@@ -2,7 +2,6 @@
 FILE: templates/index.html
 LOCATION: news/templates/index.html
 PURPOSE: Main page for news analyzer service
-DEPENDENCIES: base.html, style.css, main.js
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -22,10 +21,20 @@ DEPENDENCIES: base.html, style.css, main.js
     </nav>
     
     <!-- Main Content -->
-    <div class="container">
-        <div class="analyzer-box">
+    <main class="main-content">
+        <div class="analyzer-container">
             <h2>Analyze News Articles</h2>
-            <p>Enter a news article URL or paste article text to check credibility and verify facts</p>
+            
+            <!-- Instructions -->
+            <div class="instructions">
+                <p><strong>How to use:</strong></p>
+                <ol>
+                    <li>Choose to analyze a URL or paste article text</li>
+                    <li>Enter the article URL or paste the full text</li>
+                    <li>Click "Analyze" to check credibility and facts</li>
+                    <li>Review the trust score and detailed analysis</li>
+                </ol>
+            </div>
             
             <!-- Tab buttons -->
             <div class="input-tabs">
@@ -39,7 +48,10 @@ DEPENDENCIES: base.html, style.css, main.js
                        id="urlInput" 
                        placeholder="https://example.com/news-article" 
                        class="url-input">
-                <button id="analyzeBtn" class="analyze-btn">Analyze URL</button>
+                <div class="button-group">
+                    <button id="analyzeBtn" class="btn btn-primary">Analyze URL</button>
+                    <button id="resetBtn" class="btn btn-secondary">Reset</button>
+                </div>
             </div>
             
             <!-- Text input (hidden by default) -->
@@ -48,7 +60,10 @@ DEPENDENCIES: base.html, style.css, main.js
                           placeholder="Paste article text here..." 
                           class="text-input"
                           rows="10"></textarea>
-                <button id="analyzeTextBtn" class="analyze-btn">Analyze Text</button>
+                <div class="button-group">
+                    <button id="analyzeTextBtn" class="btn btn-primary">Analyze Text</button>
+                    <button id="resetTextBtn" class="btn btn-secondary">Reset</button>
+                </div>
             </div>
             
             <div id="loading" class="loading hidden">
@@ -59,9 +74,16 @@ DEPENDENCIES: base.html, style.css, main.js
             <div id="results" class="results hidden">
                 <!-- Results will appear here -->
             </div>
+            
+            <!-- Resources section -->
+            <div id="resources" class="resources hidden">
+                <h4>Analysis Resources Used:</h4>
+                <ul id="resourcesList"></ul>
+            </div>
         </div>
-    </div>
+    </main>
     
     <script src="/static/js/main.js"></script>
+    <script src="/static/js/ui.js"></script>
 </body>
 </html>
