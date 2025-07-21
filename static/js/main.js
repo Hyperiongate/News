@@ -149,18 +149,21 @@ const NewsAnalyzer = {
         
         let html = '';
         
-        // Article info
+        // Article info with proper citation
         html += UI.createArticleInfo(article);
+        
+        // Article summary (if available)
+        html += UI.createArticleSummary(data);
         
         // Trust score with visual meter
         const trustScore = data.trust_score || analysis.trust_score || 0;
         html += UI.formatTrustScore(trustScore);
         
+        // Author credibility section
+        html += UI.createAuthorCard(data);
+        
         // Analysis cards grid
         html += UI.createAnalysisCards(data);
-        
-        // Summary card
-        html += UI.createSummaryCard(data);
         
         // Export button (future feature)
         if (data.is_pro) {
