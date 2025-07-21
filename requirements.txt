@@ -1,13 +1,20 @@
-# FILE: requirements.txt
-# LOCATION: news/requirements.txt
-# PURPOSE: Python dependencies for news service
-# RENDER: This tells Render what packages to install
-
-flask==2.3.3
+# Core Flask dependencies
+Flask==3.0.0
 gunicorn==21.2.0
 python-dotenv==1.0.0
-requests==2.31.0
-beautifulsoup4==4.12.2
-newspaper3k==0.2.8
-openai==0.28.1
+Flask-CORS==4.0.0
 
+# News extraction and analysis
+newspaper3k==0.2.8
+lxml==4.9.3
+lxml-html-clean==0.1.0
+beautifulsoup4==4.12.2
+requests==2.31.0
+python-dateutil==2.8.2
+
+# Natural Language Processing
+nltk==3.8.1
+textblob==0.17.1
+
+# Utilities
+validators==0.22.0
