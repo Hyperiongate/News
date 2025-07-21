@@ -1,324 +1,232 @@
-// static/js/ui-controller.js
+/* static/css/components/executive-summary.css */
 
-/**
- * UI Controller - Orchestrates all modular components
- */
-class UIController {
-    constructor() {
-        this.components = {};
-        this.analysisData = null;
-        this.detailedViewVisible = false;
-        this.progressSteps = [
-            { percent: 10, text: 'Fetching article content...', step: 1 },
-            { percent: 25, text: 'Analyzing source credibility...', step: 2 },
-            { percent: 40, text: 'Checking author background...', step: 3 },
-            { percent: 55, text: 'Detecting bias and manipulation...', step: 4 },
-            { percent: 70, text: 'Fact-checking claims...', step: 5 },
-            { percent: 85, text: 'Comparing coverage across outlets...', step: 6 },
-            { percent: 95, text: 'Generating report...', step: 7 },
-            { percent: 100, text: 'Analysis complete!', step: 8 }
-        ];
-        this.currentProgressStep = 0;
-        this.progressTimer = null;
-    }
-
-    /**
-     * Register a component
-     */
-    registerComponent(name, component) {
-        this.components[name] = component;
-        console.log(`Component registered: ${name}`);
-    }
-
-    /**
-     * Build results using modular components with animations
-     */
-    buildResults(data) {
-        this.analysisData = data;
-        const resultsDiv = document.getElementById('results');
-        
-        if (!data.success) {
-            this.showError(data.error || 'Analysis failed');
-            return;
-        }
-        
-        // Clear previous results
-        resultsDiv.innerHTML = '';
-        
-        // Create results container
-        const container = document.createElement('div');
-        container.className = 'results-container';
-        
-        let componentDelay = 0;
-        
-        // Article info
-        if (data.article) {
-            const articleInfo = this.createArticleInfo(data.article);
-            articleInfo.classList.add('fade-in');
-            articleInfo.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(articleInfo);
-            componentDelay += 0.1;
-        }
-        
-        // Executive Summary (NEW)
-        if (this.components.executiveSummary) {
-            const summaryEl = this.components.executiveSummary.render(data);
-            summaryEl.classList.add('fade-in');
-            summaryEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(summaryEl);
-            componentDelay += 0.1;
-        }
-        
-        // Trust Score (ENHANCED)
-        if (this.components.trustScore && data.trust_score !== undefined) {
-            const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
-            trustScoreEl.classList.add('scale-in');
-            trustScoreEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(trustScoreEl);
-            componentDelay += 0.1;
-        }
-        
-        // Export Button (SIMPLIFIED) - Place it prominently
-        if (this.components.exportHandler && data.is_pro) {
-            const exportEl = this.components.exportHandler.render(data);
-            exportEl.classList.add('fade-in');
-            exportEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(exportEl);
-            componentDelay += 0.1;
-        }
-        
-        // Analysis Cards (COLLAPSIBLE) - Initially hidden
-        if (this.components.analysisCards) {
-            const cardsEl = this.components.analysisCards.render(data);
-            container.appendChild(cardsEl);
-        }
-        
-        // Append everything to results
-        resultsDiv.appendChild(container);
-        resultsDiv.classList.remove('hidden');
-        
-        // Show resources
-        this.showResources(data);
-        
-        // Initialize tooltips after components are rendered
-        setTimeout(() => {
-            if (window.UIUtils) {
-                window.UIUtils.initializeTooltips();
-                window.UIUtils.enhanceCards();
-            }
-        }, 1000);
-        
-        // Smooth scroll with a slight delay
-        setTimeout(() => {
-            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 300);
-        
-        // Show success toast
-        if (window.UIUtils) {
-            window.UIUtils.showToast('Analysis complete!', 'success');
-        }
-    }
-
-    /**
-     * Create article info section with author handling
-     */
-    createArticleInfo(article) {
-        const div = document.createElement('div');
-        div.className = 'article-info-card';
-        
-        // Handle multiple authors
-        let authorText = '';
-        if (article.author) {
-            // Check if author contains multiple names (common separators)
-            const authors = article.author.split(/(?:,| and | & )/i).map(a => a.trim()).filter(a => a);
-            if (authors.length > 1) {
-                authorText = `By ${authors.slice(0, -1).join(', ')} and ${authors[authors.length - 1]}`;
-            } else {
-                authorText = `By ${article.author}`;
-            }
-        }
-        
-        div.innerHTML = `
-            <div class="article-header">
-                <h2 class="article-title">${article.title || 'Untitled Article'}</h2>
-                <div class="article-meta">
-                    ${authorText ? `<span class="article-author">${authorText}</span>` : ''}
-                    ${article.domain ? `<span class="article-source">• ${article.domain}</span>` : ''}
-                    ${article.publish_date ? `<span class="article-date">• ${new Date(article.publish_date).toLocaleDateString()}</span>` : ''}
-                </div>
-            </div>
-        `;
-        
-        return div;
-    }
-
-    /**
-     * Toggle detailed view visibility
-     */
-    toggleDetailedView() {
-        const detailedView = document.getElementById('detailedAnalysisView');
-        if (!detailedView) return;
-        
-        this.detailedViewVisible = !this.detailedViewVisible;
-        
-        if (this.detailedViewVisible) {
-            detailedView.style.display = 'block';
-            setTimeout(() => {
-                detailedView.classList.add('slide-in');
-                detailedView.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 10);
-        } else {
-            detailedView.classList.remove('slide-in');
-            setTimeout(() => {
-                detailedView.style.display = 'none';
-            }, 300);
-        }
-    }
-
-    /**
-     * Show resources used
-     */
-    showResources(data) {
-        const resourcesDiv = document.getElementById('resources');
-        const resourcesList = document.getElementById('resourcesList');
-        
-        const resources = [];
-        
-        if (data.analysis?.source_credibility) {
-            resources.push('Source Credibility Database');
-        }
-        
-        if (data.author_analysis) {
-            resources.push('Author Background Check');
-        }
-        
-        if (data.is_pro) {
-            resources.push('OpenAI GPT-3.5');
-            
-            if (data.fact_checks?.length > 0) {
-                resources.push('Google Fact Check API');
-            }
-            
-            if (data.related_articles?.length > 0) {
-                resources.push('News API');
-            }
-        } else {
-            resources.push('Basic Analysis Engine');
-        }
-        
-        resourcesList.innerHTML = resources.map(r => 
-            `<span class="resource-chip">${r}</span>`
-        ).join('');
-        
-        resourcesDiv.classList.remove('hidden');
-        resourcesDiv.classList.add('fade-in');
-    }
-
-    /**
-     * Show error message with animation
-     */
-    showError(message) {
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = `
-            <div class="error-card shake">
-                <div class="error-icon">⚠️</div>
-                <div class="error-content">
-                    <h3>Analysis Error</h3>
-                    <p>${message}</p>
-                </div>
-                <button class="retry-btn" onclick="location.reload()">Try Again</button>
-            </div>
-        `;
-        resultsDiv.classList.remove('hidden');
-        
-        if (window.UIUtils) {
-            window.UIUtils.showToast(message, 'error');
-        }
-    }
-
-    /**
-     * Show progress with animated steps
-     */
-    showProgress(show, message = 'Analyzing article...') {
-        if (show && window.UIUtils) {
-            // Show loading skeletons
-            window.UIUtils.showLoadingSkeletons();
-        }
-        
-        if (this.components.progressBar) {
-            if (show) {
-                // Reset progress
-                this.currentProgressStep = 0;
-                this.components.progressBar.show(message);
-                
-                // Start automated progress animation
-                this.startProgressAnimation();
-            } else {
-                // Stop animation and hide
-                this.stopProgressAnimation();
-                this.components.progressBar.hide();
-            }
-        } else {
-            // Fallback to old loading
-            const loadingDiv = document.getElementById('loading');
-            if (show) {
-                loadingDiv.classList.remove('hidden');
-                const loadingText = loadingDiv.querySelector('p');
-                if (loadingText) loadingText.textContent = message;
-            } else {
-                loadingDiv.classList.add('hidden');
-            }
-        }
-    }
-
-    /**
-     * Start automated progress animation
-     */
-    startProgressAnimation() {
-        this.stopProgressAnimation(); // Clear any existing timer
-        
-        let stepIndex = 0;
-        
-        // Update progress every 1.5 seconds
-        this.progressTimer = setInterval(() => {
-            if (stepIndex < this.progressSteps.length - 1) {
-                const step = this.progressSteps[stepIndex];
-                
-                if (this.components.progressBar) {
-                    this.components.progressBar.setProgress(step.percent, step.text);
-                }
-                
-                stepIndex++;
-                
-                // Stop at 95% to wait for actual completion
-                if (step.percent >= 95) {
-                    this.stopProgressAnimation();
-                }
-            } else {
-                this.stopProgressAnimation();
-            }
-        }, 1500);
-    }
-
-    /**
-     * Stop progress animation
-     */
-    stopProgressAnimation() {
-        if (this.progressTimer) {
-            clearInterval(this.progressTimer);
-            this.progressTimer = null;
-        }
-    }
-
-    /**
-     * Complete progress to 100%
-     */
-    completeProgress(message = 'Analysis complete!') {
-        if (this.components.progressBar) {
-            this.components.progressBar.setProgress(100, message);
-        }
-    }
+.executive-summary-container {
+    margin-bottom: 2rem;
 }
 
-// Create global instance
-window.UI = new UIController();
+.executive-summary-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.header-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+}
+
+.summary-subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.summary-timestamp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.timestamp-icon {
+    font-size: 1rem;
+}
+
+/* Summary sections */
+.summary-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.summary-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.summary-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.section-icon {
+    font-size: 1.5rem;
+}
+
+.section-content {
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.section-content p {
+    margin: 0;
+}
+
+.section-content blockquote {
+    margin: 1rem 0 0 0;
+    padding: 1rem;
+    background: white;
+    border-left: 4px solid #1a73e8;
+    border-radius: 4px;
+    font-style: italic;
+    color: #374151;
+}
+
+/* Findings list */
+.findings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.finding-item {
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.finding-item.strength {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.finding-item.concern {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.finding-item.neutral {
+    border-color: #6b7280;
+    background: #f9fafb;
+}
+
+.finding-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.finding-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Verdict and advice */
+.verdict {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+}
+
+.advice-box {
+    background: white;
+    border: 2px solid #1a73e8;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    color: #1e40af;
+}
+
+.advice-box strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #1a73e8;
+}
+
+/* Quick actions */
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.action-btn.primary {
+    background: #1a73e8;
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background: #1557b0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+.action-btn.secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.action-btn.secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.action-icon {
+    font-size: 1.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .executive-summary-card {
+        padding: 1.5rem;
+    }
+    
+    .summary-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .header-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
