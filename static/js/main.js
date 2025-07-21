@@ -1,7 +1,7 @@
 // static/js/main.js
 
 /**
- * Main application controller - simplified to work with modular components
+ * Main application controller - with debugging
  */
 const NewsAnalyzer = {
     currentTab: 'url',
@@ -145,8 +145,30 @@ const NewsAnalyzer = {
             });
 
             const data = await response.json();
+            
+            // DEBUG: Log the entire response
+            console.log('=== BACKEND RESPONSE ===');
+            console.log(JSON.stringify(data, null, 2));
+            console.log('========================');
 
             if (response.ok) {
+                // Show what we actually got
+                if (!data.bias_analysis || Object.keys(data.bias_analysis).length === 0) {
+                    console.warn('❌ No bias analysis data received');
+                }
+                if (!data.clickbait_score && data.clickbait_score !== 0) {
+                    console.warn('❌ No clickbait score received');
+                }
+                if (!data.author_analysis || Object.keys(data.author_analysis).length === 0) {
+                    console.warn('❌ No author analysis data received');
+                }
+                if (!data.fact_checks || data.fact_checks.length === 0) {
+                    console.warn('❌ No fact checks received');
+                }
+                if (!data.trust_score && data.trust_score !== 0) {
+                    console.warn('❌ No trust score received');
+                }
+                
                 // Show progress completion before showing results
                 window.UI.showProgress(true, 'Analysis complete!');
                 
