@@ -9,10 +9,6 @@ class AnalysisCards {
         const container = document.createElement('div');
         container.className = 'analysis-cards-container';
         
-        // Initially hide detailed view
-        container.style.display = 'none';
-        container.id = 'detailedAnalysisView';
-        
         const cards = [
             this.createBiasCard(data),
             this.createFactCheckCard(data),
@@ -22,13 +18,6 @@ class AnalysisCards {
         ].filter(card => card !== null);
         
         container.innerHTML = `
-            <div class="analysis-cards-header">
-                <h3>Detailed Analysis</h3>
-                <button class="expand-all-btn" onclick="window.analysisCards?.toggleAllCards()">
-                    <span class="expand-icon">⊕</span>
-                    <span class="expand-text">Expand All</span>
-                </button>
-            </div>
             <div class="analysis-cards-grid">
                 ${cards.join('')}
             </div>
@@ -381,34 +370,6 @@ class AnalysisCards {
             content.style.display = 'none';
             toggle.textContent = '▼';
             this.expandedCards.delete(cardType);
-        }
-    }
-
-    toggleAllCards() {
-        const allCards = document.querySelectorAll('.analysis-card');
-        const shouldExpand = this.expandedCards.size < allCards.length;
-        
-        allCards.forEach(card => {
-            const cardType = card.getAttribute('data-card-type');
-            const content = card.querySelector('.card-content');
-            const toggle = card.querySelector('.card-toggle');
-            
-            if (shouldExpand) {
-                content.style.display = 'block';
-                toggle.textContent = '▲';
-                this.expandedCards.add(cardType);
-            } else {
-                content.style.display = 'none';
-                toggle.textContent = '▼';
-                this.expandedCards.delete(cardType);
-            }
-        });
-        
-        // Update button text
-        const btn = document.querySelector('.expand-all-btn');
-        if (btn) {
-            btn.querySelector('.expand-icon').textContent = shouldExpand ? '⊖' : '⊕';
-            btn.querySelector('.expand-text').textContent = shouldExpand ? 'Collapse All' : 'Expand All';
         }
     }
 
