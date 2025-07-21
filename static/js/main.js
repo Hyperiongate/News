@@ -1,15 +1,15 @@
-/**
- * FILE: static/js/main.js
- * LOCATION: news/static/js/main.js
- * PURPOSE: Main JavaScript for news analyzer with enhanced UI
- */
+// static/js/main.js
 
-// Main app object
+/**
+ * Main application controller - simplified to work with modular components
+ */
 const NewsAnalyzer = {
     currentTab: 'url',
+    currentPlan: 'free',
     
     init() {
         this.setupEventListeners();
+        this.setupPlanListener();
     },
 
     setupEventListeners() {
@@ -51,6 +51,26 @@ const NewsAnalyzer = {
                 }
             });
         }
+        
+        // Reset buttons
+        const resetBtn = document.getElementById('resetBtn');
+        const resetTextBtn = document.getElementById('resetTextBtn');
+        
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.reset());
+        }
+        
+        if (resetTextBtn) {
+            resetTextBtn.addEventListener('click', () => this.reset());
+        }
+    },
+    
+    setupPlanListener() {
+        // Listen for plan changes from pricing dropdown
+        window.addEventListener('planChanged', (e) => {
+            this.currentPlan = e.detail.plan;
+            console.log('Plan changed to:', this.currentPlan);
+        });
     },
     
     switchTab(tab) {
@@ -87,14 +107,14 @@ const NewsAnalyzer = {
             content = urlInput.value.trim();
             
             if (!content) {
-                this.showError('Please enter a valid URL');
+                window.UI.showError('Please enter a valid URL');
                 return;
             }
             
             try {
                 new URL(content);
             } catch (e) {
-                this.showError('Please enter a valid URL');
+                window.UI.showError('Please enter a valid URL');
                 return;
             }
         } else {
@@ -102,13 +122,15 @@ const NewsAnalyzer = {
             content = textInput.value.trim();
             
             if (!content || content.length < 100) {
-                this.showError('Please paste at least 100 characters of article text');
+                window.UI.showError('Please paste at least 100 characters of article text');
                 return;
             }
         }
 
-        this.showLoading(true);
+        // Show progress
+        window.UI.showProgress(true, 'Starting analysis...');
         this.hideResults();
+        this.disableButtons(true);
 
         try {
             const response = await fetch('/api/analyze', {
@@ -117,90 +139,34 @@ const NewsAnalyzer = {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    [type === 'url' ? 'url' : 'text']: content 
+                    [type === 'url' ? 'url' : 'text']: content,
+                    plan: this.currentPlan // Send current plan
                 })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                this.showResults(data);
+                // Build results using UI controller
+                window.UI.buildResults(data);
             } else {
-                this.showError(data.error || 'Analysis failed');
+                window.UI.showError(data.error || 'Analysis failed');
             }
         } catch (error) {
             console.error('Analysis error:', error);
-            this.showError('Network error. Please try again.');
+            window.UI.showError('Network error. Please try again.');
         } finally {
-            this.showLoading(false);
+            window.UI.showProgress(false);
+            this.disableButtons(false);
         }
     },
 
-    showResults(data) {
-        const resultsDiv = document.getElementById('results');
-        
-        if (!data.success) {
-            this.showError(data.error || 'Analysis failed');
-            return;
-        }
-        
-        const analysis = data.analysis || {};
-        const article = data.article || {};
-        
-        let html = '';
-        
-        // Article info with proper citation
-        html += UI.createArticleInfo(article);
-        
-        // Article summary (if available)
-        html += UI.createArticleSummary(data);
-        
-        // Trust score with visual meter
-        const trustScore = data.trust_score || analysis.trust_score || 0;
-        html += UI.formatTrustScore(trustScore);
-        
-        // Author credibility section
-        html += UI.createAuthorCard(data);
-        
-        // Analysis cards grid
-        html += UI.createAnalysisCards(data);
-        
-        // Export button (future feature)
-        if (data.is_pro) {
-            html += `
-                <div class="export-section">
-                    <button class="export-btn" onclick="NewsAnalyzer.exportReport()">
-                        <span>📄</span>
-                        <span>Export Report (Coming Soon)</span>
-                    </button>
-                </div>
-            `;
-        }
-        
-        resultsDiv.innerHTML = html;
-        resultsDiv.classList.remove('hidden');
-        
-        // Show resources used
-        UI.showResources(data);
-        
-        // Smooth scroll to results
-        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    },
-
-    showLoading(show) {
-        const loadingDiv = document.getElementById('loading');
+    disableButtons(disabled) {
         const analyzeBtn = document.getElementById('analyzeBtn');
         const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         
-        if (show) {
-            loadingDiv.classList.remove('hidden');
-            analyzeBtn.disabled = true;
-            analyzeTextBtn.disabled = true;
-        } else {
-            loadingDiv.classList.add('hidden');
-            analyzeBtn.disabled = false;
-            analyzeTextBtn.disabled = false;
-        }
+        if (analyzeBtn) analyzeBtn.disabled = disabled;
+        if (analyzeTextBtn) analyzeTextBtn.disabled = disabled;
     },
 
     hideResults() {
@@ -208,15 +174,13 @@ const NewsAnalyzer = {
         document.getElementById('resources').classList.add('hidden');
     },
 
-    showError(message) {
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = `<div class="error">${message}</div>`;
-        resultsDiv.classList.remove('hidden');
-    },
-    
-    exportReport() {
-        // Future feature
-        alert('Export feature coming soon! This will generate a professional PDF report of the analysis.');
+    reset() {
+        if (this.currentTab === 'url') {
+            document.getElementById('urlInput').value = '';
+        } else {
+            document.getElementById('textInput').value = '';
+        }
+        this.hideResults();
     }
 };
 
