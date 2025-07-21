@@ -45,59 +45,142 @@ class UIController {
         // Clear previous results
         resultsDiv.innerHTML = '';
         
-        // Create results container
-        const container = document.createElement('div');
-        container.className = 'results-container';
+        // Create main container for summary info only
+        const mainContainer = document.createElement('div');
+        mainContainer.className = 'summary-container';
+        
+        // Create or find detailed analysis container (separate from main)
+        let detailedContainer = document.getElementById('detailedAnalysisContainer');
+        if (!detailedContainer) {
+            detailedContainer = document.createElement('div');
+            detailedContainer.id = 'detailedAnalysisContainer';
+            detailedContainer.className = 'detailed-analysis-container';
+        } else {
+            detailedContainer.innerHTML = ''; // Clear existing content
+        }
         
         let componentDelay = 0;
+        
+        // === MAIN SUMMARY CONTAINER CONTENT ===
         
         // Article info
         if (data.article) {
             const articleInfo = this.createArticleInfo(data.article);
             articleInfo.classList.add('fade-in');
             articleInfo.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(articleInfo);
+            mainContainer.appendChild(articleInfo);
             componentDelay += 0.1;
         }
         
-        // Executive Summary (NEW)
+        // Executive Summary
         if (this.components.executiveSummary) {
             const summaryEl = this.components.executiveSummary.render(data);
             summaryEl.classList.add('fade-in');
             summaryEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(summaryEl);
+            mainContainer.appendChild(summaryEl);
             componentDelay += 0.1;
         }
         
-        // Trust Score (ENHANCED)
+        // Trust Score
         if (this.components.trustScore && data.trust_score !== undefined) {
             const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
             trustScoreEl.classList.add('scale-in');
             trustScoreEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(trustScoreEl);
+            mainContainer.appendChild(trustScoreEl);
             componentDelay += 0.1;
         }
         
-        // Export Button (SIMPLIFIED) - Place it prominently
+        // Export Button (for Pro users)
         if (this.components.exportHandler && data.is_pro) {
             const exportEl = this.components.exportHandler.render(data);
             exportEl.classList.add('fade-in');
             exportEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(exportEl);
+            mainContainer.appendChild(exportEl);
             componentDelay += 0.1;
         }
         
-        // Analysis Cards (COLLAPSIBLE) - Initially hidden
+        // === DETAILED ANALYSIS CARDS (SEPARATE) ===
+        
+        // Add a separator or header for detailed analysis
+        const detailsHeader = document.createElement('div');
+        detailsHeader.className = 'detailed-analysis-header';
+        detailsHeader.innerHTML = `
+            <h3>Detailed Analysis</h3>
+            <p>Click on any card below to expand and view detailed information</p>
+        `;
+        detailsHeader.classList.add('fade-in');
+        detailsHeader.style.animationDelay = `${componentDelay}s`;
+        detailedContainer.appendChild(detailsHeader);
+        componentDelay += 0.1;
+        
+        // Analysis Cards - Now in separate container
         if (this.components.analysisCards) {
             const cardsEl = this.components.analysisCards.render(data);
-            container.appendChild(cardsEl);
+            cardsEl.classList.add('fade-in');
+            cardsEl.style.animationDelay = `${componentDelay}s`;
+            cardsEl.style.display = 'block'; // Make sure it's visible
+            detailedContainer.appendChild(cardsEl);
         }
         
-        // Append everything to results
-        resultsDiv.appendChild(container);
+        // Individual component cards (if not using analysisCards component)
+        // These will be standalone cards outside the main container
+        const individualCards = [];
+        
+        // Bias Analysis Card
+        if (this.components.biasAnalysis && data.bias_analysis) {
+            const biasEl = this.components.biasAnalysis.render(data);
+            biasEl.classList.add('fade-in');
+            biasEl.style.animationDelay = `${componentDelay}s`;
+            individualCards.push(biasEl);
+            componentDelay += 0.1;
+        }
+        
+        // Fact Checker Card
+        if (this.components.factChecker && data.key_claims) {
+            const factCheckEl = this.components.factChecker.render(data);
+            factCheckEl.classList.add('fade-in');
+            factCheckEl.style.animationDelay = `${componentDelay}s`;
+            individualCards.push(factCheckEl);
+            componentDelay += 0.1;
+        }
+        
+        // Clickbait Detector Card
+        if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
+            const clickbaitEl = this.components.clickbaitDetector.render(data);
+            clickbaitEl.classList.add('fade-in');
+            clickbaitEl.style.animationDelay = `${componentDelay}s`;
+            individualCards.push(clickbaitEl);
+            componentDelay += 0.1;
+        }
+        
+        // Author Card
+        if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
+            const authorEl = this.components.authorCard.render(data);
+            authorEl.classList.add('fade-in');
+            authorEl.style.animationDelay = `${componentDelay}s`;
+            individualCards.push(authorEl);
+            componentDelay += 0.1;
+        }
+        
+        // Add individual cards if analysisCards component isn't being used
+        if (individualCards.length > 0 && !this.components.analysisCards) {
+            const cardsGrid = document.createElement('div');
+            cardsGrid.className = 'individual-cards-grid';
+            individualCards.forEach(card => cardsGrid.appendChild(card));
+            detailedContainer.appendChild(cardsGrid);
+        }
+        
+        // Append containers to results div
+        resultsDiv.appendChild(mainContainer);
+        
+        // Insert detailed container after results div
+        if (resultsDiv.parentNode) {
+            resultsDiv.parentNode.insertBefore(detailedContainer, resultsDiv.nextSibling);
+        }
+        
         resultsDiv.classList.remove('hidden');
         
-        // Show resources
+        // Show resources (separate section)
         this.showResources(data);
         
         // Initialize tooltips after components are rendered
@@ -156,21 +239,21 @@ class UIController {
      * Toggle detailed view visibility
      */
     toggleDetailedView() {
-        const detailedView = document.getElementById('detailedAnalysisView');
-        if (!detailedView) return;
+        const detailedContainer = document.getElementById('detailedAnalysisContainer');
+        if (!detailedContainer) return;
         
         this.detailedViewVisible = !this.detailedViewVisible;
         
         if (this.detailedViewVisible) {
-            detailedView.style.display = 'block';
+            detailedContainer.style.display = 'block';
             setTimeout(() => {
-                detailedView.classList.add('slide-in');
-                detailedView.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                detailedContainer.classList.add('slide-in');
+                detailedContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 10);
         } else {
-            detailedView.classList.remove('slide-in');
+            detailedContainer.classList.remove('slide-in');
             setTimeout(() => {
-                detailedView.style.display = 'none';
+                detailedContainer.style.display = 'none';
             }, 300);
         }
     }
