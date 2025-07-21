@@ -116,6 +116,7 @@ class UIController {
             max-width: 900px;
             margin: 0 auto 40px auto;
             padding: 0 20px;
+            align-items: start;
         `;
         
         // Create cards with expandable functionality
@@ -549,6 +550,7 @@ class UIController {
                 max-width: 900px;
                 margin: 0 auto 40px auto;
                 padding: 0 20px;
+                align-items: start;
             `;
             
             const secondRowCards = [];
@@ -765,6 +767,8 @@ class UIController {
             position: relative;
             overflow: hidden;
             border: 2px solid ${borderColor};
+            align-self: start;
+            min-height: 150px;
         `;
         
         card.innerHTML = `
@@ -784,7 +788,8 @@ class UIController {
         `;
         
         // Add click handler
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function(e) {
+            e.stopPropagation();
             const detailsDiv = this.querySelector('.card-details');
             const expandIcon = this.querySelector('.expand-icon');
             const isExpanded = detailsDiv.style.display !== 'none';
