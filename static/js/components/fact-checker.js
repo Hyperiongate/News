@@ -2,307 +2,286 @@
 
 class FactChecker {
     constructor() {
-        this.container = null;
+        this.data = null;
     }
 
     render(data) {
+        this.data = data;
+        
         const container = document.createElement('div');
         container.className = 'fact-checker-container analysis-card';
         
-        const claims = data.key_claims || [];
-        const factChecks = data.fact_checks || [];
-        const isBasicPlan = !data.is_pro;
-        
-        if (isBasicPlan) {
-            container.innerHTML = this.renderBasicFactCheck(claims);
+        // Check if this is a pro user with fact checks
+        if (data.is_pro && data.fact_checks && data.fact_checks.length > 0) {
+            container.innerHTML = this.renderProFactCheck();
+        } else if (data.key_claims && data.key_claims.length > 0) {
+            container.innerHTML = this.renderBasicClaims();
         } else {
-            container.innerHTML = this.renderProFactCheck(claims, factChecks, data);
+            container.innerHTML = this.renderNoClaims();
         }
-        
-        this.container = container;
-        
-        // Animate fact check items
-        setTimeout(() => this.animateFactChecks(), 100);
         
         return container;
     }
 
-    renderBasicFactCheck(claims) {
-        const claimCount = claims.length || 0;
+    renderProFactCheck() {
+        const factChecks = this.data.fact_checks || [];
+        const summary = this.data.fact_check_summary || this.generateFactCheckSummary(factChecks);
         
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">✓</span>
-                <span>Fact Checking</span>
-            </div>
-            
-            <div class="fact-checker-content">
-                <div class="fact-check-summary">
-                    <p class="fact-check-basic-text">
-                        Found <strong>${claimCount} key claims</strong> in this article.
-                    </p>
-                    <div class="upgrade-prompt">
-                        <span class="lock-icon">🔒</span>
-                        <p>Unlock Google Fact Check API verification, claim-by-claim analysis, and source verification with Pro plan.</p>
-                        <button class="upgrade-btn" onclick="window.pricingDropdown?.selectPlan('pro')">
-                            Upgrade to Pro
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderProFactCheck(claims, factChecks, data) {
-        // Merge claims with fact check results
-        const checkedClaims = this.mergeClaimsWithFactChecks(claims, factChecks);
-        const stats = this.calculateFactCheckStats(checkedClaims);
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">✓</span>
-                <span>Fact Checking Analysis</span>
-                <span class="pro-indicator">PRO</span>
-            </div>
-            
-            <div class="fact-checker-content">
-                <!-- Statistics Overview -->
-                <div class="fact-check-stats">
-                    <div class="stat-card verified">
-                        <div class="stat-icon">✓</div>
-                        <div class="stat-number">${stats.verified}</div>
-                        <div class="stat-label">Verified</div>
-                    </div>
-                    <div class="stat-card false">
-                        <div class="stat-icon">✗</div>
-                        <div class="stat-number">${stats.false}</div>
-                        <div class="stat-label">False</div>
-                    </div>
-                    <div class="stat-card mixed">
-                        <div class="stat-icon">≈</div>
-                        <div class="stat-number">${stats.mixed}</div>
-                        <div class="stat-label">Mixed</div>
-                    </div>
-                    <div class="stat-card unverified">
-                        <div class="stat-icon">?</div>
-                        <div class="stat-number">${stats.unverified}</div>
-                        <div class="stat-label">Unverified</div>
-                    </div>
-                </div>
-
-                <!-- Fact Check Results -->
-                <div class="fact-check-results">
-                    <h4>Key Claims Analysis</h4>
-                    <div class="claims-list">
-                        ${checkedClaims.map((claim, index) => this.renderClaim(claim, index)).join('')}
-                    </div>
-                </div>
-
-                <!-- Sources Used -->
-                ${this.renderFactCheckSources(factChecks)}
-
-                <!-- AI Summary -->
-                ${data.fact_check_summary ? `
-                <div class="fact-check-summary-section">
-                    <h4>🤖 AI Fact-Check Summary</h4>
-                    <p>${data.fact_check_summary}</p>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    mergeClaimsWithFactChecks(claims, factChecks) {
-        return claims.map(claim => {
-            // Find matching fact check
-            const factCheck = factChecks.find(fc => 
-                this.claimMatches(claim.text, fc.claim)
-            );
-            
-            return {
-                ...claim,
-                factCheck: factCheck || null,
-                status: factCheck ? this.mapRatingToStatus(factCheck.rating) : 'unverified'
-            };
-        });
-    }
-
-    claimMatches(claim1, claim2) {
-        // Simple matching - in real app would use more sophisticated matching
-        const normalize = (text) => text.toLowerCase().replace(/[^\w\s]/g, '');
-        return normalize(claim1).includes(normalize(claim2)) || 
-               normalize(claim2).includes(normalize(claim1));
-    }
-
-    mapRatingToStatus(rating) {
-        const ratingLower = rating.toLowerCase();
-        if (ratingLower.includes('true') || ratingLower.includes('correct')) return 'verified';
-        if (ratingLower.includes('false') || ratingLower.includes('incorrect')) return 'false';
-        if (ratingLower.includes('mixed') || ratingLower.includes('partly')) return 'mixed';
-        return 'unverified';
-    }
-
-    calculateFactCheckStats(claims) {
-        const stats = {
-            verified: 0,
+        // Count verdicts safely
+        const counts = {
+            true: 0,
             false: 0,
-            mixed: 0,
+            partially_true: 0,
             unverified: 0
         };
         
-        claims.forEach(claim => {
-            stats[claim.status]++;
+        factChecks.forEach(fc => {
+            const verdict = this.normalizeVerdict(fc.verdict);
+            if (counts.hasOwnProperty(verdict)) {
+                counts[verdict]++;
+            } else {
+                counts.unverified++;
+            }
         });
         
-        return stats;
-    }
-
-    renderClaim(claim, index) {
-        const statusConfig = this.getStatusConfig(claim.status);
+        const totalChecked = factChecks.length;
+        const verifiedPercentage = totalChecked > 0 ? 
+            Math.round((counts.true / totalChecked) * 100) : 0;
         
         return `
-            <div class="claim-item ${claim.status}" data-index="${index}">
-                <div class="claim-header">
-                    <div class="claim-status">
-                        <span class="status-icon" style="color: ${statusConfig.color};">
-                            ${statusConfig.icon}
-                        </span>
-                        <span class="status-text" style="color: ${statusConfig.color};">
-                            ${statusConfig.label}
-                        </span>
+            <div class="analysis-header">
+                <span class="analysis-icon">✓</span>
+                <span>Fact Check Results</span>
+                <span class="pro-badge">PRO</span>
+            </div>
+            
+            <div class="fact-check-summary">
+                <div class="summary-text">${summary}</div>
+                <div class="fact-check-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${totalChecked}</span>
+                        <span class="stat-label">Claims Checked</span>
                     </div>
-                    ${claim.importance ? `
-                        <div class="claim-importance ${claim.importance}">
-                            ${claim.importance} importance
-                        </div>
-                    ` : ''}
+                    <div class="stat-item">
+                        <span class="stat-value">${verifiedPercentage}%</span>
+                        <span class="stat-label">Verified</span>
+                    </div>
                 </div>
-                
-                <div class="claim-text">
-                    "${claim.text}"
-                </div>
-                
-                ${claim.factCheck ? `
-                    <div class="fact-check-details">
-                        <div class="check-source">
-                            <span class="source-label">Checked by:</span>
-                            <span class="source-name">${claim.factCheck.publisher}</span>
-                        </div>
-                        ${claim.factCheck.url ? `
-                            <a href="${claim.factCheck.url}" target="_blank" class="check-link">
-                                View fact check →
-                            </a>
-                        ` : ''}
-                    </div>
-                    
-                    ${claim.factCheck.review ? `
-                        <div class="check-review">
-                            ${claim.factCheck.review}
-                        </div>
-                    ` : ''}
-                ` : `
-                    <div class="unverified-message">
-                        No fact-check found for this claim via Google Fact Check API
-                    </div>
-                `}
-                
-                ${claim.context ? `
-                    <div class="claim-context">
-                        <strong>Context:</strong> ${claim.context}
-                    </div>
-                ` : ''}
+            </div>
+            
+            <div class="fact-check-breakdown">
+                ${this.renderFactCheckBreakdown(counts)}
+            </div>
+            
+            <div class="fact-check-details">
+                <h4>Checked Claims:</h4>
+                ${this.renderFactCheckDetails(factChecks)}
             </div>
         `;
     }
 
-    getStatusConfig(status) {
-        const configs = {
-            verified: {
-                icon: '✓',
-                label: 'Verified',
-                color: '#10b981'
-            },
-            false: {
-                icon: '✗',
-                label: 'False',
-                color: '#ef4444'
-            },
-            mixed: {
-                icon: '≈',
-                label: 'Mixed/Partly True',
-                color: '#f59e0b'
-            },
-            unverified: {
-                icon: '?',
-                label: 'Unverified',
-                color: '#6b7280'
-            }
-        };
-        
-        return configs[status] || configs.unverified;
-    }
-
-    renderFactCheckSources(factChecks) {
-        if (!factChecks || factChecks.length === 0) return '';
-        
-        const publishers = [...new Set(factChecks.map(fc => fc.publisher))];
+    renderBasicClaims() {
+        const claims = this.data.key_claims || [];
         
         return `
-            <div class="fact-check-sources">
-                <h4>Fact-Checking Sources</h4>
-                <div class="sources-list">
-                    ${publishers.map(publisher => `
-                        <div class="source-chip">
-                            <span class="source-icon">🔍</span>
-                            ${publisher}
-                        </div>
-                    `).join('')}
-                </div>
-                <p class="sources-note">
-                    Powered by Google Fact Check API • Results from trusted fact-checking organizations
+            <div class="analysis-header">
+                <span class="analysis-icon">📋</span>
+                <span>Key Claims</span>
+            </div>
+            
+            <div class="basic-claims-info">
+                <p>We identified ${claims.length} key claims in this article. 
+                   Upgrade to Pro for automated fact-checking with Google's Fact Check API.</p>
+            </div>
+            
+            <div class="claims-list">
+                ${claims.map((claim, index) => `
+                    <div class="claim-item">
+                        <span class="claim-number">${index + 1}.</span>
+                        <span class="claim-text">${this.getClaimText(claim)}</span>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="upgrade-prompt">
+                <p>🔍 Want automated fact-checking? 
+                   <a href="#" onclick="window.pricingDropdown.show(); return false;">Upgrade to Pro</a>
                 </p>
             </div>
         `;
     }
 
-    animateFactChecks() {
-        const claimItems = this.container?.querySelectorAll('.claim-item');
-        claimItems?.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                item.style.transition = 'all 0.5s ease-out';
-                item.style.opacity = '1';
-                item.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
+    renderNoClaims() {
+        return `
+            <div class="analysis-header">
+                <span class="analysis-icon">📋</span>
+                <span>Fact Checking</span>
+            </div>
+            <div class="no-claims-message">
+                <p>No specific factual claims were identified in this article for fact-checking.</p>
+            </div>
+        `;
+    }
 
-        // Animate stat cards
-        const statCards = this.container?.querySelectorAll('.stat-card');
-        statCards?.forEach((card, index) => {
-            const number = card.querySelector('.stat-number');
-            if (number) {
-                const target = parseInt(number.textContent);
-                let current = 0;
-                const increment = target / 20;
-                
-                const timer = setInterval(() => {
-                    current += increment;
-                    if (current >= target) {
-                        current = target;
-                        clearInterval(timer);
-                    }
-                    number.textContent = Math.round(current);
-                }, 50);
+    renderFactCheckBreakdown(counts) {
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        
+        return `
+            <div class="verdict-breakdown">
+                ${this.renderVerdictBar('True', counts.true, total, 'true')}
+                ${this.renderVerdictBar('False', counts.false, total, 'false')}
+                ${this.renderVerdictBar('Partially True', counts.partially_true, total, 'mixed')}
+                ${this.renderVerdictBar('Unverified', counts.unverified, total, 'unverified')}
+            </div>
+        `;
+    }
+
+    renderVerdictBar(label, count, total, type) {
+        const percentage = total > 0 ? (count / total) * 100 : 0;
+        
+        return `
+            <div class="verdict-item">
+                <div class="verdict-label">
+                    <span>${label}</span>
+                    <span class="verdict-count">${count}</span>
+                </div>
+                <div class="verdict-bar">
+                    <div class="verdict-fill verdict-${type}" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderFactCheckDetails(factChecks) {
+        return factChecks.map((fc, index) => {
+            const verdict = this.normalizeVerdict(fc.verdict);
+            const status = this.mapVerdictToStatus(verdict);
+            const icon = this.getVerdictIcon(verdict);
+            
+            return `
+                <div class="fact-check-item">
+                    <div class="fact-check-header">
+                        <span class="verdict-icon ${status}">${icon}</span>
+                        <span class="verdict-label ${status}">${this.formatVerdict(verdict)}</span>
+                    </div>
+                    <div class="claim-text">"${fc.claim || 'Claim text unavailable'}"</div>
+                    ${fc.explanation ? `<div class="fact-check-explanation">${fc.explanation}</div>` : ''}
+                    ${fc.publisher ? `<div class="fact-check-source">Source: ${fc.publisher}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Helper methods to safely handle data
+    getClaimText(claim) {
+        if (typeof claim === 'string') {
+            return claim;
+        } else if (claim && claim.text) {
+            return claim.text;
+        } else if (claim && claim.claim) {
+            return claim.claim;
+        }
+        return 'Claim text unavailable';
+    }
+
+    normalizeVerdict(verdict) {
+        if (!verdict) return 'unverified';
+        
+        const v = verdict.toString().toLowerCase();
+        
+        if (v.includes('true') && !v.includes('false')) {
+            return 'true';
+        } else if (v.includes('false')) {
+            return 'false';
+        } else if (v.includes('partial') || v.includes('mixed') || v.includes('half')) {
+            return 'partially_true';
+        }
+        
+        return 'unverified';
+    }
+
+    mapVerdictToStatus(verdict) {
+        const statusMap = {
+            'true': 'status-verified',
+            'false': 'status-false',
+            'partially_true': 'status-mixed',
+            'unverified': 'status-unverified'
+        };
+        
+        return statusMap[verdict] || 'status-unverified';
+    }
+
+    getVerdictIcon(verdict) {
+        const iconMap = {
+            'true': '✓',
+            'false': '✗',
+            'partially_true': '≈',
+            'unverified': '?'
+        };
+        
+        return iconMap[verdict] || '?';
+    }
+
+    formatVerdict(verdict) {
+        const formatMap = {
+            'true': 'Verified True',
+            'false': 'False',
+            'partially_true': 'Partially True',
+            'unverified': 'Unverified'
+        };
+        
+        return formatMap[verdict] || 'Unverified';
+    }
+
+    generateFactCheckSummary(factChecks) {
+        if (!factChecks || factChecks.length === 0) {
+            return "No fact checks performed.";
+        }
+        
+        const counts = {
+            true: 0,
+            false: 0,
+            partially_true: 0,
+            unverified: 0
+        };
+        
+        factChecks.forEach(fc => {
+            const verdict = this.normalizeVerdict(fc.verdict);
+            if (counts.hasOwnProperty(verdict)) {
+                counts[verdict]++;
+            } else {
+                counts.unverified++;
             }
         });
+        
+        const total = factChecks.length;
+        const parts = [];
+        
+        parts.push(`Checked ${total} claim${total !== 1 ? 's' : ''}`);
+        
+        if (counts.true > 0) {
+            parts.push(`${counts.true} verified as true`);
+        }
+        if (counts.false > 0) {
+            parts.push(`${counts.false} found false`);
+        }
+        if (counts.partially_true > 0) {
+            parts.push(`${counts.partially_true} partially true`);
+        }
+        if (counts.unverified > 0) {
+            parts.push(`${counts.unverified} unverified`);
+        }
+        
+        return parts.join(', ') + '.';
     }
 }
 
-// Export and register with UI controller
+// Create global instance
 window.FactChecker = FactChecker;
 
-// Auto-register when UI controller is available
-if (window.UI) {
-    window.UI.registerComponent('factChecker', new FactChecker());
-}
+// Auto-register with UI controller
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.UI) {
+        window.UI.registerComponent('factChecker', new FactChecker());
+    }
+});
