@@ -1,8 +1,7 @@
 /**
  * FILE: static/js/main.js
  * LOCATION: news/static/js/main.js
- * PURPOSE: Frontend JavaScript for news analyzer
- * DEPENDENCIES: ui.js
+ * PURPOSE: Main JavaScript for news analyzer with enhanced UI
  */
 
 // Main app object
@@ -148,55 +147,31 @@ const NewsAnalyzer = {
         const analysis = data.analysis || {};
         const article = data.article || {};
         
-        let html = '<h3>Analysis Results</h3>';
+        let html = '';
         
         // Article info
-        if (article.title) {
-            html += `<div class="result-item"><strong>Title:</strong> ${article.title}</div>`;
-        }
-        if (article.author) {
-            html += `<div class="result-item"><strong>Author:</strong> ${article.author}</div>`;
-        }
-        if (article.domain) {
-            html += `<div class="result-item"><strong>Source:</strong> ${article.domain}</div>`;
-        }
+        html += UI.createArticleInfo(article);
         
-        // Trust score with visual bar
+        // Trust score with visual meter
         const trustScore = data.trust_score || analysis.trust_score || 0;
-        html += `<div class="result-item">${UI.formatTrustScore(trustScore)}</div>`;
+        html += UI.formatTrustScore(trustScore);
         
-        // Summary
-        if (analysis.summary || data.summary) {
-            html += `<div class="result-item"><strong>Summary:</strong> ${analysis.summary || data.summary}</div>`;
-        }
+        // Analysis cards grid
+        html += UI.createAnalysisCards(data);
         
-        // Source credibility
-        if (analysis.source_credibility) {
-            const cred = analysis.source_credibility;
-            html += `<div class="result-item">
-                <strong>Source Analysis:</strong><br>
-                Credibility: ${cred.credibility || 'Unknown'} | 
-                Bias: ${cred.bias || 'Unknown'} | 
-                Type: ${cred.type || 'Unknown'}
-            </div>`;
-        }
+        // Summary card
+        html += UI.createSummaryCard(data);
         
-        // Manipulation tactics
-        if (data.manipulation_tactics?.length > 0) {
-            html += '<div class="result-item"><strong>⚠️ Manipulation Tactics Detected:</strong><ul>';
-            data.manipulation_tactics.forEach(tactic => {
-                html += `<li>${tactic}</li>`;
-            });
-            html += '</ul></div>';
-        }
-        
-        // Key claims
-        if (data.key_claims?.length > 0) {
-            html += '<div class="result-item"><strong>Key Claims:</strong><ul>';
-            data.key_claims.forEach(claim => {
-                html += `<li>${claim}</li>`;
-            });
-            html += '</ul></div>';
+        // Export button (future feature)
+        if (data.is_pro) {
+            html += `
+                <div class="export-section">
+                    <button class="export-btn" onclick="NewsAnalyzer.exportReport()">
+                        <span>📄</span>
+                        <span>Export Report (Coming Soon)</span>
+                    </button>
+                </div>
+            `;
         }
         
         resultsDiv.innerHTML = html;
@@ -204,6 +179,9 @@ const NewsAnalyzer = {
         
         // Show resources used
         UI.showResources(data);
+        
+        // Smooth scroll to results
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     },
 
     showLoading(show) {
@@ -231,6 +209,11 @@ const NewsAnalyzer = {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `<div class="error">${message}</div>`;
         resultsDiv.classList.remove('hidden');
+    },
+    
+    exportReport() {
+        // Future feature
+        alert('Export feature coming soon! This will generate a professional PDF report of the analysis.');
     }
 };
 
