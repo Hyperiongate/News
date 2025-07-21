@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Analyzer - Facts & Fakes AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Component styles -->
+    <link rel="stylesheet" href="/static/css/components/pricing-dropdown.css">
 </head>
 <body>
     <!-- Header -->
@@ -22,6 +24,8 @@
                     <a href="#" class="nav-pill">Deepfake Detection</a>
                 </div>
             </div>
+            <!-- Pricing dropdown mount point -->
+            <div id="pricingDropdownMount"></div>
         </nav>
     </header>
 
@@ -116,7 +120,21 @@
         </div>
     </main>
 
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/ui.js"></script>
+    <!-- Core modules -->
+<script src="/static/js/main.js"></script>
+<script src="/static/js/ui-controller.js"></script>
+
+<!-- Components -->
+<script src="/static/js/components/pricing-dropdown.js"></script>
+
+<!-- Initialize components -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Mount pricing dropdown
+        if (window.pricingDropdown) {
+            window.pricingDropdown.mount('pricingDropdownMount');
+        }
+    });
+</script>
 </body>
 </html>
