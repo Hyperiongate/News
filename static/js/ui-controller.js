@@ -197,19 +197,74 @@ class UIController {
         
         if (data.fact_checks?.length) {
             const card = this.createExpandableCard(cardId++, '✓', 'Fact Checks', 
-                `<p><strong>${data.fact_checks.length}</strong> claims checked</p>
-                 <p style="color: #666;">Click to see details</p>`,
-                `${data.fact_checks.map(fc => `
-                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
-                        <div style="font-weight: 600; color: ${fc.verdict?.includes('true') ? '#10b981' : '#ef4444'};">
-                            ${fc.verdict || 'Unverified'}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
-                            "${fc.claim || fc}"
-                        </div>
-                        ${fc.source ? `<div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Source: ${fc.source}</div>` : ''}
-                    </div>
-                `).join('')}`,
+                `<p><strong>${data.fact_checks.length}</strong> claims verified</p>
+                 <p style="color: #666; font-size: 0.9rem;">Click to see details</p>`,
+                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Fact Checking?</h4>
+                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        We verify key claims made in the article against reliable sources and databases. 
+                        This helps you distinguish between verified facts and unsubstantiated claims.
+                    </p>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #059669;">Claims Analyzed</h4>
+                    ${data.fact_checks.map((fc, index) => {
+                        // Handle different data structures for fact checks
+                        const claim = typeof fc === 'string' ? fc : (fc.claim || fc.text || 'Claim');
+                        const verdict = fc.verdict || fc.result || 'Unverified';
+                        const source = fc.source || fc.reference || '';
+                        const explanation = fc.explanation || fc.details || '';
+                        
+                        // Determine verdict color and icon
+                        let verdictColor = '#6b7280'; // gray default
+                        let verdictIcon = '❓';
+                        
+                        if (verdict.toLowerCase().includes('true') || verdict.toLowerCase().includes('verified') || verdict.toLowerCase().includes('correct')) {
+                            verdictColor = '#10b981';
+                            verdictIcon = '✅';
+                        } else if (verdict.toLowerCase().includes('false') || verdict.toLowerCase().includes('incorrect') || verdict.toLowerCase().includes('wrong')) {
+                            verdictColor = '#ef4444';
+                            verdictIcon = '❌';
+                        } else if (verdict.toLowerCase().includes('partial') || verdict.toLowerCase().includes('mixed') || verdict.toLowerCase().includes('misleading')) {
+                            verdictColor = '#f59e0b';
+                            verdictIcon = '⚠️';
+                        }
+                        
+                        return `
+                            <div style="margin: 12px 0; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid ${verdictColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: start; gap: 10px;">
+                                    <span style="font-size: 1.5rem;">${verdictIcon}</span>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: ${verdictColor}; margin-bottom: 8px; font-size: 1rem;">
+                                            ${verdict}
+                                        </div>
+                                        <div style="color: #374151; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                                            <strong>Claim:</strong> "${claim}"
+                                        </div>
+                                        ${explanation ? `
+                                            <div style="color: #6b7280; font-size: 0.9rem; line-height: 1.5; margin-bottom: 8px;">
+                                                ${explanation}
+                                            </div>
+                                        ` : ''}
+                                        ${source ? `
+                                            <div style="color: #9ca3af; font-size: 0.85rem; margin-top: 8px;">
+                                                <strong>Source:</strong> ${source}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #92400e;">Understanding the Results</h4>
+                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                        ${this.getFactCheckSummary(data.fact_checks)}
+                    </p>
+                </div>`,
                 '#10b981'
             );
             cards.push(card);
@@ -357,6 +412,34 @@ class UIController {
         }
     }
 
+    getFactCheckSummary(factChecks) {
+        const total = factChecks.length;
+        let verified = 0;
+        let false_claims = 0;
+        let mixed = 0;
+        
+        factChecks.forEach(fc => {
+            const verdict = (fc.verdict || fc.result || '').toLowerCase();
+            if (verdict.includes('true') || verdict.includes('verified') || verdict.includes('correct')) {
+                verified++;
+            } else if (verdict.includes('false') || verdict.includes('incorrect') || verdict.includes('wrong')) {
+                false_claims++;
+            } else {
+                mixed++;
+            }
+        });
+        
+        if (verified === total) {
+            return "Excellent! All fact-checked claims in this article were verified as accurate. This indicates strong factual reporting.";
+        } else if (false_claims === 0) {
+            return `Most claims checked out well. ${verified} out of ${total} claims were fully verified, with ${mixed} requiring additional context or nuance. Overall, the factual accuracy is good.`;
+        } else if (false_claims < total / 2) {
+            return `Mixed results: ${verified} claims verified, ${false_claims} found to be false or misleading, and ${mixed} partially accurate. Readers should approach this article with some caution.`;
+        } else {
+            return `Significant accuracy concerns: ${false_claims} out of ${total} claims were found to be false or misleading. This article requires careful fact-checking from additional sources.`;
+        }
+    }
+
     generateAssessment(data) {
         const trustScore = data.trust_score || 0;
         const source = data.article?.domain || 'this source';
@@ -387,7 +470,10 @@ class UIController {
         
         // Add fact check summary
         if (data.fact_checks?.length > 0) {
-            const verified = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('true')).length;
+            const verified = data.fact_checks.filter(fc => {
+                const verdict = (fc.verdict || fc.result || '').toLowerCase();
+                return verdict.includes('true') || verdict.includes('verified') || verdict.includes('correct');
+            }).length;
             assessment += ` Of ${data.fact_checks.length} key claims fact-checked, ${verified} were verified as accurate.`;
         }
         
