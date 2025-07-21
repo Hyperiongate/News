@@ -160,17 +160,18 @@ class NewsAnalyzer:
             author_analysis = None
             if article_data.get('author') and is_pro and self.author_analyzer:
                 try:
-                    author_analysis = self.author_analyzer.analyze_author(
+                    # Use the new analyze_authors method for multiple authors
+                    authors = self.author_analyzer.analyze_authors(
                         article_data['author'], 
                         article_data.get('domain')
                     )
-                    # Enhance author analysis
-                    if not author_analysis.get('bio'):
-                        author_analysis['bio'] = f"{article_data['author']} is a journalist who writes for {article_data.get('domain', 'this publication')}."
-                    if not author_analysis.get('articles_count'):
-                        author_analysis['articles_count'] = random.randint(50, 500)
-                    if not author_analysis.get('years_experience'):
-                        author_analysis['years_experience'] = random.randint(2, 15)
+                    
+                    # For now, use the first author as primary (UI will be updated to show all)
+                    if authors:
+                        author_analysis = authors[0]
+                        # Store all authors for future use
+                        author_analysis['all_authors'] = authors
+                        
                 except Exception as e:
                     logger.error(f"Author analysis error: {str(e)}")
                     author_analysis = self._create_default_author_analysis(article_data.get('author'))
