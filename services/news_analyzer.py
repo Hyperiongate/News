@@ -1,256 +1,433 @@
 """
-FILE: services/author_analyzer.py
-LOCATION: news/services/author_analyzer.py
-PURPOSE: Analyze journalist/author credibility using Google Search
+FILE: services/news_analyzer.py
+LOCATION: news/services/news_analyzer.py
+PURPOSE: Core news analysis service with AI and fact-checking
 """
 
 import os
-import logging
-import requests
-import re
 import json
-from urllib.parse import quote
+import logging
+import time
+import re
+from datetime import datetime
+from urllib.parse import urlparse
 
+import openai
+import requests
+from bs4 import BeautifulSoup
+
+from .news_extractor import NewsExtractor
+from .fact_checker import FactChecker
+from .source_credibility import SOURCE_CREDIBILITY
+
+# Set up logging
 logger = logging.getLogger(__name__)
 
-class AuthorAnalyzer:
-    """Analyze author credibility and background using Google Search"""
+# Try to import author analyzer
+try:
+    from .author_analyzer import AuthorAnalyzer
+    AUTHOR_ANALYSIS_ENABLED = True
+except ImportError:
+    logger.warning("Author analyzer not available")
+    AUTHOR_ANALYSIS_ENABLED = False
+    AuthorAnalyzer = None
+
+# Configuration
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+if OPENAI_API_KEY:
+    openai.api_key = OPENAI_API_KEY
+
+
+class NewsAnalyzer:
+    """Main class for analyzing news articles"""
     
     def __init__(self):
+        self.extractor = NewsExtractor()
+        self.fact_checker = FactChecker()
+        self.author_analyzer = AuthorAnalyzer() if AUTHOR_ANALYSIS_ENABLED else None
         self.session = requests.Session()
-        self.google_api_key = os.environ.get('GOOGLE_API_KEY')
-        self.google_cse_id = os.environ.get('GOOGLE_CSE_ID')  # Custom Search Engine ID
-        
-        # Initialize with basic known journalists data
-        self.known_journalists = {
-            'yolande knell': {
-                'outlets': ['BBC'],
-                'expertise': ['Middle East correspondent'],
-                'base_credibility': 80
-            }
-        }
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
     
-    def analyze_author(self, author_name, article_domain=None):
+    def analyze(self, content, content_type='url', is_pro=True):
         """
-        Comprehensive author analysis using Google Search
+        Analyze news content
+        
+        Args:
+            content: URL or article text
+            content_type: 'url' or 'text'
+            is_pro: Whether to use professional features
+            
+        Returns:
+            dict: Analysis results
         """
-        if not author_name:
-            return {
-                'found': False,
-                'message': 'No author information available'
-            }
-        
-        # Clean author name
-        author_name = self._clean_author_name(author_name)
-        
-        analysis = {
-            'name': author_name,
-            'found': True,
-            'credibility_score': 50,  # Start neutral
-            'bio': None,
-            'expertise': [],
-            'awards': [],
-            'website': None,
-            'social_media': {},
-            'previous_work': [],
-            'outlets': [],
-            'verification_status': 'unverified',
-            'search_results': []
-        }
-        
-        # Check known journalists first
-        known_info = self.known_journalists.get(author_name.lower())
-        if known_info:
-            analysis['credibility_score'] = known_info.get('base_credibility', 70)
-            analysis['outlets'] = known_info.get('outlets', [])
-            analysis['expertise'] = known_info.get('expertise', [])
-        
-        # Search Google if API key available
-        if self.google_api_key and self.google_cse_id:
-            google_results = self._google_search_author(author_name, article_domain)
-            analysis.update(google_results)
-        elif self.google_api_key:
-            # Use regular Google Search API
-            google_results = self._google_web_search(author_name, article_domain)
-            analysis.update(google_results)
-        
-        # Calculate final credibility score
-        analysis['credibility_score'] = self._calculate_credibility_score(analysis)
-        analysis['credibility_assessment'] = self._generate_credibility_assessment(analysis)
-        
-        return analysis
-    
-    def _clean_author_name(self, name):
-        """Clean and normalize author name"""
-        # Remove common prefixes
-        name = re.sub(r'^(by|By|BY)\s+', '', name)
-        # Remove extra whitespace
-        name = ' '.join(name.split())
-        # Remove trailing punctuation
-        name = name.rstrip('.,;:')
-        return name
-    
-    def _google_web_search(self, author_name, domain=None):
-        """Use Google Search API to find author information"""
-        results = {
-            'bio': None,
-            'website': None,
-            'expertise': [],
-            'awards': [],
-            'outlets': [],
-            'search_results': []
-        }
-        
-        if not self.google_api_key:
-            return results
-        
         try:
-            # Search for author information
-            queries = [
-                f'"{author_name}" journalist biography',
-                f'"{author_name}" reporter profile',
-                f'"{author_name}" journalist awards credentials'
-            ]
-            
-            if domain:
-                queries[0] += f' site:{domain}'
-            
-            base_url = 'https://www.googleapis.com/customsearch/v1'
-            
-            for query in queries[:2]:  # Limit API calls
-                params = {
-                    'key': self.google_api_key,
-                    'q': query,
-                    'num': 10
+            # Extract article data
+            if content_type == 'url':
+                article_data = self.extractor.extract_article(content)
+                if not article_data:
+                    domain = urlparse(content).netloc.replace('www.', '')
+                    return {
+                        'success': False,
+                        'error': f"Unable to extract content from {domain}. Please try pasting the article text directly.",
+                        'domain': domain,
+                        'suggestions': [
+                            'Copy and paste the article text using the "Paste Text" option',
+                            'Try a different news source',
+                            'Ensure the URL points directly to an article'
+                        ]
+                    }
+            else:
+                article_data = {
+                    'title': 'Direct Text Analysis',
+                    'text': content,
+                    'url': None,
+                    'domain': None,
+                    'publish_date': None,
+                    'author': None
                 }
-                
-                if self.google_cse_id:
-                    params['cx'] = self.google_cse_id
-                
-                response = self.session.get(base_url, params=params, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    for item in data.get('items', []):
-                        result_info = {
-                            'title': item.get('title', ''),
-                            'snippet': item.get('snippet', ''),
-                            'link': item.get('link', '')
-                        }
-                        results['search_results'].append(result_info)
-                        
-                        snippet = item.get('snippet', '').lower()
-                        title = item.get('title', '').lower()
-                        link = item.get('link', '')
-                        
-                        # Extract bio
-                        if not results['bio'] and any(word in snippet for word in ['journalist', 'reporter', 'correspondent']):
-                            results['bio'] = item.get('snippet')
-                        
-                        # Look for credentials and awards
-                        award_keywords = ['award', 'pulitzer', 'emmy', 'peabody', 'murrow', 'polk', 'honor']
-                        if any(word in snippet for word in award_keywords):
-                            results['awards'].append(item.get('snippet'))
-                        
-                        # Find social media/website
-                        if author_name.lower() in link.lower():
-                            if 'twitter.com' in link or 'x.com' in link:
-                                results['website'] = link
-                                results['social_media']['twitter'] = link
-                            elif 'linkedin.com' in link:
-                                results['social_media']['linkedin'] = link
-                            elif 'muckrack.com' in link:
-                                results['website'] = link
-                            elif not results['website'] and ('bio' in link or 'about' in link or 'profile' in link):
-                                results['website'] = link
-                        
-                        # Extract outlets
-                        major_outlets = ['new york times', 'washington post', 'cnn', 'bbc', 'reuters', 
-                                       'associated press', 'guardian', 'npr', 'wsj', 'forbes']
-                        for outlet in major_outlets:
-                            if outlet in snippet or outlet in title:
-                                outlet_name = outlet.title()
-                                if outlet_name not in results['outlets']:
-                                    results['outlets'].append(outlet_name)
-                        
-                        # Extract expertise
-                        if 'correspondent' in snippet:
-                            expertise_match = re.search(r'(\w+\s+correspondent)', snippet, re.I)
-                            if expertise_match:
-                                results['expertise'].append(expertise_match.group(1))
-                
-                else:
-                    logger.warning(f"Google API error: {response.status_code}")
             
-            # Remove duplicates
-            results['awards'] = list(set(results['awards']))[:3]
-            results['expertise'] = list(set(results['expertise']))
-            results['outlets'] = list(set(results['outlets']))
+            # Analyze author if available
+            author_analysis = None
+            if article_data.get('author') and is_pro and self.author_analyzer:
+                try:
+                    author_analysis = self.author_analyzer.analyze_author(
+                        article_data['author'], 
+                        article_data.get('domain')
+                    )
+                except Exception as e:
+                    logger.error(f"Author analysis error: {str(e)}")
+                    author_analysis = {
+                        'name': article_data['author'],
+                        'found': False,
+                        'message': 'Author analysis temporarily unavailable'
+                    }
+            
+            # Perform analysis
+            if is_pro and OPENAI_API_KEY:
+                analysis = self.get_ai_analysis(article_data, author_analysis)
+            else:
+                analysis = self.get_basic_analysis(article_data)
+            
+            # Add source credibility
+            if article_data.get('domain'):
+                analysis['source_credibility'] = self.check_source_credibility(article_data['domain'])
+            
+            # Add fact checks if available
+            if is_pro:
+                fact_check_results = self.fact_checker.check_claims(analysis.get('key_claims', []))
+                analysis['fact_checks'] = fact_check_results
+                
+                # Update trust score based on fact checks
+                if fact_check_results:
+                    false_claims = sum(1 for fc in fact_check_results if fc.get('verdict') == 'false')
+                    if false_claims > 0:
+                        penalty = min(false_claims * 10, 30)
+                        analysis['trust_score'] = max(0, analysis.get('trust_score', 50) - penalty)
+                
+                # Factor in author credibility
+                if author_analysis and author_analysis.get('credibility_score'):
+                    author_weight = 0.2  # Author credibility affects 20% of trust score
+                    current_score = analysis.get('trust_score', 50)
+                    author_score = author_analysis['credibility_score']
+                    analysis['trust_score'] = int(current_score * (1 - author_weight) + author_score * author_weight)
+            
+            # Add related articles
+            if is_pro and article_data.get('title'):
+                analysis['related_articles'] = self.fact_checker.get_related_articles(article_data['title'])
+            
+            # Generate summaries
+            analysis['article_summary'] = self._generate_article_summary(article_data)
+            analysis['conversational_summary'] = self._generate_conversational_summary(
+                article_data, analysis, author_analysis
+            )
+            
+            return {
+                'success': True,
+                'article': article_data,
+                'analysis': analysis,
+                'author_analysis': author_analysis,
+                'is_pro': is_pro,
+                'bias_score': analysis.get('bias_score', 0),
+                'credibility_score': analysis.get('credibility_score', 0.5),
+                'trust_score': analysis.get('trust_score', 50),
+                'summary': analysis.get('summary', ''),
+                'article_summary': analysis.get('article_summary', ''),
+                'conversational_summary': analysis.get('conversational_summary', ''),
+                'manipulation_tactics': analysis.get('manipulation_tactics', []),
+                'key_claims': analysis.get('key_claims', []),
+                'fact_checks': analysis.get('fact_checks', []),
+                'source_credibility': analysis.get('source_credibility', {}),
+                'related_articles': analysis.get('related_articles', []),
+                'article_info': article_data
+            }
             
         except Exception as e:
-            logger.error(f"Error searching for author {author_name}: {str(e)}")
-        
-        return results
+            logger.error(f"News analysis error: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Analysis failed: {str(e)}'
+            }
     
-    def _calculate_credibility_score(self, analysis):
-        """Calculate author credibility score based on found information"""
-        score = 40  # Base score
-        
-        # Positive factors
-        if analysis.get('bio'):
-            score += 15
-        
-        if analysis.get('website'):
-            score += 10
-            if 'linkedin' in str(analysis.get('social_media', {})):
-                score += 5
-        
-        if analysis.get('awards'):
-            score += min(len(analysis['awards']) * 10, 30)  # Max 30 points for awards
-        
-        if analysis.get('outlets'):
-            # Major outlets add credibility
-            major_outlets = ['New York Times', 'Washington Post', 'BBC', 'CNN', 'Reuters', 
-                           'Associated Press', 'Guardian', 'NPR', 'WSJ']
-            for outlet in analysis['outlets']:
-                if outlet in major_outlets:
-                    score += 5
-            score = min(score, 95)  # Cap contribution
-        
-        if len(analysis.get('search_results', [])) > 5:
-            score += 5  # Well-documented online presence
-        
-        # Ensure score is within bounds
-        score = min(100, max(0, score))
-        
-        return score
+    def get_ai_analysis(self, article_data, author_analysis=None):
+        """Use OpenAI to analyze article"""
+        try:
+            prompt = self._create_analysis_prompt(article_data, author_analysis)
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert fact-checker and media analyst. Analyze articles for bias, credibility, and factual accuracy."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=1500
+            )
+            
+            analysis_text = response.choices[0].message.content
+            return self._parse_ai_response(analysis_text)
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            return self.get_basic_analysis(article_data)
     
-    def _generate_credibility_assessment(self, analysis):
-        """Generate human-readable credibility assessment"""
-        score = analysis.get('credibility_score', 50)
-        name = analysis.get('name', 'The author')
+    def _create_analysis_prompt(self, article_data, author_analysis=None):
+        """Create analysis prompt for AI"""
+        author_context = ""
+        if author_analysis and author_analysis.get('found'):
+            author_context = f"""
+            Author Information:
+            - Name: {author_analysis.get('name')}
+            - Credibility Score: {author_analysis.get('credibility_score', 'Unknown')}/100
+            - Previous Work: {len(author_analysis.get('previous_work', []))} articles found
+            """
         
-        assessment = f"{name} "
+        return f"""
+        Analyze this news article for bias, credibility, and factual accuracy.
         
-        if score >= 80:
-            assessment += "appears to be a well-established journalist with strong credentials. "
-            if analysis.get('awards'):
-                assessment += f"Has received recognition for their work. "
-            if analysis.get('outlets'):
-                assessment += f"Has written for: {', '.join(analysis['outlets'][:3])}. "
-        elif score >= 60:
-            assessment += "appears to be a legitimate journalist with verified work history. "
-            if analysis.get('outlets'):
-                assessment += f"Associated with: {', '.join(analysis['outlets'][:2])}. "
-        elif score >= 40:
-            assessment += "has limited publicly available information. "
-            assessment += "This doesn't necessarily indicate poor credibility, but independent verification is recommended. "
+        Title: {article_data.get('title', 'N/A')}
+        Author: {article_data.get('author', 'Unknown')}
+        Source: {article_data.get('domain', 'Unknown')}
+        {author_context}
+        
+        Article Text (first 3000 chars):
+        {article_data.get('text', '')[:3000]}
+        
+        Provide analysis in this JSON format:
+        {{
+            "bias_score": -1.0 to 1.0 (-1 = far left, 0 = center, 1 = far right),
+            "credibility_score": 0.0 to 1.0,
+            "manipulation_tactics": ["list", "of", "tactics"],
+            "key_claims": ["claim 1", "claim 2", "claim 3"],
+            "article_summary": "3-4 sentence summary of the article's main points",
+            "summary": "Brief summary of your credibility findings",
+            "trust_score": 0 to 100
+        }}
+        """
+    
+    def _parse_ai_response(self, response_text):
+        """Parse AI response"""
+        try:
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                parsed = json.loads(json_match.group())
+                # Ensure article_summary exists
+                if 'article_summary' not in parsed:
+                    parsed['article_summary'] = parsed.get('summary', '')
+                return parsed
+        except:
+            pass
+        
+        return {
+            'summary': response_text,
+            'article_summary': 'Unable to generate summary',
+            'bias_score': 0,
+            'credibility_score': 0.5,
+            'trust_score': 50,
+            'manipulation_tactics': [],
+            'key_claims': [],
+            'fact_checks': []
+        }
+    
+    def get_basic_analysis(self, article_data):
+        """Basic analysis without AI"""
+        text = article_data.get('text', '')
+        
+        # Bias detection
+        bias_score = self._detect_bias(text)
+        
+        # Credibility check
+        credibility_score = 0.5
+        if article_data.get('domain'):
+            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
+            credibility_map = {'High': 0.8, 'Medium': 0.6, 'Low': 0.3, 'Very Low': 0.1}
+            credibility_score = credibility_map.get(source_info.get('credibility'), 0.5)
+        
+        # Manipulation tactics
+        manipulation_tactics = self._detect_manipulation(text)
+        
+        # Key claims
+        key_claims = self._extract_key_claims(text)
+        
+        # Generate article summary
+        article_summary = self._generate_article_summary(article_data)
+        
+        # Trust score
+        trust_score = int((credibility_score * 100 + (1 - abs(bias_score)) * 50) / 2)
+        trust_score -= len(manipulation_tactics) * 5
+        trust_score = max(0, min(100, trust_score))
+        
+        # Summary
+        bias_label = 'Left-leaning' if bias_score < -0.3 else 'Right-leaning' if bias_score > 0.3 else 'Center/Neutral'
+        credibility_label = 'High' if credibility_score > 0.7 else 'Medium' if credibility_score > 0.4 else 'Low'
+        
+        summary = f"Analysis complete. Source credibility: {credibility_label}. "
+        summary += f"Political bias: {bias_label}. "
+        if manipulation_tactics:
+            summary += f"Warning: {len(manipulation_tactics)} manipulation tactics detected. "
+        summary += f"Trust score: {trust_score}%."
+        
+        return {
+            'bias_score': bias_score,
+            'credibility_score': credibility_score,
+            'manipulation_tactics': manipulation_tactics,
+            'key_claims': key_claims,
+            'article_summary': article_summary,
+            'fact_checks': [],
+            'summary': summary,
+            'trust_score': trust_score
+        }
+    
+    def _generate_article_summary(self, article_data):
+        """Generate a summary of the article's key points"""
+        if not article_data.get('text'):
+            return "No article content available for summary."
+        
+        text = article_data['text'][:1500]  # First 1500 chars
+        sentences = text.split('.')
+        
+        # Extract key points (first 3-5 important sentences)
+        key_points = []
+        for sentence in sentences[:10]:
+            sentence = sentence.strip()
+            if len(sentence) > 50 and not sentence.startswith(('Photo', 'Image', 'Advertisement')):
+                key_points.append(sentence)
+                if len(key_points) >= 3:
+                    break
+        
+        if key_points:
+            return "Key points: " + ". ".join(key_points) + "."
         else:
-            assessment += "could not be verified through public sources. "
-            assessment += "Consider checking the article's claims carefully and consulting additional sources. "
+            return "Article discusses: " + text[:200] + "..."
+    
+    def _generate_conversational_summary(self, article_data, analysis, author_analysis):
+        """Generate a conversational summary of the analysis"""
+        parts = []
         
-        if analysis.get('expertise'):
-            assessment += f"Areas of expertise: {', '.join(analysis['expertise'][:2])}. "
+        # Source citation
+        if article_data.get('author') and article_data.get('domain'):
+            parts.append(f"This article by {article_data['author']} from {article_data['domain']} ")
+        elif article_data.get('domain'):
+            parts.append(f"This article from {article_data['domain']} ")
+        else:
+            parts.append("This article ")
         
-        return assessment.strip()
+        # Trust assessment
+        trust_score = analysis.get('trust_score', 50)
+        if trust_score >= 80:
+            parts.append("appears to be highly trustworthy based on our analysis. ")
+        elif trust_score >= 60:
+            parts.append("seems reasonably credible with some minor concerns. ")
+        elif trust_score >= 40:
+            parts.append("raises some credibility concerns that readers should be aware of. ")
+        else:
+            parts.append("shows significant credibility issues and should be read with caution. ")
+        
+        # Author credibility
+        if author_analysis and author_analysis.get('found'):
+            if author_analysis.get('credibility_score', 0) >= 70:
+                parts.append(f"The author has established credentials in journalism. ")
+            elif author_analysis.get('credibility_score', 0) < 40:
+                parts.append(f"Limited information is available about the author's background. ")
+        
+        # Bias commentary
+        bias = analysis.get('bias_score', 0)
+        if abs(bias) > 0.5:
+            bias_dir = "left" if bias < 0 else "right"
+            parts.append(f"The content shows a noticeable {bias_dir}-leaning perspective. ")
+        
+        # Manipulation tactics
+        tactics = analysis.get('manipulation_tactics', [])
+        if tactics:
+            parts.append(f"We detected {len(tactics)} potential manipulation tactics including {tactics[0].lower()}. ")
+        
+        # Fact checking
+        fact_checks = analysis.get('fact_checks', [])
+        if fact_checks:
+            verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
+            if verified == len(fact_checks):
+                parts.append("All major claims we checked appear to be factual. ")
+            elif verified > 0:
+                parts.append(f"{verified} out of {len(fact_checks)} claims we checked were verified as true. ")
+        
+        return ''.join(parts)
+    
+    def _detect_bias(self, text):
+        """Detect political bias in text"""
+        text_lower = text.lower()
+        
+        left_keywords = ['progressive', 'liberal', 'democrat', 'left-wing', 'socialist', 'equity']
+        right_keywords = ['conservative', 'republican', 'right-wing', 'traditional', 'libertarian', 'patriot']
+        
+        left_count = sum(1 for keyword in left_keywords if keyword in text_lower)
+        right_count = sum(1 for keyword in right_keywords if keyword in text_lower)
+        
+        if left_count > right_count * 1.5:
+            return -0.5
+        elif right_count > left_count * 1.5:
+            return 0.5
+        return 0
+    
+    def _detect_manipulation(self, text):
+        """Detect manipulation tactics"""
+        tactics = []
+        
+        if len(re.findall(r'[A-Z]{3,}', text)) > 10:
+            tactics.append('Excessive capitalization')
+        if len(re.findall(r'!{2,}', text)) > 0:
+            tactics.append('Multiple exclamation marks')
+        if any(word in text.lower() for word in ['breaking', 'urgent', 'shocking', 'bombshell']):
+            tactics.append('Sensational language')
+        if 'they' in text.lower() and 'us' in text.lower():
+            tactics.append('Us vs. them rhetoric')
+        
+        return tactics
+    
+    def _extract_key_claims(self, text):
+        """Extract key claims from text"""
+        sentences = text.split('.')[:10]
+        claims = []
+        
+        for s in sentences:
+            s = s.strip()
+            if len(s) > 50 and any(word in s.lower() for word in ['is', 'are', 'will', 'would']):
+                claims.append(s)
+                if len(claims) >= 3:
+                    break
+        
+        return claims
+    
+    def check_source_credibility(self, domain):
+        """Check source credibility"""
+        return SOURCE_CREDIBILITY.get(domain, {
+            'credibility': 'Unknown',
+            'bias': 'Unknown',
+            'type': 'Unknown'
+        })
