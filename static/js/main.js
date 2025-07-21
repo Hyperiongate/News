@@ -12,7 +12,6 @@ const NewsAnalyzer = {
     // Initialize the app
     init() {
         this.setupEventListeners();
-        this.loadTrendingNews();
     },
 
     // Set up event listeners
