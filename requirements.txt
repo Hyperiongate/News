@@ -13,7 +13,7 @@ python-dateutil==2.8.2
 # Natural Language Processing
 nltk==3.8.1
 
-# API clients (if using OpenAI)
+# API clients
 openai==1.3.0
 
 # Utilities
