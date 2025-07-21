@@ -1,7 +1,7 @@
 /**
  * FILE: static/js/ui.js
  * LOCATION: news/static/js/ui.js
- * PURPOSE: Enhanced UI helper functions for News Analyzer
+ * PURPOSE: Enhanced UI with author credibility display
  */
 
 const UI = {
@@ -17,6 +17,10 @@ const UI = {
         // Add resources based on what was used
         if (data.analysis?.source_credibility) {
             resources.push('Source Credibility Database');
+        }
+        
+        if (data.author_analysis) {
+            resources.push('Author Background Check');
         }
         
         if (data.is_pro) {
@@ -54,7 +58,7 @@ const UI = {
                     </div>
                 </div>
                 <div class="trust-score-value">${score}%</div>
-                <div class="trust-score-label">Based on credibility, bias, and fact-checking</div>
+                <div class="trust-score-label">Based on source credibility, author background, bias analysis, and fact-checking</div>
             </div>
         `;
         
@@ -76,6 +80,129 @@ const UI = {
         if (score >= 70) return 'trust-high';
         if (score >= 40) return 'trust-medium';
         return 'trust-low';
+    },
+
+    /**
+     * Create article summary section
+     */
+    createArticleSummary(data) {
+        if (!data.article_summary && !data.conversational_summary) {
+            return '';
+        }
+        
+        return `
+            <div class="analysis-card" style="margin-bottom: 1.5rem;">
+                <div class="analysis-header">
+                    <span class="analysis-icon">📋</span>
+                    <span>Article Summary</span>
+                </div>
+                <div>
+                    ${data.article_summary ? `<p style="margin-bottom: 1rem;">${data.article_summary}</p>` : ''}
+                    ${data.conversational_summary ? `
+                        <div style="background: #f3f4f6; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <strong>Our Analysis:</strong><br>
+                            ${data.conversational_summary}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Create author analysis card
+     */
+    createAuthorCard(data) {
+        const author = data.author_analysis;
+        const articleAuthor = data.article?.author;
+        
+        if (!author && !articleAuthor) {
+            return '';
+        }
+        
+        let html = `
+            <div class="analysis-card" style="grid-column: 1 / -1;">
+                <div class="analysis-header">
+                    <span class="analysis-icon">✍️</span>
+                    <span>Author Credibility</span>
+                </div>
+                <div>
+        `;
+        
+        if (author && author.found) {
+            // Author name and basic info
+            html += `<h4 style="margin-bottom: 0.5rem;">${author.name}</h4>`;
+            
+            // Credibility assessment
+            if (author.credibility_assessment) {
+                html += `<p style="margin-bottom: 1rem;">${author.credibility_assessment}</p>`;
+            }
+            
+            // Author website/profile
+            if (author.website) {
+                html += `<p><strong>Profile:</strong> <a href="${author.website}" target="_blank" style="color: var(--primary);">View author's profile →</a></p>`;
+            }
+            
+            // Previous work
+            if (author.previous_work && author.previous_work.length > 0) {
+                html += `
+                    <div style="margin-top: 1rem;">
+                        <strong>Recent Articles by ${author.name}:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                `;
+                
+                author.previous_work.slice(0, 3).forEach(article => {
+                    html += `
+                        <li style="margin-bottom: 0.5rem;">
+                            <a href="${article.url}" target="_blank" style="color: var(--primary);">
+                                ${article.title}
+                            </a>
+                            ${article.source ? ` <span style="color: var(--gray); font-size: 0.9rem;">(${article.source})</span>` : ''}
+                        </li>
+                    `;
+                });
+                
+                html += `</ul></div>`;
+            }
+            
+            // Awards/recognition
+            if (author.awards && author.awards.length > 0) {
+                html += `
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 6px;">
+                        <strong>🏆 Recognition:</strong> ${author.awards[0]}
+                    </div>
+                `;
+            }
+            
+            // Credibility score visualization
+            if (author.credibility_score !== null) {
+                const scoreClass = author.credibility_score >= 70 ? 'trust-high' : 
+                                 author.credibility_score >= 40 ? 'trust-medium' : 'trust-low';
+                html += `
+                    <div style="margin-top: 1rem;">
+                        <strong>Author Credibility Score:</strong>
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
+                            <div style="flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                                <div class="${scoreClass}" style="height: 100%; width: ${author.credibility_score}%; transition: width 1s ease-out;"></div>
+                            </div>
+                            <span style="font-weight: 600;">${author.credibility_score}%</span>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // No author analysis available
+            html += `
+                <p><strong>Author:</strong> ${articleAuthor || 'Not specified'}</p>
+                <p style="color: var(--gray); margin-top: 0.5rem;">
+                    Author background information not available. Consider researching the author independently to verify credentials.
+                </p>
+            `;
+        }
+        
+        html += `</div></div>`;
+        
+        return html;
     },
 
     /**
@@ -229,25 +356,6 @@ const UI = {
     },
 
     /**
-     * Create summary card
-     */
-    createSummaryCard(data) {
-        const summary = data.summary || data.analysis?.summary || 'No summary available';
-        
-        return `
-            <div class="analysis-card" style="margin-top: 1.5rem;">
-                <div class="analysis-header">
-                    <span class="analysis-icon">📝</span>
-                    <span>Analysis Summary</span>
-                </div>
-                <div>
-                    <p>${summary}</p>
-                </div>
-            </div>
-        `;
-    },
-
-    /**
      * Get credibility color
      */
     getCredibilityColor(credibility) {
@@ -308,31 +416,37 @@ const UI = {
     },
 
     /**
-     * Show article info
+     * Show article info with proper citation
      */
     createArticleInfo(article) {
         if (!article) return '';
         
-        const items = [];
+        let html = '<div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">';
         
-        if (article.title) {
-            items.push(`<div class="result-item"><strong>Title:</strong> ${article.title}</div>`);
+        // Proper citation format
+        if (article.author && article.domain && article.title) {
+            html += `<p style="font-size: 1.1rem; margin-bottom: 0.5rem;">
+                <strong>${article.title}</strong>
+            </p>`;
+            html += `<p style="color: var(--gray);">
+                By ${article.author} | ${article.domain}
+                ${article.publish_date ? ` | ${new Date(article.publish_date).toLocaleDateString()}` : ''}
+            </p>`;
+        } else {
+            if (article.title) {
+                html += `<p><strong>Title:</strong> ${article.title}</p>`;
+            }
+            if (article.author) {
+                html += `<p><strong>Author:</strong> ${article.author}</p>`;
+            }
+            if (article.domain) {
+                html += `<p><strong>Source:</strong> ${article.domain}</p>`;
+            }
         }
         
-        if (article.author) {
-            items.push(`<div class="result-item"><strong>Author:</strong> ${article.author}</div>`);
-        }
+        html += '</div>';
         
-        if (article.domain) {
-            items.push(`<div class="result-item"><strong>Source:</strong> ${article.domain}</div>`);
-        }
-        
-        if (article.publish_date) {
-            const date = new Date(article.publish_date).toLocaleDateString();
-            items.push(`<div class="result-item"><strong>Published:</strong> ${date}</div>`);
-        }
-        
-        return items.join('');
+        return html;
     }
 };
 
