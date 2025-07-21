@@ -23,7 +23,7 @@ class ProgressBar {
     render() {
         const container = document.createElement('div');
         container.className = 'progress-container hidden';
-        container.id = 'progressContainer';
+        container.id = 'progressBarContainer';
         container.innerHTML = `
             <div class="progress-content">
                 <div class="progress-header">
@@ -69,12 +69,21 @@ class ProgressBar {
         return container;
     }
 
+    mount() {
+        // Find the progress container in the DOM
+        const mountPoint = document.getElementById('progressContainer');
+        if (mountPoint && !this.container) {
+            mountPoint.appendChild(this.render());
+        }
+    }
+
     show(initialText = 'Initializing analysis...') {
+        // Make sure component is mounted
+        this.mount();
+        
         if (!this.container) {
-            const mountPoint = document.getElementById('loading').parentElement;
-            if (mountPoint) {
-                mountPoint.insertBefore(this.render(), document.getElementById('loading'));
-            }
+            console.error('Progress bar container not found');
+            return;
         }
         
         // Hide old loading if exists
@@ -88,8 +97,13 @@ class ProgressBar {
         this.currentStep = 0;
         this.updateProgress(0, initialText);
         
-        // Show container
+        // Show container with fade-in effect
         this.container.classList.remove('hidden');
+        this.container.style.opacity = '0';
+        setTimeout(() => {
+            this.container.style.transition = 'opacity 0.3s ease-in';
+            this.container.style.opacity = '1';
+        }, 10);
         
         // Start animation
         this.startAnimation();
@@ -97,7 +111,13 @@ class ProgressBar {
 
     hide() {
         if (this.container) {
-            this.container.classList.add('hidden');
+            // Fade out then hide
+            this.container.style.transition = 'opacity 0.3s ease-out';
+            this.container.style.opacity = '0';
+            setTimeout(() => {
+                this.container.classList.add('hidden');
+                this.container.style.opacity = '1';
+            }, 300);
         }
         
         // Stop animation
@@ -107,16 +127,7 @@ class ProgressBar {
     startAnimation() {
         this.stopAnimation(); // Clear any existing timer
         
-        this.animationTimer = setInterval(() => {
-            if (this.currentStep < this.steps.length) {
-                const step = this.steps[this.currentStep];
-                this.updateProgress(step.percent, step.text);
-                this.updateStepIndicators();
-                this.currentStep++;
-            } else {
-                this.stopAnimation();
-            }
-        }, 1500); // Update every 1.5 seconds
+        // Don't auto-animate - let UI controller handle it
     }
 
     stopAnimation() {
@@ -143,17 +154,33 @@ class ProgressBar {
         if (this.progressText) {
             this.progressText.textContent = text;
         }
+        
+        // Update step indicators based on percentage
+        this.updateStepIndicators(percent);
     }
 
-    updateStepIndicators() {
+    updateStepIndicators(percent) {
         const indicators = this.container.querySelectorAll('.step-indicator');
-        const stepMapping = [0, 2, 3, 5, 7]; // Map animation steps to indicator steps
+        
+        // Map percentage to steps
+        let activeSteps = 0;
+        if (percent >= 10) activeSteps = 1;
+        if (percent >= 40) activeSteps = 2;
+        if (percent >= 55) activeSteps = 3;
+        if (percent >= 95) activeSteps = 4;
         
         indicators.forEach((indicator, index) => {
-            if (index <= stepMapping.indexOf(this.currentStep)) {
+            if (index <= activeSteps) {
                 indicator.classList.add('active');
+                // Add pulse animation to current step
+                if (index === activeSteps && percent < 100) {
+                    indicator.classList.add('pulse');
+                } else {
+                    indicator.classList.remove('pulse');
+                }
             } else {
                 indicator.classList.remove('active');
+                indicator.classList.remove('pulse');
             }
         });
     }
@@ -169,6 +196,12 @@ class ProgressBar {
 window.ProgressBar = ProgressBar;
 
 // Auto-register when UI controller is available
-if (window.UI) {
-    window.UI.registerComponent('progressBar', new ProgressBar());
-}
+document.addEventListener('DOMContentLoaded', () => {
+    // Create and register progress bar
+    const progressBar = new ProgressBar();
+    progressBar.mount();
+    
+    if (window.UI) {
+        window.UI.registerComponent('progressBar', progressBar);
+    }
+});
