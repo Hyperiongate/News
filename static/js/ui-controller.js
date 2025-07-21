@@ -119,43 +119,7 @@ class UIController {
     }
 
     showProgress(show, message = 'Analyzing...') {
-        if (show) {
-            document.querySelectorAll('.simple-progress-bar').forEach(el => el.remove());
-            
-            const progress = document.createElement('div');
-            progress.className = 'simple-progress-bar';
-            progress.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 4px;
-                background: #e0e0e0;
-                z-index: 9999;
-            `;
-            progress.innerHTML = `
-                <div style="
-                    height: 100%;
-                    width: 0%;
-                    background: #1a73e8;
-                    transition: width 8s ease-out;
-                "></div>
-            `;
-            document.body.appendChild(progress);
-            
-            setTimeout(() => {
-                progress.firstElementChild.style.width = '95%';
-            }, 100);
-        } else {
-            const bar = document.querySelector('.simple-progress-bar > div');
-            if (bar) {
-                bar.style.transition = 'width 0.3s ease-out';
-                bar.style.width = '100%';
-                setTimeout(() => {
-                    document.querySelectorAll('.simple-progress-bar').forEach(el => el.remove());
-                }, 300);
-            }
-        }
+        // Progress bar functionality removed
     }
 }
 
