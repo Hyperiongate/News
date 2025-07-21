@@ -25,6 +25,15 @@ from .source_credibility import SOURCE_CREDIBILITY
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Try to import author analyzer
+try:
+    from .author_analyzer import AuthorAnalyzer
+    AUTHOR_ANALYSIS_ENABLED = True
+except ImportError:
+    logger.warning("Author analyzer not available")
+    AUTHOR_ANALYSIS_ENABLED = False
+    AuthorAnalyzer = None
+
 # Configuration
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 if OPENAI_API_KEY:
@@ -36,6 +45,7 @@ class NewsAnalyzer:
     def __init__(self):
         self.extractor = NewsExtractor()
         self.fact_checker = FactChecker()
+        self.author_analyzer = AuthorAnalyzer() if AUTHOR_ANALYSIS_ENABLED else None
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -85,6 +95,22 @@ class NewsAnalyzer:
             else:
                 analysis = self.get_basic_analysis(article_data)
             
+            # Analyze author if available
+            author_analysis = None
+            if article_data.get('author') and is_pro and self.author_analyzer:
+                try:
+                    author_analysis = self.author_analyzer.analyze_author(
+                        article_data['author'], 
+                        article_data.get('domain')
+                    )
+                except Exception as e:
+                    logger.error(f"Author analysis error: {str(e)}")
+                    author_analysis = {
+                        'name': article_data['author'],
+                        'found': False,
+                        'message': 'Author analysis temporarily unavailable'
+                    }
+            
             # Add source credibility
             if article_data.get('domain'):
                 analysis['source_credibility'] = self.check_source_credibility(article_data['domain'])
@@ -100,6 +126,13 @@ class NewsAnalyzer:
                     if false_claims > 0:
                         penalty = min(false_claims * 10, 30)
                         analysis['trust_score'] = max(0, analysis.get('trust_score', 50) - penalty)
+                
+                # Factor in author credibility
+                if author_analysis and author_analysis.get('credibility_score'):
+                    author_weight = 0.2  # Author credibility affects 20% of trust score
+                    current_score = analysis.get('trust_score', 50)
+                    author_score = author_analysis['credibility_score']
+                    analysis['trust_score'] = int(current_score * (1 - author_weight) + author_score * author_weight)
             
             # Add related articles
             if is_pro and article_data.get('title'):
@@ -110,13 +143,14 @@ class NewsAnalyzer:
                 analysis['article_summary'] = self._generate_article_summary(article_data)
             
             analysis['conversational_summary'] = self._generate_conversational_summary(
-                article_data, analysis
+                article_data, analysis, author_analysis
             )
             
             return {
                 'success': True,
                 'article': article_data,
                 'analysis': analysis,
+                'author_analysis': author_analysis,
                 'is_pro': is_pro,
                 'bias_score': analysis.get('bias_score', 0),
                 'credibility_score': analysis.get('credibility_score', 0.5),
@@ -286,7 +320,7 @@ class NewsAnalyzer:
         else:
             return "Article discusses: " + text[:200] + "..."
     
-    def _generate_conversational_summary(self, article_data, analysis):
+    def _generate_conversational_summary(self, article_data, analysis, author_analysis=None):
         """Generate a conversational summary of the analysis"""
         parts = []
         
@@ -308,6 +342,13 @@ class NewsAnalyzer:
             parts.append("raises some credibility concerns that readers should be aware of. ")
         else:
             parts.append("shows significant credibility issues and should be read with caution. ")
+        
+        # Author credibility
+        if author_analysis and author_analysis.get('found'):
+            if author_analysis.get('credibility_score', 0) >= 70:
+                parts.append(f"The author has established credentials in journalism. ")
+            elif author_analysis.get('credibility_score', 0) < 40:
+                parts.append(f"Limited information is available about the author's background. ")
         
         # Bias commentary
         bias = analysis.get('bias_score', 0)
