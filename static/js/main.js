@@ -4,7 +4,7 @@
  * PURPOSE: Frontend JavaScript for news analyzer
  * DEPENDENCIES: None (vanilla JavaScript) 
  */
-
+ 
 // Main app object
 const NewsAnalyzer = {
     // Initialize the app
