@@ -1,31 +1,39 @@
 """
 FILE: services/author_analyzer.py
 LOCATION: news/services/author_analyzer.py
-PURPOSE: Analyze journalist/author credibility and background
+PURPOSE: Analyze journalist/author credibility using Google Search
 """
 
 import os
 import logging
 import requests
 import re
+import json
 from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
-    """Analyze author credibility and background"""
+    """Analyze author credibility and background using Google Search"""
     
     def __init__(self):
         self.session = requests.Session()
-        self.google_api_key = os.environ.get('GOOGLE_API_KEY')
-        self.news_api_key = os.environ.get('NEWS_API_KEY')
+        # Use existing Google Fact Check API key for search
+        self.google_api_key = os.environ.get('GOOGLE_FACT_CHECK_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+        self.google_cse_id = os.environ.get('GOOGLE_CSE_ID')  # Custom Search Engine ID
+        
+        # Initialize with basic known journalists data
+        self.known_journalists = {
+            'yolande knell': {
+                'outlets': ['BBC'],
+                'expertise': ['Middle East correspondent'],
+                'base_credibility': 80
+            }
+        }
     
     def analyze_author(self, author_name, article_domain=None):
         """
-        Comprehensive author analysis
-        
-        Returns:
-            dict: Author information including credibility, bio, website, etc.
+        Comprehensive author analysis using Google Search
         """
         if not author_name:
             return {
@@ -39,26 +47,35 @@ class AuthorAnalyzer:
         analysis = {
             'name': author_name,
             'found': True,
-            'credibility_score': None,
+            'credibility_score': 50,  # Start neutral
             'bio': None,
             'expertise': [],
             'awards': [],
             'website': None,
             'social_media': {},
             'previous_work': [],
-            'controversies': [],
-            'verification_status': 'unverified'
+            'outlets': [],
+            'verification_status': 'unverified',
+            'search_results': []
         }
         
-        # Search for author information
-        if self.google_api_key:
-            analysis.update(self._google_search_author(author_name, article_domain))
+        # Check known journalists first
+        known_info = self.known_journalists.get(author_name.lower())
+        if known_info:
+            analysis['credibility_score'] = known_info.get('base_credibility', 70)
+            analysis['outlets'] = known_info.get('outlets', [])
+            analysis['expertise'] = known_info.get('expertise', [])
         
-        # Search for author's other articles
-        if self.news_api_key:
-            analysis['previous_work'] = self._find_other_articles(author_name)
+        # Search Google if API key available
+        if self.google_api_key and self.google_cse_id:
+            google_results = self._google_search_author(author_name, article_domain)
+            analysis.update(google_results)
+        elif self.google_api_key:
+            # Use regular Google Search API
+            google_results = self._google_web_search(author_name, article_domain)
+            analysis.update(google_results)
         
-        # Analyze author credibility based on available data
+        # Calculate final credibility score
         analysis['credibility_score'] = self._calculate_credibility_score(analysis)
         analysis['credibility_assessment'] = self._generate_credibility_assessment(analysis)
         
@@ -74,121 +91,138 @@ class AuthorAnalyzer:
         name = name.rstrip('.,;:')
         return name
     
-    def _google_search_author(self, author_name, domain=None):
-        """Search Google for author information"""
+    def _google_web_search(self, author_name, domain=None):
+        """Use Google Search API to find author information"""
         results = {
             'bio': None,
             'website': None,
             'expertise': [],
-            'awards': []
+            'awards': [],
+            'outlets': [],
+            'search_results': []
         }
         
+        if not self.google_api_key:
+            return results
+        
         try:
-            # Search for author bio and credentials
-            search_query = f'"{author_name}" journalist biography credentials'
+            # Search for author information
+            queries = [
+                f'"{author_name}" journalist biography',
+                f'"{author_name}" reporter profile',
+                f'"{author_name}" journalist awards credentials'
+            ]
+            
             if domain:
-                search_query += f' site:{domain}'
+                queries[0] += f' site:{domain}'
             
-            url = 'https://www.googleapis.com/customsearch/v1'
-            params = {
-                'key': self.google_api_key,
-                'cx': os.environ.get('GOOGLE_CSE_ID'),  # Custom Search Engine ID
-                'q': search_query,
-                'num': 5
-            }
+            base_url = 'https://www.googleapis.com/customsearch/v1'
             
-            response = self.session.get(url, params=params, timeout=5)
-            
-            if response.status_code == 200:
-                data = response.json()
-                items = data.get('items', [])
+            for query in queries[:2]:  # Limit API calls
+                params = {
+                    'key': self.google_api_key,
+                    'q': query,
+                    'num': 10
+                }
                 
-                # Extract information from search results
-                for item in items:
-                    snippet = item.get('snippet', '').lower()
-                    
-                    # Look for bio information
-                    if 'journalist' in snippet or 'reporter' in snippet:
-                        if not results['bio']:
-                            results['bio'] = item.get('snippet')
-                    
-                    # Look for awards
-                    if any(word in snippet for word in ['award', 'pulitzer', 'emmy', 'peabody']):
-                        results['awards'].append(item.get('snippet'))
-                    
-                    # Check for author website
-                    if author_name.lower() in item.get('link', '').lower():
-                        if not results['website']:
-                            results['website'] = item.get('link')
-            
-            # Search for author's professional website
-            if not results['website']:
-                website_search = f'"{author_name}" journalist website portfolio'
-                params['q'] = website_search
-                params['num'] = 3
+                if self.google_cse_id:
+                    params['cx'] = self.google_cse_id
                 
-                response = self.session.get(url, params=params, timeout=5)
+                response = self.session.get(base_url, params=params, timeout=10)
+                
                 if response.status_code == 200:
                     data = response.json()
+                    
                     for item in data.get('items', []):
+                        result_info = {
+                            'title': item.get('title', ''),
+                            'snippet': item.get('snippet', ''),
+                            'link': item.get('link', '')
+                        }
+                        results['search_results'].append(result_info)
+                        
+                        snippet = item.get('snippet', '').lower()
+                        title = item.get('title', '').lower()
                         link = item.get('link', '')
-                        if any(platform in link for platform in ['linkedin.com', 'muckrack.com', 'twitter.com']):
-                            results['website'] = link
-                            break
-                            
+                        
+                        # Extract bio
+                        if not results['bio'] and any(word in snippet for word in ['journalist', 'reporter', 'correspondent']):
+                            results['bio'] = item.get('snippet')
+                        
+                        # Look for credentials and awards
+                        award_keywords = ['award', 'pulitzer', 'emmy', 'peabody', 'murrow', 'polk', 'honor']
+                        if any(word in snippet for word in award_keywords):
+                            results['awards'].append(item.get('snippet'))
+                        
+                        # Find social media/website
+                        if author_name.lower() in link.lower():
+                            if 'twitter.com' in link or 'x.com' in link:
+                                results['website'] = link
+                                results['social_media']['twitter'] = link
+                            elif 'linkedin.com' in link:
+                                results['social_media']['linkedin'] = link
+                            elif 'muckrack.com' in link:
+                                results['website'] = link
+                            elif not results['website'] and ('bio' in link or 'about' in link or 'profile' in link):
+                                results['website'] = link
+                        
+                        # Extract outlets
+                        major_outlets = ['new york times', 'washington post', 'cnn', 'bbc', 'reuters', 
+                                       'associated press', 'guardian', 'npr', 'wsj', 'forbes']
+                        for outlet in major_outlets:
+                            if outlet in snippet or outlet in title:
+                                outlet_name = outlet.title()
+                                if outlet_name not in results['outlets']:
+                                    results['outlets'].append(outlet_name)
+                        
+                        # Extract expertise
+                        if 'correspondent' in snippet:
+                            expertise_match = re.search(r'(\w+\s+correspondent)', snippet, re.I)
+                            if expertise_match:
+                                results['expertise'].append(expertise_match.group(1))
+                
+                else:
+                    logger.warning(f"Google API error: {response.status_code}")
+            
+            # Remove duplicates
+            results['awards'] = list(set(results['awards']))[:3]
+            results['expertise'] = list(set(results['expertise']))
+            results['outlets'] = list(set(results['outlets']))
+            
         except Exception as e:
             logger.error(f"Error searching for author {author_name}: {str(e)}")
         
         return results
     
-    def _find_other_articles(self, author_name):
-        """Find other articles by the same author"""
-        articles = []
-        
-        try:
-            url = "https://newsapi.org/v2/everything"
-            params = {
-                'apiKey': self.news_api_key,
-                'q': f'"{author_name}"',
-                'searchIn': 'author',
-                'sortBy': 'relevancy',
-                'pageSize': 10,
-                'language': 'en'
-            }
-            
-            response = self.session.get(url, params=params, timeout=5)
-            
-            if response.status_code == 200:
-                data = response.json()
-                for article in data.get('articles', [])[:5]:
-                    if article.get('author') and author_name.lower() in article['author'].lower():
-                        articles.append({
-                            'title': article.get('title'),
-                            'source': article.get('source', {}).get('name'),
-                            'url': article.get('url'),
-                            'publishedAt': article.get('publishedAt')
-                        })
-                        
-        except Exception as e:
-            logger.error(f"Error finding articles by {author_name}: {str(e)}")
-        
-        return articles
-    
     def _calculate_credibility_score(self, analysis):
-        """Calculate author credibility score based on available information"""
-        score = 50  # Start at neutral
+        """Calculate author credibility score based on found information"""
+        score = 40  # Base score
         
         # Positive factors
         if analysis.get('bio'):
-            score += 10
-        if analysis.get('website'):
-            score += 10
-        if analysis.get('awards'):
-            score += 20
-        if len(analysis.get('previous_work', [])) > 3:
             score += 15
         
-        # Normalize to 0-100
+        if analysis.get('website'):
+            score += 10
+            if 'linkedin' in str(analysis.get('social_media', {})):
+                score += 5
+        
+        if analysis.get('awards'):
+            score += min(len(analysis['awards']) * 10, 30)  # Max 30 points for awards
+        
+        if analysis.get('outlets'):
+            # Major outlets add credibility
+            major_outlets = ['New York Times', 'Washington Post', 'BBC', 'CNN', 'Reuters', 
+                           'Associated Press', 'Guardian', 'NPR', 'WSJ']
+            for outlet in analysis['outlets']:
+                if outlet in major_outlets:
+                    score += 5
+            score = min(score, 95)  # Cap contribution
+        
+        if len(analysis.get('search_results', [])) > 5:
+            score += 5  # Well-documented online presence
+        
+        # Ensure score is within bounds
         score = min(100, max(0, score))
         
         return score
@@ -198,36 +232,26 @@ class AuthorAnalyzer:
         score = analysis.get('credibility_score', 50)
         name = analysis.get('name', 'The author')
         
+        assessment = f"{name} "
+        
         if score >= 80:
-            assessment = f"{name} appears to be a well-established journalist with a strong track record. "
+            assessment += "appears to be a well-established journalist with strong credentials. "
             if analysis.get('awards'):
-                assessment += "They have received recognition for their work. "
+                assessment += f"Has received recognition for their work. "
+            if analysis.get('outlets'):
+                assessment += f"Has written for: {', '.join(analysis['outlets'][:3])}. "
         elif score >= 60:
-            assessment = f"{name} seems to be a legitimate journalist with some established work. "
-            if analysis.get('previous_work'):
-                assessment += f"Found {len(analysis['previous_work'])} other articles by this author. "
+            assessment += "appears to be a legitimate journalist with verified work history. "
+            if analysis.get('outlets'):
+                assessment += f"Associated with: {', '.join(analysis['outlets'][:2])}. "
         elif score >= 40:
-            assessment = f"{name} has limited publicly available information. "
-            assessment += "This doesn't necessarily indicate poor credibility, but more research may be needed. "
+            assessment += "has limited publicly available information. "
+            assessment += "This doesn't necessarily indicate poor credibility, but independent verification is recommended. "
         else:
-            assessment = f"Could not find substantial information about {name}. "
-            assessment += "Consider verifying the author's credentials independently. "
+            assessment += "could not be verified through public sources. "
+            assessment += "Consider checking the article's claims carefully and consulting additional sources. "
         
-        if analysis.get('website'):
-            assessment += f"Author website/profile found. "
+        if analysis.get('expertise'):
+            assessment += f"Areas of expertise: {', '.join(analysis['expertise'][:2])}. "
         
-        return assessment
-    
-    def get_author_snippet(self, author_name, article_domain=None):
-        """Get a brief author snippet for inline display"""
-        if not author_name:
-            return "Author information not available"
-        
-        # For quick display, just return basic info
-        # Full analysis happens separately
-        clean_name = self._clean_author_name(author_name)
-        
-        if article_domain and article_domain in ['nytimes.com', 'washingtonpost.com', 'bbc.com', 'reuters.com', 'apnews.com']:
-            return f"{clean_name} - Staff journalist at {article_domain}"
-        
-        return clean_name
+        return assessment.strip()
