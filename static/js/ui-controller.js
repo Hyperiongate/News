@@ -126,27 +126,71 @@ class UIController {
             const card = this.createExpandableCard(cardId++, '⚖️', 'Bias Analysis', 
                 `<p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
                  <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>`,
-                `<p>Opinion Content: <strong>${data.bias_analysis.opinion_percentage || 0}%</strong></p>
-                 <p>Emotional Language: <strong>${data.bias_analysis.emotional_score || 0}%</strong></p>
-                 ${data.bias_analysis.manipulation_tactics?.length ? `
-                    <div style="margin-top: 15px;">
-                        <strong>Manipulation Tactics Detected:</strong>
-                        <ul style="margin: 10px 0; padding-left: 20px;">
-                            ${data.bias_analysis.manipulation_tactics.map(t => `<li>${t.name || t}</li>`).join('')}
-                        </ul>
+                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Bias Analysis?</h4>
+                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        We examine how the article presents information - is it giving you straight facts or pushing a particular viewpoint? 
+                        Think of it as checking whether the author is being a neutral reporter or an advocate for a cause.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #059669;">What We Measured</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        <li>Language patterns and word choices</li>
+                        <li>How much is opinion vs. factual reporting</li>
+                        <li>Emotional language and sensationalism</li>
+                        <li>Balance in presenting different viewpoints</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Political Lean</h4>
+                    <div style="position: relative; height: 30px; background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%); border-radius: 15px; margin: 10px 0;">
+                        <div style="position: absolute; top: -5px; left: ${50 + (data.bias_analysis.political_lean / 2)}%; transform: translateX(-50%);">
+                            <div style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 15px solid #1f2937;"></div>
+                            <div style="background: #1f2937; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-top: -5px; white-space: nowrap;">
+                                ${Math.abs(data.bias_analysis.political_lean)}% ${data.bias_analysis.political_lean > 0 ? 'Right' : data.bias_analysis.political_lean < 0 ? 'Left' : 'Center'}
+                            </div>
+                        </div>
                     </div>
-                 ` : ''}
-                 ${data.bias_analysis.loaded_phrases?.length ? `
-                    <div style="margin-top: 15px;">
-                        <strong>Loaded Phrases:</strong>
-                        ${data.bias_analysis.loaded_phrases.slice(0, 3).map(p => `
-                            <div style="margin: 8px 0; padding: 8px; background: #f5f5f5; border-radius: 4px;">
-                                <span style="font-weight: 600;">"${p.text}"</span>
-                                <span style="color: #666; font-size: 0.9rem;"> - ${p.type}</span>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.85rem; color: #6b7280;">
+                        <span>Far Left</span>
+                        <span>Center</span>
+                        <span>Far Right</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                        ${this.getBiasExplanation(data.bias_analysis)}
+                    </p>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <p style="margin: 5px 0; color: #475569; font-size: 0.9rem;">
+                        <strong>Opinion Content:</strong> ${data.bias_analysis.opinion_percentage || 0}% 
+                        ${data.bias_analysis.opinion_percentage > 50 ? '(High - more commentary than reporting)' : '(Acceptable for news)'}
+                    </p>
+                    <p style="margin: 5px 0; color: #475569; font-size: 0.9rem;">
+                        <strong>Emotional Language:</strong> ${data.bias_analysis.emotional_score || 0}% 
+                        ${data.bias_analysis.emotional_score > 50 ? '(Sensationalized tone detected)' : '(Professional tone)'}
+                    </p>
+                </div>
+                
+                ${data.bias_analysis.manipulation_tactics?.length ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">Red Flags Found</h4>
+                        ${data.bias_analysis.manipulation_tactics.map(t => `
+                            <div style="margin: 8px 0; padding: 10px; background: #fee2e2; border-radius: 4px;">
+                                <strong style="color: #991b1b;">${t.name || t}</strong>
+                                ${t.description ? `<p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #7f1d1d;">${t.description}</p>` : ''}
                             </div>
                         `).join('')}
                     </div>
-                 ` : ''}`
+                ` : ''}`, 
+                '#1e40af'
             );
             cards.push(card);
         }
@@ -165,7 +209,8 @@ class UIController {
                         </div>
                         ${fc.source ? `<div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Source: ${fc.source}</div>` : ''}
                     </div>
-                `).join('')}`
+                `).join('')}`,
+                '#10b981'
             );
             cards.push(card);
         }
@@ -194,7 +239,8 @@ class UIController {
                         <p>Curiosity Gap: ${data.title_analysis.curiosity_gap}%</p>
                         <p>Emotional Words: ${data.title_analysis.emotional_words}%</p>
                     </div>
-                 ` : ''}`
+                 ` : ''}`,
+                '#f59e0b'
             );
             cards.push(card);
         }
@@ -213,7 +259,8 @@ class UIController {
                     </div>
                  ` : ''}
                  ${data.author_analysis.articles_count ? `<p style="margin-top: 10px;">Articles Written: <strong>${data.author_analysis.articles_count}</strong></p>` : ''}
-                 ${data.author_analysis.years_experience ? `<p>Years of Experience: <strong>${data.author_analysis.years_experience}</strong></p>` : ''}`
+                 ${data.author_analysis.years_experience ? `<p>Years of Experience: <strong>${data.author_analysis.years_experience}</strong></p>` : ''}`,
+                '#9333ea'
             );
             cards.push(card);
         }
@@ -228,7 +275,7 @@ class UIController {
         this.showResources(data);
     }
 
-    createExpandableCard(id, icon, title, summary, details) {
+    createExpandableCard(id, icon, title, summary, details, borderColor = '#e5e7eb') {
         const card = document.createElement('div');
         card.className = 'analysis-card-standalone';
         card.id = `card-${id}`;
@@ -241,6 +288,7 @@ class UIController {
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            border: 2px solid ${borderColor};
         `;
         
         card.innerHTML = `
@@ -292,6 +340,21 @@ class UIController {
         });
         
         return card;
+    }
+    
+    getBiasExplanation(biasAnalysis) {
+        const lean = biasAnalysis.political_lean || 0;
+        const absLean = Math.abs(lean);
+        
+        if (absLean < 20) {
+            return "Great news! This article maintains a balanced perspective. The author presents information fairly without pushing a particular political agenda. This is what quality journalism looks like.";
+        } else if (absLean < 40) {
+            return `The article leans slightly ${lean > 0 ? 'conservative' : 'liberal'}, but stays within normal bounds for news reporting. Most readers would find it reasonably fair, though those on the ${lean > 0 ? 'left' : 'right'} might notice the subtle tilt.`;
+        } else if (absLean < 60) {
+            return `There's a noticeable ${lean > 0 ? 'conservative' : 'liberal'} perspective here. While not extreme, the article clearly favors one side of the political spectrum. Consider reading additional sources for balance.`;
+        } else {
+            return `This shows strong ${lean > 0 ? 'conservative' : 'liberal'} bias. The article reads more like opinion or advocacy than neutral reporting. You're getting one side of the story - seek out other perspectives for the full picture.`;
+        }
     }
 
     generateAssessment(data) {
