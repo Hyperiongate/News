@@ -1,816 +1,1009 @@
-// static/js/ui-controller.js 
-class UIController {
-    constructor() {
-        this.components = {};
-        this.analysisData = null;
-    }
+"""
+FILE: services/news_analyzer.py
+LOCATION: news/services/news_analyzer.py
+PURPOSE: Core news analysis service with AI and fact-checking
+DEPENDENCIES: OpenAI, requests, BeautifulSoup4
+SERVICE: News analyzer - Main analysis logic
+"""
 
-    registerComponent(name, component) {
-        this.components[name] = component;
-        console.log(`Component registered: ${name}`);
-    }
+import os
+import json
+import logging
+import time
+import re
+from datetime import datetime
+from urllib.parse import urlparse
+import random
 
-    buildResults(data) {
-        if (!data.success) {
-            this.showError(data.error || 'Analysis failed');
-            return;
-        }
+import requests
+from bs4 import BeautifulSoup
+
+from .news_extractor import NewsExtractor
+from .fact_checker import FactChecker
+from .source_credibility import SOURCE_CREDIBILITY
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+# Try to import OpenAI with error handling
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    logger.warning("OpenAI library not available")
+    OPENAI_AVAILABLE = False
+    OpenAI = None
+
+# Try to import author analyzer
+try:
+    from .author_analyzer import AuthorAnalyzer
+    AUTHOR_ANALYSIS_ENABLED = True
+except ImportError:
+    logger.warning("Author analyzer not available")
+    AUTHOR_ANALYSIS_ENABLED = False
+    AuthorAnalyzer = None
+
+# Configuration - Delayed OpenAI client initialization
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+_openai_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client with lazy initialization"""
+    global _openai_client
+    
+    if _openai_client is not None:
+        return _openai_client
+    
+    if not OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY not found in environment variables")
+        return None
+    
+    if not OPENAI_AVAILABLE:
+        logger.warning("OpenAI library not available")
+        return None
+    
+    try:
+        _openai_client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            timeout=30.0,
+            max_retries=2
+        )
+        logger.info("OpenAI client initialized successfully")
+        return _openai_client
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        return None
+
+class NewsAnalyzer:
+    """Main class for analyzing news articles"""
+    
+    def __init__(self):
+        self.extractor = NewsExtractor()
+        self.fact_checker = FactChecker()
+        self.author_analyzer = AuthorAnalyzer() if AUTHOR_ANALYSIS_ENABLED else None
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        # Initialize OpenAI client when needed
+        self._openai_client = None
+    
+    def analyze(self, content, content_type='url', is_pro=True):
+        """
+        Analyze news content
         
-        const resultsDiv = document.getElementById('results');
-        const analyzerCard = document.querySelector('.analyzer-card');
-        
-        // Clear everything
-        resultsDiv.innerHTML = '';
-        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
-        document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
-        document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
-        
-        // INSIDE: Compact Enhanced Summary with Overall Assessment
-        resultsDiv.innerHTML = `
-            <div class="overall-assessment" style="padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; margin: 15px;">
-                <!-- Header with Source Info -->
-                <div style="margin-bottom: 20px;">
-                    <h1 style="font-size: 1.75rem; margin: 0 0 8px 0; color: #1a1a1a;">${data.article?.title || 'Article Analysis'}</h1>
-                    <div style="font-size: 0.9rem; color: #666;">
-                        <span style="font-weight: 600;">Source:</span> ${data.article?.domain || 'Unknown'} 
-                        ${data.article?.author ? `<span style="margin: 0 8px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
-                        ${data.article?.publish_date ? `<span style="margin: 0 8px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString()}` : ''}
-                    </div>
-                </div>
-                
-                <!-- Main Content Grid: Trust Score Left, Metrics Right -->
-                <div style="display: grid; grid-template-columns: 180px 1fr; gap: 25px; align-items: start;">
-                    <!-- Trust Score - Colorful -->
-                    <div style="position: relative; width: 180px; height: 180px;">
-                        <svg width="180" height="180" style="transform: rotate(-90deg);">
-                            <defs>
-                                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style="stop-color:${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'};stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'};stop-opacity:1" />
-                                </linearGradient>
-                            </defs>
-                            <circle cx="90" cy="90" r="80" fill="none" stroke="#f3f4f6" stroke-width="16"/>
-                            <circle cx="90" cy="90" r="80" fill="none" 
-                                stroke="url(#scoreGradient)" 
-                                stroke-width="16"
-                                stroke-dasharray="${(data.trust_score / 100) * 502} 502"
-                                stroke-linecap="round"
-                                filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.1))"/>
-                        </svg>
-                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                            <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, ${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'}, ${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                                ${data.trust_score || 0}%
-                            </div>
-                            <div style="font-size: 0.85rem; color: #6b7280; font-weight: 600; margin-top: -5px;">Trust Score</div>
-                        </div>
-                    </div>
+        Args:
+            content: URL or article text
+            content_type: 'url' or 'text'
+            is_pro: Whether to use professional features
+            
+        Returns:
+            dict: Analysis results
+        """
+        try:
+            # Extract article data
+            if content_type == 'url':
+                article_data = self.extractor.extract_article(content)
+                if not article_data:
+                    domain = urlparse(content).netloc.replace('www.', '')
+                    return {
+                        'success': False,
+                        'error': f"Unable to extract content from {domain}. Please try pasting the article text directly.",
+                        'domain': domain,
+                        'suggestions': [
+                            'Copy and paste the article text using the "Paste Text" option',
+                            'Try a different news source',
+                            'Ensure the URL points directly to an article'
+                        ]
+                    }
+            else:
+                article_data = {
+                    'title': 'Direct Text Analysis',
+                    'text': content,
+                    'url': None,
+                    'domain': None,
+                    'publish_date': None,
+                    'author': None
+                }
+            
+            # Get OpenAI client if needed
+            openai_client = get_openai_client() if is_pro else None
+            
+            # Perform analysis
+            if is_pro and openai_client:
+                raw_analysis = self.get_ai_analysis(article_data, openai_client)
+            else:
+                raw_analysis = self.get_basic_analysis(article_data)
+            
+            # Convert to frontend format
+            bias_score = raw_analysis.get('bias_score', 0)
+            
+            # Create properly formatted bias analysis
+            bias_analysis = {
+                'overall_bias': self._get_bias_label(bias_score),
+                'political_lean': bias_score * 100,  # Convert to -100 to +100 scale
+                'objectivity_score': max(0, 100 - abs(bias_score * 100)),
+                'opinion_percentage': self._calculate_opinion_percentage(article_data.get('text', '')),
+                'emotional_score': self._calculate_emotional_score(article_data.get('text', '')),
+                'manipulation_tactics': self._format_manipulation_tactics(raw_analysis.get('manipulation_tactics', [])),
+                'loaded_phrases': self._extract_loaded_phrases(article_data.get('text', '')),
+                'ai_summary': raw_analysis.get('summary', '')
+            }
+            
+            # Calculate clickbait score
+            clickbait_score = self._calculate_clickbait_score(article_data)
+            clickbait_indicators = self._get_clickbait_indicators(article_data)
+            title_analysis = self._analyze_title(article_data.get('title', ''))
+            
+            # Analyze author if available
+            author_analysis = None
+            if article_data.get('author') and is_pro and self.author_analyzer:
+                try:
+                    # Use the new analyze_authors method for multiple authors
+                    authors = self.author_analyzer.analyze_authors(
+                        article_data['author'], 
+                        article_data.get('domain')
+                    )
                     
-                    <!-- Key Metrics Grid - 2x2 -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #1a73e8;">${data.bias_analysis?.objectivity_score || 0}%</div>
-                            <div style="color: #6b7280; font-size: 0.85rem;">Objectivity</div>
-                        </div>
-                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">${data.clickbait_score || 0}%</div>
-                            <div style="color: #6b7280; font-size: 0.85rem;">Clickbait</div>
-                        </div>
-                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #9333ea;">${data.fact_checks?.length || 0}</div>
-                            <div style="color: #6b7280; font-size: 0.85rem;">Facts Checked</div>
-                        </div>
-                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #059669;">${this.getCredibilityRating(data)}</div>
-                            <div style="color: #6b7280; font-size: 0.85rem;">Source</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Overall Assessment Text -->
-                <div style="background: white; padding: 18px; border-radius: 8px; margin: 20px 0 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-                    <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.1rem;">Overall Assessment</h3>
-                    <p style="line-height: 1.6; color: #374151; margin: 0; font-size: 0.95rem;">
-                        ${this.generateAssessment(data)}
-                    </p>
-                </div>
-                
-                <!-- Key Findings - Compact -->
-                ${this.generateKeyFindings(data)}
-            </div>
-        `;
-        resultsDiv.classList.remove('hidden');
-        
-        // OUTSIDE: Header
-        const header = document.createElement('h2');
-        header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem;';
-        header.textContent = 'Detailed Analysis';
-        analyzerCard.parentNode.insertBefore(header, analyzerCard.nextSibling);
-        
-        // Create 2x2 grid wrapper
-        const gridWrapper = document.createElement('div');
-        gridWrapper.className = 'cards-grid-wrapper';
-        gridWrapper.style.cssText = `
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            max-width: 900px;
-            margin: 0 auto 40px auto;
-            padding: 0 20px;
-        `;
-        
-        // Create cards with expandable functionality
-        const cards = [];
-        let cardId = 0;
-        
-        if (data.bias_analysis) {
-            const card = this.createExpandableCard(cardId++, '⚖️', 'Bias Analysis', 
-                `<p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
-                 <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>`,
-                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Bias Analysis?</h4>
-                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        We examine how the article presents information - is it giving you straight facts or pushing a particular viewpoint? 
-                        Think of it as checking whether the author is being a neutral reporter or an advocate for a cause.
-                    </p>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #059669;">What We Measured</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        <li>Language patterns and word choices</li>
-                        <li>How much is opinion vs. factual reporting</li>
-                        <li>Emotional language and sensationalism</li>
-                        <li>Balance in presenting different viewpoints</li>
-                    </ul>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Political Lean</h4>
-                    <div style="position: relative; height: 30px; background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%); border-radius: 15px; margin: 10px 0;">
-                        <div style="position: absolute; top: -5px; left: ${50 + (data.bias_analysis.political_lean / 2)}%; transform: translateX(-50%);">
-                            <div style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 15px solid #1f2937;"></div>
-                            <div style="background: #1f2937; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-top: -5px; white-space: nowrap;">
-                                ${Math.abs(data.bias_analysis.political_lean)}% ${data.bias_analysis.political_lean > 0 ? 'Right' : data.bias_analysis.political_lean < 0 ? 'Left' : 'Center'}
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.85rem; color: #6b7280;">
-                        <span>Far Left</span>
-                        <span>Center</span>
-                        <span>Far Right</span>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
-                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                        ${this.getBiasExplanation(data.bias_analysis)}
-                    </p>
-                </div>
-                
-                <div style="margin-top: 15px;">
-                    <p style="margin: 5px 0; color: #475569; font-size: 0.9rem;">
-                        <strong>Opinion Content:</strong> ${data.bias_analysis.opinion_percentage || 0}% 
-                        ${data.bias_analysis.opinion_percentage > 50 ? '(High - more commentary than reporting)' : '(Acceptable for news)'}
-                    </p>
-                    <p style="margin: 5px 0; color: #475569; font-size: 0.9rem;">
-                        <strong>Emotional Language:</strong> ${data.bias_analysis.emotional_score || 0}% 
-                        ${data.bias_analysis.emotional_score > 50 ? '(Sensationalized tone detected)' : '(Professional tone)'}
-                    </p>
-                </div>
-                
-                ${data.bias_analysis.manipulation_tactics?.length ? `
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">Red Flags Found</h4>
-                        ${data.bias_analysis.manipulation_tactics.map(t => `
-                            <div style="margin: 8px 0; padding: 10px; background: #fee2e2; border-radius: 4px;">
-                                <strong style="color: #991b1b;">${t.name || t}</strong>
-                                ${t.description ? `<p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #7f1d1d;">${t.description}</p>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}`, 
-                '#1e40af'
-            );
-            cards.push(card);
-        }
-        
-        if (data.fact_checks?.length) {
-            const card = this.createExpandableCard(cardId++, '✓', 'Fact Checks', 
-                `<p><strong>${data.fact_checks.length}</strong> claims verified</p>
-                 <p style="color: #666; font-size: 0.9rem;">Click to see details</p>`,
-                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Fact Checking?</h4>
-                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        We verify key claims made in the article against reliable sources and databases. 
-                        This helps you distinguish between verified facts and unsubstantiated claims.
-                    </p>
-                </div>
-                
-                <div style="margin-top: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #059669;">Claims Analyzed</h4>
-                    ${data.fact_checks.map((fc, index) => {
-                        // Handle different data structures for fact checks
-                        const claim = typeof fc === 'string' ? fc : (fc.claim || fc.text || 'Claim');
-                        const verdict = fc.verdict || fc.result || 'Unverified';
-                        const source = fc.source || fc.reference || '';
-                        const explanation = fc.explanation || fc.details || '';
+                    # For now, use the first author as primary (UI will be updated to show all)
+                    if authors:
+                        author_analysis = authors[0]
+                        # Store all authors for future use
+                        author_analysis['all_authors'] = authors
                         
-                        // Determine verdict color and icon
-                        let verdictColor = '#6b7280'; // gray default
-                        let verdictIcon = '❓';
+                except Exception as e:
+                    logger.error(f"Author analysis error: {str(e)}")
+                    author_analysis = self._create_default_author_analysis(article_data.get('author'))
+            elif article_data.get('author'):
+                author_analysis = self._create_default_author_analysis(article_data.get('author'))
+            
+            # Format key claims and fact checks from AI analysis
+            key_claims = []
+            fact_checks = []
+            
+            if is_pro and openai_client and 'key_claims' in raw_analysis:
+                # Process AI-generated claims with fact checks
+                for claim_data in raw_analysis['key_claims']:
+                    if isinstance(claim_data, dict):
+                        # AI provided structured fact-check data
+                        claim_text = claim_data.get('claim', claim_data.get('text', ''))
+                        key_claims.append({
+                            'text': claim_text,
+                            'importance': 'high',
+                            'context': 'Extracted from article content'
+                        })
                         
-                        if (verdict.toLowerCase().includes('true') || verdict.toLowerCase().includes('verified') || verdict.toLowerCase().includes('correct')) {
-                            verdictColor = '#10b981';
-                            verdictIcon = '✅';
-                        } else if (verdict.toLowerCase().includes('false') || verdict.toLowerCase().includes('incorrect') || verdict.toLowerCase().includes('wrong')) {
-                            verdictColor = '#ef4444';
-                            verdictIcon = '❌';
-                        } else if (verdict.toLowerCase().includes('partial') || verdict.toLowerCase().includes('mixed') || verdict.toLowerCase().includes('misleading')) {
-                            verdictColor = '#f59e0b';
-                            verdictIcon = '⚠️';
-                        }
+                        # Create fact check entry from AI analysis
+                        verdict = claim_data.get('verdict', 'unverified')
                         
-                        return `
-                            <div style="margin: 12px 0; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid ${verdictColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                                <div style="display: flex; align-items: start; gap: 10px;">
-                                    <span style="font-size: 1.5rem;">${verdictIcon}</span>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 600; color: ${verdictColor}; margin-bottom: 8px; font-size: 1rem;">
-                                            ${verdict}
-                                        </div>
-                                        <div style="color: #374151; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
-                                            <strong>Claim:</strong> "${claim}"
-                                        </div>
-                                        ${explanation ? `
-                                            <div style="color: #6b7280; font-size: 0.9rem; line-height: 1.5; margin-bottom: 8px;">
-                                                ${explanation}
-                                            </div>
-                                        ` : ''}
-                                        ${source ? `
-                                            <div style="color: #9ca3af; font-size: 0.85rem; margin-top: 8px;">
-                                                <strong>Source:</strong> ${source}
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #92400e;">Understanding the Results</h4>
-                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                        ${this.getFactCheckSummary(data.fact_checks)}
-                    </p>
-                </div>`,
-                '#10b981'
-            );
-            cards.push(card);
-        }
-        
-        if (data.clickbait_score !== undefined) {
-            const card = this.createExpandableCard(cardId++, '🎣', 'Clickbait Detection', 
-                `<p style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">
-                    ${data.clickbait_score}%
-                 </p>
-                 <p style="color: #666;">Clickbait Score</p>`,
-                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Clickbait Detection?</h4>
-                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        We analyze headlines for manipulative tactics designed to trick you into clicking. 
-                        Clickbait often overpromises, creates false urgency, or withholds key information to generate curiosity.
-                    </p>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #059669;">What We Analyzed</h4>
-                    <div style="padding: 12px; background: #f3f4f6; border-radius: 6px; margin: 10px 0;">
-                        <p style="margin: 0; font-style: italic; color: #374151;">
-                            "${data.article?.title || 'Article Title'}"
-                        </p>
-                    </div>
-                    <ul style="margin: 10px 0; padding-left: 20px; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        <li>Sensationalist language and emotional triggers</li>
-                        <li>Curiosity gaps and withheld information</li>
-                        <li>Excessive punctuation and capitalization</li>
-                        <li>Common clickbait patterns and formulas</li>
-                    </ul>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Clickbait Score Breakdown</h4>
-                    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <!-- Visual gauge -->
-                        <div style="position: relative; height: 40px; background: linear-gradient(to right, #10b981 0%, #fbbf24 50%, #ef4444 100%); border-radius: 20px; overflow: hidden;">
-                            <div style="position: absolute; top: 0; right: ${100 - data.clickbait_score}%; bottom: 0; left: 0; background: rgba(255,255,255,0.9);"></div>
-                            <div style="position: absolute; top: 50%; left: ${data.clickbait_score}%; transform: translate(-50%, -50%); z-index: 10;">
-                                <div style="width: 20px; height: 20px; background: #1f2937; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; color: #6b7280;">
-                            <span>Normal</span>
-                            <span>Moderate</span>
-                            <span>High Clickbait</span>
-                        </div>
-                        
-                        ${data.title_analysis ? `
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px;">
-                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.sensationalism > 50 ? '#ef4444' : '#6b7280'};">
-                                        ${data.title_analysis.sensationalism}%
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #6b7280;">Sensationalism</div>
-                                </div>
-                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.curiosity_gap > 0 ? '#f59e0b' : '#6b7280'};">
-                                        ${data.title_analysis.curiosity_gap}%
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #6b7280;">Curiosity Gap</div>
-                                </div>
-                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.emotional_words > 50 ? '#ef4444' : '#6b7280'};">
-                                        ${data.title_analysis.emotional_words}%
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #6b7280;">Emotional Words</div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                ${data.clickbait_indicators?.length ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">What We Found</h4>
-                        ${data.clickbait_indicators.map(ind => `
-                            <div style="margin: 8px 0; padding: 12px; background: #fef2f2; border-radius: 6px; border-left: 3px solid #ef4444;">
-                                <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
-                                    ${ind.name}
-                                </div>
-                                <div style="font-size: 0.9rem; color: #7f1d1d;">
-                                    ${ind.description}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : `
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #14532d;">What We Found</h4>
-                        <p style="margin: 0; color: #14532d; font-size: 0.95rem;">
-                            Good news! This headline appears straightforward without manipulative tactics.
-                        </p>
-                    </div>
-                `}
-                
-                <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
-                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                        ${this.getClickbaitExplanation(data.clickbait_score)}
-                    </p>
-                </div>
-                
-                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                        <strong>💡 Tip:</strong> Headlines should inform, not manipulate. Good journalism tells you what the story is about without tricks or emotional manipulation.
-                    </p>
-                </div>`,
-                '#f59e0b'
-            );
-            cards.push(card);
-        }
-        
-        if (data.author_analysis) {
-            const card = this.createExpandableCard(cardId++, '✍️', 'Author Analysis', 
-                `<p><strong>${data.author_analysis.name || 'Unknown'}</strong></p>
-                 <p>Credibility: <strong>${data.author_analysis.credibility_score || 'N/A'}</strong></p>`,
-                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Author Analysis?</h4>
-                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                        We research the journalist's background, experience, and credibility. This helps you understand 
-                        who's behind the story and whether they have the expertise to report on this topic.
-                    </p>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #059669;">Author Profile</h4>
-                    <div style="display: flex; align-items: start; gap: 15px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="flex: 1;">
-                            <h5 style="margin: 0 0 8px 0; color: #1f2937; font-size: 1.1rem;">${data.author_analysis.name}</h5>
-                            <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 0.95rem; line-height: 1.6;">
-                                ${data.author_analysis.bio || 'No biographical information available'}
-                            </p>
+                        # Fallback: if still unverified, check if claim is widely reported
+                        if verdict == 'unverified' and self.fact_checker:
+                            # Extract key terms from claim for news search
+                            claim_keywords = ' '.join(claim_text.split()[:10])
+                            related_news = self.fact_checker.get_related_articles(claim_keywords, max_articles=3)
                             
-                            ${data.author_analysis.professional_info ? `
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px;">
-                                    ${data.author_analysis.professional_info.years_experience ? `
-                                        <div style="font-size: 0.9rem;">
-                                            <span style="color: #6b7280;">Experience:</span>
-                                            <strong style="color: #1f2937;">${data.author_analysis.professional_info.years_experience}+ years</strong>
-                                        </div>
-                                    ` : ''}
-                                    ${data.author_analysis.professional_info.outlets?.length ? `
-                                        <div style="font-size: 0.9rem;">
-                                            <span style="color: #6b7280;">Outlet:</span>
-                                            <strong style="color: #1f2937;">${data.author_analysis.professional_info.outlets[0]}</strong>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
+                            if len(related_news) >= 2:
+                                verdict = 'widely_reported'
+                                claim_data['explanation'] = f"This claim appears in multiple news sources. {claim_data.get('explanation', '')}"
+                        
+                        fact_checks.append({
+                            'claim': claim_text,
+                            'verdict': verdict,
+                            'explanation': claim_data.get('explanation', 'No explanation provided'),
+                            'source': 'AI Analysis' if verdict != 'widely_reported' else 'AI + News Verification',
+                            'publisher': 'OpenAI GPT-3.5',
+                            'checked_at': datetime.now().isoformat()
+                        })
+                    else:
+                        # Fallback for simple string claims
+                        key_claims.append({
+                            'text': str(claim_data),
+                            'importance': 'high',
+                            'context': 'Extracted from article content'
+                        })
+            else:
+                # No AI analysis, extract basic claims
+                for i, claim in enumerate(raw_analysis.get('key_claims', [])):
+                    key_claims.append({
+                        'text': claim,
+                        'importance': 'high' if i == 0 else 'medium',
+                        'context': 'Extracted from article content'
+                    })
                 
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Credibility Score: ${data.author_analysis.credibility_score}/100</h4>
-                    
-                    <!-- Visual credibility gauge -->
-                    <div style="position: relative; height: 30px; background: #e5e7eb; border-radius: 15px; overflow: hidden; margin: 10px 0;">
-                        <div style="position: absolute; top: 0; left: 0; bottom: 0; width: ${data.author_analysis.credibility_score}%; background: linear-gradient(to right, #ef4444, #f59e0b, #10b981); transition: width 0.5s ease;"></div>
-                        <div style="position: absolute; top: 50%; left: ${data.author_analysis.credibility_score}%; transform: translate(-50%, -50%);">
-                            <div style="width: 24px; height: 24px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 0.7rem; font-weight: bold;">${data.author_analysis.credibility_score}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.85rem; color: #6b7280;">
-                        <span>Unverified</span>
-                        <span>Moderate</span>
-                        <span>Highly Credible</span>
-                    </div>
-                    
-                    ${data.author_analysis.credibility_explanation ? `
-                        <div style="margin-top: 15px; padding: 12px; background: ${
-                            data.author_analysis.credibility_score >= 60 ? '#f0fdf4' : 
-                            data.author_analysis.credibility_score >= 40 ? '#fef3c7' : '#fee2e2'
-                        }; border-radius: 6px;">
-                            <div style="font-weight: 600; color: ${
-                                data.author_analysis.credibility_score >= 60 ? '#14532d' : 
-                                data.author_analysis.credibility_score >= 40 ? '#713f12' : '#991b1b'
-                            }; margin-bottom: 4px;">
-                                ${data.author_analysis.credibility_explanation.level} Credibility
-                            </div>
-                            <p style="margin: 0; font-size: 0.9rem; color: ${
-                                data.author_analysis.credibility_score >= 60 ? '#166534' : 
-                                data.author_analysis.credibility_score >= 40 ? '#854d0e' : '#7f1d1d'
-                            };">
-                                ${data.author_analysis.credibility_explanation.explanation}
-                            </p>
-                        </div>
-                    ` : ''}
-                    
-                    ${data.author_analysis.credibility_breakdown ? `
-                        <div style="margin-top: 15px;">
-                            <h5 style="margin: 0 0 10px 0; color: #1f2937; font-size: 0.95rem;">Credibility Factors</h5>
-                            <div style="display: grid; gap: 8px;">
-                                ${Object.entries(data.author_analysis.credibility_breakdown).map(([factor, score]) => `
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <span style="flex: 1; font-size: 0.9rem; color: #6b7280; text-transform: capitalize;">
-                                            ${factor.replace('_', ' ')}
-                                        </span>
-                                        <div style="width: 100px; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                                            <div style="width: ${(score/25)*100}%; height: 100%; background: ${score >= 15 ? '#10b981' : score >= 10 ? '#f59e0b' : '#ef4444'};"></div>
-                                        </div>
-                                        <span style="font-size: 0.85rem; color: #1f2937; font-weight: 600; width: 30px; text-align: right;">
-                                            ${score}/25
-                                        </span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-                
-                ${data.author_analysis.online_presence && Object.keys(data.author_analysis.online_presence).some(k => data.author_analysis.online_presence[k]) ? `
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #059669;">Online Presence</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${data.author_analysis.online_presence.twitter ? `
-                                <span style="padding: 4px 12px; background: #1da1f2; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Twitter: ${data.author_analysis.online_presence.twitter}
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.linkedin ? `
-                                <span style="padding: 4px 12px; background: #0077b5; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    LinkedIn ✓
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.wikipedia ? `
-                                <span style="padding: 4px 12px; background: #6b7280; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Wikipedia ✓
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.outlet_profile ? `
-                                <span style="padding: 4px 12px; background: #10b981; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Verified Staff
-                                </span>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${data.author_analysis.sources_checked ? `
-                    <div style="margin-top: 15px; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                        <p style="margin: 0; font-size: 0.85rem; color: #6b7280;">
-                            <strong>Sources checked:</strong> ${data.author_analysis.sources_checked.join(', ')}
-                        </p>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                        <strong>💡 Tip:</strong> ${data.author_analysis.credibility_explanation?.advice || 'Always verify important claims through multiple sources, regardless of author credibility.'}
-                    </p>
-                </div>`,
-                '#9333ea'
-            );
-            cards.push(card);
-        }
-        
-        // Add cards to grid
-        cards.forEach(card => gridWrapper.appendChild(card));
-        
-        // Insert grid after header
-        header.parentNode.insertBefore(gridWrapper, header.nextSibling);
-        
-        // Show resources
-        this.showResources(data);
-    }
-
-    createExpandableCard(id, icon, title, summary, details, borderColor = '#e5e7eb') {
-        const card = document.createElement('div');
-        card.className = 'analysis-card-standalone';
-        card.id = `card-${id}`;
-        card.style.cssText = `
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid ${borderColor};
-        `;
-        
-        card.innerHTML = `
-            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
-                <h3 style="margin: 0; display: flex; align-items: center;">
-                    <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
-                    ${title}
-                </h3>
-                <span class="expand-icon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
-            </div>
-            <div class="card-summary" style="margin-top: 15px;">
-                ${summary}
-            </div>
-            <div class="card-details" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                ${details}
-            </div>
-        `;
-        
-        // Add click handler
-        card.addEventListener('click', function() {
-            const detailsDiv = this.querySelector('.card-details');
-            const expandIcon = this.querySelector('.expand-icon');
-            const isExpanded = detailsDiv.style.display !== 'none';
+                # Use traditional fact checker if no AI fact-checking
+                if is_pro and key_claims:
+                    fact_checks = self.fact_checker.check_claims([c['text'] for c in key_claims])
             
-            if (isExpanded) {
-                detailsDiv.style.display = 'none';
-                expandIcon.style.transform = 'rotate(0deg)';
-                this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-            } else {
-                detailsDiv.style.display = 'block';
-                expandIcon.style.transform = 'rotate(180deg)';
-                this.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
-            }
-        });
-        
-        // Hover effect
-        card.addEventListener('mouseenter', function() {
-            if (!this.querySelector('.card-details').style.display || this.querySelector('.card-details').style.display === 'none') {
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-            }
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            if (!this.querySelector('.card-details').style.display || this.querySelector('.card-details').style.display === 'none') {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-            }
-        });
-        
-        return card;
-    }
-    
-    getBiasExplanation(biasAnalysis) {
-        const lean = biasAnalysis.political_lean || 0;
-        const absLean = Math.abs(lean);
-        
-        if (absLean < 20) {
-            return "Great news! This article maintains a balanced perspective. The author presents information fairly without pushing a particular political agenda. This is what quality journalism looks like.";
-        } else if (absLean < 40) {
-            return `The article leans slightly ${lean > 0 ? 'conservative' : 'liberal'}, but stays within normal bounds for news reporting. Most readers would find it reasonably fair, though those on the ${lean > 0 ? 'left' : 'right'} might notice the subtle tilt.`;
-        } else if (absLean < 60) {
-            return `There's a noticeable ${lean > 0 ? 'conservative' : 'liberal'} perspective here. While not extreme, the article clearly favors one side of the political spectrum. Consider reading additional sources for balance.`;
-        } else {
-            return `This shows strong ${lean > 0 ? 'conservative' : 'liberal'} bias. The article reads more like opinion or advocacy than neutral reporting. You're getting one side of the story - seek out other perspectives for the full picture.`;
-        }
-    }
-
-    getFactCheckSummary(factChecks) {
-        const total = factChecks.length;
-        let verified = 0;
-        let false_claims = 0;
-        let mixed = 0;
-        
-        factChecks.forEach(fc => {
-            const verdict = (fc.verdict || fc.result || '').toLowerCase();
-            if (verdict.includes('true') || verdict.includes('verified') || verdict.includes('correct')) {
-                verified++;
-            } else if (verdict.includes('false') || verdict.includes('incorrect') || verdict.includes('wrong')) {
-                false_claims++;
-            } else {
-                mixed++;
-            }
-        });
-        
-        if (verified === total) {
-            return "Excellent! All fact-checked claims in this article were verified as accurate. This indicates strong factual reporting.";
-        } else if (false_claims === 0) {
-            return `Most claims checked out well. ${verified} out of ${total} claims were fully verified, with ${mixed} requiring additional context or nuance. Overall, the factual accuracy is good.`;
-        } else if (false_claims < total / 2) {
-            return `Mixed results: ${verified} claims verified, ${false_claims} found to be false or misleading, and ${mixed} partially accurate. Readers should approach this article with some caution.`;
-        } else {
-            return `Significant accuracy concerns: ${false_claims} out of ${total} claims were found to be false or misleading. This article requires careful fact-checking from additional sources.`;
-        }
-    }
-
-    getClickbaitExplanation(score) {
-        if (score < 20) {
-            return "This headline is exemplary - it clearly describes the content without manipulation. The author respects your time and intelligence by being straightforward.";
-        } else if (score < 40) {
-            return "This headline shows minor clickbait elements but remains mostly informative. While it might use some attention-grabbing techniques, it doesn't cross into manipulation territory.";
-        } else if (score < 60) {
-            return "This headline uses moderate clickbait tactics. It's trying harder to grab your attention than to inform you. Be aware that the actual content might not live up to the headline's promise.";
-        } else if (score < 80) {
-            return "This is significant clickbait. The headline prioritizes generating clicks over honest communication. Expect the article to underdeliver on what the headline suggests.";
-        } else {
-            return "This is extreme clickbait designed to manipulate your emotions and curiosity. The headline likely misrepresents the actual content. Approach with heavy skepticism.";
-        }
-    }
-    
-    generateAssessment(data) {
-        const trustScore = data.trust_score || 0;
-        const source = data.article?.domain || 'this source';
-        const author = data.article?.author || 'the author';
-        
-        let assessment = `This article from <strong>${source}</strong>`;
-        if (data.article?.author) {
-            assessment += ` by <strong>${author}</strong>`;
-        }
-        
-        if (trustScore >= 70) {
-            assessment += ` demonstrates high credibility with a trust score of ${trustScore}%. The content appears to be well-researched and reliable.`;
-        } else if (trustScore >= 40) {
-            assessment += ` shows moderate credibility with a trust score of ${trustScore}%. Some aspects of the article require careful consideration.`;
-        } else {
-            assessment += ` raises significant credibility concerns with a trust score of only ${trustScore}%. Readers should verify claims through additional sources.`;
-        }
-        
-        // Add bias assessment
-        if (data.bias_analysis) {
-            const bias = Math.abs(data.bias_analysis.political_lean || 0);
-            if (bias > 60) {
-                assessment += ` The article shows strong political bias, which may affect its objectivity.`;
-            } else if (bias > 30) {
-                assessment += ` Some political lean is detected, but within acceptable journalistic standards.`;
-            }
-        }
-        
-        // Add fact check summary
-        if (data.fact_checks?.length > 0) {
-            const verified = data.fact_checks.filter(fc => {
-                const verdict = (fc.verdict || fc.result || '').toLowerCase();
-                return verdict.includes('true') || verdict.includes('verified') || verdict.includes('correct');
-            }).length;
-            assessment += ` Of ${data.fact_checks.length} key claims fact-checked, ${verified} were verified as accurate.`;
-        }
-        
-        return assessment;
-    }
-
-    generateKeyFindings(data) {
-        const findings = [];
-        
-        // Source credibility finding
-        if (data.analysis?.source_credibility?.rating) {
-            findings.push({
-                icon: '🏢',
-                text: `Source rated as <strong>${data.analysis.source_credibility.rating}</strong> credibility`,
-                type: data.analysis.source_credibility.rating === 'High' ? 'positive' : 'neutral'
-            });
-        }
-        
-        // Bias finding
-        if (data.bias_analysis?.overall_bias) {
-            findings.push({
-                icon: '⚖️',
-                text: `${data.bias_analysis.overall_bias} detected`,
-                type: data.bias_analysis.overall_bias.includes('Center') ? 'positive' : 'neutral'
-            });
-        }
-        
-        // Manipulation tactics
-        if (data.bias_analysis?.manipulation_tactics?.length > 0) {
-            findings.push({
-                icon: '⚠️',
-                text: `${data.bias_analysis.manipulation_tactics.length} manipulation tactics identified`,
-                type: 'negative'
-            });
-        }
-        
-        // Clickbait
-        if (data.clickbait_score > 60) {
-            findings.push({
-                icon: '🎣',
-                text: 'High clickbait score detected in headline',
-                type: 'negative'
-            });
-        }
-        
-        if (findings.length === 0) return '';
-        
-        return `
-            <div style="margin-top: 15px;">
-                <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.05rem;">Key Findings</h3>
-                <div style="display: grid; gap: 8px;">
-                    ${findings.map(f => `
-                        <div style="display: flex; align-items: center; padding: 10px; background: ${
-                            f.type === 'positive' ? '#f0fdf4' : 
-                            f.type === 'negative' ? '#fef2f2' : '#f9fafb'
-                        }; border-radius: 6px; border-left: 3px solid ${
-                            f.type === 'positive' ? '#10b981' : 
-                            f.type === 'negative' ? '#ef4444' : '#6b7280'
-                        };">
-                            <span style="font-size: 1.2rem; margin-right: 10px;">${f.icon}</span>
-                            <span style="color: #374151; font-size: 0.9rem;">${f.text}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    getCredibilityRating(data) {
-        if (data.analysis?.source_credibility?.rating) {
-            return data.analysis.source_credibility.rating;
-        }
-        if (data.trust_score >= 70) return 'High';
-        if (data.trust_score >= 40) return 'Medium';
-        return 'Low';
-    }
-
-    showResources(data) {
-        const resourcesDiv = document.getElementById('resources');
-        if (!resourcesDiv) return;
-        
-        const resourcesList = resourcesDiv.querySelector('.resource-list');
-        if (resourcesList) {
-            const resources = [];
-            if (data.is_pro) resources.push('OpenAI GPT-3.5');
-            if (data.fact_checks?.length) resources.push('Google Fact Check API');
-            resources.push('Source Credibility Database');
+            # Calculate trust score with all factors
+            trust_score = self._calculate_comprehensive_trust_score(
+                raw_analysis, bias_analysis, clickbait_score, 
+                author_analysis, fact_checks, article_data
+            )
             
-            resourcesList.innerHTML = resources.map(r => 
-                `<span class="resource-chip">${r}</span>`
-            ).join('');
+            # Get related articles
+            related_articles = []
+            if is_pro and article_data.get('title'):
+                related_articles = self.fact_checker.get_related_articles(article_data['title'])
+            
+            # Generate summaries
+            article_summary = raw_analysis.get('article_summary', self._generate_article_summary(article_data))
+            conversational_summary = self._generate_conversational_summary(
+                article_data, raw_analysis, author_analysis
+            )
+            
+            # Add source credibility with proper format
+            source_credibility = {}
+            if article_data.get('domain'):
+                source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {
+                    'credibility': 'Unknown',
+                    'bias': 'Unknown',
+                    'type': 'Unknown'
+                })
+                source_credibility = {
+                    'rating': source_info.get('credibility', 'Unknown'),
+                    'bias': source_info.get('bias', 'Unknown'),
+                    'type': source_info.get('type', 'Unknown'),
+                    'description': f"{article_data['domain']} is rated as {source_info.get('credibility', 'Unknown')} credibility"
+                }
+            
+            # Add transparency analysis
+            transparency_analysis = self._analyze_transparency(article_data.get('text', ''))
+            
+            # Add content depth analysis
+            content_analysis = self._analyze_content_depth(article_data.get('text', ''))
+            
+            return {
+                'success': True,
+                'article': article_data,
+                'analysis': {
+                    'source_credibility': source_credibility
+                },
+                'bias_analysis': bias_analysis,
+                'clickbait_score': clickbait_score,
+                'clickbait_indicators': clickbait_indicators,
+                'title_analysis': title_analysis,
+                'author_analysis': author_analysis,
+                'is_pro': is_pro,
+                'trust_score': trust_score,
+                'article_summary': article_summary,
+                'conversational_summary': conversational_summary,
+                'key_claims': key_claims,
+                'fact_checks': fact_checks,
+                'fact_check_summary': self._generate_fact_check_summary(fact_checks),
+                'related_articles': related_articles,
+                'source_credibility': source_credibility,
+                'transparency_analysis': transparency_analysis,
+                'content_analysis': content_analysis
+            }
+            
+        except Exception as e:
+            logger.error(f"News analysis error: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Analysis failed: {str(e)}'
+            }
+    
+    def _get_bias_label(self, bias_score):
+        """Convert bias score to label"""
+        if bias_score < -0.5:
+            return "Strong Left Bias"
+        elif bias_score < -0.2:
+            return "Left-Leaning Bias"
+        elif bias_score > 0.5:
+            return "Strong Right Bias"
+        elif bias_score > 0.2:
+            return "Right-Leaning Bias"
+        else:
+            return "Center/Minimal Bias"
+    
+    def _calculate_opinion_percentage(self, text):
+        """Calculate percentage of opinion vs facts"""
+        if not text:
+            return 0
+        
+        opinion_words = ['believe', 'think', 'feel', 'opinion', 'seems', 'appears', 'probably', 'maybe', 'perhaps']
+        text_lower = text.lower()
+        opinion_count = sum(1 for word in opinion_words if word in text_lower)
+        
+        sentences = text.split('.')
+        opinion_sentences = sum(1 for s in sentences if any(word in s.lower() for word in opinion_words))
+        
+        return min(100, int((opinion_sentences / max(len(sentences), 1)) * 100))
+    
+    def _calculate_emotional_score(self, text):
+        """Calculate emotional language score"""
+        if not text:
+            return 0
+        
+        emotional_words = ['shocking', 'outrageous', 'disgusting', 'amazing', 'terrible', 'horrible', 
+                          'fantastic', 'disaster', 'crisis', 'scandal', 'explosive', 'bombshell']
+        text_lower = text.lower()
+        
+        emotional_count = sum(1 for word in emotional_words if word in text_lower)
+        word_count = len(text.split())
+        
+        return min(100, int((emotional_count / max(word_count, 1)) * 1000))
+    
+    def _format_manipulation_tactics(self, tactics):
+        """Format manipulation tactics for frontend"""
+        formatted = []
+        tactic_details = {
+            'Excessive capitalization': {
+                'name': 'Excessive Capitalization',
+                'type': 'sensational_language',
+                'description': 'Using ALL CAPS to create false urgency or emphasis'
+            },
+            'Multiple exclamation marks': {
+                'name': 'Multiple Exclamation Marks',
+                'type': 'sensational_language',
+                'description': 'Using excessive punctuation to manipulate emotions'
+            },
+            'Sensational language': {
+                'name': 'Sensational Language',
+                'type': 'sensational_language',
+                'description': 'Using dramatic words to exaggerate importance'
+            },
+            'Us vs. them rhetoric': {
+                'name': 'Us vs. Them Rhetoric',
+                'type': 'false_dilemma',
+                'description': 'Creating artificial divisions to manipulate readers'
+            }
         }
         
-        resourcesDiv.classList.remove('hidden');
-        if (resourcesDiv.closest('.analyzer-card')) {
-            document.querySelector('.analyzer-card').parentNode.appendChild(resourcesDiv);
+        for tactic in tactics:
+            details = tactic_details.get(tactic, {
+                'name': tactic,
+                'type': 'manipulation',
+                'description': 'Potential manipulation tactic detected'
+            })
+            formatted.append(details)
+        
+        return formatted
+    
+    def _extract_loaded_phrases(self, text):
+        """Extract loaded/biased phrases"""
+        if not text:
+            return []
+        
+        loaded_patterns = [
+            (r'\b(radical|extreme|far-left|far-right)\b', 'political'),
+            (r'\b(destroy|devastate|annihilate)\b', 'hyperbolic'),
+            (r'\b(always|never|everyone|no one)\b', 'absolute'),
+            (r'\b(obviously|clearly|undeniably)\b', 'assumption')
+        ]
+        
+        phrases = []
+        for pattern, phrase_type in loaded_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                start = max(0, match.start() - 20)
+                end = min(len(text), match.end() + 20)
+                context = text[start:end].strip()
+                phrases.append({
+                    'text': match.group(),
+                    'type': phrase_type,
+                    'context': context
+                })
+                if len(phrases) >= 5:
+                    return phrases
+        
+        return phrases
+    
+    def _calculate_clickbait_score(self, article_data):
+        """Calculate clickbait score"""
+        title = article_data.get('title', '')
+        if not title:
+            return 0
+        
+        score = 0
+        
+        # Check for clickbait patterns
+        clickbait_patterns = [
+            (r'you won\'t believe', 20),
+            (r'shocking', 15),
+            (r'this one trick', 25),
+            (r'\?!', 10),
+            (r'number \d+', 10),
+            (r'reasons why', 15),
+            (r'what happened next', 20)
+        ]
+        
+        title_lower = title.lower()
+        for pattern, points in clickbait_patterns:
+            if re.search(pattern, title_lower):
+                score += points
+        
+        # Check for excessive capitalization
+        caps_ratio = sum(1 for c in title if c.isupper()) / max(len(title), 1)
+        if caps_ratio > 0.5:
+            score += 20
+        
+        return min(100, score)
+    
+    def _get_clickbait_indicators(self, article_data):
+        """Get specific clickbait indicators"""
+        indicators = []
+        title = article_data.get('title', '')
+        
+        if '?' in title and '!' in title:
+            indicators.append({
+                'type': 'curiosity_gap',
+                'name': 'Question with Exclamation',
+                'description': 'Title uses question and exclamation to create curiosity'
+            })
+        
+        if re.search(r'\b\d+\b', title):
+            indicators.append({
+                'type': 'lists_numbers',
+                'name': 'Numbered List',
+                'description': 'Title includes numbers suggesting a listicle format'
+            })
+        
+        if any(word in title.lower() for word in ['shocking', 'unbelievable', 'amazing']):
+            indicators.append({
+                'type': 'sensational_language',
+                'name': 'Sensational Words',
+                'description': 'Title uses emotionally charged language'
+            })
+        
+        return indicators
+    
+    def _analyze_title(self, title):
+        """Analyze title for clickbait elements"""
+        if not title:
+            return {}
+        
+        word_count = len(title.split())
+        emotional_words = ['shocking', 'amazing', 'unbelievable', 'incredible', 'outrageous']
+        emotional_count = sum(1 for word in emotional_words if word in title.lower())
+        
+        return {
+            'sensationalism': min(100, emotional_count * 30),
+            'curiosity_gap': 50 if '?' in title else 0,
+            'emotional_words': min(100, int((emotional_count / max(word_count, 1)) * 200))
         }
-    }
-
-    showError(message) {
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = `
-            <div class="error-card">
-                <div class="error-icon">⚠️</div>
-                <div class="error-content">
-                    <h3>Analysis Error</h3>
-                    <p>${message}</p>
-                </div>
-            </div>
-        `;
-        resultsDiv.classList.remove('hidden');
-    }
-
-    showProgress(show, message = 'Analyzing...') {
-        // Progress bar functionality removed
-    }
-}
-
-window.UI = new UIController();
+    
+    def _create_default_author_analysis(self, author_name):
+        """Create default author analysis when detailed info not available"""
+        return {
+            'name': author_name,
+            'found': False,
+            'bio': f"{author_name} - Author information not available in our database",
+            'credibility_score': 50,
+            'articles_count': None,
+            'years_experience': None,
+            'verification_status': {
+                'verified': False,
+                'journalist_verified': False,
+                'outlet_staff': False
+            }
+        }
+    
+    def _calculate_comprehensive_trust_score(self, raw_analysis, bias_analysis, 
+                                           clickbait_score, author_analysis, 
+                                           fact_checks, article_data):
+        """Calculate comprehensive trust score"""
+        score = 50  # Base score
+        
+        # Source credibility impact (up to +/- 20)
+        if article_data.get('domain'):
+            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
+            cred_map = {'High': 20, 'Medium': 10, 'Low': -10, 'Very Low': -20}
+            score += cred_map.get(source_info.get('credibility', ''), 0)
+        
+        # Bias impact (up to -20 for extreme bias)
+        political_lean = abs(bias_analysis.get('political_lean', 0))
+        if political_lean > 80:
+            score -= 20
+        elif political_lean > 60:
+            score -= 10
+        
+        # Clickbait impact (up to -15)
+        score -= min(15, clickbait_score // 5)
+        
+        # Author credibility impact (up to +/- 15)
+        if author_analysis and author_analysis.get('credibility_score'):
+            author_cred = author_analysis['credibility_score']
+            if author_cred >= 70:
+                score += 15
+            elif author_cred < 40:
+                score -= 10
+        
+        # Fact check impact (up to -30)
+        if fact_checks:
+            false_count = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
+            score -= false_count * 10
+        
+        # Manipulation tactics impact (up to -20)
+        tactics_count = len(bias_analysis.get('manipulation_tactics', []))
+        score -= min(20, tactics_count * 5)
+        
+        return max(0, min(100, score))
+    
+    def _generate_fact_check_summary(self, fact_checks):
+        """Generate summary of fact check results"""
+        if not fact_checks:
+            return "No fact checks performed."
+        
+        total = len(fact_checks)
+        verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
+        false = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
+        mixed = sum(1 for fc in fact_checks if fc.get('verdict') in ['partially_true', 'mixed'])
+        
+        return f"Checked {total} claims: {verified} verified as true, {false} found false, {mixed} partially true."
+    
+    def get_ai_analysis(self, article_data, openai_client):
+        """Use OpenAI to analyze article with integrated fact-checking"""
+        try:
+            if not openai_client:
+                logger.warning("OpenAI client not available, falling back to basic analysis")
+                return self.get_basic_analysis(article_data)
+                
+            prompt = self._create_analysis_prompt(article_data)
+            
+            # Updated to use new OpenAI client
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert fact-checker and media analyst. Analyze articles for bias, credibility, and factual accuracy. When fact-checking claims, use your knowledge to verify them and provide clear explanations."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,  # Lower temperature for more factual responses
+                max_tokens=2000   # Increased for detailed fact-checking
+            )
+            
+            analysis_text = response.choices[0].message.content
+            return self._parse_ai_response(analysis_text)
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            return self.get_basic_analysis(article_data)
+    
+    def _create_analysis_prompt(self, article_data):
+        """Create analysis prompt for AI with integrated fact-checking"""
+        return f"""
+        Analyze this news article for bias, credibility, and factual accuracy.
+        
+        Title: {article_data.get('title', 'N/A')}
+        Author: {article_data.get('author', 'Unknown')}
+        Source: {article_data.get('domain', 'Unknown')}
+        
+        Article Text (first 3000 chars):
+        {article_data.get('text', '')[:3000]}
+        
+        Provide analysis in this exact JSON format:
+        {{
+            "bias_score": -1.0 to 1.0 (-1 = far left, 0 = center, 1 = far right),
+            "credibility_score": 0.0 to 1.0,
+            "manipulation_tactics": ["list", "of", "tactics"],
+            "key_claims": [
+                {{
+                    "claim": "exact text of the claim from the article",
+                    "verdict": "MUST be one of: true, false, partially_true",
+                    "explanation": "explanation based on your knowledge"
+                }}
+            ],
+            "article_summary": "3-4 sentence summary of the article's main points",
+            "summary": "Brief summary of your credibility and bias findings",
+            "trust_score": 0 to 100
+        }}
+        
+        CRITICAL FACT-CHECKING RULES:
+        1. Extract 3-5 specific factual claims from the article
+        2. For EACH claim, you MUST choose a verdict from: "true", "false", or "partially_true"
+        3. NEVER use "unverified" - make your best assessment based on your training data
+        4. If you're unsure, choose "partially_true" and explain what parts might be accurate
+        5. Base verdicts on factual knowledge, not opinions about the source
+        """
+    
+    def _parse_ai_response(self, response_text):
+        """Parse AI response with better error handling"""
+        try:
+            # Find JSON in response
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                parsed = json.loads(json_match.group())
+                
+                # Ensure all required fields exist
+                if 'article_summary' not in parsed:
+                    parsed['article_summary'] = parsed.get('summary', 'Unable to generate summary')
+                
+                # Ensure key_claims is properly formatted
+                if 'key_claims' in parsed and isinstance(parsed['key_claims'], list):
+                    # Validate each claim has required fields
+                    for i, claim in enumerate(parsed['key_claims']):
+                        if isinstance(claim, str):
+                            # Convert string to proper format
+                            parsed['key_claims'][i] = {
+                                'claim': claim,
+                                'verdict': 'unverified',
+                                'explanation': 'Claim extracted but not verified'
+                            }
+                        elif isinstance(claim, dict):
+                            # Ensure all fields exist
+                            if 'claim' not in claim:
+                                claim['claim'] = f"Claim {i+1}"
+                            if 'verdict' not in claim:
+                                claim['verdict'] = 'unverified'
+                            if 'explanation' not in claim:
+                                claim['explanation'] = 'No explanation provided'
+                
+                return parsed
+        except Exception as e:
+            logger.error(f"Error parsing AI response: {str(e)}")
+        
+        # Fallback response
+        return {
+            'summary': response_text[:500] if response_text else 'Analysis failed',
+            'article_summary': 'Unable to generate summary',
+            'bias_score': 0,
+            'credibility_score': 0.5,
+            'trust_score': 50,
+            'manipulation_tactics': [],
+            'key_claims': [],
+            'fact_checks': []
+        }
+    
+    def get_basic_analysis(self, article_data):
+        """Basic analysis without AI"""
+        text = article_data.get('text', '')
+        
+        # Bias detection
+        bias_score = self._detect_bias(text)
+        
+        # Credibility check
+        credibility_score = 0.5
+        if article_data.get('domain'):
+            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
+            credibility_map = {'High': 0.8, 'Medium': 0.6, 'Low': 0.3, 'Very Low': 0.1}
+            credibility_score = credibility_map.get(source_info.get('credibility'), 0.5)
+        
+        # Manipulation tactics
+        manipulation_tactics = self._detect_manipulation(text)
+        
+        # Key claims (basic extraction)
+        key_claims = self._extract_key_claims(text)
+        
+        # Generate article summary
+        article_summary = self._generate_article_summary(article_data)
+        
+        # Trust score
+        trust_score = int((credibility_score * 100 + (1 - abs(bias_score)) * 50) / 2)
+        trust_score -= len(manipulation_tactics) * 5
+        trust_score = max(0, min(100, trust_score))
+        
+        # Summary
+        bias_label = 'Left-leaning' if bias_score < -0.3 else 'Right-leaning' if bias_score > 0.3 else 'Center/Neutral'
+        credibility_label = 'High' if credibility_score > 0.7 else 'Medium' if credibility_score > 0.4 else 'Low'
+        
+        summary = f"Analysis complete. Source credibility: {credibility_label}. "
+        summary += f"Political bias: {bias_label}. "
+        if manipulation_tactics:
+            summary += f"Warning: {len(manipulation_tactics)} manipulation tactics detected. "
+        summary += f"Trust score: {trust_score}%."
+        
+        return {
+            'bias_score': bias_score,
+            'credibility_score': credibility_score,
+            'manipulation_tactics': manipulation_tactics,
+            'key_claims': key_claims,
+            'article_summary': article_summary,
+            'fact_checks': [],
+            'summary': summary,
+            'trust_score': trust_score
+        }
+    
+    def _generate_article_summary(self, article_data):
+        """Generate a summary of the article's key points"""
+        if not article_data.get('text'):
+            return "No article content available for summary."
+        
+        text = article_data['text'][:1500]  # First 1500 chars
+        sentences = text.split('.')
+        
+        # Extract key points (first 3-5 important sentences)
+        key_points = []
+        for sentence in sentences[:10]:
+            sentence = sentence.strip()
+            if len(sentence) > 50 and not sentence.startswith(('Photo', 'Image', 'Advertisement')):
+                key_points.append(sentence)
+                if len(key_points) >= 3:
+                    break
+        
+        if key_points:
+            return "Key points: " + ". ".join(key_points) + "."
+        else:
+            return "Article discusses: " + text[:200] + "..."
+    
+    def _generate_conversational_summary(self, article_data, analysis, author_analysis=None):
+        """Generate a conversational summary of the analysis"""
+        parts = []
+        
+        # Source citation
+        if article_data.get('author') and article_data.get('domain'):
+            parts.append(f"This article by {article_data['author']} from {article_data['domain']} ")
+        elif article_data.get('domain'):
+            parts.append(f"This article from {article_data['domain']} ")
+        else:
+            parts.append("This article ")
+        
+        # Trust assessment
+        trust_score = analysis.get('trust_score', 50)
+        if trust_score >= 80:
+            parts.append("appears to be highly trustworthy based on our analysis. ")
+        elif trust_score >= 60:
+            parts.append("seems reasonably credible with some minor concerns. ")
+        elif trust_score >= 40:
+            parts.append("raises some credibility concerns that readers should be aware of. ")
+        else:
+            parts.append("shows significant credibility issues and should be read with caution. ")
+        
+        # Author credibility
+        if author_analysis and author_analysis.get('found'):
+            if author_analysis.get('credibility_score', 0) >= 70:
+                parts.append(f"The author has established credentials in journalism. ")
+            elif author_analysis.get('credibility_score', 0) < 40:
+                parts.append(f"Limited information is available about the author's background. ")
+        
+        # Bias commentary
+        bias = analysis.get('bias_score', 0)
+        if abs(bias) > 0.5:
+            bias_dir = "left" if bias < 0 else "right"
+            parts.append(f"The content shows a noticeable {bias_dir}-leaning perspective. ")
+        
+        # Manipulation tactics
+        tactics = analysis.get('manipulation_tactics', [])
+        if tactics:
+            parts.append(f"We detected {len(tactics)} potential manipulation tactics including {tactics[0].lower()}. ")
+        
+        # Fact checking
+        fact_checks = analysis.get('fact_checks', [])
+        if fact_checks:
+            verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
+            if verified == len(fact_checks):
+                parts.append("All major claims we checked appear to be factual. ")
+            elif verified > 0:
+                parts.append(f"{verified} out of {len(fact_checks)} claims we checked were verified as true. ")
+        
+        return ''.join(parts)
+    
+    def _detect_bias(self, text):
+        """Detect political bias in text"""
+        text_lower = text.lower()
+        
+        left_keywords = ['progressive', 'liberal', 'democrat', 'left-wing', 'socialist', 'equity']
+        right_keywords = ['conservative', 'republican', 'right-wing', 'traditional', 'libertarian', 'patriot']
+        
+        left_count = sum(1 for keyword in left_keywords if keyword in text_lower)
+        right_count = sum(1 for keyword in right_keywords if keyword in text_lower)
+        
+        if left_count > right_count * 1.5:
+            return -0.5
+        elif right_count > left_count * 1.5:
+            return 0.5
+        return 0
+    
+    def _detect_manipulation(self, text):
+        """Detect manipulation tactics"""
+        tactics = []
+        
+        if len(re.findall(r'[A-Z]{3,}', text)) > 10:
+            tactics.append('Excessive capitalization')
+        if len(re.findall(r'!{2,}', text)) > 0:
+            tactics.append('Multiple exclamation marks')
+        if any(word in text.lower() for word in ['breaking', 'urgent', 'shocking', 'bombshell']):
+            tactics.append('Sensational language')
+        if 'they' in text.lower() and 'us' in text.lower():
+            tactics.append('Us vs. them rhetoric')
+        
+        return tactics
+    
+    def _extract_key_claims(self, text):
+        """Extract key claims from text"""
+        sentences = text.split('.')[:10]
+        claims = []
+        
+        for s in sentences:
+            s = s.strip()
+            if len(s) > 50 and any(word in s.lower() for word in ['is', 'are', 'will', 'would']):
+                claims.append(s)
+                if len(claims) >= 3:
+                    break
+        
+        return claims
+    
+    def check_source_credibility(self, domain):
+        """Check source credibility"""
+        return SOURCE_CREDIBILITY.get(domain, {
+            'credibility': 'Unknown',
+            'bias': 'Unknown',
+            'type': 'Unknown'
+        })
+    
+    def _analyze_transparency(self, text):
+        """Analyze article transparency and sourcing"""
+        if not text:
+            return {
+                'transparency_score': 0,
+                'source_count': 0,
+                'source_types': {},
+                'has_links': False,
+                'quote_ratio': 0
+            }
+        
+        # Count different types of sources
+        source_types = {
+            'named_sources': 0,
+            'anonymous_sources': 0,
+            'official_sources': 0,
+            'expert_sources': 0,
+            'document_references': 0
+        }
+        
+        # Look for named sources
+        named_patterns = [
+            r'([A-Z][a-z]+ [A-Z][a-z]+), (?:a |an |the )?(?:said|told|explained)',
+            r'According to ([A-Z][a-z]+ [A-Z][a-z]+)',
+            r'"[^"]+," said ([A-Z][a-z]+ [A-Z][a-z]+)'
+        ]
+        
+        for pattern in named_patterns:
+            matches = re.findall(pattern, text)
+            source_types['named_sources'] += len(matches)
+        
+        # Look for anonymous sources
+        anon_patterns = [
+            r'sources? (?:said|told|confirmed)',
+            r'anonymous (?:source|official)',
+            r'person familiar with',
+            r'official who spoke on condition of anonymity'
+        ]
+        
+        for pattern in anon_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            source_types['anonymous_sources'] += len(matches)
+        
+        # Look for official sources
+        official_patterns = [
+            r'(?:Department|Ministry|Agency) of \w+',
+            r'(?:White House|Pentagon|Congress|Parliament)',
+            r'(?:police|government|federal) (?:officials?|spokesperson)'
+        ]
+        
+        for pattern in official_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            source_types['official_sources'] += len(matches)
+        
+        # Count quotes
+        quotes = re.findall(r'"[^"]{20,}"', text)
+        quote_ratio = min(100, int((len(quotes) / max(len(text.split('.')), 1)) * 100))
+        
+        # Check for links/references
+        has_links = bool(re.search(r'https?://', text)) or bool(re.search(r'(?:study|report|survey) (?:found|showed|revealed)', text))
+        
+        # Calculate transparency score
+        total_sources = sum(source_types.values())
+        named_ratio = source_types['named_sources'] / max(total_sources, 1)
+        
+        transparency_score = min(100, int(
+            (named_ratio * 40) +  # Named sources worth 40%
+            (min(total_sources, 10) * 3) +  # More sources = better (up to 30%)
+            (quote_ratio * 0.2) +  # Quotes worth 20%
+            (10 if has_links else 0)  # Links worth 10%
+        ))
+        
+        return {
+            'transparency_score': transparency_score,
+            'source_count': total_sources,
+            'source_types': source_types,
+            'has_links': has_links,
+            'quote_ratio': quote_ratio,
+            'named_source_ratio': int(named_ratio * 100)
+        }
+    
+    def _analyze_content_depth(self, text):
+        """Analyze content depth and quality"""
+        if not text:
+            return {
+                'depth_score': 0,
+                'word_count': 0,
+                'reading_level': 'Unknown',
+                'facts_vs_opinion': {'facts': 0, 'opinions': 0, 'analysis': 0},
+                'emotional_tone': 'neutral'
+            }
+        
+        # Word and sentence counts
+        words = text.split()
+        word_count = len(words)
+        sentences = [s.strip() for s in text.split('.') if s.strip()]
+        sentence_count = len(sentences)
+        
+        # Calculate reading level (simplified Flesch-Kincaid)
+        avg_sentence_length = word_count / max(sentence_count, 1)
+        complex_words = sum(1 for w in words if len(w) > 6)
+        complexity_ratio = complex_words / max(word_count, 1)
+        
+        if avg_sentence_length < 15 and complexity_ratio < 0.2:
+            reading_level = "Middle School"
+            reading_score = 6
+        elif avg_sentence_length < 20 and complexity_ratio < 0.3:
+            reading_level = "High School"
+            reading_score = 10
+        elif avg_sentence_length < 25 and complexity_ratio < 0.4:
+            reading_level = "College"
+            reading_score = 14
+        else:
+            reading_level = "Graduate"
+            reading_score = 16
+        
+        # Analyze facts vs opinions
+        fact_indicators = ['according to', 'study', 'research', 'data', 'statistics', 'reported', 'confirmed']
+        opinion_indicators = ['believe', 'think', 'feel', 'seems', 'appears', 'probably', 'opinion']
+        analysis_indicators = ['however', 'therefore', 'suggests', 'indicates', 'implies', 'meaning']
+        
+        facts_count = sum(1 for s in sentences if any(ind in s.lower() for ind in fact_indicators))
+        opinion_count = sum(1 for s in sentences if any(ind in s.lower() for ind in opinion_indicators))
+        analysis_count = sum(1 for s in sentences if any(ind in s.lower() for ind in analysis_indicators))
+        
+        # Emotional tone analysis
+        positive_words = ['success', 'achieve', 'improve', 'benefit', 'progress', 'victory', 'celebrate']
+        negative_words = ['fail', 'crisis', 'threat', 'danger', 'loss', 'defeat', 'disaster']
+        
+        positive_count = sum(1 for word in positive_words if word in text.lower())
+        negative_count = sum(1 for word in negative_words if word in text.lower())
+        
+        if positive_count > negative_count * 1.5:
+            emotional_tone = 'positive'
+        elif negative_count > positive_count * 1.5:
+            emotional_tone = 'negative'
+        else:
+            emotional_tone = 'neutral'
+        
+        # Calculate depth score
+        depth_score = min(100, int(
+            (min(word_count, 1000) / 10) * 0.3 +  # Length contributes 30%
+            (reading_score * 2) +  # Complexity contributes 32%
+            (min(facts_count, 10) * 3) +  # Facts contribute 30%
+            (8 if emotional_tone == 'neutral' else 0)  # Neutral tone adds 8%
+        ))
+        
+        return {
+            'depth_score': depth_score,
+            'word_count': word_count,
+            'reading_level': reading_level,
+            'avg_sentence_length': int(avg_sentence_length),
+            'facts_vs_opinion': {
+                'facts': facts_count,
+                'opinions': opinion_count,
+                'analysis': analysis_count
+            },
+            'emotional_tone': emotional_tone,
+            'complexity_ratio': int(complexity_ratio * 100)
+        }
