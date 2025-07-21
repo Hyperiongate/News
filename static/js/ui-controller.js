@@ -7,15 +7,16 @@ class UIController {
     constructor() {
         this.components = {};
         this.analysisData = null;
+        this.detailedViewVisible = false;
         this.progressSteps = [
-            { percent: 10, text: 'Fetching article content...' },
-            { percent: 25, text: 'Analyzing source credibility...' },
-            { percent: 40, text: 'Checking author background...' },
-            { percent: 55, text: 'Detecting bias and manipulation...' },
-            { percent: 70, text: 'Fact-checking claims...' },
-            { percent: 85, text: 'Comparing coverage across outlets...' },
-            { percent: 95, text: 'Generating report...' },
-            { percent: 100, text: 'Analysis complete!' }
+            { percent: 10, text: 'Fetching article content...', step: 1 },
+            { percent: 25, text: 'Analyzing source credibility...', step: 2 },
+            { percent: 40, text: 'Checking author background...', step: 3 },
+            { percent: 55, text: 'Detecting bias and manipulation...', step: 4 },
+            { percent: 70, text: 'Fact-checking claims...', step: 5 },
+            { percent: 85, text: 'Comparing coverage across outlets...', step: 6 },
+            { percent: 95, text: 'Generating report...', step: 7 },
+            { percent: 100, text: 'Analysis complete!', step: 8 }
         ];
         this.currentProgressStep = 0;
         this.progressTimer = null;
@@ -50,7 +51,7 @@ class UIController {
         
         let componentDelay = 0;
         
-        // Article info with fade-in
+        // Article info
         if (data.article) {
             const articleInfo = this.createArticleInfo(data.article);
             articleInfo.classList.add('fade-in');
@@ -59,73 +60,37 @@ class UIController {
             componentDelay += 0.1;
         }
         
-        // Article summary with fade-in
-        if (data.article_summary || data.conversational_summary) {
-            const summary = this.createSummarySection(data);
-            summary.classList.add('fade-in');
-            summary.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(summary);
+        // Executive Summary (NEW)
+        if (this.components.executiveSummary) {
+            const summaryEl = this.components.executiveSummary.render(data);
+            summaryEl.classList.add('fade-in');
+            summaryEl.style.animationDelay = `${componentDelay}s`;
+            container.appendChild(summaryEl);
             componentDelay += 0.1;
         }
         
-        // Trust score component with scale-in
+        // Trust Score (ENHANCED)
         if (this.components.trustScore && data.trust_score !== undefined) {
-            const trustScoreEl = this.components.trustScore.render(data.trust_score || 0);
+            const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
             trustScoreEl.classList.add('scale-in');
             trustScoreEl.style.animationDelay = `${componentDelay}s`;
             container.appendChild(trustScoreEl);
             componentDelay += 0.1;
         }
         
-        // Author card component with slide-in
-        if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
-            const authorEl = this.components.authorCard.render(data);
-            authorEl.classList.add('slide-in-left');
-            authorEl.style.animationDelay = `${componentDelay}s`;
-            container.appendChild(authorEl);
-            componentDelay += 0.1;
-        }
-        
-        // Analysis grid
-        const analysisGrid = document.createElement('div');
-        analysisGrid.className = 'analysis-grid';
-        analysisGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;';
-        
-        // Bias analysis component
-        if (this.components.biasAnalysis && data.bias_analysis) {
-            const biasEl = this.components.biasAnalysis.render(data);
-            biasEl.classList.add('fade-in');
-            biasEl.style.animationDelay = `${componentDelay}s`;
-            analysisGrid.appendChild(biasEl);
-            componentDelay += 0.1;
-        }
-        
-        // Fact checker component
-        if (this.components.factChecker && data.key_claims) {
-            const factCheckEl = this.components.factChecker.render(data);
-            factCheckEl.classList.add('fade-in');
-            factCheckEl.style.animationDelay = `${componentDelay}s`;
-            analysisGrid.appendChild(factCheckEl);
-            componentDelay += 0.1;
-        }
-        
-        // Clickbait detector component
-        if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
-            const clickbaitEl = this.components.clickbaitDetector.render(data);
-            clickbaitEl.classList.add('fade-in');
-            clickbaitEl.style.animationDelay = `${componentDelay}s`;
-            analysisGrid.appendChild(clickbaitEl);
-            componentDelay += 0.1;
-        }
-        
-        container.appendChild(analysisGrid);
-        
-        // Export handler (only for Pro users) with slide-in
+        // Export Button (SIMPLIFIED) - Place it prominently
         if (this.components.exportHandler && data.is_pro) {
             const exportEl = this.components.exportHandler.render(data);
-            exportEl.classList.add('slide-in-right');
+            exportEl.classList.add('fade-in');
             exportEl.style.animationDelay = `${componentDelay}s`;
             container.appendChild(exportEl);
+            componentDelay += 0.1;
+        }
+        
+        // Analysis Cards (COLLAPSIBLE) - Initially hidden
+        if (this.components.analysisCards) {
+            const cardsEl = this.components.analysisCards.render(data);
+            container.appendChild(cardsEl);
         }
         
         // Append everything to results
@@ -155,68 +120,59 @@ class UIController {
     }
 
     /**
-     * Create article info section
+     * Create article info section with author handling
      */
     createArticleInfo(article) {
         const div = document.createElement('div');
-        div.className = 'article-info';
-        div.style.cssText = 'background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;';
+        div.className = 'article-info-card';
         
-        if (article.title) {
-            const title = document.createElement('h2');
-            title.style.cssText = 'font-size: 1.25rem; margin-bottom: 0.5rem; color: #111827;';
-            title.textContent = article.title;
-            div.appendChild(title);
+        // Handle multiple authors
+        let authorText = '';
+        if (article.author) {
+            // Check if author contains multiple names (common separators)
+            const authors = article.author.split(/(?:,| and | & )/i).map(a => a.trim()).filter(a => a);
+            if (authors.length > 1) {
+                authorText = `By ${authors.slice(0, -1).join(', ')} and ${authors[authors.length - 1]}`;
+            } else {
+                authorText = `By ${article.author}`;
+            }
         }
         
-        const meta = document.createElement('p');
-        meta.style.cssText = 'color: #6b7280; font-size: 0.95rem;';
-        const parts = [];
-        
-        if (article.author) parts.push(`By ${article.author}`);
-        if (article.domain) parts.push(article.domain);
-        if (article.publish_date) {
-            parts.push(new Date(article.publish_date).toLocaleDateString());
-        }
-        
-        meta.textContent = parts.join(' | ');
-        div.appendChild(meta);
+        div.innerHTML = `
+            <div class="article-header">
+                <h2 class="article-title">${article.title || 'Untitled Article'}</h2>
+                <div class="article-meta">
+                    ${authorText ? `<span class="article-author">${authorText}</span>` : ''}
+                    ${article.domain ? `<span class="article-source">• ${article.domain}</span>` : ''}
+                    ${article.publish_date ? `<span class="article-date">• ${new Date(article.publish_date).toLocaleDateString()}</span>` : ''}
+                </div>
+            </div>
+        `;
         
         return div;
     }
 
     /**
-     * Create summary section
+     * Toggle detailed view visibility
      */
-    createSummarySection(data) {
-        const div = document.createElement('div');
-        div.className = 'summary-section analysis-card';
-        div.style.marginBottom = '1.5rem';
+    toggleDetailedView() {
+        const detailedView = document.getElementById('detailedAnalysisView');
+        if (!detailedView) return;
         
-        const header = document.createElement('div');
-        header.className = 'analysis-header';
-        header.innerHTML = '<span class="analysis-icon">📋</span><span>Article Summary</span>';
-        div.appendChild(header);
+        this.detailedViewVisible = !this.detailedViewVisible;
         
-        const content = document.createElement('div');
-        content.style.cssText = 'padding: 1rem 0;';
-        
-        if (data.article_summary) {
-            const summary = document.createElement('p');
-            summary.style.cssText = 'margin-bottom: 1rem; line-height: 1.6; color: #374151;';
-            summary.textContent = data.article_summary;
-            content.appendChild(summary);
+        if (this.detailedViewVisible) {
+            detailedView.style.display = 'block';
+            setTimeout(() => {
+                detailedView.classList.add('slide-in');
+                detailedView.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 10);
+        } else {
+            detailedView.classList.remove('slide-in');
+            setTimeout(() => {
+                detailedView.style.display = 'none';
+            }, 300);
         }
-        
-        if (data.conversational_summary) {
-            const conv = document.createElement('div');
-            conv.style.cssText = 'background: #f3f4f6; padding: 1rem; border-radius: 8px; margin-top: 1rem;';
-            conv.innerHTML = `<strong style="color: #111827;">Our Analysis:</strong><br><span style="color: #4b5563; line-height: 1.6;">${data.conversational_summary}</span>`;
-            content.appendChild(conv);
-        }
-        
-        div.appendChild(content);
-        return div;
     }
 
     /**
@@ -251,7 +207,7 @@ class UIController {
         }
         
         resourcesList.innerHTML = resources.map(r => 
-            `<span class="resource-chip smooth-transition" style="display: inline-block; padding: 0.375rem 0.75rem; background: #e5e7eb; border-radius: 9999px; font-size: 0.875rem; margin: 0.25rem;">${r}</span>`
+            `<span class="resource-chip">${r}</span>`
         ).join('');
         
         resourcesDiv.classList.remove('hidden');
@@ -264,8 +220,13 @@ class UIController {
     showError(message) {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `
-            <div class="error shake" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                <strong>Error:</strong> ${message}
+            <div class="error-card shake">
+                <div class="error-icon">⚠️</div>
+                <div class="error-content">
+                    <h3>Analysis Error</h3>
+                    <p>${message}</p>
+                </div>
+                <button class="retry-btn" onclick="location.reload()">Try Again</button>
             </div>
         `;
         resultsDiv.classList.remove('hidden');
@@ -316,17 +277,24 @@ class UIController {
     startProgressAnimation() {
         this.stopProgressAnimation(); // Clear any existing timer
         
+        let stepIndex = 0;
+        
         // Update progress every 1.5 seconds
         this.progressTimer = setInterval(() => {
-            if (this.currentProgressStep < this.progressSteps.length - 1) {
-                this.currentProgressStep++;
-                const step = this.progressSteps[this.currentProgressStep];
+            if (stepIndex < this.progressSteps.length - 1) {
+                const step = this.progressSteps[stepIndex];
                 
                 if (this.components.progressBar) {
                     this.components.progressBar.setProgress(step.percent, step.text);
                 }
+                
+                stepIndex++;
+                
+                // Stop at 95% to wait for actual completion
+                if (step.percent >= 95) {
+                    this.stopProgressAnimation();
+                }
             } else {
-                // Stop at 95% until analysis completes
                 this.stopProgressAnimation();
             }
         }, 1500);
