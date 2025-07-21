@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Analyzer - Facts & Fakes AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
     
     <!-- Component styles -->
     <link rel="stylesheet" href="/static/css/components/pricing-dropdown.css">
@@ -153,17 +154,8 @@
                 window.pricingDropdown.mount('pricingDropdownMount');
             }
 
-            // Mount progress bar
-            if (window.ProgressBar && window.UI) {
-                const progressBar = new window.ProgressBar();
-                const progressContainer = document.getElementById('progressContainer');
-                if (progressContainer) {
-                    progressContainer.appendChild(progressBar.render());
-                }
-                window.UI.registerComponent('progressBar', progressBar);
-            }
-
             // Components are auto-registered in their respective files
+            // Progress bar is auto-registered in progress-bar.js
             console.log('Components loaded:', Object.keys(window.UI.components));
         });
     </script>
