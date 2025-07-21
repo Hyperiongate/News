@@ -76,6 +76,7 @@ body {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-direction: column;
 }
 
 .url-input {
@@ -92,6 +93,48 @@ body {
     border-color: #3498db;
 }
 
+.text-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.3s;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Tab buttons */
+.input-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tab-btn {
+    padding: 0.5rem 1rem;
+    background-color: #ecf0f1;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-btn:hover {
+    background-color: #d5dbdb;
+}
+
+.tab-btn.active {
+    background-color: #3498db;
+    color: white;
+}
+
 .analyze-btn {
     padding: 0.75rem 2rem;
     background-color: #3498db;
@@ -101,6 +144,7 @@ body {
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.3s;
+    align-self: flex-start;
 }
 
 .analyze-btn:hover {
