@@ -276,25 +276,105 @@ class UIController {
                     ${data.clickbait_score}%
                  </p>
                  <p style="color: #666;">Clickbait Score</p>`,
-                `${data.clickbait_indicators?.length ? `
-                    <div style="margin-top: 15px;">
-                        <strong>Indicators Found:</strong>
+                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Clickbait Detection?</h4>
+                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        We analyze headlines for manipulative tactics designed to trick you into clicking. 
+                        Clickbait often overpromises, creates false urgency, or withholds key information to generate curiosity.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #059669;">What We Analyzed</h4>
+                    <div style="padding: 12px; background: #f3f4f6; border-radius: 6px; margin: 10px 0;">
+                        <p style="margin: 0; font-style: italic; color: #374151;">
+                            "${data.article?.title || 'Article Title'}"
+                        </p>
+                    </div>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        <li>Sensationalist language and emotional triggers</li>
+                        <li>Curiosity gaps and withheld information</li>
+                        <li>Excessive punctuation and capitalization</li>
+                        <li>Common clickbait patterns and formulas</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Clickbait Score Breakdown</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <!-- Visual gauge -->
+                        <div style="position: relative; height: 40px; background: linear-gradient(to right, #10b981 0%, #fbbf24 50%, #ef4444 100%); border-radius: 20px; overflow: hidden;">
+                            <div style="position: absolute; top: 0; right: ${100 - data.clickbait_score}%; bottom: 0; left: 0; background: rgba(255,255,255,0.9);"></div>
+                            <div style="position: absolute; top: 50%; left: ${data.clickbait_score}%; transform: translate(-50%, -50%); z-index: 10;">
+                                <div style="width: 20px; height: 20px; background: #1f2937; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; color: #6b7280;">
+                            <span>Normal</span>
+                            <span>Moderate</span>
+                            <span>High Clickbait</span>
+                        </div>
+                        
+                        ${data.title_analysis ? `
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px;">
+                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.sensationalism > 50 ? '#ef4444' : '#6b7280'};">
+                                        ${data.title_analysis.sensationalism}%
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Sensationalism</div>
+                                </div>
+                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.curiosity_gap > 0 ? '#f59e0b' : '#6b7280'};">
+                                        ${data.title_analysis.curiosity_gap}%
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Curiosity Gap</div>
+                                </div>
+                                <div style="text-align: center; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${data.title_analysis.emotional_words > 50 ? '#ef4444' : '#6b7280'};">
+                                        ${data.title_analysis.emotional_words}%
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Emotional Words</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                ${data.clickbait_indicators?.length ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">What We Found</h4>
                         ${data.clickbait_indicators.map(ind => `
-                            <div style="margin: 10px 0; padding: 10px; background: #fef2f2; border-radius: 4px;">
-                                <div style="font-weight: 600;">${ind.name}</div>
-                                <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">${ind.description}</div>
+                            <div style="margin: 8px 0; padding: 12px; background: #fef2f2; border-radius: 6px; border-left: 3px solid #ef4444;">
+                                <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
+                                    ${ind.name}
+                                </div>
+                                <div style="font-size: 0.9rem; color: #7f1d1d;">
+                                    ${ind.description}
+                                </div>
                             </div>
                         `).join('')}
                     </div>
-                 ` : ''}
-                 ${data.title_analysis ? `
-                    <div style="margin-top: 15px;">
-                        <strong>Title Analysis:</strong>
-                        <p>Sensationalism: ${data.title_analysis.sensationalism}%</p>
-                        <p>Curiosity Gap: ${data.title_analysis.curiosity_gap}%</p>
-                        <p>Emotional Words: ${data.title_analysis.emotional_words}%</p>
+                ` : `
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #14532d;">What We Found</h4>
+                        <p style="margin: 0; color: #14532d; font-size: 0.95rem;">
+                            Good news! This headline appears straightforward without manipulative tactics.
+                        </p>
                     </div>
-                 ` : ''}`,
+                `}
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                        ${this.getClickbaitExplanation(data.clickbait_score)}
+                    </p>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                        <strong>💡 Tip:</strong> Headlines should inform, not manipulate. Good journalism tells you what the story is about without tricks or emotional manipulation.
+                    </p>
+                </div>`,
                 '#f59e0b'
             );
             cards.push(card);
@@ -440,6 +520,20 @@ class UIController {
         }
     }
 
+    getClickbaitExplanation(score) {
+        if (score < 20) {
+            return "This headline is exemplary - it clearly describes the content without manipulation. The author respects your time and intelligence by being straightforward.";
+        } else if (score < 40) {
+            return "This headline shows minor clickbait elements but remains mostly informative. While it might use some attention-grabbing techniques, it doesn't cross into manipulation territory.";
+        } else if (score < 60) {
+            return "This headline uses moderate clickbait tactics. It's trying harder to grab your attention than to inform you. Be aware that the actual content might not live up to the headline's promise.";
+        } else if (score < 80) {
+            return "This is significant clickbait. The headline prioritizes generating clicks over honest communication. Expect the article to underdeliver on what the headline suggests.";
+        } else {
+            return "This is extreme clickbait designed to manipulate your emotions and curiosity. The headline likely misrepresents the actual content. Approach with heavy skepticism.";
+        }
+    }
+    
     generateAssessment(data) {
         const trustScore = data.trust_score || 0;
         const source = data.article?.domain || 'this source';
