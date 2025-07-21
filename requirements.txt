@@ -1,13 +1,11 @@
 # Core Flask dependencies
+# Core Flask dependencies
 Flask==3.0.0
 gunicorn==21.2.0
 python-dotenv==1.0.0
 Flask-CORS==4.0.0
 
-# News extraction and analysis
-newspaper3k==0.2.8
-lxml==4.9.3
-lxml-html-clean==0.1.0
+# News extraction and analysis - NO lxml or newspaper3k
 beautifulsoup4==4.12.2
 requests==2.31.0
 python-dateutil==2.8.2
