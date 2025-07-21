@@ -293,3 +293,135 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('All components:', Object.keys(window.UI.components));
     }, 200);
 });
+// ADD THIS TO THE END OF YOUR ui-controller.js FILE
+
+// REAL FIX #1: Proper inline progress bar
+document.addEventListener('DOMContentLoaded', () => {
+    // Replace the showProgress method with a proper inline version
+    window.UI.showProgress = function(show, message = 'Analyzing article...') {
+        const progressContainer = document.getElementById('progressContainer');
+        if (!progressContainer) return;
+        
+        if (show) {
+            progressContainer.innerHTML = `
+                <div class="inline-progress" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 1.5rem;
+                    border-radius: 8px;
+                    margin: 1rem 0;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                ">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="spinner" style="
+                            width: 20px;
+                            height: 20px;
+                            border: 3px solid rgba(255,255,255,0.3);
+                            border-top-color: white;
+                            border-radius: 50%;
+                            animation: spin 1s linear infinite;
+                        "></div>
+                        <p style="margin: 0; color: white; font-weight: 500;">${message}</p>
+                    </div>
+                    <div style="
+                        background: rgba(255,255,255,0.2);
+                        height: 8px;
+                        border-radius: 4px;
+                        overflow: hidden;
+                    ">
+                        <div class="progress-bar-fill" style="
+                            height: 100%;
+                            width: 0%;
+                            background: white;
+                            transition: width 0.5s ease;
+                            animation: progress-animation 8s ease-out forwards;
+                        "></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                    @keyframes progress-animation {
+                        0% { width: 0%; }
+                        20% { width: 25%; }
+                        40% { width: 45%; }
+                        60% { width: 65%; }
+                        80% { width: 85%; }
+                        100% { width: 95%; }
+                    }
+                </style>
+            `;
+        } else {
+            progressContainer.innerHTML = '';
+        }
+    };
+});
+
+// REAL FIX #2: FORCE cards outside container after results render
+const originalBuildResults = window.UI.buildResults.bind(window.UI);
+window.UI.buildResults = function(data) {
+    // Call original
+    originalBuildResults(data);
+    
+    // FORCE separation after a delay
+    setTimeout(() => {
+        const analyzerCard = document.querySelector('.analyzer-card');
+        const resultsDiv = document.getElementById('results');
+        
+        // Find ALL analysis components that should be outside
+        const componentsToMove = [
+            '.analysis-cards-container',
+            '.analysis-cards-grid', 
+            '.bias-analysis-container',
+            '.fact-checker-container',
+            '.clickbait-detector-container',
+            '.author-card-container',
+            '#detailedAnalysisView'
+        ];
+        
+        // Create container outside if it doesn't exist
+        let outsideContainer = document.querySelector('.detailed-analysis-container');
+        if (!outsideContainer) {
+            outsideContainer = document.createElement('div');
+            outsideContainer.className = 'detailed-analysis-container';
+            outsideContainer.style.cssText = `
+                margin-top: 3rem;
+                padding: 2rem 0;
+                border-top: 2px solid #e5e7eb;
+            `;
+            outsideContainer.innerHTML = `
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h2 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Detailed Analysis</h2>
+                    <p style="color: #6b7280;">Deep dive into bias, manipulation tactics, and credibility</p>
+                </div>
+            `;
+            
+            // Insert AFTER analyzer card
+            if (analyzerCard && analyzerCard.parentNode) {
+                analyzerCard.parentNode.insertBefore(outsideContainer, analyzerCard.nextSibling);
+            }
+        }
+        
+        // Move each component outside
+        componentsToMove.forEach(selector => {
+            const element = document.querySelector(selector);
+            if (element && element.closest('.analyzer-card')) {
+                console.log(`Moving ${selector} outside...`);
+                outsideContainer.appendChild(element);
+                
+                // Remove any container styling
+                element.style.background = 'transparent';
+                element.style.padding = '0';
+                element.style.border = 'none';
+                element.style.boxShadow = 'none';
+            }
+        });
+        
+        // Also move resources
+        const resources = document.getElementById('resources');
+        if (resources && resources.closest('.analyzer-card')) {
+            analyzerCard.parentNode.appendChild(resources);
+            resources.style.marginTop = '2rem';
+        }
+        
+        console.log('✅ Layout separation complete');
+    }, 500);
+};
