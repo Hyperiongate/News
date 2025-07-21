@@ -1,0 +1,502 @@
+/* static/css/components/analysis-cards.css */
+
+.analysis-cards-container {
+    margin: 2rem 0;
+}
+
+.analysis-cards-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-cards-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.expand-all-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.expand-all-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Cards grid */
+.analysis-cards-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+/* Individual card */
+.analysis-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.analysis-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Card header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.card-header:hover {
+    background: #f9fafb;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.card-icon {
+    font-size: 1.5rem;
+}
+
+.card-title h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.card-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.preview-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.preview-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.preview-badge.high,
+.preview-badge.verified {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.preview-badge.medium {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.preview-badge.low {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.preview-badge.left {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.preview-badge.right {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.preview-badge.center {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.card-toggle {
+    font-size: 1rem;
+    color: #6b7280;
+    transition: transform 0.3s ease;
+}
+
+/* Card content */
+.card-content {
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Bias meter */
+.bias-meter {
+    margin: 1.5rem 0;
+}
+
+.meter-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.meter-track {
+    height: 8px;
+    background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%);
+    border-radius: 4px;
+    position: relative;
+}
+
+.meter-indicator {
+    position: absolute;
+    top: -4px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 3px solid #111827;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: left 0.5s ease;
+}
+
+/* Metrics grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.metric {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Subsections */
+.subsection {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.subsection h5 {
+    font-size: 0.975rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 1rem 0;
+}
+
+/* Tactics and phrases */
+.tactics-list,
+.phrases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tactic-item,
+.phrase-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.tactic-icon {
+    color: #f59e0b;
+}
+
+.phrase-type {
+    padding: 0.125rem 0.5rem;
+    background: #e5e7eb;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.phrase-text {
+    flex: 1;
+    font-style: italic;
+    color: #4b5563;
+}
+
+/* Fact checks compact */
+.fact-checks-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fact-check-compact {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.fc-header {
+    margin-bottom: 0.5rem;
+}
+
+.fc-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.fc-verdict.true {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.fc-verdict.false {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.fc-verdict.mixed {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.fc-verdict.unverified {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.fc-claim {
+    font-style: italic;
+    color: #374151;
+    margin: 0.5rem 0;
+}
+
+.fc-explanation {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Author details */
+.author-details {
+    padding: 1rem 0;
+}
+
+.author-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.author-header h5 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.author-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.author-bio {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.author-bio p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.expertise-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.expertise-tag {
+    padding: 0.25rem 0.75rem;
+    background: #e5e7eb;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+/* Clickbait gauge */
+.clickbait-gauge {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+    border-radius: 20px;
+    margin: 1.5rem 0;
+}
+
+.gauge-fill {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 16px;
+    transition: width 0.5s ease;
+}
+
+.gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Indicators */
+.indicators-list {
+    margin-top: 1.5rem;
+}
+
+.indicators-list h5 {
+    font-size: 0.975rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 1rem 0;
+}
+
+.indicator-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.indicator-icon {
+    color: #f59e0b;
+    font-size: 1.25rem;
+}
+
+.indicator-content strong {
+    display: block;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.indicator-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Source details */
+.source-details {
+    padding: 1rem 0;
+}
+
+.source-details h5 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.source-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.source-description {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.source-description p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-content {
+        padding: 0 1rem 1rem;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
