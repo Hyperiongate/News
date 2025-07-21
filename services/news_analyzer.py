@@ -158,6 +158,7 @@ class NewsAnalyzer:
             
             # Analyze author if available
             author_analysis = None
+            all_authors = []
             if article_data.get('author') and is_pro and self.author_analyzer:
                 try:
                     # Use the new analyze_authors method for multiple authors
@@ -169,8 +170,8 @@ class NewsAnalyzer:
                     # For now, use the first author as primary (UI will be updated to show all)
                     if authors:
                         author_analysis = authors[0]
-                        # Store all authors for future use
-                        author_analysis['all_authors'] = authors
+                        # Store all authors separately to avoid circular reference
+                        all_authors = authors
                         
                 except Exception as e:
                     logger.error(f"Author analysis error: {str(e)}")
@@ -497,6 +498,11 @@ class NewsAnalyzer:
                 'verified': False,
                 'journalist_verified': False,
                 'outlet_staff': False
+            },
+            'credibility_explanation': {
+                'level': 'Moderate',
+                'explanation': 'Limited information available about this author.',
+                'advice': 'Verify important claims through additional sources.'
             }
         }
     
