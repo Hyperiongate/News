@@ -147,17 +147,28 @@ const NewsAnalyzer = {
             const data = await response.json();
 
             if (response.ok) {
-                // Build results using UI controller
-                window.UI.buildResults(data);
+                // Show progress completion before showing results
+                window.UI.showProgress(true, 'Analysis complete!');
+                
+                // Wait a moment to show completion
+                setTimeout(() => {
+                    window.UI.showProgress(false);
+                    // Build results using UI controller
+                    window.UI.buildResults(data);
+                }, 1500);
             } else {
+                window.UI.showProgress(false);
                 window.UI.showError(data.error || 'Analysis failed');
             }
         } catch (error) {
             console.error('Analysis error:', error);
+            window.UI.showProgress(false);
             window.UI.showError('Network error. Please try again.');
         } finally {
-            window.UI.showProgress(false);
-            this.disableButtons(false);
+            // Re-enable buttons after showing results
+            setTimeout(() => {
+                this.disableButtons(false);
+            }, 1500);
         }
     },
 
