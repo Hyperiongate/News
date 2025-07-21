@@ -1,0 +1,232 @@
+/* static/css/components/executive-summary.css */
+
+.executive-summary-container {
+    margin-bottom: 2rem;
+}
+
+.executive-summary-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.header-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+}
+
+.summary-subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.summary-timestamp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.timestamp-icon {
+    font-size: 1rem;
+}
+
+/* Summary sections */
+.summary-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.summary-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.summary-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.section-icon {
+    font-size: 1.5rem;
+}
+
+.section-content {
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.section-content p {
+    margin: 0;
+}
+
+.section-content blockquote {
+    margin: 1rem 0 0 0;
+    padding: 1rem;
+    background: white;
+    border-left: 4px solid #1a73e8;
+    border-radius: 4px;
+    font-style: italic;
+    color: #374151;
+}
+
+/* Findings list */
+.findings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.finding-item {
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.finding-item.strength {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.finding-item.concern {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.finding-item.neutral {
+    border-color: #6b7280;
+    background: #f9fafb;
+}
+
+.finding-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.finding-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Verdict and advice */
+.verdict {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+}
+
+.advice-box {
+    background: white;
+    border: 2px solid #1a73e8;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    color: #1e40af;
+}
+
+.advice-box strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #1a73e8;
+}
+
+/* Quick actions */
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.action-btn.primary {
+    background: #1a73e8;
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background: #1557b0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+.action-btn.secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.action-btn.secondary:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.action-icon {
+    font-size: 1.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .executive-summary-card {
+        padding: 1.5rem;
+    }
+    
+    .summary-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .header-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
