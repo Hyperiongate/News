@@ -1,234 +1,239 @@
 """
 FILE: services/news_extractor.py
 LOCATION: news/services/news_extractor.py
-PURPOSE: Article extraction without newspaper3k dependency
+PURPOSE: Extract article content with fixed author formatting
 """
 
+import logging
 import re
-import json
-from bs4 import BeautifulSoup
-import requests
-from urllib.parse import urlparse
 from datetime import datetime
+from urllib.parse import urlparse
+
+import requests
+from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 class NewsExtractor:
+    """Extract article content from URLs"""
+    
     def __init__(self):
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        # Author patterns
-        self.author_patterns = [
-            r'[Bb]y\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-            r'[Ww]ritten\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-            r'[Aa]uthor:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-        ]
-        
-        # Site-specific selectors
-        self.author_selectors = {
-            'bbc.com': [
-                ('span', {'class': 'ssrcss-68pt20-Text-TextContributorName'}),
-                ('div', {'data-testid': 'byline-name'}),
-                ('p', {'class': 'ssrcss-1rv0moy-Contributor'}),
-            ],
-            'cnn.com': [
-                ('span', {'class': 'byline__name'}),
-                ('span', {'class': 'metadata__byline__author'}),
-            ],
-            'nytimes.com': [
-                ('span', {'class': 'byline-name'}),
-                ('span', {'itemprop': 'name'}),
-            ],
-            'reuters.com': [
-                ('span', {'data-testid': 'author-name'}),
-                ('div', {'class': 'author-name'}),
-            ],
-            'theguardian.com': [
-                ('span', {'itemprop': 'name'}),
-                ('address', {'aria-label': re.compile('Written by')}),
-            ],
-        }
-
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+    
     def extract_article(self, url):
-        """Extract article content and metadata"""
+        """Extract article content from URL"""
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
+            response = self.session.get(url, timeout=10)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
-            domain = urlparse(url).netloc
             
             # Extract components
             title = self._extract_title(soup)
-            author = self._extract_author(soup, domain)
             text = self._extract_text(soup)
+            author = self._extract_author(soup, url)
             publish_date = self._extract_date(soup)
             
+            # Get domain
+            domain = urlparse(url).netloc.replace('www.', '')
+            
             return {
-                'success': True,
                 'title': title,
-                'author': author,
                 'text': text,
+                'author': author,
                 'publish_date': publish_date,
-                'domain': domain,
-                'url': url
+                'url': url,
+                'domain': domain
             }
             
         except Exception as e:
-            print(f"Extraction error: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'url': url
-            }
+            logger.error(f"Extraction error for {url}: {str(e)}")
+            return None
     
     def _extract_title(self, soup):
         """Extract article title"""
-        # Try og:title first
-        og_title = soup.find('meta', {'property': 'og:title'})
-        if og_title and og_title.get('content'):
-            return og_title.get('content').strip()
+        # Try common title selectors
+        selectors = [
+            'h1',
+            'meta[property="og:title"]',
+            'meta[name="twitter:title"]',
+            'title'
+        ]
         
-        # Try regular title tag
-        if soup.title:
-            return soup.title.string.strip()
+        for selector in selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    return element.get('content', '').strip()
+                else:
+                    return element.get_text().strip()
         
-        # Try h1
-        h1 = soup.find('h1')
-        if h1:
-            return h1.get_text().strip()
-        
-        return "Unknown Title"
+        return 'No title found'
     
-    def _extract_author(self, soup, domain):
-        """Extract author with multiple strategies"""
-        # Method 1: Site-specific selectors
-        for site, selectors in self.author_selectors.items():
-            if site in domain:
-                for tag, attrs in selectors:
-                    elem = soup.find(tag, attrs)
-                    if elem:
-                        author = self._clean_author(elem.get_text())
-                        if author:
-                            return author
+    def _extract_text(self, soup):
+        """Extract main article text"""
+        # Remove script and style elements
+        for script in soup(['script', 'style']):
+            script.decompose()
+        
+        # Try to find article body
+        article_selectors = [
+            'article',
+            '[class*="article-body"]',
+            '[class*="story-body"]',
+            '[class*="content-body"]',
+            'main',
+            '[role="main"]'
+        ]
+        
+        for selector in article_selectors:
+            article = soup.select_one(selector)
+            if article:
+                paragraphs = article.find_all('p')
+                if paragraphs:
+                    text = ' '.join([p.get_text().strip() for p in paragraphs])
+                    if len(text) > 100:
+                        return text
+        
+        # Fallback: get all paragraphs
+        paragraphs = soup.find_all('p')
+        text = ' '.join([p.get_text().strip() for p in paragraphs[:20]])
+        
+        return text if text else 'No article text found'
+    
+    def _extract_author(self, soup, url):
+        """Extract author with proper formatting"""
+        # Method 1: JSON-LD structured data
+        json_ld = soup.find_all('script', type='application/ld+json')
+        for script in json_ld:
+            try:
+                import json
+                data = json.loads(script.string)
+                
+                # Handle different JSON-LD formats
+                if isinstance(data, dict):
+                    # Check for author in main object
+                    author = data.get('author')
+                    if author:
+                        # Handle different author formats
+                        if isinstance(author, dict):
+                            name = author.get('name', '')
+                            if name:
+                                return name.strip()
+                        elif isinstance(author, str):
+                            return author.strip()
+                        elif isinstance(author, list) and author:
+                            # If it's a list, get the first author
+                            first_author = author[0]
+                            if isinstance(first_author, dict):
+                                name = first_author.get('name', '')
+                                if name:
+                                    return name.strip()
+                            elif isinstance(first_author, str):
+                                return first_author.strip()
+                    
+                    # Check in @graph structure
+                    if '@graph' in data:
+                        for item in data['@graph']:
+                            if isinstance(item, dict) and item.get('@type') in ['NewsArticle', 'Article']:
+                                author = item.get('author')
+                                if author:
+                                    if isinstance(author, dict):
+                                        name = author.get('name', '')
+                                        if name:
+                                            return name.strip()
+                                    elif isinstance(author, str):
+                                        return author.strip()
+            except:
+                continue
         
         # Method 2: Meta tags
-        meta_names = ['author', 'article:author', 'og:author', 'twitter:creator']
-        for name in meta_names:
-            meta = soup.find('meta', {'property': name}) or soup.find('meta', {'name': name})
+        meta_selectors = [
+            'meta[name="author"]',
+            'meta[property="article:author"]',
+            'meta[name="byl"]',
+            'meta[name="DC.creator"]'
+        ]
+        
+        for selector in meta_selectors:
+            meta = soup.select_one(selector)
             if meta and meta.get('content'):
-                author = self._clean_author(meta.get('content'))
+                author = meta['content'].strip()
+                # Clean up common prefixes
+                author = re.sub(r'^(by|By|BY)\s+', '', author)
                 if author:
                     return author
         
-        # Method 3: JSON-LD
-        json_ld = soup.find('script', {'type': 'application/ld+json'})
-        if json_ld:
-            try:
-                data = json.loads(json_ld.string)
-                if isinstance(data, dict) and 'author' in data:
-                    if isinstance(data['author'], dict):
-                        author = data['author'].get('name', '')
-                    else:
-                        author = str(data['author'])
-                    author = self._clean_author(author)
-                    if author:
-                        return author
-            except:
-                pass
+        # Method 3: Common byline patterns
+        byline_selectors = [
+            '[class*="byline"]',
+            '[class*="author"]',
+            '[class*="by-line"]',
+            '[class*="writer"]',
+            'span[itemprop="author"]',
+            '[rel="author"]'
+        ]
         
-        # Method 4: Byline patterns
-        for pattern in self.author_patterns:
-            # Look in common byline locations
-            for tag in ['p', 'span', 'div']:
-                elements = soup.find_all(tag, string=re.compile(pattern, re.I))
-                for elem in elements:
-                    match = re.search(pattern, elem.get_text())
-                    if match:
-                        author = self._clean_author(match.group(1))
-                        if author:
-                            return author
+        for selector in byline_selectors:
+            element = soup.select_one(selector)
+            if element:
+                text = element.get_text().strip()
+                # Clean up the text
+                text = re.sub(r'^(by|By|BY)\s+', '', text)
+                text = re.sub(r'\s+', ' ', text)
+                if text and len(text) < 100:  # Reasonable length for an author name
+                    return text
         
-        # Method 5: Schema.org
-        author_elem = soup.find(attrs={'itemprop': 'author'})
-        if author_elem:
-            name_elem = author_elem.find(attrs={'itemprop': 'name'})
-            if name_elem:
-                author = self._clean_author(name_elem.get_text())
-            else:
-                author = self._clean_author(author_elem.get_text())
-            if author:
-                return author
+        # Method 4: Site-specific patterns
+        domain = urlparse(url).netloc.replace('www.', '')
+        
+        if 'bbc.com' in domain or 'bbc.co.uk' in domain:
+            # BBC specific
+            author_div = soup.find('div', {'class': 'ssrcss-68pt20-Text-TextContributorName'})
+            if author_div:
+                return author_div.get_text().strip()
+        
+        elif 'cnn.com' in domain:
+            # CNN specific
+            byline = soup.find('span', {'class': 'byline__name'})
+            if byline:
+                return byline.get_text().strip()
+        
+        elif 'nytimes.com' in domain:
+            # NYTimes specific
+            byline = soup.find('span', {'itemprop': 'name'})
+            if byline:
+                return byline.get_text().strip()
         
         return None
     
-    def _clean_author(self, text):
-        """Clean author text"""
-        if not text:
-            return None
-        
-        # Remove common prefixes
-        text = re.sub(r'^(by|written by|author:)\s*', '', text, flags=re.I)
-        
-        # Remove email/twitter handles
-        text = re.sub(r'@\S+', '', text)
-        text = re.sub(r'\S+@\S+', '', text)
-        
-        # Clean up
-        text = ' '.join(text.split())
-        
-        # Validate
-        if len(text) < 3 or len(text) > 100:
-            return None
-        
-        # Must have letters
-        if not re.search(r'[a-zA-Z]', text):
-            return None
-        
-        # Exclude common non-names
-        if text.lower() in ['staff', 'editor', 'admin', 'correspondent', 'reporter']:
-            return None
-        
-        return text.strip()
-    
-    def _extract_text(self, soup):
-        """Extract article text"""
-        # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer']):
-            element.decompose()
-        
-        # Try to find article body
-        article_body = soup.find('article') or soup.find('div', {'class': re.compile('article|content|story')})
-        
-        if article_body:
-            # Get paragraphs
-            paragraphs = article_body.find_all('p')
-            text = ' '.join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
-        else:
-            # Fallback to all paragraphs
-            paragraphs = soup.find_all('p')
-            text = ' '.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
-        
-        return text[:5000]  # Limit length
-    
     def _extract_date(self, soup):
         """Extract publish date"""
-        # Try meta tags
-        date_metas = ['article:published_time', 'datePublished', 'publish_date']
-        for name in date_metas:
-            meta = soup.find('meta', {'property': name}) or soup.find('meta', {'name': name})
-            if meta and meta.get('content'):
-                try:
-                    return datetime.fromisoformat(meta.get('content').replace('Z', '+00:00'))
-                except:
-                    pass
+        # Try meta tags first
+        date_selectors = [
+            'meta[property="article:published_time"]',
+            'meta[name="publish_date"]',
+            'meta[name="publication_date"]',
+            'meta[property="og:published_time"]',
+            'time[datetime]'
+        ]
         
-        # Try time tag
-        time_tag = soup.find('time')
-        if time_tag and time_tag.get('datetime'):
-            try:
-                return datetime.fromisoformat(time_tag.get('datetime').replace('Z', '+00:00'))
-            except:
-                pass
+        for selector in date_selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    date_str = element.get('content', '')
+                else:
+                    date_str = element.get('datetime', '')
+                
+                if date_str:
+                    try:
+                        # Parse ISO format
+                        return datetime.fromisoformat(date_str.replace('Z', '+00:00')).isoformat()
+                    except:
+                        pass
         
         return None
