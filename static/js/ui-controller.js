@@ -1,13 +1,13 @@
 // static/js/ui-controller.js
 
 /**
- * UI Controller - Orchestrates all modular components
+ * UI Controller - Orchestrates all modular components with separated layout
  */
 class UIController {
     constructor() {
         this.components = {};
         this.analysisData = null;
-        this.detailedViewVisible = false;
+        this.detailedViewVisible = true; // Show by default
         this.progressSteps = [
             { percent: 10, text: 'Fetching article content...', step: 1 },
             { percent: 25, text: 'Analyzing source credibility...', step: 2 },
@@ -31,7 +31,7 @@ class UIController {
     }
 
     /**
-     * Build results using modular components with animations
+     * Build results using modular components with separated layout
      */
     buildResults(data) {
         this.analysisData = data;
@@ -43,34 +43,25 @@ class UIController {
             return;
         }
         
-        // Clear previous results
+        // Clear previous results and any existing detailed containers
         resultsDiv.innerHTML = '';
-        
-        // Remove any existing detailed analysis container
-        const existingDetailedContainer = document.getElementById('detailedAnalysisContainer');
-        if (existingDetailedContainer) {
-            existingDetailedContainer.remove();
+        const existingDetailed = document.querySelector('.detailed-analysis-container');
+        if (existingDetailed) {
+            existingDetailed.remove();
         }
         
-        // Create main container for summary info only
-        const mainContainer = document.createElement('div');
-        mainContainer.className = 'summary-container';
-        
-        // Create detailed analysis container (separate from main)
-        const detailedContainer = document.createElement('div');
-        detailedContainer.id = 'detailedAnalysisContainer';
-        detailedContainer.className = 'detailed-analysis-container';
+        // === PART 1: SUMMARY CONTAINER (inside analyzer-card) ===
+        const summaryContainer = document.createElement('div');
+        summaryContainer.className = 'summary-container';
         
         let componentDelay = 0;
-        
-        // === MAIN SUMMARY CONTAINER CONTENT ===
         
         // Article info
         if (data.article) {
             const articleInfo = this.createArticleInfo(data.article);
             articleInfo.classList.add('fade-in');
             articleInfo.style.animationDelay = `${componentDelay}s`;
-            mainContainer.appendChild(articleInfo);
+            summaryContainer.appendChild(articleInfo);
             componentDelay += 0.1;
         }
         
@@ -79,7 +70,7 @@ class UIController {
             const summaryEl = this.components.executiveSummary.render(data);
             summaryEl.classList.add('fade-in');
             summaryEl.style.animationDelay = `${componentDelay}s`;
-            mainContainer.appendChild(summaryEl);
+            summaryContainer.appendChild(summaryEl);
             componentDelay += 0.1;
         }
         
@@ -88,22 +79,19 @@ class UIController {
             const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
             trustScoreEl.classList.add('scale-in');
             trustScoreEl.style.animationDelay = `${componentDelay}s`;
-            mainContainer.appendChild(trustScoreEl);
+            summaryContainer.appendChild(trustScoreEl);
             componentDelay += 0.1;
         }
         
-        // Export Button (for Pro users)
-        if (this.components.exportHandler && data.is_pro) {
-            const exportEl = this.components.exportHandler.render(data);
-            exportEl.classList.add('fade-in');
-            exportEl.style.animationDelay = `${componentDelay}s`;
-            mainContainer.appendChild(exportEl);
-            componentDelay += 0.1;
-        }
+        // Add summary container to results
+        resultsDiv.appendChild(summaryContainer);
+        resultsDiv.classList.remove('hidden');
         
-        // === DETAILED ANALYSIS CARDS (SEPARATE) ===
+        // === PART 2: DETAILED ANALYSIS (outside analyzer-card) ===
+        const detailedContainer = document.createElement('div');
+        detailedContainer.className = 'detailed-analysis-container';
         
-        // Add a separator or header for detailed analysis
+        // Detailed analysis header
         const detailsHeader = document.createElement('div');
         detailsHeader.className = 'detailed-analysis-header';
         detailsHeader.innerHTML = `
@@ -115,87 +103,29 @@ class UIController {
         detailedContainer.appendChild(detailsHeader);
         componentDelay += 0.1;
         
-        // Analysis Cards Container
-        const cardsContainer = document.createElement('div');
-        cardsContainer.className = 'analysis-cards-section';
-        
-        // Analysis Cards - Now in separate container
+        // Analysis Cards
         if (this.components.analysisCards) {
             const cardsEl = this.components.analysisCards.render(data);
             cardsEl.classList.add('fade-in');
             cardsEl.style.animationDelay = `${componentDelay}s`;
-            cardsEl.style.display = 'block'; // Make sure it's visible
+            // Apply transparent styles to remove container appearance
             cardsEl.style.background = 'transparent';
             cardsEl.style.padding = '0';
             cardsEl.style.margin = '0';
             cardsEl.style.border = 'none';
             cardsEl.style.boxShadow = 'none';
-            cardsContainer.appendChild(cardsEl);
-        } else {
-            // Individual component cards (if not using analysisCards component)
-            const individualCards = [];
-            
-            // Bias Analysis Card
-            if (this.components.biasAnalysis && data.bias_analysis) {
-                const biasEl = this.components.biasAnalysis.render(data);
-                biasEl.classList.add('fade-in');
-                biasEl.style.animationDelay = `${componentDelay}s`;
-                individualCards.push(biasEl);
-                componentDelay += 0.1;
-            }
-            
-            // Fact Checker Card
-            if (this.components.factChecker && data.key_claims) {
-                const factCheckEl = this.components.factChecker.render(data);
-                factCheckEl.classList.add('fade-in');
-                factCheckEl.style.animationDelay = `${componentDelay}s`;
-                individualCards.push(factCheckEl);
-                componentDelay += 0.1;
-            }
-            
-            // Clickbait Detector Card
-            if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
-                const clickbaitEl = this.components.clickbaitDetector.render(data);
-                clickbaitEl.classList.add('fade-in');
-                clickbaitEl.style.animationDelay = `${componentDelay}s`;
-                individualCards.push(clickbaitEl);
-                componentDelay += 0.1;
-            }
-            
-            // Author Card
-            if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
-                const authorEl = this.components.authorCard.render(data);
-                authorEl.classList.add('fade-in');
-                authorEl.style.animationDelay = `${componentDelay}s`;
-                individualCards.push(authorEl);
-                componentDelay += 0.1;
-            }
-            
-            // Add individual cards
-            if (individualCards.length > 0) {
-                const cardsGrid = document.createElement('div');
-                cardsGrid.className = 'individual-cards-grid';
-                individualCards.forEach(card => cardsGrid.appendChild(card));
-                cardsContainer.appendChild(cardsGrid);
-            }
+            detailedContainer.appendChild(cardsEl);
         }
         
-        detailedContainer.appendChild(cardsContainer);
-        
-        // Append main container to results div
-        resultsDiv.appendChild(mainContainer);
-        
-        // Insert detailed container after analyzer card (outside of it)
+        // Insert detailed container AFTER analyzer card (outside of it)
         if (analyzerCard && analyzerCard.parentNode) {
             analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
         }
         
-        resultsDiv.classList.remove('hidden');
-        
-        // Show resources (will be moved outside by showResources method)
+        // === PART 3: RESOURCES (also outside) ===
         this.showResources(data);
         
-        // Initialize tooltips after components are rendered
+        // Initialize tooltips and enhancements
         setTimeout(() => {
             if (window.UIUtils) {
                 window.UIUtils.initializeTooltips();
@@ -203,7 +133,7 @@ class UIController {
             }
         }, 1000);
         
-        // Smooth scroll with a slight delay
+        // Smooth scroll to results
         setTimeout(() => {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 300);
@@ -215,16 +145,14 @@ class UIController {
     }
 
     /**
-     * Create article info section with author handling
+     * Create article info section
      */
     createArticleInfo(article) {
         const div = document.createElement('div');
         div.className = 'article-info-card';
         
-        // Handle multiple authors
         let authorText = '';
         if (article.author) {
-            // Check if author contains multiple names (common separators)
             const authors = article.author.split(/(?:,| and | & )/i).map(a => a.trim()).filter(a => a);
             if (authors.length > 1) {
                 authorText = `By ${authors.slice(0, -1).join(', ')} and ${authors[authors.length - 1]}`;
@@ -251,7 +179,7 @@ class UIController {
      * Toggle detailed view visibility
      */
     toggleDetailedView() {
-        const detailedContainer = document.getElementById('detailedAnalysisContainer');
+        const detailedContainer = document.querySelector('.detailed-analysis-container');
         if (!detailedContainer) return;
         
         this.detailedViewVisible = !this.detailedViewVisible;
@@ -259,14 +187,10 @@ class UIController {
         if (this.detailedViewVisible) {
             detailedContainer.style.display = 'block';
             setTimeout(() => {
-                detailedContainer.classList.add('slide-in');
                 detailedContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 10);
         } else {
-            detailedContainer.classList.remove('slide-in');
-            setTimeout(() => {
-                detailedContainer.style.display = 'none';
-            }, 300);
+            detailedContainer.style.display = 'none';
         }
     }
 
@@ -277,6 +201,11 @@ class UIController {
         const resourcesDiv = document.getElementById('resources');
         const resourcesList = document.getElementById('resourcesList');
         const analyzerCard = document.querySelector('.analyzer-card');
+        
+        // Move resources outside if it's still inside analyzer card
+        if (resourcesDiv.closest('.analyzer-card')) {
+            analyzerCard.parentNode.appendChild(resourcesDiv);
+        }
         
         const resources = [];
         
@@ -306,17 +235,12 @@ class UIController {
             `<span class="resource-chip">${r}</span>`
         ).join('');
         
-        // Move resources div outside analyzer card if it's inside
-        if (resourcesDiv.parentElement === analyzerCard) {
-            analyzerCard.parentNode.insertBefore(resourcesDiv, analyzerCard.nextSibling.nextSibling);
-        }
-        
         resourcesDiv.classList.remove('hidden');
         resourcesDiv.classList.add('fade-in');
     }
 
     /**
-     * Show error message with animation
+     * Show error message
      */
     showError(message) {
         const resultsDiv = document.getElementById('results');
@@ -341,33 +265,31 @@ class UIController {
      * Show progress with animated steps
      */
     showProgress(show, message = 'Analyzing article...') {
-        if (show && window.UIUtils) {
-            // Show loading skeletons
-            window.UIUtils.showLoadingSkeletons();
-        }
+        console.log('showProgress called:', show, message);
         
+        // Try to use the progress bar component
         if (this.components.progressBar) {
+            console.log('Using progressBar component');
             if (show) {
-                // Reset progress
                 this.currentProgressStep = 0;
                 this.components.progressBar.show(message);
-                
-                // Start automated progress animation
                 this.startProgressAnimation();
             } else {
-                // Stop animation and hide
                 this.stopProgressAnimation();
                 this.components.progressBar.hide();
             }
         } else {
+            console.log('Progress bar component not found, using fallback');
             // Fallback to old loading
             const loadingDiv = document.getElementById('loading');
-            if (show) {
-                loadingDiv.classList.remove('hidden');
-                const loadingText = loadingDiv.querySelector('p');
-                if (loadingText) loadingText.textContent = message;
-            } else {
-                loadingDiv.classList.add('hidden');
+            if (loadingDiv) {
+                if (show) {
+                    loadingDiv.classList.remove('hidden');
+                    const loadingText = loadingDiv.querySelector('p');
+                    if (loadingText) loadingText.textContent = message;
+                } else {
+                    loadingDiv.classList.add('hidden');
+                }
             }
         }
     }
@@ -376,11 +298,10 @@ class UIController {
      * Start automated progress animation
      */
     startProgressAnimation() {
-        this.stopProgressAnimation(); // Clear any existing timer
+        this.stopProgressAnimation();
         
         let stepIndex = 0;
         
-        // Update progress every 1.5 seconds
         this.progressTimer = setInterval(() => {
             if (stepIndex < this.progressSteps.length - 1) {
                 const step = this.progressSteps[stepIndex];
@@ -391,7 +312,6 @@ class UIController {
                 
                 stepIndex++;
                 
-                // Stop at 95% to wait for actual completion
                 if (step.percent >= 95) {
                     this.stopProgressAnimation();
                 }
