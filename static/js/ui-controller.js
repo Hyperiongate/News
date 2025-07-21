@@ -23,7 +23,7 @@ class UIController {
         resultsDiv.innerHTML = '';
         document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
         document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
-        document.querySelectorAll('.overall-assessment').forEach(el => el.remove());
+        document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
         
         // INSIDE: Enhanced Summary with Overall Assessment
         resultsDiv.innerHTML = `
@@ -92,37 +92,62 @@ class UIController {
         `;
         resultsDiv.classList.remove('hidden');
         
-        // OUTSIDE: Just a header, NO container
+        // OUTSIDE: Header
         const header = document.createElement('h2');
         header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem;';
         header.textContent = 'Detailed Analysis';
         analyzerCard.parentNode.insertBefore(header, analyzerCard.nextSibling);
         
-        // Create individual cards - NO CONTAINER
+        // Create 2x2 grid wrapper
+        const gridWrapper = document.createElement('div');
+        gridWrapper.className = 'cards-grid-wrapper';
+        gridWrapper.style.cssText = `
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+        `;
+        
+        // Create cards with expandable functionality
         const cards = [];
+        let cardId = 0;
         
         if (data.bias_analysis) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
-            card.innerHTML = `
-                <h3>⚖️ Bias Analysis</h3>
-                <p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
-                <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>
-                <p>Opinion Content: <strong>${data.bias_analysis.opinion_percentage || 0}%</strong></p>
-                <p>Emotional Language: <strong>${data.bias_analysis.emotional_score || 0}%</strong></p>
-            `;
+            const card = this.createExpandableCard(cardId++, '⚖️', 'Bias Analysis', 
+                `<p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
+                 <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>`,
+                `<p>Opinion Content: <strong>${data.bias_analysis.opinion_percentage || 0}%</strong></p>
+                 <p>Emotional Language: <strong>${data.bias_analysis.emotional_score || 0}%</strong></p>
+                 ${data.bias_analysis.manipulation_tactics?.length ? `
+                    <div style="margin-top: 15px;">
+                        <strong>Manipulation Tactics Detected:</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            ${data.bias_analysis.manipulation_tactics.map(t => `<li>${t.name || t}</li>`).join('')}
+                        </ul>
+                    </div>
+                 ` : ''}
+                 ${data.bias_analysis.loaded_phrases?.length ? `
+                    <div style="margin-top: 15px;">
+                        <strong>Loaded Phrases:</strong>
+                        ${data.bias_analysis.loaded_phrases.slice(0, 3).map(p => `
+                            <div style="margin: 8px 0; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+                                <span style="font-weight: 600;">"${p.text}"</span>
+                                <span style="color: #666; font-size: 0.9rem;"> - ${p.type}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                 ` : ''}`
+            );
             cards.push(card);
         }
         
         if (data.fact_checks?.length) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
-            card.innerHTML = `
-                <h3>✓ Fact Checks</h3>
-                <p><strong>${data.fact_checks.length}</strong> claims checked</p>
-                ${data.fact_checks.slice(0, 3).map(fc => `
+            const card = this.createExpandableCard(cardId++, '✓', 'Fact Checks', 
+                `<p><strong>${data.fact_checks.length}</strong> claims checked</p>
+                 <p style="color: #666;">Click to see details</p>`,
+                `${data.fact_checks.map(fc => `
                     <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
                         <div style="font-weight: 600; color: ${fc.verdict?.includes('true') ? '#10b981' : '#ef4444'};">
                             ${fc.verdict || 'Unverified'}
@@ -130,56 +155,135 @@ class UIController {
                         <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
                             "${fc.claim || fc}"
                         </div>
+                        ${fc.source ? `<div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Source: ${fc.source}</div>` : ''}
                     </div>
-                `).join('')}
-            `;
+                `).join('')}`
+            );
             cards.push(card);
         }
         
         if (data.clickbait_score !== undefined) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
-            card.innerHTML = `
-                <h3>🎣 Clickbait Detection</h3>
-                <p style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">
+            const card = this.createExpandableCard(cardId++, '🎣', 'Clickbait Detection', 
+                `<p style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">
                     ${data.clickbait_score}%
-                </p>
-                ${data.clickbait_indicators?.length ? `
+                 </p>
+                 <p style="color: #666;">Clickbait Score</p>`,
+                `${data.clickbait_indicators?.length ? `
                     <div style="margin-top: 15px;">
                         <strong>Indicators Found:</strong>
-                        <ul style="margin: 10px 0; padding-left: 20px;">
-                            ${data.clickbait_indicators.map(ind => `<li>${ind.name}</li>`).join('')}
-                        </ul>
+                        ${data.clickbait_indicators.map(ind => `
+                            <div style="margin: 10px 0; padding: 10px; background: #fef2f2; border-radius: 4px;">
+                                <div style="font-weight: 600;">${ind.name}</div>
+                                <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">${ind.description}</div>
+                            </div>
+                        `).join('')}
                     </div>
-                ` : ''}
-            `;
+                 ` : ''}
+                 ${data.title_analysis ? `
+                    <div style="margin-top: 15px;">
+                        <strong>Title Analysis:</strong>
+                        <p>Sensationalism: ${data.title_analysis.sensationalism}%</p>
+                        <p>Curiosity Gap: ${data.title_analysis.curiosity_gap}%</p>
+                        <p>Emotional Words: ${data.title_analysis.emotional_words}%</p>
+                    </div>
+                 ` : ''}`
+            );
             cards.push(card);
         }
         
         if (data.author_analysis) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
-            card.innerHTML = `
-                <h3>✍️ Author Analysis</h3>
-                <p><strong>${data.author_analysis.name || 'Unknown'}</strong></p>
-                <p>Credibility Score: <strong>${data.author_analysis.credibility_score || 'N/A'}</strong></p>
-                ${data.author_analysis.bio ? `<p style="margin-top: 10px; font-size: 0.9rem; color: #666;">${data.author_analysis.bio}</p>` : ''}
-                ${data.author_analysis.verification_status?.verified ? '<p style="color: #10b981;">✓ Verified Journalist</p>' : ''}
-            `;
+            const card = this.createExpandableCard(cardId++, '✍️', 'Author Analysis', 
+                `<p><strong>${data.author_analysis.name || 'Unknown'}</strong></p>
+                 <p>Credibility: <strong>${data.author_analysis.credibility_score || 'N/A'}</strong></p>`,
+                `${data.author_analysis.bio ? `<p style="margin-top: 10px; font-size: 0.9rem; color: #666;">${data.author_analysis.bio}</p>` : ''}
+                 ${data.author_analysis.verification_status ? `
+                    <div style="margin-top: 15px;">
+                        <strong>Verification Status:</strong>
+                        <p>${data.author_analysis.verification_status.verified ? '✓' : '✗'} Verified Account</p>
+                        <p>${data.author_analysis.verification_status.journalist_verified ? '✓' : '✗'} Journalist Verified</p>
+                        <p>${data.author_analysis.verification_status.outlet_staff ? '✓' : '✗'} Outlet Staff</p>
+                    </div>
+                 ` : ''}
+                 ${data.author_analysis.articles_count ? `<p style="margin-top: 10px;">Articles Written: <strong>${data.author_analysis.articles_count}</strong></p>` : ''}
+                 ${data.author_analysis.years_experience ? `<p>Years of Experience: <strong>${data.author_analysis.years_experience}</strong></p>` : ''}`
+            );
             cards.push(card);
         }
         
-        // Insert each card directly after the header - NO CONTAINER
-        let insertAfter = header;
-        cards.forEach(card => {
-            insertAfter.parentNode.insertBefore(card, insertAfter.nextSibling);
-            insertAfter = card;
-        });
+        // Add cards to grid
+        cards.forEach(card => gridWrapper.appendChild(card));
+        
+        // Insert grid after header
+        header.parentNode.insertBefore(gridWrapper, header.nextSibling);
         
         // Show resources
         this.showResources(data);
+    }
+
+    createExpandableCard(id, icon, title, summary, details) {
+        const card = document.createElement('div');
+        card.className = 'analysis-card-standalone';
+        card.id = `card-${id}`;
+        card.style.cssText = `
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        `;
+        
+        card.innerHTML = `
+            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="margin: 0; display: flex; align-items: center;">
+                    <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
+                    ${title}
+                </h3>
+                <span class="expand-icon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+            </div>
+            <div class="card-summary" style="margin-top: 15px;">
+                ${summary}
+            </div>
+            <div class="card-details" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                ${details}
+            </div>
+        `;
+        
+        // Add click handler
+        card.addEventListener('click', function() {
+            const detailsDiv = this.querySelector('.card-details');
+            const expandIcon = this.querySelector('.expand-icon');
+            const isExpanded = detailsDiv.style.display !== 'none';
+            
+            if (isExpanded) {
+                detailsDiv.style.display = 'none';
+                expandIcon.style.transform = 'rotate(0deg)';
+                this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            } else {
+                detailsDiv.style.display = 'block';
+                expandIcon.style.transform = 'rotate(180deg)';
+                this.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
+            }
+        });
+        
+        // Hover effect
+        card.addEventListener('mouseenter', function() {
+            if (!this.querySelector('.card-details').style.display || this.querySelector('.card-details').style.display === 'none') {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            if (!this.querySelector('.card-details').style.display || this.querySelector('.card-details').style.display === 'none') {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            }
+        });
+        
+        return card;
     }
 
     generateAssessment(data) {
