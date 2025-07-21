@@ -1,4 +1,4 @@
-/**
+ /**
  * FILE: static/js/main.js
  * LOCATION: news/static/js/main.js
  * PURPOSE: Frontend JavaScript for news analyzer
