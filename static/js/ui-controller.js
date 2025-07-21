@@ -36,6 +36,7 @@ class UIController {
     buildResults(data) {
         this.analysisData = data;
         const resultsDiv = document.getElementById('results');
+        const analyzerCard = document.querySelector('.analyzer-card');
         
         if (!data.success) {
             this.showError(data.error || 'Analysis failed');
@@ -45,19 +46,20 @@ class UIController {
         // Clear previous results
         resultsDiv.innerHTML = '';
         
+        // Remove any existing detailed analysis container
+        const existingDetailedContainer = document.getElementById('detailedAnalysisContainer');
+        if (existingDetailedContainer) {
+            existingDetailedContainer.remove();
+        }
+        
         // Create main container for summary info only
         const mainContainer = document.createElement('div');
         mainContainer.className = 'summary-container';
         
-        // Create or find detailed analysis container (separate from main)
-        let detailedContainer = document.getElementById('detailedAnalysisContainer');
-        if (!detailedContainer) {
-            detailedContainer = document.createElement('div');
-            detailedContainer.id = 'detailedAnalysisContainer';
-            detailedContainer.className = 'detailed-analysis-container';
-        } else {
-            detailedContainer.innerHTML = ''; // Clear existing content
-        }
+        // Create detailed analysis container (separate from main)
+        const detailedContainer = document.createElement('div');
+        detailedContainer.id = 'detailedAnalysisContainer';
+        detailedContainer.className = 'detailed-analysis-container';
         
         let componentDelay = 0;
         
@@ -106,12 +108,16 @@ class UIController {
         detailsHeader.className = 'detailed-analysis-header';
         detailsHeader.innerHTML = `
             <h3>Detailed Analysis</h3>
-            <p>Click on any card below to expand and view detailed information</p>
+            <p>Deep dive into bias, manipulation tactics, fact-checking, and credibility scores</p>
         `;
         detailsHeader.classList.add('fade-in');
         detailsHeader.style.animationDelay = `${componentDelay}s`;
         detailedContainer.appendChild(detailsHeader);
         componentDelay += 0.1;
+        
+        // Analysis Cards Container
+        const cardsContainer = document.createElement('div');
+        cardsContainer.className = 'analysis-cards-section';
         
         // Analysis Cards - Now in separate container
         if (this.components.analysisCards) {
@@ -119,68 +125,74 @@ class UIController {
             cardsEl.classList.add('fade-in');
             cardsEl.style.animationDelay = `${componentDelay}s`;
             cardsEl.style.display = 'block'; // Make sure it's visible
-            detailedContainer.appendChild(cardsEl);
+            cardsEl.style.background = 'transparent';
+            cardsEl.style.padding = '0';
+            cardsEl.style.margin = '0';
+            cardsEl.style.border = 'none';
+            cardsEl.style.boxShadow = 'none';
+            cardsContainer.appendChild(cardsEl);
+        } else {
+            // Individual component cards (if not using analysisCards component)
+            const individualCards = [];
+            
+            // Bias Analysis Card
+            if (this.components.biasAnalysis && data.bias_analysis) {
+                const biasEl = this.components.biasAnalysis.render(data);
+                biasEl.classList.add('fade-in');
+                biasEl.style.animationDelay = `${componentDelay}s`;
+                individualCards.push(biasEl);
+                componentDelay += 0.1;
+            }
+            
+            // Fact Checker Card
+            if (this.components.factChecker && data.key_claims) {
+                const factCheckEl = this.components.factChecker.render(data);
+                factCheckEl.classList.add('fade-in');
+                factCheckEl.style.animationDelay = `${componentDelay}s`;
+                individualCards.push(factCheckEl);
+                componentDelay += 0.1;
+            }
+            
+            // Clickbait Detector Card
+            if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
+                const clickbaitEl = this.components.clickbaitDetector.render(data);
+                clickbaitEl.classList.add('fade-in');
+                clickbaitEl.style.animationDelay = `${componentDelay}s`;
+                individualCards.push(clickbaitEl);
+                componentDelay += 0.1;
+            }
+            
+            // Author Card
+            if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
+                const authorEl = this.components.authorCard.render(data);
+                authorEl.classList.add('fade-in');
+                authorEl.style.animationDelay = `${componentDelay}s`;
+                individualCards.push(authorEl);
+                componentDelay += 0.1;
+            }
+            
+            // Add individual cards
+            if (individualCards.length > 0) {
+                const cardsGrid = document.createElement('div');
+                cardsGrid.className = 'individual-cards-grid';
+                individualCards.forEach(card => cardsGrid.appendChild(card));
+                cardsContainer.appendChild(cardsGrid);
+            }
         }
         
-        // Individual component cards (if not using analysisCards component)
-        // These will be standalone cards outside the main container
-        const individualCards = [];
+        detailedContainer.appendChild(cardsContainer);
         
-        // Bias Analysis Card
-        if (this.components.biasAnalysis && data.bias_analysis) {
-            const biasEl = this.components.biasAnalysis.render(data);
-            biasEl.classList.add('fade-in');
-            biasEl.style.animationDelay = `${componentDelay}s`;
-            individualCards.push(biasEl);
-            componentDelay += 0.1;
-        }
-        
-        // Fact Checker Card
-        if (this.components.factChecker && data.key_claims) {
-            const factCheckEl = this.components.factChecker.render(data);
-            factCheckEl.classList.add('fade-in');
-            factCheckEl.style.animationDelay = `${componentDelay}s`;
-            individualCards.push(factCheckEl);
-            componentDelay += 0.1;
-        }
-        
-        // Clickbait Detector Card
-        if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
-            const clickbaitEl = this.components.clickbaitDetector.render(data);
-            clickbaitEl.classList.add('fade-in');
-            clickbaitEl.style.animationDelay = `${componentDelay}s`;
-            individualCards.push(clickbaitEl);
-            componentDelay += 0.1;
-        }
-        
-        // Author Card
-        if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
-            const authorEl = this.components.authorCard.render(data);
-            authorEl.classList.add('fade-in');
-            authorEl.style.animationDelay = `${componentDelay}s`;
-            individualCards.push(authorEl);
-            componentDelay += 0.1;
-        }
-        
-        // Add individual cards if analysisCards component isn't being used
-        if (individualCards.length > 0 && !this.components.analysisCards) {
-            const cardsGrid = document.createElement('div');
-            cardsGrid.className = 'individual-cards-grid';
-            individualCards.forEach(card => cardsGrid.appendChild(card));
-            detailedContainer.appendChild(cardsGrid);
-        }
-        
-        // Append containers to results div
+        // Append main container to results div
         resultsDiv.appendChild(mainContainer);
         
-        // Insert detailed container after results div
-        if (resultsDiv.parentNode) {
-            resultsDiv.parentNode.insertBefore(detailedContainer, resultsDiv.nextSibling);
+        // Insert detailed container after analyzer card (outside of it)
+        if (analyzerCard && analyzerCard.parentNode) {
+            analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
         }
         
         resultsDiv.classList.remove('hidden');
         
-        // Show resources (separate section)
+        // Show resources (will be moved outside by showResources method)
         this.showResources(data);
         
         // Initialize tooltips after components are rendered
@@ -259,11 +271,12 @@ class UIController {
     }
 
     /**
-     * Show resources used
+     * Show resources used - moved outside analyzer card
      */
     showResources(data) {
         const resourcesDiv = document.getElementById('resources');
         const resourcesList = document.getElementById('resourcesList');
+        const analyzerCard = document.querySelector('.analyzer-card');
         
         const resources = [];
         
@@ -292,6 +305,11 @@ class UIController {
         resourcesList.innerHTML = resources.map(r => 
             `<span class="resource-chip">${r}</span>`
         ).join('');
+        
+        // Move resources div outside analyzer card if it's inside
+        if (resourcesDiv.parentElement === analyzerCard) {
+            analyzerCard.parentNode.insertBefore(resourcesDiv, analyzerCard.nextSibling.nextSibling);
+        }
         
         resourcesDiv.classList.remove('hidden');
         resourcesDiv.classList.add('fade-in');
