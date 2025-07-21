@@ -2,7 +2,7 @@
 
 class ExecutiveSummary {
     constructor() {
-        this.data = null;
+        this.data = null; 
     }
 
     render(data) {
