@@ -1,4 +1,4 @@
-// static/js/ui-controller.js
+// static/js/ui-controller.js 
 class UIController {
     constructor() {
         this.components = {};
