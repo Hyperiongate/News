@@ -131,3 +131,201 @@ const NewsAnalyzer = {
                 body: JSON.stringify({ 
                     [type === 'url' ? 'url' : 'text']: content 
                 })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                this.showResults(data);
+            } else {
+                this.showError(data.error || 'Analysis failed');
+            }
+        } catch (error) {
+            console.error('Analysis error:', error);
+            this.showError('Network error. Please try again.');
+        } finally {
+            this.showLoading(false);
+        }
+    },
+
+    // Load trending news
+    async loadTrendingNews() {
+        try {
+            const response = await fetch('/api/trending');
+            const data = await response.json();
+
+            if (response.ok && data.articles) {
+                this.displayTrendingNews(data.articles);
+            }
+        } catch (error) {
+            console.error('Failed to load trending news:', error);
+        }
+    },
+
+    // Display trending news
+    displayTrendingNews(articles) {
+        const trendingDiv = document.getElementById('trending');
+        
+        if (articles.length === 0) {
+            trendingDiv.innerHTML = '<p>No trending articles available</p>';
+            return;
+        }
+
+        const html = articles.map(article => `
+            <div class="trending-item">
+                <a href="#" onclick="NewsAnalyzer.analyzeTrendingArticle('${article.url}'); return false;">
+                    ${article.title}
+                </a>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">
+                    ${article.source}
+                </div>
+            </div>
+        `).join('');
+
+        trendingDiv.innerHTML = html;
+    },
+
+    // Analyze trending article
+    analyzeTrendingArticle(url) {
+        // Switch to URL tab
+        this.switchTab('url');
+        // Fill URL
+        document.getElementById('urlInput').value = url;
+        this.analyzeNews('url');
+    },
+
+    // Show results
+    showResults(data) {
+        const resultsDiv = document.getElementById('results');
+        
+        // Handle both success and error responses
+        if (!data.success) {
+            this.showError(data.error || 'Analysis failed');
+            return;
+        }
+        
+        const analysis = data.analysis || {};
+        const article = data.article || {};
+        
+        let html = '<h3>Analysis Results</h3>';
+        
+        // Article info
+        if (article.title) {
+            html += `<div class="result-item"><strong>Title:</strong> ${article.title}</div>`;
+        }
+        if (article.author) {
+            html += `<div class="result-item"><strong>Author:</strong> ${article.author}</div>`;
+        }
+        if (article.domain) {
+            html += `<div class="result-item"><strong>Source:</strong> ${article.domain}</div>`;
+        }
+        
+        // Trust score with color coding
+        const trustScore = data.trust_score || analysis.trust_score || 0;
+        const scoreColor = trustScore >= 70 ? '#27ae60' : trustScore >= 40 ? '#f39c12' : '#e74c3c';
+        html += `<div class="result-item">
+            <strong>Trust Score:</strong> 
+            <span style="color: ${scoreColor}; font-weight: bold;">${trustScore}%</span>
+        </div>`;
+        
+        // Summary
+        if (analysis.summary) {
+            html += `<div class="result-item"><strong>Summary:</strong> ${analysis.summary}</div>`;
+        }
+        
+        // Source credibility
+        if (analysis.source_credibility) {
+            const cred = analysis.source_credibility;
+            html += `<div class="result-item">
+                <strong>Source Credibility:</strong> ${cred.credibility || 'Unknown'} 
+                | <strong>Bias:</strong> ${cred.bias || 'Unknown'}
+                | <strong>Type:</strong> ${cred.type || 'Unknown'}
+            </div>`;
+        }
+        
+        // Manipulation tactics
+        if (analysis.manipulation_tactics && analysis.manipulation_tactics.length > 0) {
+            html += '<div class="result-item"><strong>⚠️ Warning - Manipulation Tactics Detected:</strong><ul>';
+            analysis.manipulation_tactics.forEach(tactic => {
+                html += `<li>${tactic}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Key claims and fact checks
+        if (analysis.fact_checks && analysis.fact_checks.length > 0) {
+            html += '<div class="result-item"><strong>Fact Check Results:</strong>';
+            analysis.fact_checks.forEach(check => {
+                const verdictColor = check.verdict === 'true' ? '#27ae60' : 
+                                   check.verdict === 'false' ? '#e74c3c' : 
+                                   check.verdict === 'partially_true' ? '#f39c12' : '#95a5a6';
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                        <div><strong>Claim:</strong> ${check.claim}</div>
+                        <div><strong>Verdict:</strong> <span style="color: ${verdictColor}; font-weight: bold;">${check.verdict.replace('_', ' ').toUpperCase()}</span></div>
+                        <div><strong>Source:</strong> ${check.source}</div>
+                        ${check.explanation ? `<div><strong>Details:</strong> ${check.explanation}</div>` : ''}
+                    </div>`;
+            });
+            html += '</div>';
+        } else if (analysis.key_claims && analysis.key_claims.length > 0) {
+            html += '<div class="result-item"><strong>Key Claims Identified:</strong><ul>';
+            analysis.key_claims.forEach(claim => {
+                html += `<li>${claim}</li>`;
+            });
+            html += '</ul><em>Note: Fact checking requires API keys to be configured</em></div>';
+        }
+        
+        // Related articles
+        if (analysis.related_articles && analysis.related_articles.length > 0) {
+            html += '<div class="result-item"><strong>Related Articles:</strong>';
+            analysis.related_articles.forEach(article => {
+                html += `
+                    <div style="margin: 5px 0;">
+                        <a href="${article.url}" target="_blank" style="color: #3498db;">
+                            ${article.title}
+                        </a>
+                        <span style="color: #666; font-size: 0.9em;"> - ${article.source}</span>
+                    </div>`;
+            });
+            html += '</div>';
+        }
+        
+        resultsDiv.innerHTML = html;
+        resultsDiv.classList.remove('hidden');
+    },
+
+    // Show/hide loading state
+    showLoading(show) {
+        const loadingDiv = document.getElementById('loading');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        
+        if (show) {
+            loadingDiv.classList.remove('hidden');
+            analyzeBtn.disabled = true;
+            analyzeTextBtn.disabled = true;
+        } else {
+            loadingDiv.classList.add('hidden');
+            analyzeBtn.disabled = false;
+            analyzeTextBtn.disabled = false;
+        }
+    },
+
+    // Hide results
+    hideResults() {
+        document.getElementById('results').classList.add('hidden');
+    },
+
+    // Show error message
+    showError(message) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = `<div class="error">${message}</div>`;
+        resultsDiv.classList.remove('hidden');
+    }
+};
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    NewsAnalyzer.init();
+});
