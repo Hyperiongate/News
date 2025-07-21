@@ -22,6 +22,7 @@ class UIController {
         // Clear everything
         resultsDiv.innerHTML = '';
         document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
+        document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
         
         // INSIDE: Summary only
         resultsDiv.innerHTML = `
@@ -35,48 +36,69 @@ class UIController {
         `;
         resultsDiv.classList.remove('hidden');
         
-        // OUTSIDE: Cards
-        const outside = document.createElement('div');
-        outside.className = 'detailed-analysis-container';
-        outside.style.cssText = 'margin-top: 40px; padding: 20px; background: #f9f9f9;';
-        outside.innerHTML = `
-            <h2 style="text-align: center; margin-bottom: 30px;">Detailed Analysis</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto;">
-                ${data.bias_analysis ? `
-                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <h3>⚖️ Bias Analysis</h3>
-                        <p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
-                        <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>
-                    </div>
-                ` : ''}
-                
-                ${data.fact_checks?.length ? `
-                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <h3>✓ Fact Checks</h3>
-                        <p><strong>${data.fact_checks.length}</strong> claims checked</p>
-                    </div>
-                ` : ''}
-                
-                ${data.clickbait_score !== undefined ? `
-                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <h3>🎣 Clickbait</h3>
-                        <p style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">
-                            ${data.clickbait_score}%
-                        </p>
-                    </div>
-                ` : ''}
-                
-                ${data.author_analysis ? `
-                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <h3>✍️ Author</h3>
-                        <p><strong>${data.author_analysis.name || 'Unknown'}</strong></p>
-                        <p>Credibility: ${data.author_analysis.credibility_score || 'N/A'}</p>
-                    </div>
-                ` : ''}
-            </div>
-        `;
+        // OUTSIDE: Just a header, NO container
+        const header = document.createElement('h2');
+        header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem;';
+        header.textContent = 'Detailed Analysis';
+        analyzerCard.parentNode.insertBefore(header, analyzerCard.nextSibling);
         
-        analyzerCard.parentNode.insertBefore(outside, analyzerCard.nextSibling);
+        // Create individual cards - NO CONTAINER
+        const cards = [];
+        
+        if (data.bias_analysis) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card-standalone';
+            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
+            card.innerHTML = `
+                <h3>⚖️ Bias Analysis</h3>
+                <p>Political Lean: <strong>${data.bias_analysis.political_lean || 0}%</strong></p>
+                <p>Objectivity: <strong>${data.bias_analysis.objectivity_score || 0}%</strong></p>
+            `;
+            cards.push(card);
+        }
+        
+        if (data.fact_checks?.length) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card-standalone';
+            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
+            card.innerHTML = `
+                <h3>✓ Fact Checks</h3>
+                <p><strong>${data.fact_checks.length}</strong> claims checked</p>
+            `;
+            cards.push(card);
+        }
+        
+        if (data.clickbait_score !== undefined) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card-standalone';
+            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
+            card.innerHTML = `
+                <h3>🎣 Clickbait</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">
+                    ${data.clickbait_score}%
+                </p>
+            `;
+            cards.push(card);
+        }
+        
+        if (data.author_analysis) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card-standalone';
+            card.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px auto; max-width: 400px;';
+            card.innerHTML = `
+                <h3>✍️ Author</h3>
+                <p><strong>${data.author_analysis.name || 'Unknown'}</strong></p>
+                <p>Credibility: ${data.author_analysis.credibility_score || 'N/A'}</p>
+            `;
+            cards.push(card);
+        }
+        
+        // Insert each card directly after the header - NO CONTAINER
+        let insertAfter = header;
+        cards.forEach(card => {
+            insertAfter.parentNode.insertBefore(card, insertAfter.nextSibling);
+            insertAfter = card;
+        });
         
         // Show resources
         this.showResources(data);
