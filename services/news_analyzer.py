@@ -56,7 +56,7 @@ class NewsAnalyzer:
         try:
             # Extract article data
             if content_type == 'url':
-                article_data = self.extractor.extract_article(content)  # CHANGED FROM extract_from_url
+                article_data = self.extractor.extract_article(content)  # CHANGED FROM extract_article
                 if not article_data:
                     domain = urlparse(content).netloc.replace('www.', '')
                     return {
