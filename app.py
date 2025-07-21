@@ -1,10 +1,11 @@
 """
 FILE: app.py
 LOCATION: news/app.py
-PURPOSE: Flask app with enhanced features and export capability
+PURPOSE: Flask app with optional export capability
 """
 
 import os
+import io
 import json
 import logging
 from datetime import datetime
@@ -13,7 +14,17 @@ from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 
 from services.news_analyzer import NewsAnalyzer
-from services.report_generator import ReportGenerator
+
+# Try to import report generator, but make it optional
+try:
+    from services.report_generator import ReportGenerator
+    report_generator = ReportGenerator()
+    EXPORT_ENABLED = True
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("ReportLab not installed - export feature disabled")
+    report_generator = None
+    EXPORT_ENABLED = False
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -25,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize services
 analyzer = NewsAnalyzer()
-report_generator = ReportGenerator()
 
 # Store recent analyses in memory (for export feature)
 # In production, use Redis or database
@@ -62,7 +72,7 @@ def analyze():
         result = analyzer.analyze(content, content_type, is_pro)
         
         # Store result for potential export (with simple ID)
-        if result.get('success'):
+        if result.get('success') and EXPORT_ENABLED:
             analysis_id = str(int(datetime.now().timestamp()))
             recent_analyses[analysis_id] = result
             result['analysis_id'] = analysis_id
@@ -71,6 +81,9 @@ def analyze():
             if len(recent_analyses) > 100:
                 oldest_key = min(recent_analyses.keys())
                 del recent_analyses[oldest_key]
+        
+        # Add export status to response
+        result['export_enabled'] = EXPORT_ENABLED
         
         return jsonify(result)
         
@@ -84,6 +97,9 @@ def analyze():
 @app.route('/api/export/<analysis_id>', methods=['GET'])
 def export_report(analysis_id):
     """Export analysis as PDF"""
+    if not EXPORT_ENABLED:
+        return jsonify({'error': 'Export feature not available'}), 503
+        
     try:
         # Get analysis from memory
         analysis = recent_analyses.get(analysis_id)
@@ -115,7 +131,8 @@ def health():
     return jsonify({
         'status': 'healthy',
         'service': 'news-analyzer',
-        'version': '1.1.0'
+        'version': '1.1.0',
+        'export_enabled': EXPORT_ENABLED
     })
 
 # Error handlers
