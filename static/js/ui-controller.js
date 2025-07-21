@@ -343,3 +343,111 @@ class UIController {
 
 // Create global instance
 window.UI = new UIController();
+// === ADD THIS TO THE END OF ui-controller.js ===
+// Complete fix for progress bar and separated layout
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔧 Applying UI fixes...');
+    
+    // Fix 1: Ensure progress bar is registered
+    setTimeout(() => {
+        if (!window.UI.components.progressBar && window.ProgressBar) {
+            console.log('✅ Manually registering progress bar');
+            const progressBar = new ProgressBar();
+            progressBar.mount();
+            window.UI.registerComponent('progressBar', progressBar);
+        }
+        console.log('📦 Registered components:', Object.keys(window.UI.components));
+    }, 100);
+    
+    // Fix 2: Override buildResults for proper layout separation
+    const originalBuildResults = window.UI.buildResults.bind(window.UI);
+    window.UI.buildResults = function(data) {
+        const resultsDiv = document.getElementById('results');
+        const analyzerCard = document.querySelector('.analyzer-card');
+        
+        if (!data.success) {
+            this.showError(data.error || 'Analysis failed');
+            return;
+        }
+        
+        // Clear everything
+        resultsDiv.innerHTML = '';
+        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
+        
+        // === INSIDE ANALYZER CARD ===
+        const summaryContainer = document.createElement('div');
+        summaryContainer.className = 'summary-container';
+        
+        // 1. Article Info
+        if (data.article) {
+            const articleInfo = this.createArticleInfo(data.article);
+            articleInfo.classList.add('fade-in');
+            summaryContainer.appendChild(articleInfo);
+        }
+        
+        // 2. Executive Summary
+        if (this.components.executiveSummary) {
+            try {
+                const summaryEl = this.components.executiveSummary.render(data);
+                summaryEl.classList.add('fade-in');
+                summaryEl.style.animationDelay = '0.1s';
+                summaryContainer.appendChild(summaryEl);
+            } catch (e) {
+                console.error('Executive summary error:', e);
+            }
+        }
+        
+        // 3. Trust Score
+        if (this.components.trustScore && data.trust_score !== undefined) {
+            const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
+            trustScoreEl.classList.add('scale-in');
+            trustScoreEl.style.animationDelay = '0.2s';
+            summaryContainer.appendChild(trustScoreEl);
+        }
+        
+        // Add to results
+        resultsDiv.appendChild(summaryContainer);
+        resultsDiv.classList.remove('hidden');
+        
+        // === OUTSIDE ANALYZER CARD ===
+        const detailedContainer = document.createElement('div');
+        detailedContainer.className = 'detailed-analysis-container';
+        detailedContainer.innerHTML = `
+            <div class="detailed-analysis-header">
+                <h3>Detailed Analysis</h3>
+                <p>Deep dive into bias, manipulation tactics, fact-checking, and credibility scores</p>
+            </div>
+        `;
+        
+        // Add analysis cards
+        if (this.components.analysisCards) {
+            const cardsWrapper = document.createElement('div');
+            cardsWrapper.id = 'detailedAnalysisView';
+            const cardsEl = this.components.analysisCards.render(data);
+            cardsWrapper.appendChild(cardsEl);
+            detailedContainer.appendChild(cardsWrapper);
+        }
+        
+        // Insert after analyzer card
+        if (analyzerCard && analyzerCard.parentNode) {
+            analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
+        }
+        
+        // Move resources outside
+        this.showResources(data);
+        setTimeout(() => {
+            const resources = document.getElementById('resources');
+            if (resources && resources.closest('.analyzer-card')) {
+                analyzerCard.parentNode.appendChild(resources);
+            }
+        }, 100);
+        
+        // Scroll to results
+        setTimeout(() => {
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 300);
+    };
+    
+    console.log('✅ UI fixes applied');
+});
