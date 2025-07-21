@@ -15,7 +15,6 @@ from datetime import datetime
 from urllib.parse import urlparse
 import random
 
-from openai import OpenAI
 import requests
 from bs4 import BeautifulSoup
 
@@ -26,6 +25,15 @@ from .source_credibility import SOURCE_CREDIBILITY
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Try to import OpenAI with error handling
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    logger.warning("OpenAI library not available")
+    OPENAI_AVAILABLE = False
+    OpenAI = None
+
 # Try to import author analyzer
 try:
     from .author_analyzer import AuthorAnalyzer
@@ -35,11 +43,37 @@ except ImportError:
     AUTHOR_ANALYSIS_ENABLED = False
     AuthorAnalyzer = None
 
-# Configuration - Updated for new OpenAI client
+# Configuration - Delayed OpenAI client initialization
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-openai_client = None
-if OPENAI_API_KEY:
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+_openai_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client with lazy initialization"""
+    global _openai_client
+    
+    if _openai_client is not None:
+        return _openai_client
+    
+    if not OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY not found in environment variables")
+        return None
+    
+    if not OPENAI_AVAILABLE:
+        logger.warning("OpenAI library not available")
+        return None
+    
+    try:
+        _openai_client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            timeout=30.0,
+            max_retries=2
+        )
+        logger.info("OpenAI client initialized successfully")
+        return _openai_client
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        return None
 
 class NewsAnalyzer:
     """Main class for analyzing news articles"""
@@ -52,6 +86,8 @@ class NewsAnalyzer:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
+        # Initialize OpenAI client when needed
+        self._openai_client = None
     
     def analyze(self, content, content_type='url', is_pro=True):
         """
@@ -91,9 +127,12 @@ class NewsAnalyzer:
                     'author': None
                 }
             
+            # Get OpenAI client if needed
+            openai_client = get_openai_client() if is_pro else None
+            
             # Perform analysis
             if is_pro and openai_client:
-                raw_analysis = self.get_ai_analysis(article_data)
+                raw_analysis = self.get_ai_analysis(article_data, openai_client)
             else:
                 raw_analysis = self.get_basic_analysis(article_data)
             
@@ -468,9 +507,13 @@ class NewsAnalyzer:
         
         return f"Checked {total} claims: {verified} verified as true, {false} found false, {mixed} partially true."
     
-    def get_ai_analysis(self, article_data):
+    def get_ai_analysis(self, article_data, openai_client):
         """Use OpenAI to analyze article - Updated for new API"""
         try:
+            if not openai_client:
+                logger.warning("OpenAI client not available, falling back to basic analysis")
+                return self.get_basic_analysis(article_data)
+                
             prompt = self._create_analysis_prompt(article_data)
             
             # Updated to use new OpenAI client
