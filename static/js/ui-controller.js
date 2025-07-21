@@ -196,20 +196,88 @@ class UIController {
         }
         
         if (data.fact_checks?.length) {
+            const verified = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('true')).length;
+            const false_claims = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('false')).length;
+            const mixed = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('mixed') || fc.verdict?.toLowerCase().includes('partial')).length;
+            const unverified = data.fact_checks.length - verified - false_claims - mixed;
+            
             const card = this.createExpandableCard(cardId++, '✓', 'Fact Checks', 
                 `<p><strong>${data.fact_checks.length}</strong> claims checked</p>
-                 <p style="color: #666;">Click to see details</p>`,
-                `${data.fact_checks.map(fc => `
-                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
-                        <div style="font-weight: 600; color: ${fc.verdict?.includes('true') ? '#10b981' : '#ef4444'};">
-                            ${fc.verdict || 'Unverified'}
+                 <p style="color: #666; font-size: 0.9rem;">
+                    ${verified > 0 ? `✓ ${verified} True` : ''} 
+                    ${false_claims > 0 ? `✗ ${false_claims} False` : ''} 
+                    ${mixed > 0 ? `≈ ${mixed} Mixed` : ''}
+                 </p>`,
+                `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #059669;">How We Fact-Check</h4>
+                    <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                        We identified the key factual claims in this article and cross-referenced them with multiple trusted sources including fact-checking databases, 
+                        official records, and verified news reports. Think of it as detective work - we're tracking down evidence to see if what's being claimed actually happened.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1e40af;">Claims We Verified</h4>
+                    ${data.fact_checks.map((fc, index) => `
+                        <div style="margin: 15px 0; padding: 15px; background: ${
+                            fc.verdict?.toLowerCase().includes('true') ? '#f0fdf4' : 
+                            fc.verdict?.toLowerCase().includes('false') ? '#fef2f2' : '#f9fafb'
+                        }; border-radius: 6px; border-left: 4px solid ${
+                            fc.verdict?.toLowerCase().includes('true') ? '#10b981' : 
+                            fc.verdict?.toLowerCase().includes('false') ? '#ef4444' : '#f59e0b'
+                        };">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 1.5rem; margin-right: 10px;">
+                                    ${fc.verdict?.toLowerCase().includes('true') ? '✓' : 
+                                      fc.verdict?.toLowerCase().includes('false') ? '✗' : '≈'}
+                                </span>
+                                <span style="font-weight: 600; color: ${
+                                    fc.verdict?.toLowerCase().includes('true') ? '#059669' : 
+                                    fc.verdict?.toLowerCase().includes('false') ? '#dc2626' : '#d97706'
+                                };">
+                                    ${fc.verdict || 'Unverified'}
+                                </span>
+                            </div>
+                            <div style="font-style: italic; color: #475569; margin-bottom: 8px;">
+                                "Claim: ${fc.claim || fc}"
+                            </div>
+                            ${fc.explanation ? `
+                                <div style="font-size: 0.9rem; color: #64748b; margin-top: 8px;">
+                                    <strong>Why:</strong> ${fc.explanation}
+                                </div>
+                            ` : ''}
+                            ${fc.source ? `
+                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                    <strong>Checked via:</strong> ${fc.source}
+                                </div>
+                            ` : ''}
                         </div>
-                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
-                            "${fc.claim || fc}"
-                        </div>
-                        ${fc.source ? `<div style="font-size: 0.8rem; color: #999; margin-top: 5px;">Source: ${fc.source}</div>` : ''}
+                    `).join('')}
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                    <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Tells Us</h4>
+                    <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                        ${this.getFactCheckExplanation(verified, false_claims, mixed, data.fact_checks.length)}
+                    </p>
+                </div>
+                
+                ${data.related_articles?.length > 0 ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #7c3aed;">How Other Sources Reported This</h4>
+                        <p style="margin: 0 0 10px 0; color: #475569; font-size: 0.9rem;">
+                            We found ${data.related_articles.length} other articles covering similar claims:
+                        </p>
+                        ${data.related_articles.slice(0, 3).map(article => `
+                            <div style="margin: 8px 0; padding: 10px; background: #f3f4f6; border-radius: 4px;">
+                                <div style="font-weight: 600; font-size: 0.9rem;">${article.title}</div>
+                                <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+                                    ${article.source} • ${new Date(article.publishedAt).toLocaleDateString()}
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('')}`,
+                ` : ''}`,
                 '#10b981'
             );
             cards.push(card);
@@ -342,18 +410,21 @@ class UIController {
         return card;
     }
     
-    getBiasExplanation(biasAnalysis) {
-        const lean = biasAnalysis.political_lean || 0;
-        const absLean = Math.abs(lean);
-        
-        if (absLean < 20) {
-            return "Great news! This article maintains a balanced perspective. The author presents information fairly without pushing a particular political agenda. This is what quality journalism looks like.";
-        } else if (absLean < 40) {
-            return `The article leans slightly ${lean > 0 ? 'conservative' : 'liberal'}, but stays within normal bounds for news reporting. Most readers would find it reasonably fair, though those on the ${lean > 0 ? 'left' : 'right'} might notice the subtle tilt.`;
-        } else if (absLean < 60) {
-            return `There's a noticeable ${lean > 0 ? 'conservative' : 'liberal'} perspective here. While not extreme, the article clearly favors one side of the political spectrum. Consider reading additional sources for balance.`;
+    getFactCheckExplanation(verified, false_claims, mixed, total) {
+        if (false_claims === 0 && verified === total) {
+            return "Excellent! Every claim we checked turned out to be accurate. This suggests the author did their homework and the article is based on solid facts. You can trust the information presented here.";
+        } else if (false_claims === 0 && verified > 0) {
+            return "Good news - we didn't find any false claims. The facts we could verify checked out, though some claims couldn't be fully confirmed. Overall, this appears to be reliable reporting.";
+        } else if (false_claims === 1) {
+            return "We found one false claim in the article. While most information appears accurate, this error raises questions about the thoroughness of fact-checking. Read with some caution.";
+        } else if (false_claims >= total / 2) {
+            return "Red flag! Half or more of the claims we checked were false. This seriously undermines the article's credibility. We strongly recommend finding alternative sources for this information.";
+        } else if (false_claims > 1) {
+            return `We found ${false_claims} false claims out of ${total} checked. Multiple factual errors suggest problems with the article's accuracy. Be skeptical of other claims made here.`;
+        } else if (mixed > verified) {
+            return "Most claims contain partial truths or are taken out of context. While not entirely false, the article appears to be misleading. Look for more complete reporting elsewhere.";
         } else {
-            return `This shows strong ${lean > 0 ? 'conservative' : 'liberal'} bias. The article reads more like opinion or advocacy than neutral reporting. You're getting one side of the story - seek out other perspectives for the full picture.`;
+            return "Mixed results - some claims check out while others don't. This is common in complex topics, but be aware that not everything in this article is accurately presented.";
         }
     }
 
