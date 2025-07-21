@@ -6,7 +6,7 @@ class UIController {
     }
 
     registerComponent(name, component) {
-        this.components[name] = component;
+        this.components[name] = component; 
         console.log(`Component registered: ${name}`);
     }
 
