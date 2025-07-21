@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Analyzer - Facts & Fakes AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    
     <!-- Component styles -->
     <link rel="stylesheet" href="/static/css/components/pricing-dropdown.css">
     <link rel="stylesheet" href="/static/css/components/progress-bar.css">
+    <link rel="stylesheet" href="/static/css/components/trust-score.css">
+    <link rel="stylesheet" href="/static/css/components/author-card.css">
+    <link rel="stylesheet" href="/static/css/components/bias-analysis.css">
+    <link rel="stylesheet" href="/static/css/components/fact-checker.css">
+    <link rel="stylesheet" href="/static/css/components/clickbait-detector.css">
+    <link rel="stylesheet" href="/static/css/components/export-handler.css">
 </head>
 <body>
     <!-- Header -->
@@ -104,7 +111,10 @@
                 </div>
             </div>
 
-            <!-- Loading state -->
+            <!-- Progress bar container -->
+            <div id="progressContainer"></div>
+
+            <!-- Loading state (fallback) -->
             <div id="loading" class="loading hidden">
                 <div class="spinner"></div>
                 <p>Analyzing article...</p>
@@ -122,21 +132,40 @@
     </main>
 
     <!-- Core modules -->
-<script src="/static/js/main.js"></script>
-<script src="/static/js/ui-controller.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/ui-controller.js"></script>
 
-<!-- Components -->
-<script src="/static/js/components/pricing-dropdown.js"></script>
-<script src="/static/js/components/progress-bar.js"></script>
+    <!-- Components -->
+    <script src="/static/js/components/pricing-dropdown.js"></script>
+    <script src="/static/js/components/progress-bar.js"></script>
+    <script src="/static/js/components/trust-score.js"></script>
+    <script src="/static/js/components/author-card.js"></script>
+    <script src="/static/js/components/bias-analysis.js"></script>
+    <script src="/static/js/components/fact-checker.js"></script>
+    <script src="/static/js/components/clickbait-detector.js"></script>
+    <script src="/static/js/components/export-handler.js"></script>
 
-<!-- Initialize components -->
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Mount pricing dropdown
-        if (window.pricingDropdown) {
-            window.pricingDropdown.mount('pricingDropdownMount');
-        }
-    });
-</script>
+    <!-- Initialize components -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mount pricing dropdown
+            if (window.pricingDropdown) {
+                window.pricingDropdown.mount('pricingDropdownMount');
+            }
+
+            // Mount progress bar
+            if (window.ProgressBar && window.UI) {
+                const progressBar = new window.ProgressBar();
+                const progressContainer = document.getElementById('progressContainer');
+                if (progressContainer) {
+                    progressContainer.appendChild(progressBar.render());
+                }
+                window.UI.registerComponent('progressBar', progressBar);
+            }
+
+            // Components are auto-registered in their respective files
+            console.log('Components loaded:', Object.keys(window.UI.components));
+        });
+    </script>
 </body>
 </html>
