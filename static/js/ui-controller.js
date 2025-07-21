@@ -25,68 +25,76 @@ class UIController {
         document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
         document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
         
-        // INSIDE: Enhanced Summary with Overall Assessment
+        // INSIDE: Compact Enhanced Summary with Overall Assessment
         resultsDiv.innerHTML = `
-            <div class="overall-assessment" style="padding: 30px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; margin: 20px;">
+            <div class="overall-assessment" style="padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; margin: 15px;">
                 <!-- Header with Source Info -->
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="font-size: 2.5rem; margin: 0 0 10px 0; color: #1a1a1a;">${data.article?.title || 'Article Analysis'}</h1>
-                    <div style="font-size: 1.1rem; color: #666;">
+                <div style="margin-bottom: 20px;">
+                    <h1 style="font-size: 1.75rem; margin: 0 0 8px 0; color: #1a1a1a;">${data.article?.title || 'Article Analysis'}</h1>
+                    <div style="font-size: 0.9rem; color: #666;">
                         <span style="font-weight: 600;">Source:</span> ${data.article?.domain || 'Unknown'} 
-                        ${data.article?.author ? `<span style="margin: 0 10px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
-                        ${data.article?.publish_date ? `<span style="margin: 0 10px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString()}` : ''}
+                        ${data.article?.author ? `<span style="margin: 0 8px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
+                        ${data.article?.publish_date ? `<span style="margin: 0 8px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString()}` : ''}
                     </div>
                 </div>
                 
-                <!-- Trust Score Infographic -->
-                <div style="display: flex; align-items: center; justify-content: center; margin: 30px 0;">
-                    <div style="position: relative; width: 200px; height: 200px;">
-                        <svg width="200" height="200" style="transform: rotate(-90deg);">
-                            <circle cx="100" cy="100" r="90" fill="none" stroke="#e0e0e0" stroke-width="20"/>
-                            <circle cx="100" cy="100" r="90" fill="none" 
-                                stroke="${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'}" 
-                                stroke-width="20"
-                                stroke-dasharray="${(data.trust_score / 100) * 565} 565"
-                                stroke-linecap="round"/>
+                <!-- Main Content Grid: Trust Score Left, Metrics Right -->
+                <div style="display: grid; grid-template-columns: 180px 1fr; gap: 25px; align-items: start;">
+                    <!-- Trust Score - Colorful -->
+                    <div style="position: relative; width: 180px; height: 180px;">
+                        <svg width="180" height="180" style="transform: rotate(-90deg);">
+                            <defs>
+                                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'};stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'};stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="90" cy="90" r="80" fill="none" stroke="#f3f4f6" stroke-width="16"/>
+                            <circle cx="90" cy="90" r="80" fill="none" 
+                                stroke="url(#scoreGradient)" 
+                                stroke-width="16"
+                                stroke-dasharray="${(data.trust_score / 100) * 502} 502"
+                                stroke-linecap="round"
+                                filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.1))"/>
                         </svg>
                         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                            <div style="font-size: 3rem; font-weight: bold; color: ${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'};">
+                            <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, ${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'}, ${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                                 ${data.trust_score || 0}%
                             </div>
-                            <div style="font-size: 1rem; color: #666; font-weight: 600;">Trust Score</div>
+                            <div style="font-size: 0.85rem; color: #6b7280; font-weight: 600; margin-top: -5px;">Trust Score</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Grid - 2x2 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #1a73e8;">${data.bias_analysis?.objectivity_score || 0}%</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Objectivity</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">${data.clickbait_score || 0}%</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Clickbait</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #9333ea;">${data.fact_checks?.length || 0}</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Facts Checked</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #059669;">${this.getCredibilityRating(data)}</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Source</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Key Metrics Grid -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin: 30px 0;">
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="font-size: 2rem; font-weight: bold; color: #1a73e8;">${data.bias_analysis?.objectivity_score || 0}%</div>
-                        <div style="color: #666; margin-top: 5px;">Objectivity</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="font-size: 2rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">${data.clickbait_score || 0}%</div>
-                        <div style="color: #666; margin-top: 5px;">Clickbait</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="font-size: 2rem; font-weight: bold; color: #9333ea;">${data.fact_checks?.length || 0}</div>
-                        <div style="color: #666; margin-top: 5px;">Claims Checked</div>
-                    </div>
-                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="font-size: 1.5rem; font-weight: bold; color: #059669;">${this.getCredibilityRating(data)}</div>
-                        <div style="color: #666; margin-top: 5px;">Source Rating</div>
-                    </div>
-                </div>
-                
                 <!-- Overall Assessment Text -->
-                <div style="background: white; padding: 25px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="color: #1a1a1a; margin: 0 0 15px 0;">Overall Assessment</h3>
-                    <p style="line-height: 1.8; color: #333; margin: 0;">
+                <div style="background: white; padding: 18px; border-radius: 8px; margin: 20px 0 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                    <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.1rem;">Overall Assessment</h3>
+                    <p style="line-height: 1.6; color: #374151; margin: 0; font-size: 0.95rem;">
                         ${this.generateAssessment(data)}
                     </p>
                 </div>
                 
-                <!-- Key Findings -->
+                <!-- Key Findings - Compact -->
                 ${this.generateKeyFindings(data)}
             </div>
         `;
@@ -365,19 +373,19 @@ class UIController {
         if (findings.length === 0) return '';
         
         return `
-            <div style="margin-top: 20px;">
-                <h3 style="color: #1a1a1a; margin: 0 0 15px 0;">Key Findings</h3>
-                <div style="display: grid; gap: 10px;">
+            <div style="margin-top: 15px;">
+                <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.05rem;">Key Findings</h3>
+                <div style="display: grid; gap: 8px;">
                     ${findings.map(f => `
-                        <div style="display: flex; align-items: center; padding: 12px; background: ${
+                        <div style="display: flex; align-items: center; padding: 10px; background: ${
                             f.type === 'positive' ? '#f0fdf4' : 
                             f.type === 'negative' ? '#fef2f2' : '#f9fafb'
-                        }; border-radius: 8px; border-left: 4px solid ${
+                        }; border-radius: 6px; border-left: 3px solid ${
                             f.type === 'positive' ? '#10b981' : 
                             f.type === 'negative' ? '#ef4444' : '#6b7280'
                         };">
-                            <span style="font-size: 1.5rem; margin-right: 15px;">${f.icon}</span>
-                            <span style="color: #333;">${f.text}</span>
+                            <span style="font-size: 1.2rem; margin-right: 10px;">${f.icon}</span>
+                            <span style="color: #374151; font-size: 0.9rem;">${f.text}</span>
                         </div>
                     `).join('')}
                 </div>
