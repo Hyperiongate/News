@@ -2,26 +2,24 @@
  * FILE: static/js/main.js
  * LOCATION: news/static/js/main.js
  * PURPOSE: Frontend JavaScript for news analyzer
- * DEPENDENCIES: None (vanilla JavaScript)
+ * DEPENDENCIES: ui.js
  */
 
 // Main app object
 const NewsAnalyzer = {
-    currentTab: 'url', // Track current tab
+    currentTab: 'url',
     
-    // Initialize the app
     init() {
         this.setupEventListeners();
     },
 
-    // Set up event listeners
     setupEventListeners() {
         const analyzeBtn = document.getElementById('analyzeBtn');
         const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         const urlInput = document.getElementById('urlInput');
         const textInput = document.getElementById('textInput');
         
-        // Tab switching - use class selectors for the buttons
+        // Tab switching
         const tabButtons = document.querySelectorAll('.tab-btn');
         tabButtons.forEach(button => {
             button.addEventListener('click', (e) => {
@@ -30,7 +28,7 @@ const NewsAnalyzer = {
             });
         });
 
-        // Button clicks
+        // Analyze buttons
         if (analyzeBtn) {
             analyzeBtn.addEventListener('click', () => this.analyzeNews('url'));
         }
@@ -56,13 +54,10 @@ const NewsAnalyzer = {
         }
     },
     
-    // Switch between URL and text tabs
     switchTab(tab) {
         this.currentTab = tab;
         
-        // Update tab buttons
         const tabButtons = document.querySelectorAll('.tab-btn');
-        
         tabButtons.forEach(button => {
             if (button.getAttribute('data-tab') === tab) {
                 button.classList.add('active');
@@ -71,7 +66,6 @@ const NewsAnalyzer = {
             }
         });
         
-        // Show/hide appropriate input groups
         const urlGroup = document.getElementById('urlInputGroup');
         const textGroup = document.getElementById('textInputGroup');
         
@@ -83,11 +77,9 @@ const NewsAnalyzer = {
             textGroup.classList.remove('hidden');
         }
         
-        // Clear previous results
         this.hideResults();
     },
 
-    // Analyze news article
     async analyzeNews(type) {
         let content;
         
@@ -100,7 +92,6 @@ const NewsAnalyzer = {
                 return;
             }
             
-            // Validate URL
             try {
                 new URL(content);
             } catch (e) {
@@ -117,7 +108,6 @@ const NewsAnalyzer = {
             }
         }
 
-        // Show loading state
         this.showLoading(true);
         this.hideResults();
 
@@ -147,11 +137,9 @@ const NewsAnalyzer = {
         }
     },
 
-    // Show results
     showResults(data) {
         const resultsDiv = document.getElementById('results');
         
-        // Handle both success and error responses
         if (!data.success) {
             this.showError(data.error || 'Analysis failed');
             return;
@@ -173,82 +161,51 @@ const NewsAnalyzer = {
             html += `<div class="result-item"><strong>Source:</strong> ${article.domain}</div>`;
         }
         
-        // Trust score with color coding
+        // Trust score with visual bar
         const trustScore = data.trust_score || analysis.trust_score || 0;
-        const scoreColor = trustScore >= 70 ? '#27ae60' : trustScore >= 40 ? '#f39c12' : '#e74c3c';
-        html += `<div class="result-item">
-            <strong>Trust Score:</strong> 
-            <span style="color: ${scoreColor}; font-weight: bold;">${trustScore}%</span>
-        </div>`;
+        html += `<div class="result-item">${UI.formatTrustScore(trustScore)}</div>`;
         
         // Summary
-        if (analysis.summary) {
-            html += `<div class="result-item"><strong>Summary:</strong> ${analysis.summary}</div>`;
+        if (analysis.summary || data.summary) {
+            html += `<div class="result-item"><strong>Summary:</strong> ${analysis.summary || data.summary}</div>`;
         }
         
         // Source credibility
         if (analysis.source_credibility) {
             const cred = analysis.source_credibility;
             html += `<div class="result-item">
-                <strong>Source Credibility:</strong> ${cred.credibility || 'Unknown'} 
-                | <strong>Bias:</strong> ${cred.bias || 'Unknown'}
-                | <strong>Type:</strong> ${cred.type || 'Unknown'}
+                <strong>Source Analysis:</strong><br>
+                Credibility: ${cred.credibility || 'Unknown'} | 
+                Bias: ${cred.bias || 'Unknown'} | 
+                Type: ${cred.type || 'Unknown'}
             </div>`;
         }
         
         // Manipulation tactics
-        if (analysis.manipulation_tactics && analysis.manipulation_tactics.length > 0) {
-            html += '<div class="result-item"><strong>⚠️ Warning - Manipulation Tactics Detected:</strong><ul>';
-            analysis.manipulation_tactics.forEach(tactic => {
+        if (data.manipulation_tactics?.length > 0) {
+            html += '<div class="result-item"><strong>⚠️ Manipulation Tactics Detected:</strong><ul>';
+            data.manipulation_tactics.forEach(tactic => {
                 html += `<li>${tactic}</li>`;
             });
             html += '</ul></div>';
         }
         
-        // Key claims and fact checks
-        if (analysis.fact_checks && analysis.fact_checks.length > 0) {
-            html += '<div class="result-item"><strong>Fact Check Results:</strong>';
-            analysis.fact_checks.forEach(check => {
-                const verdictColor = check.verdict === 'true' ? '#27ae60' : 
-                                   check.verdict === 'false' ? '#e74c3c' : 
-                                   check.verdict === 'partially_true' ? '#f39c12' : '#95a5a6';
-                html += `
-                    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-                        <div><strong>Claim:</strong> ${check.claim}</div>
-                        <div><strong>Verdict:</strong> <span style="color: ${verdictColor}; font-weight: bold;">${check.verdict.replace('_', ' ').toUpperCase()}</span></div>
-                        <div><strong>Source:</strong> ${check.source}</div>
-                        ${check.explanation ? `<div><strong>Details:</strong> ${check.explanation}</div>` : ''}
-                    </div>`;
-            });
-            html += '</div>';
-        } else if (analysis.key_claims && analysis.key_claims.length > 0) {
-            html += '<div class="result-item"><strong>Key Claims Identified:</strong><ul>';
-            analysis.key_claims.forEach(claim => {
+        // Key claims
+        if (data.key_claims?.length > 0) {
+            html += '<div class="result-item"><strong>Key Claims:</strong><ul>';
+            data.key_claims.forEach(claim => {
                 html += `<li>${claim}</li>`;
             });
-            html += '</ul><em>Note: Fact checking requires API keys to be configured</em></div>';
-        }
-        
-        // Related articles
-        if (analysis.related_articles && analysis.related_articles.length > 0) {
-            html += '<div class="result-item"><strong>Related Articles:</strong>';
-            analysis.related_articles.forEach(article => {
-                html += `
-                    <div style="margin: 5px 0;">
-                        <a href="${article.url}" target="_blank" style="color: #3498db;">
-                            ${article.title}
-                        </a>
-                        <span style="color: #666; font-size: 0.9em;"> - ${article.source}</span>
-                    </div>`;
-            });
-            html += '</div>';
+            html += '</ul></div>';
         }
         
         resultsDiv.innerHTML = html;
         resultsDiv.classList.remove('hidden');
+        
+        // Show resources used
+        UI.showResources(data);
     },
 
-    // Show/hide loading state
     showLoading(show) {
         const loadingDiv = document.getElementById('loading');
         const analyzeBtn = document.getElementById('analyzeBtn');
@@ -265,12 +222,11 @@ const NewsAnalyzer = {
         }
     },
 
-    // Hide results
     hideResults() {
         document.getElementById('results').classList.add('hidden');
+        document.getElementById('resources').classList.add('hidden');
     },
 
-    // Show error message
     showError(message) {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `<div class="error">${message}</div>`;
