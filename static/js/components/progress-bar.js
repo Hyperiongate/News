@@ -5,16 +5,18 @@ class ProgressBar {
         this.container = null;
         this.progressBar = null;
         this.progressText = null;
+        this.progressPercentage = null;
         this.currentProgress = 0;
+        this.isComplete = false;
         this.steps = [
-            { percent: 10, text: 'Fetching article content...' },
-            { percent: 25, text: 'Analyzing source credibility...' },
-            { percent: 40, text: 'Checking author background...' },
-            { percent: 55, text: 'Detecting bias and manipulation...' },
-            { percent: 70, text: 'Fact-checking claims...' },
-            { percent: 85, text: 'Comparing coverage across outlets...' },
-            { percent: 95, text: 'Generating report...' },
-            { percent: 100, text: 'Analysis complete!' }
+            { percent: 10, text: 'Fetching article content...', step: 1 },
+            { percent: 25, text: 'Analyzing source credibility...', step: 2 },
+            { percent: 40, text: 'Checking author background...', step: 3 },
+            { percent: 55, text: 'Detecting bias and manipulation...', step: 4 },
+            { percent: 70, text: 'Fact-checking claims...', step: 5 },
+            { percent: 85, text: 'Comparing coverage across outlets...', step: 6 },
+            { percent: 95, text: 'Generating report...', step: 7 },
+            { percent: 100, text: 'Analysis complete!', step: 8 }
         ];
         this.currentStep = 0;
         this.animationTimer = null;
@@ -43,19 +45,31 @@ class ProgressBar {
                     </div>
                     <div class="step-indicator" data-step="1">
                         <span class="step-dot"></span>
-                        <span class="step-label">Source</span>
+                        <span class="step-label">Extract</span>
                     </div>
                     <div class="step-indicator" data-step="2">
                         <span class="step-dot"></span>
-                        <span class="step-label">Author</span>
+                        <span class="step-label">Source</span>
                     </div>
                     <div class="step-indicator" data-step="3">
                         <span class="step-dot"></span>
-                        <span class="step-label">Analysis</span>
+                        <span class="step-label">Author</span>
                     </div>
                     <div class="step-indicator" data-step="4">
                         <span class="step-dot"></span>
-                        <span class="step-label">Complete</span>
+                        <span class="step-label">Bias</span>
+                    </div>
+                    <div class="step-indicator" data-step="5">
+                        <span class="step-dot"></span>
+                        <span class="step-label">Facts</span>
+                    </div>
+                    <div class="step-indicator" data-step="6">
+                        <span class="step-dot"></span>
+                        <span class="step-label">Report</span>
+                    </div>
+                    <div class="step-indicator" data-step="7">
+                        <span class="step-dot"></span>
+                        <span class="step-label">Done</span>
                     </div>
                 </div>
             </div>
@@ -92,7 +106,8 @@ class ProgressBar {
             oldLoading.classList.add('hidden');
         }
         
-        // Reset progress
+        // Reset state
+        this.isComplete = false;
         this.currentProgress = 0;
         this.currentStep = 0;
         this.updateProgress(0, initialText);
@@ -105,29 +120,46 @@ class ProgressBar {
             this.container.style.opacity = '1';
         }, 10);
         
-        // Start animation
-        this.startAnimation();
+        // Start automated progress
+        this.startAutomatedProgress();
     }
 
     hide() {
         if (this.container) {
+            // Stop any ongoing animation
+            this.stopAnimation();
+            
             // Fade out then hide
             this.container.style.transition = 'opacity 0.3s ease-out';
             this.container.style.opacity = '0';
             setTimeout(() => {
                 this.container.classList.add('hidden');
                 this.container.style.opacity = '1';
+                this.reset();
             }, 300);
         }
-        
-        // Stop animation
-        this.stopAnimation();
     }
 
-    startAnimation() {
+    startAutomatedProgress() {
         this.stopAnimation(); // Clear any existing timer
         
-        // Don't auto-animate - let UI controller handle it
+        let stepIndex = 0;
+        
+        // Progress through steps automatically
+        this.animationTimer = setInterval(() => {
+            if (stepIndex < this.steps.length && !this.isComplete) {
+                const step = this.steps[stepIndex];
+                this.updateProgress(step.percent, step.text);
+                stepIndex++;
+                
+                // Stop at 95% to wait for actual completion
+                if (step.percent >= 95) {
+                    this.stopAnimation();
+                }
+            } else {
+                this.stopAnimation();
+            }
+        }, 1500); // Update every 1.5 seconds
     }
 
     stopAnimation() {
@@ -138,10 +170,13 @@ class ProgressBar {
     }
 
     updateProgress(percent, text) {
+        if (this.isComplete) return;
+        
         this.currentProgress = percent;
         
-        // Update progress bar
+        // Update progress bar with smooth transition
         if (this.progressBar) {
+            this.progressBar.style.transition = 'width 0.5s ease-out';
             this.progressBar.style.width = `${percent}%`;
         }
         
@@ -155,39 +190,123 @@ class ProgressBar {
             this.progressText.textContent = text;
         }
         
-        // Update step indicators based on percentage
+        // Update step indicators
         this.updateStepIndicators(percent);
+        
+        // Handle completion
+        if (percent >= 100) {
+            this.complete();
+        }
     }
 
     updateStepIndicators(percent) {
         const indicators = this.container.querySelectorAll('.step-indicator');
         
-        // Map percentage to steps
-        let activeSteps = 0;
-        if (percent >= 10) activeSteps = 1;
-        if (percent >= 40) activeSteps = 2;
-        if (percent >= 55) activeSteps = 3;
-        if (percent >= 95) activeSteps = 4;
+        // Calculate which step we're on based on percentage
+        let activeStep = 0;
+        for (let i = 0; i < this.steps.length; i++) {
+            if (percent >= this.steps[i].percent) {
+                activeStep = this.steps[i].step;
+            }
+        }
         
         indicators.forEach((indicator, index) => {
-            if (index <= activeSteps) {
+            if (index <= activeStep) {
                 indicator.classList.add('active');
-                // Add pulse animation to current step
-                if (index === activeSteps && percent < 100) {
+                indicator.classList.remove('pulse');
+                
+                // Add completion check mark for completed steps
+                if (index < activeStep) {
+                    indicator.classList.add('completed');
+                }
+                
+                // Add pulse to current step
+                if (index === activeStep && percent < 100) {
                     indicator.classList.add('pulse');
-                } else {
-                    indicator.classList.remove('pulse');
                 }
             } else {
-                indicator.classList.remove('active');
-                indicator.classList.remove('pulse');
+                indicator.classList.remove('active', 'completed', 'pulse');
             }
         });
     }
 
-    // Manual progress update for real-time feedback
+    complete() {
+        this.isComplete = true;
+        this.currentProgress = 100;
+        
+        // Ensure progress bar is at 100%
+        if (this.progressBar) {
+            this.progressBar.style.width = '100%';
+        }
+        
+        // Mark all steps as completed
+        const indicators = this.container.querySelectorAll('.step-indicator');
+        indicators.forEach(indicator => {
+            indicator.classList.add('active', 'completed');
+            indicator.classList.remove('pulse');
+        });
+        
+        // Update text
+        if (this.progressText) {
+            this.progressText.textContent = 'Analysis complete!';
+        }
+        if (this.progressPercentage) {
+            this.progressPercentage.textContent = '100%';
+        }
+        
+        // Add completion animation
+        this.container.classList.add('progress-complete');
+        
+        // Auto-hide after showing completion
+        setTimeout(() => {
+            this.fadeOut();
+        }, 1500);
+    }
+
+    fadeOut() {
+        if (this.container && !this.container.classList.contains('hidden')) {
+            this.container.style.transition = 'opacity 0.5s ease-out';
+            this.container.style.opacity = '0';
+            setTimeout(() => {
+                this.hide();
+            }, 500);
+        }
+    }
+
+    reset() {
+        this.currentProgress = 0;
+        this.currentStep = 0;
+        this.isComplete = false;
+        
+        if (this.progressBar) {
+            this.progressBar.style.width = '0%';
+        }
+        if (this.progressText) {
+            this.progressText.textContent = 'Initializing analysis...';
+        }
+        if (this.progressPercentage) {
+            this.progressPercentage.textContent = '0%';
+        }
+        
+        // Reset all step indicators
+        const indicators = this.container?.querySelectorAll('.step-indicator');
+        if (indicators) {
+            indicators.forEach((indicator, index) => {
+                indicator.classList.remove('completed', 'pulse');
+                if (index === 0) {
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+            });
+        }
+        
+        this.container?.classList.remove('progress-complete');
+    }
+
+    // Manual control methods
     setProgress(percent, text) {
-        this.stopAnimation(); // Stop auto animation
+        this.stopAnimation(); // Stop auto animation when manually controlling
         this.updateProgress(percent, text);
     }
 }
