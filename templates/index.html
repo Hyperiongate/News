@@ -25,14 +25,30 @@ DEPENDENCIES: base.html, style.css, main.js
     <div class="container">
         <div class="analyzer-box">
             <h2>Analyze News Articles</h2>
-            <p>Enter a news article URL to check its credibility and verify facts</p>
+            <p>Enter a news article URL or paste article text to check credibility and verify facts</p>
             
-            <div class="input-group">
+            <!-- Tab buttons -->
+            <div class="input-tabs">
+                <button class="tab-btn active" onclick="NewsAnalyzer.switchTab('url')">Analyze URL</button>
+                <button class="tab-btn" onclick="NewsAnalyzer.switchTab('text')">Paste Text</button>
+            </div>
+            
+            <!-- URL input -->
+            <div id="urlInputGroup" class="input-group">
                 <input type="url" 
                        id="urlInput" 
                        placeholder="https://example.com/news-article" 
                        class="url-input">
-                <button id="analyzeBtn" class="analyze-btn">Analyze</button>
+                <button id="analyzeBtn" class="analyze-btn">Analyze URL</button>
+            </div>
+            
+            <!-- Text input (hidden by default) -->
+            <div id="textInputGroup" class="input-group hidden">
+                <textarea id="textInput" 
+                          placeholder="Paste article text here..." 
+                          class="text-input"
+                          rows="10"></textarea>
+                <button id="analyzeTextBtn" class="analyze-btn">Analyze Text</button>
             </div>
 
             <div id="loading" class="loading hidden">
