@@ -195,11 +195,23 @@ class NewsAnalyzer:
                         })
                         
                         # Create fact check entry from AI analysis
+                        verdict = claim_data.get('verdict', 'unverified')
+                        
+                        # Fallback: if still unverified, check if claim is widely reported
+                        if verdict == 'unverified' and self.fact_checker:
+                            # Extract key terms from claim for news search
+                            claim_keywords = ' '.join(claim_text.split()[:10])
+                            related_news = self.fact_checker.get_related_articles(claim_keywords, max_articles=3)
+                            
+                            if len(related_news) >= 2:
+                                verdict = 'widely_reported'
+                                claim_data['explanation'] = f"This claim appears in multiple news sources. {claim_data.get('explanation', '')}"
+                        
                         fact_checks.append({
                             'claim': claim_text,
-                            'verdict': claim_data.get('verdict', 'unverified'),
+                            'verdict': verdict,
                             'explanation': claim_data.get('explanation', 'No explanation provided'),
-                            'source': 'AI Analysis',
+                            'source': 'AI Analysis' if verdict != 'widely_reported' else 'AI + News Verification',
                             'publisher': 'OpenAI GPT-3.5',
                             'checked_at': datetime.now().isoformat()
                         })
@@ -255,6 +267,12 @@ class NewsAnalyzer:
                     'description': f"{article_data['domain']} is rated as {source_info.get('credibility', 'Unknown')} credibility"
                 }
             
+            # Add transparency analysis
+            transparency_analysis = self._analyze_transparency(article_data.get('text', ''))
+            
+            # Add content depth analysis
+            content_analysis = self._analyze_content_depth(article_data.get('text', ''))
+            
             return {
                 'success': True,
                 'article': article_data,
@@ -274,7 +292,9 @@ class NewsAnalyzer:
                 'fact_checks': fact_checks,
                 'fact_check_summary': self._generate_fact_check_summary(fact_checks),
                 'related_articles': related_articles,
-                'source_credibility': source_credibility
+                'source_credibility': source_credibility,
+                'transparency_analysis': transparency_analysis,
+                'content_analysis': content_analysis
             }
             
         except Exception as e:
@@ -578,7 +598,7 @@ class NewsAnalyzer:
         Article Text (first 3000 chars):
         {article_data.get('text', '')[:3000]}
         
-        Provide analysis in this exact JSON format (be sure to include fact-checking for each claim):
+        Provide analysis in this exact JSON format:
         {{
             "bias_score": -1.0 to 1.0 (-1 = far left, 0 = center, 1 = far right),
             "credibility_score": 0.0 to 1.0,
@@ -586,13 +606,8 @@ class NewsAnalyzer:
             "key_claims": [
                 {{
                     "claim": "exact text of the claim from the article",
-                    "verdict": "true/false/partially_true/unverified",
-                    "explanation": "detailed explanation of why this claim is true/false/partially true, citing your knowledge"
-                }},
-                {{
-                    "claim": "another claim",
-                    "verdict": "true/false/partially_true/unverified",
-                    "explanation": "explanation with evidence"
+                    "verdict": "MUST be one of: true, false, partially_true",
+                    "explanation": "explanation based on your knowledge"
                 }}
             ],
             "article_summary": "3-4 sentence summary of the article's main points",
@@ -600,12 +615,12 @@ class NewsAnalyzer:
             "trust_score": 0 to 100
         }}
         
-        Important instructions for fact-checking:
-        - Extract 3-5 key factual claims from the article
-        - For each claim, use your knowledge to determine if it's true, false, or partially true
-        - Only mark as "unverified" if you truly cannot determine accuracy
-        - Provide specific explanations for your verdicts
-        - Consider whether claims are taken out of context or misleading even if technically true
+        CRITICAL FACT-CHECKING RULES:
+        1. Extract 3-5 specific factual claims from the article
+        2. For EACH claim, you MUST choose a verdict from: "true", "false", or "partially_true"
+        3. NEVER use "unverified" - make your best assessment based on your training data
+        4. If you're unsure, choose "partially_true" and explain what parts might be accurate
+        5. Base verdicts on factual knowledge, not opinions about the source
         """
     
     def _parse_ai_response(self, response_text):
@@ -831,3 +846,164 @@ class NewsAnalyzer:
             'bias': 'Unknown',
             'type': 'Unknown'
         })
+    
+    def _analyze_transparency(self, text):
+        """Analyze article transparency and sourcing"""
+        if not text:
+            return {
+                'transparency_score': 0,
+                'source_count': 0,
+                'source_types': {},
+                'has_links': False,
+                'quote_ratio': 0
+            }
+        
+        # Count different types of sources
+        source_types = {
+            'named_sources': 0,
+            'anonymous_sources': 0,
+            'official_sources': 0,
+            'expert_sources': 0,
+            'document_references': 0
+        }
+        
+        # Look for named sources
+        named_patterns = [
+            r'([A-Z][a-z]+ [A-Z][a-z]+), (?:a |an |the )?(?:said|told|explained)',
+            r'According to ([A-Z][a-z]+ [A-Z][a-z]+)',
+            r'"[^"]+," said ([A-Z][a-z]+ [A-Z][a-z]+)'
+        ]
+        
+        for pattern in named_patterns:
+            matches = re.findall(pattern, text)
+            source_types['named_sources'] += len(matches)
+        
+        # Look for anonymous sources
+        anon_patterns = [
+            r'sources? (?:said|told|confirmed)',
+            r'anonymous (?:source|official)',
+            r'person familiar with',
+            r'official who spoke on condition of anonymity'
+        ]
+        
+        for pattern in anon_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            source_types['anonymous_sources'] += len(matches)
+        
+        # Look for official sources
+        official_patterns = [
+            r'(?:Department|Ministry|Agency) of \w+',
+            r'(?:White House|Pentagon|Congress|Parliament)',
+            r'(?:police|government|federal) (?:officials?|spokesperson)'
+        ]
+        
+        for pattern in official_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            source_types['official_sources'] += len(matches)
+        
+        # Count quotes
+        quotes = re.findall(r'"[^"]{20,}"', text)
+        quote_ratio = min(100, int((len(quotes) / max(len(text.split('.')), 1)) * 100))
+        
+        # Check for links/references
+        has_links = bool(re.search(r'https?://', text)) or bool(re.search(r'(?:study|report|survey) (?:found|showed|revealed)', text))
+        
+        # Calculate transparency score
+        total_sources = sum(source_types.values())
+        named_ratio = source_types['named_sources'] / max(total_sources, 1)
+        
+        transparency_score = min(100, int(
+            (named_ratio * 40) +  # Named sources worth 40%
+            (min(total_sources, 10) * 3) +  # More sources = better (up to 30%)
+            (quote_ratio * 0.2) +  # Quotes worth 20%
+            (10 if has_links else 0)  # Links worth 10%
+        ))
+        
+        return {
+            'transparency_score': transparency_score,
+            'source_count': total_sources,
+            'source_types': source_types,
+            'has_links': has_links,
+            'quote_ratio': quote_ratio,
+            'named_source_ratio': int(named_ratio * 100)
+        }
+    
+    def _analyze_content_depth(self, text):
+        """Analyze content depth and quality"""
+        if not text:
+            return {
+                'depth_score': 0,
+                'word_count': 0,
+                'reading_level': 'Unknown',
+                'facts_vs_opinion': {'facts': 0, 'opinions': 0, 'analysis': 0},
+                'emotional_tone': 'neutral'
+            }
+        
+        # Word and sentence counts
+        words = text.split()
+        word_count = len(words)
+        sentences = [s.strip() for s in text.split('.') if s.strip()]
+        sentence_count = len(sentences)
+        
+        # Calculate reading level (simplified Flesch-Kincaid)
+        avg_sentence_length = word_count / max(sentence_count, 1)
+        complex_words = sum(1 for w in words if len(w) > 6)
+        complexity_ratio = complex_words / max(word_count, 1)
+        
+        if avg_sentence_length < 15 and complexity_ratio < 0.2:
+            reading_level = "Middle School"
+            reading_score = 6
+        elif avg_sentence_length < 20 and complexity_ratio < 0.3:
+            reading_level = "High School"
+            reading_score = 10
+        elif avg_sentence_length < 25 and complexity_ratio < 0.4:
+            reading_level = "College"
+            reading_score = 14
+        else:
+            reading_level = "Graduate"
+            reading_score = 16
+        
+        # Analyze facts vs opinions
+        fact_indicators = ['according to', 'study', 'research', 'data', 'statistics', 'reported', 'confirmed']
+        opinion_indicators = ['believe', 'think', 'feel', 'seems', 'appears', 'probably', 'opinion']
+        analysis_indicators = ['however', 'therefore', 'suggests', 'indicates', 'implies', 'meaning']
+        
+        facts_count = sum(1 for s in sentences if any(ind in s.lower() for ind in fact_indicators))
+        opinion_count = sum(1 for s in sentences if any(ind in s.lower() for ind in opinion_indicators))
+        analysis_count = sum(1 for s in sentences if any(ind in s.lower() for ind in analysis_indicators))
+        
+        # Emotional tone analysis
+        positive_words = ['success', 'achieve', 'improve', 'benefit', 'progress', 'victory', 'celebrate']
+        negative_words = ['fail', 'crisis', 'threat', 'danger', 'loss', 'defeat', 'disaster']
+        
+        positive_count = sum(1 for word in positive_words if word in text.lower())
+        negative_count = sum(1 for word in negative_words if word in text.lower())
+        
+        if positive_count > negative_count * 1.5:
+            emotional_tone = 'positive'
+        elif negative_count > positive_count * 1.5:
+            emotional_tone = 'negative'
+        else:
+            emotional_tone = 'neutral'
+        
+        # Calculate depth score
+        depth_score = min(100, int(
+            (min(word_count, 1000) / 10) * 0.3 +  # Length contributes 30%
+            (reading_score * 2) +  # Complexity contributes 32%
+            (min(facts_count, 10) * 3) +  # Facts contribute 30%
+            (8 if emotional_tone == 'neutral' else 0)  # Neutral tone adds 8%
+        ))
+        
+        return {
+            'depth_score': depth_score,
+            'word_count': word_count,
+            'reading_level': reading_level,
+            'avg_sentence_length': int(avg_sentence_length),
+            'facts_vs_opinion': {
+                'facts': facts_count,
+                'opinions': opinion_count,
+                'analysis': analysis_count
+            },
+            'emotional_tone': emotional_tone,
+            'complexity_ratio': int(complexity_ratio * 100)
+        }
