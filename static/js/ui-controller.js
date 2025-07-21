@@ -1,13 +1,13 @@
 // static/js/ui-controller.js
+// COMPLETE REPLACEMENT - FIXES PROGRESS BAR AND SEPARATED LAYOUT
 
 /**
- * UI Controller - Orchestrates all modular components with separated layout
+ * UI Controller - Fixed version with working progress bar and separated layout
  */
 class UIController {
     constructor() {
         this.components = {};
         this.analysisData = null;
-        this.detailedViewVisible = true; // Show by default
         this.progressSteps = [
             { percent: 10, text: 'Fetching article content...', step: 1 },
             { percent: 25, text: 'Analyzing source credibility...', step: 2 },
@@ -31,7 +31,7 @@ class UIController {
     }
 
     /**
-     * Build results using modular components with separated layout
+     * Build results - FIXED VERSION WITH SEPARATED LAYOUT
      */
     buildResults(data) {
         this.analysisData = data;
@@ -43,105 +43,76 @@ class UIController {
             return;
         }
         
-        // Clear previous results and any existing detailed containers
+        // Clear everything
         resultsDiv.innerHTML = '';
-        const existingDetailed = document.querySelector('.detailed-analysis-container');
-        if (existingDetailed) {
-            existingDetailed.remove();
-        }
+        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
         
-        // === PART 1: SUMMARY CONTAINER (inside analyzer-card) ===
+        // === PART 1: SUMMARY (INSIDE analyzer-card) ===
         const summaryContainer = document.createElement('div');
         summaryContainer.className = 'summary-container';
         
-        let componentDelay = 0;
-        
         // Article info
         if (data.article) {
-            const articleInfo = this.createArticleInfo(data.article);
-            articleInfo.classList.add('fade-in');
-            articleInfo.style.animationDelay = `${componentDelay}s`;
-            summaryContainer.appendChild(articleInfo);
-            componentDelay += 0.1;
+            summaryContainer.appendChild(this.createArticleInfo(data.article));
         }
         
         // Executive Summary
         if (this.components.executiveSummary) {
-            const summaryEl = this.components.executiveSummary.render(data);
-            summaryEl.classList.add('fade-in');
-            summaryEl.style.animationDelay = `${componentDelay}s`;
-            summaryContainer.appendChild(summaryEl);
-            componentDelay += 0.1;
+            try {
+                summaryContainer.appendChild(this.components.executiveSummary.render(data));
+            } catch (e) {
+                console.error('Executive summary error:', e);
+            }
         }
         
         // Trust Score
         if (this.components.trustScore && data.trust_score !== undefined) {
-            const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
-            trustScoreEl.classList.add('scale-in');
-            trustScoreEl.style.animationDelay = `${componentDelay}s`;
-            summaryContainer.appendChild(trustScoreEl);
-            componentDelay += 0.1;
+            summaryContainer.appendChild(this.components.trustScore.render(data.trust_score, data));
         }
         
-        // Add summary container to results
+        // Add summary to results
         resultsDiv.appendChild(summaryContainer);
         resultsDiv.classList.remove('hidden');
         
-        // === PART 2: DETAILED ANALYSIS (outside analyzer-card) ===
+        // === PART 2: DETAILED ANALYSIS (OUTSIDE analyzer-card) ===
         const detailedContainer = document.createElement('div');
         detailedContainer.className = 'detailed-analysis-container';
-        
-        // Detailed analysis header
-        const detailsHeader = document.createElement('div');
-        detailsHeader.className = 'detailed-analysis-header';
-        detailsHeader.innerHTML = `
-            <h3>Detailed Analysis</h3>
-            <p>Deep dive into bias, manipulation tactics, fact-checking, and credibility scores</p>
+        detailedContainer.innerHTML = `
+            <div class="detailed-analysis-header">
+                <h3>Detailed Analysis</h3>
+                <p>Deep dive into bias, manipulation tactics, fact-checking, and credibility scores</p>
+            </div>
         `;
-        detailsHeader.classList.add('fade-in');
-        detailsHeader.style.animationDelay = `${componentDelay}s`;
-        detailedContainer.appendChild(detailsHeader);
-        componentDelay += 0.1;
         
-        // Analysis Cards
+        // Analysis Cards Container
+        const cardsWrapper = document.createElement('div');
+        cardsWrapper.id = 'detailedAnalysisView';
+        cardsWrapper.style.background = 'transparent';
+        cardsWrapper.style.padding = '0';
+        cardsWrapper.style.border = 'none';
+        
         if (this.components.analysisCards) {
-            const cardsEl = this.components.analysisCards.render(data);
-            cardsEl.classList.add('fade-in');
-            cardsEl.style.animationDelay = `${componentDelay}s`;
-            // Apply transparent styles to remove container appearance
-            cardsEl.style.background = 'transparent';
-            cardsEl.style.padding = '0';
-            cardsEl.style.margin = '0';
-            cardsEl.style.border = 'none';
-            cardsEl.style.boxShadow = 'none';
-            detailedContainer.appendChild(cardsEl);
+            cardsWrapper.appendChild(this.components.analysisCards.render(data));
         }
         
-        // Insert detailed container AFTER analyzer card (outside of it)
-        if (analyzerCard && analyzerCard.parentNode) {
-            analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
-        }
+        detailedContainer.appendChild(cardsWrapper);
         
-        // === PART 3: RESOURCES (also outside) ===
+        // INSERT OUTSIDE ANALYZER CARD
+        analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
+        
+        // === PART 3: RESOURCES (ALSO OUTSIDE) ===
         this.showResources(data);
-        
-        // Initialize tooltips and enhancements
         setTimeout(() => {
-            if (window.UIUtils) {
-                window.UIUtils.initializeTooltips();
-                window.UIUtils.enhanceCards();
+            const resources = document.getElementById('resources');
+            if (resources && resources.closest('.analyzer-card')) {
+                analyzerCard.parentNode.appendChild(resources);
             }
-        }, 1000);
+        }, 100);
         
-        // Smooth scroll to results
+        // Scroll to results
         setTimeout(() => {
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 300);
-        
-        // Show success toast
-        if (window.UIUtils) {
-            window.UIUtils.showToast('Analysis complete!', 'success');
-        }
     }
 
     /**
@@ -176,36 +147,11 @@ class UIController {
     }
 
     /**
-     * Toggle detailed view visibility
-     */
-    toggleDetailedView() {
-        const detailedContainer = document.querySelector('.detailed-analysis-container');
-        if (!detailedContainer) return;
-        
-        this.detailedViewVisible = !this.detailedViewVisible;
-        
-        if (this.detailedViewVisible) {
-            detailedContainer.style.display = 'block';
-            setTimeout(() => {
-                detailedContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 10);
-        } else {
-            detailedContainer.style.display = 'none';
-        }
-    }
-
-    /**
-     * Show resources used - moved outside analyzer card
+     * Show resources used
      */
     showResources(data) {
         const resourcesDiv = document.getElementById('resources');
         const resourcesList = document.getElementById('resourcesList');
-        const analyzerCard = document.querySelector('.analyzer-card');
-        
-        // Move resources outside if it's still inside analyzer card
-        if (resourcesDiv.closest('.analyzer-card')) {
-            analyzerCard.parentNode.appendChild(resourcesDiv);
-        }
         
         const resources = [];
         
@@ -219,11 +165,9 @@ class UIController {
         
         if (data.is_pro) {
             resources.push('OpenAI GPT-3.5');
-            
             if (data.fact_checks?.length > 0) {
                 resources.push('Google Fact Check API');
             }
-            
             if (data.related_articles?.length > 0) {
                 resources.push('News API');
             }
@@ -236,7 +180,6 @@ class UIController {
         ).join('');
         
         resourcesDiv.classList.remove('hidden');
-        resourcesDiv.classList.add('fade-in');
     }
 
     /**
@@ -245,7 +188,7 @@ class UIController {
     showError(message) {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `
-            <div class="error-card shake">
+            <div class="error-card">
                 <div class="error-icon">⚠️</div>
                 <div class="error-content">
                     <h3>Analysis Error</h3>
@@ -255,43 +198,36 @@ class UIController {
             </div>
         `;
         resultsDiv.classList.remove('hidden');
-        
-        if (window.UIUtils) {
-            window.UIUtils.showToast(message, 'error');
-        }
     }
 
     /**
-     * Show progress with animated steps
+     * Show progress - FIXED TO USE PROGRESS BAR COMPONENT
      */
     showProgress(show, message = 'Analyzing article...') {
-        console.log('showProgress called:', show, message);
-        
-        // Try to use the progress bar component
-        if (this.components.progressBar) {
-            console.log('Using progressBar component');
-            if (show) {
-                this.currentProgressStep = 0;
-                this.components.progressBar.show(message);
-                this.startProgressAnimation();
-            } else {
-                this.stopProgressAnimation();
-                this.components.progressBar.hide();
-            }
-        } else {
-            console.log('Progress bar component not found, using fallback');
-            // Fallback to old loading
-            const loadingDiv = document.getElementById('loading');
-            if (loadingDiv) {
+        // Wait a moment for components to register
+        setTimeout(() => {
+            if (this.components.progressBar) {
                 if (show) {
-                    loadingDiv.classList.remove('hidden');
-                    const loadingText = loadingDiv.querySelector('p');
-                    if (loadingText) loadingText.textContent = message;
+                    this.components.progressBar.show(message);
+                    this.startProgressAnimation();
                 } else {
-                    loadingDiv.classList.add('hidden');
+                    this.stopProgressAnimation();
+                    this.components.progressBar.hide();
+                }
+            } else {
+                // Fallback to old loading
+                const loadingDiv = document.getElementById('loading');
+                if (loadingDiv) {
+                    if (show) {
+                        loadingDiv.classList.remove('hidden');
+                        const loadingText = loadingDiv.querySelector('p');
+                        if (loadingText) loadingText.textContent = message;
+                    } else {
+                        loadingDiv.classList.add('hidden');
+                    }
                 }
             }
-        }
+        }, 50);
     }
 
     /**
@@ -303,13 +239,9 @@ class UIController {
         let stepIndex = 0;
         
         this.progressTimer = setInterval(() => {
-            if (stepIndex < this.progressSteps.length - 1) {
+            if (stepIndex < this.progressSteps.length - 1 && this.components.progressBar) {
                 const step = this.progressSteps[stepIndex];
-                
-                if (this.components.progressBar) {
-                    this.components.progressBar.setProgress(step.percent, step.text);
-                }
-                
+                this.components.progressBar.setProgress(step.percent, step.text);
                 stepIndex++;
                 
                 if (step.percent >= 95) {
@@ -332,122 +264,32 @@ class UIController {
     }
 
     /**
-     * Complete progress to 100%
+     * Toggle detailed view
      */
-    completeProgress(message = 'Analysis complete!') {
-        if (this.components.progressBar) {
-            this.components.progressBar.setProgress(100, message);
+    toggleDetailedView() {
+        const detailedContainer = document.querySelector('.detailed-analysis-container');
+        if (detailedContainer) {
+            const isHidden = detailedContainer.style.display === 'none';
+            detailedContainer.style.display = isHidden ? 'block' : 'none';
         }
     }
 }
 
 // Create global instance
 window.UI = new UIController();
-// === ADD THIS TO THE END OF ui-controller.js ===
-// Complete fix for progress bar and separated layout
 
+// FORCE REGISTRATION OF PROGRESS BAR
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔧 Applying UI fixes...');
-    
-    // Fix 1: Ensure progress bar is registered
+    // Give other components time to load
     setTimeout(() => {
-        if (!window.UI.components.progressBar && window.ProgressBar) {
-            console.log('✅ Manually registering progress bar');
+        // If progress bar component exists but isn't registered, force it
+        if (window.ProgressBar && !window.UI.components.progressBar) {
             const progressBar = new ProgressBar();
             progressBar.mount();
             window.UI.registerComponent('progressBar', progressBar);
-        }
-        console.log('📦 Registered components:', Object.keys(window.UI.components));
-    }, 100);
-    
-    // Fix 2: Override buildResults for proper layout separation
-    const originalBuildResults = window.UI.buildResults.bind(window.UI);
-    window.UI.buildResults = function(data) {
-        const resultsDiv = document.getElementById('results');
-        const analyzerCard = document.querySelector('.analyzer-card');
-        
-        if (!data.success) {
-            this.showError(data.error || 'Analysis failed');
-            return;
+            console.log('Progress bar force-registered');
         }
         
-        // Clear everything
-        resultsDiv.innerHTML = '';
-        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
-        
-        // === INSIDE ANALYZER CARD ===
-        const summaryContainer = document.createElement('div');
-        summaryContainer.className = 'summary-container';
-        
-        // 1. Article Info
-        if (data.article) {
-            const articleInfo = this.createArticleInfo(data.article);
-            articleInfo.classList.add('fade-in');
-            summaryContainer.appendChild(articleInfo);
-        }
-        
-        // 2. Executive Summary
-        if (this.components.executiveSummary) {
-            try {
-                const summaryEl = this.components.executiveSummary.render(data);
-                summaryEl.classList.add('fade-in');
-                summaryEl.style.animationDelay = '0.1s';
-                summaryContainer.appendChild(summaryEl);
-            } catch (e) {
-                console.error('Executive summary error:', e);
-            }
-        }
-        
-        // 3. Trust Score
-        if (this.components.trustScore && data.trust_score !== undefined) {
-            const trustScoreEl = this.components.trustScore.render(data.trust_score, data);
-            trustScoreEl.classList.add('scale-in');
-            trustScoreEl.style.animationDelay = '0.2s';
-            summaryContainer.appendChild(trustScoreEl);
-        }
-        
-        // Add to results
-        resultsDiv.appendChild(summaryContainer);
-        resultsDiv.classList.remove('hidden');
-        
-        // === OUTSIDE ANALYZER CARD ===
-        const detailedContainer = document.createElement('div');
-        detailedContainer.className = 'detailed-analysis-container';
-        detailedContainer.innerHTML = `
-            <div class="detailed-analysis-header">
-                <h3>Detailed Analysis</h3>
-                <p>Deep dive into bias, manipulation tactics, fact-checking, and credibility scores</p>
-            </div>
-        `;
-        
-        // Add analysis cards
-        if (this.components.analysisCards) {
-            const cardsWrapper = document.createElement('div');
-            cardsWrapper.id = 'detailedAnalysisView';
-            const cardsEl = this.components.analysisCards.render(data);
-            cardsWrapper.appendChild(cardsEl);
-            detailedContainer.appendChild(cardsWrapper);
-        }
-        
-        // Insert after analyzer card
-        if (analyzerCard && analyzerCard.parentNode) {
-            analyzerCard.parentNode.insertBefore(detailedContainer, analyzerCard.nextSibling);
-        }
-        
-        // Move resources outside
-        this.showResources(data);
-        setTimeout(() => {
-            const resources = document.getElementById('resources');
-            if (resources && resources.closest('.analyzer-card')) {
-                analyzerCard.parentNode.appendChild(resources);
-            }
-        }, 100);
-        
-        // Scroll to results
-        setTimeout(() => {
-            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 300);
-    };
-    
-    console.log('✅ UI fixes applied');
+        console.log('All components:', Object.keys(window.UI.components));
+    }, 200);
 });
