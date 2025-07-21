@@ -38,12 +38,6 @@ const NewsAnalyzer = {
             analyzeTextBtn.addEventListener('click', () => this.analyzeNews('text'));
         }
         
-        // Debug button
-        const debugBtn = document.getElementById('debugBtn');
-        if (debugBtn) {
-            debugBtn.addEventListener('click', () => this.debugAuthor());
-        }
-        
         // Enter key handlers
         if (urlInput) {
             urlInput.addEventListener('keypress', (e) => {
@@ -281,34 +275,6 @@ const NewsAnalyzer = {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `<div class="error">${message}</div>`;
         resultsDiv.classList.remove('hidden');
-    },
-
-    // Debug author extraction
-    async debugAuthor() {
-        const urlInput = document.getElementById('urlInput');
-        const url = urlInput.value.trim();
-        
-        if (!url) {
-            alert('Please enter a URL to debug');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/api/debug-author', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url: url })
-            });
-            
-            const data = await response.json();
-            console.log('Debug author response:', data);
-            alert(`Author found: ${data.raw_author || 'NONE'}\nCheck console for details`);
-        } catch (error) {
-            console.error('Debug error:', error);
-            alert('Debug failed - check console');
-        }
     }
 };
 
