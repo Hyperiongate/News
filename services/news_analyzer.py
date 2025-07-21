@@ -2,6 +2,8 @@
 FILE: services/news_analyzer.py
 LOCATION: news/services/news_analyzer.py
 PURPOSE: Core news analysis service with AI and fact-checking
+DEPENDENCIES: OpenAI, requests, BeautifulSoup4
+SERVICE: News analyzer - Main analysis logic
 """
 
 import os
@@ -23,20 +25,10 @@ from .source_credibility import SOURCE_CREDIBILITY
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# Try to import author analyzer
-try:
-    from .author_analyzer import AuthorAnalyzer
-    AUTHOR_ANALYSIS_ENABLED = True
-except ImportError:
-    logger.warning("Author analyzer not available")
-    AUTHOR_ANALYSIS_ENABLED = False
-    AuthorAnalyzer = None
-
 # Configuration
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
-
 
 class NewsAnalyzer:
     """Main class for analyzing news articles"""
@@ -44,7 +36,6 @@ class NewsAnalyzer:
     def __init__(self):
         self.extractor = NewsExtractor()
         self.fact_checker = FactChecker()
-        self.author_analyzer = AuthorAnalyzer() if AUTHOR_ANALYSIS_ENABLED else None
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -65,7 +56,7 @@ class NewsAnalyzer:
         try:
             # Extract article data
             if content_type == 'url':
-                article_data = self.extractor.extract_article(content)
+                article_data = self.extractor.extract_article(content)  # Fixed method name
                 if not article_data:
                     domain = urlparse(content).netloc.replace('www.', '')
                     return {
@@ -88,25 +79,9 @@ class NewsAnalyzer:
                     'author': None
                 }
             
-            # Analyze author if available
-            author_analysis = None
-            if article_data.get('author') and is_pro and self.author_analyzer:
-                try:
-                    author_analysis = self.author_analyzer.analyze_author(
-                        article_data['author'], 
-                        article_data.get('domain')
-                    )
-                except Exception as e:
-                    logger.error(f"Author analysis error: {str(e)}")
-                    author_analysis = {
-                        'name': article_data['author'],
-                        'found': False,
-                        'message': 'Author analysis temporarily unavailable'
-                    }
-            
             # Perform analysis
             if is_pro and OPENAI_API_KEY:
-                analysis = self.get_ai_analysis(article_data, author_analysis)
+                analysis = self.get_ai_analysis(article_data)
             else:
                 analysis = self.get_basic_analysis(article_data)
             
@@ -125,29 +100,23 @@ class NewsAnalyzer:
                     if false_claims > 0:
                         penalty = min(false_claims * 10, 30)
                         analysis['trust_score'] = max(0, analysis.get('trust_score', 50) - penalty)
-                
-                # Factor in author credibility
-                if author_analysis and author_analysis.get('credibility_score'):
-                    author_weight = 0.2  # Author credibility affects 20% of trust score
-                    current_score = analysis.get('trust_score', 50)
-                    author_score = author_analysis['credibility_score']
-                    analysis['trust_score'] = int(current_score * (1 - author_weight) + author_score * author_weight)
             
             # Add related articles
             if is_pro and article_data.get('title'):
                 analysis['related_articles'] = self.fact_checker.get_related_articles(article_data['title'])
             
             # Generate summaries
-            analysis['article_summary'] = self._generate_article_summary(article_data)
+            if not analysis.get('article_summary'):
+                analysis['article_summary'] = self._generate_article_summary(article_data)
+            
             analysis['conversational_summary'] = self._generate_conversational_summary(
-                article_data, analysis, author_analysis
+                article_data, analysis
             )
             
             return {
                 'success': True,
                 'article': article_data,
                 'analysis': analysis,
-                'author_analysis': author_analysis,
                 'is_pro': is_pro,
                 'bias_score': analysis.get('bias_score', 0),
                 'credibility_score': analysis.get('credibility_score', 0.5),
@@ -170,17 +139,17 @@ class NewsAnalyzer:
                 'error': f'Analysis failed: {str(e)}'
             }
     
-    def get_ai_analysis(self, article_data, author_analysis=None):
+    def get_ai_analysis(self, article_data):
         """Use OpenAI to analyze article"""
         try:
-            prompt = self._create_analysis_prompt(article_data, author_analysis)
+            prompt = self._create_analysis_prompt(article_data)
             
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert fact-checker and media analyst. Analyze articles for bias, credibility, and factual accuracy."
+                        "content": "You are an expert fact-checker and media analyst. Analyze articles for bias, credibility, factual accuracy, and provide article summaries."
                     },
                     {
                         "role": "user",
@@ -198,24 +167,14 @@ class NewsAnalyzer:
             logger.error(f"OpenAI API error: {str(e)}")
             return self.get_basic_analysis(article_data)
     
-    def _create_analysis_prompt(self, article_data, author_analysis=None):
+    def _create_analysis_prompt(self, article_data):
         """Create analysis prompt for AI"""
-        author_context = ""
-        if author_analysis and author_analysis.get('found'):
-            author_context = f"""
-            Author Information:
-            - Name: {author_analysis.get('name')}
-            - Credibility Score: {author_analysis.get('credibility_score', 'Unknown')}/100
-            - Previous Work: {len(author_analysis.get('previous_work', []))} articles found
-            """
-        
         return f"""
         Analyze this news article for bias, credibility, and factual accuracy.
         
         Title: {article_data.get('title', 'N/A')}
         Author: {article_data.get('author', 'Unknown')}
         Source: {article_data.get('domain', 'Unknown')}
-        {author_context}
         
         Article Text (first 3000 chars):
         {article_data.get('text', '')[:3000]}
@@ -327,7 +286,7 @@ class NewsAnalyzer:
         else:
             return "Article discusses: " + text[:200] + "..."
     
-    def _generate_conversational_summary(self, article_data, analysis, author_analysis):
+    def _generate_conversational_summary(self, article_data, analysis):
         """Generate a conversational summary of the analysis"""
         parts = []
         
@@ -349,13 +308,6 @@ class NewsAnalyzer:
             parts.append("raises some credibility concerns that readers should be aware of. ")
         else:
             parts.append("shows significant credibility issues and should be read with caution. ")
-        
-        # Author credibility
-        if author_analysis and author_analysis.get('found'):
-            if author_analysis.get('credibility_score', 0) >= 70:
-                parts.append(f"The author has established credentials in journalism. ")
-            elif author_analysis.get('credibility_score', 0) < 40:
-                parts.append(f"Limited information is available about the author's background. ")
         
         # Bias commentary
         bias = analysis.get('bias_score', 0)
