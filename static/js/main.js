@@ -21,10 +21,18 @@ const NewsAnalyzer = {
         const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         const urlInput = document.getElementById('urlInput');
         const textInput = document.getElementById('textInput');
+        const urlTabBtn = document.getElementById('urlTabBtn');
+        const textTabBtn = document.getElementById('textTabBtn');
 
+        // Button clicks
         analyzeBtn.addEventListener('click', () => this.analyzeNews('url'));
         analyzeTextBtn.addEventListener('click', () => this.analyzeNews('text'));
         
+        // Tab switches
+        urlTabBtn.addEventListener('click', () => this.switchTab('url'));
+        textTabBtn.addEventListener('click', () => this.switchTab('text'));
+        
+        // Enter key handlers
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.analyzeNews('url');
@@ -43,16 +51,17 @@ const NewsAnalyzer = {
         this.currentTab = tab;
         
         // Update tab buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.classList.add('active');
+        const urlTabBtn = document.getElementById('urlTabBtn');
+        const textTabBtn = document.getElementById('textTabBtn');
         
-        // Show/hide input groups
         if (tab === 'url') {
+            urlTabBtn.classList.add('active');
+            textTabBtn.classList.remove('active');
             document.getElementById('urlInputGroup').classList.remove('hidden');
             document.getElementById('textInputGroup').classList.add('hidden');
         } else {
+            urlTabBtn.classList.remove('active');
+            textTabBtn.classList.add('active');
             document.getElementById('urlInputGroup').classList.add('hidden');
             document.getElementById('textInputGroup').classList.remove('hidden');
         }
