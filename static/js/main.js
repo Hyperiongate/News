@@ -123,7 +123,7 @@ const NewsAnalyzer = {
         this.hideResults();
 
         try {
-            const response = await fetch('/api/analyze', {
+            const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ const NewsAnalyzer = {
     // Load trending news
     async loadTrendingNews() {
         try {
-            const response = await fetch('/api/trending');
+            const response = await fetch('/trending');
             const data = await response.json();
 
             if (response.ok && data.articles) {
