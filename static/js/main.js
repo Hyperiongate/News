@@ -127,8 +127,13 @@ const NewsAnalyzer = {
             }
         }
 
-        // Show progress
-        window.UI.showProgress(true, 'Starting analysis...');
+        // Update button text to show processing
+        const analyzeBtn = type === 'url' ? document.getElementById('analyzeBtn') : document.getElementById('analyzeTextBtn');
+        const originalText = analyzeBtn ? analyzeBtn.textContent : '';
+        if (analyzeBtn) {
+            analyzeBtn.textContent = 'Analyzing...';
+        }
+        
         this.hideResults();
         this.disableButtons(true);
 
@@ -169,28 +174,20 @@ const NewsAnalyzer = {
                     console.warn('❌ No trust score received');
                 }
                 
-                // Show progress completion before showing results
-                window.UI.showProgress(true, 'Analysis complete!');
-                
-                // Wait a moment to show completion
-                setTimeout(() => {
-                    window.UI.showProgress(false);
-                    // Build results using UI controller
-                    window.UI.buildResults(data);
-                }, 1500);
+                // Build results using UI controller
+                window.UI.buildResults(data);
             } else {
-                window.UI.showProgress(false);
                 window.UI.showError(data.error || 'Analysis failed');
             }
         } catch (error) {
             console.error('Analysis error:', error);
-            window.UI.showProgress(false);
             window.UI.showError('Network error. Please try again.');
         } finally {
-            // Re-enable buttons after showing results
-            setTimeout(() => {
-                this.disableButtons(false);
-            }, 1500);
+            // Re-enable buttons and restore text
+            this.disableButtons(false);
+            if (analyzeBtn) {
+                analyzeBtn.textContent = originalText || 'Analyze';
+            }
         }
     },
 
