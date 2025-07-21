@@ -13,7 +13,7 @@ class PricingDropdown {
         dropdown.innerHTML = `
             <button class="pricing-toggle-btn" id="pricingToggle">
                 <span class="pricing-icon">💎</span>
-                <span class="pricing-text">${this.currentPlan === 'free' ? 'Free Plan' : 'Pro Plan'}</span>
+                <span class="pricing-text">${this.currentPlan === 'free' ? 'Basic Plan' : 'Pro Plan'}</span>
                 <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -28,24 +28,25 @@ class PricingDropdown {
                 <div class="pricing-plans">
                     <div class="plan-card ${this.currentPlan === 'free' ? 'active' : ''}" data-plan="free">
                         <div class="plan-header">
-                            <h4>Free</h4>
+                            <h4>Basic</h4>
                             <div class="plan-price">
                                 <span class="price">$0</span>
                                 <span class="period">/month</span>
                             </div>
                         </div>
                         <ul class="plan-features">
-                            <li><span class="check">✓</span> Basic source credibility check</li>
-                            <li><span class="check">✓</span> Political bias detection</li>
+                            <li><span class="check">✓</span> Overall trust score</li>
+                            <li><span class="check">✓</span> Source credibility check</li>
+                            <li><span class="check">✓</span> Basic author info</li>
                             <li><span class="check">✓</span> Article summary</li>
-                            <li><span class="check">✓</span> Author lookup</li>
-                            <li><span class="x">✗</span> AI-powered analysis</li>
-                            <li><span class="x">✗</span> Fact-checking with sources</li>
-                            <li><span class="x">✗</span> PDF export</li>
-                            <li><span class="x">✗</span> Related coverage analysis</li>
+                            <li><span class="check">✓</span> Summary of findings</li>
+                            <li><span class="check">✓</span> 1 free Pro analysis/day (login required)</li>
+                            <li><span class="x">✗</span> Detailed bias analysis</li>
+                            <li><span class="x">✗</span> Fact-checking</li>
+                            <li><span class="x">✗</span> Manipulation detection</li>
                         </ul>
                         <button class="plan-select-btn" onclick="pricingDropdown.selectPlan('free')">
-                            ${this.currentPlan === 'free' ? 'Current Plan' : 'Select Free'}
+                            ${this.currentPlan === 'free' ? 'Current Plan' : 'Select Basic'}
                         </button>
                     </div>
                     
@@ -59,14 +60,15 @@ class PricingDropdown {
                             </div>
                         </div>
                         <ul class="plan-features">
-                            <li><span class="check">✓</span> Everything in Free</li>
-                            <li><span class="check">✓</span> OpenAI GPT-3.5 analysis</li>
+                            <li><span class="check">✓</span> Everything in Basic</li>
+                            <li><span class="check">✓</span> GPT-3.5 AI analysis</li>
+                            <li><span class="check">✓</span> Detailed bias detection</li>
                             <li><span class="check">✓</span> Google Fact Check API</li>
-                            <li><span class="check">✓</span> Clickbait detection</li>
-                            <li><span class="check">✓</span> Readability scoring</li>
-                            <li><span class="check">✓</span> Coverage comparison</li>
+                            <li><span class="check">✓</span> Manipulation tactics detection</li>
+                            <li><span class="check">✓</span> Author credibility deep-dive</li>
+                            <li><span class="check">✓</span> Related coverage comparison</li>
                             <li><span class="check">✓</span> PDF report export</li>
-                            <li><span class="check">✓</span> Priority support</li>
+                            <li><span class="check">✓</span> Unlimited analyses</li>
                         </ul>
                         <button class="plan-select-btn pro" onclick="pricingDropdown.selectPlan('pro')">
                             ${this.currentPlan === 'pro' ? 'Current Plan' : 'Upgrade to Pro'}
@@ -75,7 +77,7 @@ class PricingDropdown {
                 </div>
                 
                 <div class="pricing-footer">
-                    <p>All plans include unlimited article analysis</p>
+                    <p style="color: #f59e0b; font-weight: 600;">🚧 Development Mode: All features unlocked for testing</p>
                 </div>
             </div>
         `;
@@ -149,7 +151,7 @@ class PricingDropdown {
         
         // Update button text
         const toggleText = this.container.querySelector('.pricing-text');
-        toggleText.textContent = plan === 'free' ? 'Free Plan' : 'Pro Plan';
+        toggleText.textContent = plan === 'free' ? 'Basic Plan' : 'Pro Plan';
         
         // Update buttons
         this.updateButtons();
@@ -176,20 +178,20 @@ class PricingDropdown {
             freeBtn.textContent = 'Current Plan';
             proBtn.textContent = 'Upgrade to Pro';
         } else {
-            freeBtn.textContent = 'Select Free';
+            freeBtn.textContent = 'Select Basic';
             proBtn.textContent = 'Current Plan';
         }
     }
 
     showUpgradeModal() {
-        // For now, just show an alert
-        // In production, this would open a payment modal
-        alert('Pro features coming soon! For now, enjoy all features for free.');
+        // Development mode message
+        alert('Development mode: All features available for testing. Login system coming soon!');
         
-        // Reset to free plan
-        setTimeout(() => {
-            this.selectPlan('free');
-        }, 100);
+        // In dev mode, don't reset to free
+        // Comment out for production:
+        // setTimeout(() => {
+        //     this.selectPlan('free');
+        // }, 100);
     }
 
     mount(targetId) {
