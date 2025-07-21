@@ -8,6 +8,8 @@ class ProgressBar {
         this.progressPercentage = null;
         this.currentProgress = 0;
         this.isComplete = false;
+        this.startTime = null;
+        this.minDisplayTime = 3000; // Minimum time to show progress bar (3 seconds)
         this.steps = [
             { percent: 10, text: 'Fetching article content...', step: 1 },
             { percent: 25, text: 'Analyzing source credibility...', step: 2 },
@@ -100,6 +102,9 @@ class ProgressBar {
             return;
         }
         
+        // Record start time
+        this.startTime = Date.now();
+        
         // Hide old loading if exists
         const oldLoading = document.getElementById('loading');
         if (oldLoading) {
@@ -114,6 +119,7 @@ class ProgressBar {
         
         // Show container with fade-in effect
         this.container.classList.remove('hidden');
+        this.container.style.display = 'block'; // Ensure it's visible
         this.container.style.opacity = '0';
         setTimeout(() => {
             this.container.style.transition = 'opacity 0.3s ease-in';
@@ -126,17 +132,25 @@ class ProgressBar {
 
     hide() {
         if (this.container) {
-            // Stop any ongoing animation
-            this.stopAnimation();
+            // Calculate how long the progress bar has been showing
+            const elapsedTime = Date.now() - this.startTime;
+            const remainingTime = Math.max(0, this.minDisplayTime - elapsedTime);
             
-            // Fade out then hide
-            this.container.style.transition = 'opacity 0.3s ease-out';
-            this.container.style.opacity = '0';
+            // Delay hiding if we haven't shown for minimum time
             setTimeout(() => {
-                this.container.classList.add('hidden');
-                this.container.style.opacity = '1';
-                this.reset();
-            }, 300);
+                // Stop any ongoing animation
+                this.stopAnimation();
+                
+                // Fade out then hide
+                this.container.style.transition = 'opacity 0.3s ease-out';
+                this.container.style.opacity = '0';
+                setTimeout(() => {
+                    this.container.classList.add('hidden');
+                    this.container.style.display = 'none';
+                    this.container.style.opacity = '1';
+                    this.reset();
+                }, 300);
+            }, remainingTime);
         }
     }
 
@@ -159,7 +173,7 @@ class ProgressBar {
             } else {
                 this.stopAnimation();
             }
-        }, 1500); // Update every 1.5 seconds
+        }, 400); // Update more frequently for smoother animation
     }
 
     stopAnimation() {
@@ -265,11 +279,17 @@ class ProgressBar {
 
     fadeOut() {
         if (this.container && !this.container.classList.contains('hidden')) {
-            this.container.style.transition = 'opacity 0.5s ease-out';
-            this.container.style.opacity = '0';
+            // Ensure we've shown for minimum time
+            const elapsedTime = Date.now() - this.startTime;
+            const remainingTime = Math.max(0, this.minDisplayTime - elapsedTime);
+            
             setTimeout(() => {
-                this.hide();
-            }, 500);
+                this.container.style.transition = 'opacity 0.5s ease-out';
+                this.container.style.opacity = '0';
+                setTimeout(() => {
+                    this.hide();
+                }, 500);
+            }, remainingTime);
         }
     }
 
@@ -277,6 +297,7 @@ class ProgressBar {
         this.currentProgress = 0;
         this.currentStep = 0;
         this.isComplete = false;
+        this.startTime = null;
         
         if (this.progressBar) {
             this.progressBar.style.width = '0%';
