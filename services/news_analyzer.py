@@ -15,7 +15,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 import random
 
-import openai
+from openai import OpenAI
 import requests
 from bs4 import BeautifulSoup
 
@@ -35,10 +35,11 @@ except ImportError:
     AUTHOR_ANALYSIS_ENABLED = False
     AuthorAnalyzer = None
 
-# Configuration
+# Configuration - Updated for new OpenAI client
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+openai_client = None
 if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 class NewsAnalyzer:
     """Main class for analyzing news articles"""
@@ -91,7 +92,7 @@ class NewsAnalyzer:
                 }
             
             # Perform analysis
-            if is_pro and OPENAI_API_KEY:
+            if is_pro and openai_client:
                 raw_analysis = self.get_ai_analysis(article_data)
             else:
                 raw_analysis = self.get_basic_analysis(article_data)
@@ -468,11 +469,12 @@ class NewsAnalyzer:
         return f"Checked {total} claims: {verified} verified as true, {false} found false, {mixed} partially true."
     
     def get_ai_analysis(self, article_data):
-        """Use OpenAI to analyze article"""
+        """Use OpenAI to analyze article - Updated for new API"""
         try:
             prompt = self._create_analysis_prompt(article_data)
             
-            response = openai.ChatCompletion.create(
+            # Updated to use new OpenAI client
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
