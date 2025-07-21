@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import openai
 import requests
 from bs4 import BeautifulSoup
-
+from .author_analyzer import AuthorAnalyzer
 from .news_extractor import NewsExtractor
 from .fact_checker import FactChecker
 from .source_credibility import SOURCE_CREDIBILITY
