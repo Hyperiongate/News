@@ -30,7 +30,7 @@ class UIController {
     }
 
     /**
-     * Build results using modular components
+     * Build results using modular components with animations
      */
     buildResults(data) {
         this.analysisData = data;
@@ -48,26 +48,42 @@ class UIController {
         const container = document.createElement('div');
         container.className = 'results-container';
         
-        // Article info
+        let componentDelay = 0;
+        
+        // Article info with fade-in
         if (data.article) {
-            container.appendChild(this.createArticleInfo(data.article));
+            const articleInfo = this.createArticleInfo(data.article);
+            articleInfo.classList.add('fade-in');
+            articleInfo.style.animationDelay = `${componentDelay}s`;
+            container.appendChild(articleInfo);
+            componentDelay += 0.1;
         }
         
-        // Article summary
+        // Article summary with fade-in
         if (data.article_summary || data.conversational_summary) {
-            container.appendChild(this.createSummarySection(data));
+            const summary = this.createSummarySection(data);
+            summary.classList.add('fade-in');
+            summary.style.animationDelay = `${componentDelay}s`;
+            container.appendChild(summary);
+            componentDelay += 0.1;
         }
         
-        // Trust score component
+        // Trust score component with scale-in
         if (this.components.trustScore && data.trust_score !== undefined) {
             const trustScoreEl = this.components.trustScore.render(data.trust_score || 0);
+            trustScoreEl.classList.add('scale-in');
+            trustScoreEl.style.animationDelay = `${componentDelay}s`;
             container.appendChild(trustScoreEl);
+            componentDelay += 0.1;
         }
         
-        // Author card component
+        // Author card component with slide-in
         if (this.components.authorCard && (data.author_analysis || data.article?.author)) {
             const authorEl = this.components.authorCard.render(data);
+            authorEl.classList.add('slide-in-left');
+            authorEl.style.animationDelay = `${componentDelay}s`;
             container.appendChild(authorEl);
+            componentDelay += 0.1;
         }
         
         // Analysis grid
@@ -78,29 +94,37 @@ class UIController {
         // Bias analysis component
         if (this.components.biasAnalysis && data.bias_analysis) {
             const biasEl = this.components.biasAnalysis.render(data);
+            biasEl.classList.add('fade-in');
+            biasEl.style.animationDelay = `${componentDelay}s`;
             analysisGrid.appendChild(biasEl);
+            componentDelay += 0.1;
         }
         
         // Fact checker component
         if (this.components.factChecker && data.key_claims) {
             const factCheckEl = this.components.factChecker.render(data);
+            factCheckEl.classList.add('fade-in');
+            factCheckEl.style.animationDelay = `${componentDelay}s`;
             analysisGrid.appendChild(factCheckEl);
+            componentDelay += 0.1;
         }
         
         // Clickbait detector component
         if (this.components.clickbaitDetector && data.clickbait_score !== undefined) {
             const clickbaitEl = this.components.clickbaitDetector.render(data);
+            clickbaitEl.classList.add('fade-in');
+            clickbaitEl.style.animationDelay = `${componentDelay}s`;
             analysisGrid.appendChild(clickbaitEl);
+            componentDelay += 0.1;
         }
-        
-        // Add more components here as they're available
-        // Coverage comparison, readability analysis, etc.
         
         container.appendChild(analysisGrid);
         
-        // Export handler (only for Pro users)
+        // Export handler (only for Pro users) with slide-in
         if (this.components.exportHandler && data.is_pro) {
             const exportEl = this.components.exportHandler.render(data);
+            exportEl.classList.add('slide-in-right');
+            exportEl.style.animationDelay = `${componentDelay}s`;
             container.appendChild(exportEl);
         }
         
@@ -111,8 +135,23 @@ class UIController {
         // Show resources
         this.showResources(data);
         
-        // Smooth scroll
-        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Initialize tooltips after components are rendered
+        setTimeout(() => {
+            if (window.UIUtils) {
+                window.UIUtils.initializeTooltips();
+                window.UIUtils.enhanceCards();
+            }
+        }, 1000);
+        
+        // Smooth scroll with a slight delay
+        setTimeout(() => {
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 300);
+        
+        // Show success toast
+        if (window.UIUtils) {
+            window.UIUtils.showToast('Analysis complete!', 'success');
+        }
     }
 
     /**
@@ -212,29 +251,39 @@ class UIController {
         }
         
         resourcesList.innerHTML = resources.map(r => 
-            `<span class="resource-chip" style="display: inline-block; padding: 0.375rem 0.75rem; background: #e5e7eb; border-radius: 9999px; font-size: 0.875rem; margin: 0.25rem;">${r}</span>`
+            `<span class="resource-chip smooth-transition" style="display: inline-block; padding: 0.375rem 0.75rem; background: #e5e7eb; border-radius: 9999px; font-size: 0.875rem; margin: 0.25rem;">${r}</span>`
         ).join('');
         
         resourcesDiv.classList.remove('hidden');
+        resourcesDiv.classList.add('fade-in');
     }
 
     /**
-     * Show error message
+     * Show error message with animation
      */
     showError(message) {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = `
-            <div class="error" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <div class="error shake" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
                 <strong>Error:</strong> ${message}
             </div>
         `;
         resultsDiv.classList.remove('hidden');
+        
+        if (window.UIUtils) {
+            window.UIUtils.showToast(message, 'error');
+        }
     }
 
     /**
      * Show progress with animated steps
      */
     showProgress(show, message = 'Analyzing article...') {
+        if (show && window.UIUtils) {
+            // Show loading skeletons
+            window.UIUtils.showLoadingSkeletons();
+        }
+        
         if (this.components.progressBar) {
             if (show) {
                 // Reset progress
