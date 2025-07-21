@@ -11,11 +11,14 @@
     <link rel="stylesheet" href="/static/css/components/pricing-dropdown.css">
     <link rel="stylesheet" href="/static/css/components/progress-bar.css">
     <link rel="stylesheet" href="/static/css/components/trust-score.css">
+    <link rel="stylesheet" href="/static/css/components/executive-summary.css">
+    <link rel="stylesheet" href="/static/css/components/analysis-cards.css">
     <link rel="stylesheet" href="/static/css/components/author-card.css">
     <link rel="stylesheet" href="/static/css/components/bias-analysis.css">
     <link rel="stylesheet" href="/static/css/components/fact-checker.css">
     <link rel="stylesheet" href="/static/css/components/clickbait-detector.css">
     <link rel="stylesheet" href="/static/css/components/export-handler.css">
+    <link rel="stylesheet" href="/static/css/components/article-info.css">
 </head>
 <body>
     <!-- Header -->
@@ -140,6 +143,8 @@
     <script src="/static/js/components/pricing-dropdown.js"></script>
     <script src="/static/js/components/progress-bar.js"></script>
     <script src="/static/js/components/trust-score.js"></script>
+    <script src="/static/js/components/executive-summary.js"></script>
+    <script src="/static/js/components/analysis-cards.js"></script>
     <script src="/static/js/components/author-card.js"></script>
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
@@ -155,8 +160,7 @@
             }
 
             // Components are auto-registered in their respective files
-            // Progress bar is auto-registered in progress-bar.js
-            console.log('Components loaded:', Object.keys(window.UI.components));
+            console.log('Components loaded:', Object.keys(window.UI?.components || {}));
         });
     </script>
 </body>
