@@ -1,7 +1,7 @@
 """
 FILE: app.py
 LOCATION: news/app.py
-PURPOSE: Flask app with database integration and enhanced features
+PURPOSE: Flask app with database integration - Fixed imports
 """
 
 import os
@@ -22,7 +22,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from services.news_analyzer import NewsAnalyzer
 from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
-from services.source_credibility import SourceCredibility
+from services.source_credibility import SOURCE_CREDIBILITY  # Changed: import the dictionary directly
 from services.author_analyzer import AuthorAnalyzer
 
 # Import database models
@@ -65,7 +65,6 @@ logger = logging.getLogger(__name__)
 analyzer = NewsAnalyzer()
 news_extractor = NewsExtractor()
 fact_checker = FactChecker()
-source_credibility = SourceCredibility()
 author_analyzer = AuthorAnalyzer()
 
 # Create tables and seed data
@@ -207,9 +206,13 @@ def analyze():
                 domain = result['article']['domain']
                 source = Source.query.filter_by(domain=domain).first()
                 if not source:
+                    # Get credibility info from SOURCE_CREDIBILITY dictionary
+                    source_info = SOURCE_CREDIBILITY.get(domain, {})
                     source = Source(
                         domain=domain,
-                        name=result.get('analysis', {}).get('source_credibility', {}).get('name', domain)
+                        name=source_info.get('name', domain),
+                        credibility_score=self._map_credibility_to_score(source_info.get('credibility', 'Unknown')),
+                        political_lean=source_info.get('bias', 'Unknown')
                     )
                     db.session.add(source)
                 
@@ -282,6 +285,17 @@ def analyze():
             'success': False,
             'error': f'Analysis failed: {str(e)}'
         }), 500
+
+def _map_credibility_to_score(credibility_text):
+    """Map credibility text to numeric score"""
+    mapping = {
+        'High': 85,
+        'Medium': 60,
+        'Low': 30,
+        'Very Low': 10,
+        'Unknown': 50
+    }
+    return mapping.get(credibility_text, 50)
 
 @app.route('/api/export/pdf', methods=['POST'])
 def export_pdf():
