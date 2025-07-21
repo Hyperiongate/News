@@ -22,15 +22,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'news-analyzer-secret-ke
 app.config['NEWS_API_KEY'] = os.environ.get('NEWS_API_KEY')
 app.config['GOOGLE_FACT_CHECK_API_KEY'] = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
 
-# Import our services (we'll create these next)
-# from services.news_analyzer import NewsAnalyzer
-# from services.news_extractor import NewsExtractor
-# from services.fact_checker import FactChecker
+# Import our services
+from services.news_analyzer import NewsAnalyzer
+from services.fact_checker import FactChecker
 
 # Initialize services
-# analyzer = NewsAnalyzer()
-# extractor = NewsExtractor()
-# fact_checker = FactChecker()
+analyzer = NewsAnalyzer()
+fact_checker = FactChecker()
 
 @app.route('/')
 def index():
@@ -42,21 +40,17 @@ def analyze_news():
     """Main endpoint for news analysis"""
     try:
         data = request.get_json()
-        url = data.get('url')
         
-        if not url:
-            return jsonify({'error': 'No URL provided'}), 400
+        # Check if it's a URL or text
+        content = data.get('url') or data.get('text')
+        if not content:
+            return jsonify({'error': 'No URL or text provided'}), 400
         
-        # For now, return a simple response
-        # TODO: Implement actual analysis
-        result = {
-            'status': 'success',
-            'url': url,
-            'message': 'News analysis will be implemented here',
-            'credibility_score': 75,
-            'fact_check_results': [],
-            'source_analysis': {}
-        }
+        # Determine content type
+        content_type = 'url' if content.startswith(('http://', 'https://')) else 'text'
+        
+        # Perform analysis
+        result = analyzer.analyze(content, content_type, is_pro=True)
         
         return jsonify(result)
         
@@ -67,18 +61,15 @@ def analyze_news():
 def get_trending():
     """Get trending news for analysis"""
     try:
-        # TODO: Implement trending news fetching
-        trending = {
+        country = request.args.get('country', 'us')
+        category = request.args.get('category', 'general')
+        
+        trending = fact_checker.get_trending_news(country, category)
+        
+        return jsonify({
             'status': 'success',
-            'articles': [
-                {
-                    'title': 'Sample Article 1',
-                    'url': 'https://example.com/1',
-                    'source': 'Example News'
-                }
-            ]
-        }
-        return jsonify(trending)
+            'articles': trending
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
