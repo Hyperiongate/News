@@ -749,6 +749,280 @@ class UIController {
             gridWrapper.parentNode.insertBefore(secondGridWrapper, gridWrapper.nextSibling);
         }
         
+        // Create third row of cards for persuasion and connections
+        if (data.persuasion_analysis || data.connection_analysis) {
+            const thirdGridWrapper = document.createElement('div');
+            thirdGridWrapper.className = 'cards-grid-wrapper';
+            thirdGridWrapper.style.cssText = `
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                max-width: 900px;
+                margin: 0 auto 40px auto;
+                padding: 0 20px;
+                align-items: start;
+            `;
+            
+            const thirdRowCards = [];
+            
+            // Persuasion Techniques Card
+            if (data.persuasion_analysis) {
+                const card = this.createExpandableCard(cardId++, '🎯', 'Persuasion Techniques', 
+                    `<p style="font-size: 2rem; font-weight: bold; color: ${data.persuasion_analysis.persuasion_score >= 70 ? '#ef4444' : data.persuasion_analysis.persuasion_score >= 40 ? '#f59e0b' : '#10b981'};">
+                        ${data.persuasion_analysis.persuasion_score}%
+                     </p>
+                     <p style="color: #666;">Persuasion Intensity</p>`,
+                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What are Persuasion Techniques?</h4>
+                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                            We analyze the psychological and rhetorical methods used to influence readers. This includes emotional 
+                            appeals, logical arguments, and specific techniques designed to change minds or prompt action.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">Emotional Appeals Detected</h4>
+                        
+                        <!-- Emotion wheel visualization -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                                ${Object.entries(data.persuasion_analysis.emotional_appeals || {}).map(([emotion, value]) => `
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2rem; margin-bottom: 5px;">
+                                            ${emotion === 'fear' ? '😨' :
+                                              emotion === 'anger' ? '😠' :
+                                              emotion === 'hope' ? '🌟' :
+                                              emotion === 'pride' ? '🦚' :
+                                              emotion === 'sympathy' ? '💝' :
+                                              emotion === 'excitement' ? '🎉' : '😐'}
+                                        </div>
+                                        <div style="height: 60px; width: 60px; margin: 0 auto 8px; position: relative;">
+                                            <svg width="60" height="60">
+                                                <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" stroke-width="5"/>
+                                                <circle cx="30" cy="30" r="25" fill="none" 
+                                                    stroke="${value > 50 ? '#ef4444' : value > 25 ? '#f59e0b' : '#10b981'}" 
+                                                    stroke-width="5"
+                                                    stroke-dasharray="${(value / 100) * 157} 157"
+                                                    stroke-linecap="round"
+                                                    transform="rotate(-90 30 30)"/>
+                                            </svg>
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem;">
+                                                ${value}%
+                                            </div>
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #6b7280; text-transform: capitalize;">
+                                            ${emotion}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${data.persuasion_analysis.dominant_emotion ? `
+                                <div style="text-align: center; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                                    <span style="font-size: 0.9rem; color: #6b7280;">Primary emotional appeal:</span>
+                                    <strong style="color: #1f2937; text-transform: capitalize; margin-left: 5px;">
+                                        ${data.persuasion_analysis.dominant_emotion}
+                                    </strong>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${data.persuasion_analysis.logical_fallacies?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Logical Fallacies Found</h4>
+                            ${data.persuasion_analysis.logical_fallacies.map(fallacy => `
+                                <div style="margin: 8px 0; padding: 12px; background: #fee2e2; border-radius: 6px; border-left: 3px solid #ef4444;">
+                                    <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
+                                        ${fallacy.type}
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #7f1d1d;">
+                                        ${fallacy.description}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${data.persuasion_analysis.rhetorical_devices?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Rhetorical Devices Used</h4>
+                            ${data.persuasion_analysis.rhetorical_devices.map(device => `
+                                <div style="margin: 8px 0; padding: 12px; background: #f3e8ff; border-radius: 6px;">
+                                    <div style="font-weight: 600; color: #6b21a8; margin-bottom: 4px;">
+                                        ${device.type}
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #581c87;">
+                                        ${device.description}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${data.persuasion_analysis.call_to_action ? `
+                        <div style="margin-bottom: 20px; padding: 15px; background: ${
+                            data.persuasion_analysis.call_to_action.strength === 'strong' ? '#fef3c7' : '#f0fdf4'
+                        }; border-radius: 6px;">
+                            <h4 style="margin: 0 0 10px 0; color: ${
+                                data.persuasion_analysis.call_to_action.strength === 'strong' ? '#92400e' : '#14532d'
+                            };">Call to Action Detected</h4>
+                            <p style="margin: 0; color: ${
+                                data.persuasion_analysis.call_to_action.strength === 'strong' ? '#451a03' : '#14532d'
+                            }; font-size: 0.95rem;">
+                                The article includes a ${data.persuasion_analysis.call_to_action.strength} call to action, 
+                                encouraging readers to take ${data.persuasion_analysis.call_to_action.type === 'action' ? 'specific actions' : 'engage with the content'}.
+                            </p>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                            ${this.getPersuasionExplanation(data.persuasion_analysis)}
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                            <strong>💡 Tip:</strong> Understanding persuasion techniques helps you read critically. 
+                            Strong emotional appeals and logical fallacies may indicate manipulation rather than honest reporting.
+                        </p>
+                    </div>`,
+                    '#ec4899'
+                );
+                thirdRowCards.push(card);
+            }
+            
+            // Connection Web Card
+            if (data.connection_analysis) {
+                const card = this.createExpandableCard(cardId++, '🔗', 'Connection Web', 
+                    `<p><strong>${data.connection_analysis.topic_connections?.length || 0}</strong> topic connections</p>
+                     <p style="color: #666;">Scope: <strong>${this.capitalizeFirst(data.connection_analysis.primary_scope || 'General')}</strong></p>`,
+                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Connection Analysis?</h4>
+                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                            We identify how this article connects to broader topics, historical events, and current movements. 
+                            This helps you understand the context and see if the article is part of larger narratives or campaigns.
+                        </p>
+                    </div>
+                    
+                    ${data.connection_analysis.topic_connections?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #059669;">Topic Connections</h4>
+                            <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                ${data.connection_analysis.topic_connections.map((topic, index) => `
+                                    <div style="margin: ${index > 0 ? '12px 0' : '0'}; padding-bottom: ${index < data.connection_analysis.topic_connections.length - 1 ? '12px' : '0'}; 
+                                                border-bottom: ${index < data.connection_analysis.topic_connections.length - 1 ? '1px solid #e5e7eb' : 'none'};">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                            <span style="font-weight: 600; color: #1f2937; font-size: 1rem;">
+                                                ${topic.topic}
+                                            </span>
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <div style="width: 100px; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                                                    <div style="width: ${topic.strength}%; height: 100%; background: ${
+                                                        topic.strength >= 70 ? '#3b82f6' : 
+                                                        topic.strength >= 40 ? '#8b5cf6' : '#a78bfa'
+                                                    };"></div>
+                                                </div>
+                                                <span style="font-size: 0.85rem; color: #6b7280; min-width: 35px; text-align: right;">
+                                                    ${topic.strength}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #6b7280;">
+                                            Key terms: ${topic.keywords.join(', ')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Geographic Relevance</h4>
+                        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-around; text-align: center;">
+                                ${Object.entries(data.connection_analysis.geographic_relevance || {}).map(([scope, value]) => `
+                                    <div>
+                                        <div style="font-size: 2rem; margin-bottom: 8px;">
+                                            ${scope === 'local' ? '📍' :
+                                              scope === 'national' ? '🏛️' :
+                                              scope === 'international' ? '🌍' : '📍'}
+                                        </div>
+                                        <div style="font-size: 1.2rem; font-weight: bold; color: ${
+                                            value >= 50 ? '#1f2937' : '#9ca3af'
+                                        };">
+                                            ${value}%
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #6b7280; text-transform: capitalize;">
+                                            ${scope}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${data.connection_analysis.historical_context?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #059669;">Historical Context</h4>
+                            ${data.connection_analysis.historical_context.map(context => `
+                                <div style="margin: 8px 0; padding: 10px; background: #f0fdf4; border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #14532d;">
+                                        ${context.type === 'temporal' ? '📅 Timeline' : '📜 Historical Event'}:
+                                    </span>
+                                    <span style="color: #166534; margin-left: 5px;">
+                                        ${context.description || context.reference}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${data.connection_analysis.movement_connections?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Movement/Campaign Connections</h4>
+                            ${data.connection_analysis.movement_connections.map(movement => `
+                                <div style="margin: 8px 0; padding: 10px; background: #fef2f2; border-radius: 6px;">
+                                    <div style="font-weight: 600; color: #991b1b;">
+                                        ${movement.movement}
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #7f1d1d;">
+                                        Category: ${movement.category}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                            ${this.getConnectionExplanation(data.connection_analysis)}
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                            <strong>💡 Tip:</strong> Articles connected to multiple topics or movements may be pushing an agenda. 
+                            Check if the connections are relevant or if they're being forced to support a narrative.
+                        </p>
+                    </div>`,
+                    '#6366f1'
+                );
+                thirdRowCards.push(card);
+            }
+            
+            // Add third row cards
+            thirdRowCards.forEach(card => thirdGridWrapper.appendChild(card));
+            
+            // Find the last grid wrapper and insert after it
+            const lastGrid = document.querySelector('.cards-grid-wrapper:last-of-type');
+            if (lastGrid) {
+                lastGrid.parentNode.insertBefore(thirdGridWrapper, lastGrid.nextSibling);
+            }
+        }
+        
         // Show resources
         this.showResources(data);
     }
@@ -978,6 +1252,58 @@ class UIController {
             <div style="width: ${analysisPct}%; background: #f59e0b;"></div>
             <div style="width: ${opinionsPct}%; background: #ef4444;"></div>
         `;
+    }
+    
+    getPersuasionExplanation(analysis) {
+        const score = analysis.persuasion_score;
+        const fallacies = analysis.logical_fallacies?.length || 0;
+        const dominant = analysis.dominant_emotion;
+        
+        if (score >= 70) {
+            return `This article uses heavy persuasion techniques with a score of ${score}%. ${fallacies > 0 ? `It contains ${fallacies} logical fallacies, which undermines its credibility. ` : ''}${dominant ? `The primary emotional appeal is ${dominant}, which may cloud objective judgment. ` : ''}Be aware that the content is designed to strongly influence your opinion.`;
+        } else if (score >= 50) {
+            return `This article shows moderate persuasion with a score of ${score}%. ${dominant ? `It primarily appeals to ${dominant} emotions. ` : ''}${fallacies > 0 ? `Some logical issues were detected. ` : ''}The content aims to influence but maintains some balance.`;
+        } else if (score >= 30) {
+            return `This article uses mild persuasion techniques (${score}%). ${dominant ? `Some ${dominant} emotional appeals are present. ` : ''}The persuasion level is typical for opinion pieces or editorial content.`;
+        } else {
+            return `This article shows minimal persuasion (${score}%). It focuses primarily on presenting information rather than influencing opinion. This is characteristic of straightforward news reporting.`;
+        }
+    }
+    
+    getConnectionExplanation(analysis) {
+        const topicCount = analysis.topic_connections?.length || 0;
+        const scope = analysis.primary_scope;
+        const movements = analysis.movement_connections?.length || 0;
+        
+        let explanation = '';
+        
+        if (topicCount === 0) {
+            explanation = "This article appears to be narrowly focused without significant connections to broader topics. ";
+        } else if (topicCount === 1) {
+            explanation = `This article primarily connects to ${analysis.topic_connections[0].topic}. `;
+        } else if (topicCount <= 3) {
+            explanation = `This article bridges ${topicCount} major topics, suggesting a moderate scope. `;
+        } else {
+            explanation = `This article connects to ${topicCount} different topics, indicating either comprehensive coverage or an attempt to link disparate issues. `;
+        }
+        
+        if (scope === 'international') {
+            explanation += "The content has global relevance and discusses issues beyond national borders. ";
+        } else if (scope === 'national') {
+            explanation += "The focus is primarily on national-level issues and policies. ";
+        } else if (scope === 'local') {
+            explanation += "This appears to be focused on local or regional matters. ";
+        }
+        
+        if (movements > 0) {
+            explanation += `It references ${movements} political or social movement${movements > 1 ? 's' : ''}, which may indicate advocacy or agenda-driven content.`;
+        }
+        
+        return explanation.trim();
+    }
+    
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
     
     generateAssessment(data) {
