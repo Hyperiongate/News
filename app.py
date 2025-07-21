@@ -65,11 +65,26 @@ def analyze():
         else:
             return jsonify({'success': False, 'error': 'Please provide either URL or text'}), 400
         
-        # Check if user is pro (for now, always true - implement auth later)
-        is_pro = True
+        # Development mode: always provide full analysis but track plan selection
+        selected_plan = data.get('plan', 'free')
+        is_development = True  # Set to False for production
+        
+        # In development, everyone gets pro features
+        # In production, this would check user auth and plan
+        if is_development:
+            is_pro = True
+            analysis_mode = 'development'
+        else:
+            is_pro = selected_plan == 'pro'
+            analysis_mode = selected_plan
         
         # Perform analysis
         result = analyzer.analyze(content, content_type, is_pro)
+        
+        # Add plan info to result
+        result['selected_plan'] = selected_plan
+        result['analysis_mode'] = analysis_mode
+        result['development_mode'] = is_development
         
         # Store result for potential export (with simple ID)
         if result.get('success') and EXPORT_ENABLED:
@@ -132,7 +147,8 @@ def health():
         'status': 'healthy',
         'service': 'news-analyzer',
         'version': '1.1.0',
-        'export_enabled': EXPORT_ENABLED
+        'export_enabled': EXPORT_ENABLED,
+        'development_mode': True
     })
 
 # Error handlers
