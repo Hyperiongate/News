@@ -1,0 +1,58 @@
+<!-- 
+FILE: templates/index.html
+LOCATION: news/templates/index.html
+PURPOSE: Main page for news analyzer service
+DEPENDENCIES: base.html, style.css, main.js
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Analyzer - Facts & Fakes AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">News Analyzer</h1>
+            <span class="tagline">Part of Facts & Fakes AI</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="analyzer-box">
+            <h2>Analyze News Articles</h2>
+            <p>Enter a news article URL to check its credibility and verify facts</p>
+            
+            <div class="input-group">
+                <input type="url" 
+                       id="urlInput" 
+                       placeholder="https://example.com/news-article" 
+                       class="url-input">
+                <button id="analyzeBtn" class="analyze-btn">Analyze</button>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing article...</p>
+            </div>
+
+            <div id="results" class="results hidden">
+                <!-- Results will appear here -->
+            </div>
+        </div>
+
+        <div class="trending-section">
+            <h3>Trending Articles</h3>
+            <div id="trending" class="trending-list">
+                <p class="loading-text">Loading trending news...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
