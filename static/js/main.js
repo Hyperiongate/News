@@ -1,12 +1,14 @@
- /**
+/**
  * FILE: static/js/main.js
  * LOCATION: news/static/js/main.js
  * PURPOSE: Frontend JavaScript for news analyzer
- * DEPENDENCIES: None (vanilla JavaScript) 
+ * DEPENDENCIES: None (vanilla JavaScript)
  */
- 
+
 // Main app object
 const NewsAnalyzer = {
+    currentTab: 'url', // Track current tab
+    
     // Initialize the app
     init() {
         this.setupEventListeners();
@@ -16,32 +18,77 @@ const NewsAnalyzer = {
     // Set up event listeners
     setupEventListeners() {
         const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         const urlInput = document.getElementById('urlInput');
+        const textInput = document.getElementById('textInput');
 
-        analyzeBtn.addEventListener('click', () => this.analyzeNews());
+        analyzeBtn.addEventListener('click', () => this.analyzeNews('url'));
+        analyzeTextBtn.addEventListener('click', () => this.analyzeNews('text'));
+        
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.analyzeNews();
+                this.analyzeNews('url');
+            }
+        });
+        
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                this.analyzeNews('text');
             }
         });
     },
+    
+    // Switch between URL and text tabs
+    switchTab(tab) {
+        this.currentTab = tab;
+        
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Show/hide input groups
+        if (tab === 'url') {
+            document.getElementById('urlInputGroup').classList.remove('hidden');
+            document.getElementById('textInputGroup').classList.add('hidden');
+        } else {
+            document.getElementById('urlInputGroup').classList.add('hidden');
+            document.getElementById('textInputGroup').classList.remove('hidden');
+        }
+        
+        // Clear previous results
+        this.hideResults();
+    },
 
     // Analyze news article
-    async analyzeNews() {
-        const urlInput = document.getElementById('urlInput');
-        const url = urlInput.value.trim();
-
-        if (!url) {
-            this.showError('Please enter a valid URL');
-            return;
-        }
-
-        // Validate URL
-        try {
-            new URL(url);
-        } catch (e) {
-            this.showError('Please enter a valid URL');
-            return;
+    async analyzeNews(type) {
+        let content;
+        
+        if (type === 'url') {
+            const urlInput = document.getElementById('urlInput');
+            content = urlInput.value.trim();
+            
+            if (!content) {
+                this.showError('Please enter a valid URL');
+                return;
+            }
+            
+            // Validate URL
+            try {
+                new URL(content);
+            } catch (e) {
+                this.showError('Please enter a valid URL');
+                return;
+            }
+        } else {
+            const textInput = document.getElementById('textInput');
+            content = textInput.value.trim();
+            
+            if (!content || content.length < 100) {
+                this.showError('Please paste at least 100 characters of article text');
+                return;
+            }
         }
 
         // Show loading state
@@ -54,7 +101,9 @@ const NewsAnalyzer = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url: url })
+                body: JSON.stringify({ 
+                    [type === 'url' ? 'url' : 'text']: content 
+                })
             });
 
             const data = await response.json();
@@ -65,6 +114,7 @@ const NewsAnalyzer = {
                 this.showError(data.error || 'Analysis failed');
             }
         } catch (error) {
+            console.error('Analysis error:', error);
             this.showError('Network error. Please try again.');
         } finally {
             this.showLoading(false);
@@ -110,8 +160,11 @@ const NewsAnalyzer = {
 
     // Analyze trending article
     analyzeTrendingArticle(url) {
+        // Switch to URL tab
+        document.querySelectorAll('.tab-btn')[0].click();
+        // Fill URL
         document.getElementById('urlInput').value = url;
-        this.analyzeNews();
+        this.analyzeNews('url');
     },
 
     // Show results
@@ -219,13 +272,16 @@ const NewsAnalyzer = {
     showLoading(show) {
         const loadingDiv = document.getElementById('loading');
         const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         
         if (show) {
             loadingDiv.classList.remove('hidden');
             analyzeBtn.disabled = true;
+            analyzeTextBtn.disabled = true;
         } else {
             loadingDiv.classList.add('hidden');
             analyzeBtn.disabled = false;
+            analyzeTextBtn.disabled = false;
         }
     },
 
