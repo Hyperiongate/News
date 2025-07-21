@@ -118,27 +118,99 @@ const NewsAnalyzer = {
     showResults(data) {
         const resultsDiv = document.getElementById('results');
         
-        const html = `
-            <h3>Analysis Results</h3>
-            <div class="result-item">
-                <strong>URL:</strong> ${data.url}
-            </div>
-            <div class="result-item">
-                <strong>Credibility Score:</strong> ${data.credibility_score}%
-            </div>
-            <div class="result-item">
-                <strong>Status:</strong> ${data.message}
-            </div>
-            ${data.fact_check_results && data.fact_check_results.length > 0 ? `
-                <div class="result-item">
-                    <strong>Fact Check Results:</strong>
-                    <ul>
-                        ${data.fact_check_results.map(result => `<li>${result}</li>`).join('')}
-                    </ul>
-                </div>
-            ` : ''}
-        `;
-
+        // Handle both success and error responses
+        if (!data.success) {
+            this.showError(data.error || 'Analysis failed');
+            return;
+        }
+        
+        const analysis = data.analysis || {};
+        const article = data.article || {};
+        
+        let html = '<h3>Analysis Results</h3>';
+        
+        // Article info
+        if (article.title) {
+            html += `<div class="result-item"><strong>Title:</strong> ${article.title}</div>`;
+        }
+        if (article.author) {
+            html += `<div class="result-item"><strong>Author:</strong> ${article.author}</div>`;
+        }
+        if (article.domain) {
+            html += `<div class="result-item"><strong>Source:</strong> ${article.domain}</div>`;
+        }
+        
+        // Trust score with color coding
+        const trustScore = data.trust_score || analysis.trust_score || 0;
+        const scoreColor = trustScore >= 70 ? '#27ae60' : trustScore >= 40 ? '#f39c12' : '#e74c3c';
+        html += `<div class="result-item">
+            <strong>Trust Score:</strong> 
+            <span style="color: ${scoreColor}; font-weight: bold;">${trustScore}%</span>
+        </div>`;
+        
+        // Summary
+        if (analysis.summary) {
+            html += `<div class="result-item"><strong>Summary:</strong> ${analysis.summary}</div>`;
+        }
+        
+        // Source credibility
+        if (analysis.source_credibility) {
+            const cred = analysis.source_credibility;
+            html += `<div class="result-item">
+                <strong>Source Credibility:</strong> ${cred.credibility || 'Unknown'} 
+                | <strong>Bias:</strong> ${cred.bias || 'Unknown'}
+                | <strong>Type:</strong> ${cred.type || 'Unknown'}
+            </div>`;
+        }
+        
+        // Manipulation tactics
+        if (analysis.manipulation_tactics && analysis.manipulation_tactics.length > 0) {
+            html += '<div class="result-item"><strong>⚠️ Warning - Manipulation Tactics Detected:</strong><ul>';
+            analysis.manipulation_tactics.forEach(tactic => {
+                html += `<li>${tactic}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Key claims and fact checks
+        if (analysis.fact_checks && analysis.fact_checks.length > 0) {
+            html += '<div class="result-item"><strong>Fact Check Results:</strong>';
+            analysis.fact_checks.forEach(check => {
+                const verdictColor = check.verdict === 'true' ? '#27ae60' : 
+                                   check.verdict === 'false' ? '#e74c3c' : 
+                                   check.verdict === 'partially_true' ? '#f39c12' : '#95a5a6';
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                        <div><strong>Claim:</strong> ${check.claim}</div>
+                        <div><strong>Verdict:</strong> <span style="color: ${verdictColor}; font-weight: bold;">${check.verdict.replace('_', ' ').toUpperCase()}</span></div>
+                        <div><strong>Source:</strong> ${check.source}</div>
+                        ${check.explanation ? `<div><strong>Details:</strong> ${check.explanation}</div>` : ''}
+                    </div>`;
+            });
+            html += '</div>';
+        } else if (analysis.key_claims && analysis.key_claims.length > 0) {
+            html += '<div class="result-item"><strong>Key Claims Identified:</strong><ul>';
+            analysis.key_claims.forEach(claim => {
+                html += `<li>${claim}</li>`;
+            });
+            html += '</ul><em>Note: Fact checking requires API keys to be configured</em></div>';
+        }
+        
+        // Related articles
+        if (analysis.related_articles && analysis.related_articles.length > 0) {
+            html += '<div class="result-item"><strong>Related Articles:</strong>';
+            analysis.related_articles.forEach(article => {
+                html += `
+                    <div style="margin: 5px 0;">
+                        <a href="${article.url}" target="_blank" style="color: #3498db;">
+                            ${article.title}
+                        </a>
+                        <span style="color: #666; font-size: 0.9em;"> - ${article.source}</span>
+                    </div>`;
+            });
+            html += '</div>';
+        }
+        
         resultsDiv.innerHTML = html;
         resultsDiv.classList.remove('hidden');
     },
