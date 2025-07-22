@@ -161,283 +161,284 @@ class AuthorAnalyzer:
         return result
     
     def _check_outlet_author_page(self, author_name, domain):
-        """Check the news outlet's author page"""
+        """Universal author page checker that works for any outlet"""
         # Clean domain
         clean_domain = domain.replace('www.', '')
-        
-        # Special handling for known sites
-        if 'cnbc.com' in clean_domain:
-            return self._check_cnbc_author(author_name)
-        elif 'cnn.com' in clean_domain:
-            return self._check_cnn_author(author_name)
-        elif 'bbc.com' in clean_domain or 'bbc.co.uk' in clean_domain:
-            return self._check_bbc_author(author_name)
-        elif 'reuters.com' in clean_domain:
-            return self._check_reuters_author(author_name)
-        elif 'bloomberg.com' in clean_domain:
-            return self._check_bloomberg_author(author_name)
-        
-        # Generic author page patterns
         author_slug = author_name.lower().replace(' ', '-')
-        author_patterns = [
-            f"https://{domain}/author/{author_slug}/",
-            f"https://{domain}/journalists/{author_slug}/",
-            f"https://{domain}/by/{author_slug}/",
-            f"https://{domain}/staff/{author_slug}/",
+        author_underscore = author_name.lower().replace(' ', '_')
+        author_plus = author_name.lower().replace(' ', '+')
+        
+        # Common author page URL patterns used by most news sites
+        url_patterns = [
             f"https://{domain}/{author_slug}/",
-            f"https://www.{domain}/author/{author_slug}/",
-            f"https://www.{domain}/{author_slug}/"
+            f"https://{domain}/author/{author_slug}/",
+            f"https://{domain}/authors/{author_slug}/",
+            f"https://{domain}/journalist/{author_slug}/",
+            f"https://{domain}/journalists/{author_slug}/",
+            f"https://{domain}/reporter/{author_slug}/",
+            f"https://{domain}/staff/{author_slug}/",
+            f"https://{domain}/contributors/{author_slug}/",
+            f"https://{domain}/by/{author_slug}/",
+            f"https://{domain}/profiles/{author_slug}/",
+            f"https://{domain}/people/{author_slug}/",
+            f"https://{domain}/team/{author_slug}/",
+            f"https://{domain}/writer/{author_slug}/",
+            f"https://www.{clean_domain}/{author_slug}/",
+            f"https://www.{clean_domain}/author/{author_slug}/",
+            # Try underscore versions
+            f"https://{domain}/author/{author_underscore}/",
+            f"https://{domain}/authors/{author_underscore}/",
+            # Try plus sign versions
+            f"https://{domain}/author/{author_plus}/",
         ]
         
-        for pattern in author_patterns:
+        for url in url_patterns:
             try:
-                response = self.session.get(pattern, timeout=5)
+                response = self.session.get(url, timeout=5)
                 if response.status_code == 200:
-                    return self._parse_author_page(response.text, pattern, domain)
+                    # Parse the page universally
+                    result = self._parse_author_page_universal(response.text, url, domain, author_name)
+                    if result and (result.get('bio') or result.get('found_author_page')):
+                        return result
             except Exception as e:
-                logger.debug(f"Failed to check {pattern}: {e}")
+                logger.debug(f"Failed to check {url}: {e}")
                 continue
         
-        return None
+        # If no author page found, try searching the site
+        return self._search_site_for_author(author_name, domain)
     
-    def _check_cnn_author(self, author_name):
-        """Special handling for CNN authors"""
-        # CNN uses profiles.cnn.com
-        url = f"https://www.cnn.com/profiles/{author_name.lower().replace(' ', '-')}"
+    def _parse_author_page_universal(self, html, url, domain, author_name):
+        """Universal parser that works for any news site author page"""
+        soup = BeautifulSoup(html, 'html.parser')
         
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                result = {
-                    'online_presence': {'outlet_profile': url},
-                    'verification_status': {
-                        'verified': True,
-                        'journalist_verified': True,
-                        'outlet_staff': True
-                    },
-                    'professional_info': {
-                        'outlets': ['CNN']
-                    }
-                }
-                
-                # Extract CNN-specific elements
-                bio_elem = soup.select_one('div.profile__bio')
-                if bio_elem:
-                    result['bio'] = bio_elem.get_text(strip=True)
-                
-                title_elem = soup.select_one('div.profile__title')
-                if title_elem:
-                    result['professional_info']['current_position'] = title_elem.get_text(strip=True)
-                
-                return result
-                
-        except Exception as e:
-            logger.debug(f"Error checking CNN author {author_name}: {e}")
+        # Check if this is actually an author page (not a 404 or wrong page)
+        page_text = soup.get_text().lower()
+        author_name_lower = author_name.lower()
         
-        return None
-    
-    def _check_bbc_author(self, author_name):
-        """Special handling for BBC authors"""
-        # BBC doesn't have consistent author pages, so we'll return basic info
-        return {
-            'professional_info': {
-                'outlets': ['BBC'],
-                'current_position': 'Journalist'
-            },
+        # Verify this is likely an author page
+        if (author_name_lower not in page_text and 
+            not any(word in author_name_lower.split() for word in page_text.split()) and
+            'page not found' not in page_text and 
+            '404' not in page_text):
+            return None
+        
+        result = {
+            'online_presence': {'outlet_profile': url},
             'verification_status': {
                 'verified': True,
                 'journalist_verified': True,
                 'outlet_staff': True
-            }
+            },
+            'professional_info': {
+                'outlets': [domain.replace('www.', '').split('.')[0].upper()]
+            },
+            'found_author_page': True
         }
-    
-    def _check_reuters_author(self, author_name):
-        """Special handling for Reuters authors"""
-        # Reuters uses /journalists/ path
-        author_slug = author_name.lower().replace(' ', '-')
-        url = f"https://www.reuters.com/journalists/{author_slug}"
         
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                return {
-                    'online_presence': {'outlet_profile': url},
-                    'professional_info': {
-                        'outlets': ['Reuters'],
-                        'current_position': 'Journalist'
-                    },
-                    'verification_status': {
-                        'verified': True,
-                        'journalist_verified': True,
-                        'outlet_staff': True
-                    }
-                }
-        except:
-            pass
+        # 1. Check JSON-LD structured data first (most reliable)
+        scripts = soup.find_all('script', type='application/ld+json')
+        for script in scripts:
+            try:
+                data = json.loads(script.string)
+                if self._extract_from_json_ld(data, author_name, result):
+                    break
+            except:
+                continue
         
-        return None
-    
-    def _check_bloomberg_author(self, author_name):
-        """Special handling for Bloomberg authors"""
-        # Bloomberg uses /authors/ path
-        author_slug = author_name.replace(' ', '-')
-        url = f"https://www.bloomberg.com/authors/{author_slug}"
+        # 2. Check meta tags
+        self._extract_from_meta_tags(soup, author_name, result)
         
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                return {
-                    'online_presence': {'outlet_profile': url},
-                    'professional_info': {
-                        'outlets': ['Bloomberg'],
-                        'current_position': 'Journalist'
-                    },
-                    'verification_status': {
-                        'verified': True,
-                        'journalist_verified': True,
-                        'outlet_staff': True
-                    }
-                }
-        except:
-            pass
+        # 3. Smart bio extraction - look for paragraphs that mention the author
+        if not result.get('bio'):
+            bio_candidates = []
+            
+            # Common bio container selectors
+            bio_containers = soup.select('''
+                [class*="bio"], [class*="Bio"], 
+                [class*="author-desc"], [class*="author-info"],
+                [class*="author-about"], [class*="contributor"],
+                [id*="bio"], [id*="Bio"],
+                .description, .about, .profile
+            ''')
+            
+            for container in bio_containers:
+                text = container.get_text(strip=True)
+                if len(text) > 50 and author_name.split()[-1].lower() in text.lower():
+                    bio_candidates.append(text)
+            
+            # Also check all paragraphs
+            for p in soup.find_all('p'):
+                text = p.get_text(strip=True)
+                # Look for paragraphs that mention the author and are biographical
+                if (len(text) > 50 and 
+                    any(name_part.lower() in text.lower() for name_part in author_name.split()) and
+                    any(keyword in text.lower() for keyword in 
+                        ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
+                         'covers', 'reports', 'joined', 'experience', 'previously'])):
+                    bio_candidates.append(text)
+            
+            # Pick the best bio (longest relevant one)
+            if bio_candidates:
+                result['bio'] = max(bio_candidates, key=len)
         
-        return None
-    
-    def _check_cnbc_author(self, author_name):
-        """Special handling for CNBC authors"""
-        # CNBC uses format: https://www.cnbc.com/firstname-lastname/
-        author_slug = author_name.lower().replace(' ', '-')
-        url = f"https://www.cnbc.com/{author_slug}/"
+        # 4. Extract image - look for images with author name or in author sections
+        if not result.get('image_url'):
+            img_candidates = []
+            
+            # Check images with alt text
+            for img in soup.find_all('img', alt=True):
+                if any(name_part.lower() in img['alt'].lower() for name_part in author_name.split()):
+                    img_candidates.append(img)
+            
+            # Check images in author sections
+            author_sections = soup.select('[class*="author"], [id*="author"]')
+            for section in author_sections:
+                imgs = section.find_all('img')
+                img_candidates.extend(imgs)
+            
+            # Get the first valid image
+            for img in img_candidates:
+                if img.get('src'):
+                    img_url = img['src']
+                    if not img_url.startswith('http'):
+                        img_url = f"https://{domain}{img_url}" if img_url.startswith('/') else f"https://{domain}/{img_url}"
+                    result['image_url'] = img_url
+                    break
         
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                result = {
-                    'online_presence': {'outlet_profile': url},
-                    'verification_status': {
-                        'verified': True,
-                        'journalist_verified': True,
-                        'outlet_staff': True
-                    }
-                }
-                
-                # Extract bio from CNBC's specific structure
-                bio_elem = soup.select_one('div.InlineVideo-container ~ p')
-                if not bio_elem:
-                    bio_elem = soup.select_one('div.AuthorBio-bio')
-                if bio_elem:
-                    result['bio'] = bio_elem.get_text(strip=True)
-                
-                # Extract image
-                img_elem = soup.select_one('img.AuthorBio-image')
-                if img_elem and img_elem.get('src'):
-                    result['image_url'] = img_elem['src']
-                
-                # Extract title/position
-                title_elem = soup.select_one('div.AuthorBio-title')
-                if title_elem:
-                    result['professional_info'] = {
-                        'current_position': title_elem.get_text(strip=True),
-                        'outlets': ['CNBC']
-                    }
-                
-                # Social media
-                social_container = soup.select_one('div.AuthorBio-social')
-                if social_container:
-                    twitter_link = social_container.select_one('a[href*="twitter.com"]')
-                    if twitter_link:
-                        result['online_presence']['twitter'] = twitter_link['href'].split('/')[-1]
-                    
-                    linkedin_link = social_container.select_one('a[href*="linkedin.com"]')
-                    if linkedin_link:
-                        result['online_presence']['linkedin'] = linkedin_link['href']
-                
-                return result
-                
-        except Exception as e:
-            logger.error(f"Error checking CNBC author {author_name}: {e}")
+        # 5. Extract title/position
+        if not result['professional_info'].get('current_position'):
+            # Look for common patterns
+            title_patterns = [
+                rf"{author_name}\s*,\s*([^,\.\n]+)",  # Name, Title
+                rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^\.\n]+?)(?:\s+at\s+|$)",  # Name is a Title
+                rf"(?:by|By)\s+{author_name}\s*,\s*([^,\.\n]+)",  # By Name, Title
+            ]
+            
+            for pattern in title_patterns:
+                match = re.search(pattern, soup.get_text(), re.IGNORECASE)
+                if match:
+                    title = match.group(1).strip()
+                    if len(title) < 100:  # Reasonable title length
+                        result['professional_info']['current_position'] = title
+                        break
         
-        return None
-    
-    def _parse_author_page(self, html, url, domain):
-        """Parse author page from outlet website"""
-        soup = BeautifulSoup(html, 'html.parser')
-        result = {}
-        
-        # Extract bio - common patterns
-        bio_selectors = [
-            'div.author-bio',
-            'div.bio',
-            'p.author-description',
-            'div.author-description',
-            'div.author-info',
-            'section.author-bio',
-            'div.contributor-bio'
-        ]
-        
-        for selector in bio_selectors:
-            bio_elem = soup.select_one(selector)
-            if bio_elem:
-                result['bio'] = bio_elem.get_text(strip=True)
-                break
-        
-        # Extract image
-        img_selectors = [
-            'img.author-image',
-            'img.author-photo',
-            'div.author-image img',
-            'div.author img'
-        ]
-        
-        for selector in img_selectors:
-            img_elem = soup.select_one(selector)
-            if img_elem and img_elem.get('src'):
-                result['image_url'] = img_elem['src']
-                if not result['image_url'].startswith('http'):
-                    result['image_url'] = f"https://{domain}{result['image_url']}"
-                break
-        
-        # Extract position/title
-        title_selectors = [
-            'span.author-title',
-            'p.author-title',
-            'div.author-position',
-            'span.author-role'
-        ]
-        
-        for selector in title_selectors:
-            title_elem = soup.select_one(selector)
-            if title_elem:
-                result['professional_info'] = {
-                    'current_position': title_elem.get_text(strip=True),
-                    'outlets': [domain]
-                }
-                break
-        
-        # Social media links
+        # 6. Extract social media links
         social_links = soup.find_all('a', href=True)
         for link in social_links:
-            href = link['href']
-            if 'twitter.com' in href or 'x.com' in href:
-                result['online_presence'] = result.get('online_presence', {})
-                result['online_presence']['twitter'] = href.split('/')[-1].replace('@', '')
-            elif 'linkedin.com' in href:
-                result['online_presence'] = result.get('online_presence', {})
-                result['online_presence']['linkedin'] = href
+            href = link['href'].lower()
+            
+            # Twitter/X
+            if ('twitter.com/' in href or 'x.com/' in href) and '/status/' not in href:
+                match = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', href)
+                if match:
+                    handle = match.group(1).replace('@', '')
+                    if handle not in ['share', 'intent', 'home', 'search']:
+                        result['online_presence']['twitter'] = handle
+            
+            # LinkedIn
+            elif 'linkedin.com/in/' in href:
+                result['online_presence']['linkedin'] = link['href']
+            
+            # Email
+            elif href.startswith('mailto:'):
+                email = href.replace('mailto:', '').split('?')[0]
+                if '@' in email:
+                    result['online_presence']['email'] = email
         
-        result['online_presence'] = result.get('online_presence', {})
-        result['online_presence']['outlet_profile'] = url
-        result['verification_status'] = {
-            'verified': True,
-            'journalist_verified': True,
-            'outlet_staff': True
-        }
+        # 7. Default bio if none found but we're on an author page
+        if not result.get('bio') and result.get('found_author_page'):
+            position = result['professional_info'].get('current_position', 'journalist')
+            outlet = result['professional_info']['outlets'][0]
+            result['bio'] = f"{author_name} is a {position} at {outlet}."
         
         return result
+    
+    def _extract_from_json_ld(self, data, author_name, result):
+        """Extract author info from JSON-LD structured data"""
+        if isinstance(data, dict):
+            # Direct Person object
+            if data.get('@type') == 'Person' and author_name.lower() in data.get('name', '').lower():
+                if data.get('description'):
+                    result['bio'] = data['description']
+                if data.get('jobTitle'):
+                    result['professional_info']['current_position'] = data['jobTitle']
+                if data.get('image'):
+                    result['image_url'] = data['image'] if isinstance(data['image'], str) else data['image'].get('url')
+                return True
+            
+            # Article with author
+            if data.get('@type') in ['Article', 'NewsArticle'] and data.get('author'):
+                author = data['author']
+                if isinstance(author, dict) and author_name.lower() in author.get('name', '').lower():
+                    if author.get('description'):
+                        result['bio'] = author['description']
+                    if author.get('jobTitle'):
+                        result['professional_info']['current_position'] = author['jobTitle']
+                    return True
+        
+        elif isinstance(data, list):
+            # Check each item in the list
+            for item in data:
+                if self._extract_from_json_ld(item, author_name, result):
+                    return True
+        
+        return False
+    
+    def _extract_from_meta_tags(self, soup, author_name, result):
+        """Extract author info from meta tags"""
+        # Common meta tag patterns
+        meta_mappings = {
+            'bio': ['description', 'author.description', 'twitter:description'],
+            'image': ['author.image', 'twitter:image', 'og:image'],
+            'title': ['author.title', 'author.jobTitle']
+        }
+        
+        for field, properties in meta_mappings.items():
+            if not result.get(field if field != 'title' else 'professional_info', {}).get('current_position' if field == 'title' else field):
+                for prop in properties:
+                    meta = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
+                    if meta and meta.get('content'):
+                        content = meta['content']
+                        if field == 'bio' and (author_name.lower() in content.lower() or len(content) > 100):
+                            result['bio'] = content
+                        elif field == 'image':
+                            result['image_url'] = content
+                        elif field == 'title':
+                            result['professional_info']['current_position'] = content
+    
+    def _search_site_for_author(self, author_name, domain):
+        """Search the site for author information using site search"""
+        # Try site search URL patterns
+        search_patterns = [
+            f"https://{domain}/search?q={author_name.replace(' ', '+')}",
+            f"https://{domain}/?s={author_name.replace(' ', '+')}",
+            f"https://{domain}/search/{author_name.replace(' ', '+')}",
+        ]
+        
+        for search_url in search_patterns:
+            try:
+                response = self.session.get(search_url, timeout=5)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    # Look for author links in search results
+                    for link in soup.find_all('a', href=True):
+                        href = link['href']
+                        if any(pattern in href.lower() for pattern in ['/author/', '/journalist/', '/staff/', '/by/']):
+                            if author_name.lower().replace(' ', '-') in href.lower():
+                                # Found a potential author page
+                                full_url = href if href.startswith('http') else f"https://{domain}{href}"
+                                try:
+                                    author_response = self.session.get(full_url, timeout=5)
+                                    if author_response.status_code == 200:
+                                        return self._parse_author_page_universal(
+                                            author_response.text, full_url, domain, author_name
+                                        )
+                                except:
+                                    continue
+            except:
+                continue
+        
+        return None
     
     def _google_search_author(self, author_name, domain=None):
         """Search Google for author information"""
@@ -517,7 +518,7 @@ class AuthorAnalyzer:
         # Try to determine position from common patterns
         if domain:
             domain_lower = domain.lower()
-            if 'cnn' in domain_lower or 'bbc' in domain_lower or 'reuters' in domain_lower:
+            if any(outlet in domain_lower for outlet in ['cnn', 'bbc', 'reuters', 'bloomberg', 'cnbc']):
                 result['professional_info']['current_position'] = 'Journalist'
                 result['verification_status'] = {
                     'verified': True,
@@ -564,7 +565,7 @@ class AuthorAnalyzer:
         }
         
         # Apply scoring
-        if author_data.get('bio'):
+        if author_data.get('bio') and 'Limited information available' not in author_data.get('bio', ''):
             score += criteria['has_bio']
         
         if author_data.get('image_url'):
