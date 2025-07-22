@@ -137,9 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.UI) {
                     window.UI.buildResults(result);
                     
-                    // Add export buttons if pro user
-                    if (result.is_pro && result.export_enabled) {
-                        addExportButtons();
+                    // Add export buttons - show for everyone in development mode or pro users
+                    if ((result.development_mode || result.is_pro) && result.export_enabled !== false) {
+                        setTimeout(() => {
+                            addExportButtons();
+                        }, 100); // Small delay to ensure DOM is ready
                     }
                 } else {
                     // Fallback display
@@ -168,7 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Find the overall assessment div
         const assessmentDiv = document.querySelector('.overall-assessment');
-        if (!assessmentDiv) return;
+        if (!assessmentDiv) {
+            console.error('Could not find assessment div for export buttons');
+            return;
+        }
         
         // Create export buttons container
         const exportContainer = document.createElement('div');
@@ -179,26 +184,33 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e5e7eb;
+            justify-content: center;
         `;
         
         // PDF Export Button
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'btn btn-primary';
-        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 16px;';
         pdfBtn.innerHTML = '<span>📄</span><span>Export PDF Report</span>';
         pdfBtn.onclick = exportToPDF;
         
         // JSON Export Button
         const jsonBtn = document.createElement('button');
         jsonBtn.className = 'btn btn-secondary';
-        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 16px;';
         jsonBtn.innerHTML = '<span>{ }</span><span>Export JSON</span>';
         jsonBtn.onclick = exportToJSON;
+        
+        // Add hover text
+        pdfBtn.title = 'Download a professional PDF report of this analysis';
+        jsonBtn.title = 'Export raw analysis data as JSON';
         
         exportContainer.appendChild(pdfBtn);
         exportContainer.appendChild(jsonBtn);
         
         assessmentDiv.appendChild(exportContainer);
+        
+        console.log('Export buttons added successfully');
     }
     
     async function exportToPDF() {
@@ -291,6 +303,10 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Export error: ' + error.message);
         }
     }
+    
+    // Make export functions globally available
+    window.exportToPDF = exportToPDF;
+    window.exportToJSON = exportToJSON;
     
     function showError(message) {
         results.innerHTML = `
