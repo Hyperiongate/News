@@ -96,6 +96,49 @@ class UIController {
                 
                 <!-- Key Findings - Compact -->
                 ${this.generateKeyFindings(data)}
+                
+                <!-- Export Buttons -->
+                <div class="export-buttons" style="
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                    justify-content: center;
+                ">
+                    <button onclick="window.exportToPDF && window.exportToPDF()" class="btn btn-primary" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 12px 24px;
+                        font-size: 16px;
+                        background: #1e40af;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#1e3a8a'" onmouseout="this.style.background='#1e40af'">
+                        <span>📄</span><span>Export PDF Report</span>
+                    </button>
+                    <button onclick="window.exportToJSON && window.exportToJSON()" class="btn btn-secondary" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 12px 24px;
+                        font-size: 16px;
+                        background: #6b7280;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+                        <span>{ }</span><span>Export JSON</span>
+                    </button>
+                </div>
             </div>
         `;
         resultsDiv.classList.remove('hidden');
@@ -482,364 +525,6 @@ class UIController {
                                         </span>
                                     </div>
                                 `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-                
-                ${data.author_analysis.online_presence && Object.keys(data.author_analysis.online_presence).some(k => data.author_analysis.online_presence[k]) ? `
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #059669;">Online Presence</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${data.author_analysis.online_presence.twitter ? `
-                                <span style="padding: 4px 12px; background: #1da1f2; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Twitter: ${data.author_analysis.online_presence.twitter}
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.linkedin ? `
-                                <span style="padding: 4px 12px; background: #0077b5; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    LinkedIn ✓
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.wikipedia ? `
-                                <span style="padding: 4px 12px; background: #6b7280; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Wikipedia ✓
-                                </span>
-                            ` : ''}
-                            ${data.author_analysis.online_presence.outlet_profile ? `
-                                <span style="padding: 4px 12px; background: #10b981; color: white; border-radius: 16px; font-size: 0.85rem;">
-                                    Verified Staff
-                                </span>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${data.author_analysis.sources_checked ? `
-                    <div style="margin-top: 15px; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                        <p style="margin: 0; font-size: 0.85rem; color: #6b7280;">
-                            <strong>Sources checked:</strong> ${data.author_analysis.sources_checked.join(', ')}
-                        </p>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                        <strong>💡 Tip:</strong> ${data.author_analysis.credibility_explanation?.advice || 'Always verify important claims through multiple sources, regardless of author credibility.'}
-                    </p>
-                </div>`,
-                '#9333ea'
-            );
-            cards.push(card);
-        }
-        
-        // Add cards to grid
-        cards.forEach(card => gridWrapper.appendChild(card));
-        
-        // Insert grid after header
-        header.parentNode.insertBefore(gridWrapper, header.nextSibling);
-        
-        // Create second row of cards if we have transparency and content analysis
-        if (data.transparency_analysis || data.content_analysis) {
-            const secondGridWrapper = document.createElement('div');
-            secondGridWrapper.className = 'cards-grid-wrapper';
-            secondGridWrapper.style.cssText = `
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                max-width: 900px;
-                margin: 0 auto 40px auto;
-                padding: 0 20px;
-                align-items: start;
-            `;
-            
-            const secondRowCards = [];
-            
-            // Transparency & Sources Card
-            if (data.transparency_analysis) {
-                const card = this.createExpandableCard(cardId++, '🔍', 'Transparency & Sources', 
-                    `<p style="font-size: 2rem; font-weight: bold; color: ${data.transparency_analysis.transparency_score >= 70 ? '#10b981' : data.transparency_analysis.transparency_score >= 40 ? '#f59e0b' : '#ef4444'};">
-                        ${data.transparency_analysis.transparency_score}%
-                     </p>
-                     <p style="color: #666;">Transparency Score</p>`,
-                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Source Transparency?</h4>
-                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                            We analyze how the article backs up its claims. Good journalism clearly identifies sources, 
-                            includes expert opinions, and provides verifiable information. Transparency builds trust.
-                        </p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #059669;">What We Found</h4>
-                        
-                        <!-- Source breakdown pie chart -->
-                        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="display: flex; align-items: center; gap: 20px;">
-                                <div style="position: relative; width: 120px; height: 120px;">
-                                    <svg width="120" height="120" viewBox="0 0 120 120">
-                                        ${this.createSourcesPieChart(data.transparency_analysis.source_types)}
-                                    </svg>
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                        <div style="font-size: 1.5rem; font-weight: bold; color: #1f2937;">
-                                            ${data.transparency_analysis.source_count}
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">sources</div>
-                                    </div>
-                                </div>
-                                
-                                <div style="flex: 1;">
-                                    <div style="display: grid; gap: 8px; font-size: 0.9rem;">
-                                        ${Object.entries(data.transparency_analysis.source_types || {}).filter(([_, count]) => count > 0).map(([type, count]) => `
-                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                <div style="width: 12px; height: 12px; border-radius: 2px; background: ${
-                                                    type === 'named_sources' ? '#10b981' :
-                                                    type === 'official_sources' ? '#3b82f6' :
-                                                    type === 'expert_sources' ? '#8b5cf6' :
-                                                    type === 'anonymous_sources' ? '#ef4444' : '#6b7280'
-                                                };"></div>
-                                                <span style="color: #6b7280;">${type.replace(/_/g, ' ')}: ${count}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <div style="text-align: center;">
-                                        <div style="font-size: 1.2rem; font-weight: bold; color: ${data.transparency_analysis.named_source_ratio >= 60 ? '#10b981' : '#f59e0b'};">
-                                            ${data.transparency_analysis.named_source_ratio}%
-                                        </div>
-                                        <div style="font-size: 0.8rem; color: #6b7280;">Named Sources</div>
-                                    </div>
-                                    <div style="text-align: center;">
-                                        <div style="font-size: 1.2rem; font-weight: bold; color: ${data.transparency_analysis.quote_ratio >= 20 ? '#10b981' : '#f59e0b'};">
-                                            ${data.transparency_analysis.quote_ratio}%
-                                        </div>
-                                        <div style="font-size: 0.8rem; color: #6b7280;">Direct Quotes</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
-                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                            ${this.getTransparencyExplanation(data.transparency_analysis)}
-                        </p>
-                    </div>
-                    
-                    ${data.transparency_analysis.has_links ? `
-                        <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f0fdf4; border-radius: 6px;">
-                            <span style="color: #10b981;">✓</span>
-                            <span style="font-size: 0.9rem; color: #14532d;">Article includes links or references to source materials</span>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                            <strong>💡 Tip:</strong> Articles with more named sources and direct quotes are generally more reliable. 
-                            Be cautious of articles that rely heavily on anonymous sources.
-                        </p>
-                    </div>`,
-                    '#3b82f6'
-                );
-                secondRowCards.push(card);
-            }
-            
-            // Content Analysis Card
-            if (data.content_analysis) {
-                const card = this.createExpandableCard(cardId++, '📊', 'Content Analysis', 
-                    `<p><strong>${data.content_analysis.word_count}</strong> words</p>
-                     <p style="color: #666;">Reading Level: <strong>${data.content_analysis.reading_level}</strong></p>`,
-                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Content Analysis?</h4>
-                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                            We examine the article's depth, complexity, and balance. This helps you understand if you're 
-                            getting a quick surface-level take or an in-depth analysis of the topic.
-                        </p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #059669;">Article Composition</h4>
-                        
-                        <!-- Content breakdown -->
-                        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="margin-bottom: 15px;">
-                                <h5 style="margin: 0 0 10px 0; color: #1f2937; font-size: 0.95rem;">Content Breakdown</h5>
-                                <div style="display: flex; height: 30px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-                                    ${this.createContentBar(data.content_analysis.facts_vs_opinion)}
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem;">
-                                    <span style="color: #10b981;">Facts: ${data.content_analysis.facts_vs_opinion.facts}</span>
-                                    <span style="color: #f59e0b;">Analysis: ${data.content_analysis.facts_vs_opinion.analysis}</span>
-                                    <span style="color: #ef4444;">Opinions: ${data.content_analysis.facts_vs_opinion.opinions}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Metrics grid -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                                <div style="text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: #1f2937;">
-                                        ${data.content_analysis.depth_score}%
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #6b7280;">Depth Score</div>
-                                </div>
-                                <div style="text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${
-                                        data.content_analysis.emotional_tone === 'neutral' ? '#10b981' :
-                                        data.content_analysis.emotional_tone === 'positive' ? '#3b82f6' : '#ef4444'
-                                    };">
-                                        ${data.content_analysis.emotional_tone}
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #6b7280;">Emotional Tone</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Reading metrics -->
-                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
-                                    <div>
-                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
-                                            ${data.content_analysis.avg_sentence_length}
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">Avg words/sentence</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
-                                            ${data.content_analysis.complexity_ratio}%
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">Complex words</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
-                                            ~${Math.ceil(data.content_analysis.word_count / 200)} min
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">Read time</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
-                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                            ${this.getContentExplanation(data.content_analysis)}
-                        </p>
-                    </div>
-                    
-                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                            <strong>💡 Tip:</strong> Longer articles with more facts and balanced emotional tone typically provide 
-                            more comprehensive coverage. Quick reads may miss important context.
-                        </p>
-                    </div>`,
-                    '#8b5cf6'
-                );
-                secondRowCards.push(card);
-            }
-            
-            // Add second row cards
-            secondRowCards.forEach(card => secondGridWrapper.appendChild(card));
-            
-            // Insert second grid after first grid
-            gridWrapper.parentNode.insertBefore(secondGridWrapper, gridWrapper.nextSibling);
-        }
-        
-        // Create third row of cards for persuasion and connections
-        if (data.persuasion_analysis || data.connection_analysis) {
-            const thirdGridWrapper = document.createElement('div');
-            thirdGridWrapper.className = 'cards-grid-wrapper';
-            thirdGridWrapper.style.cssText = `
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                max-width: 900px;
-                margin: 0 auto 40px auto;
-                padding: 0 20px;
-                align-items: start;
-            `;
-            
-            const thirdRowCards = [];
-            
-            // Persuasion Techniques Card
-            if (data.persuasion_analysis) {
-                const card = this.createExpandableCard(cardId++, '🎯', 'Persuasion Techniques', 
-                    `<p style="font-size: 2rem; font-weight: bold; color: ${data.persuasion_analysis.persuasion_score >= 70 ? '#ef4444' : data.persuasion_analysis.persuasion_score >= 40 ? '#f59e0b' : '#10b981'};">
-                        ${data.persuasion_analysis.persuasion_score}%
-                     </p>
-                     <p style="color: #666;">Persuasion Intensity</p>`,
-                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What are Persuasion Techniques?</h4>
-                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                            We analyze the psychological and rhetorical methods used to influence readers. This includes emotional 
-                            appeals, logical arguments, and specific techniques designed to change minds or prompt action.
-                        </p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 10px 0; color: #059669;">Emotional Appeals Detected</h4>
-                        
-                        <!-- Emotion wheel visualization -->
-                        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-                                ${Object.entries(data.persuasion_analysis.emotional_appeals || {}).map(([emotion, value]) => `
-                                    <div style="text-align: center;">
-                                        <div style="font-size: 2rem; margin-bottom: 5px;">
-                                            ${emotion === 'fear' ? '😨' :
-                                              emotion === 'anger' ? '😠' :
-                                              emotion === 'hope' ? '🌟' :
-                                              emotion === 'pride' ? '🦚' :
-                                              emotion === 'sympathy' ? '💝' :
-                                              emotion === 'excitement' ? '🎉' : '😐'}
-                                        </div>
-                                        <div style="height: 60px; width: 60px; margin: 0 auto 8px; position: relative;">
-                                            <svg width="60" height="60">
-                                                <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" stroke-width="5"/>
-                                                <circle cx="30" cy="30" r="25" fill="none" 
-                                                    stroke="${value > 50 ? '#ef4444' : value > 25 ? '#f59e0b' : '#10b981'}" 
-                                                    stroke-width="5"
-                                                    stroke-dasharray="${(value / 100) * 157} 157"
-                                                    stroke-linecap="round"
-                                                    transform="rotate(-90 30 30)"/>
-                                            </svg>
-                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem;">
-                                                ${value}%
-                                            </div>
-                                        </div>
-                                        <div style="font-size: 0.85rem; color: #6b7280; text-transform: capitalize;">
-                                            ${emotion}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            ${data.persuasion_analysis.dominant_emotion ? `
-                                <div style="text-align: center; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                                    <span style="font-size: 0.9rem; color: #6b7280;">Primary emotional appeal:</span>
-                                    <strong style="color: #1f2937; text-transform: capitalize; margin-left: 5px;">
-                                        ${data.persuasion_analysis.dominant_emotion}
-                                    </strong>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    ${data.persuasion_analysis.logical_fallacies?.length ? `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Logical Fallacies Found</h4>
-                            ${data.persuasion_analysis.logical_fallacies.map(fallacy => `
-                                <div style="margin: 8px 0; padding: 12px; background: #fee2e2; border-radius: 6px; border-left: 3px solid #ef4444;">
-                                    <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
-                                        ${fallacy.type}
-                                    </div>
-                                    <div style="font-size: 0.9rem; color: #7f1d1d;">
-                                        ${fallacy.description}
-                                    </div>
-                                </div>
-                            `).join('')}
                         </div>
                     ` : ''}
                     
@@ -1458,3 +1143,361 @@ class UIController {
 }
 
 window.UI = new UIController();
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${data.author_analysis.online_presence && Object.keys(data.author_analysis.online_presence).some(k => data.author_analysis.online_presence[k]) ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">Online Presence</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${data.author_analysis.online_presence.twitter ? `
+                                <span style="padding: 4px 12px; background: #1da1f2; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Twitter: ${data.author_analysis.online_presence.twitter}
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.linkedin ? `
+                                <span style="padding: 4px 12px; background: #0077b5; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    LinkedIn ✓
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.wikipedia ? `
+                                <span style="padding: 4px 12px; background: #6b7280; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Wikipedia ✓
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.outlet_profile ? `
+                                <span style="padding: 4px 12px; background: #10b981; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Verified Staff
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${data.author_analysis.sources_checked ? `
+                    <div style="margin-top: 15px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.85rem; color: #6b7280;">
+                            <strong>Sources checked:</strong> ${data.author_analysis.sources_checked.join(', ')}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                        <strong>💡 Tip:</strong> ${data.author_analysis.credibility_explanation?.advice || 'Always verify important claims through multiple sources, regardless of author credibility.'}
+                    </p>
+                </div>`,
+                '#9333ea'
+            );
+            cards.push(card);
+        }
+        
+        // Add cards to grid
+        cards.forEach(card => gridWrapper.appendChild(card));
+        
+        // Insert grid after header
+        header.parentNode.insertBefore(gridWrapper, header.nextSibling);
+        
+        // Create second row of cards if we have transparency and content analysis
+        if (data.transparency_analysis || data.content_analysis) {
+            const secondGridWrapper = document.createElement('div');
+            secondGridWrapper.className = 'cards-grid-wrapper';
+            secondGridWrapper.style.cssText = `
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                max-width: 900px;
+                margin: 0 auto 40px auto;
+                padding: 0 20px;
+                align-items: start;
+            `;
+            
+            const secondRowCards = [];
+            
+            // Transparency & Sources Card
+            if (data.transparency_analysis) {
+                const card = this.createExpandableCard(cardId++, '🔍', 'Transparency & Sources', 
+                    `<p style="font-size: 2rem; font-weight: bold; color: ${data.transparency_analysis.transparency_score >= 70 ? '#10b981' : data.transparency_analysis.transparency_score >= 40 ? '#f59e0b' : '#ef4444'};">
+                        ${data.transparency_analysis.transparency_score}%
+                     </p>
+                     <p style="color: #666;">Transparency Score</p>`,
+                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Source Transparency?</h4>
+                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                            We analyze how the article backs up its claims. Good journalism clearly identifies sources, 
+                            includes expert opinions, and provides verifiable information. Transparency builds trust.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">What We Found</h4>
+                        
+                        <!-- Source breakdown pie chart -->
+                        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="position: relative; width: 120px; height: 120px;">
+                                    <svg width="120" height="120" viewBox="0 0 120 120">
+                                        ${this.createSourcesPieChart(data.transparency_analysis.source_types)}
+                                    </svg>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold; color: #1f2937;">
+                                            ${data.transparency_analysis.source_count}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #6b7280;">sources</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="flex: 1;">
+                                    <div style="display: grid; gap: 8px; font-size: 0.9rem;">
+                                        ${Object.entries(data.transparency_analysis.source_types || {}).filter(([_, count]) => count > 0).map(([type, count]) => `
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <div style="width: 12px; height: 12px; border-radius: 2px; background: ${
+                                                    type === 'named_sources' ? '#10b981' :
+                                                    type === 'official_sources' ? '#3b82f6' :
+                                                    type === 'expert_sources' ? '#8b5cf6' :
+                                                    type === 'anonymous_sources' ? '#ef4444' : '#6b7280'
+                                                };"></div>
+                                                <span style="color: #6b7280;">${type.replace(/_/g, ' ')}: ${count}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 1.2rem; font-weight: bold; color: ${data.transparency_analysis.named_source_ratio >= 60 ? '#10b981' : '#f59e0b'};">
+                                            ${data.transparency_analysis.named_source_ratio}%
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: #6b7280;">Named Sources</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 1.2rem; font-weight: bold; color: ${data.transparency_analysis.quote_ratio >= 20 ? '#10b981' : '#f59e0b'};">
+                                            ${data.transparency_analysis.quote_ratio}%
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: #6b7280;">Direct Quotes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                            ${this.getTransparencyExplanation(data.transparency_analysis)}
+                        </p>
+                    </div>
+                    
+                    ${data.transparency_analysis.has_links ? `
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f0fdf4; border-radius: 6px;">
+                            <span style="color: #10b981;">✓</span>
+                            <span style="font-size: 0.9rem; color: #14532d;">Article includes links or references to source materials</span>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                            <strong>💡 Tip:</strong> Articles with more named sources and direct quotes are generally more reliable. 
+                            Be cautious of articles that rely heavily on anonymous sources.
+                        </p>
+                    </div>`,
+                    '#3b82f6'
+                );
+                secondRowCards.push(card);
+            }
+            
+            // Content Analysis Card
+            if (data.content_analysis) {
+                const card = this.createExpandableCard(cardId++, '📊', 'Content Analysis', 
+                    `<p><strong>${data.content_analysis.word_count}</strong> words</p>
+                     <p style="color: #666;">Reading Level: <strong>${data.content_analysis.reading_level}</strong></p>`,
+                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What is Content Analysis?</h4>
+                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                            We examine the article's depth, complexity, and balance. This helps you understand if you're 
+                            getting a quick surface-level take or an in-depth analysis of the topic.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">Article Composition</h4>
+                        
+                        <!-- Content breakdown -->
+                        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="margin-bottom: 15px;">
+                                <h5 style="margin: 0 0 10px 0; color: #1f2937; font-size: 0.95rem;">Content Breakdown</h5>
+                                <div style="display: flex; height: 30px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                                    ${this.createContentBar(data.content_analysis.facts_vs_opinion)}
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem;">
+                                    <span style="color: #10b981;">Facts: ${data.content_analysis.facts_vs_opinion.facts}</span>
+                                    <span style="color: #f59e0b;">Analysis: ${data.content_analysis.facts_vs_opinion.analysis}</span>
+                                    <span style="color: #ef4444;">Opinions: ${data.content_analysis.facts_vs_opinion.opinions}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Metrics grid -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                                <div style="text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #1f2937;">
+                                        ${data.content_analysis.depth_score}%
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Depth Score</div>
+                                </div>
+                                <div style="text-align: center; padding: 12px; background: #f9fafb; border-radius: 6px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: ${
+                                        data.content_analysis.emotional_tone === 'neutral' ? '#10b981' :
+                                        data.content_analysis.emotional_tone === 'positive' ? '#3b82f6' : '#ef4444'
+                                    };">
+                                        ${data.content_analysis.emotional_tone}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Emotional Tone</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Reading metrics -->
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+                                    <div>
+                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
+                                            ${data.content_analysis.avg_sentence_length}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #6b7280;">Avg words/sentence</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
+                                            ${data.content_analysis.complexity_ratio}%
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #6b7280;">Complex words</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.9rem; font-weight: 600; color: #1f2937;">
+                                            ~${Math.ceil(data.content_analysis.word_count / 200)} min
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #6b7280;">Read time</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
+                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
+                            ${this.getContentExplanation(data.content_analysis)}
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                            <strong>💡 Tip:</strong> Longer articles with more facts and balanced emotional tone typically provide 
+                            more comprehensive coverage. Quick reads may miss important context.
+                        </p>
+                    </div>`,
+                    '#8b5cf6'
+                );
+                secondRowCards.push(card);
+            }
+            
+            // Add second row cards
+            secondRowCards.forEach(card => secondGridWrapper.appendChild(card));
+            
+            // Insert second grid after first grid
+            gridWrapper.parentNode.insertBefore(secondGridWrapper, gridWrapper.nextSibling);
+        }
+        
+        // Create third row of cards for persuasion and connections
+        if (data.persuasion_analysis || data.connection_analysis) {
+            const thirdGridWrapper = document.createElement('div');
+            thirdGridWrapper.className = 'cards-grid-wrapper';
+            thirdGridWrapper.style.cssText = `
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                max-width: 900px;
+                margin: 0 auto 40px auto;
+                padding: 0 20px;
+                align-items: start;
+            `;
+            
+            const thirdRowCards = [];
+            
+            // Persuasion Techniques Card
+            if (data.persuasion_analysis) {
+                const card = this.createExpandableCard(cardId++, '🎯', 'Persuasion Techniques', 
+                    `<p style="font-size: 2rem; font-weight: bold; color: ${data.persuasion_analysis.persuasion_score >= 70 ? '#ef4444' : data.persuasion_analysis.persuasion_score >= 40 ? '#f59e0b' : '#10b981'};">
+                        ${data.persuasion_analysis.persuasion_score}%
+                     </p>
+                     <p style="color: #666;">Persuasion Intensity</p>`,
+                    `<div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af;">What are Persuasion Techniques?</h4>
+                        <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                            We analyze the psychological and rhetorical methods used to influence readers. This includes emotional 
+                            appeals, logical arguments, and specific techniques designed to change minds or prompt action.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">Emotional Appeals Detected</h4>
+                        
+                        <!-- Emotion wheel visualization -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                                ${Object.entries(data.persuasion_analysis.emotional_appeals || {}).map(([emotion, value]) => `
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2rem; margin-bottom: 5px;">
+                                            ${emotion === 'fear' ? '😨' :
+                                              emotion === 'anger' ? '😠' :
+                                              emotion === 'hope' ? '🌟' :
+                                              emotion === 'pride' ? '🦚' :
+                                              emotion === 'sympathy' ? '💝' :
+                                              emotion === 'excitement' ? '🎉' : '😐'}
+                                        </div>
+                                        <div style="height: 60px; width: 60px; margin: 0 auto 8px; position: relative;">
+                                            <svg width="60" height="60">
+                                                <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" stroke-width="5"/>
+                                                <circle cx="30" cy="30" r="25" fill="none" 
+                                                    stroke="${value > 50 ? '#ef4444' : value > 25 ? '#f59e0b' : '#10b981'}" 
+                                                    stroke-width="5"
+                                                    stroke-dasharray="${(value / 100) * 157} 157"
+                                                    stroke-linecap="round"
+                                                    transform="rotate(-90 30 30)"/>
+                                            </svg>
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem;">
+                                                ${value}%
+                                            </div>
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #6b7280; text-transform: capitalize;">
+                                            ${emotion}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${data.persuasion_analysis.dominant_emotion ? `
+                                <div style="text-align: center; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                                    <span style="font-size: 0.9rem; color: #6b7280;">Primary emotional appeal:</span>
+                                    <strong style="color: #1f2937; text-transform: capitalize; margin-left: 5px;">
+                                        ${data.persuasion_analysis.dominant_emotion}
+                                    </strong>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${data.persuasion_analysis.logical_fallacies?.length ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #dc2626;">Logical Fallacies Found</h4>
+                            ${data.persuasion_analysis.logical_fallacies.map(fallacy => `
+                                <div style="margin: 8px 0; padding: 12px; background: #fee2e2; border-radius: 6px; border-left: 3px solid #ef4444;">
+                                    <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
+                                        ${fallacy.type}
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #7f1d1d;">
+                                        ${fallacy.description}
+                                    </div>
+                                </div>
+                            `).
