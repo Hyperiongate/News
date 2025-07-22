@@ -1,3 +1,4 @@
+
 // static/js/main.js
 document.addEventListener('DOMContentLoaded', () => {
     // Tab switching
@@ -84,50 +85,20 @@ document.addEventListener('DOMContentLoaded', () => {
         loading.classList.remove('hidden');
         results.classList.add('hidden');
         
-        // Get selected plan - handle missing method gracefully
-        let selectedPlan = 'free';
-        try {
-            if (window.pricingDropdown && typeof window.pricingDropdown.getSelectedPlan === 'function') {
-                selectedPlan = window.pricingDropdown.getSelectedPlan();
-            } else {
-                // Fallback: try to get from dropdown directly
-                const dropdown = document.querySelector('#pricingDropdown select');
-                if (dropdown) {
-                    selectedPlan = dropdown.value || 'free';
-                }
-            }
-        } catch (e) {
-            console.warn('Could not get selected plan, defaulting to free', e);
-        }
+        // Get selected plan
+        const selectedPlan = window.pricingDropdown?.getSelectedPlan() || 'free';
         data.plan = selectedPlan;
         
-        // Add timeout handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            showError('Analysis timed out after 30 seconds. Please try again.');
-            loading.classList.add('hidden');
-        }, 30000); // 30 second timeout
-        
         try {
-            console.log('Sending analysis request:', data);
-            
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data),
-                signal: controller.signal
+                body: JSON.stringify(data)
             });
             
-            clearTimeout(timeoutId);
-            
-            console.log('Response status:', response.status);
-            
             const result = await response.json();
-            
-            console.log('Analysis result:', result);
             
             if (result.success) {
                 // Store analysis data
@@ -137,11 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.UI) {
                     window.UI.buildResults(result);
                     
-                    // Add export buttons - show for everyone in development mode or pro users
-                    if ((result.development_mode || result.is_pro) && result.export_enabled !== false) {
-                        setTimeout(() => {
-                            addExportButtons();
-                        }, 100); // Small delay to ensure DOM is ready
+                    // Add export buttons if pro user
+                    if (result.is_pro && result.export_enabled) {
+                        addExportButtons();
                     }
                 } else {
                     // Fallback display
@@ -151,14 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showError(result.error || 'Analysis failed');
             }
         } catch (error) {
-            clearTimeout(timeoutId);
-            
-            if (error.name === 'AbortError') {
-                console.log('Request was aborted');
-            } else {
-                console.error('Analysis error:', error);
-                showError('Network error: ' + error.message);
-            }
+            showError('Network error: ' + error.message);
         } finally {
             loading.classList.add('hidden');
         }
@@ -170,10 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Find the overall assessment div
         const assessmentDiv = document.querySelector('.overall-assessment');
-        if (!assessmentDiv) {
-            console.error('Could not find assessment div for export buttons');
-            return;
-        }
+        if (!assessmentDiv) return;
         
         // Create export buttons container
         const exportContainer = document.createElement('div');
@@ -184,33 +143,26 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e5e7eb;
-            justify-content: center;
         `;
         
         // PDF Export Button
         const pdfBtn = document.createElement('button');
         pdfBtn.className = 'btn btn-primary';
-        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 16px;';
+        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
         pdfBtn.innerHTML = '<span>📄</span><span>Export PDF Report</span>';
         pdfBtn.onclick = exportToPDF;
         
         // JSON Export Button
         const jsonBtn = document.createElement('button');
         jsonBtn.className = 'btn btn-secondary';
-        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 16px;';
+        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
         jsonBtn.innerHTML = '<span>{ }</span><span>Export JSON</span>';
         jsonBtn.onclick = exportToJSON;
-        
-        // Add hover text
-        pdfBtn.title = 'Download a professional PDF report of this analysis';
-        jsonBtn.title = 'Export raw analysis data as JSON';
         
         exportContainer.appendChild(pdfBtn);
         exportContainer.appendChild(jsonBtn);
         
         assessmentDiv.appendChild(exportContainer);
-        
-        console.log('Export buttons added successfully');
     }
     
     async function exportToPDF() {
@@ -303,10 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Export error: ' + error.message);
         }
     }
-    
-    // Make export functions globally available
-    window.exportToPDF = exportToPDF;
-    window.exportToJSON = exportToJSON;
     
     function showError(message) {
         results.innerHTML = `
