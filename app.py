@@ -98,6 +98,16 @@ def index():
     """Render main page"""
     return render_template('index.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """Return empty favicon to avoid 404 errors"""
+    # Option 1: Return empty response
+    return '', 204
+    
+    # Option 2: If you want to add a real favicon later, use this instead:
+    # return send_from_directory(os.path.join(app.root_path, 'static'),
+    #                          'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 @app.route('/api/analyze', methods=['POST'])
 @limiter.limit("20 per hour")
 def analyze():
