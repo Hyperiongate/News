@@ -1016,10 +1016,14 @@ class UIController {
             // Add third row cards
             thirdRowCards.forEach(card => thirdGridWrapper.appendChild(card));
             
-            // Find the last grid wrapper and insert after it
-            const lastGrid = document.querySelector('.cards-grid-wrapper:last-of-type');
-            if (lastGrid) {
-                lastGrid.parentNode.insertBefore(thirdGridWrapper, lastGrid.nextSibling);
+            // Insert third grid after the second grid (or first if second doesn't exist)
+            const grids = document.querySelectorAll('.cards-grid-wrapper');
+            const insertAfter = grids[grids.length - 1];
+            if (insertAfter && insertAfter.parentNode) {
+                insertAfter.parentNode.insertBefore(thirdGridWrapper, insertAfter.nextSibling);
+            } else {
+                // Fallback: insert after the header
+                header.parentNode.insertBefore(thirdGridWrapper, header.nextSibling);
             }
         }
         
@@ -1042,7 +1046,6 @@ class UIController {
             overflow: hidden;
             border: 2px solid ${borderColor};
             align-self: start;
-            min-height: 150px;
         `;
         
         card.innerHTML = `
