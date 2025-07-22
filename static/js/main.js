@@ -84,20 +84,50 @@ document.addEventListener('DOMContentLoaded', () => {
         loading.classList.remove('hidden');
         results.classList.add('hidden');
         
-        // Get selected plan
-        const selectedPlan = window.pricingDropdown?.getSelectedPlan() || 'free';
+        // Get selected plan - handle missing method gracefully
+        let selectedPlan = 'free';
+        try {
+            if (window.pricingDropdown && typeof window.pricingDropdown.getSelectedPlan === 'function') {
+                selectedPlan = window.pricingDropdown.getSelectedPlan();
+            } else {
+                // Fallback: try to get from dropdown directly
+                const dropdown = document.querySelector('#pricingDropdown select');
+                if (dropdown) {
+                    selectedPlan = dropdown.value || 'free';
+                }
+            }
+        } catch (e) {
+            console.warn('Could not get selected plan, defaulting to free', e);
+        }
         data.plan = selectedPlan;
         
+        // Add timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            showError('Analysis timed out after 30 seconds. Please try again.');
+            loading.classList.add('hidden');
+        }, 30000); // 30 second timeout
+        
         try {
+            console.log('Sending analysis request:', data);
+            
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(data),
+                signal: controller.signal
             });
             
+            clearTimeout(timeoutId);
+            
+            console.log('Response status:', response.status);
+            
             const result = await response.json();
+            
+            console.log('Analysis result:', result);
             
             if (result.success) {
                 // Store analysis data
@@ -119,7 +149,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 showError(result.error || 'Analysis failed');
             }
         } catch (error) {
-            showError('Network error: ' + error.message);
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                console.log('Request was aborted');
+            } else {
+                console.error('Analysis error:', error);
+                showError('Network error: ' + error.message);
+            }
         } finally {
             loading.classList.add('hidden');
         }
