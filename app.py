@@ -1,7 +1,7 @@
 """
 FILE: app.py
 LOCATION: news/app.py
-PURPOSE: Flask app with database integration - Fixed imports
+PURPOSE: Flask app with database integration - Fixed imports and NoneType error
 """
 
 import os
@@ -22,7 +22,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from services.news_analyzer import NewsAnalyzer
 from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
-from services.source_credibility import SOURCE_CREDIBILITY  # Changed: import the dictionary directly
+from services.source_credibility import SOURCE_CREDIBILITY
 from services.author_analyzer import AuthorAnalyzer
 
 # Import database models
@@ -202,6 +202,7 @@ def analyze():
         # Store analysis in database
         try:
             # Update or create source record
+            source = None
             if result.get('article', {}).get('domain'):
                 domain = result['article']['domain']
                 source = Source.query.filter_by(domain=domain).first()
@@ -215,8 +216,16 @@ def analyze():
                         political_lean=source_info.get('bias', 'Unknown')
                     )
                     db.session.add(source)
+                    db.session.flush()  # Get source.id without committing
                 
+                # Fix: Initialize values if None
+                if source.total_articles_analyzed is None:
+                    source.total_articles_analyzed = 0
+                if source.average_trust_score is None:
+                    source.average_trust_score = 0
+                    
                 source.total_articles_analyzed += 1
+                
                 if result.get('trust_score'):
                     # Update average trust score
                     if source.average_trust_score == 0:
@@ -228,16 +237,22 @@ def analyze():
                         )
             
             # Update or create author record
+            author = None
             if result.get('article', {}).get('author'):
                 author_name = result['article']['author']
                 author = Author.query.filter_by(name=author_name).first()
                 if not author:
                     author = Author(
                         name=author_name,
-                        primary_source_id=source.id if 'source' in locals() else None
+                        primary_source_id=source.id if source else None
                     )
                     db.session.add(author)
+                    db.session.flush()
                 
+                # Fix: Initialize values if None
+                if author.total_articles_analyzed is None:
+                    author.total_articles_analyzed = 0
+                    
                 author.total_articles_analyzed += 1
                 author.last_seen = datetime.utcnow()
                 
