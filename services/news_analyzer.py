@@ -136,20 +136,11 @@ class NewsAnalyzer:
             else:
                 raw_analysis = self.get_basic_analysis(article_data)
             
-            # Convert to frontend format
+            # Convert to frontend format with ENHANCED bias analysis
             bias_score = raw_analysis.get('bias_score', 0)
             
-            # Create properly formatted bias analysis
-            bias_analysis = {
-                'overall_bias': self._get_bias_label(bias_score),
-                'political_lean': bias_score * 100,  # Convert to -100 to +100 scale
-                'objectivity_score': max(0, 100 - abs(bias_score * 100)),
-                'opinion_percentage': self._calculate_opinion_percentage(article_data.get('text', '')),
-                'emotional_score': self._calculate_emotional_score(article_data.get('text', '')),
-                'manipulation_tactics': self._format_manipulation_tactics(raw_analysis.get('manipulation_tactics', [])),
-                'loaded_phrases': self._extract_loaded_phrases(article_data.get('text', '')),
-                'ai_summary': raw_analysis.get('summary', '')
-            }
+            # Create enhanced bias analysis
+            bias_analysis = self._create_enhanced_bias_analysis(article_data.get('text', ''), bias_score, raw_analysis)
             
             # Calculate clickbait score
             clickbait_score = self._calculate_clickbait_score(article_data)
@@ -312,6 +303,1086 @@ class NewsAnalyzer:
                 'success': False,
                 'error': f'Analysis failed: {str(e)}'
             }
+    
+    # [Keep all other existing methods from the original file...]
+    # _get_bias_label, _calculate_opinion_percentage, _calculate_emotional_score, etc.
+    # (All the methods from the original file remain unchanged)
+    
+    def _get_bias_label(self, bias_score):
+        """Convert bias score to label"""
+        if bias_score < -0.5:
+            return "Strong Left Bias"
+        elif bias_score < -0.2:
+            return "Left-Leaning Bias"
+        elif bias_score > 0.5:
+            return "Strong Right Bias"
+        elif bias_score > 0.2:
+            return "Right-Leaning Bias"
+        else:
+            return "Center/Minimal Bias"
+    
+    def _calculate_opinion_percentage(self, text):
+        """Calculate percentage of opinion vs facts"""
+        if not text:
+            return 0
+        
+        opinion_words = ['believe', 'think', 'feel', 'opinion', 'seems', 'appears', 'probably', 'maybe', 'perhaps']
+        text_lower = text.lower()
+        opinion_count = sum(1 for word in opinion_words if word in text_lower)
+        
+        sentences = text.split('.')
+        opinion_sentences = sum(1 for s in sentences if any(word in s.lower() for word in opinion_words))
+        
+        return min(100, int((opinion_sentences / max(len(sentences), 1)) * 100))
+    
+    def _calculate_emotional_score(self, text):
+        """Calculate emotional language score"""
+        if not text:
+            return 0
+        
+        emotional_words = ['shocking', 'outrageous', 'disgusting', 'amazing', 'terrible', 'horrible', 
+                          'fantastic', 'disaster', 'crisis', 'scandal', 'explosive', 'bombshell']
+        text_lower = text.lower()
+        
+        emotional_count = sum(1 for word in emotional_words if word in text_lower)
+        word_count = len(text.split())
+        
+        return min(100, int((emotional_count / max(word_count, 1)) * 1000))
+    
+    def _format_manipulation_tactics(self, tactics):
+        """Format manipulation tactics for frontend"""
+        formatted = []
+        tactic_details = {
+            'Excessive capitalization': {
+                'name': 'Excessive Capitalization',
+                'type': 'sensational_language',
+                'description': 'Using ALL CAPS to create false urgency or emphasis'
+            },
+            'Multiple exclamation marks': {
+                'name': 'Multiple Exclamation Marks',
+                'type': 'sensational_language',
+                'description': 'Using excessive punctuation to manipulate emotions'
+            },
+            'Sensational language': {
+                'name': 'Sensational Language',
+                'type': 'sensational_language',
+                'description': 'Using dramatic words to exaggerate importance'
+            },
+            'Us vs. them rhetoric': {
+                'name': 'Us vs. Them Rhetoric',
+                'type': 'false_dilemma',
+                'description': 'Creating artificial divisions to manipulate readers'
+            }
+        }
+        
+        for tactic in tactics:
+            details = tactic_details.get(tactic, {
+                'name': tactic,
+                'type': 'manipulation',
+                'description': 'Potential manipulation tactic detected'
+            })
+            formatted.append(details)
+        
+        return formatted
+    
+    def _extract_loaded_phrases(self, text):
+        """Extract loaded/biased phrases"""
+        if not text:
+            return []
+        
+        loaded_patterns = [
+            (r'\b(radical|extreme|far-left|far-right)\b', 'political'),
+            (r'\b(destroy|devastate|annihilate)\b', 'hyperbolic'),
+            (r'\b(always|never|everyone|no one)\b', 'absolute'),
+            (r'\b(obviously|clearly|undeniably)\b', 'assumption')
+        ]
+        
+        phrases = []
+        for pattern, phrase_type in loaded_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                start = max(0, match.start() - 20)
+                end = min(len(text), match.end() + 20)
+                context = text[start:end].strip()
+                phrases.append({
+                    'text': match.group(),
+                    'type': phrase_type,
+                    'context': context
+                })
+                if len(phrases) >= 5:
+                    return phrases
+        
+        return phrases
+    
+    def _calculate_clickbait_score(self, article_data):
+        """Calculate clickbait score"""
+        title = article_data.get('title', '')
+        if not title:
+            return 0
+        
+        score = 0
+        
+        # Check for clickbait patterns
+        clickbait_patterns = [
+            (r'you won\'t believe', 20),
+            (r'shocking', 15),
+            (r'this one trick', 25),
+            (r'\?!', 10),
+            (r'number \d+', 10),
+            (r'reasons why', 15),
+            (r'what happened next', 20)
+        ]
+        
+        title_lower = title.lower()
+        for pattern, points in clickbait_patterns:
+            if re.search(pattern, title_lower):
+                score += points
+        
+        # Check for excessive capitalization
+        caps_ratio = sum(1 for c in title if c.isupper()) / max(len(title), 1)
+        if caps_ratio > 0.5:
+            score += 20
+        
+        return min(100, score)
+    
+    def _get_clickbait_indicators(self, article_data):
+        """Get specific clickbait indicators"""
+        indicators = []
+        title = article_data.get('title', '')
+        
+        if '?' in title and '!' in title:
+            indicators.append({
+                'type': 'curiosity_gap',
+                'name': 'Question with Exclamation',
+                'description': 'Title uses question and exclamation to create curiosity'
+            })
+        
+        if re.search(r'\b\d+\b', title):
+            indicators.append({
+                'type': 'lists_numbers',
+                'name': 'Numbered List',
+                'description': 'Title includes numbers suggesting a listicle format'
+            })
+        
+        if any(word in title.lower() for word in ['shocking', 'unbelievable', 'amazing']):
+            indicators.append({
+                'type': 'sensational_language',
+                'name': 'Sensational Words',
+                'description': 'Title uses emotionally charged language'
+            })
+        
+        return indicators
+    
+    def _analyze_title(self, title):
+        """Analyze title for clickbait elements"""
+        if not title:
+            return {}
+        
+        word_count = len(title.split())
+        emotional_words = ['shocking', 'amazing', 'unbelievable', 'incredible', 'outrageous']
+        emotional_count = sum(1 for word in emotional_words if word in title.lower())
+        
+        return {
+            'sensationalism': min(100, emotional_count * 30),
+            'curiosity_gap': 50 if '?' in title else 0,
+            'emotional_words': min(100, int((emotional_count / max(word_count, 1)) * 200))
+        }
+    
+    def _create_default_author_analysis(self, author_name):
+        """Create default author analysis when detailed info not available"""
+        return {
+            'name': author_name,
+            'found': False,
+            'bio': f"{author_name} - Author information not available in our database",
+            'credibility_score': 50,
+            'articles_count': None,
+            'years_experience': None,
+            'verification_status': {
+                'verified': False,
+                'journalist_verified': False,
+                'outlet_staff': False
+            },
+            'credibility_explanation': {
+                'level': 'Moderate',
+                'explanation': 'Limited information available about this author.',
+                'advice': 'Verify important claims through additional sources.'
+            }
+        }
+    
+    def _calculate_comprehensive_trust_score(self, raw_analysis, bias_analysis, 
+                                           clickbait_score, author_analysis, 
+                                           fact_checks, article_data):
+        """Calculate comprehensive trust score"""
+        score = 50  # Base score
+        
+        # Source credibility impact (up to +/- 20)
+        if article_data.get('domain'):
+            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
+            cred_map = {'High': 20, 'Medium': 10, 'Low': -10, 'Very Low': -20}
+            score += cred_map.get(source_info.get('credibility', ''), 0)
+        
+        # Bias impact (up to -20 for extreme bias)
+        political_lean = abs(bias_analysis.get('political_lean', 0))
+        if political_lean > 80:
+            score -= 20
+        elif political_lean > 60:
+            score -= 10
+        
+        # Clickbait impact (up to -15)
+        score -= min(15, clickbait_score // 5)
+        
+        # Author credibility impact (up to +/- 15)
+        if author_analysis and author_analysis.get('credibility_score'):
+            author_cred = author_analysis['credibility_score']
+            if author_cred >= 70:
+                score += 15
+            elif author_cred < 40:
+                score -= 10
+        
+        # Fact check impact (up to -30)
+        if fact_checks:
+            false_count = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
+            score -= false_count * 10
+        
+        # Manipulation tactics impact (up to -20)
+        tactics_count = len(bias_analysis.get('manipulation_tactics', []))
+        score -= min(20, tactics_count * 5)
+        
+        return max(0, min(100, score))
+    
+    def _generate_fact_check_summary(self, fact_checks):
+        """Generate summary of fact check results"""
+        if not fact_checks:
+            return "No fact checks performed."
+        
+        total = len(fact_checks)
+        verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
+        false = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
+        mixed = sum(1 for fc in fact_checks if fc.get('verdict') in ['partially_true', 'mixed'])
+        
+        return f"Checked {total} claims: {verified} verified as true, {false} found false, {mixed} partially true."
+    
+    def _create_enhanced_bias_analysis(self, text, basic_bias_score, raw_analysis):
+        """Create enhanced multi-dimensional bias analysis"""
+        
+        # Calculate multi-dimensional bias scores
+        bias_dimensions = self._analyze_bias_dimensions(text)
+        
+        # Detect bias patterns and context
+        bias_patterns = self._detect_bias_patterns(text)
+        
+        # Calculate confidence in bias detection
+        bias_confidence = self._calculate_bias_confidence(text, bias_patterns)
+        
+        # Detect framing bias
+        framing_analysis = self._analyze_framing_bias(text)
+        
+        # Analyze source selection bias
+        source_bias = self._analyze_source_selection_bias(text)
+        
+        # Get enhanced loaded phrases with context
+        loaded_phrases = self._extract_enhanced_loaded_phrases(text)
+        
+        # Calculate overall political lean (maintaining compatibility)
+        political_lean = basic_bias_score * 100
+        
+        # Determine overall bias label
+        overall_bias = self._get_enhanced_bias_label(bias_dimensions, political_lean)
+        
+        # Calculate objectivity score with multiple factors
+        objectivity_score = self._calculate_enhanced_objectivity_score(
+            bias_dimensions, bias_patterns, loaded_phrases
+        )
+        
+        # Opinion percentage calculation
+        opinion_percentage = self._calculate_opinion_percentage(text)
+        
+        # Emotional score calculation
+        emotional_score = self._calculate_emotional_score(text)
+        
+        # Format manipulation tactics with enhanced detection
+        manipulation_tactics = self._detect_enhanced_manipulation_tactics(text, bias_patterns)
+        
+        # Create bias visualization data
+        bias_visualization = {
+            'spectrum_position': basic_bias_score,
+            'confidence_bands': {
+                'lower': max(-1, basic_bias_score - (1 - bias_confidence/100) * 0.3),
+                'upper': min(1, basic_bias_score + (1 - bias_confidence/100) * 0.3)
+            },
+            'contributing_factors': self._get_bias_contributing_factors(
+                bias_dimensions, framing_analysis, source_bias
+            )
+        }
+        
+        # Bias impact assessment
+        bias_impact = self._assess_bias_impact(
+            bias_dimensions, bias_patterns, manipulation_tactics
+        )
+        
+        # Comparative context
+        comparative_context = self._get_comparative_bias_context(
+            basic_bias_score, raw_analysis.get('domain')
+        )
+        
+        return {
+            'overall_bias': overall_bias,
+            'political_lean': political_lean,
+            'objectivity_score': objectivity_score,
+            'opinion_percentage': opinion_percentage,
+            'emotional_score': emotional_score,
+            'manipulation_tactics': manipulation_tactics,
+            'loaded_phrases': loaded_phrases,
+            'ai_summary': raw_analysis.get('summary', ''),
+            
+            # Enhanced bias reporting fields
+            'bias_confidence': bias_confidence,
+            'bias_dimensions': bias_dimensions,
+            'bias_patterns': bias_patterns,
+            'framing_analysis': framing_analysis,
+            'source_bias_analysis': source_bias,
+            'bias_visualization': bias_visualization,
+            'bias_impact': bias_impact,
+            'comparative_context': comparative_context
+        }
+    
+    def _analyze_bias_dimensions(self, text):
+        """Analyze multiple dimensions of bias"""
+        text_lower = text.lower()
+        
+        dimensions = {
+            'political': {
+                'score': self._detect_political_bias(text),
+                'label': '',
+                'confidence': 0
+            },
+            'corporate': {
+                'score': self._detect_corporate_bias(text),
+                'label': '',
+                'confidence': 0
+            },
+            'sensational': {
+                'score': self._detect_sensational_bias(text),
+                'label': '',
+                'confidence': 0
+            },
+            'nationalistic': {
+                'score': self._detect_nationalistic_bias(text),
+                'label': '',
+                'confidence': 0
+            },
+            'establishment': {
+                'score': self._detect_establishment_bias(text),
+                'label': '',
+                'confidence': 0
+            }
+        }
+        
+        # Add labels and confidence for each dimension
+        for dim_name, dim_data in dimensions.items():
+            score = dim_data['score']
+            
+            # Political bias labels
+            if dim_name == 'political':
+                if score < -0.6:
+                    dim_data['label'] = 'Strong left'
+                elif score < -0.2:
+                    dim_data['label'] = 'Lean left'
+                elif score > 0.6:
+                    dim_data['label'] = 'Strong right'
+                elif score > 0.2:
+                    dim_data['label'] = 'Lean right'
+                else:
+                    dim_data['label'] = 'Center'
+            
+            # Corporate bias labels
+            elif dim_name == 'corporate':
+                if score > 0.6:
+                    dim_data['label'] = 'Strong pro-corporate'
+                elif score > 0.2:
+                    dim_data['label'] = 'Slightly pro-corporate'
+                elif score < -0.6:
+                    dim_data['label'] = 'Strong anti-corporate'
+                elif score < -0.2:
+                    dim_data['label'] = 'Slightly anti-corporate'
+                else:
+                    dim_data['label'] = 'Neutral'
+            
+            # Sensational bias labels
+            elif dim_name == 'sensational':
+                if score > 0.7:
+                    dim_data['label'] = 'Highly sensational'
+                elif score > 0.4:
+                    dim_data['label'] = 'Moderately sensational'
+                elif score > 0.2:
+                    dim_data['label'] = 'Slightly sensational'
+                else:
+                    dim_data['label'] = 'Factual'
+            
+            # Nationalistic bias labels
+            elif dim_name == 'nationalistic':
+                if abs(score) > 0.6:
+                    dim_data['label'] = 'Strongly nationalistic' if score > 0 else 'Strongly internationalist'
+                elif abs(score) > 0.2:
+                    dim_data['label'] = 'Moderately nationalistic' if score > 0 else 'Moderately internationalist'
+                else:
+                    dim_data['label'] = 'Balanced'
+            
+            # Establishment bias labels
+            elif dim_name == 'establishment':
+                if score > 0.6:
+                    dim_data['label'] = 'Strong pro-establishment'
+                elif score > 0.2:
+                    dim_data['label'] = 'Lean establishment'
+                elif score < -0.6:
+                    dim_data['label'] = 'Strong anti-establishment'
+                elif score < -0.2:
+                    dim_data['label'] = 'Lean anti-establishment'
+                else:
+                    dim_data['label'] = 'Neutral'
+            
+            # Calculate confidence based on signal strength
+            dim_data['confidence'] = min(100, int(abs(score) * 100 * 1.2))
+        
+        return dimensions
+    
+    def _detect_political_bias(self, text):
+        """Enhanced political bias detection"""
+        text_lower = text.lower()
+        
+        # Expanded keyword lists with weights
+        left_indicators = {
+            'progressive': 3, 'liberal': 3, 'democrat': 2, 'left-wing': 3,
+            'socialist': 3, 'equity': 2, 'social justice': 3, 'inequality': 2,
+            'climate change': 2, 'gun control': 2, 'universal healthcare': 3,
+            'wealth redistribution': 3, 'corporate greed': 3, 'workers rights': 2,
+            'systemic racism': 3, 'diversity': 1, 'inclusion': 1
+        }
+        
+        right_indicators = {
+            'conservative': 3, 'republican': 2, 'right-wing': 3, 'traditional': 2,
+            'libertarian': 2, 'patriot': 2, 'free market': 3, 'deregulation': 3,
+            'individual liberty': 2, 'second amendment': 3, 'pro-life': 3,
+            'border security': 3, 'law and order': 2, 'family values': 2,
+            'limited government': 3, 'personal responsibility': 2
+        }
+        
+        left_score = sum(weight for term, weight in left_indicators.items() if term in text_lower)
+        right_score = sum(weight for term, weight in right_indicators.items() if term in text_lower)
+        
+        # Normalize to -1 to 1 scale
+        total_score = left_score + right_score
+        if total_score == 0:
+            return 0
+        
+        bias = (right_score - left_score) / max(total_score, 20)
+        return max(-1, min(1, bias))
+    
+    def _detect_corporate_bias(self, text):
+        """Detect pro/anti corporate bias"""
+        text_lower = text.lower()
+        
+        pro_corporate = {
+            'innovation': 1, 'job creators': 3, 'economic growth': 2,
+            'business friendly': 3, 'entrepreneurship': 2, 'free enterprise': 3,
+            'competitive advantage': 2, 'shareholder value': 3, 'efficiency': 1,
+            'market leader': 2, 'industry leader': 2
+        }
+        
+        anti_corporate = {
+            'corporate greed': 3, 'monopoly': 3, 'exploitation': 3,
+            'tax avoidance': 3, 'income inequality': 2, 'worker exploitation': 3,
+            'excessive profits': 3, 'corporate welfare': 3, 'big business': 2,
+            'wealth gap': 2, 'unfair practices': 2
+        }
+        
+        pro_score = sum(weight for term, weight in pro_corporate.items() if term in text_lower)
+        anti_score = sum(weight for term, weight in anti_corporate.items() if term in text_lower)
+        
+        total_score = pro_score + anti_score
+        if total_score == 0:
+            return 0
+        
+        bias = (pro_score - anti_score) / max(total_score, 15)
+        return max(-1, min(1, bias))
+    
+    def _detect_sensational_bias(self, text):
+        """Detect sensationalism level"""
+        text_lower = text.lower()
+        
+        sensational_indicators = {
+            'shocking': 3, 'bombshell': 3, 'explosive': 3, 'devastating': 3,
+            'breaking': 2, 'urgent': 2, 'exclusive': 2, 'revealed': 2,
+            'scandal': 3, 'crisis': 2, 'catastrophe': 3, 'disaster': 2,
+            'unbelievable': 3, 'incredible': 2, 'mind-blowing': 3,
+            'game-changing': 3, 'revolutionary': 2
+        }
+        
+        # Check for excessive punctuation
+        exclamation_count = text.count('!')
+        question_count = text.count('?')
+        caps_words = len(re.findall(r'\b[A-Z]{4,}\b', text))
+        
+        sensational_score = sum(weight for term, weight in sensational_indicators.items() 
+                               if term in text_lower)
+        
+        # Add punctuation and formatting scores
+        sensational_score += min(exclamation_count * 2, 10)
+        sensational_score += min(question_count, 5)
+        sensational_score += min(caps_words * 3, 15)
+        
+        # Normalize to 0-1 scale (sensationalism is one-directional)
+        return min(1, sensational_score / 30)
+    
+    def _detect_nationalistic_bias(self, text):
+        """Detect nationalistic vs internationalist bias"""
+        text_lower = text.lower()
+        
+        nationalistic = {
+            'america first': 3, 'national interest': 2, 'sovereignty': 2,
+            'patriotic': 2, 'our country': 2, 'homeland': 2, 'national security': 2,
+            'protect our borders': 3, 'foreign threat': 3, 'defend america': 3
+        }
+        
+        internationalist = {
+            'global cooperation': 3, 'international community': 2, 'united nations': 2,
+            'global citizens': 3, 'world peace': 2, 'international law': 2,
+            'diplomatic solution': 2, 'multilateral': 3, 'global partnership': 3
+        }
+        
+        nat_score = sum(weight for term, weight in nationalistic.items() if term in text_lower)
+        int_score = sum(weight for term, weight in internationalist.items() if term in text_lower)
+        
+        total_score = nat_score + int_score
+        if total_score == 0:
+            return 0
+        
+        bias = (nat_score - int_score) / max(total_score, 15)
+        return max(-1, min(1, bias))
+    
+    def _detect_establishment_bias(self, text):
+        """Detect establishment vs anti-establishment bias"""
+        text_lower = text.lower()
+        
+        pro_establishment = {
+            'respected institutions': 3, 'established order': 3, 'mainstream': 2,
+            'expert consensus': 3, 'institutional': 2, 'authorities say': 2,
+            'official sources': 2, 'government officials': 2, 'traditional media': 2
+        }
+        
+        anti_establishment = {
+            'deep state': 3, 'mainstream media lies': 3, 'corrupt system': 3,
+            'establishment': -2, 'elite agenda': 3, 'wake up': 2, 'they dont want': 3,
+            'hidden truth': 3, 'question everything': 2, 'alternative facts': 2
+        }
+        
+        pro_score = sum(weight for term, weight in pro_establishment.items() if term in text_lower)
+        anti_score = sum(weight for term, weight in anti_establishment.items() if term in text_lower)
+        
+        total_score = pro_score + anti_score
+        if total_score == 0:
+            return 0
+        
+        bias = (pro_score - anti_score) / max(total_score, 15)
+        return max(-1, min(1, bias))
+    
+    def _detect_bias_patterns(self, text):
+        """Detect specific bias patterns in the text"""
+        patterns = []
+        
+        # Cherry-picking detection
+        if re.search(r'(study shows|research finds|data indicates)(?!.*however|.*but|.*although)', text, re.IGNORECASE):
+            if not re.search(r'(methodology|sample size|limitations|peer.review)', text, re.IGNORECASE):
+                patterns.append({
+                    'type': 'cherry_picking',
+                    'description': 'Cites studies without mentioning limitations or opposing research',
+                    'severity': 'medium'
+                })
+        
+        # False balance detection
+        equal_time_phrases = ['both sides', 'on one hand', 'equally valid', 'opinions differ']
+        if any(phrase in text.lower() for phrase in equal_time_phrases):
+            patterns.append({
+                'type': 'false_balance',
+                'description': 'Presents unequal viewpoints as equally valid',
+                'severity': 'low'
+            })
+        
+        # Loaded questions in headlines
+        if '?' in text[:100] and any(word in text[:100].lower() for word in ['really', 'actually', 'truly']):
+            patterns.append({
+                'type': 'loaded_question',
+                'description': 'Uses questions that imply a specific answer',
+                'severity': 'medium'
+            })
+        
+        # Anecdotal evidence
+        if re.search(r'(one woman|one man|a friend|someone I know|I remember when)', text, re.IGNORECASE):
+            patterns.append({
+                'type': 'anecdotal_evidence',
+                'description': 'Relies on personal stories rather than data',
+                'severity': 'low'
+            })
+        
+        # Strawman arguments
+        if re.search(r'(claim that|say that|believe that).*?(ridiculous|absurd|crazy|insane)', text, re.IGNORECASE):
+            patterns.append({
+                'type': 'strawman',
+                'description': 'Misrepresents opposing viewpoints to make them easier to attack',
+                'severity': 'high'
+            })
+        
+        return patterns
+    
+    def _calculate_bias_confidence(self, text, bias_patterns):
+        """Calculate confidence in bias detection"""
+        confidence = 50  # Base confidence
+        
+        # Increase confidence based on text length
+        word_count = len(text.split())
+        if word_count > 1000:
+            confidence += 20
+        elif word_count > 500:
+            confidence += 10
+        
+        # Increase confidence based on pattern detection
+        confidence += min(len(bias_patterns) * 5, 20)
+        
+        # Increase confidence if multiple bias indicators align
+        # (This would need access to bias dimensions, simplified here)
+        
+        # Decrease confidence for ambiguous language
+        ambiguous_terms = ['might', 'could', 'possibly', 'perhaps', 'maybe']
+        ambiguous_count = sum(1 for term in ambiguous_terms if term in text.lower())
+        confidence -= min(ambiguous_count * 2, 10)
+        
+        return max(20, min(95, confidence))
+    
+    def _analyze_framing_bias(self, text):
+        """Analyze how issues are framed in the text"""
+        framing_indicators = {
+            'victim_framing': {
+                'patterns': ['victim of', 'suffered under', 'targeted by', 'persecuted'],
+                'detected': False,
+                'examples': []
+            },
+            'hero_framing': {
+                'patterns': ['champion of', 'defender of', 'fighting for', 'standing up'],
+                'detected': False,
+                'examples': []
+            },
+            'threat_framing': {
+                'patterns': ['threat to', 'danger to', 'risk to', 'attacking our'],
+                'detected': False,
+                'examples': []
+            },
+            'progress_framing': {
+                'patterns': ['step forward', 'progress toward', 'advancement', 'improvement'],
+                'detected': False,
+                'examples': []
+            }
+        }
+        
+        text_lower = text.lower()
+        sentences = text.split('.')
+        
+        for frame_type, frame_data in framing_indicators.items():
+            for pattern in frame_data['patterns']:
+                if pattern in text_lower:
+                    frame_data['detected'] = True
+                    # Find example sentences
+                    for sentence in sentences:
+                        if pattern in sentence.lower() and len(frame_data['examples']) < 2:
+                            frame_data['examples'].append(sentence.strip())
+        
+        # Calculate framing bias score
+        active_frames = sum(1 for f in framing_indicators.values() if f['detected'])
+        
+        return {
+            'frames_detected': active_frames,
+            'framing_patterns': framing_indicators,
+            'framing_bias_level': 'high' if active_frames >= 3 else 'medium' if active_frames >= 2 else 'low'
+        }
+    
+    def _analyze_source_selection_bias(self, text):
+        """Analyze bias in source selection"""
+        source_types = {
+            'government_officials': 0,
+            'experts': 0,
+            'activists': 0,
+            'citizens': 0,
+            'anonymous': 0,
+            'documents': 0
+        }
+        
+        # Count different source types
+        if re.search(r'(official|spokesperson|secretary|minister)', text, re.IGNORECASE):
+            source_types['government_officials'] += len(re.findall(r'(official|spokesperson|secretary|minister)', text, re.IGNORECASE))
+        
+        if re.search(r'(expert|professor|researcher|analyst)', text, re.IGNORECASE):
+            source_types['experts'] += len(re.findall(r'(expert|professor|researcher|analyst)', text, re.IGNORECASE))
+        
+        if re.search(r'(activist|advocate|campaigner)', text, re.IGNORECASE):
+            source_types['activists'] += len(re.findall(r'(activist|advocate|campaigner)', text, re.IGNORECASE))
+        
+        if re.search(r'(resident|citizen|voter|parent)', text, re.IGNORECASE):
+            source_types['citizens'] += len(re.findall(r'(resident|citizen|voter|parent)', text, re.IGNORECASE))
+        
+        if re.search(r'(sources say|sources told|anonymous)', text, re.IGNORECASE):
+            source_types['anonymous'] += len(re.findall(r'(sources say|sources told|anonymous)', text, re.IGNORECASE))
+        
+        total_sources = sum(source_types.values())
+        
+        # Analyze diversity
+        source_diversity = len([st for st in source_types.values() if st > 0])
+        
+        # Detect over-reliance on specific source types
+        bias_indicators = []
+        if total_sources > 0:
+            for source_type, count in source_types.items():
+                percentage = (count / total_sources) * 100
+                if percentage > 60:
+                    bias_indicators.append({
+                        'type': source_type,
+                        'percentage': percentage,
+                        'assessment': f'Over-reliance on {source_type.replace("_", " ")}'
+                    })
+        
+        return {
+            'source_types': source_types,
+            'total_sources': total_sources,
+            'source_diversity': source_diversity,
+            'diversity_score': min(100, source_diversity * 20),
+            'bias_indicators': bias_indicators
+        }
+    
+    def _extract_enhanced_loaded_phrases(self, text):
+        """Extract loaded phrases with enhanced context and categorization"""
+        if not text:
+            return []
+        
+        # Enhanced loaded phrase patterns with categories and severity
+        loaded_patterns = [
+            # Political loaded terms
+            (r'\b(radical|extreme|far-left|far-right|extremist)\b', 'political', 'high'),
+            (r'\b(socialist agenda|right-wing conspiracy|left-wing mob)\b', 'political', 'high'),
+            
+            # Emotional manipulation
+            (r'\b(destroy|devastate|annihilate|obliterate)\b', 'hyperbolic', 'medium'),
+            (r'\b(save|rescue|protect|defend)\s+(?:our|the)\s+\w+', 'savior_language', 'medium'),
+            
+            # Absolute language
+            (r'\b(always|never|everyone|no one|all|none)\b', 'absolute', 'low'),
+            (r'\b(undeniable|indisputable|unquestionable|irrefutable)\b', 'absolute', 'medium'),
+            
+            # Assumption language
+            (r'\b(obviously|clearly|undeniably|of course)\b', 'assumption', 'low'),
+            (r'\b(everyone knows|it\'s well known|nobody disputes)\b', 'assumption', 'medium'),
+            
+            # Us vs Them language
+            (r'\b(they|them|those people|the other side)\b', 'divisive', 'medium'),
+            (r'\b(our values|real americans|true patriots)\b', 'divisive', 'high'),
+            
+            # Fear-mongering
+            (r'\b(threat to|attack on|war on|assault on)\s+\w+', 'fear', 'high'),
+            (r'\b(invasion|infestation|plague|epidemic)\b', 'fear', 'high'),
+        ]
+        
+        phrases = []
+        seen_phrases = set()  # Avoid duplicates
+        
+        for pattern, phrase_type, severity in loaded_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                phrase_text = match.group()
+                
+                # Skip if we've already captured this phrase
+                if phrase_text.lower() in seen_phrases:
+                    continue
+                seen_phrases.add(phrase_text.lower())
+                
+                # Get surrounding context
+                start = max(0, match.start() - 40)
+                end = min(len(text), match.end() + 40)
+                context = text[start:end].strip()
+                
+                # Clean up context
+                if start > 0:
+                    context = '...' + context
+                if end < len(text):
+                    context = context + '...'
+                
+                # Determine impact based on severity and placement
+                impact = severity
+                if match.start() < 200:  # In headline or lead
+                    impact = 'high'
+                
+                phrases.append({
+                    'text': phrase_text,
+                    'type': phrase_type,
+                    'severity': severity,
+                    'impact': impact,
+                    'context': context,
+                    'explanation': self._get_loaded_phrase_explanation(phrase_type, phrase_text)
+                })
+                
+                if len(phrases) >= 10:  # Limit to top 10
+                    break
+        
+        # Sort by severity (high -> medium -> low) and return
+        severity_order = {'high': 0, 'medium': 1, 'low': 2}
+        phrases.sort(key=lambda x: severity_order.get(x['severity'], 3))
+        
+        return phrases
+    
+    def _get_loaded_phrase_explanation(self, phrase_type, phrase_text):
+        """Get explanation for why a phrase is considered loaded"""
+        explanations = {
+            'political': f'"{phrase_text}" is a politically charged term that can polarize readers',
+            'hyperbolic': f'"{phrase_text}" uses exaggerated language to amplify emotional impact',
+            'absolute': f'"{phrase_text}" makes sweeping generalizations that oversimplify complex issues',
+            'assumption': f'"{phrase_text}" assumes agreement without providing evidence',
+            'divisive': f'"{phrase_text}" creates an us-versus-them narrative',
+            'fear': f'"{phrase_text}" uses fear-based language to influence reader emotions',
+            'savior_language': f'"{phrase_text}" frames one side as heroic saviors'
+        }
+        return explanations.get(phrase_type, f'"{phrase_text}" may influence reader perception')
+    
+    def _get_enhanced_bias_label(self, bias_dimensions, political_lean):
+        """Generate comprehensive bias label based on multiple dimensions"""
+        # Start with political bias as base
+        political_bias = bias_dimensions['political']
+        
+        # Find the most prominent bias dimension
+        max_bias_dim = max(bias_dimensions.items(), 
+                          key=lambda x: abs(x[1]['score']) if x[0] != 'sensational' else x[1]['score'])
+        
+        # If political bias is minimal, use the most prominent dimension
+        if abs(political_bias['score']) < 0.2 and abs(max_bias_dim[1]['score']) > 0.3:
+            return f"{max_bias_dim[1]['label']} bias detected"
+        
+        # If sensationalism is high, include it
+        if bias_dimensions['sensational']['score'] > 0.5:
+            return f"{political_bias['label']} / Highly sensational"
+        
+        # If multiple strong biases, create compound label
+        strong_biases = [
+            dim_name for dim_name, dim_data in bias_dimensions.items()
+            if abs(dim_data['score']) > 0.5 or (dim_name == 'sensational' and dim_data['score'] > 0.5)
+        ]
+        
+        if len(strong_biases) > 1:
+            return f"Multiple biases: {', '.join(bias_dimensions[b]['label'] for b in strong_biases[:2])}"
+        
+        # Default to political bias label
+        return political_bias['label']
+    
+    def _calculate_enhanced_objectivity_score(self, bias_dimensions, bias_patterns, loaded_phrases):
+        """Calculate objectivity score based on multiple factors"""
+        score = 100  # Start with perfect objectivity
+        
+        # Deduct for each bias dimension
+        for dim_name, dim_data in bias_dimensions.items():
+            if dim_name == 'sensational':
+                # Sensationalism has stronger impact on objectivity
+                score -= min(30, dim_data['score'] * 40)
+            else:
+                # Other biases
+                score -= min(20, abs(dim_data['score']) * 25)
+        
+        # Deduct for bias patterns
+        pattern_deductions = {
+            'cherry_picking': 15,
+            'strawman': 20,
+            'loaded_question': 10,
+            'anecdotal_evidence': 5,
+            'false_balance': 8
+        }
+        
+        for pattern in bias_patterns:
+            score -= pattern_deductions.get(pattern['type'], 5)
+        
+        # Deduct for loaded phrases
+        score -= min(20, len(loaded_phrases) * 2)
+        
+        # Ensure score stays within bounds
+        return max(0, min(100, score))
+    
+    def _detect_enhanced_manipulation_tactics(self, text, bias_patterns):
+        """Enhanced manipulation tactics detection"""
+        tactics = []
+        
+        # Pattern-based tactics
+        for pattern in bias_patterns:
+            if pattern['severity'] in ['medium', 'high']:
+                tactics.append({
+                    'name': pattern['type'].replace('_', ' ').title(),
+                    'type': pattern['type'],
+                    'description': pattern['description'],
+                    'severity': pattern['severity']
+                })
+        
+        # Additional manipulation checks
+        
+        # Excessive capitalization
+        caps_words = len(re.findall(r'\b[A-Z]{3,}\b', text))
+        if caps_words > 5:
+            tactics.append({
+                'name': 'Excessive Capitalization',
+                'type': 'formatting_manipulation',
+                'description': 'Using ALL CAPS to create false urgency or emphasis',
+                'severity': 'medium'
+            })
+        
+        # Multiple exclamation marks
+        if len(re.findall(r'!{2,}', text)) > 0:
+            tactics.append({
+                'name': 'Multiple Exclamation Marks',
+                'type': 'formatting_manipulation',
+                'description': 'Using excessive punctuation to manipulate emotions',
+                'severity': 'low'
+            })
+        
+        # Clickbait patterns
+        clickbait_patterns = [
+            (r'you won\'t believe', 'Clickbait Hook', 'Uses curiosity gap to manipulate clicks'),
+            (r'doctors hate', 'False Authority', 'Claims false opposition from authorities'),
+            (r'one weird trick', 'Oversimplification', 'Promises unrealistic simple solutions')
+        ]
+        
+        for pattern, name, description in clickbait_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                tactics.append({
+                    'name': name,
+                    'type': 'clickbait',
+                    'description': description,
+                    'severity': 'medium'
+                })
+        
+        # Remove duplicates and limit
+        seen = set()
+        unique_tactics = []
+        for tactic in tactics:
+            if tactic['name'] not in seen:
+                seen.add(tactic['name'])
+                unique_tactics.append(tactic)
+        
+        return unique_tactics[:8]  # Limit to 8 most relevant
+    
+    def _get_bias_contributing_factors(self, bias_dimensions, framing_analysis, source_bias):
+        """Determine main factors contributing to bias"""
+        factors = []
+        
+        # Check each bias dimension
+        for dim_name, dim_data in bias_dimensions.items():
+            if abs(dim_data['score']) > 0.3 or (dim_name == 'sensational' and dim_data['score'] > 0.3):
+                impact = abs(dim_data['score'])
+                factors.append({
+                    'factor': dim_name.replace('_', ' ').title() + ' bias',
+                    'impact': min(1.0, impact),
+                    'description': dim_data['label']
+                })
+        
+        # Check framing bias
+        if framing_analysis['frames_detected'] >= 2:
+            factors.append({
+                'factor': 'Framing bias',
+                'impact': min(1.0, framing_analysis['frames_detected'] * 0.25),
+                'description': f"{framing_analysis['frames_detected']} framing patterns detected"
+            })
+        
+        # Check source selection bias
+        if source_bias['diversity_score'] < 40:
+            factors.append({
+                'factor': 'Source selection',
+                'impact': 0.3,
+                'description': 'Limited source diversity'
+            })
+        
+        # Sort by impact and return top 5
+        factors.sort(key=lambda x: x['impact'], reverse=True)
+        return factors[:5]
+    
+    def _assess_bias_impact(self, bias_dimensions, bias_patterns, manipulation_tactics):
+        """Assess the impact of detected biases on reader understanding"""
+        # Calculate overall bias severity
+        total_bias = sum(abs(d['score']) for d in bias_dimensions.values()) / len(bias_dimensions)
+        
+        # Determine severity level
+        if total_bias > 0.6 or len(manipulation_tactics) > 3:
+            severity = 'high'
+        elif total_bias > 0.3 or len(manipulation_tactics) > 1:
+            severity = 'moderate'
+        else:
+            severity = 'low'
+        
+        # Determine reader impact
+        impacts = []
+        
+        if bias_dimensions['political']['score'] > 0.5:
+            impacts.append('May reinforce existing political beliefs')
+        elif bias_dimensions['political']['score'] < -0.5:
+            impacts.append('May challenge conservative viewpoints')
+        
+        if bias_dimensions['sensational']['score'] > 0.5:
+            impacts.append('May exaggerate the importance or urgency of issues')
+        
+        if bias_dimensions['corporate']['score'] > 0.5:
+            impacts.append('May present business interests favorably')
+        
+        if len(bias_patterns) > 2:
+            impacts.append('Uses multiple persuasion techniques that may affect objectivity')
+        
+        # Factual accuracy assessment
+        if 'cherry_picking' in [p['type'] for p in bias_patterns]:
+            factual_accuracy = 'Facts may be accurate but selectively presented'
+        elif 'strawman' in [p['type'] for p in bias_patterns]:
+            factual_accuracy = 'May misrepresent opposing viewpoints'
+        else:
+            factual_accuracy = 'Bias present but facts appear accurately presented'
+        
+        return {
+            'severity': severity,
+            'reader_impact': impacts[:3] if impacts else ['Minimal impact on reader perception'],
+            'factual_accuracy': factual_accuracy,
+            'recommendation': self._get_bias_recommendation(severity)
+        }
+    
+    def _get_bias_recommendation(self, severity):
+        """Get recommendation based on bias severity"""
+        recommendations = {
+            'high': 'Read with caution and seek alternative perspectives from multiple sources',
+            'moderate': 'Be aware of potential bias and verify key claims independently',
+            'low': 'Minor bias detected - consider author perspective while reading'
+        }
+        return recommendations.get(severity, 'Read critically and verify important claims')
+    
+    def _get_comparative_bias_context(self, bias_score, domain):
+        """Get context about how this bias compares to typical content"""
+        context = {
+            'source_comparison': None,
+            'topic_comparison': None,
+            'industry_standard': None
+        }
+        
+        # Source comparison (would need historical data in production)
+        if domain and domain in SOURCE_CREDIBILITY:
+            source_bias = SOURCE_CREDIBILITY[domain].get('bias', 'Unknown')
+            if source_bias != 'Unknown':
+                context['source_comparison'] = {
+                    'typical_bias': source_bias,
+                    'current_article': 'More biased than usual' if abs(bias_score) > 0.5 else 'Typical for this source'
+                }
+        
+        # Industry standard comparison
+        if abs(bias_score) < 0.2:
+            context['industry_standard'] = 'Well within industry standards for objective reporting'
+        elif abs(bias_score) < 0.5:
+            context['industry_standard'] = 'Moderate bias, common in opinion or analysis pieces'
+        else:
+            context['industry_standard'] = 'High bias, typically seen in editorial or advocacy content'
+        
+        return context
     
     def _analyze_persuasion(self, text, title=''):
         """Analyze persuasion techniques and emotional appeals"""
@@ -620,717 +1691,4 @@ class NewsAnalyzer:
             'primary_scope': primary_scope,
             'historical_context': historical_context[:3],  # Limit to 3
             'movement_connections': movement_connections
-        }
-    
-    # [Keep all other existing methods from the original file...]
-    # _get_bias_label, _calculate_opinion_percentage, _calculate_emotional_score, etc.
-    # (All the methods from the original file remain unchanged)
-    
-    def _get_bias_label(self, bias_score):
-        """Convert bias score to label"""
-        if bias_score < -0.5:
-            return "Strong Left Bias"
-        elif bias_score < -0.2:
-            return "Left-Leaning Bias"
-        elif bias_score > 0.5:
-            return "Strong Right Bias"
-        elif bias_score > 0.2:
-            return "Right-Leaning Bias"
-        else:
-            return "Center/Minimal Bias"
-    
-    def _calculate_opinion_percentage(self, text):
-        """Calculate percentage of opinion vs facts"""
-        if not text:
-            return 0
-        
-        opinion_words = ['believe', 'think', 'feel', 'opinion', 'seems', 'appears', 'probably', 'maybe', 'perhaps']
-        text_lower = text.lower()
-        opinion_count = sum(1 for word in opinion_words if word in text_lower)
-        
-        sentences = text.split('.')
-        opinion_sentences = sum(1 for s in sentences if any(word in s.lower() for word in opinion_words))
-        
-        return min(100, int((opinion_sentences / max(len(sentences), 1)) * 100))
-    
-    def _calculate_emotional_score(self, text):
-        """Calculate emotional language score"""
-        if not text:
-            return 0
-        
-        emotional_words = ['shocking', 'outrageous', 'disgusting', 'amazing', 'terrible', 'horrible', 
-                          'fantastic', 'disaster', 'crisis', 'scandal', 'explosive', 'bombshell']
-        text_lower = text.lower()
-        
-        emotional_count = sum(1 for word in emotional_words if word in text_lower)
-        word_count = len(text.split())
-        
-        return min(100, int((emotional_count / max(word_count, 1)) * 1000))
-    
-    def _format_manipulation_tactics(self, tactics):
-        """Format manipulation tactics for frontend"""
-        formatted = []
-        tactic_details = {
-            'Excessive capitalization': {
-                'name': 'Excessive Capitalization',
-                'type': 'sensational_language',
-                'description': 'Using ALL CAPS to create false urgency or emphasis'
-            },
-            'Multiple exclamation marks': {
-                'name': 'Multiple Exclamation Marks',
-                'type': 'sensational_language',
-                'description': 'Using excessive punctuation to manipulate emotions'
-            },
-            'Sensational language': {
-                'name': 'Sensational Language',
-                'type': 'sensational_language',
-                'description': 'Using dramatic words to exaggerate importance'
-            },
-            'Us vs. them rhetoric': {
-                'name': 'Us vs. Them Rhetoric',
-                'type': 'false_dilemma',
-                'description': 'Creating artificial divisions to manipulate readers'
-            }
-        }
-        
-        for tactic in tactics:
-            details = tactic_details.get(tactic, {
-                'name': tactic,
-                'type': 'manipulation',
-                'description': 'Potential manipulation tactic detected'
-            })
-            formatted.append(details)
-        
-        return formatted
-    
-    def _extract_loaded_phrases(self, text):
-        """Extract loaded/biased phrases"""
-        if not text:
-            return []
-        
-        loaded_patterns = [
-            (r'\b(radical|extreme|far-left|far-right)\b', 'political'),
-            (r'\b(destroy|devastate|annihilate)\b', 'hyperbolic'),
-            (r'\b(always|never|everyone|no one)\b', 'absolute'),
-            (r'\b(obviously|clearly|undeniably)\b', 'assumption')
-        ]
-        
-        phrases = []
-        for pattern, phrase_type in loaded_patterns:
-            matches = re.finditer(pattern, text, re.IGNORECASE)
-            for match in matches:
-                start = max(0, match.start() - 20)
-                end = min(len(text), match.end() + 20)
-                context = text[start:end].strip()
-                phrases.append({
-                    'text': match.group(),
-                    'type': phrase_type,
-                    'context': context
-                })
-                if len(phrases) >= 5:
-                    return phrases
-        
-        return phrases
-    
-    def _calculate_clickbait_score(self, article_data):
-        """Calculate clickbait score"""
-        title = article_data.get('title', '')
-        if not title:
-            return 0
-        
-        score = 0
-        
-        # Check for clickbait patterns
-        clickbait_patterns = [
-            (r'you won\'t believe', 20),
-            (r'shocking', 15),
-            (r'this one trick', 25),
-            (r'\?!', 10),
-            (r'number \d+', 10),
-            (r'reasons why', 15),
-            (r'what happened next', 20)
-        ]
-        
-        title_lower = title.lower()
-        for pattern, points in clickbait_patterns:
-            if re.search(pattern, title_lower):
-                score += points
-        
-        # Check for excessive capitalization
-        caps_ratio = sum(1 for c in title if c.isupper()) / max(len(title), 1)
-        if caps_ratio > 0.5:
-            score += 20
-        
-        return min(100, score)
-    
-    def _get_clickbait_indicators(self, article_data):
-        """Get specific clickbait indicators"""
-        indicators = []
-        title = article_data.get('title', '')
-        
-        if '?' in title and '!' in title:
-            indicators.append({
-                'type': 'curiosity_gap',
-                'name': 'Question with Exclamation',
-                'description': 'Title uses question and exclamation to create curiosity'
-            })
-        
-        if re.search(r'\b\d+\b', title):
-            indicators.append({
-                'type': 'lists_numbers',
-                'name': 'Numbered List',
-                'description': 'Title includes numbers suggesting a listicle format'
-            })
-        
-        if any(word in title.lower() for word in ['shocking', 'unbelievable', 'amazing']):
-            indicators.append({
-                'type': 'sensational_language',
-                'name': 'Sensational Words',
-                'description': 'Title uses emotionally charged language'
-            })
-        
-        return indicators
-    
-    def _analyze_title(self, title):
-        """Analyze title for clickbait elements"""
-        if not title:
-            return {}
-        
-        word_count = len(title.split())
-        emotional_words = ['shocking', 'amazing', 'unbelievable', 'incredible', 'outrageous']
-        emotional_count = sum(1 for word in emotional_words if word in title.lower())
-        
-        return {
-            'sensationalism': min(100, emotional_count * 30),
-            'curiosity_gap': 50 if '?' in title else 0,
-            'emotional_words': min(100, int((emotional_count / max(word_count, 1)) * 200))
-        }
-    
-    def _create_default_author_analysis(self, author_name):
-        """Create default author analysis when detailed info not available"""
-        return {
-            'name': author_name,
-            'found': False,
-            'bio': f"{author_name} - Author information not available in our database",
-            'credibility_score': 50,
-            'articles_count': None,
-            'years_experience': None,
-            'verification_status': {
-                'verified': False,
-                'journalist_verified': False,
-                'outlet_staff': False
-            },
-            'credibility_explanation': {
-                'level': 'Moderate',
-                'explanation': 'Limited information available about this author.',
-                'advice': 'Verify important claims through additional sources.'
-            }
-        }
-    
-    def _calculate_comprehensive_trust_score(self, raw_analysis, bias_analysis, 
-                                           clickbait_score, author_analysis, 
-                                           fact_checks, article_data):
-        """Calculate comprehensive trust score"""
-        score = 50  # Base score
-        
-        # Source credibility impact (up to +/- 20)
-        if article_data.get('domain'):
-            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
-            cred_map = {'High': 20, 'Medium': 10, 'Low': -10, 'Very Low': -20}
-            score += cred_map.get(source_info.get('credibility', ''), 0)
-        
-        # Bias impact (up to -20 for extreme bias)
-        political_lean = abs(bias_analysis.get('political_lean', 0))
-        if political_lean > 80:
-            score -= 20
-        elif political_lean > 60:
-            score -= 10
-        
-        # Clickbait impact (up to -15)
-        score -= min(15, clickbait_score // 5)
-        
-        # Author credibility impact (up to +/- 15)
-        if author_analysis and author_analysis.get('credibility_score'):
-            author_cred = author_analysis['credibility_score']
-            if author_cred >= 70:
-                score += 15
-            elif author_cred < 40:
-                score -= 10
-        
-        # Fact check impact (up to -30)
-        if fact_checks:
-            false_count = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
-            score -= false_count * 10
-        
-        # Manipulation tactics impact (up to -20)
-        tactics_count = len(bias_analysis.get('manipulation_tactics', []))
-        score -= min(20, tactics_count * 5)
-        
-        return max(0, min(100, score))
-    
-    def _generate_fact_check_summary(self, fact_checks):
-        """Generate summary of fact check results"""
-        if not fact_checks:
-            return "No fact checks performed."
-        
-        total = len(fact_checks)
-        verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
-        false = sum(1 for fc in fact_checks if fc.get('verdict') == 'false')
-        mixed = sum(1 for fc in fact_checks if fc.get('verdict') in ['partially_true', 'mixed'])
-        
-        return f"Checked {total} claims: {verified} verified as true, {false} found false, {mixed} partially true."
-    
-    def get_ai_analysis(self, article_data, openai_client):
-        """Use OpenAI to analyze article with integrated fact-checking"""
-        try:
-            if not openai_client:
-                logger.warning("OpenAI client not available, falling back to basic analysis")
-                return self.get_basic_analysis(article_data)
-                
-            prompt = self._create_analysis_prompt(article_data)
-            
-            # Updated to use new OpenAI client
-            response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert fact-checker and media analyst. Analyze articles for bias, credibility, and factual accuracy. When fact-checking claims, use your knowledge to verify them and provide clear explanations."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.3,  # Lower temperature for more factual responses
-                max_tokens=2000   # Increased for detailed fact-checking
-            )
-            
-            analysis_text = response.choices[0].message.content
-            return self._parse_ai_response(analysis_text)
-            
-        except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return self.get_basic_analysis(article_data)
-    
-    def _create_analysis_prompt(self, article_data):
-        """Create analysis prompt for AI with integrated fact-checking"""
-        return f"""
-        Analyze this news article for bias, credibility, and factual accuracy.
-        
-        Title: {article_data.get('title', 'N/A')}
-        Author: {article_data.get('author', 'Unknown')}
-        Source: {article_data.get('domain', 'Unknown')}
-        
-        Article Text (first 3000 chars):
-        {article_data.get('text', '')[:3000]}
-        
-        Provide analysis in this exact JSON format:
-        {{
-            "bias_score": -1.0 to 1.0 (-1 = far left, 0 = center, 1 = far right),
-            "credibility_score": 0.0 to 1.0,
-            "manipulation_tactics": ["list", "of", "tactics"],
-            "key_claims": [
-                {{
-                    "claim": "exact text of the claim from the article",
-                    "verdict": "MUST be one of: true, false, partially_true",
-                    "explanation": "explanation based on your knowledge"
-                }}
-            ],
-            "article_summary": "3-4 sentence summary of the article's main points",
-            "summary": "Brief summary of your credibility and bias findings",
-            "trust_score": 0 to 100
-        }}
-        
-        CRITICAL FACT-CHECKING RULES:
-        1. Extract 3-5 specific factual claims from the article
-        2. For EACH claim, you MUST choose a verdict from: "true", "false", or "partially_true"
-        3. NEVER use "unverified" - make your best assessment based on your training data
-        4. If you're unsure, choose "partially_true" and explain what parts might be accurate
-        5. Base verdicts on factual knowledge, not opinions about the source
-        """
-    
-    def _parse_ai_response(self, response_text):
-        """Parse AI response with better error handling"""
-        try:
-            # Find JSON in response
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group())
-                
-                # Ensure all required fields exist
-                if 'article_summary' not in parsed:
-                    parsed['article_summary'] = parsed.get('summary', 'Unable to generate summary')
-                
-                # Ensure key_claims is properly formatted
-                if 'key_claims' in parsed and isinstance(parsed['key_claims'], list):
-                    # Validate each claim has required fields
-                    for i, claim in enumerate(parsed['key_claims']):
-                        if isinstance(claim, str):
-                            # Convert string to proper format
-                            parsed['key_claims'][i] = {
-                                'claim': claim,
-                                'verdict': 'unverified',
-                                'explanation': 'Claim extracted but not verified'
-                            }
-                        elif isinstance(claim, dict):
-                            # Ensure all fields exist
-                            if 'claim' not in claim:
-                                claim['claim'] = f"Claim {i+1}"
-                            if 'verdict' not in claim:
-                                claim['verdict'] = 'unverified'
-                            if 'explanation' not in claim:
-                                claim['explanation'] = 'No explanation provided'
-                
-                return parsed
-        except Exception as e:
-            logger.error(f"Error parsing AI response: {str(e)}")
-        
-        # Fallback response
-        return {
-            'summary': response_text[:500] if response_text else 'Analysis failed',
-            'article_summary': 'Unable to generate summary',
-            'bias_score': 0,
-            'credibility_score': 0.5,
-            'trust_score': 50,
-            'manipulation_tactics': [],
-            'key_claims': [],
-            'fact_checks': []
-        }
-    
-    def get_basic_analysis(self, article_data):
-        """Basic analysis without AI"""
-        text = article_data.get('text', '')
-        
-        # Bias detection
-        bias_score = self._detect_bias(text)
-        
-        # Credibility check
-        credibility_score = 0.5
-        if article_data.get('domain'):
-            source_info = SOURCE_CREDIBILITY.get(article_data['domain'], {})
-            credibility_map = {'High': 0.8, 'Medium': 0.6, 'Low': 0.3, 'Very Low': 0.1}
-            credibility_score = credibility_map.get(source_info.get('credibility'), 0.5)
-        
-        # Manipulation tactics
-        manipulation_tactics = self._detect_manipulation(text)
-        
-        # Key claims (basic extraction)
-        key_claims = self._extract_key_claims(text)
-        
-        # Generate article summary
-        article_summary = self._generate_article_summary(article_data)
-        
-        # Trust score
-        trust_score = int((credibility_score * 100 + (1 - abs(bias_score)) * 50) / 2)
-        trust_score -= len(manipulation_tactics) * 5
-        trust_score = max(0, min(100, trust_score))
-        
-        # Summary
-        bias_label = 'Left-leaning' if bias_score < -0.3 else 'Right-leaning' if bias_score > 0.3 else 'Center/Neutral'
-        credibility_label = 'High' if credibility_score > 0.7 else 'Medium' if credibility_score > 0.4 else 'Low'
-        
-        summary = f"Analysis complete. Source credibility: {credibility_label}. "
-        summary += f"Political bias: {bias_label}. "
-        if manipulation_tactics:
-            summary += f"Warning: {len(manipulation_tactics)} manipulation tactics detected. "
-        summary += f"Trust score: {trust_score}%."
-        
-        return {
-            'bias_score': bias_score,
-            'credibility_score': credibility_score,
-            'manipulation_tactics': manipulation_tactics,
-            'key_claims': key_claims,
-            'article_summary': article_summary,
-            'fact_checks': [],
-            'summary': summary,
-            'trust_score': trust_score
-        }
-    
-    def _generate_article_summary(self, article_data):
-        """Generate a summary of the article's key points"""
-        if not article_data.get('text'):
-            return "No article content available for summary."
-        
-        text = article_data['text'][:1500]  # First 1500 chars
-        sentences = text.split('.')
-        
-        # Extract key points (first 3-5 important sentences)
-        key_points = []
-        for sentence in sentences[:10]:
-            sentence = sentence.strip()
-            if len(sentence) > 50 and not sentence.startswith(('Photo', 'Image', 'Advertisement')):
-                key_points.append(sentence)
-                if len(key_points) >= 3:
-                    break
-        
-        if key_points:
-            return "Key points: " + ". ".join(key_points) + "."
-        else:
-            return "Article discusses: " + text[:200] + "..."
-    
-    def _generate_conversational_summary(self, article_data, analysis, author_analysis=None):
-        """Generate a conversational summary of the analysis"""
-        parts = []
-        
-        # Source citation
-        if article_data.get('author') and article_data.get('domain'):
-            parts.append(f"This article by {article_data['author']} from {article_data['domain']} ")
-        elif article_data.get('domain'):
-            parts.append(f"This article from {article_data['domain']} ")
-        else:
-            parts.append("This article ")
-        
-        # Trust assessment
-        trust_score = analysis.get('trust_score', 50)
-        if trust_score >= 80:
-            parts.append("appears to be highly trustworthy based on our analysis. ")
-        elif trust_score >= 60:
-            parts.append("seems reasonably credible with some minor concerns. ")
-        elif trust_score >= 40:
-            parts.append("raises some credibility concerns that readers should be aware of. ")
-        else:
-            parts.append("shows significant credibility issues and should be read with caution. ")
-        
-        # Author credibility
-        if author_analysis and author_analysis.get('found'):
-            if author_analysis.get('credibility_score', 0) >= 70:
-                parts.append(f"The author has established credentials in journalism. ")
-            elif author_analysis.get('credibility_score', 0) < 40:
-                parts.append(f"Limited information is available about the author's background. ")
-        
-        # Bias commentary
-        bias = analysis.get('bias_score', 0)
-        if abs(bias) > 0.5:
-            bias_dir = "left" if bias < 0 else "right"
-            parts.append(f"The content shows a noticeable {bias_dir}-leaning perspective. ")
-        
-        # Manipulation tactics
-        tactics = analysis.get('manipulation_tactics', [])
-        if tactics:
-            parts.append(f"We detected {len(tactics)} potential manipulation tactics including {tactics[0].lower()}. ")
-        
-        # Fact checking
-        fact_checks = analysis.get('fact_checks', [])
-        if fact_checks:
-            verified = sum(1 for fc in fact_checks if fc.get('verdict') == 'true')
-            if verified == len(fact_checks):
-                parts.append("All major claims we checked appear to be factual. ")
-            elif verified > 0:
-                parts.append(f"{verified} out of {len(fact_checks)} claims we checked were verified as true. ")
-        
-        return ''.join(parts)
-    
-    def _detect_bias(self, text):
-        """Detect political bias in text"""
-        text_lower = text.lower()
-        
-        left_keywords = ['progressive', 'liberal', 'democrat', 'left-wing', 'socialist', 'equity']
-        right_keywords = ['conservative', 'republican', 'right-wing', 'traditional', 'libertarian', 'patriot']
-        
-        left_count = sum(1 for keyword in left_keywords if keyword in text_lower)
-        right_count = sum(1 for keyword in right_keywords if keyword in text_lower)
-        
-        if left_count > right_count * 1.5:
-            return -0.5
-        elif right_count > left_count * 1.5:
-            return 0.5
-        return 0
-    
-    def _detect_manipulation(self, text):
-        """Detect manipulation tactics"""
-        tactics = []
-        
-        if len(re.findall(r'[A-Z]{3,}', text)) > 10:
-            tactics.append('Excessive capitalization')
-        if len(re.findall(r'!{2,}', text)) > 0:
-            tactics.append('Multiple exclamation marks')
-        if any(word in text.lower() for word in ['breaking', 'urgent', 'shocking', 'bombshell']):
-            tactics.append('Sensational language')
-        if 'they' in text.lower() and 'us' in text.lower():
-            tactics.append('Us vs. them rhetoric')
-        
-        return tactics
-    
-    def _extract_key_claims(self, text):
-        """Extract key claims from text"""
-        sentences = text.split('.')[:10]
-        claims = []
-        
-        for s in sentences:
-            s = s.strip()
-            if len(s) > 50 and any(word in s.lower() for word in ['is', 'are', 'will', 'would']):
-                claims.append(s)
-                if len(claims) >= 3:
-                    break
-        
-        return claims
-    
-    def check_source_credibility(self, domain):
-        """Check source credibility"""
-        return SOURCE_CREDIBILITY.get(domain, {
-            'credibility': 'Unknown',
-            'bias': 'Unknown',
-            'type': 'Unknown'
-        })
-    
-    def _analyze_transparency(self, text):
-        """Analyze article transparency and sourcing"""
-        if not text:
-            return {
-                'transparency_score': 0,
-                'source_count': 0,
-                'source_types': {},
-                'has_links': False,
-                'quote_ratio': 0
-            }
-        
-        # Count different types of sources
-        source_types = {
-            'named_sources': 0,
-            'anonymous_sources': 0,
-            'official_sources': 0,
-            'expert_sources': 0,
-            'document_references': 0
-        }
-        
-        # Look for named sources
-        named_patterns = [
-            r'([A-Z][a-z]+ [A-Z][a-z]+), (?:a |an |the )?(?:said|told|explained)',
-            r'According to ([A-Z][a-z]+ [A-Z][a-z]+)',
-            r'"[^"]+," said ([A-Z][a-z]+ [A-Z][a-z]+)'
-        ]
-        
-        for pattern in named_patterns:
-            matches = re.findall(pattern, text)
-            source_types['named_sources'] += len(matches)
-        
-        # Look for anonymous sources
-        anon_patterns = [
-            r'sources? (?:said|told|confirmed)',
-            r'anonymous (?:source|official)',
-            r'person familiar with',
-            r'official who spoke on condition of anonymity'
-        ]
-        
-        for pattern in anon_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            source_types['anonymous_sources'] += len(matches)
-        
-        # Look for official sources
-        official_patterns = [
-            r'(?:Department|Ministry|Agency) of \w+',
-            r'(?:White House|Pentagon|Congress|Parliament)',
-            r'(?:police|government|federal) (?:officials?|spokesperson)'
-        ]
-        
-        for pattern in official_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            source_types['official_sources'] += len(matches)
-        
-        # Count quotes
-        quotes = re.findall(r'"[^"]{20,}"', text)
-        quote_ratio = min(100, int((len(quotes) / max(len(text.split('.')), 1)) * 100))
-        
-        # Check for links/references
-        has_links = bool(re.search(r'https?://', text)) or bool(re.search(r'(?:study|report|survey) (?:found|showed|revealed)', text))
-        
-        # Calculate transparency score
-        total_sources = sum(source_types.values())
-        named_ratio = source_types['named_sources'] / max(total_sources, 1)
-        
-        transparency_score = min(100, int(
-            (named_ratio * 40) +  # Named sources worth 40%
-            (min(total_sources, 10) * 3) +  # More sources = better (up to 30%)
-            (quote_ratio * 0.2) +  # Quotes worth 20%
-            (10 if has_links else 0)  # Links worth 10%
-        ))
-        
-        return {
-            'transparency_score': transparency_score,
-            'source_count': total_sources,
-            'source_types': source_types,
-            'has_links': has_links,
-            'quote_ratio': quote_ratio,
-            'named_source_ratio': int(named_ratio * 100)
-        }
-    
-    def _analyze_content_depth(self, text):
-        """Analyze content depth and quality"""
-        if not text:
-            return {
-                'depth_score': 0,
-                'word_count': 0,
-                'reading_level': 'Unknown',
-                'facts_vs_opinion': {'facts': 0, 'opinions': 0, 'analysis': 0},
-                'emotional_tone': 'neutral'
-            }
-        
-        # Word and sentence counts
-        words = text.split()
-        word_count = len(words)
-        sentences = [s.strip() for s in text.split('.') if s.strip()]
-        sentence_count = len(sentences)
-        
-        # Calculate reading level (simplified Flesch-Kincaid)
-        avg_sentence_length = word_count / max(sentence_count, 1)
-        complex_words = sum(1 for w in words if len(w) > 6)
-        complexity_ratio = complex_words / max(word_count, 1)
-        
-        if avg_sentence_length < 15 and complexity_ratio < 0.2:
-            reading_level = "Middle School"
-            reading_score = 6
-        elif avg_sentence_length < 20 and complexity_ratio < 0.3:
-            reading_level = "High School"
-            reading_score = 10
-        elif avg_sentence_length < 25 and complexity_ratio < 0.4:
-            reading_level = "College"
-            reading_score = 14
-        else:
-            reading_level = "Graduate"
-            reading_score = 16
-        
-        # Analyze facts vs opinions
-        fact_indicators = ['according to', 'study', 'research', 'data', 'statistics', 'reported', 'confirmed']
-        opinion_indicators = ['believe', 'think', 'feel', 'seems', 'appears', 'probably', 'opinion']
-        analysis_indicators = ['however', 'therefore', 'suggests', 'indicates', 'implies', 'meaning']
-        
-        facts_count = sum(1 for s in sentences if any(ind in s.lower() for ind in fact_indicators))
-        opinion_count = sum(1 for s in sentences if any(ind in s.lower() for ind in opinion_indicators))
-        analysis_count = sum(1 for s in sentences if any(ind in s.lower() for ind in analysis_indicators))
-        
-        # Emotional tone analysis
-        positive_words = ['success', 'achieve', 'improve', 'benefit', 'progress', 'victory', 'celebrate']
-        negative_words = ['fail', 'crisis', 'threat', 'danger', 'loss', 'defeat', 'disaster']
-        
-        positive_count = sum(1 for word in positive_words if word in text.lower())
-        negative_count = sum(1 for word in negative_words if word in text.lower())
-        
-        if positive_count > negative_count * 1.5:
-            emotional_tone = 'positive'
-        elif negative_count > positive_count * 1.5:
-            emotional_tone = 'negative'
-        else:
-            emotional_tone = 'neutral'
-        
-        # Calculate depth score
-        depth_score = min(100, int(
-            (min(word_count, 1000) / 10) * 0.3 +  # Length contributes 30%
-            (reading_score * 2) +  # Complexity contributes 32%
-            (min(facts_count, 10) * 3) +  # Facts contribute 30%
-            (8 if emotional_tone == 'neutral' else 0)  # Neutral tone adds 8%
-        ))
-        
-        return {
-            'depth_score': depth_score,
-            'word_count': word_count,
-            'reading_level': reading_level,
-            'avg_sentence_length': int(avg_sentence_length),
-            'facts_vs_opinion': {
-                'facts': facts_count,
-                'opinions': opinion_count,
-                'analysis': analysis_count
-            },
-            'emotional_tone': emotional_tone,
-            'complexity_ratio': int(complexity_ratio * 100)
         }
