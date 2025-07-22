@@ -274,6 +274,12 @@ class NewsAnalyzer:
             # Add content depth analysis
             content_analysis = self._analyze_content_depth(article_data.get('text', ''))
             
+            # Add persuasion analysis (NEW)
+            persuasion_analysis = self._analyze_persuasion(article_data.get('text', ''), article_data.get('title', ''))
+            
+            # Add connection analysis (NEW)
+            connection_analysis = self._analyze_connections(article_data.get('text', ''), article_data.get('title', ''))
+            
             return {
                 'success': True,
                 'article': article_data,
@@ -295,7 +301,9 @@ class NewsAnalyzer:
                 'related_articles': related_articles,
                 'source_credibility': source_credibility,
                 'transparency_analysis': transparency_analysis,
-                'content_analysis': content_analysis
+                'content_analysis': content_analysis,
+                'persuasion_analysis': persuasion_analysis,  # NEW
+                'connection_analysis': connection_analysis    # NEW
             }
             
         except Exception as e:
@@ -304,6 +312,319 @@ class NewsAnalyzer:
                 'success': False,
                 'error': f'Analysis failed: {str(e)}'
             }
+    
+    def _analyze_persuasion(self, text, title=''):
+        """Analyze persuasion techniques and emotional appeals"""
+        if not text:
+            return {
+                'persuasion_score': 0,
+                'emotional_appeals': {},
+                'logical_fallacies': [],
+                'rhetorical_devices': [],
+                'dominant_emotion': None,
+                'call_to_action': None
+            }
+        
+        # Analyze emotional appeals
+        emotional_appeals = {
+            'fear': 0,
+            'anger': 0,
+            'hope': 0,
+            'pride': 0,
+            'sympathy': 0,
+            'excitement': 0
+        }
+        
+        # Fear appeal patterns
+        fear_words = ['threat', 'danger', 'risk', 'crisis', 'disaster', 'catastrophe', 'terrifying', 'alarming', 'devastating']
+        emotional_appeals['fear'] = min(100, sum(1 for word in fear_words if word in text.lower()) * 10)
+        
+        # Anger appeal patterns
+        anger_words = ['outrage', 'furious', 'disgusting', 'unacceptable', 'betrayal', 'corrupt', 'scandal']
+        emotional_appeals['anger'] = min(100, sum(1 for word in anger_words if word in text.lower()) * 10)
+        
+        # Hope appeal patterns
+        hope_words = ['hope', 'promising', 'breakthrough', 'opportunity', 'solution', 'improvement', 'progress']
+        emotional_appeals['hope'] = min(100, sum(1 for word in hope_words if word in text.lower()) * 8)
+        
+        # Pride appeal patterns
+        pride_words = ['proud', 'achievement', 'success', 'victory', 'excellence', 'superior', 'best']
+        emotional_appeals['pride'] = min(100, sum(1 for word in pride_words if word in text.lower()) * 8)
+        
+        # Sympathy appeal patterns
+        sympathy_words = ['victims', 'suffering', 'tragedy', 'heartbreaking', 'unfortunate', 'desperate']
+        emotional_appeals['sympathy'] = min(100, sum(1 for word in sympathy_words if word in text.lower()) * 10)
+        
+        # Excitement appeal patterns
+        excitement_words = ['amazing', 'incredible', 'revolutionary', 'groundbreaking', 'extraordinary', 'sensational']
+        emotional_appeals['excitement'] = min(100, sum(1 for word in excitement_words if word in text.lower()) * 8)
+        
+        # Find dominant emotion
+        dominant_emotion = max(emotional_appeals.items(), key=lambda x: x[1])
+        dominant_emotion = dominant_emotion[0] if dominant_emotion[1] > 20 else None
+        
+        # Detect logical fallacies
+        logical_fallacies = []
+        
+        # Ad hominem
+        if re.search(r'\b(stupid|idiot|moron|fool|ignorant)\b', text, re.IGNORECASE):
+            logical_fallacies.append({
+                'type': 'Ad Hominem',
+                'description': 'Attacks the person rather than addressing their argument'
+            })
+        
+        # False dichotomy
+        if re.search(r'\b(either|or|only two|no other|must choose)\b', text, re.IGNORECASE):
+            if re.search(r'\b(options?|choices?|alternatives?)\b', text, re.IGNORECASE):
+                logical_fallacies.append({
+                    'type': 'False Dichotomy',
+                    'description': 'Presents only two options when more exist'
+                })
+        
+        # Appeal to authority
+        if re.search(r'\b(experts? say|scientists? agree|doctors? recommend|studies show)\b', text, re.IGNORECASE):
+            if not re.search(r'\b(according to|study by|research from|source:)\b', text, re.IGNORECASE):
+                logical_fallacies.append({
+                    'type': 'Appeal to Authority',
+                    'description': 'Claims expert support without specific sources'
+                })
+        
+        # Slippery slope
+        if re.search(r'\b(will lead to|next thing|before you know|eventually|slippery slope)\b', text, re.IGNORECASE):
+            logical_fallacies.append({
+                'type': 'Slippery Slope',
+                'description': 'Assumes one event will lead to extreme consequences'
+            })
+        
+        # Detect rhetorical devices
+        rhetorical_devices = []
+        
+        # Repetition
+        words = text.lower().split()
+        word_counts = {}
+        for word in words:
+            if len(word) > 5:  # Only count significant words
+                word_counts[word] = word_counts.get(word, 0) + 1
+        
+        repeated_words = [w for w, c in word_counts.items() if c >= 5]
+        if repeated_words:
+            rhetorical_devices.append({
+                'type': 'Repetition',
+                'description': f'Key terms repeated for emphasis: {", ".join(repeated_words[:3])}'
+            })
+        
+        # Rhetorical questions
+        rhetorical_q_count = len(re.findall(r'\?(?!\s*["\'])', text))
+        if rhetorical_q_count >= 3:
+            rhetorical_devices.append({
+                'type': 'Rhetorical Questions',
+                'description': 'Uses questions to make points rather than seek answers'
+            })
+        
+        # Metaphors/analogies
+        if re.search(r'\b(like|as if|similar to|compared to|metaphorically)\b', text, re.IGNORECASE):
+            rhetorical_devices.append({
+                'type': 'Metaphor/Analogy',
+                'description': 'Uses comparisons to simplify or dramatize concepts'
+            })
+        
+        # Detect call to action
+        call_to_action = None
+        action_patterns = [
+            r'\b(call your|contact|write to|demand|take action|join|sign|donate|vote)\b',
+            r'\b(must|need to|have to|should|urgent)\s+\b(act|do|help|support)\b'
+        ]
+        
+        for pattern in action_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                call_to_action = {
+                    'detected': True,
+                    'strength': 'strong' if '!' in text[-100:] else 'moderate',
+                    'type': 'action' if 'donate' in text.lower() or 'sign' in text.lower() else 'engagement'
+                }
+                break
+        
+        # Calculate overall persuasion score
+        persuasion_score = 0
+        
+        # Emotional appeals contribute up to 40 points
+        max_emotion_score = max(emotional_appeals.values())
+        persuasion_score += min(40, int(max_emotion_score * 0.4))
+        
+        # Logical fallacies add 10 points each (up to 30)
+        persuasion_score += min(30, len(logical_fallacies) * 10)
+        
+        # Rhetorical devices add 5 points each (up to 20)
+        persuasion_score += min(20, len(rhetorical_devices) * 5)
+        
+        # Call to action adds 10 points
+        if call_to_action:
+            persuasion_score += 10
+        
+        return {
+            'persuasion_score': min(100, persuasion_score),
+            'emotional_appeals': emotional_appeals,
+            'logical_fallacies': logical_fallacies,
+            'rhetorical_devices': rhetorical_devices,
+            'dominant_emotion': dominant_emotion,
+            'call_to_action': call_to_action
+        }
+    
+    def _analyze_connections(self, text, title=''):
+        """Analyze connections to topics, movements, and geographic relevance"""
+        if not text:
+            return {
+                'topic_connections': [],
+                'geographic_relevance': {},
+                'primary_scope': 'general',
+                'historical_context': [],
+                'movement_connections': []
+            }
+        
+        text_lower = text.lower()
+        
+        # Topic detection with keywords
+        topics = {
+            'Politics': {
+                'keywords': ['election', 'president', 'congress', 'senate', 'politician', 'campaign', 'vote', 'democracy', 'government'],
+                'strength': 0
+            },
+            'Economy': {
+                'keywords': ['economy', 'inflation', 'recession', 'market', 'stock', 'unemployment', 'gdp', 'finance', 'budget'],
+                'strength': 0
+            },
+            'Climate Change': {
+                'keywords': ['climate', 'warming', 'carbon', 'emissions', 'renewable', 'fossil fuel', 'environment', 'greenhouse'],
+                'strength': 0
+            },
+            'Technology': {
+                'keywords': ['ai', 'artificial intelligence', 'tech', 'silicon valley', 'startup', 'innovation', 'digital', 'software'],
+                'strength': 0
+            },
+            'Healthcare': {
+                'keywords': ['health', 'medical', 'hospital', 'doctor', 'vaccine', 'disease', 'treatment', 'insurance', 'medicare'],
+                'strength': 0
+            },
+            'Education': {
+                'keywords': ['school', 'education', 'student', 'teacher', 'university', 'college', 'learning', 'curriculum'],
+                'strength': 0
+            },
+            'Social Justice': {
+                'keywords': ['justice', 'equality', 'rights', 'discrimination', 'diversity', 'inclusion', 'racism', 'protest'],
+                'strength': 0
+            },
+            'International Relations': {
+                'keywords': ['foreign', 'international', 'diplomacy', 'sanctions', 'trade', 'alliance', 'treaty', 'global'],
+                'strength': 0
+            }
+        }
+        
+        # Calculate topic strengths
+        word_count = len(text.split())
+        for topic, data in topics.items():
+            keyword_count = sum(1 for keyword in data['keywords'] if keyword in text_lower)
+            # Calculate strength as percentage (0-100)
+            data['strength'] = min(100, int((keyword_count / max(len(data['keywords']), 1)) * 100))
+        
+        # Filter and format topic connections
+        topic_connections = []
+        for topic, data in topics.items():
+            if data['strength'] >= 20:  # Only include relevant topics
+                topic_connections.append({
+                    'topic': topic,
+                    'strength': data['strength'],
+                    'keywords': [kw for kw in data['keywords'] if kw in text_lower][:5]
+                })
+        
+        # Sort by strength
+        topic_connections.sort(key=lambda x: x['strength'], reverse=True)
+        
+        # Geographic relevance detection
+        geographic_relevance = {
+            'local': 0,
+            'national': 0,
+            'international': 0
+        }
+        
+        # Local indicators
+        local_patterns = ['local', 'city', 'town', 'neighborhood', 'community', 'municipal', 'county']
+        geographic_relevance['local'] = min(100, sum(10 for p in local_patterns if p in text_lower))
+        
+        # National indicators
+        national_patterns = ['national', 'federal', 'country', 'nationwide', 'domestic', 'american', 'united states']
+        geographic_relevance['national'] = min(100, sum(10 for p in national_patterns if p in text_lower))
+        
+        # International indicators
+        international_patterns = ['international', 'global', 'world', 'foreign', 'countries', 'nations', 'worldwide']
+        geographic_relevance['international'] = min(100, sum(10 for p in international_patterns if p in text_lower))
+        
+        # Determine primary scope
+        primary_scope = max(geographic_relevance.items(), key=lambda x: x[1])[0]
+        if max(geographic_relevance.values()) < 30:
+            primary_scope = 'general'
+        
+        # Historical context detection
+        historical_context = []
+        
+        # Check for historical references
+        if re.search(r'\b\d{4}\b', text):  # Year references
+            years = re.findall(r'\b(19\d{2}|20\d{2})\b', text)
+            for year in set(years):
+                if int(year) < 2020:  # Historical reference
+                    historical_context.append({
+                        'type': 'temporal',
+                        'reference': f'References events from {year}'
+                    })
+        
+        # Check for historical events
+        historical_events = {
+            'World War': 'Major global conflict reference',
+            'Cold War': 'Post-WWII geopolitical tension',
+            'Great Depression': 'Economic crisis reference',
+            '9/11': 'September 11 attacks reference',
+            'Civil Rights': 'Civil rights movement reference'
+        }
+        
+        for event, description in historical_events.items():
+            if event.lower() in text_lower:
+                historical_context.append({
+                    'type': 'event',
+                    'reference': event,
+                    'description': description
+                })
+        
+        # Movement/campaign connections
+        movement_connections = []
+        
+        movements = {
+            'Black Lives Matter': 'social_justice',
+            'Me Too': 'social_justice',
+            'MAGA': 'political',
+            'Green New Deal': 'environmental',
+            'Occupy': 'economic',
+            'Tea Party': 'political',
+            'Brexit': 'political',
+            'Arab Spring': 'political'
+        }
+        
+        for movement, category in movements.items():
+            if movement.lower() in text_lower:
+                movement_connections.append({
+                    'movement': movement,
+                    'category': category
+                })
+        
+        return {
+            'topic_connections': topic_connections[:5],  # Top 5 topics
+            'geographic_relevance': geographic_relevance,
+            'primary_scope': primary_scope,
+            'historical_context': historical_context[:3],  # Limit to 3
+            'movement_connections': movement_connections
+        }
+    
+    # [Keep all other existing methods from the original file...]
+    # _get_bias_label, _calculate_opinion_percentage, _calculate_emotional_score, etc.
+    # (All the methods from the original file remain unchanged)
     
     def _get_bias_label(self, bias_score):
         """Convert bias score to label"""
