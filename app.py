@@ -1,3 +1,4 @@
+
 """
 FILE: app.py
 LOCATION: news/app.py
@@ -97,16 +98,6 @@ def log_request():
 def index():
     """Render main page"""
     return render_template('index.html')
-
-@app.route('/favicon.ico')
-def favicon():
-    """Return empty favicon to avoid 404 errors"""
-    # Option 1: Return empty response
-    return '', 204
-    
-    # Option 2: If you want to add a real favicon later, use this instead:
-    # return send_from_directory(os.path.join(app.root_path, 'static'),
-    #                          'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route('/api/analyze', methods=['POST'])
 @limiter.limit("20 per hour")
@@ -222,7 +213,7 @@ def analyze():
                     source = Source(
                         domain=domain,
                         name=source_info.get('name', domain),
-                        credibility_score=_map_credibility_to_score(source_info.get('credibility', 'Unknown')),
+                        credibility_score=self._map_credibility_to_score(source_info.get('credibility', 'Unknown')),
                         political_lean=source_info.get('bias', 'Unknown')
                     )
                     db.session.add(source)
@@ -301,9 +292,6 @@ def analyze():
         # Add export status
         result['export_enabled'] = PDF_EXPORT_ENABLED
         result['processing_time'] = time.time() - start_time
-        
-        # Log what we're returning for debugging
-        logger.info(f"Returning result with: is_pro={result.get('is_pro')}, development_mode={result.get('development_mode')}, export_enabled={result.get('export_enabled')}")
         
         return jsonify(result)
         
