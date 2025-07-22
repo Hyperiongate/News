@@ -302,6 +302,9 @@ def analyze():
         result['export_enabled'] = PDF_EXPORT_ENABLED
         result['processing_time'] = time.time() - start_time
         
+        # Log what we're returning for debugging
+        logger.info(f"Returning result with: is_pro={result.get('is_pro')}, development_mode={result.get('development_mode')}, export_enabled={result.get('export_enabled')}")
+        
         return jsonify(result)
         
     except Exception as e:
