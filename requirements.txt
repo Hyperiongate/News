@@ -20,6 +20,8 @@ httpx==0.25.2  # Added specific httpx version for OpenAI compatibility
 # PDF generation
 reportlab==4.0.7
 
+psycopg2-binary==2.9.9
+
 # Security
 werkzeug==3.0.1
 
