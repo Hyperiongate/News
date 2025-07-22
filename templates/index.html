@@ -19,6 +19,47 @@
     <link rel="stylesheet" href="/static/css/components/export-handler.css">
     <link rel="stylesheet" href="/static/css/components/article-info.css">
     <link rel="stylesheet" href="/static/css/components/separated-layout.css">
+    
+    <!-- Equal height cards fix -->
+    <style>
+        /* Equal height cards using CSS Grid */
+        .cards-grid-wrapper {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+            max-width: 900px !important;
+            margin: 0 auto 40px auto !important;
+            padding: 0 20px !important;
+            grid-auto-rows: 1fr !important; /* This makes all rows equal height */
+        }
+
+        /* Make cards stretch to fill their grid cell */
+        .analysis-card-standalone {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 100% !important;
+            min-height: 200px !important;
+        }
+
+        /* Make the summary section grow to fill space */
+        .analysis-card-standalone .card-summary {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+        }
+
+        /* Ensure expanded cards can grow properly */
+        .analysis-card-standalone.expanded {
+            height: auto !important;
+            align-self: start !important;
+        }
+        
+        /* Keep the card details hidden initially */
+        .analysis-card-standalone .card-details {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -162,6 +203,24 @@
 
             // Components are auto-registered in their respective files
             console.log('Components loaded:', Object.keys(window.UI?.components || {}));
+            
+            // Add expanded class handling for cards
+            setTimeout(() => {
+                document.addEventListener('click', function(e) {
+                    const card = e.target.closest('.analysis-card-standalone');
+                    if (card) {
+                        const detailsDiv = card.querySelector('.card-details');
+                        if (detailsDiv) {
+                            const isExpanded = detailsDiv.style.display !== 'none';
+                            if (isExpanded) {
+                                card.classList.remove('expanded');
+                            } else {
+                                card.classList.add('expanded');
+                            }
+                        }
+                    }
+                });
+            }, 100);
         });
     </script>
 </body>
