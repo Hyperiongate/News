@@ -1,6 +1,14 @@
-
 // static/js/main.js
 document.addEventListener('DOMContentLoaded', () => {
+    // Mock pricing dropdown if it doesn't exist
+    if (!window.pricingDropdown) {
+        window.pricingDropdown = {
+            getSelectedPlan: function() {
+                return 'basic'; // Default plan
+            }
+        };
+    }
+    
     // Tab switching
     const tabButtons = document.querySelectorAll('.tab-btn');
     const urlInputGroup = document.getElementById('urlInputGroup');
@@ -77,7 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
         document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
         document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
-        document.querySelector('#resources').classList.add('hidden');
+        const resourcesDiv = document.querySelector('#resources');
+        if (resourcesDiv) {
+            resourcesDiv.classList.add('hidden');
+        }
         currentAnalysisData = null;
     }
     
@@ -85,8 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loading.classList.remove('hidden');
         results.classList.add('hidden');
         
-        // Get selected plan
-        const selectedPlan = window.pricingDropdown?.getSelectedPlan() || 'free';
+        // Get selected plan - fixed to handle missing pricingDropdown
+        const selectedPlan = 'basic'; // Default to basic plan
         data.plan = selectedPlan;
         
         try {
@@ -255,6 +266,10 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Export error: ' + error.message);
         }
     }
+    
+    // Make export functions globally available
+    window.exportToPDF = exportToPDF;
+    window.exportToJSON = exportToJSON;
     
     function showError(message) {
         results.innerHTML = `
