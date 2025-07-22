@@ -222,7 +222,7 @@ def analyze():
                     source = Source(
                         domain=domain,
                         name=source_info.get('name', domain),
-                        credibility_score=self._map_credibility_to_score(source_info.get('credibility', 'Unknown')),
+                        credibility_score=_map_credibility_to_score(source_info.get('credibility', 'Unknown')),
                         political_lean=source_info.get('bias', 'Unknown')
                     )
                     db.session.add(source)
