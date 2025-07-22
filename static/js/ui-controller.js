@@ -159,7 +159,7 @@ class UIController {
             max-width: 900px;
             margin: 0 auto 40px auto;
             padding: 0 20px;
-            align-items: start;
+            grid-auto-rows: 1fr;
         `;
         
         // Create cards with expandable functionality
@@ -593,7 +593,7 @@ class UIController {
                 max-width: 900px;
                 margin: 0 auto 40px auto;
                 padding: 0 20px;
-                align-items: start;
+                grid-auto-rows: 1fr;
             `;
             
             const secondRowCards = [];
@@ -803,7 +803,7 @@ class UIController {
                 max-width: 900px;
                 margin: 0 auto 40px auto;
                 padding: 0 20px;
-                align-items: start;
+                grid-auto-rows: 1fr;
             `;
             
             const thirdRowCards = [];
@@ -1088,7 +1088,10 @@ class UIController {
             position: relative;
             overflow: hidden;
             border: 2px solid ${borderColor};
-            align-self: start;
+            min-height: 200px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         `;
         
         card.innerHTML = `
@@ -1099,7 +1102,7 @@ class UIController {
                 </h3>
                 <span class="expand-icon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
             </div>
-            <div class="card-summary" style="margin-top: 15px;">
+            <div class="card-summary" style="margin-top: 15px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
                 ${summary}
             </div>
             <div class="card-details" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
