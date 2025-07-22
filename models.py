@@ -4,7 +4,7 @@ LOCATION: news/models.py
 PURPOSE: SQLAlchemy database models
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 
@@ -81,6 +81,19 @@ class Author(db.Model):
     social_media = db.Column(JSON)
     expertise_areas = db.Column(JSON)
 
+class AuthorCache(db.Model):
+    """Cache author lookup results"""
+    id = db.Column(db.Integer, primary_key=True)
+    author_name = db.Column(db.String(200), unique=True, nullable=False)
+    lookup_data = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)
+    
+    @property
+    def is_expired(self):
+        """Check if cache entry has expired"""
+        return datetime.utcnow() > self.expires_at if self.expires_at else True
+
 class FactCheckCache(db.Model):
     """Cache fact check results"""
     id = db.Column(db.Integer, primary_key=True)
@@ -90,6 +103,11 @@ class FactCheckCache(db.Model):
     source = db.Column(db.String(50))  # 'google', 'manual', etc.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime)
+    
+    @property
+    def is_expired(self):
+        """Check if cache entry has expired"""
+        return datetime.utcnow() > self.expires_at if self.expires_at else True
 
 class APIUsage(db.Model):
     """Track API usage for rate limiting"""
