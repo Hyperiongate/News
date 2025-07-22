@@ -527,52 +527,49 @@ class UIController {
                                 `).join('')}
                         </div>
                     ` : ''}
-                    
-                    ${data.persuasion_analysis.rhetorical_devices?.length ? `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 10px 0; color: #7c3aed;">Rhetorical Devices Used</h4>
-                            ${data.persuasion_analysis.rhetorical_devices.map(device => `
-                                <div style="margin: 8px 0; padding: 12px; background: #f3e8ff; border-radius: 6px;">
-                                    <div style="font-weight: 600; color: #6b21a8; margin-bottom: 4px;">
-                                        ${device.type}
-                                    </div>
-                                    <div style="font-size: 0.9rem; color: #581c87;">
-                                        ${device.description}
-                                    </div>
-                                </div>
-                            `).join('')}
+                </div>
+                
+                ${data.author_analysis.online_presence && Object.keys(data.author_analysis.online_presence).some(k => data.author_analysis.online_presence[k]) ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #059669;">Online Presence</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${data.author_analysis.online_presence.twitter ? `
+                                <span style="padding: 4px 12px; background: #1da1f2; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Twitter: ${data.author_analysis.online_presence.twitter}
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.linkedin ? `
+                                <span style="padding: 4px 12px; background: #0077b5; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    LinkedIn ✓
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.wikipedia ? `
+                                <span style="padding: 4px 12px; background: #6b7280; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Wikipedia ✓
+                                </span>
+                            ` : ''}
+                            ${data.author_analysis.online_presence.outlet_profile ? `
+                                <span style="padding: 4px 12px; background: #10b981; color: white; border-radius: 16px; font-size: 0.85rem;">
+                                    Verified Staff
+                                </span>
+                            ` : ''}
                         </div>
-                    ` : ''}
-                    
-                    ${data.persuasion_analysis.call_to_action ? `
-                        <div style="margin-bottom: 20px; padding: 15px; background: ${
-                            data.persuasion_analysis.call_to_action.strength === 'strong' ? '#fef3c7' : '#f0fdf4'
-                        }; border-radius: 6px;">
-                            <h4 style="margin: 0 0 10px 0; color: ${
-                                data.persuasion_analysis.call_to_action.strength === 'strong' ? '#92400e' : '#14532d'
-                            };">Call to Action Detected</h4>
-                            <p style="margin: 0; color: ${
-                                data.persuasion_analysis.call_to_action.strength === 'strong' ? '#451a03' : '#14532d'
-                            }; font-size: 0.95rem;">
-                                The article includes a ${data.persuasion_analysis.call_to_action.strength} call to action, 
-                                encouraging readers to take ${data.persuasion_analysis.call_to_action.type === 'action' ? 'specific actions' : 'engage with the content'}.
-                            </p>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
-                        <h4 style="margin: 0 0 10px 0; color: #92400e;">What This Means</h4>
-                        <p style="margin: 0; color: #451a03; font-size: 0.95rem; line-height: 1.6;">
-                            ${this.getPersuasionExplanation(data.persuasion_analysis)}
+                    </div>
+                ` : ''}
+                
+                ${data.author_analysis.sources_checked ? `
+                    <div style="margin-top: 15px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                        <p style="margin: 0; font-size: 0.85rem; color: #6b7280;">
+                            <strong>Sources checked:</strong> ${data.author_analysis.sources_checked.join(', ')}
                         </p>
                     </div>
-                    
-                    <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
-                        <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
-                            <strong>💡 Tip:</strong> Understanding persuasion techniques helps you read critically. 
-                            Strong emotional appeals and logical fallacies may indicate manipulation rather than honest reporting.
-                        </p>
-                    </div>`,
+                ` : ''}
+                
+                <div style="margin-top: 15px; padding: 12px; background: #e0e7ff; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #3730a3;">
+                        <strong>💡 Tip:</strong> ${data.author_analysis.credibility_explanation?.advice || 'Always verify important claims through multiple sources, regardless of author credibility.'}
+                    </p>
+                </div>`,
                     '#ec4899'
                 );
                 thirdRowCards.push(card);
