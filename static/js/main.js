@@ -1,220 +1,327 @@
 // static/js/main.js
-
-/**
- * Main application controller - with debugging
- */
-const NewsAnalyzer = {
-    currentTab: 'url',
-    currentPlan: 'free',
+document.addEventListener('DOMContentLoaded', () => {
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const urlInputGroup = document.getElementById('urlInputGroup');
+    const textInputGroup = document.getElementById('textInputGroup');
     
-    init() {
-        this.setupEventListeners();
-        this.setupPlanListener();
-    },
-
-    setupEventListeners() {
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
-        const urlInput = document.getElementById('urlInput');
-        const textInput = document.getElementById('textInput');
-        
-        // Tab switching
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const tab = button.getAttribute('data-tab');
-                this.switchTab(tab);
-            });
-        });
-
-        // Analyze buttons
-        if (analyzeBtn) {
-            analyzeBtn.addEventListener('click', () => this.analyzeNews('url'));
-        }
-        if (analyzeTextBtn) {
-            analyzeTextBtn.addEventListener('click', () => this.analyzeNews('text'));
-        }
-        
-        // Enter key handlers
-        if (urlInput) {
-            urlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.analyzeNews('url');
-                }
-            });
-        }
-        
-        if (textInput) {
-            textInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                    this.analyzeNews('text');
-                }
-            });
-        }
-        
-        // Reset buttons
-        const resetBtn = document.getElementById('resetBtn');
-        const resetTextBtn = document.getElementById('resetTextBtn');
-        
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => this.reset());
-        }
-        
-        if (resetTextBtn) {
-            resetTextBtn.addEventListener('click', () => this.reset());
-        }
-    },
-    
-    setupPlanListener() {
-        // Listen for plan changes from pricing dropdown
-        window.addEventListener('planChanged', (e) => {
-            this.currentPlan = e.detail.plan;
-            console.log('Plan changed to:', this.currentPlan);
-        });
-    },
-    
-    switchTab(tab) {
-        this.currentTab = tab;
-        
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        tabButtons.forEach(button => {
-            if (button.getAttribute('data-tab') === tab) {
-                button.classList.add('active');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            
+            // Update active states
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Show/hide input groups
+            if (tab === 'url') {
+                urlInputGroup.classList.remove('hidden');
+                textInputGroup.classList.add('hidden');
             } else {
-                button.classList.remove('active');
+                urlInputGroup.classList.add('hidden');
+                textInputGroup.classList.remove('hidden');
             }
         });
-        
-        const urlGroup = document.getElementById('urlInputGroup');
-        const textGroup = document.getElementById('textInputGroup');
-        
-        if (tab === 'url') {
-            urlGroup.classList.remove('hidden');
-            textGroup.classList.add('hidden');
-        } else {
-            urlGroup.classList.add('hidden');
-            textGroup.classList.remove('hidden');
+    });
+    
+    // Analysis functionality
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resetTextBtn = document.getElementById('resetTextBtn');
+    const urlInput = document.getElementById('urlInput');
+    const textInput = document.getElementById('textInput');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    
+    // Store analysis data globally for export
+    let currentAnalysisData = null;
+    
+    // URL Analysis
+    analyzeBtn.addEventListener('click', async () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+            alert('Please enter a URL');
+            return;
         }
         
-        this.hideResults();
-    },
-
-    async analyzeNews(type) {
-        let content;
-        
-        if (type === 'url') {
-            const urlInput = document.getElementById('urlInput');
-            content = urlInput.value.trim();
-            
-            if (!content) {
-                window.UI.showError('Please enter a valid URL');
-                return;
-            }
-            
-            try {
-                new URL(content);
-            } catch (e) {
-                window.UI.showError('Please enter a valid URL');
-                return;
-            }
-        } else {
-            const textInput = document.getElementById('textInput');
-            content = textInput.value.trim();
-            
-            if (!content || content.length < 100) {
-                window.UI.showError('Please paste at least 100 characters of article text');
-                return;
-            }
-        }
-
-        // Update button text to show processing
-        const analyzeBtn = type === 'url' ? document.getElementById('analyzeBtn') : document.getElementById('analyzeTextBtn');
-        const originalText = analyzeBtn ? analyzeBtn.textContent : '';
-        if (analyzeBtn) {
-            analyzeBtn.textContent = 'Analyzing...';
+        await performAnalysis({ url }, 'url');
+    });
+    
+    // Text Analysis
+    analyzeTextBtn.addEventListener('click', async () => {
+        const text = textInput.value.trim();
+        if (!text) {
+            alert('Please paste article text');
+            return;
         }
         
-        this.hideResults();
-        this.disableButtons(true);
-
+        await performAnalysis({ text }, 'text');
+    });
+    
+    // Reset buttons
+    resetBtn.addEventListener('click', () => {
+        urlInput.value = '';
+        resetAnalysis();
+    });
+    
+    resetTextBtn.addEventListener('click', () => {
+        textInput.value = '';
+        resetAnalysis();
+    });
+    
+    function resetAnalysis() {
+        results.innerHTML = '';
+        results.classList.add('hidden');
+        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
+        document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
+        document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
+        document.querySelector('#resources').classList.add('hidden');
+        currentAnalysisData = null;
+    }
+    
+    async function performAnalysis(data, type) {
+        loading.classList.remove('hidden');
+        results.classList.add('hidden');
+        
+        // Get selected plan
+        const selectedPlan = window.pricingDropdown?.getSelectedPlan() || 'free';
+        data.plan = selectedPlan;
+        
         try {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
-                    [type === 'url' ? 'url' : 'text']: content,
-                    plan: this.currentPlan // Send current plan
-                })
+                body: JSON.stringify(data)
             });
-
-            const data = await response.json();
             
-            // DEBUG: Log the entire response
-            console.log('=== BACKEND RESPONSE ===');
-            console.log(JSON.stringify(data, null, 2));
-            console.log('========================');
-
-            if (response.ok) {
-                // Show what we actually got
-                if (!data.bias_analysis || Object.keys(data.bias_analysis).length === 0) {
-                    console.warn('❌ No bias analysis data received');
-                }
-                if (!data.clickbait_score && data.clickbait_score !== 0) {
-                    console.warn('❌ No clickbait score received');
-                }
-                if (!data.author_analysis || Object.keys(data.author_analysis).length === 0) {
-                    console.warn('❌ No author analysis data received');
-                }
-                if (!data.fact_checks || data.fact_checks.length === 0) {
-                    console.warn('❌ No fact checks received');
-                }
-                if (!data.trust_score && data.trust_score !== 0) {
-                    console.warn('❌ No trust score received');
-                }
+            const result = await response.json();
+            
+            if (result.success) {
+                // Store analysis data
+                currentAnalysisData = result;
                 
-                // Build results using UI controller
-                window.UI.buildResults(data);
+                // Use UI controller to build results
+                if (window.UI) {
+                    window.UI.buildResults(result);
+                    
+                    // Add export buttons if pro user
+                    if (result.is_pro && result.export_enabled) {
+                        addExportButtons();
+                    }
+                } else {
+                    // Fallback display
+                    displayResults(result);
+                }
             } else {
-                window.UI.showError(data.error || 'Analysis failed');
+                showError(result.error || 'Analysis failed');
             }
         } catch (error) {
-            console.error('Analysis error:', error);
-            window.UI.showError('Network error. Please try again.');
+            showError('Network error: ' + error.message);
         } finally {
-            // Re-enable buttons and restore text
-            this.disableButtons(false);
-            if (analyzeBtn) {
-                analyzeBtn.textContent = originalText || 'Analyze';
-            }
+            loading.classList.add('hidden');
         }
-    },
-
-    disableButtons(disabled) {
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
-        
-        if (analyzeBtn) analyzeBtn.disabled = disabled;
-        if (analyzeTextBtn) analyzeTextBtn.disabled = disabled;
-    },
-
-    hideResults() {
-        document.getElementById('results').classList.add('hidden');
-        document.getElementById('resources').classList.add('hidden');
-    },
-
-    reset() {
-        if (this.currentTab === 'url') {
-            document.getElementById('urlInput').value = '';
-        } else {
-            document.getElementById('textInput').value = '';
-        }
-        this.hideResults();
     }
-};
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    NewsAnalyzer.init();
+    
+    function addExportButtons() {
+        // Check if export buttons already exist
+        if (document.querySelector('.export-buttons')) return;
+        
+        // Find the overall assessment div
+        const assessmentDiv = document.querySelector('.overall-assessment');
+        if (!assessmentDiv) return;
+        
+        // Create export buttons container
+        const exportContainer = document.createElement('div');
+        exportContainer.className = 'export-buttons';
+        exportContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        `;
+        
+        // PDF Export Button
+        const pdfBtn = document.createElement('button');
+        pdfBtn.className = 'btn btn-primary';
+        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+        pdfBtn.innerHTML = '<span>📄</span><span>Export PDF Report</span>';
+        pdfBtn.onclick = exportToPDF;
+        
+        // JSON Export Button
+        const jsonBtn = document.createElement('button');
+        jsonBtn.className = 'btn btn-secondary';
+        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+        jsonBtn.innerHTML = '<span>{ }</span><span>Export JSON</span>';
+        jsonBtn.onclick = exportToJSON;
+        
+        exportContainer.appendChild(pdfBtn);
+        exportContainer.appendChild(jsonBtn);
+        
+        assessmentDiv.appendChild(exportContainer);
+    }
+    
+    async function exportToPDF() {
+        if (!currentAnalysisData) {
+            alert('No analysis data to export');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/export/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    analysis_data: currentAnalysisData,
+                    analysis_id: currentAnalysisData.analysis_id
+                })
+            });
+            
+            if (response.ok) {
+                // Get the filename from Content-Disposition header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'news_analysis.pdf';
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+                
+                // Download the PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                const error = await response.json();
+                alert('PDF export failed: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Export error: ' + error.message);
+        }
+    }
+    
+    async function exportToJSON() {
+        if (!currentAnalysisData) {
+            alert('No analysis data to export');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/export/json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    analysis_data: currentAnalysisData,
+                    analysis_id: currentAnalysisData.analysis_id
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Create filename
+                const domain = currentAnalysisData.article?.domain || 'article';
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `news_analysis_${domain}_${timestamp}.json`;
+                
+                // Download JSON
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                const error = await response.json();
+                alert('JSON export failed: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Export error: ' + error.message);
+        }
+    }
+    
+    function showError(message) {
+        results.innerHTML = `
+            <div class="error-card">
+                <div class="error-icon">⚠️</div>
+                <div class="error-content">
+                    <h3>Analysis Error</h3>
+                    <p>${message}</p>
+                </div>
+            </div>
+        `;
+        results.classList.remove('hidden');
+    }
+    
+    // Fallback display function (if UI controller not available)
+    function displayResults(data) {
+        results.innerHTML = `
+            <div class="analysis-results">
+                <h2>Analysis Complete</h2>
+                <div class="trust-score">
+                    <h3>Trust Score: ${data.trust_score || 0}%</h3>
+                </div>
+                <div class="summary">
+                    <p>${data.conversational_summary || 'Analysis completed.'}</p>
+                </div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+        results.classList.remove('hidden');
+    }
+    
+    // Add CSS for buttons if not already styled
+    if (!document.querySelector('style[data-component="export-buttons"]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-component', 'export-buttons');
+        style.textContent = `
+            .btn {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .btn-primary {
+                background: #1e40af;
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                background: #1e3a8a;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+            }
+            
+            .btn-secondary {
+                background: #6b7280;
+                color: white;
+            }
+            
+            .btn-secondary:hover {
+                background: #4b5563;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    }
 });
