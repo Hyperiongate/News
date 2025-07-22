@@ -1,155 +1,139 @@
-# models.py
-from flask_sqlalchemy import SQLAlchemy
+"""
+FILE: models.py
+LOCATION: news/models.py
+PURPOSE: SQLAlchemy database models
+"""
+
 from datetime import datetime
-import json
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import JSON
 
 db = SQLAlchemy()
 
 class User(db.Model):
-    __tablename__ = 'users'
-    
+    """User model for authentication"""
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    plan_type = db.Column(db.String(20), default='basic')  # basic or pro
+    password_hash = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login = db.Column(db.DateTime)
+    is_pro = db.Column(db.Boolean, default=False)
     
     # Relationships
     analyses = db.relationship('Analysis', backref='user', lazy=True)
-    api_usage = db.relationship('APIUsage', backref='user', lazy=True)
 
 class Analysis(db.Model):
-    __tablename__ = 'analyses'
-    
+    """Store analysis results"""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    url = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    url = db.Column(db.String(500))
     title = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Scores
-    trust_score = db.Column(db.Integer)
-    bias_score = db.Column(db.Integer)
-    clickbait_score = db.Column(db.Integer)
+    trust_score = db.Column(db.Float, default=0)
+    bias_score = db.Column(db.Float, default=0)
+    clickbait_score = db.Column(db.Float, default=0)
     
-    # JSON fields for complex data
-    full_analysis = db.Column(db.JSON)
-    author_data = db.Column(db.JSON)
-    source_data = db.Column(db.JSON)
-    bias_analysis = db.Column(db.JSON)
-    fact_check_results = db.Column(db.JSON)
+    # Full analysis data (JSON)
+    full_analysis = db.Column(JSON)
+    author_data = db.Column(JSON)
+    source_data = db.Column(JSON)
+    bias_analysis = db.Column(JSON)
+    fact_check_results = db.Column(JSON)
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    processing_time = db.Column(db.Float)  # seconds
-    
-    # Indexes for faster queries
-    __table_args__ = (
-        db.Index('idx_user_created', 'user_id', 'created_at'),
-        db.Index('idx_url', 'url'),
-    )
+    processing_time = db.Column(db.Float)
+    is_cached = db.Column(db.Boolean, default=False)
 
 class Source(db.Model):
-    __tablename__ = 'sources'
-    
+    """News source information"""
     id = db.Column(db.Integer, primary_key=True)
-    domain = db.Column(db.String(255), unique=True, nullable=False)
-    name = db.Column(db.String(255))
-    credibility_score = db.Column(db.Integer, default=50)
-    political_lean = db.Column(db.String(50))  # left, center-left, center, center-right, right
-    
-    # Metadata
-    fact_check_history = db.Column(db.JSON)  # track accuracy over time
-    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
-    verified = db.Column(db.Boolean, default=False)
+    domain = db.Column(db.String(200), unique=True, nullable=False)
+    name = db.Column(db.String(200))
+    credibility_score = db.Column(db.Float, default=50)
+    political_lean = db.Column(db.String(50))
+    source_type = db.Column(db.String(50))
     
     # Statistics
     total_articles_analyzed = db.Column(db.Integer, default=0)
-    average_trust_score = db.Column(db.Float, default=0.0)
+    average_trust_score = db.Column(db.Float, default=0)
+    last_analyzed = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    authors = db.relationship('Author', backref='primary_source', lazy=True)
 
 class Author(db.Model):
-    __tablename__ = 'authors'
-    
+    """Author/journalist information"""
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255))
+    name = db.Column(db.String(200), nullable=False)
+    primary_source_id = db.Column(db.Integer, db.ForeignKey('source.id'))
     
     # Credibility data
-    credibility_score = db.Column(db.Integer, default=50)
-    verified = db.Column(db.Boolean, default=False)
-    verification_source = db.Column(db.String(255))  # twitter, linkedin, etc
-    
-    # Associated sources
-    primary_source_id = db.Column(db.Integer, db.ForeignKey('sources.id'))
-    primary_source = db.relationship('Source', backref='authors')
+    credibility_score = db.Column(db.Float, default=50)
+    verification_status = db.Column(db.String(50), default='unverified')
     
     # Statistics
     total_articles_analyzed = db.Column(db.Integer, default=0)
-    average_bias_score = db.Column(db.Float, default=0.0)
-    expertise_areas = db.Column(db.JSON)  # list of topics
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-
-class APIUsage(db.Model):
-    __tablename__ = 'api_usage'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    endpoint = db.Column(db.String(255))
-    method = db.Column(db.String(10))
-    status_code = db.Column(db.Integer)
-    response_time = db.Column(db.Float)  # milliseconds
-    ip_address = db.Column(db.String(45))
-    user_agent = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Rate limiting helper
-    __table_args__ = (
-        db.Index('idx_user_endpoint_created', 'user_id', 'endpoint', 'created_at'),
-    )
+    # Additional info (JSON)
+    bio = db.Column(db.Text)
+    social_media = db.Column(JSON)
+    expertise_areas = db.Column(JSON)
 
 class FactCheckCache(db.Model):
-    __tablename__ = 'fact_check_cache'
-    
+    """Cache fact check results"""
     id = db.Column(db.Integer, primary_key=True)
-    claim_hash = db.Column(db.String(64), unique=True, nullable=False)  # SHA256 of claim
-    claim_text = db.Column(db.Text, nullable=False)
-    result = db.Column(db.JSON, nullable=False)
-    source = db.Column(db.String(100))  # google, snopes, etc
+    claim_hash = db.Column(db.String(64), unique=True, nullable=False)
+    claim_text = db.Column(db.Text)
+    result = db.Column(JSON)
+    source = db.Column(db.String(50))  # 'google', 'manual', etc.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime)
 
-# Database initialization function
-def init_db(app):
-    """Initialize database with app"""
-    db.init_app(app)
-    with app.app_context():
-        db.create_all()
-        
-        # Seed some initial source data
-        seed_sources()
+class APIUsage(db.Model):
+    """Track API usage for rate limiting"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    endpoint = db.Column(db.String(100))
+    method = db.Column(db.String(10))
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def init_db():
+    """Initialize database"""
+    db.create_all()
 
 def seed_sources():
-    """Seed database with known news sources"""
-    sources_data = [
-        {'domain': 'nytimes.com', 'name': 'The New York Times', 'credibility_score': 85, 'political_lean': 'center-left'},
-        {'domain': 'wsj.com', 'name': 'The Wall Street Journal', 'credibility_score': 85, 'political_lean': 'center-right'},
-        {'domain': 'bbc.com', 'name': 'BBC', 'credibility_score': 90, 'political_lean': 'center'},
-        {'domain': 'reuters.com', 'name': 'Reuters', 'credibility_score': 95, 'political_lean': 'center'},
-        {'domain': 'apnews.com', 'name': 'Associated Press', 'credibility_score': 95, 'political_lean': 'center'},
-        {'domain': 'cnn.com', 'name': 'CNN', 'credibility_score': 75, 'political_lean': 'left'},
-        {'domain': 'foxnews.com', 'name': 'Fox News', 'credibility_score': 70, 'political_lean': 'right'},
-        {'domain': 'npr.org', 'name': 'NPR', 'credibility_score': 85, 'political_lean': 'center-left'},
-        {'domain': 'bloomberg.com', 'name': 'Bloomberg', 'credibility_score': 85, 'political_lean': 'center'},
-        {'domain': 'theguardian.com', 'name': 'The Guardian', 'credibility_score': 80, 'political_lean': 'left'},
-    ]
+    """Seed initial source data"""
+    from services.source_credibility import SOURCE_CREDIBILITY
     
-    for source_data in sources_data:
-        existing = Source.query.filter_by(domain=source_data['domain']).first()
+    for domain, info in SOURCE_CREDIBILITY.items():
+        existing = Source.query.filter_by(domain=domain).first()
         if not existing:
-            source = Source(**source_data)
+            source = Source(
+                domain=domain,
+                name=info.get('name', domain),
+                credibility_score=_map_credibility_to_score(info.get('credibility', 'Unknown')),
+                political_lean=info.get('bias', 'Unknown'),
+                source_type=info.get('type', 'Unknown')
+            )
             db.session.add(source)
     
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error seeding sources: {e}")
+
+def _map_credibility_to_score(credibility_text):
+    """Map credibility text to numeric score"""
+    mapping = {
+        'High': 85,
+        'Medium': 60,
+        'Low': 30,
+        'Very Low': 10,
+        'Unknown': 50
+    }
+    return mapping.get(credibility_text, 50)
