@@ -1,157 +1,156 @@
-"""
-FILE: models.py
-LOCATION: news/models.py
-PURPOSE: SQLAlchemy database models
-"""
 
-from datetime import datetime, timedelta
+# models.py
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import JSON
+from datetime import datetime
+import json
 
 db = SQLAlchemy()
 
 class User(db.Model):
-    """User model for authentication"""
+    __tablename__ = 'users'
+    
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200))
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    plan_type = db.Column(db.String(20), default='basic')  # basic or pro
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_pro = db.Column(db.Boolean, default=False)
+    last_login = db.Column(db.DateTime)
     
     # Relationships
     analyses = db.relationship('Analysis', backref='user', lazy=True)
+    api_usage = db.relationship('APIUsage', backref='user', lazy=True)
 
 class Analysis(db.Model):
-    """Store analysis results"""
+    __tablename__ = 'analyses'
+    
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    url = db.Column(db.String(500))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    url = db.Column(db.Text, nullable=False)
     title = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Scores
-    trust_score = db.Column(db.Float, default=0)
-    bias_score = db.Column(db.Float, default=0)
-    clickbait_score = db.Column(db.Float, default=0)
+    trust_score = db.Column(db.Integer)
+    bias_score = db.Column(db.Integer)
+    clickbait_score = db.Column(db.Integer)
     
-    # Full analysis data (JSON)
-    full_analysis = db.Column(JSON)
-    author_data = db.Column(JSON)
-    source_data = db.Column(JSON)
-    bias_analysis = db.Column(JSON)
-    fact_check_results = db.Column(JSON)
+    # JSON fields for complex data
+    full_analysis = db.Column(db.JSON)
+    author_data = db.Column(db.JSON)
+    source_data = db.Column(db.JSON)
+    bias_analysis = db.Column(db.JSON)
+    fact_check_results = db.Column(db.JSON)
     
     # Metadata
-    processing_time = db.Column(db.Float)
-    is_cached = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processing_time = db.Column(db.Float)  # seconds
+    
+    # Indexes for faster queries
+    __table_args__ = (
+        db.Index('idx_user_created', 'user_id', 'created_at'),
+        db.Index('idx_url', 'url'),
+    )
 
 class Source(db.Model):
-    """News source information"""
+    __tablename__ = 'sources'
+    
     id = db.Column(db.Integer, primary_key=True)
-    domain = db.Column(db.String(200), unique=True, nullable=False)
-    name = db.Column(db.String(200))
-    credibility_score = db.Column(db.Float, default=50)
-    political_lean = db.Column(db.String(50))
-    source_type = db.Column(db.String(50))
+    domain = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(255))
+    credibility_score = db.Column(db.Integer, default=50)
+    political_lean = db.Column(db.String(50))  # left, center-left, center, center-right, right
+    
+    # Metadata
+    fact_check_history = db.Column(db.JSON)  # track accuracy over time
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    verified = db.Column(db.Boolean, default=False)
     
     # Statistics
     total_articles_analyzed = db.Column(db.Integer, default=0)
-    average_trust_score = db.Column(db.Float, default=0)
-    last_analyzed = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    authors = db.relationship('Author', backref='primary_source', lazy=True)
+    average_trust_score = db.Column(db.Float, default=0.0)
 
 class Author(db.Model):
-    """Author/journalist information"""
+    __tablename__ = 'authors'
+    
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    primary_source_id = db.Column(db.Integer, db.ForeignKey('source.id'))
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255))
     
     # Credibility data
-    credibility_score = db.Column(db.Float, default=50)
-    verification_status = db.Column(db.String(50), default='unverified')
+    credibility_score = db.Column(db.Integer, default=50)
+    verified = db.Column(db.Boolean, default=False)
+    verification_source = db.Column(db.String(255))  # twitter, linkedin, etc
+    
+    # Associated sources
+    primary_source_id = db.Column(db.Integer, db.ForeignKey('sources.id'))
+    primary_source = db.relationship('Source', backref='authors')
     
     # Statistics
     total_articles_analyzed = db.Column(db.Integer, default=0)
+    average_bias_score = db.Column(db.Float, default=0.0)
+    expertise_areas = db.Column(db.JSON)  # list of topics
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Additional info (JSON)
-    bio = db.Column(db.Text)
-    social_media = db.Column(JSON)
-    expertise_areas = db.Column(JSON)
-
-class AuthorCache(db.Model):
-    """Cache author lookup results"""
-    id = db.Column(db.Integer, primary_key=True)
-    author_name = db.Column(db.String(200), unique=True, nullable=False)
-    lookup_data = db.Column(JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime)
-    
-    @property
-    def is_expired(self):
-        """Check if cache entry has expired"""
-        return datetime.utcnow() > self.expires_at if self.expires_at else True
-
-class FactCheckCache(db.Model):
-    """Cache fact check results"""
-    id = db.Column(db.Integer, primary_key=True)
-    claim_hash = db.Column(db.String(64), unique=True, nullable=False)
-    claim_text = db.Column(db.Text)
-    result = db.Column(JSON)
-    source = db.Column(db.String(50))  # 'google', 'manual', etc.
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime)
-    
-    @property
-    def is_expired(self):
-        """Check if cache entry has expired"""
-        return datetime.utcnow() > self.expires_at if self.expires_at else True
 
 class APIUsage(db.Model):
-    """Track API usage for rate limiting"""
+    __tablename__ = 'api_usage'
+    
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    endpoint = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    endpoint = db.Column(db.String(255))
     method = db.Column(db.String(10))
+    status_code = db.Column(db.Integer)
+    response_time = db.Column(db.Float)  # milliseconds
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Rate limiting helper
+    __table_args__ = (
+        db.Index('idx_user_endpoint_created', 'user_id', 'endpoint', 'created_at'),
+    )
 
-def init_db():
-    """Initialize database"""
-    db.create_all()
+class FactCheckCache(db.Model):
+    __tablename__ = 'fact_check_cache'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    claim_hash = db.Column(db.String(64), unique=True, nullable=False)  # SHA256 of claim
+    claim_text = db.Column(db.Text, nullable=False)
+    result = db.Column(db.JSON, nullable=False)
+    source = db.Column(db.String(100))  # google, snopes, etc
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)
+
+# Database initialization function
+def init_db(app):
+    """Initialize database with app"""
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+        
+        # Seed some initial source data
+        seed_sources()
 
 def seed_sources():
-    """Seed initial source data"""
-    from services.source_credibility import SOURCE_CREDIBILITY
+    """Seed database with known news sources"""
+    sources_data = [
+        {'domain': 'nytimes.com', 'name': 'The New York Times', 'credibility_score': 85, 'political_lean': 'center-left'},
+        {'domain': 'wsj.com', 'name': 'The Wall Street Journal', 'credibility_score': 85, 'political_lean': 'center-right'},
+        {'domain': 'bbc.com', 'name': 'BBC', 'credibility_score': 90, 'political_lean': 'center'},
+        {'domain': 'reuters.com', 'name': 'Reuters', 'credibility_score': 95, 'political_lean': 'center'},
+        {'domain': 'apnews.com', 'name': 'Associated Press', 'credibility_score': 95, 'political_lean': 'center'},
+        {'domain': 'cnn.com', 'name': 'CNN', 'credibility_score': 75, 'political_lean': 'left'},
+        {'domain': 'foxnews.com', 'name': 'Fox News', 'credibility_score': 70, 'political_lean': 'right'},
+        {'domain': 'npr.org', 'name': 'NPR', 'credibility_score': 85, 'political_lean': 'center-left'},
+        {'domain': 'bloomberg.com', 'name': 'Bloomberg', 'credibility_score': 85, 'political_lean': 'center'},
+        {'domain': 'theguardian.com', 'name': 'The Guardian', 'credibility_score': 80, 'political_lean': 'left'},
+    ]
     
-    for domain, info in SOURCE_CREDIBILITY.items():
-        existing = Source.query.filter_by(domain=domain).first()
+    for source_data in sources_data:
+        existing = Source.query.filter_by(domain=source_data['domain']).first()
         if not existing:
-            source = Source(
-                domain=domain,
-                name=info.get('name', domain),
-                credibility_score=_map_credibility_to_score(info.get('credibility', 'Unknown')),
-                political_lean=info.get('bias', 'Unknown'),
-                source_type=info.get('type', 'Unknown')
-            )
+            source = Source(**source_data)
             db.session.add(source)
     
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error seeding sources: {e}")
-
-def _map_credibility_to_score(credibility_text):
-    """Map credibility text to numeric score"""
-    mapping = {
-        'High': 85,
-        'Medium': 60,
-        'Low': 30,
-        'Very Low': 10,
-        'Unknown': 50
-    }
-    return mapping.get(credibility_text, 50)
+    db.session.commit()
