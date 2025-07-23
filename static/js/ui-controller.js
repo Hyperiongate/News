@@ -849,8 +849,7 @@ class UIController {
                 </div>
             `}
             
-            <div style="background: #faf5ff; border-
-            <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+               <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">The Psychology of Clickbait</h4>
                <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
                    ${this.getClickbaitPsychologyExplanation(clickbaitScore)}
