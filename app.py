@@ -28,13 +28,16 @@ from services.author_analyzer import AuthorAnalyzer
 # Import database models
 from models import db, User, Analysis, Source, Author, APIUsage, FactCheckCache, init_db
 
+# Configure logging early
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Try to import PDF generator
 try:
     from services.pdf_generator import PDFGenerator
     pdf_generator = PDFGenerator()
     PDF_EXPORT_ENABLED = True
 except ImportError:
-    logger = logging.getLogger(__name__)
     logger.warning("ReportLab not installed - PDF export feature disabled")
     pdf_generator = None
     PDF_EXPORT_ENABLED = False
@@ -44,6 +47,14 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///news_analyzer.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configure database connection pooling
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,  # Test connections before using
+    'pool_recycle': 300,    # Recycle connections after 5 minutes
+    'pool_size': 10,        # Number of connections to maintain
+    'max_overflow': 20      # Maximum overflow connections
+}
 
 # Initialize extensions
 CORS(app)
@@ -57,10 +68,6 @@ limiter = Limiter(
     default_limits=["100 per hour"]
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Initialize services
 analyzer = NewsAnalyzer()
 news_extractor = NewsExtractor()
@@ -69,16 +76,16 @@ author_analyzer = AuthorAnalyzer()
 
 # Create tables and seed data
 with app.app_context():
-    db.create_all()
-    from models import seed_sources
     try:
+        db.create_all()
+        from models import seed_sources
         seed_sources()
     except Exception as e:
-        logger.warning(f"Could not seed sources: {e}")
+        logger.warning(f"Could not initialize database: {e}")
 
 @app.before_request
 def log_request():
-    """Log API usage"""
+    """Log API usage with proper error handling"""
     if request.path.startswith('/api/'):
         try:
             usage = APIUsage(
@@ -92,6 +99,12 @@ def log_request():
             db.session.commit()
         except Exception as e:
             logger.error(f"Could not log API usage: {e}")
+            # IMPORTANT: Clean up the session
+            try:
+                db.session.rollback()
+            except:
+                # If rollback fails, remove the session entirely
+                db.session.remove()
 
 @app.route('/')
 def index():
@@ -159,7 +172,10 @@ def analyze():
                     })
         except Exception as e:
             logger.warning(f"Could not check cache: {e}")
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                db.session.remove()
             # Continue without cache
         
         # Development mode: always provide full analysis but track plan selection
@@ -227,7 +243,10 @@ def analyze():
                         db.session.commit()
                     except Exception as e:
                         logger.warning(f"Could not cache fact checks: {e}")
-                        db.session.rollback()
+                        try:
+                            db.session.rollback()
+                        except:
+                            db.session.remove()
                     
                     cached_facts.extend(new_results)
                 
@@ -369,11 +388,18 @@ def export_pdf():
         
         if not analysis_data:
             # Try to get from database
-            analysis_id = data.get('analysis_id')
-            if analysis_id:
-                analysis = Analysis.query.get(analysis_id)
-                if analysis:
-                    analysis_data = analysis.full_analysis
+            try:
+                analysis_id = data.get('analysis_id')
+                if analysis_id:
+                    analysis = Analysis.query.get(analysis_id)
+                    if analysis:
+                        analysis_data = analysis.full_analysis
+            except Exception as e:
+                logger.warning(f"Could not fetch analysis from database: {e}")
+                try:
+                    db.session.rollback()
+                except:
+                    db.session.remove()
         
         if not analysis_data:
             return jsonify({'error': 'No analysis data provided'}), 400
@@ -406,11 +432,18 @@ def export_json():
         
         if not analysis_data:
             # Try to get from database
-            analysis_id = data.get('analysis_id')
-            if analysis_id:
-                analysis = Analysis.query.get(analysis_id)
-                if analysis:
-                    analysis_data = analysis.full_analysis
+            try:
+                analysis_id = data.get('analysis_id')
+                if analysis_id:
+                    analysis = Analysis.query.get(analysis_id)
+                    if analysis:
+                        analysis_data = analysis.full_analysis
+            except Exception as e:
+                logger.warning(f"Could not fetch analysis from database: {e}")
+                try:
+                    db.session.rollback()
+                except:
+                    db.session.remove()
         
         if not analysis_data:
             return jsonify({'error': 'No analysis data provided'}), 400
@@ -434,49 +467,74 @@ def export_json():
 @app.route('/api/history')
 def get_history():
     """Get user's analysis history"""
-    user_id = session.get('user_id')
-    
-    # For now, return recent analyses for all users if not logged in
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    
-    query = Analysis.query
-    if user_id:
-        query = query.filter_by(user_id=user_id)
-    
-    analyses = query.order_by(Analysis.created_at.desc())\
-        .paginate(page=page, per_page=per_page, error_out=False)
-    
-    return jsonify({
-        'analyses': [{
-            'id': a.id,
-            'url': a.url,
-            'title': a.title,
-            'trust_score': a.trust_score,
-            'created_at': a.created_at.isoformat()
-        } for a in analyses.items],
-        'total': analyses.total,
-        'pages': analyses.pages,
-        'current_page': page
-    })
+    try:
+        user_id = session.get('user_id')
+        
+        # For now, return recent analyses for all users if not logged in
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        query = Analysis.query
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        
+        analyses = query.order_by(Analysis.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        return jsonify({
+            'analyses': [{
+                'id': a.id,
+                'url': a.url,
+                'title': a.title,
+                'trust_score': a.trust_score,
+                'created_at': a.created_at.isoformat()
+            } for a in analyses.items],
+            'total': analyses.total,
+            'pages': analyses.pages,
+            'current_page': page
+        })
+    except Exception as e:
+        logger.error(f"History fetch error: {e}")
+        try:
+            db.session.rollback()
+        except:
+            db.session.remove()
+        return jsonify({
+            'analyses': [],
+            'total': 0,
+            'pages': 0,
+            'current_page': 1,
+            'error': 'Could not fetch history'
+        })
 
 @app.route('/api/sources/stats')
 def source_statistics():
     """Get source credibility statistics"""
-    sources = Source.query.filter(Source.total_articles_analyzed > 0)\
-        .order_by(Source.average_trust_score.desc())\
-        .limit(20).all()
-    
-    return jsonify({
-        'sources': [{
-            'domain': s.domain,
-            'name': s.name,
-            'credibility_score': s.credibility_score,
-            'political_lean': s.political_lean,
-            'articles_analyzed': s.total_articles_analyzed,
-            'average_trust_score': round(s.average_trust_score, 1) if s.average_trust_score else 0
-        } for s in sources]
-    })
+    try:
+        sources = Source.query.filter(Source.total_articles_analyzed > 0)\
+            .order_by(Source.average_trust_score.desc())\
+            .limit(20).all()
+        
+        return jsonify({
+            'sources': [{
+                'domain': s.domain,
+                'name': s.name,
+                'credibility_score': s.credibility_score,
+                'political_lean': s.political_lean,
+                'articles_analyzed': s.total_articles_analyzed,
+                'average_trust_score': round(s.average_trust_score, 1) if s.average_trust_score else 0
+            } for s in sources]
+        })
+    except Exception as e:
+        logger.error(f"Source statistics error: {e}")
+        try:
+            db.session.rollback()
+        except:
+            db.session.remove()
+        return jsonify({
+            'sources': [],
+            'error': 'Could not fetch source statistics'
+        })
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -485,7 +543,12 @@ def health():
         # Check database connection
         db.session.execute('SELECT 1')
         db_status = 'healthy'
-    except:
+    except Exception as e:
+        logger.warning(f"Database health check failed: {e}")
+        try:
+            db.session.rollback()
+        except:
+            db.session.remove()
         db_status = 'unhealthy'
     
     return jsonify({
@@ -509,6 +572,7 @@ def not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
+    logger.error(f"Internal server error: {e}")
     return jsonify({'error': 'Internal server error'}), 500
 
 @app.errorhandler(429)
