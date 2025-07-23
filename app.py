@@ -1,7 +1,11 @@
+# COMPLETE FIX PACKAGE FOR NEWS ANALYZER
+
+## 1. UPDATED app.py - Fixed caching and data structure issues
+
 """
 FILE: app.py
 LOCATION: news/app.py
-PURPOSE: Flask app with database integration - Fixed imports and NoneType error
+PURPOSE: Flask app with database integration - Fixed caching and data structure
 """
 
 import os
@@ -114,12 +118,7 @@ def index():
 @app.route('/favicon.ico')
 def favicon():
     """Return empty favicon to avoid 404 errors"""
-    # Option 1: Return empty response
     return '', 204
-    
-    # Option 2: If you want to add a real favicon later, use this instead:
-    # return send_from_directory(os.path.join(app.root_path, 'static'),
-    #                          'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route('/api/analyze', methods=['POST'])
 @limiter.limit("20 per hour")
@@ -154,29 +153,49 @@ def analyze():
         # Get user ID from session (if authenticated)
         user_id = session.get('user_id')
         
+        # Check for force_fresh parameter
+        force_fresh = data.get('force_fresh', False)
+        
         # Try to check for cached analysis, but don't fail if database is down
         recent_analysis = None
-        try:
-            if content_type == 'url':
-                recent_analysis = Analysis.query.filter_by(url=content)\
-                    .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
-                    .first()
-                
-                if recent_analysis and recent_analysis.full_analysis:
-                    logger.info(f"Returning cached analysis for {content}")
-                    return jsonify({
-                        'success': True,
-                        'cached': True,
-                        **recent_analysis.full_analysis,
-                        'processing_time': recent_analysis.processing_time
-                    })
-        except Exception as e:
-            logger.warning(f"Could not check cache: {e}")
+        if not force_fresh:  # Only check cache if not forcing fresh
             try:
-                db.session.rollback()
-            except:
-                db.session.remove()
-            # Continue without cache
+                if content_type == 'url':
+                    recent_analysis = Analysis.query.filter_by(url=content)\
+                        .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
+                        .first()
+                    
+                    if recent_analysis and recent_analysis.full_analysis:
+                        # Validate that cached data has required fields
+                        cached_data = recent_analysis.full_analysis
+                        required_fields = ['success', 'article', 'bias_analysis', 'trust_score']
+                        
+                        # Check if all required fields exist
+                        if all(field in cached_data for field in required_fields):
+                            # Check if the cached data has the new analysis fields
+                            if 'persuasion_analysis' not in cached_data or 'connection_analysis' not in cached_data:
+                                # Cached data is old format, perform fresh analysis
+                                logger.info(f"Cached data for {content} is outdated, performing fresh analysis")
+                                recent_analysis = None
+                            else:
+                                logger.info(f"Returning cached analysis for {content}")
+                                return jsonify({
+                                    'success': True,
+                                    'cached': True,
+                                    **cached_data,
+                                    'processing_time': recent_analysis.processing_time
+                                })
+                        else:
+                            # Cached data is incomplete, perform fresh analysis
+                            logger.info(f"Cached data for {content} is incomplete, performing fresh analysis")
+                            recent_analysis = None
+            except Exception as e:
+                logger.warning(f"Could not check cache: {e}")
+                try:
+                    db.session.rollback()
+                except:
+                    db.session.remove()
+                # Continue without cache
         
         # Development mode: always provide full analysis but track plan selection
         selected_plan = data.get('plan', 'free')
@@ -564,6 +583,35 @@ def health():
             'news_api': bool(os.environ.get('NEWS_API_KEY'))
         }
     })
+
+# Add admin route to clear cache (TEMPORARY - remove in production)
+@app.route('/api/admin/clear-cache', methods=['POST'])
+def clear_cache():
+    """Clear all cached analyses - TEMPORARY ADMIN ROUTE"""
+    try:
+        # Get password from request
+        data = request.get_json()
+        password = data.get('password')
+        
+        # Simple password check (change this!)
+        if password != 'admin123':
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        # Delete all analyses
+        deleted = Analysis.query.delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted,
+            'message': f'Cleared {deleted} cached analyses'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # Error handlers
 @app.errorhandler(404)
