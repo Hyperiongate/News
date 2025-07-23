@@ -249,12 +249,8 @@ class UIController {
             document.querySelector('main').appendChild(container);
         }
         
-        // Add export handler if available
-        if (data.export_enabled && this.components.exportHandler) {
-            setTimeout(() => {
-                this.components.exportHandler.mount(data);
-            }, 100);
-        }
+        // REMOVED THE PROBLEMATIC exportHandler.mount() CALL
+        // The export buttons are already set up in buildResults() method
     }
 
     generateAssessment(data) {
