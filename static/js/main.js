@@ -54,7 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        await performAnalysis({ url }, 'url');
+        // Force fresh analysis by default
+        await performAnalysis({ url, force_fresh: true }, 'url');
     });
     
     // Text Analysis
@@ -65,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        await performAnalysis({ text }, 'text');
+        await performAnalysis({ text, force_fresh: true }, 'text');
     });
     
     // Reset buttons
@@ -101,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
         data.plan = selectedPlan;
         
         try {
+            console.log('Sending analysis request:', data);
+            
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
@@ -110,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             const result = await response.json();
+            console.log('Analysis result received:', result);
             
             if (result.success) {
                 // Store analysis data
