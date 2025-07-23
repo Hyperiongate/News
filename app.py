@@ -115,6 +115,14 @@ def analyze():
     start_time = time.time()
     
     try:
+        # Ensure clean database session at the start
+        try:
+            db.session.rollback()
+        except:
+            # If rollback fails, create new session
+            db.session.remove()
+            db.session = db.create_scoped_session()
+        
         data = request.get_json()
         
         if not data:
@@ -133,20 +141,26 @@ def analyze():
         # Get user ID from session (if authenticated)
         user_id = session.get('user_id')
         
-        # Check for recent analysis of same URL (cache)
-        if content_type == 'url':
-            recent_analysis = Analysis.query.filter_by(url=content)\
-                .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
-                .first()
-            
-            if recent_analysis and recent_analysis.full_analysis:
-                logger.info(f"Returning cached analysis for {content}")
-                return jsonify({
-                    'success': True,
-                    'cached': True,
-                    **recent_analysis.full_analysis,
-                    'processing_time': recent_analysis.processing_time
-                })
+        # Try to check for cached analysis, but don't fail if database is down
+        recent_analysis = None
+        try:
+            if content_type == 'url':
+                recent_analysis = Analysis.query.filter_by(url=content)\
+                    .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
+                    .first()
+                
+                if recent_analysis and recent_analysis.full_analysis:
+                    logger.info(f"Returning cached analysis for {content}")
+                    return jsonify({
+                        'success': True,
+                        'cached': True,
+                        **recent_analysis.full_analysis,
+                        'processing_time': recent_analysis.processing_time
+                    })
+        except Exception as e:
+            logger.warning(f"Could not check cache: {e}")
+            db.session.rollback()
+            # Continue without cache
         
         # Development mode: always provide full analysis but track plan selection
         selected_plan = data.get('plan', 'free')
@@ -171,45 +185,58 @@ def analyze():
         result['analysis_mode'] = analysis_mode
         result['development_mode'] = is_development
         
-        # Enhanced fact checking with caching
+        # Enhanced fact checking with caching (wrapped in try-catch)
         if is_pro and result.get('key_claims'):
-            cached_facts = []
-            new_claims = []
-            
-            for claim in result['key_claims'][:5]:
-                claim_text = claim.get('text', claim) if isinstance(claim, dict) else claim
-                claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
+            try:
+                cached_facts = []
+                new_claims = []
                 
-                # Check cache
-                cached = FactCheckCache.query.filter_by(claim_hash=claim_hash)\
-                    .filter(FactCheckCache.expires_at > datetime.utcnow()).first()
+                for claim in result['key_claims'][:5]:
+                    claim_text = claim.get('text', claim) if isinstance(claim, dict) else claim
+                    claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
+                    
+                    # Try to check cache
+                    try:
+                        cached = FactCheckCache.query.filter_by(claim_hash=claim_hash)\
+                            .filter(FactCheckCache.expires_at > datetime.utcnow()).first()
+                        
+                        if cached:
+                            cached_facts.append(cached.result)
+                        else:
+                            new_claims.append(claim_text)
+                    except:
+                        # If cache check fails, treat as new claim
+                        new_claims.append(claim_text)
                 
-                if cached:
-                    cached_facts.append(cached.result)
-                else:
-                    new_claims.append(claim_text)
-            
-            # Check new claims
-            if new_claims:
-                new_results = fact_checker.check_claims(new_claims)
+                # Check new claims
+                if new_claims:
+                    new_results = fact_checker.check_claims(new_claims)
+                    
+                    # Try to cache new results, but don't fail if database is down
+                    try:
+                        for i, fc_result in enumerate(new_results):
+                            if i < len(new_claims):
+                                cache_entry = FactCheckCache(
+                                    claim_hash=hashlib.sha256(new_claims[i].encode()).hexdigest(),
+                                    claim_text=new_claims[i],
+                                    result=fc_result,
+                                    source='google',
+                                    expires_at=datetime.utcnow() + timedelta(days=7)
+                                )
+                                db.session.add(cache_entry)
+                        db.session.commit()
+                    except Exception as e:
+                        logger.warning(f"Could not cache fact checks: {e}")
+                        db.session.rollback()
+                    
+                    cached_facts.extend(new_results)
                 
-                # Cache new results
-                for i, fc_result in enumerate(new_results):
-                    if i < len(new_claims):
-                        cache_entry = FactCheckCache(
-                            claim_hash=hashlib.sha256(new_claims[i].encode()).hexdigest(),
-                            claim_text=new_claims[i],
-                            result=fc_result,
-                            source='google',
-                            expires_at=datetime.utcnow() + timedelta(days=7)
-                        )
-                        db.session.add(cache_entry)
-                
-                cached_facts.extend(new_results)
-            
-            result['fact_checks'] = cached_facts
+                result['fact_checks'] = cached_facts
+            except Exception as e:
+                logger.warning(f"Fact checking error: {e}")
+                # Continue without enhanced fact checking
         
-        # Store analysis in database
+        # Try to store analysis in database, but don't fail if database is down
         try:
             # Update or create source record
             source = None
@@ -294,9 +321,12 @@ def analyze():
             result['analysis_id'] = str(analysis.id)
             
         except Exception as e:
-            logger.error(f"Database error: {str(e)}")
-            db.session.rollback()
-            # Continue even if database fails
+            logger.error(f"Database error (non-critical): {str(e)}")
+            try:
+                db.session.rollback()
+            except:
+                db.session.remove()
+            # Continue - the analysis still works without database storage
         
         # Add export status
         result['export_enabled'] = PDF_EXPORT_ENABLED
@@ -306,6 +336,11 @@ def analyze():
         
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}")
+        # Ensure session is rolled back
+        try:
+            db.session.rollback()
+        except:
+            db.session.remove()
         return jsonify({
             'success': False,
             'error': f'Analysis failed: {str(e)}'
