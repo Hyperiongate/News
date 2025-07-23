@@ -1895,8 +1895,7 @@ class UIController {
            }
            resources.push('Source Credibility Database (1000+ sources)');
            if (data.author_analysis?.sources_checked?.length) {
-               resources.push('Author
-                              resources.push('Author Verification System');
+               resources.push('Author Verification System');
            }
            resources.push('Bias Pattern Analysis Engine');
            resources.push('Manipulation Detection Algorithm');
