@@ -3,7 +3,7 @@
 .analysis-cards-container {
     margin: 2rem auto;
     width: 100%;
-    max-width: 100%;
+    max-width: 1400px; /* Increased from default to allow wider layout */
 }
 
 .analysis-cards-header {
@@ -26,7 +26,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     width: 100%;
-    padding: 0 2rem;
+    padding: 0 1rem; /* Reduced padding */
     box-sizing: border-box;
 }
 
@@ -40,6 +40,7 @@
     display: flex;
     flex-direction: column;
     min-height: 120px;
+    width: 100%; /* Ensure cards take full width of grid cell */
 }
 
 .analysis-card:hover {
@@ -817,9 +818,39 @@
 }
 
 /* Container for cards inside the detailed analysis section */
+.detailed-analysis-container {
+    width: 100%;
+    max-width: 1400px; /* Match the container max-width */
+    margin: 0 auto;
+    padding: 0 1rem; /* Add some padding on the sides */
+}
+
 .detailed-analysis-container .analysis-cards-container {
     width: 100%;
     max-width: none;
+}
+
+/* Ensure the section uses full width */
+.section-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Desktop responsive (wider screens) */
+@media (min-width: 1440px) {
+    .analysis-cards-container {
+        max-width: 1600px;
+    }
+    
+    .detailed-analysis-container {
+        max-width: 1600px;
+    }
+    
+    .section-container {
+        max-width: 1600px;
+    }
 }
 
 /* Tablet responsive (1 column) */
