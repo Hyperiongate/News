@@ -1,442 +1,317 @@
-/* static/css/components/analysis-cards.css */
+// static/js/components/analysis-cards.js
 
-.analysis-cards-container {
-    margin: 2rem 0;
-}
-
-.analysis-cards-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.analysis-cards-header h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #111827;
-    margin: 0;
-}
-
-.expand-all-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.expand-all-btn:hover {
-    background: #e5e7eb;
-}
-
-/* Cards grid - UPDATED FOR UNIFORM SIZING */
-.analysis-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-    grid-auto-rows: minmax(120px, auto); /* Minimum height for all cards */
-}
-
-/* Individual card - UPDATED FOR FLEX LAYOUT */
-.analysis-card {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    min-height: 120px; /* Minimum height when collapsed */
-}
-
-.analysis-card:hover {
-    border-color: #d1d5db;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-/* When card is expanded */
-.analysis-card.expanded {
-    grid-row: span 2; /* Take more space when expanded */
-}
-
-/* Card header - UPDATED FOR CONSISTENT HEIGHT */
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s ease;
-    min-height: 80px; /* Consistent header height */
-    flex-shrink: 0; /* Prevent header from shrinking */
-}
-
-.card-header:hover {
-    background: #f9fafb;
-}
-
-.card-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.card-icon {
-    font-size: 1.5rem;
-}
-
-.card-title h4 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #111827;
-}
-
-.card-preview {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.preview-text {
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-/* UPDATED PREVIEW BADGE FOR CONSISTENCY */
-.preview-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    min-width: 90px; /* Consistent width */
-    text-align: center;
-    white-space: nowrap;
-}
-
-.preview-badge.high,
-.preview-badge.excellent,
-.preview-badge.verified {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.preview-badge.medium,
-.preview-badge.good {
-    background: #fed7aa;
-    color: #92400e;
-}
-
-.preview-badge.low,
-.preview-badge.fair,
-.preview-badge.poor {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.preview-badge.left {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.preview-badge.right {
-    background: #fecaca;
-    color: #991b1b;
-}
-
-.preview-badge.center {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.card-toggle {
-    font-size: 1rem;
-    color: #6b7280;
-    transition: transform 0.3s ease;
-}
-
-/* Card content - UPDATED FOR FLEX LAYOUT */
-.card-content {
-    padding: 0 1.5rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent content overflow */
-}
-
-/* Bias meter */
-.bias-meter {
-    margin: 1.5rem 0;
-}
-
-.meter-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-.meter-track {
-    height: 8px;
-    background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%);
-    border-radius: 4px;
-    position: relative;
-}
-
-.meter-indicator {
-    position: absolute;
-    top: -4px;
-    width: 16px;
-    height: 16px;
-    background: white;
-    border: 3px solid #111827;
-    border-radius: 50%;
-    transform: translateX(-50%);
-    transition: left 0.5s ease;
-}
-
-/* Metrics grid - UPDATED FOR CONSISTENCY */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 0.75rem;
-    margin: 1rem 0;
-}
-
-.metric {
-    background: #f9fafb;
-    padding: 0.75rem;
-    border-radius: 8px;
-    text-align: center;
-    min-height: 70px; /* Consistent metric height */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.metric-label {
-    display: block;
-    font-size: 0.7rem;
-    color: #6b7280;
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-}
-
-.metric-value {
-    display: block;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-/* Subsections */
-.subsection {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.subsection h5 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-    margin: 0 0 1rem 0;
-}
-
-/* Tactics and phrases */
-.tactics-list,
-.phrases-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.tactic-item,
-.phrase-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-}
-
-.tactic-icon {
-    color: #f59e0b;
-}
-
-.phrase-type {
-    padding: 0.125rem 0.5rem;
-    background: #e5e7eb;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-.phrase-text {
-    flex: 1;
-    font-style: italic;
-    color: #4b5563;
-}
-
-/* Fact checks compact */
-.fact-checks-compact {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-top: 1rem;
-}
-
-.fact-check-compact {
-    background: #f9fafb;
-    border-radius: 8px;
-    padding: 0.75rem;
-}
-
-.fc-header {
-    margin-bottom: 0.5rem;
-}
-
-.fc-verdict {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.fc-verdict.true {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.fc-verdict.false {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.fc-verdict.mixed {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.fc-verdict.unverified {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.fc-claim {
-    font-style: italic;
-    color: #374151;
-    margin: 0.5rem 0;
-    font-size: 0.875rem;
-}
-
-.fc-explanation {
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-/* Author details */
-.author-details {
-    padding: 0.5rem 0;
-}
-
-.author-details h5 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #111827;
-}
-
-.verified-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    background: #d1fae5;
-    color: #065f46;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-left: 0.5rem;
-}
-
-/* Trust interpretation */
-.trust-interpretation {
-    background: #f9fafb;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.interpretation-text {
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: #374151;
-    margin: 0;
-}
-
-/* Clickbait gauge */
-.clickbait-gauge {
-    position: relative;
-    height: 30px;
-    background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-    border-radius: 15px;
-    margin: 1rem 0;
-}
-
-.gauge-fill {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    bottom: 3px;
-    background: white;
-    border-radius: 12px;
-    transition: width 0.5s ease;
-}
-
-.gauge-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-    .analysis-cards-grid {
-        grid-template-columns: 1fr;
-        grid-auto-rows: auto; /* Allow variable height on mobile */
+(function() {
+    'use strict';
+    
+    function AnalysisCards() {
+        this.expandedCards = new Set();
     }
     
-    .card-header {
-        padding: 1rem;
-        min-height: 70px;
-    }
+    AnalysisCards.prototype.render = function(data) {
+        var container = document.createElement('div');
+        container.className = 'analysis-cards-container';
+        
+        var cards = [];
+        
+        var trustCard = this.createTrustScoreCard(data);
+        if (trustCard) cards.push(trustCard);
+        
+        var biasCard = this.createBiasCard(data);
+        if (biasCard) cards.push(biasCard);
+        
+        var factCard = this.createFactCheckCard(data);
+        if (factCard) cards.push(factCard);
+        
+        var authorCard = this.createAuthorCard(data);
+        if (authorCard) cards.push(authorCard);
+        
+        var clickbaitCard = this.createClickbaitCard(data);
+        if (clickbaitCard) cards.push(clickbaitCard);
+        
+        container.innerHTML = '<div class="analysis-cards-grid">' + cards.join('') + '</div>';
+        
+        var self = this;
+        setTimeout(function() {
+            self.attachEventListeners(container);
+        }, 100);
+        
+        return container;
+    };
     
-    .card-content {
-        padding: 0 1rem 1rem;
-    }
+    AnalysisCards.prototype.createTrustScoreCard = function(data) {
+        var trustScore = null;
+        if (data && data.analysis && typeof data.analysis.trust_score === 'number') {
+            trustScore = data.analysis.trust_score;
+        } else if (data && typeof data.trust_score === 'number') {
+            trustScore = data.trust_score;
+        }
+        
+        if (trustScore === null) return null;
+        
+        var score = Math.round(trustScore);
+        var level = 'poor';
+        if (score >= 80) level = 'excellent';
+        else if (score >= 60) level = 'good';
+        else if (score >= 40) level = 'fair';
+        
+        return '<div class="analysis-card" data-card-type="trust" data-collapsed="true">' +
+            '<div class="card-header" onclick="window.analysisCards.toggleCard(\'trust\')">' +
+                '<div class="card-title">' +
+                    '<span class="card-icon">🛡️</span>' +
+                    '<h4>Trust Score</h4>' +
+                '</div>' +
+                '<div class="card-preview">' +
+                    '<span class="preview-badge ' + level + '">' + score + '/100</span>' +
+                    '<span class="card-toggle">▼</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-content" style="display: none;">' +
+                '<div class="trust-interpretation">' +
+                    '<p class="interpretation-text">' + this.getTrustInterpretation(score) + '</p>' +
+                '</div>' +
+                '<div class="metrics-grid">' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Overall</span>' +
+                        '<span class="metric-value">' + score + '</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Rating</span>' +
+                        '<span class="metric-value">' + level.charAt(0).toUpperCase() + level.slice(1) + '</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Reliability</span>' +
+                        '<span class="metric-value">' + (score >= 60 ? 'High' : 'Low') + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    };
     
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-}
+    AnalysisCards.prototype.createBiasCard = function(data) {
+        if (!data || !data.bias_analysis) return null;
+        
+        var bias = data.bias_analysis;
+        var politicalLean = bias.political_lean || 0;
+        var biasDirection = 'center';
+        if (politicalLean > 0) biasDirection = 'right';
+        else if (politicalLean < 0) biasDirection = 'left';
+        
+        var biasLabel = bias.overall_bias || (biasDirection === 'center' ? 'Balanced' : biasDirection.charAt(0).toUpperCase() + biasDirection.slice(1));
+        
+        return '<div class="analysis-card" data-card-type="bias" data-collapsed="true">' +
+            '<div class="card-header" onclick="window.analysisCards.toggleCard(\'bias\')">' +
+                '<div class="card-title">' +
+                    '<span class="card-icon">⚖️</span>' +
+                    '<h4>Bias Analysis</h4>' +
+                '</div>' +
+                '<div class="card-preview">' +
+                    '<span class="preview-badge ' + biasDirection + '">' + biasLabel + '</span>' +
+                    '<span class="card-toggle">▼</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-content" style="display: none;">' +
+                '<div class="bias-meter">' +
+                    '<div class="meter-labels">' +
+                        '<span>Left</span>' +
+                        '<span>Center</span>' +
+                        '<span>Right</span>' +
+                    '</div>' +
+                    '<div class="meter-track">' +
+                        '<div class="meter-indicator" style="left: ' + (50 + politicalLean * 25) + '%"></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="metrics-grid">' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Objectivity</span>' +
+                        '<span class="metric-value">' + Math.round(bias.objectivity_score || 0) + '%</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Opinion</span>' +
+                        '<span class="metric-value">' + Math.round(bias.opinion_percentage || 0) + '%</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Emotional</span>' +
+                        '<span class="metric-value">' + Math.round(bias.emotional_score || 0) + '%</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    };
+    
+    AnalysisCards.prototype.createFactCheckCard = function(data) {
+        if (!data || !data.fact_checks || data.fact_checks.length === 0) return null;
+        
+        var verified = 0;
+        for (var i = 0; i < data.fact_checks.length; i++) {
+            var fc = data.fact_checks[i];
+            if (fc.verdict && fc.verdict.toLowerCase().indexOf('true') !== -1) {
+                verified++;
+            }
+        }
+        
+        var total = data.fact_checks.length;
+        var percentage = total > 0 ? Math.round((verified / total) * 100) : 0;
+        var level = 'low';
+        if (percentage >= 70) level = 'high';
+        else if (percentage >= 40) level = 'medium';
+        
+        return '<div class="analysis-card" data-card-type="factcheck" data-collapsed="true">' +
+            '<div class="card-header" onclick="window.analysisCards.toggleCard(\'factcheck\')">' +
+                '<div class="card-title">' +
+                    '<span class="card-icon">✓</span>' +
+                    '<h4>Fact Check</h4>' +
+                '</div>' +
+                '<div class="card-preview">' +
+                    '<span class="preview-badge ' + level + '">' + percentage + '% verified</span>' +
+                    '<span class="card-toggle">▼</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-content" style="display: none;">' +
+                '<div class="metrics-grid">' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Verified</span>' +
+                        '<span class="metric-value">' + verified + '</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Total</span>' +
+                        '<span class="metric-value">' + total + '</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Accuracy</span>' +
+                        '<span class="metric-value">' + percentage + '%</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    };
+    
+    AnalysisCards.prototype.createAuthorCard = function(data) {
+        if (!data || !data.author_analysis || !data.author_analysis.name) return null;
+        
+        var author = data.author_analysis;
+        var credScore = null;
+        if (typeof author.credibility_score === 'number') {
+            credScore = Math.round(author.credibility_score);
+        }
+        
+        var scoreText = credScore !== null ? credScore + '%' : 'Unknown';
+        var level = 'medium';
+        if (credScore !== null) {
+            if (credScore >= 70) level = 'high';
+            else if (credScore < 40) level = 'low';
+        }
+        
+        return '<div class="analysis-card" data-card-type="author" data-collapsed="true">' +
+            '<div class="card-header" onclick="window.analysisCards.toggleCard(\'author\')">' +
+                '<div class="card-title">' +
+                    '<span class="card-icon">✍️</span>' +
+                    '<h4>Author</h4>' +
+                '</div>' +
+                '<div class="card-preview">' +
+                    '<span class="preview-badge ' + level + '">' + scoreText + '</span>' +
+                    '<span class="card-toggle">▼</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-content" style="display: none;">' +
+                '<div class="author-details">' +
+                    '<h5>' + author.name + '</h5>' +
+                '</div>' +
+                '<div class="metrics-grid">' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Credibility</span>' +
+                        '<span class="metric-value">' + scoreText + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    };
+    
+    AnalysisCards.prototype.createClickbaitCard = function(data) {
+        var clickbaitScore = null;
+        if (data && typeof data.clickbait_score === 'number') {
+            clickbaitScore = Math.round(data.clickbait_score);
+        }
+        
+        if (clickbaitScore === null) return null;
+        
+        var level = 'low';
+        if (clickbaitScore > 70) level = 'high';
+        else if (clickbaitScore > 40) level = 'medium';
+        
+        return '<div class="analysis-card" data-card-type="clickbait" data-collapsed="true">' +
+            '<div class="card-header" onclick="window.analysisCards.toggleCard(\'clickbait\')">' +
+                '<div class="card-title">' +
+                    '<span class="card-icon">🎣</span>' +
+                    '<h4>Clickbait</h4>' +
+                '</div>' +
+                '<div class="card-preview">' +
+                    '<span class="preview-badge ' + level + '">' + clickbaitScore + '%</span>' +
+                    '<span class="card-toggle">▼</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="card-content" style="display: none;">' +
+                '<div class="clickbait-gauge">' +
+                    '<div class="gauge-fill" style="width: ' + (100 - clickbaitScore) + '%"></div>' +
+                    '<div class="gauge-labels">' +
+                        '<span>Genuine</span>' +
+                        '<span>Clickbait</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="metrics-grid">' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Score</span>' +
+                        '<span class="metric-value">' + clickbaitScore + '%</span>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<span class="metric-label">Level</span>' +
+                        '<span class="metric-value">' + level.charAt(0).toUpperCase() + level.slice(1) + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    };
+    
+    AnalysisCards.prototype.getTrustInterpretation = function(score) {
+        if (score >= 80) return "This article demonstrates high credibility and can be considered a reliable source.";
+        if (score >= 60) return "This article shows good credibility with minor concerns to be aware of.";
+        if (score >= 40) return "This article has moderate credibility. Verify important claims independently.";
+        return "This article shows low credibility. Seek additional sources for verification.";
+    };
+    
+    AnalysisCards.prototype.toggleCard = function(cardType) {
+        var card = document.querySelector('[data-card-type="' + cardType + '"]');
+        if (!card) return;
+        
+        var content = card.querySelector('.card-content');
+        var toggle = card.querySelector('.card-toggle');
+        var isCollapsed = card.getAttribute('data-collapsed') === 'true';
+        
+        if (isCollapsed) {
+            content.style.display = 'block';
+            toggle.textContent = '▲';
+            card.setAttribute('data-collapsed', 'false');
+            card.classList.add('expanded');
+            this.expandedCards.add(cardType);
+        } else {
+            content.style.display = 'none';
+            toggle.textContent = '▼';
+            card.setAttribute('data-collapsed', 'true');
+            card.classList.remove('expanded');
+            this.expandedCards.delete(cardType);
+        }
+    };
+    
+    AnalysisCards.prototype.attachEventListeners = function(container) {
+        // Event listeners are attached via onclick in the HTML
+    };
+    
+    // Create global instance
+    window.analysisCards = new AnalysisCards();
+    
+    // Register with UI
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.UI) {
+            window.UI.registerComponent('analysisCards', window.analysisCards);
+        }
+    });
+})();
