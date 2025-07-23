@@ -942,3 +942,11 @@ class AnalysisDropdowns {
 }
 
 // Export and register
+window.AnalysisDropdowns = AnalysisDropdowns;
+
+// Auto-register when UI controller is available
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.UI) {
+        window.UI.registerComponent('analysisDropdowns', new AnalysisDropdowns());
+    }
+});
