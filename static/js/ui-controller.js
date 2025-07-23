@@ -145,7 +145,7 @@ class UIController {
         `;
         resultsDiv.classList.remove('hidden');
         
-        // OUTSIDE: Detailed Analysis using CARDS
+        // OUTSIDE: Detailed Analysis using the new analysis-cards component
         this.renderDetailedAnalysisWithCards(data);
         
         // Show resources
@@ -195,41 +195,51 @@ class UIController {
             container.appendChild(summarySection);
         }
         
-        // Create cards grid wrapper
-        const cardsWrapper = document.createElement('div');
-        cardsWrapper.className = 'cards-grid-wrapper';
-        
-        // Define cards to render
-        const cardComponents = [
-            { name: 'trustScore', data: data },
-            { name: 'biasAnalysis', data: data },
-            { name: 'factChecker', data: data },
-            { name: 'authorCard', data: data },
-            { name: 'clickbaitDetector', data: data },
-            { name: 'sourceCard', data: data }  // You might need to create this component
-        ];
-        
-        // Render each card
-        cardComponents.forEach(({ name, data }) => {
-            if (this.components[name]) {
-                try {
-                    const cardElement = this.components[name].render(data);
-                    if (cardElement) {
-                        // Wrap in a standalone card container if needed
-                        const cardContainer = document.createElement('div');
-                        cardContainer.className = 'analysis-card-standalone';
-                        cardContainer.appendChild(cardElement);
-                        cardsWrapper.appendChild(cardContainer);
+        // Use the analysis-cards component if available
+        if (this.components.analysisCards) {
+            const cardsSection = document.createElement('div');
+            cardsSection.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 0 20px;';
+            
+            const cardsContent = this.components.analysisCards.render(data);
+            cardsSection.appendChild(cardsContent);
+            container.appendChild(cardsSection);
+        } else {
+            // Fallback: render individual cards if analysisCards component is not available
+            const cardsWrapper = document.createElement('div');
+            cardsWrapper.className = 'cards-grid-wrapper';
+            cardsWrapper.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 0 20px;';
+            
+            // Define cards to render (removed sourceCard)
+            const cardComponents = [
+                { name: 'trustScore', data: data },
+                { name: 'biasAnalysis', data: data },
+                { name: 'factChecker', data: data },
+                { name: 'authorCard', data: data },
+                { name: 'clickbaitDetector', data: data }
+            ];
+            
+            // Render each card
+            cardComponents.forEach(({ name, data }) => {
+                if (this.components[name]) {
+                    try {
+                        const cardElement = this.components[name].render(data);
+                        if (cardElement) {
+                            // Wrap in a standalone card container if needed
+                            const cardContainer = document.createElement('div');
+                            cardContainer.className = 'analysis-card-standalone';
+                            cardContainer.appendChild(cardElement);
+                            cardsWrapper.appendChild(cardContainer);
+                        }
+                    } catch (error) {
+                        console.error(`Error rendering ${name}:`, error);
                     }
-                } catch (error) {
-                    console.error(`Error rendering ${name}:`, error);
+                } else {
+                    console.warn(`Component ${name} not found - skipping`);
                 }
-            } else {
-                console.warn(`Component ${name} not found`);
-            }
-        });
-        
-        container.appendChild(cardsWrapper);
+            });
+            
+            container.appendChild(cardsWrapper);
+        }
         
         // Insert after analyzer card
         const analyzerCard = document.querySelector('.analyzer-card');
