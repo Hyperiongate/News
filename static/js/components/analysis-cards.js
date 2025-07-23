@@ -9,12 +9,13 @@ class AnalysisCards {
         const container = document.createElement('div');
         container.className = 'analysis-cards-container';
         
+        // Only create cards that have data
         const cards = [
             this.createBiasCard(data),
             this.createFactCheckCard(data),
             this.createAuthorCard(data),
             this.createClickbaitCard(data),
-            this.createSourceCard(data)
+            this.createTrustScoreCard(data)  // Add trust score card
         ].filter(card => card !== null);
         
         container.innerHTML = `
@@ -39,7 +40,7 @@ class AnalysisCards {
         const biasDirection = bias.political_lean > 0 ? 'right' : bias.political_lean < 0 ? 'left' : 'center';
         
         return `
-            <div class="analysis-card" data-card-type="bias">
+            <div class="analysis-card" data-card-type="bias" data-collapsed="true">
                 <div class="card-header" onclick="window.analysisCards?.toggleCard('bias')">
                     <div class="card-title">
                         <span class="card-icon">⚖️</span>
@@ -64,46 +65,18 @@ class AnalysisCards {
                     
                     <div class="metrics-grid">
                         <div class="metric">
-                            <span class="metric-label">Objectivity Score</span>
+                            <span class="metric-label">Objectivity</span>
                             <span class="metric-value">${bias.objectivity_score || 0}%</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">Opinion Content</span>
+                            <span class="metric-label">Opinion</span>
                             <span class="metric-value">${bias.opinion_percentage || 0}%</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">Emotional Language</span>
+                            <span class="metric-label">Emotional</span>
                             <span class="metric-value">${bias.emotional_score || 0}%</span>
                         </div>
                     </div>
-                    
-                    ${bias.manipulation_tactics?.length > 0 ? `
-                        <div class="subsection">
-                            <h5>Detected Manipulation Tactics:</h5>
-                            <div class="tactics-list">
-                                ${bias.manipulation_tactics.map(tactic => `
-                                    <div class="tactic-item">
-                                        <span class="tactic-icon">⚠️</span>
-                                        <span class="tactic-name">${tactic.name || tactic}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${bias.loaded_phrases?.length > 0 ? `
-                        <div class="subsection">
-                            <h5>Loaded Language Examples:</h5>
-                            <div class="phrases-list">
-                                ${bias.loaded_phrases.slice(0, 3).map(phrase => `
-                                    <div class="phrase-item">
-                                        <span class="phrase-type">${phrase.type}</span>
-                                        <span class="phrase-text">"${phrase.text}"</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
             </div>
         `;
@@ -114,21 +87,36 @@ class AnalysisCards {
         
         const verified = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('true')).length;
         const total = data.fact_checks.length;
+        const percentage = Math.round((verified / total) * 100);
         
         return `
-            <div class="analysis-card" data-card-type="factcheck">
+            <div class="analysis-card" data-card-type="factcheck" data-collapsed="true">
                 <div class="card-header" onclick="window.analysisCards?.toggleCard('factcheck')">
                     <div class="card-title">
                         <span class="card-icon">✓</span>
-                        <h4>Fact Check Results</h4>
+                        <h4>Fact Check</h4>
                     </div>
                     <div class="card-preview">
-                        <span class="preview-text">${verified}/${total} verified</span>
+                        <span class="preview-badge ${percentage >= 70 ? 'high' : percentage >= 40 ? 'medium' : 'low'}">${percentage}% verified</span>
                         <span class="card-toggle">▼</span>
                     </div>
                 </div>
                 <div class="card-content" style="display: none;">
-                    ${this.renderCompactFactChecks(data.fact_checks)}
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Verified</span>
+                            <span class="metric-value">${verified}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Total Claims</span>
+                            <span class="metric-value">${total}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Accuracy</span>
+                            <span class="metric-value">${percentage}%</span>
+                        </div>
+                    </div>
+                    ${this.renderCompactFactChecks(data.fact_checks.slice(0, 3))}
                 </div>
             </div>
         `;
@@ -138,59 +126,43 @@ class AnalysisCards {
         if (!data.author_analysis || !data.author_analysis.name) return null;
         
         const author = data.author_analysis;
+        const credScore = author.credibility_score || 'N/A';
         
         return `
-            <div class="analysis-card" data-card-type="author">
+            <div class="analysis-card" data-card-type="author" data-collapsed="true">
                 <div class="card-header" onclick="window.analysisCards?.toggleCard('author')">
                     <div class="card-title">
                         <span class="card-icon">✍️</span>
-                        <h4>Author Analysis</h4>
+                        <h4>Author</h4>
                     </div>
                     <div class="card-preview">
-                        <span class="preview-text">${author.name}</span>
+                        <span class="preview-badge ${credScore >= 70 ? 'high' : credScore >= 40 ? 'medium' : 'low'}">
+                            ${typeof credScore === 'number' ? credScore + '% cred' : credScore}
+                        </span>
                         <span class="card-toggle">▼</span>
                     </div>
                 </div>
                 <div class="card-content" style="display: none;">
                     <div class="author-details">
-                        <div class="author-header">
-                            <h5>${author.name}</h5>
-                            ${author.verified ? '<span class="verified-badge">✓ Verified</span>' : ''}
+                        <h5>${author.name}</h5>
+                        ${author.verified ? '<span class="verified-badge">✓ Verified</span>' : ''}
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Credibility</span>
+                            <span class="metric-value">${credScore}${typeof credScore === 'number' ? '%' : ''}</span>
                         </div>
-                        
-                        <div class="author-metrics">
+                        ${author.articles_count ? `
                             <div class="metric">
-                                <span class="metric-label">Credibility Score</span>
-                                <span class="metric-value">${author.credibility_score || 'N/A'}</span>
-                            </div>
-                            ${author.articles_count ? `
-                                <div class="metric">
-                                    <span class="metric-label">Articles Written</span>
-                                    <span class="metric-value">${author.articles_count}</span>
-                                </div>
-                            ` : ''}
-                            ${author.years_experience ? `
-                                <div class="metric">
-                                    <span class="metric-label">Years Experience</span>
-                                    <span class="metric-value">${author.years_experience}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        ${author.bio ? `
-                            <div class="author-bio">
-                                <p>${author.bio}</p>
+                                <span class="metric-label">Articles</span>
+                                <span class="metric-value">${author.articles_count}</span>
                             </div>
                         ` : ''}
-                        
-                        ${author.expertise?.length > 0 ? `
-                            <div class="author-expertise">
-                                <h6>Areas of Expertise:</h6>
-                                <div class="expertise-tags">
-                                    ${author.expertise.map(area => 
-                                        `<span class="expertise-tag">${area}</span>`
-                                    ).join('')}
-                                </div>
+                        ${author.years_experience ? `
+                            <div class="metric">
+                                <span class="metric-label">Experience</span>
+                                <span class="metric-value">${author.years_experience}y</span>
                             </div>
                         ` : ''}
                     </div>
@@ -206,14 +178,14 @@ class AnalysisCards {
         const level = score > 70 ? 'high' : score > 40 ? 'medium' : 'low';
         
         return `
-            <div class="analysis-card" data-card-type="clickbait">
+            <div class="analysis-card" data-card-type="clickbait" data-collapsed="true">
                 <div class="card-header" onclick="window.analysisCards?.toggleCard('clickbait')">
                     <div class="card-title">
                         <span class="card-icon">🎣</span>
-                        <h4>Clickbait Detection</h4>
+                        <h4>Clickbait</h4>
                     </div>
                     <div class="card-preview">
-                        <span class="preview-badge ${level}">${score}% clickbait</span>
+                        <span class="preview-badge ${level}">${score}% score</span>
                         <span class="card-toggle">▼</span>
                     </div>
                 </div>
@@ -226,84 +198,19 @@ class AnalysisCards {
                         </div>
                     </div>
                     
-                    ${data.clickbait_indicators?.length > 0 ? `
-                        <div class="indicators-list">
-                            <h5>Detected Indicators:</h5>
-                            ${data.clickbait_indicators.map(indicator => `
-                                <div class="indicator-item">
-                                    <span class="indicator-icon">📌</span>
-                                    <div class="indicator-content">
-                                        <strong>${indicator.name}</strong>
-                                        <p>${indicator.description}</p>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                    
-                    ${data.title_analysis ? `
-                        <div class="title-metrics">
-                            <h5>Title Analysis:</h5>
-                            <div class="metrics-grid">
-                                <div class="metric">
-                                    <span class="metric-label">Sensationalism</span>
-                                    <span class="metric-value">${data.title_analysis.sensationalism}%</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="metric-label">Curiosity Gap</span>
-                                    <span class="metric-value">${data.title_analysis.curiosity_gap}%</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="metric-label">Emotional Words</span>
-                                    <span class="metric-value">${data.title_analysis.emotional_words}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    createSourceCard(data) {
-        if (!data.analysis?.source_credibility) return null;
-        
-        const source = data.analysis.source_credibility;
-        
-        return `
-            <div class="analysis-card" data-card-type="source">
-                <div class="card-header" onclick="window.analysisCards?.toggleCard('source')">
-                    <div class="card-title">
-                        <span class="card-icon">🏢</span>
-                        <h4>Source Credibility</h4>
-                    </div>
-                    <div class="card-preview">
-                        <span class="preview-badge ${source.rating?.toLowerCase()}">${source.rating}</span>
-                        <span class="card-toggle">▼</span>
-                    </div>
-                </div>
-                <div class="card-content" style="display: none;">
-                    <div class="source-details">
-                        <h5>${data.article?.domain || 'Unknown Source'}</h5>
-                        
-                        <div class="source-metrics">
+                    <div class="metrics-grid">
+                        ${data.title_analysis ? `
                             <div class="metric">
-                                <span class="metric-label">Credibility</span>
-                                <span class="metric-value">${source.rating}</span>
+                                <span class="metric-label">Sensational</span>
+                                <span class="metric-value">${data.title_analysis.sensationalism}%</span>
                             </div>
                             <div class="metric">
-                                <span class="metric-label">Political Bias</span>
-                                <span class="metric-value">${source.bias || 'Unknown'}</span>
+                                <span class="metric-label">Curiosity</span>
+                                <span class="metric-value">${data.title_analysis.curiosity_gap}%</span>
                             </div>
                             <div class="metric">
-                                <span class="metric-label">Type</span>
-                                <span class="metric-value">${source.type || 'Unknown'}</span>
-                            </div>
-                        </div>
-                        
-                        ${source.description ? `
-                            <div class="source-description">
-                                <p>${source.description}</p>
+                                <span class="metric-label">Emotional</span>
+                                <span class="metric-value">${data.title_analysis.emotional_words}%</span>
                             </div>
                         ` : ''}
                     </div>
@@ -312,10 +219,63 @@ class AnalysisCards {
         `;
     }
 
+    createTrustScoreCard(data) {
+        if (!data.analysis?.trust_score) return null;
+        
+        const score = data.analysis.trust_score;
+        const level = score >= 80 ? 'excellent' : score >= 60 ? 'good' : score >= 40 ? 'fair' : 'poor';
+        
+        return `
+            <div class="analysis-card" data-card-type="trust" data-collapsed="true">
+                <div class="card-header" onclick="window.analysisCards?.toggleCard('trust')">
+                    <div class="card-title">
+                        <span class="card-icon">🛡️</span>
+                        <h4>Trust Score</h4>
+                    </div>
+                    <div class="card-preview">
+                        <span class="preview-badge ${level}">${score}/100</span>
+                        <span class="card-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="card-content" style="display: none;">
+                    <div class="trust-interpretation">
+                        <p class="interpretation-text">
+                            ${this.getTrustInterpretation(score)}
+                        </p>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Overall</span>
+                            <span class="metric-value">${score}/100</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Rating</span>
+                            <span class="metric-value">${level.charAt(0).toUpperCase() + level.slice(1)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Reliability</span>
+                            <span class="metric-value">${score >= 60 ? 'High' : 'Low'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    getTrustInterpretation(score) {
+        if (score >= 80) return "This article demonstrates high credibility and can be considered a reliable source.";
+        if (score >= 60) return "This article shows good credibility with minor concerns to be aware of.";
+        if (score >= 40) return "This article has moderate credibility. Verify important claims independently.";
+        return "This article shows low credibility. Seek additional sources for verification.";
+    }
+
     renderCompactFactChecks(factChecks) {
+        if (!factChecks || factChecks.length === 0) return '';
+        
         return `
             <div class="fact-checks-compact">
-                ${factChecks.slice(0, 5).map((fc, index) => `
+                ${factChecks.map((fc, index) => `
                     <div class="fact-check-compact">
                         <div class="fc-header">
                             <span class="fc-verdict ${this.getVerdictClass(fc.verdict)}">
@@ -323,7 +283,6 @@ class AnalysisCards {
                             </span>
                         </div>
                         <div class="fc-claim">"${fc.claim}"</div>
-                        ${fc.explanation ? `<div class="fc-explanation">${fc.explanation}</div>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -361,14 +320,19 @@ class AnalysisCards {
         
         const content = card.querySelector('.card-content');
         const toggle = card.querySelector('.card-toggle');
+        const isCollapsed = card.getAttribute('data-collapsed') === 'true';
         
-        if (content.style.display === 'none') {
+        if (isCollapsed) {
             content.style.display = 'block';
             toggle.textContent = '▲';
+            card.setAttribute('data-collapsed', 'false');
+            card.classList.add('expanded');
             this.expandedCards.add(cardType);
         } else {
             content.style.display = 'none';
             toggle.textContent = '▼';
+            card.setAttribute('data-collapsed', 'true');
+            card.classList.remove('expanded');
             this.expandedCards.delete(cardType);
         }
     }
