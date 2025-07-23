@@ -945,8 +945,30 @@ class AnalysisDropdowns {
 window.AnalysisDropdowns = AnalysisDropdowns;
 
 // Auto-register when UI controller is available
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.UI) {
+function registerAnalysisDropdowns() {
+    if (window.UI && !window.UI.components.analysisDropdowns) {
         window.UI.registerComponent('analysisDropdowns', new AnalysisDropdowns());
+        console.log('AnalysisDropdowns component registered');
     }
-});
+}
+
+// Try to register on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', registerAnalysisDropdowns);
+
+// Also try to register immediately if UI is already available
+if (window.UI) {
+    registerAnalysisDropdowns();
+}
+
+// And set up a fallback to register when UI becomes available
+if (!window.UI) {
+    let checkInterval = setInterval(() => {
+        if (window.UI) {
+            registerAnalysisDropdowns();
+            clearInterval(checkInterval);
+        }
+    }, 50);
+    
+    // Stop checking after 5 seconds
+    setTimeout(() => clearInterval(checkInterval), 5000);
+}
