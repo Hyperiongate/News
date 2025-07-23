@@ -1,480 +1,412 @@
-
-"""
-FILE: app.py
-LOCATION: news/app.py
-PURPOSE: Flask app with database integration - Fixed imports and NoneType error
-"""
-
-import os
-import io
-import json
-import logging
-import time
-import hashlib
-from datetime import datetime, timedelta
-
-from flask import Flask, render_template, request, jsonify, send_file, session
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
-
-# Import services
-from services.news_analyzer import NewsAnalyzer
-from services.news_extractor import NewsExtractor
-from services.fact_checker import FactChecker
-from services.source_credibility import SOURCE_CREDIBILITY
-from services.author_analyzer import AuthorAnalyzer
-
-# Import database models
-from models import db, User, Analysis, Source, Author, APIUsage, FactCheckCache, init_db
-
-# Try to import PDF generator
-try:
-    from services.pdf_generator import PDFGenerator
-    pdf_generator = PDFGenerator()
-    PDF_EXPORT_ENABLED = True
-except ImportError:
-    logger = logging.getLogger(__name__)
-    logger.warning("ReportLab not installed - PDF export feature disabled")
-    pdf_generator = None
-    PDF_EXPORT_ENABLED = False
-
-# Initialize Flask app
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///news_analyzer.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize extensions
-CORS(app)
-db.init_app(app)
-
-# Initialize rate limiter
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    storage_uri="memory://",
-    default_limits=["100 per hour"]
-)
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Initialize services
-analyzer = NewsAnalyzer()
-news_extractor = NewsExtractor()
-fact_checker = FactChecker()
-author_analyzer = AuthorAnalyzer()
-
-# Create tables and seed data
-with app.app_context():
-    db.create_all()
-    from models import seed_sources
-    try:
-        seed_sources()
-    except Exception as e:
-        logger.warning(f"Could not seed sources: {e}")
-
-@app.before_request
-def log_request():
-    """Log API usage"""
-    if request.path.startswith('/api/'):
-        try:
-            usage = APIUsage(
-                user_id=session.get('user_id'),
-                endpoint=request.path,
-                method=request.method,
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent', '')[:500]
-            )
-            db.session.add(usage)
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Could not log API usage: {e}")
-
-@app.route('/')
-def index():
-    """Render main page"""
-    return render_template('index.html')
-
-@app.route('/api/analyze', methods=['POST'])
-@limiter.limit("20 per hour")
-def analyze():
-    """Enhanced analyze endpoint with database integration"""
-    start_time = time.time()
-    
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
-        # Determine content type
-        if 'url' in data:
-            content = data['url']
-            content_type = 'url'
-        elif 'text' in data:
-            content = data['text']
-            content_type = 'text'
-        else:
-            return jsonify({'success': False, 'error': 'Please provide either URL or text'}), 400
-        
-        # Get user ID from session (if authenticated)
-        user_id = session.get('user_id')
-        
-        # Check for recent analysis of same URL (cache)
-        if content_type == 'url':
-            recent_analysis = Analysis.query.filter_by(url=content)\
-                .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
-                .first()
-            
-            if recent_analysis and recent_analysis.full_analysis:
-                logger.info(f"Returning cached analysis for {content}")
-                return jsonify({
-                    'success': True,
-                    'cached': True,
-                    **recent_analysis.full_analysis,
-                    'processing_time': recent_analysis.processing_time
-                })
-        
-        # Development mode: always provide full analysis but track plan selection
-        selected_plan = data.get('plan', 'free')
-        is_development = True  # Set to False for production
-        
-        # In development, everyone gets pro features
-        if is_development:
-            is_pro = True
-            analysis_mode = 'development'
-        else:
-            is_pro = selected_plan == 'pro'
-            analysis_mode = selected_plan
-        
-        # Perform analysis using existing analyzer
-        result = analyzer.analyze(content, content_type, is_pro)
-        
-        if not result.get('success'):
-            return jsonify(result), 400
-        
-        # Add plan info to result
-        result['selected_plan'] = selected_plan
-        result['analysis_mode'] = analysis_mode
-        result['development_mode'] = is_development
-        
-        # Enhanced fact checking with caching
-        if is_pro and result.get('key_claims'):
-            cached_facts = []
-            new_claims = []
-            
-            for claim in result['key_claims'][:5]:
-                claim_text = claim.get('text', claim) if isinstance(claim, dict) else claim
-                claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
-                
-                # Check cache
-                cached = FactCheckCache.query.filter_by(claim_hash=claim_hash)\
-                    .filter(FactCheckCache.expires_at > datetime.utcnow()).first()
-                
-                if cached:
-                    cached_facts.append(cached.result)
-                else:
-                    new_claims.append(claim_text)
-            
-            # Check new claims
-            if new_claims:
-                new_results = fact_checker.check_claims(new_claims)
-                
-                # Cache new results
-                for i, fc_result in enumerate(new_results):
-                    if i < len(new_claims):
-                        cache_entry = FactCheckCache(
-                            claim_hash=hashlib.sha256(new_claims[i].encode()).hexdigest(),
-                            claim_text=new_claims[i],
-                            result=fc_result,
-                            source='google',
-                            expires_at=datetime.utcnow() + timedelta(days=7)
-                        )
-                        db.session.add(cache_entry)
-                
-                cached_facts.extend(new_results)
-            
-            result['fact_checks'] = cached_facts
-        
-        # Store analysis in database
-        try:
-            # Update or create source record
-            source = None
-            if result.get('article', {}).get('domain'):
-                domain = result['article']['domain']
-                source = Source.query.filter_by(domain=domain).first()
-                if not source:
-                    # Get credibility info from SOURCE_CREDIBILITY dictionary
-                    source_info = SOURCE_CREDIBILITY.get(domain, {})
-                    source = Source(
-                        domain=domain,
-                        name=source_info.get('name', domain),
-                        credibility_score=self._map_credibility_to_score(source_info.get('credibility', 'Unknown')),
-                        political_lean=source_info.get('bias', 'Unknown')
-                    )
-                    db.session.add(source)
-                    db.session.flush()  # Get source.id without committing
-                
-                # Fix: Initialize values if None
-                if source.total_articles_analyzed is None:
-                    source.total_articles_analyzed = 0
-                if source.average_trust_score is None:
-                    source.average_trust_score = 0
-                    
-                source.total_articles_analyzed += 1
-                
-                if result.get('trust_score'):
-                    # Update average trust score
-                    if source.average_trust_score == 0:
-                        source.average_trust_score = result['trust_score']
-                    else:
-                        source.average_trust_score = (
-                            (source.average_trust_score * (source.total_articles_analyzed - 1) + 
-                             result['trust_score']) / source.total_articles_analyzed
-                        )
-            
-            # Update or create author record
-            author = None
-            if result.get('article', {}).get('author'):
-                author_name = result['article']['author']
-                author = Author.query.filter_by(name=author_name).first()
-                if not author:
-                    author = Author(
-                        name=author_name,
-                        primary_source_id=source.id if source else None
-                    )
-                    db.session.add(author)
-                    db.session.flush()
-                
-                # Fix: Initialize values if None
-                if author.total_articles_analyzed is None:
-                    author.total_articles_analyzed = 0
-                    
-                author.total_articles_analyzed += 1
-                author.last_seen = datetime.utcnow()
-                
-                # Update author credibility from analysis
-                if result.get('author_analysis', {}).get('credibility_score'):
-                    author.credibility_score = result['author_analysis']['credibility_score']
-            
-            # Create analysis record
-            analysis = Analysis(
-                user_id=user_id,
-                url=content if content_type == 'url' else None,
-                title=result.get('article', {}).get('title'),
-                trust_score=result.get('trust_score', 0),
-                bias_score=abs(result.get('bias_analysis', {}).get('political_lean', 0)) if result.get('bias_analysis') else 0,
-                clickbait_score=result.get('clickbait_score', 0),
-                full_analysis=result,
-                author_data=result.get('author_analysis', {}),
-                source_data=result.get('analysis', {}).get('source_credibility', {}),
-                bias_analysis=result.get('bias_analysis', {}),
-                fact_check_results=result.get('fact_checks', []),
-                processing_time=time.time() - start_time
-            )
-            db.session.add(analysis)
-            
-            # Commit all changes
-            db.session.commit()
-            
-            # Add analysis ID for export
-            result['analysis_id'] = str(analysis.id)
-            
-        except Exception as e:
-            logger.error(f"Database error: {str(e)}")
-            db.session.rollback()
-            # Continue even if database fails
-        
-        # Add export status
-        result['export_enabled'] = PDF_EXPORT_ENABLED
-        result['processing_time'] = time.time() - start_time
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        logger.error(f"Analysis error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Analysis failed: {str(e)}'
-        }), 500
-
-def _map_credibility_to_score(credibility_text):
-    """Map credibility text to numeric score"""
-    mapping = {
-        'High': 85,
-        'Medium': 60,
-        'Low': 30,
-        'Very Low': 10,
-        'Unknown': 50
+// static/js/ui-controller.js
+class UIController {
+    constructor() {
+        this.components = {};
+        this.analysisData = null;
     }
-    return mapping.get(credibility_text, 50)
 
-@app.route('/api/export/pdf', methods=['POST'])
-def export_pdf():
-    """Export analysis as PDF"""
-    if not PDF_EXPORT_ENABLED:
-        return jsonify({'error': 'PDF export feature not available'}), 503
-    
-    try:
-        data = request.json
-        analysis_data = data.get('analysis_data', {})
-        
-        if not analysis_data:
-            # Try to get from database
-            analysis_id = data.get('analysis_id')
-            if analysis_id:
-                analysis = Analysis.query.get(analysis_id)
-                if analysis:
-                    analysis_data = analysis.full_analysis
-        
-        if not analysis_data:
-            return jsonify({'error': 'No analysis data provided'}), 400
-        
-        # Generate PDF
-        pdf_buffer = pdf_generator.generate_analysis_pdf(analysis_data)
-        
-        # Create filename
-        domain = analysis_data.get('article', {}).get('domain', 'article')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"news_analysis_{domain}_{timestamp}.pdf"
-        
-        return send_file(
-            pdf_buffer,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
-        )
-        
-    except Exception as e:
-        logger.error(f"PDF export error: {str(e)}")
-        return jsonify({'error': 'PDF export failed'}), 500
+    registerComponent(name, component) {
+        this.components[name] = component;
+        console.log(`Component registered: ${name}`);
+    }
 
-@app.route('/api/export/json', methods=['POST'])
-def export_json():
-    """Export analysis as JSON"""
-    try:
-        data = request.json
-        analysis_data = data.get('analysis_data', {})
-        
-        if not analysis_data:
-            # Try to get from database
-            analysis_id = data.get('analysis_id')
-            if analysis_id:
-                analysis = Analysis.query.get(analysis_id)
-                if analysis:
-                    analysis_data = analysis.full_analysis
-        
-        if not analysis_data:
-            return jsonify({'error': 'No analysis data provided'}), 400
-        
-        # Create clean JSON export
-        export_data = {
-            'metadata': {
-                'exported_at': datetime.utcnow().isoformat(),
-                'version': '1.0',
-                'source': 'News Analyzer AI'
-            },
-            'analysis': analysis_data
+    buildResults(data) {
+        if (!data.success) {
+            this.showError(data.error || 'Analysis failed');
+            return;
         }
         
-        return jsonify(export_data)
+        const resultsDiv = document.getElementById('results');
+        const analyzerCard = document.querySelector('.analyzer-card');
         
-    except Exception as e:
-        logger.error(f"JSON export error: {str(e)}")
-        return jsonify({'error': 'JSON export failed'}), 500
+        // Clear everything
+        resultsDiv.innerHTML = '';
+        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
+        document.querySelectorAll('.analysis-cards-container').forEach(el => el.remove());
+        
+        // Store analysis data
+        this.analysisData = data;
+        
+        // INSIDE: Compact Enhanced Summary with Overall Assessment
+        resultsDiv.innerHTML = `
+            <div class="overall-assessment" style="padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%); border-radius: 12px; margin: 15px;">
+                <!-- Header with Source Info -->
+                <div style="margin-bottom: 20px;">
+                    <h1 style="font-size: 1.75rem; margin: 0 0 8px 0; color: #1a1a1a;">${data.article?.title || 'Article Analysis'}</h1>
+                    <div style="font-size: 0.9rem; color: #666;">
+                        <span style="font-weight: 600;">Source:</span> ${data.article?.domain || 'Unknown'} 
+                        ${data.article?.author ? `<span style="margin: 0 8px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
+                        ${data.article?.publish_date ? `<span style="margin: 0 8px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString()}` : ''}
+                    </div>
+                </div>
+                
+                <!-- Main Content Grid: Trust Score Left, Metrics Right -->
+                <div style="display: grid; grid-template-columns: 180px 1fr; gap: 25px; align-items: start;">
+                    <!-- Trust Score - Colorful -->
+                    <div style="position: relative; width: 180px; height: 180px;">
+                        <svg width="180" height="180" style="transform: rotate(-90deg);">
+                            <defs>
+                                <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'};stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'};stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="90" cy="90" r="80" fill="none" stroke="#f3f4f6" stroke-width="16"/>
+                            <circle cx="90" cy="90" r="80" fill="none" 
+                                stroke="url(#scoreGradient)" 
+                                stroke-width="16"
+                                stroke-dasharray="${(data.trust_score / 100) * 502} 502"
+                                stroke-linecap="round"
+                                filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.1))"/>
+                        </svg>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, ${data.trust_score >= 70 ? '#34d399' : data.trust_score >= 40 ? '#fbbf24' : '#f87171'}, ${data.trust_score >= 70 ? '#10b981' : data.trust_score >= 40 ? '#f59e0b' : '#ef4444'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                                ${data.trust_score || 0}%
+                            </div>
+                            <div style="font-size: 0.85rem; color: #6b7280; font-weight: 600; margin-top: -5px;">Trust Score</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Grid - 2x2 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #1a73e8;">${data.bias_analysis?.objectivity_score || 0}%</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Objectivity</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: ${data.clickbait_score > 60 ? '#ef4444' : '#10b981'};">${data.clickbait_score || 0}%</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Clickbait</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #9333ea;">${data.fact_checks?.length || 0}</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Facts Checked</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #059669;">${this.getCredibilityRating(data)}</div>
+                            <div style="color: #6b7280; font-size: 0.85rem;">Source</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Overall Assessment Text -->
+                <div style="background: white; padding: 18px; border-radius: 8px; margin: 20px 0 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                    <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.1rem;">Overall Assessment</h3>
+                    <p style="line-height: 1.6; color: #374151; margin: 0; font-size: 0.95rem;">
+                        ${this.generateAssessment(data)}
+                    </p>
+                </div>
+                
+                <!-- Key Findings - Compact -->
+                ${this.generateKeyFindings(data)}
+                
+                <!-- Export Buttons -->
+                <div class="export-buttons" style="
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e5e7eb;
+                    justify-content: center;
+                ">
+                    <button onclick="window.exportToPDF && window.exportToPDF()" class="btn btn-primary" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 12px 24px;
+                        font-size: 16px;
+                        background: #1e40af;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#1e3a8a'" onmouseout="this.style.background='#1e40af'">
+                        <span>📄</span><span>Export PDF Report</span>
+                    </button>
+                    <button onclick="window.exportToJSON && window.exportToJSON()" class="btn btn-secondary" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 12px 24px;
+                        font-size: 16px;
+                        background: #6b7280;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+                        <span>{ }</span><span>Export JSON</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        resultsDiv.classList.remove('hidden');
+        
+        // OUTSIDE: Detailed Analysis using CARDS
+        this.renderDetailedAnalysisWithCards(data);
+        
+        // Show resources
+        this.showResources(data);
+        
+        // Set up export functions
+        window.exportToPDF = () => {
+            if (this.components.exportHandler) {
+                this.components.exportHandler.exportPDF(data);
+            }
+        };
+        
+        window.exportToJSON = () => {
+            if (this.components.exportHandler) {
+                this.components.exportHandler.exportJSON(data);
+            }
+        };
+    }
 
-@app.route('/api/history')
-def get_history():
-    """Get user's analysis history"""
-    user_id = session.get('user_id')
-    
-    # For now, return recent analyses for all users if not logged in
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    
-    query = Analysis.query
-    if user_id:
-        query = query.filter_by(user_id=user_id)
-    
-    analyses = query.order_by(Analysis.created_at.desc())\
-        .paginate(page=page, per_page=per_page, error_out=False)
-    
-    return jsonify({
-        'analyses': [{
-            'id': a.id,
-            'url': a.url,
-            'title': a.title,
-            'trust_score': a.trust_score,
-            'created_at': a.created_at.isoformat()
-        } for a in analyses.items],
-        'total': analyses.total,
-        'pages': analyses.pages,
-        'current_page': page
-    })
-
-@app.route('/api/sources/stats')
-def source_statistics():
-    """Get source credibility statistics"""
-    sources = Source.query.filter(Source.total_articles_analyzed > 0)\
-        .order_by(Source.average_trust_score.desc())\
-        .limit(20).all()
-    
-    return jsonify({
-        'sources': [{
-            'domain': s.domain,
-            'name': s.name,
-            'credibility_score': s.credibility_score,
-            'political_lean': s.political_lean,
-            'articles_analyzed': s.total_articles_analyzed,
-            'average_trust_score': round(s.average_trust_score, 1) if s.average_trust_score else 0
-        } for s in sources]
-    })
-
-@app.route('/api/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    try:
-        # Check database connection
-        db.session.execute('SELECT 1')
-        db_status = 'healthy'
-    except:
-        db_status = 'unhealthy'
-    
-    return jsonify({
-        'status': 'healthy',
-        'service': 'news-analyzer',
-        'version': '2.0.0',
-        'database': db_status,
-        'pdf_export_enabled': PDF_EXPORT_ENABLED,
-        'development_mode': True,
-        'features': {
-            'ai_analysis': bool(os.environ.get('OPENAI_API_KEY')),
-            'fact_checking': bool(os.environ.get('GOOGLE_FACT_CHECK_API_KEY')),
-            'news_api': bool(os.environ.get('NEWS_API_KEY'))
+    renderDetailedAnalysisWithCards(data) {
+        console.log('Rendering detailed analysis with cards layout');
+        
+        // Create container for cards layout
+        const container = document.createElement('div');
+        container.className = 'detailed-analysis-container';
+        container.id = 'detailedAnalysisContainer';
+        
+        // Add section header
+        const header = document.createElement('h2');
+        header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem; color: #1f2937;';
+        header.textContent = 'Detailed Analysis';
+        container.appendChild(header);
+        
+        // Add executive summary if pro user
+        if (data.is_pro && this.components.executiveSummary) {
+            const summarySection = document.createElement('div');
+            summarySection.className = 'section-container';
+            summarySection.style.cssText = 'max-width: 1200px; margin: 0 auto 40px auto; padding: 0 20px;';
+            
+            const summaryHeader = document.createElement('h3');
+            summaryHeader.className = 'section-header';
+            summaryHeader.innerHTML = '<span>📝</span> Executive Summary';
+            summarySection.appendChild(summaryHeader);
+            
+            const summaryContent = this.components.executiveSummary.render(data);
+            summarySection.appendChild(summaryContent);
+            container.appendChild(summarySection);
         }
-    })
+        
+        // Create cards grid wrapper
+        const cardsWrapper = document.createElement('div');
+        cardsWrapper.className = 'cards-grid-wrapper';
+        
+        // Define cards to render
+        const cardComponents = [
+            { name: 'trustScore', data: data },
+            { name: 'biasAnalysis', data: data },
+            { name: 'factChecker', data: data },
+            { name: 'authorCard', data: data },
+            { name: 'clickbaitDetector', data: data },
+            { name: 'sourceCard', data: data }  // You might need to create this component
+        ];
+        
+        // Render each card
+        cardComponents.forEach(({ name, data }) => {
+            if (this.components[name]) {
+                try {
+                    const cardElement = this.components[name].render(data);
+                    if (cardElement) {
+                        // Wrap in a standalone card container if needed
+                        const cardContainer = document.createElement('div');
+                        cardContainer.className = 'analysis-card-standalone';
+                        cardContainer.appendChild(cardElement);
+                        cardsWrapper.appendChild(cardContainer);
+                    }
+                } catch (error) {
+                    console.error(`Error rendering ${name}:`, error);
+                }
+            } else {
+                console.warn(`Component ${name} not found`);
+            }
+        });
+        
+        container.appendChild(cardsWrapper);
+        
+        // Insert after analyzer card
+        const analyzerCard = document.querySelector('.analyzer-card');
+        if (analyzerCard && analyzerCard.parentNode) {
+            analyzerCard.parentNode.insertBefore(container, analyzerCard.nextSibling);
+        } else {
+            document.querySelector('main').appendChild(container);
+        }
+        
+        // Add export handler if available
+        if (data.export_enabled && this.components.exportHandler) {
+            setTimeout(() => {
+                this.components.exportHandler.mount(data);
+            }, 100);
+        }
+    }
 
-# Error handlers
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({'error': 'Not found'}), 404
+    generateAssessment(data) {
+        const trustScore = data.trust_score || 0;
+        const source = data.article?.domain || 'this source';
+        const author = data.article?.author || 'the author';
+        
+        let assessment = `This article from <strong>${source}</strong>`;
+        if (data.article?.author) {
+            assessment += ` by <strong>${author}</strong>`;
+        }
+        
+        if (trustScore >= 70) {
+            assessment += ` demonstrates high credibility with a trust score of ${trustScore}%. The content appears to be well-researched and reliable.`;
+        } else if (trustScore >= 40) {
+            assessment += ` shows moderate credibility with a trust score of ${trustScore}%. Some aspects of the article require careful consideration.`;
+        } else {
+            assessment += ` raises significant credibility concerns with a trust score of only ${trustScore}%. Readers should verify claims through additional sources.`;
+        }
+        
+        // Add bias assessment
+        if (data.bias_analysis) {
+            const bias = Math.abs(data.bias_analysis.political_lean || 0);
+            if (bias > 60) {
+                assessment += ` The article shows strong political bias, which may affect its objectivity.`;
+            } else if (bias > 30) {
+                assessment += ` Some political lean is detected, but within acceptable journalistic standards.`;
+            }
+        }
+        
+        // Add fact check summary
+        if (data.fact_checks?.length > 0) {
+            const verified = data.fact_checks.filter(fc => {
+                const verdict = (fc.verdict || fc.result || '').toLowerCase();
+                return verdict.includes('true') || verdict.includes('verified') || verdict.includes('correct');
+            }).length;
+            assessment += ` Of ${data.fact_checks.length} key claims fact-checked, ${verified} were verified as accurate.`;
+        }
+        
+        return assessment;
+    }
 
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({'error': 'Internal server error'}), 500
+    generateKeyFindings(data) {
+        const findings = [];
+        
+        // Source credibility finding
+        if (data.analysis?.source_credibility?.rating) {
+            findings.push({
+                icon: '🏢',
+                text: `Source rated as <strong>${data.analysis.source_credibility.rating}</strong> credibility`,
+                type: data.analysis.source_credibility.rating === 'High' ? 'positive' : 'neutral'
+            });
+        }
+        
+        // Bias finding
+        if (data.bias_analysis?.overall_bias) {
+            findings.push({
+                icon: '⚖️',
+                text: `${data.bias_analysis.overall_bias} detected`,
+                type: data.bias_analysis.overall_bias.includes('Center') ? 'positive' : 'neutral'
+            });
+        }
+        
+        // Manipulation tactics
+        if (data.bias_analysis?.manipulation_tactics?.length > 0) {
+            findings.push({
+                icon: '⚠️',
+                text: `${data.bias_analysis.manipulation_tactics.length} manipulation tactics identified`,
+                type: 'negative'
+            });
+        }
+        
+        // Clickbait
+        if (data.clickbait_score > 60) {
+            findings.push({
+                icon: '🎣',
+                text: 'High clickbait score detected in headline',
+                type: 'negative'
+            });
+        }
+        
+        // Fact checking results
+        if (data.fact_checks?.length > 0) {
+            const verified = data.fact_checks.filter(fc => 
+                fc.verdict?.toLowerCase().includes('true') || 
+                fc.verdict?.toLowerCase().includes('verified')
+            ).length;
+            const accuracy = Math.round((verified / data.fact_checks.length) * 100);
+            findings.push({
+                icon: '✓',
+                text: `${accuracy}% fact accuracy (${verified}/${data.fact_checks.length} claims verified)`,
+                type: accuracy >= 80 ? 'positive' : accuracy >= 50 ? 'neutral' : 'negative'
+            });
+        }
+        
+        if (findings.length === 0) return '';
+        
+        return `
+            <div style="margin-top: 15px;">
+                <h3 style="color: #1a1a1a; margin: 0 0 10px 0; font-size: 1.05rem;">Key Findings</h3>
+                <div style="display: grid; gap: 8px;">
+                    ${findings.map(f => `
+                        <div style="display: flex; align-items: center; padding: 10px; background: ${
+                            f.type === 'positive' ? '#f0fdf4' : 
+                            f.type === 'negative' ? '#fef2f2' : '#f9fafb'
+                        }; border-radius: 6px; border-left: 3px solid ${
+                            f.type === 'positive' ? '#10b981' : 
+                            f.type === 'negative' ? '#ef4444' : '#6b7280'
+                        };">
+                            <span style="font-size: 1.2rem; margin-right: 10px;">${f.icon}</span>
+                            <span style="color: #374151; font-size: 0.9rem;">${f.text}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
 
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({
-        'error': 'Rate limit exceeded',
-        'message': str(e.description)
-    }), 429
+    getCredibilityRating(data) {
+        if (data.analysis?.source_credibility?.rating) {
+            return data.analysis.source_credibility.rating;
+        }
+        if (data.trust_score >= 70) return 'High';
+        if (data.trust_score >= 40) return 'Medium';
+        return 'Low';
+    }
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('DEBUG', 'True').lower() == 'true'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    showResources(data) {
+        const resourcesDiv = document.getElementById('resources');
+        if (!resourcesDiv) return;
+        
+        const resourcesList = resourcesDiv.querySelector('.resource-list') || document.getElementById('resourcesList');
+        if (resourcesList) {
+            const resources = [];
+            if (data.is_pro) resources.push('OpenAI GPT-3.5');
+            if (data.fact_checks?.length) resources.push('Google Fact Check API');
+            resources.push('Source Credibility Database');
+            
+            resourcesList.innerHTML = resources.map(r => 
+                `<span class="resource-chip">${r}</span>`
+            ).join('');
+        }
+        
+        resourcesDiv.classList.remove('hidden');
+        
+        // Move resources to the detailed analysis container
+        const detailedContainer = document.getElementById('detailedAnalysisContainer');
+        if (detailedContainer && resourcesDiv.parentNode !== detailedContainer) {
+            detailedContainer.appendChild(resourcesDiv);
+        }
+    }
+
+    showError(message) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = `
+            <div class="error">
+                <strong>⚠️ Analysis Error</strong>
+                <p>${message}</p>
+            </div>
+        `;
+        resultsDiv.classList.remove('hidden');
+    }
+}
+
+window.UI = new UIController();
