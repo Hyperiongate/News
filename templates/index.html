@@ -1,147 +1,228 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Analyzer - AI-Powered Media Analysis</title>
-    
-    <!-- CSS Files -->
+    <title>News Analyzer - Facts & Fakes AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+    
+    <!-- Component styles -->
+    <link rel="stylesheet" href="/static/css/components/pricing-dropdown.css">
     <link rel="stylesheet" href="/static/css/components/trust-score.css">
+    <link rel="stylesheet" href="/static/css/components/executive-summary.css">
+    <link rel="stylesheet" href="/static/css/components/analysis-cards.css">
+    <link rel="stylesheet" href="/static/css/components/author-card.css">
     <link rel="stylesheet" href="/static/css/components/bias-analysis.css">
     <link rel="stylesheet" href="/static/css/components/fact-checker.css">
-    <link rel="stylesheet" href="/static/css/components/author-card.css">
     <link rel="stylesheet" href="/static/css/components/clickbait-detector.css">
     <link rel="stylesheet" href="/static/css/components/export-handler.css">
+    <link rel="stylesheet" href="/static/css/components/article-info.css">
+    <link rel="stylesheet" href="/static/css/components/separated-layout.css">
     
-    <!-- Enhanced Dropdowns CSS -->
-    <link rel="stylesheet" href="/static/css/components/analysis-dropdowns-enhanced.css">
+    <!-- Equal height cards fix -->
+    <style>
+        /* Equal height cards using CSS Grid */
+        .cards-grid-wrapper {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+            max-width: 900px !important;
+            margin: 0 auto 40px auto !important;
+            padding: 0 20px !important;
+            grid-auto-rows: 1fr !important; /* This makes all rows equal height */
+        }
+
+        /* Make cards stretch to fill their grid cell */
+        .analysis-card-standalone {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 100% !important;
+            min-height: 200px !important;
+        }
+
+        /* Make the summary section grow to fill space */
+        .analysis-card-standalone .card-summary {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+        }
+
+        /* Ensure expanded cards can grow properly */
+        .analysis-card-standalone.expanded {
+            height: auto !important;
+            align-self: start !important;
+        }
+        
+        /* Keep the card details hidden initially */
+        .analysis-card-standalone .card-details {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
-    <header>
-        <div class="container">
-            <nav>
-                <div class="logo">
-                    <span class="logo-icon">🔍</span>
-                    <span class="logo-text">News Analyzer</span>
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo-section">
+                <a href="/" class="logo">
+                    <span>🔍</span>
+                    <span>Facts & Fakes AI</span>
+                </a>
+                <div class="nav-pills">
+                    <a href="#" class="nav-pill active">News Analyzer</a>
+                    <a href="#" class="nav-pill">AI Detector</a>
+                    <a href="#" class="nav-pill">Plagiarism Check</a>
+                    <a href="#" class="nav-pill">Deepfake Detection</a>
                 </div>
-                <div class="nav-links">
-                    <a href="#features">Features</a>
-                    <a href="#how-it-works">How it Works</a>
-                    <a href="#pricing">Pricing</a>
-                </div>
-            </nav>
-        </div>
+            </div>
+            <!-- Pricing dropdown mount point -->
+            <div id="pricingDropdownMount"></div>
+        </nav>
     </header>
 
-    <!-- Main Content -->
-    <main>
-        <div class="container">
-            <!-- Hero Section -->
-            <section class="hero">
-                <h1>AI-Powered News Analysis</h1>
-                <p class="hero-subtitle">Detect bias, verify facts, and assess credibility with advanced AI</p>
-            </section>
+    <!-- Main content -->
+    <main class="main-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">News Article Analyzer</h1>
+            <p class="hero-subtitle">
+                AI-powered fact-checking and bias detection to help you identify trustworthy news sources
+            </p>
+        </div>
 
-            <!-- Analyzer Card -->
-            <div class="analyzer-card">
-                <form id="analyzeForm">
-                    <div class="input-group">
-                        <input type="url" id="urlInput" placeholder="Paste article URL here..." required>
-                        <button type="submit" id="analyzeBtn">
-                            <span class="btn-text">Analyze</span>
-                            <span class="btn-loading hidden">Analyzing...</span>
-                        </button>
-                    </div>
-                    
-                    <div class="option-toggle">
-                        <label>
-                            <input type="checkbox" id="textToggle">
-                            <span>Paste article text instead</span>
-                        </label>
-                    </div>
-                    
-                    <div class="text-input-container hidden" id="textInputContainer">
-                        <textarea id="textInput" placeholder="Paste article text here..." rows="6"></textarea>
-                    </div>
-                </form>
+        <!-- Features Grid -->
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">AI Analysis</div>
+                <div class="feature-desc">OpenAI-powered content analysis</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✓</div>
+                <div class="feature-title">Fact Checking</div>
+                <div class="feature-desc">Google Fact Check API integration</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Bias Detection</div>
+                <div class="feature-desc">Political lean & manipulation tactics</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏢</div>
+                <div class="feature-title">Source Rating</div>
+                <div class="feature-desc">Credibility database of news sources</div>
+            </div>
+        </div>
+
+        <!-- Analyzer Card -->
+        <div class="analyzer-card">
+            <!-- Input tabs -->
+            <div class="input-tabs">
+                <button class="tab-btn active" data-tab="url">Analyze URL</button>
+                <button class="tab-btn" data-tab="text">Paste Text</button>
             </div>
 
-            <!-- Results Section -->
-            <div id="results" class="results-section hidden"></div>
-
-            <!-- Resources Section -->
-            <div id="resources" class="resources-section hidden">
-                <h3>Analysis Resources Used</h3>
-                <div class="resource-list"></div>
+            <!-- URL input -->
+            <div id="urlInputGroup" class="input-group">
+                <label class="input-label">Article URL</label>
+                <input type="url" 
+                       id="urlInput" 
+                       placeholder="https://example.com/news-article" 
+                       class="url-input">
+                <div class="button-group">
+                    <button id="analyzeBtn" class="btn btn-primary">
+                        <span>🔍</span>
+                        <span>Analyze Article</span>
+                    </button>
+                    <button id="resetBtn" class="btn btn-secondary">Reset</button>
+                </div>
             </div>
+
+            <!-- Text input (hidden by default) -->
+            <div id="textInputGroup" class="input-group hidden">
+                <label class="input-label">Article Text</label>
+                <textarea id="textInput" 
+                          placeholder="Paste the complete article text here..." 
+                          class="text-input"
+                          rows="10"></textarea>
+                <div class="button-group">
+                    <button id="analyzeTextBtn" class="btn btn-primary">
+                        <span>🔍</span>
+                        <span>Analyze Text</span>
+                    </button>
+                    <button id="resetTextBtn" class="btn btn-secondary">Reset</button>
+                </div>
+            </div>
+
+            <!-- Progress bar container -->
+            <div id="progressContainer"></div>
+
+            <!-- Loading state (fallback) -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing article...</p>
+            </div>
+
+            <!-- Results will be inserted here by JavaScript -->
+            <div id="results" class="results hidden"></div>
+        </div>
+
+        <!-- Detailed analysis container will be inserted here by JavaScript -->
+        
+        <!-- Resources section (initially inside analyzer-card, will be moved by JS) -->
+        <div id="resources" class="resources hidden">
+            <h4>Resources Used</h4>
+            <div id="resourcesList" class="resource-list"></div>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 News Analyzer. Empowering informed media consumption.</p>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
-    <!-- Core JavaScript -->
+    <!-- Core modules -->
     <script src="/static/js/main.js"></script>
-    
-    <!-- Component Scripts -->
+    <script src="/static/js/ui-controller.js"></script>
+
+    <!-- Components -->
+    <script src="/static/js/components/pricing-dropdown.js"></script>
     <script src="/static/js/components/trust-score.js"></script>
+    <script src="/static/js/components/executive-summary.js"></script>
+    <script src="/static/js/components/analysis-cards.js"></script>
+    <script src="/static/js/components/author-card.js"></script>
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
-    <script src="/static/js/components/author-card.js"></script>
     <script src="/static/js/components/clickbait-detector.js"></script>
     <script src="/static/js/components/export-handler.js"></script>
-    
-    <!-- Enhanced Dropdowns Component - MUST be loaded before UI Controller -->
-    <script src="/static/js/components/analysis-dropdowns-enhanced.js"></script>
-    
-    <!-- UI Controller - Load AFTER all components -->
-    <script src="/static/js/ui-controller.js"></script>
-    
-    <!-- Component Registration Verification -->
+
+    <!-- Initialize components -->
     <script>
-    // Ensure all components are properly registered
-    document.addEventListener('DOMContentLoaded', function() {
-        // Give components time to register
-        setTimeout(() => {
-            if (window.UI) {
-                const components = Object.keys(window.UI.components);
-                console.log('Components loaded:', components);
-                
-                // Verify critical components are registered
-                const requiredComponents = [
-                    'trustScore',
-                    'biasAnalysis',
-                    'factChecker',
-                    'authorCard',
-                    'clickbaitDetector',
-                    'analysisDropdowns'
-                ];
-                
-                const missingComponents = requiredComponents.filter(comp => !window.UI.components[comp]);
-                
-                if (missingComponents.length > 0) {
-                    console.error('Missing components:', missingComponents);
-                    
-                    // Try to manually register analysisDropdowns if it's missing
-                    if (missingComponents.includes('analysisDropdowns') && window.AnalysisDropdowns) {
-                        window.UI.registerComponent('analysisDropdowns', new window.AnalysisDropdowns());
-                        console.log('Manually registered analysisDropdowns component');
-                    }
-                } else {
-                    console.log('All required components registered successfully');
-                }
-            } else {
-                console.error('UI Controller not initialized');
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mount pricing dropdown
+            if (window.pricingDropdown) {
+                window.pricingDropdown.mount('pricingDropdownMount');
             }
-        }, 200);
-    });
+
+            // Components are auto-registered in their respective files
+            console.log('Components loaded:', Object.keys(window.UI?.components || {}));
+            
+            // Add expanded class handling for cards
+            setTimeout(() => {
+                document.addEventListener('click', function(e) {
+                    const card = e.target.closest('.analysis-card-standalone');
+                    if (card) {
+                        const detailsDiv = card.querySelector('.card-details');
+                        if (detailsDiv) {
+                            const isExpanded = detailsDiv.style.display !== 'none';
+                            if (isExpanded) {
+                                card.classList.remove('expanded');
+                            } else {
+                                card.classList.add('expanded');
+                            }
+                        }
+                    }
+                });
+            }, 100);
+        });
     </script>
 </body>
 </html>
