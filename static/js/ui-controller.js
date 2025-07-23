@@ -145,7 +145,7 @@ class UIController {
         `;
         resultsDiv.classList.remove('hidden');
         
-        // OUTSIDE: Detailed Analysis using Dropdown Layout
+        // OUTSIDE: Detailed Analysis using Enhanced Dropdown Layout
         this.renderDetailedAnalysis(data);
         
         // Show resources
@@ -166,7 +166,7 @@ class UIController {
     }
 
     renderDetailedAnalysis(data) {
-        console.log('Rendering detailed analysis with dropdown layout');
+        console.log('Rendering detailed analysis with enhanced dropdown layout');
         
         // Create container for dropdown layout
         const container = document.createElement('div');
@@ -195,15 +195,17 @@ class UIController {
             container.appendChild(summarySection);
         }
         
-        // Use the new dropdown layout component if available
+        // Use the enhanced dropdown layout component
         if (this.components.analysisDropdowns) {
             const dropdownsContainer = this.components.analysisDropdowns.render(data);
             container.appendChild(dropdownsContainer);
         } else {
-            // Fallback: create dropdowns manually
-            console.warn('AnalysisDropdowns component not found, creating manual dropdowns');
-            const dropdownsContainer = this.createManualDropdowns(data);
-            container.appendChild(dropdownsContainer);
+            console.warn('AnalysisDropdowns component not found');
+            // Fallback to basic message
+            const fallback = document.createElement('div');
+            fallback.style.cssText = 'text-align: center; padding: 2rem; color: #6b7280;';
+            fallback.textContent = 'Detailed analysis components loading...';
+            container.appendChild(fallback);
         }
         
         // Insert after analyzer card
@@ -220,132 +222,6 @@ class UIController {
                 this.components.exportHandler.mount(data);
             }, 100);
         }
-    }
-
-    createManualDropdowns(data) {
-        // Fallback method to create dropdowns if component is not available
-        const container = document.createElement('div');
-        container.className = 'analysis-dropdowns-container';
-        container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 0 20px;';
-        
-        // Define dropdown configurations
-        const dropdownConfigs = [
-            {
-                title: 'Trust Score Analysis',
-                icon: '🎯',
-                component: 'trustScore',
-                preview: `Trust: ${data.trust_score || 0}%`
-            },
-            {
-                title: 'Bias Analysis',
-                icon: '⚖️',
-                component: 'biasAnalysis',
-                preview: data.bias_analysis?.overall_bias || 'Unknown'
-            },
-            {
-                title: 'Fact Checking Results',
-                icon: '✓',
-                component: 'factChecker',
-                preview: `${data.fact_checks?.length || 0} claims checked`
-            },
-            {
-                title: 'Author Credibility',
-                icon: '👤',
-                component: 'authorCard',
-                preview: data.author_analysis?.name || 'Unknown author'
-            },
-            {
-                title: 'Clickbait Detection',
-                icon: '🎣',
-                component: 'clickbaitDetector',
-                preview: `Score: ${data.clickbait_score || 0}%`
-            }
-        ];
-        
-        // Create each dropdown
-        dropdownConfigs.forEach((config, index) => {
-            const dropdown = document.createElement('div');
-            dropdown.className = 'analysis-dropdown';
-            dropdown.style.cssText = `
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                margin-bottom: 16px;
-                overflow: hidden;
-                transition: box-shadow 0.2s ease;
-            `;
-            
-            // Create header
-            const header = document.createElement('div');
-            header.className = 'dropdown-header';
-            header.style.cssText = `
-                padding: 20px 24px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-                user-select: none;
-                transition: background-color 0.2s ease;
-            `;
-            
-            header.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 24px;">${config.icon}</span>
-                    <span style="font-size: 18px; font-weight: 600; color: #1f2937;">${config.title}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <span style="font-size: 14px; color: #6b7280;">${config.preview}</span>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="color: #6b7280; transition: transform 0.3s ease;">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                    </svg>
-                </div>
-            `;
-            
-            // Create content
-            const content = document.createElement('div');
-            content.className = 'dropdown-content';
-            content.style.cssText = `
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s ease-out;
-                border-top: 1px solid #e5e7eb;
-            `;
-            
-            // Render component content if available
-            if (config.component && this.components[config.component]) {
-                const componentContent = this.components[config.component].render(data);
-                componentContent.style.padding = '24px';
-                content.appendChild(componentContent);
-            }
-            
-            dropdown.appendChild(header);
-            dropdown.appendChild(content);
-            
-            // Add click handler
-            header.addEventListener('click', () => {
-                const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
-                const arrow = header.querySelector('svg');
-                
-                if (isOpen) {
-                    content.style.maxHeight = '0';
-                    arrow.style.transform = 'rotate(0)';
-                } else {
-                    content.style.maxHeight = content.scrollHeight + 'px';
-                    arrow.style.transform = 'rotate(180deg)';
-                }
-            });
-            
-            // Auto-open first two dropdowns
-            if (index < 2) {
-                setTimeout(() => {
-                    header.click();
-                }, 100 + (index * 100));
-            }
-            
-            container.appendChild(dropdown);
-        });
-        
-        return container;
     }
 
     generateAssessment(data) {
@@ -424,6 +300,20 @@ class UIController {
                 icon: '🎣',
                 text: 'High clickbait score detected in headline',
                 type: 'negative'
+            });
+        }
+        
+        // Fact checking results
+        if (data.fact_checks?.length > 0) {
+            const verified = data.fact_checks.filter(fc => 
+                fc.verdict?.toLowerCase().includes('true') || 
+                fc.verdict?.toLowerCase().includes('verified')
+            ).length;
+            const accuracy = Math.round((verified / data.fact_checks.length) * 100);
+            findings.push({
+                icon: '✓',
+                text: `${accuracy}% fact accuracy (${verified}/${data.fact_checks.length} claims verified)`,
+                type: accuracy >= 80 ? 'positive' : accuracy >= 50 ? 'neutral' : 'negative'
             });
         }
         
