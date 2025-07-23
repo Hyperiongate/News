@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +20,7 @@
     <link rel="stylesheet" href="/static/css/components/article-info.css">
     <link rel="stylesheet" href="/static/css/components/separated-layout.css">
     
-    <!-- Equal height cards fix -->
+    <!-- Equal height cards fix and Analysis Cards styles -->
     <style>
         /* Equal height cards using CSS Grid */
         .cards-grid-wrapper {
@@ -59,6 +58,242 @@
         /* Keep the card details hidden initially */
         .analysis-card-standalone .card-details {
             display: none;
+        }
+        
+        /* Analysis Cards Styles */
+        .analysis-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+        
+        .analysis-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .analysis-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .card-icon {
+            font-size: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .card-content {
+            color: #6b7280;
+        }
+        
+        .card-summary {
+            margin-bottom: 1rem;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+        }
+        
+        .metric-label {
+            color: #6b7280;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .preview-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .preview-badge.high,
+        .preview-badge.verified {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .preview-badge.medium {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .preview-badge.low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .preview-badge.left {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .preview-badge.right {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .preview-badge.center {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        /* Source card specific */
+        .source-info {
+            margin-bottom: 1rem;
+        }
+        
+        .source-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .credibility-badge {
+            display: inline-block;
+            padding: 0.375rem 0.875rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .credibility-badge.high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .credibility-badge.medium {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .credibility-badge.low,
+        .credibility-badge.unknown {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .source-metrics {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .source-description {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        
+        /* Card details section */
+        .card-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        /* Bias meter styles */
+        .bias-meter {
+            margin: 1rem 0;
+        }
+        
+        .meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        
+        .meter-track {
+            height: 8px;
+            background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%);
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .meter-indicator {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border: 3px solid #111827;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            transition: left 0.5s ease;
+        }
+        
+        /* Fact check styles */
+        .fact-check-item {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .fc-verdict {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .fc-verdict.true {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .fc-verdict.false {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .fc-verdict.mixed {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .fc-claim {
+            font-style: italic;
+            color: #374151;
+            margin: 0.5rem 0;
+        }
+        
+        .fc-explanation {
+            font-size: 0.875rem;
+            color: #6b7280;
         }
     </style>
 </head>
