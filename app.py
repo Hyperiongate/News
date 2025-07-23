@@ -169,7 +169,7 @@ def analyze():
         if content_type == 'url':
             try:
                 recent_analysis = Analysis.query.filter_by(url=content)\
-                    .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
+                    .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=0))\
                     .first()
                 
                 if recent_analysis and recent_analysis.full_analysis:
