@@ -1,7 +1,9 @@
 /* static/css/components/analysis-cards.css */
 
 .analysis-cards-container {
-    margin: 2rem 0;
+    margin: 2rem auto;
+    width: 100%;
+    max-width: 100%;
 }
 
 .analysis-cards-header {
@@ -18,36 +20,17 @@
     margin: 0;
 }
 
-.expand-all-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.expand-all-btn:hover {
-    background: #e5e7eb;
-}
-
-/* Cards grid - FIXED FOR 2 COLUMNS */
+/* Cards grid - FULL WIDTH 2 COLUMNS */
 .analysis-cards-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
+    width: 100%;
+    padding: 0 2rem;
+    box-sizing: border-box;
 }
 
-/* Individual card - UNIFORM HEIGHT */
+/* Individual card */
 .analysis-card {
     background: white;
     border: 2px solid #e5e7eb;
@@ -56,7 +39,6 @@
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 120px;
 }
 
@@ -65,7 +47,12 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* Card header - CONSISTENT HEIGHT */
+/* When card is expanded */
+.analysis-card[data-collapsed="false"] {
+    min-height: auto;
+}
+
+/* Card header - CLICKABLE */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -111,7 +98,7 @@
     color: #6b7280;
 }
 
-/* PREVIEW BADGE - CONSISTENT SIZING */
+/* PREVIEW BADGE */
 .preview-badge {
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
@@ -158,21 +145,37 @@
     color: #374151;
 }
 
+/* DROPDOWN TOGGLE ARROW */
 .card-toggle {
     font-size: 1rem;
     color: #6b7280;
     transition: transform 0.3s ease;
+    font-weight: bold;
 }
 
-/* Card content - SCROLLABLE WHEN EXPANDED */
+/* Card content - COLLAPSIBLE */
 .card-content {
     padding: 0 1.5rem 1.5rem;
     border-top: 1px solid #e5e7eb;
     flex: 1;
-    display: flex;
-    flex-direction: column;
     overflow-y: auto;
     max-height: 600px;
+    transition: all 0.3s ease;
+}
+
+/* Hide content when collapsed */
+.analysis-card[data-collapsed="true"] .card-content {
+    display: none;
+}
+
+/* Show content when expanded */
+.analysis-card[data-collapsed="false"] .card-content {
+    display: block;
+}
+
+/* Rotate arrow when expanded */
+.analysis-card[data-collapsed="false"] .card-toggle {
+    transform: rotate(180deg);
 }
 
 /* Bias meter */
@@ -813,10 +816,17 @@
     margin: 0.25rem 0;
 }
 
+/* Container for cards inside the detailed analysis section */
+.detailed-analysis-container .analysis-cards-container {
+    width: 100%;
+    max-width: none;
+}
+
 /* Tablet responsive (1 column) */
 @media (max-width: 1024px) {
     .analysis-cards-grid {
         grid-template-columns: 1fr;
+        padding: 0 1rem;
     }
 }
 
@@ -825,7 +835,7 @@
     .analysis-cards-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
-        padding: 0;
+        padding: 0 0.5rem;
     }
     
     .card-header {
