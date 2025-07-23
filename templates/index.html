@@ -20,14 +20,14 @@
     <link rel="stylesheet" href="/static/css/components/article-info.css">
     <link rel="stylesheet" href="/static/css/components/separated-layout.css">
     
-    <!-- Equal height cards fix and Analysis Cards styles -->
+    <!-- Enhanced Analysis Cards Styles -->
     <style>
-        /* Make all cards equal height with fixed grid */
+        /* Reset and improve card grid */
         .cards-grid-wrapper {
             display: grid !important;
             grid-template-columns: repeat(2, 1fr) !important;
-            gap: 24px !important;
-            max-width: 1000px !important;
+            gap: 20px !important;
+            max-width: 1200px !important;
             margin: 0 auto 40px auto !important;
             padding: 0 20px !important;
         }
@@ -35,386 +35,398 @@
         @media (max-width: 768px) {
             .cards-grid-wrapper {
                 grid-template-columns: 1fr !important;
+                gap: 16px !important;
             }
         }
 
-        /* Fixed height card containers */
+        /* Analysis card container */
         .analysis-card-standalone {
-            height: 280px !important;
-        }
-        
-        .analysis-card-standalone .analysis-card {
-            height: 100% !important;
-            margin: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        
-        /* Ensure content doesn't overflow */
-        .analysis-card-standalone .card-content {
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+            transition: all 0.3s ease !important;
             overflow: hidden !important;
-        }
-        
-        /* Hide details by default */
-        .analysis-card-standalone .card-details {
-            display: none;
-        }
-        
-        /* When expanded, allow natural height */
-        .analysis-card-standalone.expanded {
+            cursor: pointer !important;
+            position: relative !important;
+            min-height: 180px !important;
             height: auto !important;
+            border: 2px solid transparent !important;
         }
         
-        .analysis-card-standalone.expanded .analysis-card {
-            height: auto !important;
-        }
-        
-        .analysis-card-standalone.expanded .card-details {
-            display: block;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #e5e7eb;
+        .analysis-card-standalone:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+            transform: translateY(-2px) !important;
+            border-color: #e5e7eb !important;
         }
 
-        /* Make the summary section grow to fill space */
-        .analysis-card-standalone .card-summary {
-            flex: 1 !important;
+        /* Remove inner .analysis-card div styling conflicts */
+        .analysis-card-standalone .analysis-card {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+        }
+
+        /* Card header with colored accent */
+        .analysis-card-standalone .card-header {
             display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 20px !important;
+            background: #f8fafc !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            margin: 0 !important;
         }
 
-        /* Ensure expanded cards can grow properly */
-        .analysis-card-standalone.expanded {
-            height: auto !important;
-            align-self: start !important;
+        .analysis-card-standalone h3 {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            margin: 0 !important;
+            font-size: 1.125rem !important;
+            font-weight: 600 !important;
+            color: #1f2937 !important;
         }
-        
-        /* Keep the card details hidden initially */
+
+        .analysis-card-standalone h3 span:first-child {
+            font-size: 1.5rem !important;
+        }
+
+        /* Expand/collapse icon */
+        .expand-icon {
+            font-size: 1rem !important;
+            color: #6b7280 !important;
+            transition: transform 0.3s ease !important;
+        }
+
+        .analysis-card-standalone.expanded .expand-icon {
+            transform: rotate(180deg) !important;
+        }
+
+        /* Card summary section */
+        .analysis-card-standalone .card-summary {
+            padding: 20px !important;
+            background: white !important;
+            min-height: 80px !important;
+        }
+
+        .analysis-card-standalone .card-summary p {
+            margin: 0 0 8px 0 !important;
+            color: #374151 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .analysis-card-standalone .card-summary strong {
+            color: #1f2937 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Card details section */
         .analysis-card-standalone .card-details {
-            display: none;
+            display: none !important;
+            padding: 0 20px 20px 20px !important;
+            background: white !important;
+            animation: fadeIn 0.3s ease !important;
         }
-        
-        /* Analysis Cards Styles - Fixed sizing */
-        .analysis-cards-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 20px;
+
+        .analysis-card-standalone.expanded .card-details {
+            display: block !important;
         }
-        
-        @media (max-width: 768px) {
-            .analysis-cards-container {
-                grid-template-columns: 1fr;
+
+        /* Specific card color accents */
+        .analysis-card-standalone[data-card-type="trust"] {
+            border-top: 4px solid #3b82f6 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="bias"] {
+            border-top: 4px solid #8b5cf6 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="facts"] {
+            border-top: 4px solid #10b981 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="author"] {
+            border-top: 4px solid #ec4899 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="clickbait"] {
+            border-top: 4px solid #f59e0b !important;
+        }
+
+        .analysis-card-standalone[data-card-type="source"] {
+            border-top: 4px solid #06b6d4 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="manipulation"] {
+            border-top: 4px solid #ef4444 !important;
+        }
+
+        .analysis-card-standalone[data-card-type="transparency"] {
+            border-top: 4px solid #14b8a6 !important;
+        }
+
+        /* Visual elements inside cards */
+        .progress-bar {
+            width: 100% !important;
+            height: 8px !important;
+            background: #e5e7eb !important;
+            border-radius: 4px !important;
+            overflow: hidden !important;
+            margin: 8px 0 !important;
+        }
+
+        .progress-fill {
+            height: 100% !important;
+            background: #3b82f6 !important;
+            transition: width 0.5s ease !important;
+        }
+
+        /* Bias spectrum visualization */
+        .political-spectrum {
+            position: relative !important;
+            width: 100% !important;
+            height: 30px !important;
+            background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%) !important;
+            border-radius: 15px !important;
+            margin: 16px 0 !important;
+        }
+
+        .spectrum-indicator {
+            position: absolute !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 20px !important;
+            height: 20px !important;
+            background: #1f2937 !important;
+            border: 3px solid white !important;
+            border-radius: 50% !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+            transition: left 0.5s ease !important;
+        }
+
+        /* Clickbait gauge */
+        .clickbait-gauge {
+            position: relative !important;
+            width: 100% !important;
+            height: 40px !important;
+            background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%) !important;
+            border-radius: 20px !important;
+            margin: 16px 0 !important;
+        }
+
+        .clickbait-indicator {
+            position: absolute !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 24px !important;
+            height: 24px !important;
+            background: white !important;
+            border-radius: 50% !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+            transition: left 0.5s ease !important;
+        }
+
+        /* Fact check items */
+        .fact-check-item {
+            background: #f9fafb !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            margin-bottom: 12px !important;
+            border-left: 4px solid #e5e7eb !important;
+        }
+
+        .fact-check-item.verified {
+            border-left-color: #10b981 !important;
+            background: #f0fdf4 !important;
+        }
+
+        .fact-check-item.false {
+            border-left-color: #ef4444 !important;
+            background: #fef2f2 !important;
+        }
+
+        .fact-check-item.mixed {
+            border-left-color: #f59e0b !important;
+            background: #fffbeb !important;
+        }
+
+        /* Badges and labels */
+        .badge {
+            display: inline-block !important;
+            padding: 4px 12px !important;
+            border-radius: 999px !important;
+            font-size: 0.75rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.025em !important;
+        }
+
+        .badge.verified {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+        }
+
+        .badge.warning {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        .badge.info {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+        }
+
+        /* Score displays */
+        .score-display {
+            font-size: 2.5rem !important;
+            font-weight: 700 !important;
+            margin: 16px 0 !important;
+            text-align: center !important;
+        }
+
+        .score-display.high {
+            color: #10b981 !important;
+        }
+
+        .score-display.medium {
+            color: #f59e0b !important;
+        }
+
+        .score-display.low {
+            color: #ef4444 !important;
+        }
+
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+            margin-top: 16px !important;
+        }
+
+        .metric-item {
+            text-align: center !important;
+            padding: 12px !important;
+            background: #f9fafb !important;
+            border-radius: 8px !important;
+        }
+
+        .metric-value {
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: #1f2937 !important;
+        }
+
+        .metric-label {
+            font-size: 0.75rem !important;
+            color: #6b7280 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            margin-top: 4px !important;
+        }
+
+        /* Section headers in details */
+        .analysis-card-standalone .card-details h4 {
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            color: #1f2937 !important;
+            margin: 20px 0 12px 0 !important;
+            padding-bottom: 8px !important;
+            border-bottom: 1px solid #e5e7eb !important;
+        }
+
+        .analysis-card-standalone .card-details h4:first-child {
+            margin-top: 0 !important;
+        }
+
+        /* Lists in details */
+        .analysis-card-standalone .card-details ul {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .analysis-card-standalone .card-details li {
+            padding: 8px 0 !important;
+            padding-left: 20px !important;
+            position: relative !important;
+            color: #4b5563 !important;
+            font-size: 0.9rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .analysis-card-standalone .card-details li:before {
+            content: "•" !important;
+            position: absolute !important;
+            left: 0 !important;
+            color: #9ca3af !important;
+        }
+
+        /* Explanatory boxes */
+        .explanation-box {
+            background: #f3f4f6 !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            margin: 16px 0 !important;
+            border-left: 4px solid #6366f1 !important;
+        }
+
+        .explanation-box p {
+            margin: 0 !important;
+            color: #374151 !important;
+            font-size: 0.9rem !important;
+            line-height: 1.6 !important;
+        }
+
+        /* Tips and recommendations */
+        .tip-box {
+            background: #fef3c7 !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            margin: 16px 0 !important;
+            border-left: 4px solid #f59e0b !important;
+        }
+
+        .tip-box p {
+            margin: 0 !important;
+            color: #78350f !important;
+            font-size: 0.9rem !important;
+            line-height: 1.6 !important;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-        
-        /* Fixed height cards */
-        .analysis-card {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            height: 280px; /* Fixed height for all cards */
-            overflow: hidden;
-        }
-        
-        .analysis-card:hover {
-            border-color: #6366f1;
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
-            transform: translateY(-2px);
-        }
-        
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #f3f4f6;
-            background: #fafafa;
-            flex-shrink: 0;
-        }
-        
-        .card-icon {
-            font-size: 1.75rem;
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 10px;
-            flex-shrink: 0;
-        }
-        
-        .card-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #111827;
-            margin: 0;
-            flex: 1;
-        }
-        
-        .card-content {
-            padding: 1.5rem;
-            color: #6b7280;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .card-summary {
-            flex: 1;
-            overflow: hidden;
-        }
-        
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.625rem 0;
-            border-bottom: 1px solid #f9fafb;
-        }
-        
-        .summary-item:last-child {
-            border-bottom: none;
-        }
-        
-        .summary-label {
-            font-size: 0.875rem;
-            color: #6b7280;
-            font-weight: 500;
-        }
-        
-        .summary-value {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #111827;
-        }
-        
-        /* Fixed positioning for view more */
-        .card-footer {
-            padding: 0.75rem 1.5rem;
-            background: #f9fafb;
-            border-top: 1px solid #e5e7eb;
-            text-align: center;
-            font-size: 0.875rem;
-            color: #6b7280;
-            flex-shrink: 0;
-        }
-        
-        .card-footer:hover {
-            background: #f3f4f6;
-            color: #4b5563;
-        }
-        
-        .metric {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            font-size: 0.875rem;
-        }
-        
-        .metric-label {
-            color: #6b7280;
-            font-weight: 500;
-            font-size: 0.875rem;
-        }
-        
-        .metric-value {
-            font-weight: 700;
-            color: #111827;
-            font-size: 0.9rem;
-        }
-        
-        /* Ensure preview badges fit nicely */
-        .preview-badge {
-            display: inline-block;
-            padding: 0.25rem 0.625rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        
-        .preview-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .preview-badge.high,
-        .preview-badge.verified {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .preview-badge.medium {
-            background: #fed7aa;
-            color: #92400e;
-        }
-        
-        .preview-badge.low {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .preview-badge.left {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .preview-badge.right {
-            background: #fecaca;
-            color: #991b1b;
-        }
-        
-        .preview-badge.center {
-            background: #e5e7eb;
-            color: #374151;
-        }
-        
-        /* Source card specific */
-        .source-info {
-            margin-bottom: 1rem;
-        }
-        
-        .source-name {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin: 0 0 0.5rem 0;
-        }
-        
-        .credibility-badge {
-            display: inline-block;
-            padding: 0.375rem 0.875rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-        
-        .credibility-badge.high {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .credibility-badge.medium {
-            background: #fed7aa;
-            color: #92400e;
-        }
-        
-        .credibility-badge.low,
-        .credibility-badge.unknown {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .source-metrics {
-            display: grid;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-        
-        .source-description {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f9fafb;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            line-height: 1.6;
-        }
-        
-        /* Card details section */
-        .card-details {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        /* Bias meter styles */
-        .bias-meter {
-            margin: 1rem 0;
-        }
-        
-        .meter-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: #6b7280;
-            margin-bottom: 0.5rem;
-        }
-        
-        .meter-track {
-            height: 8px;
-            background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%);
-            border-radius: 4px;
-            position: relative;
-        }
-        
-        .meter-indicator {
-            position: absolute;
-            top: -4px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            border: 3px solid #111827;
-            border-radius: 50%;
-            transform: translateX(-50%);
-            transition: left 0.5s ease;
-        }
-        
-        /* Fact check styles */
-        .fact-check-item {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .fc-verdict {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        
-        .fc-verdict.true {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .fc-verdict.false {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .fc-verdict.mixed {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .fc-claim {
-            font-style: italic;
-            color: #374151;
-            margin: 0.5rem 0;
-        }
-        
-        .fc-explanation {
-            font-size: 0.875rem;
-            color: #6b7280;
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .metrics-grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .analysis-card-standalone .card-header {
+                padding: 16px !important;
+            }
+            
+            .analysis-card-standalone .card-summary {
+                padding: 16px !important;
+            }
+            
+            .analysis-card-standalone .card-details {
+                padding: 0 16px 16px 16px !important;
+            }
         }
     </style>
 </head>
@@ -561,23 +573,15 @@
             // Components are auto-registered in their respective files
             console.log('Components loaded:', Object.keys(window.UI?.components || {}));
             
-            // Add expanded class handling for cards
-            setTimeout(() => {
-                document.addEventListener('click', function(e) {
-                    const card = e.target.closest('.analysis-card-standalone');
-                    if (card) {
-                        const detailsDiv = card.querySelector('.card-details');
-                        if (detailsDiv) {
-                            const isExpanded = detailsDiv.style.display !== 'none';
-                            if (isExpanded) {
-                                card.classList.remove('expanded');
-                            } else {
-                                card.classList.add('expanded');
-                            }
-                        }
-                    }
-                });
-            }, 100);
+            // Add click handling for card expansion
+            document.addEventListener('click', function(e) {
+                const card = e.target.closest('.analysis-card-standalone');
+                if (card && !e.target.closest('a, button')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    card.classList.toggle('expanded');
+                }
+            });
         });
     </script>
 </body>
