@@ -22,7 +22,7 @@
     
     <!-- Equal height cards fix and Analysis Cards styles -->
     <style>
-        /* Make all cards equal height */
+        /* Make all cards equal height with fixed grid */
         .cards-grid-wrapper {
             display: grid !important;
             grid-template-columns: repeat(2, 1fr) !important;
@@ -30,7 +30,6 @@
             max-width: 1000px !important;
             margin: 0 auto 40px auto !important;
             padding: 0 20px !important;
-            grid-auto-rows: 1fr !important;
         }
         
         @media (max-width: 768px) {
@@ -39,17 +38,41 @@
             }
         }
 
-        /* Make cards stretch to fill their grid cell */
+        /* Fixed height card containers */
         .analysis-card-standalone {
-            display: flex !important;
-            flex-direction: column !important;
-            height: 100% !important;
-            min-height: 250px !important;
+            height: 280px !important;
         }
         
         .analysis-card-standalone .analysis-card {
             height: 100% !important;
             margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        /* Ensure content doesn't overflow */
+        .analysis-card-standalone .card-content {
+            overflow: hidden !important;
+        }
+        
+        /* Hide details by default */
+        .analysis-card-standalone .card-details {
+            display: none;
+        }
+        
+        /* When expanded, allow natural height */
+        .analysis-card-standalone.expanded {
+            height: auto !important;
+        }
+        
+        .analysis-card-standalone.expanded .analysis-card {
+            height: auto !important;
+        }
+        
+        .analysis-card-standalone.expanded .card-details {
+            display: block;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
         }
 
         /* Make the summary section grow to fill space */
@@ -71,7 +94,7 @@
             display: none;
         }
         
-        /* Analysis Cards Styles */
+        /* Analysis Cards Styles - Fixed sizing */
         .analysis-cards-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -87,17 +110,18 @@
             }
         }
         
+        /* Fixed height cards */
         .analysis-card {
             background: white;
             border: 2px solid #e5e7eb;
             border-radius: 16px;
-            padding: 1.5rem;
+            padding: 0;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
-            min-height: 200px;
-            height: 100%;
+            height: 280px; /* Fixed height for all cards */
+            overflow: hidden;
         }
         
         .analysis-card:hover {
@@ -110,20 +134,22 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
+            padding: 1.25rem 1.5rem;
             border-bottom: 1px solid #f3f4f6;
+            background: #fafafa;
+            flex-shrink: 0;
         }
         
         .card-icon {
             font-size: 1.75rem;
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f9fafb;
+            background: white;
             border-radius: 10px;
+            flex-shrink: 0;
         }
         
         .card-title {
@@ -135,22 +161,24 @@
         }
         
         .card-content {
+            padding: 1.5rem;
             color: #6b7280;
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         
         .card-summary {
-            margin-bottom: 1rem;
             flex: 1;
+            overflow: hidden;
         }
         
         .summary-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0;
+            padding: 0.625rem 0;
             border-bottom: 1px solid #f9fafb;
         }
         
@@ -158,44 +186,63 @@
             border-bottom: none;
         }
         
+        .summary-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .summary-value {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        /* Fixed positioning for view more */
+        .card-footer {
+            padding: 0.75rem 1.5rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        
+        .card-footer:hover {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+        
         .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.625rem 0;
-            font-size: 0.9rem;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
         }
         
         .metric-label {
             color: #6b7280;
             font-weight: 500;
+            font-size: 0.875rem;
         }
         
         .metric-value {
             font-weight: 700;
             color: #111827;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
         
-        /* View Details Button */
-        .view-details-btn {
-            margin-top: auto;
-            padding: 0.75rem;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            text-align: center;
+        /* Ensure preview badges fit nicely */
+        .preview-badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
             font-weight: 600;
-            color: #4b5563;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .view-details-btn:hover {
-            background: #6366f1;
-            color: white;
-            border-color: #6366f1;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
         
         .preview-badge {
