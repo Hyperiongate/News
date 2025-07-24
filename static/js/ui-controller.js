@@ -1,4 +1,4 @@
-// Helper methods remain the same as in the original file
+// Helper methods
     createCard(type, icon, title) {
         const card = document.createElement('div');
         card.className = 'analysis-card-standalone';
@@ -25,7 +25,6 @@
         return card;
     }
 
-    // All helper methods from the original file
     calculateDetailedTrustBreakdown(data) {
         const sourceScore = this.calculateSourceScore(data.source_credibility);
         const authorScore = data.author_analysis?.credibility_score || 50;
@@ -1037,156 +1036,6 @@ class UIController {
         return card;
     }
 
-    createComprehensiveBiasAnalysisCard(data) {
-        const card = this.createCard('bias', '⚖️', 'Bias Analysis');
-        
-        const biasData = data.bias_analysis || {};
-        const politicalLean = biasData.political_lean || 0;
-        const dimensions = biasData.bias_dimensions || {};
-        const objectivity = Math.round((biasData.objectivity_score || 0) * 10) / 10;
-        
-        card.querySelector('.card-summary').innerHTML = `
-            <div style="text-align: center; margin-bottom: 16px;">
-                <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.125rem;">${biasData.overall_bias || 'Bias Assessment'}</h4>
-                <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivity}%</div>
-                <div style="font-size: 0.875rem; color: #64748b;">Objectivity Score</div>
-                ${biasData.bias_confidence ? `
-                    <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 6px;">
-                        <span style="font-size: 0.8125rem; color: #0369a1;">
-                            Analysis Confidence: ${biasData.bias_confidence}%
-                        </span>
-                    </div>
-                ` : ''}
-            </div>
-            <div style="margin: 20px 0;">
-                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Political Spectrum Position</div>
-                <div class="political-spectrum">
-                    <div class="spectrum-indicator" style="left: ${50 + (politicalLean / 2)}%"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
-                    <span>Far Left</span>
-                    <span>Center</span>
-                    <span>Far Right</span>
-                </div>
-            </div>
-        `;
-        
-        card.querySelector('.card-details').innerHTML = `
-            <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding Bias Analysis</h4>
-                <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                    ${Object.keys(dimensions).length > 0 ? 
-                        `Our AI performed a comprehensive bias analysis examining ${Object.keys(dimensions).length} different dimensions of bias,
-                        ${biasData.bias_patterns?.length || 0} bias patterns, and ${biasData.loaded_phrases?.length || 0} loaded phrases.
-                        This analysis has a confidence level of ${biasData.bias_confidence || 0}%.` :
-                        'We analyze multiple dimensions of bias beyond just political lean. Our system examines language patterns, source selection, framing techniques, and rhetorical devices to provide a comprehensive bias assessment.'
-                    }
-                </p>
-            </div>
-            
-            ${Object.keys(dimensions).length > 0 ? `
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Multi-Dimensional Bias Breakdown</h4>
-                
-                ${Object.entries(dimensions).map(([dimension, dimData]) => `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h5 style="margin: 0; color: #1e293b; font-size: 1rem; text-transform: capitalize;">${dimension.replace(/_/g, ' ')} Bias</h5>
-                            <span class="badge ${this.getBiasLevelClass(dimData.score)}" style="font-size: 0.875rem;">
-                                ${dimData.label}
-                            </span>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                <span style="font-size: 0.8125rem; color: #64748b;">Bias Score</span>
-                                <span style="font-size: 0.8125rem; font-weight: 600; color: #334155;">${Math.round(Math.abs(dimData.score) * 100)}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${dimData.confidence}%; background: #6366f1;"></div>
-                            </div>
-                        </div>
-                        <p style="margin: 0; color: #64748b; font-size: 0.8125rem; line-height: 1.5;">
-                            <strong>Analysis confidence:</strong> ${dimData.confidence}% - ${this.getBiasAnalysisExplanation(dimension, dimData)}
-                        </p>
-                    </div>
-                `).join('')}
-            ` : ''}
-            
-            ${biasData.framing_analysis && biasData.framing_analysis.frames_detected > 0 ? `
-                <div style="margin: 20px 0; padding: 16px; background: #faf5ff; border-radius: 8px;">
-                    <h5 style="margin: 0 0 12px 0; color: #6b21a8; font-size: 1rem;">Framing Techniques Detected (${biasData.framing_analysis.frames_detected} found)</h5>
-                    ${Object.entries(biasData.framing_analysis.framing_patterns || {}).filter(([_, pattern]) => pattern.detected).map(([type, pattern]) => `
-                        <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px;">
-                            <strong style="color: #581c87; font-size: 0.875rem;">${type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
-                            ${pattern.examples && pattern.examples.length > 0 ? `
-                                <div style="margin-top: 8px;">
-                                    ${pattern.examples.map(ex => `
-                                        <p style="margin: 4px 0 0 20px; padding: 8px; background: #f3f4f6; border-left: 3px solid #7c3aed; color: #374151; font-size: 0.8125rem; font-style: italic; border-radius: 4px;">
-                                            "${ex}"
-                                        </p>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
-            
-            ${indicators.length > 0 ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Specific Tactics Detected</h4>
-                    ${indicators.map(ind => `
-                        <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
-                            <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${ind.name}</h5>
-                            <p style="margin: 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                ${ind.description}
-                            </p>
-                            ${ind.psychology ? `
-                                <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
-                                    Psychology: ${ind.psychology}
-                                </p>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            ` : `
-                <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
-                    <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">✓ Good Headline Practice</h4>
-                    <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.6;">
-                        This headline appears straightforward and informative without manipulative tactics. 
-                        It respects the reader's time by clearly indicating what the article is about.
-                    </p>
-                </div>
-            `}
-            
-            <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">The Psychology of Clickbait</h4>
-                <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
-                    ${this.getClickbaitPsychologyExplanation(clickbaitScore)}
-                </p>
-                <h5 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 0.875rem;">How to Defend Yourself:</h5>
-                <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.8125rem; line-height: 1.5;">
-                    <li>Ask: "What specific information will I gain?"</li>
-                    <li>Notice emotional reactions to headlines</li>
-                    <li>Look for concrete facts vs. vague promises</li>
-                    <li>Check if the headline matches the content</li>
-                </ul>
-            </div>
-            
-            <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">How We Calculate Clickbait Scores</h5>
-                <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                    <li>Pattern matching against known clickbait formulas</li>
-                    <li>Emotional word frequency and intensity</li>
-                    <li>Information gap analysis (what's withheld)</li>
-                    <li>Punctuation and capitalization patterns</li>
-                    <li>Comparison with straightforward headline standards</li>
-                </ul>
-            </div>
-        `;
-        
-        return card;
-    }
-
     createComprehensiveSourceCredibilityCard(data) {
         const card = this.createCard('source', '🏢', 'Source Credibility');
         
@@ -1641,6 +1490,153 @@ class UIController {
         
         return card;
     }
+
+    createComprehensiveBiasAnalysisCard(data) {
+        const card = this.createCard('bias', '⚖️', 'Bias Analysis');
+        
+        const biasData = data.bias_analysis || {};
+        const politicalLean = biasData.political_lean || 0;
+        const dimensions = biasData.bias_dimensions || {};
+        const objectivity = Math.round((biasData.objectivity_score || 0) * 10) / 10;
+        
+        card.querySelector('.card-summary').innerHTML = `
+            <div style="text-align: center; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.125rem;">${biasData.overall_bias || 'Bias Assessment'}</h4>
+                <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivity}%</div>
+                <div style="font-size: 0.875rem; color: #64748b;">Objectivity Score</div>
+                ${biasData.bias_confidence ? `
+                    <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 6px;">
+                        <span style="font-size: 0.8125rem; color: #0369a1;">
+                            Analysis Confidence: ${biasData.bias_confidence}%
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
+            <div style="margin: 20px 0;">
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Political Spectrum Position</div>
+                <div class="political-spectrum">
+                    <div class="spectrum-indicator" style="left: ${50 + (politicalLean / 2)}%"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
+                    <span>Far Left</span>
+                    <span>Center</span>
+                    <span>Far Right</span>
+                </div>
+            </div>
+        `;
+        
+        card.querySelector('.card-details').innerHTML = `
+            <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding Bias Analysis</h4>
+                <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                    ${Object.keys(dimensions).length > 0 ? 
+                        `Our AI performed a comprehensive bias analysis examining ${Object.keys(dimensions).length} different dimensions of bias,
+                        ${biasData.bias_patterns?.length || 0} bias patterns, and ${biasData.loaded_phrases?.length || 0} loaded phrases.
+                        This analysis has a confidence level of ${biasData.bias_confidence || 0}%.` :
+                        'We analyze multiple dimensions of bias beyond just political lean. Our system examines language patterns, source selection, framing techniques, and rhetorical devices to provide a comprehensive bias assessment.'
+                    }
+                </p>
+            </div>
+            
+            ${Object.keys(dimensions).length > 0 ? `
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Multi-Dimensional Bias Breakdown</h4>
+                
+                ${Object.entries(dimensions).map(([dimension, dimData]) => `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h5 style="margin: 0; color: #1e293b; font-size: 1rem; text-transform: capitalize;">${dimension.replace(/_/g, ' ')} Bias</h5>
+                            <span class="badge ${this.getBiasLevelClass(dimData.score)}" style="font-size: 0.875rem;">
+                                ${dimData.label}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span style="font-size: 0.8125rem; color: #64748b;">Bias Score</span>
+                                <span style="font-size: 0.8125rem; font-weight: 600; color: #334155;">${Math.round(Math.abs(dimData.score) * 100)}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${dimData.confidence}%; background: #6366f1;"></div>
+                            </div>
+                        </div>
+                        <p style="margin: 0; color: #64748b; font-size: 0.8125rem; line-height: 1.5;">
+                            <strong>Analysis confidence:</strong> ${dimData.confidence}% - ${this.getBiasAnalysisExplanation(dimension, dimData)}
+                        </p>
+                    </div>
+                `).join('')}
+            ` : ''}
+            
+            ${biasData.framing_analysis && biasData.framing_analysis.frames_detected > 0 ? `
+                <div style="margin: 20px 0; padding: 16px; background: #faf5ff; border-radius: 8px;">
+                    <h5 style="margin: 0 0 12px 0; color: #6b21a8; font-size: 1rem;">Framing Techniques Detected (${biasData.framing_analysis.frames_detected} found)</h5>
+                    ${Object.entries(biasData.framing_analysis.framing_patterns || {}).filter(([_, pattern]) => pattern.detected).map(([type, pattern]) => `
+                        <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px;">
+                            <strong style="color: #581c87; font-size: 0.875rem;">${type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
+                            ${pattern.examples && pattern.examples.length > 0 ? `
+                                <div style="margin-top: 8px;">
+                                    ${pattern.examples.map(ex => `
+                                        <p style="margin: 4px 0 0 20px; padding: 8px; background: #f3f4f6; border-left: 3px solid #7c3aed; color: #374151; font-size: 0.8125rem; font-style: italic; border-radius: 4px;">
+                                            "${ex}"
+                                        </p>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${indicators.length > 0 ? `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Specific Tactics Detected</h4>
+                    ${indicators.map(ind => `
+                        <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                            <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${ind.name}</h5>
+                            <p style="margin: 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                ${ind.description}
+                            </p>
+                            ${ind.psychology ? `
+                                <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
+                                    Psychology: ${ind.psychology}
+                                </p>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">✓ Good Headline Practice</h4>
+                    <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.6;">
+                        This headline appears straightforward and informative without manipulative tactics. 
+                        It respects the reader's time by clearly indicating what the article is about.
+                    </p>
+                </div>
+            `}
+            
+            <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">The Psychology of Clickbait</h4>
+                <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
+                    ${this.getClickbaitPsychologyExplanation(clickbaitScore)}
+                </p>
+                <h5 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 0.875rem;">How to Defend Yourself:</h5>
+                <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.8125rem; line-height: 1.5;">
+                    <li>Ask: "What specific information will I gain?"</li>
+                    <li>Notice emotional reactions to headlines</li>
+                    <li>Look for concrete facts vs. vague promises</li>
+                    <li>Check if the headline matches the content</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">How We Calculate Clickbait Scores</h5>
+                <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                    <li>Pattern matching against known clickbait formulas</li>
+                    <li>Emotional word frequency and intensity</li>
+                    <li>Information gap analysis (what's withheld)</li>
+                    <li>Punctuation and capitalization patterns</li>
+                    <li>Comparison with straightforward headline standards</li>
+                </ul>
+            </div>
+            ` : ''}
             
             ${biasData.loaded_phrases && biasData.loaded_phrases.length > 0 ? `
                 <div style="margin: 20px 0;">
@@ -2139,6 +2135,4 @@ class UIController {
                             <div style="font-size: 0.75rem; color: #64748b;">
                                 ${metric.desc}
                             </div>
-                        </div>
-                    `).join('')}
-                </div>
+                        </div
