@@ -1,6 +1,6 @@
 """
 FILE: services/news_analyzer.py
-LOCATION: news/services/news_analyzer.py
+LOCATION: services/news_analyzer.py
 PURPOSE: Main orchestrator for article analysis - FIXED AUTHOR DATA FLOW
 """
 
@@ -99,10 +99,11 @@ class NewsAnalyzer:
                 article_data.get('domain', 'unknown')
             )
             
-            # CRITICAL FIX: Ensure author is properly set in the article data
+            # CRITICAL FIX: Ensure author is properly analyzed
             if article_data.get('author'):
                 logger.info(f"Analyzing author: {article_data['author']} from domain: {article_data.get('domain')}")
-                analysis_results['author_analysis'] = self.author_analyzer.analyze_author(
+                # Call the correct method name - analyze_single_author
+                analysis_results['author_analysis'] = self.author_analyzer.analyze_single_author(
                     article_data['author'],
                     article_data.get('domain')
                 )
