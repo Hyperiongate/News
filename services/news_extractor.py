@@ -105,110 +105,194 @@ class NewsExtractor:
         return text if text else 'No article text found'
     
     def _extract_author(self, soup, url):
-        """Extract author with proper formatting"""
-        # Method 1: JSON-LD structured data
-        json_ld = soup.find_all('script', type='application/ld+json')
-        for script in json_ld:
-            try:
-                import json
-                data = json.loads(script.string)
-                
-                # Handle different JSON-LD formats
-                if isinstance(data, dict):
-                    # Check for author in main object
-                    author = data.get('author')
-                    if author:
-                        # Handle different author formats
-                        if isinstance(author, dict):
-                            name = author.get('name', '')
-                            if name:
-                                return name.strip()
-                        elif isinstance(author, str):
-                            return author.strip()
-                        elif isinstance(author, list) and author:
-                            # If it's a list, get the first author
-                            first_author = author[0]
-                            if isinstance(first_author, dict):
-                                name = first_author.get('name', '')
-                                if name:
-                                    return name.strip()
-                            elif isinstance(first_author, str):
-                                return first_author.strip()
-                    
-                    # Check in @graph structure
-                    if '@graph' in data:
-                        for item in data['@graph']:
-                            if isinstance(item, dict) and item.get('@type') in ['NewsArticle', 'Article']:
-                                author = item.get('author')
-                                if author:
-                                    if isinstance(author, dict):
-                                        name = author.get('name', '')
-                                        if name:
-                                            return name.strip()
-                                    elif isinstance(author, str):
-                                        return author.strip()
-            except:
-                continue
-        
-        # Method 2: Meta tags
-        meta_selectors = [
-            'meta[name="author"]',
-            'meta[property="article:author"]',
-            'meta[name="byl"]',
-            'meta[name="DC.creator"]'
-        ]
-        
-        for selector in meta_selectors:
-            meta = soup.select_one(selector)
-            if meta and meta.get('content'):
-                author = meta['content'].strip()
-                # Clean up common prefixes
-                author = re.sub(r'^(by|By|BY)\s+', '', author)
+    """Extract author with proper formatting"""
+    
+    # List of organization names to filter out
+    org_names = [
+        'ABC News', 'CNN', 'BBC', 'Reuters', 'AP', 'Associated Press',
+        'Fox News', 'NBC News', 'CBS News', 'MSNBC', 'NPR', 'PBS',
+        'The New York Times', 'The Washington Post', 'The Guardian',
+        'Bloomberg', 'CNBC', 'The Hill', 'Politico', 'Axios',
+        'The Wall Street Journal', 'USA Today', 'The Independent'
+    ]
+    
+    def is_organization_name(text):
+        """Check if text is an organization name rather than a person"""
+        if not text:
+            return True
+        # Check against known orgs
+        for org in org_names:
+            if org.lower() in text.lower():
+                return True
+        # Check for common organization patterns
+        if any(word in text.lower() for word in ['news', 'staff', 'team', 'correspondent', 'newsroom', 'editorial']):
+            return True
+        # Check if it looks like a person name (First Last)
+        parts = text.strip().split()
+        if len(parts) >= 2 and len(parts) <= 4:
+            # Likely a person's name
+            return False
+        return True
+    
+    def clean_author_text(text):
+        """Clean up author text"""
+        if not text:
+            return None
+        # Remove common prefixes
+        text = re.sub(r'^(by|By|BY)\s+', '', text.strip())
+        text = re.sub(r'\s+', ' ', text)
+        # Remove "and ABC News" type suffixes
+        text = re.sub(r'\s+(and|for)\s+.*(News|Staff|Team).*$', '', text, flags=re.IGNORECASE)
+        return text.strip()
+    
+    # Method 1: JSON-LD structured data
+    json_ld = soup.find_all('script', type='application/ld+json')
+    for script in json_ld:
+        try:
+            import json
+            data = json.loads(script.string)
+            
+            # Handle different JSON-LD formats
+            if isinstance(data, dict):
+                # Check for author in main object
+                author = data.get('author')
                 if author:
+                    # Handle different author formats
+                    if isinstance(author, dict):
+                        name = author.get('name', '')
+                        name = clean_author_text(name)
+                        if name and not is_organization_name(name):
+                            return name
+                    elif isinstance(author, str):
+                        name = clean_author_text(author)
+                        if name and not is_organization_name(name):
+                            return name
+                    elif isinstance(author, list) and author:
+                        # If it's a list, get the first valid author
+                        for auth in author:
+                            if isinstance(auth, dict):
+                                name = auth.get('name', '')
+                                name = clean_author_text(name)
+                                if name and not is_organization_name(name):
+                                    return name
+                            elif isinstance(auth, str):
+                                name = clean_author_text(auth)
+                                if name and not is_organization_name(name):
+                                    return name
+                
+                # Check in @graph structure
+                if '@graph' in data:
+                    for item in data['@graph']:
+                        if isinstance(item, dict) and item.get('@type') in ['NewsArticle', 'Article']:
+                            author = item.get('author')
+                            if author:
+                                if isinstance(author, dict):
+                                    name = author.get('name', '')
+                                    name = clean_author_text(name)
+                                    if name and not is_organization_name(name):
+                                        return name
+                                elif isinstance(author, str):
+                                    name = clean_author_text(author)
+                                    if name and not is_organization_name(name):
+                                        return name
+        except:
+            continue
+    
+    # Method 2: Meta tags
+    meta_selectors = [
+        'meta[name="author"]',
+        'meta[property="article:author"]',
+        'meta[name="byl"]',
+        'meta[name="DC.creator"]',
+        'meta[name="parsely-author"]'
+    ]
+    
+    for selector in meta_selectors:
+        meta = soup.select_one(selector)
+        if meta and meta.get('content'):
+            author = clean_author_text(meta['content'])
+            if author and not is_organization_name(author):
+                return author
+    
+    # Method 3: Common byline patterns with better filtering
+    byline_selectors = [
+        '[class*="byline"]:not([class*="date"])',
+        '[class*="author"]:not([class*="bio"])',
+        '[class*="by-line"]',
+        '[class*="writer"]',
+        'span[itemprop="author"]',
+        '[rel="author"]',
+        '.byline__name',  # CNN
+        '.authors__name',  # Various sites
+        '.contributor__name'  # Various sites
+    ]
+    
+    for selector in byline_selectors:
+        elements = soup.select(selector)
+        for element in elements:
+            text = element.get_text().strip()
+            
+            # Skip if it's too long (likely not just a name)
+            if len(text) > 100:
+                continue
+                
+            # Clean the text
+            text = clean_author_text(text)
+            
+            # Skip if it's an organization
+            if text and not is_organization_name(text):
+                return text
+    
+    # Method 4: Look for "By [Name]" pattern in the article
+    for p in soup.find_all(['p', 'div', 'span']):
+        text = p.get_text().strip()
+        # Look for "By Name" pattern at the start of a line
+        match = re.match(r'^(?:by|By|BY)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
+        if match:
+            author = match.group(1)
+            if not is_organization_name(author):
+                return author
+    
+    # Method 5: Site-specific patterns
+    domain = urlparse(url).netloc.replace('www.', '')
+    
+    if 'abcnews.go.com' in domain:
+        # ABC News specific - look for author in article body
+        # Try to find author near the dateline
+        for elem in soup.find_all(['div', 'p', 'span']):
+            text = elem.get_text().strip()
+            # ABC often has "By FIRSTNAME LASTNAME" in the article
+            if text.startswith(('By ', 'BY ')):
+                author = clean_author_text(text)
+                if author and not is_organization_name(author) and len(author.split()) >= 2:
                     return author
-        
-        # Method 3: Common byline patterns
-        byline_selectors = [
-            '[class*="byline"]',
-            '[class*="author"]',
-            '[class*="by-line"]',
-            '[class*="writer"]',
-            'span[itemprop="author"]',
-            '[rel="author"]'
-        ]
-        
-        for selector in byline_selectors:
-            element = soup.select_one(selector)
-            if element:
-                text = element.get_text().strip()
-                # Clean up the text
-                text = re.sub(r'^(by|By|BY)\s+', '', text)
-                text = re.sub(r'\s+', ' ', text)
-                if text and len(text) < 100:  # Reasonable length for an author name
-                    return text
-        
-        # Method 4: Site-specific patterns
-        domain = urlparse(url).netloc.replace('www.', '')
-        
-        if 'bbc.com' in domain or 'bbc.co.uk' in domain:
-            # BBC specific
-            author_div = soup.find('div', {'class': 'ssrcss-68pt20-Text-TextContributorName'})
-            if author_div:
-                return author_div.get_text().strip()
-        
-        elif 'cnn.com' in domain:
-            # CNN specific
-            byline = soup.find('span', {'class': 'byline__name'})
-            if byline:
-                return byline.get_text().strip()
-        
-        elif 'nytimes.com' in domain:
-            # NYTimes specific
-            byline = soup.find('span', {'itemprop': 'name'})
-            if byline:
-                return byline.get_text().strip()
-        
-        return None
+    
+    elif 'bbc.com' in domain or 'bbc.co.uk' in domain:
+        # BBC specific
+        author_div = soup.find('div', {'class': 'ssrcss-68pt20-Text-TextContributorName'})
+        if author_div:
+            author = clean_author_text(author_div.get_text())
+            if author and not is_organization_name(author):
+                return author
+    
+    elif 'cnn.com' in domain:
+        # CNN specific
+        byline = soup.find('span', {'class': 'byline__name'})
+        if byline:
+            author = clean_author_text(byline.get_text())
+            if author and not is_organization_name(author):
+                return author
+    
+    elif 'nytimes.com' in domain:
+        # NYTimes specific
+        byline = soup.find('span', {'itemprop': 'name'})
+        if byline:
+            author = clean_author_text(byline.get_text())
+            if author and not is_organization_name(author):
+                return author
+    
+    # If no valid author found, return None instead of organization name
+    return None
     
     def _extract_date(self, soup):
         """Extract publish date"""
