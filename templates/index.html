@@ -59,6 +59,10 @@
             border-color: #e5e7eb !important;
         }
 
+        .analysis-card-standalone.expanded {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+        }
+
         /* Remove inner .analysis-card div styling conflicts */
         .analysis-card-standalone .analysis-card {
             background: none !important;
@@ -75,29 +79,29 @@
             align-items: center !important;
             justify-content: space-between !important;
             padding: 20px !important;
-            background: #f8fafc !important;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
             border-bottom: 1px solid #e5e7eb !important;
             margin: 0 !important;
         }
 
-        .analysis-card-standalone h3 {
+        .analysis-card-standalone .card-header h3 {
             display: flex !important;
             align-items: center !important;
             gap: 12px !important;
             margin: 0 !important;
-            font-size: 1.125rem !important;
+            font-size: 1.25rem !important;
             font-weight: 600 !important;
-            color: #1f2937 !important;
+            color: #0f172a !important;
         }
 
-        .analysis-card-standalone h3 span:first-child {
+        .analysis-card-standalone .card-header h3 span:first-child {
             font-size: 1.5rem !important;
         }
 
         /* Expand/collapse icon */
         .expand-icon {
-            font-size: 1rem !important;
-            color: #6b7280 !important;
+            font-size: 0.875rem !important;
+            color: #64748b !important;
             transition: transform 0.3s ease !important;
         }
 
@@ -124,16 +128,19 @@
             font-weight: 600 !important;
         }
 
-        /* Card details section */
+        /* Card details section - Using max-height for smooth transitions */
         .analysis-card-standalone .card-details {
-            display: none !important;
-            padding: 0 20px 20px 20px !important;
+            max-height: 0 !important;
+            overflow: hidden !important;
+            transition: max-height 0.3s ease !important;
+            padding: 0 20px !important;
             background: white !important;
-            animation: fadeIn 0.3s ease !important;
         }
 
         .analysis-card-standalone.expanded .card-details {
-            display: block !important;
+            max-height: 3000px !important;
+            padding: 20px !important;
+            border-top: 1px solid #e5e7eb !important;
         }
 
         /* Specific card color accents */
@@ -333,7 +340,7 @@
         .analysis-card-standalone .card-details h4 {
             font-size: 1rem !important;
             font-weight: 600 !important;
-            color: #1f2937 !important;
+            color: #0f172a !important;
             margin: 20px 0 12px 0 !important;
             padding-bottom: 8px !important;
             border-bottom: 1px solid #e5e7eb !important;
@@ -398,6 +405,15 @@
             line-height: 1.6 !important;
         }
 
+        /* Override any conflicting styles from other CSS files */
+        .overall-assessment {
+            padding: 24px !important;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            border-radius: 12px !important;
+            margin: 20px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        }
+
         /* Animation */
         @keyframes fadeIn {
             from {
@@ -425,7 +441,11 @@
             }
             
             .analysis-card-standalone .card-details {
-                padding: 0 16px 16px 16px !important;
+                padding: 0 16px !important;
+            }
+            
+            .analysis-card-standalone.expanded .card-details {
+                padding: 16px !important;
             }
         }
     </style>
@@ -573,15 +593,8 @@
             // Components are auto-registered in their respective files
             console.log('Components loaded:', Object.keys(window.UI?.components || {}));
             
-            // Add click handling for card expansion
-            document.addEventListener('click', function(e) {
-                const card = e.target.closest('.analysis-card-standalone');
-                if (card && !e.target.closest('a, button')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    card.classList.toggle('expanded');
-                }
-            });
+            // Click handlers are already added by the UI controller in the createCard method
+            // No need for additional event listeners here
         });
     </script>
 </body>
