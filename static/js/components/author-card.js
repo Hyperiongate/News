@@ -10,12 +10,15 @@ class AuthorCard {
         container.className = 'author-card-container analysis-card';
         container.style.cssText = 'margin-bottom: 1.5rem;';
         
+        // Get the author analysis data correctly
         const author = data.author_analysis || {};
         const article = data.article || {};
-        const authorName = article.author || 'Unknown Author';
         
-        // Calculate author credibility score (0-100)
-        const credibilityScore = this.calculateCredibilityScore(author);
+        // Use the name from author_analysis if available, otherwise fall back to article.author
+        const authorName = author.name || article.author || 'Unknown Author';
+        
+        // Use the credibility score from the analysis
+        const credibilityScore = author.credibility_score || 0;
         const { color, status } = this.getCredibilityStatus(credibilityScore);
         
         container.innerHTML = `
@@ -32,8 +35,9 @@ class AuthorCard {
                     
                     <div class="author-details">
                         <h3 class="author-name">${authorName}</h3>
-                        ${author.outlet ? `<p class="author-outlet">${author.outlet}</p>` : ''}
-                        ${author.role ? `<p class="author-role">${author.role}</p>` : ''}
+                        ${author.professional_info?.current_position ? `<p class="author-role">${author.professional_info.current_position}</p>` : ''}
+                        ${author.professional_info?.outlets && author.professional_info.outlets.length > 0 ? 
+                            `<p class="author-outlet">${author.professional_info.outlets[0]}</p>` : ''}
                     </div>
                     
                     <div class="author-credibility">
@@ -54,7 +58,7 @@ class AuthorCard {
                     </div>
                 </div>
                 
-                ${author.bio ? `
+                ${author.bio && !author.bio.includes('Limited information available') ? `
                 <div class="author-bio">
                     <h4>About the Author</h4>
                     <p>${author.bio}</p>
@@ -65,11 +69,11 @@ class AuthorCard {
                     ${this.renderMetrics(author)}
                 </div>
                 
-                ${author.expertise ? `
+                ${author.professional_info?.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
                 <div class="author-expertise">
                     <h4>Areas of Expertise</h4>
                     <div class="expertise-tags">
-                        ${author.expertise.map(area => `
+                        ${author.professional_info.expertise_areas.map(area => `
                             <span class="expertise-tag">${area}</span>
                         `).join('')}
                     </div>
@@ -82,12 +86,29 @@ class AuthorCard {
                 </div>
                 ` : ''}
                 
-                ${data.is_pro && author.detailed_analysis ? `
-                <div class="author-pro-analysis">
-                    <div class="pro-badge">Pro Analysis</div>
-                    <h4>Deep Dive Insights</h4>
-                    <div class="pro-insights">
-                        ${author.detailed_analysis}
+                ${author.sources_checked && author.sources_checked.length > 0 ? `
+                <div class="author-sources">
+                    <p style="font-size: 0.8rem; color: #6b7280; margin-top: 12px;">
+                        <em>Sources checked: ${author.sources_checked.join(', ')}</em>
+                    </p>
+                </div>
+                ` : ''}
+                
+                ${author.online_presence && Object.keys(author.online_presence).length > 0 ? `
+                <div class="author-online-presence">
+                    <h4>Online Presence</h4>
+                    <div class="online-presence-items">
+                        ${this.renderOnlinePresence(author.online_presence)}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${author.credibility_explanation ? `
+                <div class="credibility-explanation">
+                    <h4>Credibility Assessment</h4>
+                    <div class="explanation-box ${author.credibility_explanation.level.toLowerCase()}">
+                        <p><strong>${author.credibility_explanation.level}:</strong> ${author.credibility_explanation.explanation}</p>
+                        <p style="margin-top: 8px; font-style: italic;">${author.credibility_explanation.advice}</p>
                     </div>
                 </div>
                 ` : ''}
@@ -113,28 +134,8 @@ class AuthorCard {
     }
 
     calculateCredibilityScore(author) {
-        let score = 50; // Base score
-        
-        // Adjust based on verification
-        if (author.verified) score += 20;
-        if (author.verified_journalist) score += 15;
-        
-        // Adjust based on experience
-        if (author.years_experience) {
-            score += Math.min(author.years_experience * 2, 20);
-        }
-        
-        // Adjust based on awards or recognition
-        if (author.awards && author.awards.length > 0) {
-            score += Math.min(author.awards.length * 5, 15);
-        }
-        
-        // Adjust based on transparency
-        if (author.bio) score += 5;
-        if (author.contact_available) score += 5;
-        
-        // Cap at 100
-        return Math.min(Math.max(score, 0), 100);
+        // This is now calculated by the backend, so we just use the provided score
+        return author.credibility_score || 0;
     }
 
     getCredibilityStatus(score) {
@@ -152,6 +153,9 @@ class AuthorCard {
     renderMetrics(author) {
         const metrics = [];
         
+        // Check professional_info for additional data
+        const profInfo = author.professional_info || {};
+        
         if (author.articles_count) {
             metrics.push({
                 icon: '📝',
@@ -160,36 +164,48 @@ class AuthorCard {
             });
         }
         
-        if (author.years_experience) {
+        if (profInfo.years_experience) {
             metrics.push({
                 icon: '📅',
                 label: 'Years Experience',
-                value: author.years_experience
+                value: profInfo.years_experience
             });
         }
         
-        if (author.specialization) {
+        if (profInfo.outlets && profInfo.outlets.length > 0) {
             metrics.push({
-                icon: '🎯',
-                label: 'Specialization',
-                value: author.specialization
+                icon: '🏢',
+                label: 'Publications',
+                value: profInfo.outlets.length
             });
         }
         
-        if (author.social_following) {
-            metrics.push({
-                icon: '👥',
-                label: 'Social Following',
-                value: this.formatNumber(author.social_following)
-            });
+        if (author.online_presence) {
+            const presenceCount = Object.values(author.online_presence).filter(v => v).length;
+            if (presenceCount > 0) {
+                metrics.push({
+                    icon: '🌐',
+                    label: 'Online Presence',
+                    value: `${presenceCount} verified`
+                });
+            }
         }
         
         if (metrics.length === 0) {
-            metrics.push({
-                icon: 'ℹ️',
-                label: 'Limited Information',
-                value: 'Author details not available'
-            });
+            // Show what we searched but didn't find
+            if (author.found === false) {
+                metrics.push({
+                    icon: 'ℹ️',
+                    label: 'Search Status',
+                    value: 'Limited information found'
+                });
+            } else {
+                metrics.push({
+                    icon: '🔍',
+                    label: 'Information',
+                    value: 'Basic details only'
+                });
+            }
         }
         
         return `
@@ -252,6 +268,48 @@ class AuthorCard {
                 <span>${v.text}</span>
             </div>
         `).join('');
+    }
+
+    renderOnlinePresence(presence) {
+        const items = [];
+        
+        if (presence.twitter) {
+            items.push(`<a href="https://twitter.com/${presence.twitter}" target="_blank" class="presence-link">
+                <span>🐦</span> @${presence.twitter}
+            </a>`);
+        }
+        
+        if (presence.linkedin) {
+            items.push(`<a href="${presence.linkedin}" target="_blank" class="presence-link">
+                <span>💼</span> LinkedIn
+            </a>`);
+        }
+        
+        if (presence.personal_website) {
+            items.push(`<a href="${presence.personal_website}" target="_blank" class="presence-link">
+                <span>🌐</span> Website
+            </a>`);
+        }
+        
+        if (presence.outlet_profile) {
+            items.push(`<a href="${presence.outlet_profile}" target="_blank" class="presence-link">
+                <span>📰</span> Author Page
+            </a>`);
+        }
+        
+        if (presence.email) {
+            items.push(`<a href="mailto:${presence.email}" class="presence-link">
+                <span>✉️</span> Email
+            </a>`);
+        }
+        
+        if (presence.muckrack) {
+            items.push(`<a href="${presence.muckrack}" target="_blank" class="presence-link">
+                <span>📊</span> Muck Rack
+            </a>`);
+        }
+        
+        return items.join('');
     }
 
     formatNumber(num) {
