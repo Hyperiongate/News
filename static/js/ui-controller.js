@@ -523,6 +523,10 @@
 
         createEnhancedAuthorAnalysisCard(data) {
             const card = this.createCard('author', '✍️', 'Author Analysis');
+
+            console.log('Author card data:', data);
+            console.log('Author analysis:', data.author_analysis);
+            console.log('Article author:', data.article?.author);
             
             const author = data.author_analysis || {};
             const credScore = author.credibility_score || 0;
