@@ -1,1194 +1,4 @@
-// Enhanced UI Controller with Deeper Analysis - Maintains Existing Layout
-(function() {
-    class UIController {
-        constructor() {
-            this.components = {};
-            this.analysisData = null;
-        }
-
-        registerComponent(name, component) {
-            this.components[name] = component;
-            console.log(`Component registered: ${name}`);
-        }
-
-        buildResults(data) {
-            if (!data.success) {
-                this.showError(data.error || 'Analysis failed');
-                return;
-            }
-            
-            const resultsDiv = document.getElementById('results');
-            const analyzerCard = document.querySelector('.analyzer-card');
-            
-            // Clear everything
-            resultsDiv.innerHTML = '';
-            document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
-            document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
-            document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
-            
-            // Store analysis data
-            this.analysisData = data;
-            
-            // Log what we received to debug
-            console.log('Analysis Data Received:', data);
-            
-            // Create the overall assessment summary
-            resultsDiv.innerHTML = this.createOverallAssessment(data);
-            resultsDiv.classList.remove('hidden');
-            
-            // Create section header
-            const header = document.createElement('h2');
-            header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem; color: #1f2937; font-weight: 600;';
-            header.textContent = 'Comprehensive Analysis Report';
-            analyzerCard.parentNode.insertBefore(header, analyzerCard.nextSibling);
-            
-            // Create main grid
-            const gridWrapper = document.createElement('div');
-            gridWrapper.className = 'cards-grid-wrapper';
-            gridWrapper.style.cssText = `
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-                max-width: 1200px;
-                margin: 0 auto 40px auto;
-                padding: 0 20px;
-            `;
-            
-            // Create all 8 comprehensive cards with ENHANCED content
-            const cards = [
-                this.createEnhancedTrustScoreCard(data),
-                this.createEnhancedBiasAnalysisCard(data),
-                this.createEnhancedFactCheckCard(data),
-                this.createEnhancedAuthorAnalysisCard(data),
-                this.createEnhancedClickbaitCard(data),
-                this.createEnhancedSourceCredibilityCard(data),
-                this.createEnhancedManipulationCard(data),
-                this.createEnhancedTransparencyCard(data)
-            ];
-            
-            // Add all cards to grid
-            cards.forEach(card => gridWrapper.appendChild(card));
-            
-            // Insert grid after header
-            header.parentNode.insertBefore(gridWrapper, header.nextSibling);
-            
-            // Show resources
-            this.showResources(data);
-        }
-
-        createOverallAssessment(data) {
-            const trustScore = data.trust_score || 0;
-            const biasData = data.bias_analysis || {};
-            const objectivityScore = Math.round((biasData.objectivity_score || 0) * 10) / 10;
-            
-            return `
-                <div class="overall-assessment" style="padding: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; margin: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                    <!-- Header with Article Info -->
-                    <div style="margin-bottom: 24px;">
-                        <h1 style="font-size: 1.875rem; margin: 0 0 12px 0; color: #0f172a; font-weight: 700;">${data.article?.title || 'Article Analysis'}</h1>
-                        <div style="font-size: 0.9rem; color: #64748b;">
-                            <span style="font-weight: 600;">Source:</span> ${data.article?.domain || 'Unknown'} 
-                            ${data.article?.author ? `<span style="margin: 0 8px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
-                            ${data.article?.publish_date ? `<span style="margin: 0 8px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
-                        </div>
-                    </div>
-                    
-                    <!-- Main Metrics Display -->
-                    <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: center;">
-                        <!-- Trust Score Circle -->
-                        <div style="position: relative; width: 200px; height: 200px;">
-                            <svg width="200" height="200" style="transform: rotate(-90deg);">
-                                <defs>
-                                    <linearGradient id="trustGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" style="stop-color:${trustScore >= 70 ? '#10b981' : trustScore >= 40 ? '#f59e0b' : '#ef4444'};stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};stop-opacity:1" />
-                                    </linearGradient>
-                                </defs>
-                                <circle cx="100" cy="100" r="90" fill="none" stroke="#e2e8f0" stroke-width="20"/>
-                                <circle cx="100" cy="100" r="90" fill="none" 
-                                    stroke="url(#trustGradient)" 
-                                    stroke-width="20"
-                                    stroke-dasharray="${(trustScore / 100) * 565.48} 565.48"
-                                    stroke-linecap="round"/>
-                            </svg>
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                <div style="font-size: 3rem; font-weight: 800; color: ${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};">
-                                    ${trustScore}%
-                                </div>
-                                <div style="font-size: 0.875rem; color: #64748b; font-weight: 600; margin-top: -4px;">Trust Score</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Key Metrics Grid -->
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                                <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivityScore}%</div>
-                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Objectivity Score</div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Confidence: ${biasData.bias_confidence || 0}%</div>
-                            </div>
-                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                                <div style="font-size: 2rem; font-weight: 700; color: ${data.clickbait_score > 60 ? '#ef4444' : data.clickbait_score > 30 ? '#f59e0b' : '#10b981'}; margin-bottom: 4px;">${data.clickbait_score || 0}%</div>
-                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Clickbait Score</div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${data.clickbait_score > 60 ? 'High manipulation' : data.clickbait_score > 30 ? 'Some tactics used' : 'Straightforward'}</div>
-                            </div>
-                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                                <div style="font-size: 2rem; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">${data.fact_checks?.length || 0}</div>
-                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Claims Analyzed</div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${this.getFactCheckBrief(data.fact_checks)}</div>
-                            </div>
-                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                                <div style="font-size: 1.5rem; font-weight: 700; color: ${this.getSourceColor(data.source_credibility?.rating)}; margin-bottom: 4px;">${data.source_credibility?.rating || 'Unknown'}</div>
-                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Source Rating</div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${data.source_credibility?.type || 'Not in database'}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Executive Summary -->
-                    <div style="background: white; padding: 24px; border-radius: 10px; margin-top: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                        <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 600;">Executive Summary</h3>
-                        <p style="line-height: 1.7; color: #475569; margin: 0 0 12px 0; font-size: 0.9375rem;">
-                            ${data.conversational_summary || this.generateEnhancedAssessment(data)}
-                        </p>
-                        ${data.article_summary ? `
-                            <div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                                <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 0.875rem;">Article Summary:</h4>
-                                <p style="margin: 0; color: #334155; font-size: 0.875rem; line-height: 1.6;">
-                                    ${data.article_summary}
-                                </p>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Analysis Mode Indicator (if in development) -->
-                    ${data.development_mode ? `
-                        <div style="margin-top: 16px; padding: 12px; background: #dbeafe; border-radius: 8px; text-align: center;">
-                            <p style="margin: 0; color: #1e40af; font-size: 0.8125rem;">
-                                <strong>Analysis Mode:</strong> ${data.analysis_mode || 'Pro'} (Development Mode Active)
-                            </p>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }
-
-        createEnhancedTrustScoreCard(data) {
-            const card = this.createCard('trust', '🛡️', 'Trust Score Analysis');
-            
-            const trustScore = data.trust_score || 0;
-            const breakdown = this.calculateDetailedTrustBreakdown(data);
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 3rem; font-weight: 800; color: ${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};">
-                        ${trustScore}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; font-weight: 500;">Overall Trust Score</div>
-                </div>
-                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                    <h4 style="margin: 0 0 12px 0; font-size: 0.875rem; font-weight: 600; color: #334155;">Score Components</h4>
-                    ${Object.entries(breakdown).map(([key, value]) => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 0.875rem; color: #64748b;">${this.formatBreakdownLabel(key)}</span>
-                            <span style="font-weight: 600; color: #1e293b;">${value.score}%</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTrustScoreInterpretation(trustScore, breakdown)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Deep Trust Analysis</h4>
-                
-                ${Object.entries(breakdown).map(([key, data]) => `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h5 style="margin: 0; color: #1e293b; font-size: 1rem;">${this.formatBreakdownLabel(key)}</h5>
-                            <span style="font-size: 1.25rem; font-weight: 700; color: ${data.score >= 70 ? '#059669' : data.score >= 40 ? '#d97706' : '#dc2626'};">
-                                ${data.score}%
-                            </span>
-                        </div>
-                        <div class="progress-bar" style="margin-bottom: 12px;">
-                            <div class="progress-fill" style="width: ${data.score}%; background: ${data.score >= 70 ? '#10b981' : data.score >= 40 ? '#f59e0b' : '#ef4444'};"></div>
-                        </div>
-                        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.875rem; line-height: 1.5;">
-                            <strong>What this measures:</strong> ${data.description}
-                        </p>
-                        <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.8125rem;">
-                            <strong>How we assessed it:</strong> ${data.methodology}
-                        </p>
-                        ${this.getTrustComponentInsights(key, data, this.analysisData)}
-                    </div>
-                `).join('')}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">What You Should Do</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
-                        ${this.getTrustActionItems(trustScore, breakdown).map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Trust Score Methodology</h5>
-                    <p style="margin: 0; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                        Our trust score combines multiple factors weighted by their predictive value for accuracy.
-                        Source credibility (${this.getWeightPercentage('source')}%), 
-                        author track record (${this.getWeightPercentage('author')}%), 
-                        transparency (${this.getWeightPercentage('transparency')}%), 
-                        and factual accuracy (${this.getWeightPercentage('facts')}%) 
-                        are analyzed using our proprietary algorithm.
-                    </p>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createEnhancedBiasAnalysisCard(data) {
-            const card = this.createCard('bias', '⚖️', 'Bias Analysis');
-            
-            const biasData = data.bias_analysis || {};
-            const politicalLean = biasData.political_lean || 0;
-            const dimensions = biasData.bias_dimensions || {};
-            const objectivity = Math.round((biasData.objectivity_score || 0) * 10) / 10;
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.125rem;">${biasData.overall_bias || 'Bias Assessment'}</h4>
-                    <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivity}%</div>
-                    <div style="font-size: 0.875rem; color: #64748b;">Objectivity Score</div>
-                    ${biasData.bias_confidence ? `
-                        <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 6px;">
-                            <span style="font-size: 0.8125rem; color: #0369a1;">
-                                Analysis Confidence: ${biasData.bias_confidence}%
-                            </span>
-                        </div>
-                    ` : ''}
-                </div>
-                <div style="margin: 20px 0;">
-                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Political Spectrum Position</div>
-                    <div class="political-spectrum">
-                        <div class="spectrum-indicator" style="left: ${50 + (politicalLean / 2)}%"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
-                        <span>Far Left</span>
-                        <span>Center</span>
-                        <span>Far Right</span>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Analysis</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getBiasContextExplanation(biasData, data)}
-                    </p>
-                </div>
-                
-                ${Object.keys(dimensions).length > 0 ? `
-                    <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Multi-Dimensional Bias Breakdown</h4>
-                    
-                    ${Object.entries(dimensions).map(([dimension, dimData]) => `
-                        <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h5 style="margin: 0; color: #1e293b; font-size: 1rem; text-transform: capitalize;">${dimension.replace(/_/g, ' ')} Bias</h5>
-                                <span class="badge ${this.getBiasLevelClass(dimData.score)}" style="font-size: 0.875rem;">
-                                    ${dimData.label}
-                                </span>
-                            </div>
-                            <div style="margin-bottom: 12px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                    <span style="font-size: 0.8125rem; color: #64748b;">Bias Score</span>
-                                    <span style="font-size: 0.8125rem; font-weight: 600; color: #334155;">${Math.round(Math.abs(dimData.score) * 100)}%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${dimData.confidence}%; background: #6366f1;"></div>
-                                </div>
-                            </div>
-                            <p style="margin: 0 0 8px 0; color: #64748b; font-size: 0.8125rem; line-height: 1.5;">
-                                <strong>Analysis confidence:</strong> ${dimData.confidence}%
-                            </p>
-                            ${this.getDimensionSpecificInsights(dimension, dimData, data)}
-                        </div>
-                    `).join('')}
-                ` : ''}
-                
-                ${biasData.bias_patterns && biasData.bias_patterns.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Specific Bias Patterns Detected</h4>
-                        ${biasData.bias_patterns.map(pattern => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
-                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${pattern.type}</h5>
-                                <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                    ${pattern.description}
-                                </p>
-                                ${pattern.example ? `
-                                    <div style="padding: 8px; background: #fee2e2; border-radius: 4px;">
-                                        <p style="margin: 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
-                                            Example: "${pattern.example}"
-                                        </p>
-                                    </div>
-                                ` : ''}
-                                ${pattern.impact ? `
-                                    <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem;">
-                                        <strong>Impact:</strong> ${pattern.impact}
-                                    </p>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                ${biasData.framing_analysis && biasData.framing_analysis.frames_detected > 0 ? `
-                    <div style="margin: 20px 0; padding: 16px; background: #faf5ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 12px 0; color: #6b21a8; font-size: 1rem;">Narrative Framing Analysis</h5>
-                        <p style="margin: 0 0 12px 0; color: #581c87; font-size: 0.875rem;">
-                            ${biasData.framing_analysis.frames_detected} framing techniques shape how you perceive this story:
-                        </p>
-                        ${Object.entries(biasData.framing_analysis.framing_patterns || {}).filter(([_, pattern]) => pattern.detected).map(([type, pattern]) => `
-                            <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px;">
-                                <strong style="color: #581c87; font-size: 0.875rem;">${type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
-                                <p style="margin: 4px 0 0 0; color: #6b21a8; font-size: 0.8125rem;">
-                                    ${this.getFramingExplanation(type, pattern)}
-                                </p>
-                                ${pattern.examples && pattern.examples.length > 0 ? `
-                                    <div style="margin-top: 8px;">
-                                        ${pattern.examples.map(ex => `
-                                            <p style="margin: 4px 0 0 20px; padding: 8px; background: #f3f4f6; border-left: 3px solid #7c3aed; color: #374151; font-size: 0.8125rem; font-style: italic; border-radius: 4px;">
-                                                "${ex}"
-                                            </p>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                ${biasData.loaded_phrases && biasData.loaded_phrases.length > 0 ? `
-                    <div style="margin: 20px 0;">
-                        <h5 style="margin: 0 0 12px 0; color: #dc2626; font-size: 1rem;">🚨 Loaded Language Analysis</h5>
-                        <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 0.875rem;">
-                            These emotionally charged words manipulate your perception:
-                        </p>
-                        ${biasData.loaded_phrases.slice(0, 5).map(phrase => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid ${
-                                phrase.severity === 'high' ? '#dc2626' : 
-                                phrase.severity === 'medium' ? '#f59e0b' : '#6b7280'
-                            }; border-radius: 4px;">
-                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                                    <strong style="color: #991b1b; font-size: 0.9375rem;">"${phrase.text}"</strong>
-                                    <span style="padding: 2px 8px; background: ${
-                                        phrase.severity === 'high' ? '#dc2626' : 
-                                        phrase.severity === 'medium' ? '#f59e0b' : '#6b7280'
-                                    }; color: white; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">
-                                        ${phrase.severity || 'medium'} impact
-                                    </span>
-                                </div>
-                                ${phrase.explanation ? `
-                                    <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                        ${phrase.explanation}
-                                    </p>
-                                ` : ''}
-                                ${this.getLoadedPhraseAlternative(phrase)}
-                            </div>
-                        `).join('')}
-                        ${biasData.loaded_phrases.length > 5 ? `
-                            <p style="margin: 12px 0 0 0; color: #64748b; font-size: 0.8125rem; text-align: center;">
-                                ... and ${biasData.loaded_phrases.length - 5} more loaded phrases detected
-                            </p>
-                        ` : ''}
-                    </div>
-                ` : ''}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Article Objectively</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
-                        ${this.getObjectiveReadingStrategies(biasData, data).map(strategy => `<li>${strategy}</li>`).join('')}
-                    </ul>
-                </div>
-                
-                ${this.generateBiasCompensationRecommendation(biasData, data)}
-            `;
-            
-            return card;
-        }
-
-        createEnhancedFactCheckCard(data) {
-            const card = this.createCard('facts', '✓', 'Fact Check Analysis');
-            
-            const factChecks = data.fact_checks || [];
-            const keyClaimsCount = data.key_claims?.length || factChecks.length;
-            const breakdown = this.getFactCheckBreakdown(factChecks);
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #1e293b;">${keyClaimsCount}</div>
-                    <div style="font-size: 0.875rem; color: #64748b;">Key Claims Identified</div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    <div style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 6px;">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #166534;">✓ ${breakdown.verified}</div>
-                        <div style="font-size: 0.75rem; color: #14532d;">Verified True</div>
-                    </div>
-                    <div style="text-align: center; padding: 12px; background: #fef2f2; border-radius: 6px;">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #991b1b;">✗ ${breakdown.false}</div>
-                        <div style="font-size: 0.75rem; color: #7f1d1d;">Found False</div>
-                    </div>
-                </div>
-                ${breakdown.partial > 0 || breakdown.unverified > 0 ? `
-                    <div style="margin-top: 12px; text-align: center; font-size: 0.8125rem; color: #64748b;">
-                        ${breakdown.partial > 0 ? `${breakdown.partial} partially true` : ''}
-                        ${breakdown.partial > 0 && breakdown.unverified > 0 ? ', ' : ''}
-                        ${breakdown.unverified > 0 ? `${breakdown.unverified} unverified` : ''}
-                    </div>
-                ` : ''}
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What Our Fact-Check Reveals</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getFactCheckSummaryAnalysis(breakdown, factChecks, data)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Detailed Claim Analysis</h4>
-                
-                ${factChecks.length > 0 ? factChecks.map((fc, index) => {
-                    const verdict = fc.verdict || 'unverified';
-                    const { icon, color, bgColor, borderColor } = this.getFactCheckStyle(verdict);
-                    
-                    return `
-                        <div style="margin-bottom: 16px; padding: 16px; background: ${bgColor}; border-left: 4px solid ${borderColor}; border-radius: 4px;">
-                            <div style="display: flex; gap: 12px;">
-                                <span style="font-size: 1.5rem; flex-shrink: 0;">${icon}</span>
-                                <div style="flex: 1;">
-                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                                        <h5 style="margin: 0; color: #1e293b; font-size: 0.9375rem;">Claim ${index + 1}</h5>
-                                        <span style="padding: 2px 12px; background: ${color}; color: white; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
-                                            ${verdict.replace(/_/g, ' ').toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <p style="margin: 0 0 8px 0; color: #334155; font-style: italic; font-size: 0.875rem; line-height: 1.5;">
-                                        "${fc.claim || fc.text || 'Claim text'}"
-                                    </p>
-                                    ${fc.explanation ? `
-                                        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.8125rem; line-height: 1.5;">
-                                            <strong>Analysis:</strong> ${fc.explanation}
-                                        </p>
-                                    ` : ''}
-                                    ${this.getClaimContext(fc, data)}
-                                    <div style="display: flex; gap: 16px; font-size: 0.75rem; color: #64748b;">
-                                        ${fc.source ? `<span><strong>Source:</strong> ${fc.source}</span>` : ''}
-                                        ${fc.publisher ? `<span><strong>Verified by:</strong> ${fc.publisher}</span>` : ''}
-                                        ${fc.checked_at ? `<span><strong>Checked:</strong> ${new Date(fc.checked_at).toLocaleDateString()}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('') : `
-                    <p style="color: #64748b; font-style: italic;">No specific fact checks were performed on this article.</p>
-                `}
-                
-                ${this.generateMissingContextAnalysis(data)}
-                
-                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">Fact-Checking Implications</h4>
-                    <p style="margin: 0; color: #166534; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getFactCheckImplications(breakdown, data)}
-                    </p>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Verify Claims Yourself</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
-                        ${this.getSelfVerificationTips(data).map(tip => `<li>${tip}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createEnhancedAuthorAnalysisCard(data) {
-            const card = this.createCard('author', '✍️', 'Author Analysis');
-            
-            const author = data.author_analysis || {};
-            const credScore = author.credibility_score || 0;
-            const hasDetailedInfo = author.found && author.bio && !author.bio.includes('Limited information');
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
-                        ${author.name || data.article?.author || 'Unknown Author'}
-                    </h4>
-                    ${hasDetailedInfo ? `
-                        <div style="margin: 16px 0;">
-                            <div style="font-size: 2.5rem; font-weight: 700; color: ${credScore >= 70 ? '#059669' : credScore >= 40 ? '#d97706' : '#dc2626'};">
-                                ${credScore}/100
-                            </div>
-                            <div style="font-size: 0.875rem; color: #64748b;">Credibility Score</div>
-                        </div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
-                            ${author.verification_status?.verified ? '<span class="badge verified">✓ Verified</span>' : ''}
-                            ${author.verification_status?.journalist_verified ? '<span class="badge verified">Professional Journalist</span>' : ''}
-                            ${author.verification_status?.outlet_staff ? '<span class="badge info">Staff Writer</span>' : ''}
-                        </div>
-                    ` : `
-                        <div style="margin: 16px 0; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                            <p style="margin: 0; color: #92400e; font-size: 0.875rem;">
-                                Limited author information available. This affects our ability to verify credibility.
-                            </p>
-                        </div>
-                    `}
-                    ${author.articles_count && author.professional_info?.years_experience ? `
-                        <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">
-                            <p style="margin: 0; color: #0369a1; font-size: 0.875rem; font-weight: 500;">
-                                ${author.articles_count} articles published • ${author.professional_info.years_experience}+ years experience
-                            </p>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getAuthorAnalysisContext(author, data)}
-                    </p>
-                </div>
-                
-                ${author.bio ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Biography</h4>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
-                            <p style="margin: 0; color: #334155; line-height: 1.7; font-size: 0.9375rem;">
-                                ${author.bio}
-                            </p>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${this.generateAuthorExpertiseAnalysis(author, data)}
-                
-                ${author.professional_info ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Professional Background</h4>
-                        <div style="display: grid; gap: 12px;">
-                            ${author.professional_info.current_position ? `
-                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Current Position</span>
-                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
-                                        ${author.professional_info.current_position}
-                                    </p>
-                                </div>
-                            ` : ''}
-                            ${author.professional_info.years_experience ? `
-                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Experience</span>
-                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
-                                        ${author.professional_info.years_experience}+ years in journalism
-                                    </p>
-                                </div>
-                            ` : ''}
-                            ${author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
-                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Publications</span>
-                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
-                                        ${author.professional_info.outlets.join(', ')}
-                                    </p>
-                                </div>
-                            ` : ''}
-                            ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
-                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Areas of Expertise</span>
-                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
-                                        ${author.professional_info.expertise_areas.join(', ')}
-                                    </p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${this.generateAuthorBiasPatterns(author, data)}
-                
-                <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
-                    <h5 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">Credibility Assessment</h5>
-                    <div style="display: grid; gap: 8px; margin-bottom: 12px;">
-                        ${this.getEnhancedCredibilityFactors(author, data).map(factor => `
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.875rem; color: #166534;">${factor.label}</span>
-                                <span style="font-size: 0.875rem; font-weight: 600; color: ${factor.present ? '#059669' : '#dc2626'};">
-                                    ${factor.present ? '✓' : '✗'}
-                                </span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${author.credibility_explanation ? `
-                        <p style="margin: 0; color: #14532d; font-size: 0.875rem; line-height: 1.5;">
-                            <strong>${author.credibility_explanation.level}:</strong> ${author.credibility_explanation.explanation}
-                        </p>
-                    ` : ''}
-                </div>
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Author's Work</h4>
-                    <p style="margin: 0; color: #78350f; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getEnhancedAuthorReadingAdvice(author, data)}
-                    </p>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createEnhancedClickbaitCard(data) {
-            const card = this.createCard('clickbait', '🎣', 'Clickbait & Headline Analysis');
-            
-            const clickbaitScore = data.clickbait_score || 0;
-            const titleAnalysis = data.title_analysis || {};
-            const indicators = data.clickbait_indicators || [];
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 3rem; font-weight: 800; color: ${clickbaitScore < 30 ? '#059669' : clickbaitScore < 60 ? '#d97706' : '#dc2626'};">
-                        ${clickbaitScore}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b;">Clickbait Score</div>
-                </div>
-                <div style="margin-bottom: 16px;">
-                    <div class="clickbait-gauge">
-                        <div class="clickbait-indicator" style="left: ${clickbaitScore}%"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
-                        <span>Straightforward</span>
-                        <span>Moderate</span>
-                        <span>Heavy Clickbait</span>
-                    </div>
-                </div>
-                <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
-                    <p style="margin: 0; font-size: 0.8125rem; font-style: italic; color: #475569; text-align: center;">
-                        "${data.article?.title || 'No title available'}"
-                    </p>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Reveals</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getClickbaitAnalysisContext(clickbaitScore, indicators, data)}
-                    </p>
-                </div>
-                
-                ${Object.keys(titleAnalysis).length > 0 ? `
-                    <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Headline Psychology Breakdown</h4>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-                        ${[
-                            { label: 'Sensationalism', value: titleAnalysis.sensationalism || 0, desc: 'Exaggerated language', insight: this.getSensationalismInsight(titleAnalysis.sensationalism) },
-                            { label: 'Curiosity Gap', value: titleAnalysis.curiosity_gap || 0, desc: 'Withheld information', insight: this.getCuriosityGapInsight(titleAnalysis.curiosity_gap) },
-                            { label: 'Emotional Words', value: titleAnalysis.emotional_words || 0, desc: 'Feeling over facts', insight: this.getEmotionalWordsInsight(titleAnalysis.emotional_words) }
-                        ].map(metric => `
-                            <div style="text-align: center; padding: 16px; background: #f8fafc; border-radius: 8px;">
-                                <div style="font-size: 1.75rem; font-weight: 700; color: ${metric.value > 50 ? '#dc2626' : metric.value > 25 ? '#f59e0b' : '#059669'};">
-                                    ${metric.value}%
-                                </div>
-                                <div style="font-size: 0.875rem; font-weight: 600; color: #1e293b; margin: 4px 0;">
-                                    ${metric.label}
-                                </div>
-                                <div style="font-size: 0.75rem; color: #64748b;">
-                                    ${metric.desc}
-                                </div>
-                                <div style="margin-top: 8px; padding: 8px; background: white; border-radius: 4px;">
-                                    <p style="margin: 0; font-size: 0.7rem; color: #475569; line-height: 1.4;">
-                                        ${metric.insight}
-                                    </p>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                ${indicators.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Manipulation Tactics in This Headline</h4>
-                        ${indicators.map(ind => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
-                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${ind.name}</h5>
-                                <p style="margin: 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                    ${ind.description}
-                                </p>
-                                ${ind.psychology ? `
-                                    <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
-                                        <strong>Psychology:</strong> ${ind.psychology}
-                                    </p>
-                                ` : ''}
-                                ${this.getClickbaitTacticDefense(ind)}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
-                        <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">✓ Good Headline Practice</h4>
-                        <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.6;">
-                            This headline appears straightforward and informative without manipulative tactics. 
-                            It respects the reader's time by clearly indicating what the article is about.
-                        </p>
-                    </div>
-                `}
-                
-                ${this.generateHeadlineContentComparisonCard(data)}
-                
-                <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">The Psychology of Headlines</h4>
-                    <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getEnhancedClickbaitPsychologyExplanation(clickbaitScore, indicators)}
-                    </p>
-                    <h5 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 0.875rem;">Critical Reading Strategies:</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.8125rem; line-height: 1.5;">
-                        ${this.getHeadlineDefenseStrategies(clickbaitScore, indicators).map(strategy => `<li>${strategy}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createEnhancedSourceCredibilityCard(data) {
-            const card = this.createCard('source', '🏢', 'Source Credibility & Network');
-            
-            const source = data.source_credibility || {};
-            const domain = data.article?.domain || 'Unknown';
-            const rating = source.rating || 'Unknown';
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <h4 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">${domain}</h4>
-                    <div class="credibility-badge ${rating.toLowerCase()}" style="display: inline-block; padding: 8px 24px; font-size: 1.125rem;">
-                        ${rating} Credibility
-                    </div>
-                    <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Political Bias</div>
-                            <div style="font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
-                                ${source.bias || 'Unknown'}
-                            </div>
-                        </div>
-                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Type</div>
-                            <div style="font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
-                                ${source.type || 'Unknown'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Source</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getSourceAnalysisContext(source, data)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">What ${rating} Credibility Means</h4>
-                
-                <div style="margin-bottom: 20px; padding: 16px; background: ${this.getSourceRatingColor(rating)}; border-radius: 8px;">
-                    <h5 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1rem;">${rating} Credibility Sources</h5>
-                    <p style="margin: 0 0 12px 0; color: #334155; font-size: 0.875rem; line-height: 1.6;">
-                        ${this.getSourceRatingDescription(rating)}
-                    </p>
-                    <div style="margin-bottom: 12px;">
-                        <h6 style="margin: 0 0 8px 0; color: #1e293b; font-size: 0.875rem;">Key Characteristics:</h6>
-                        <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 0.8125rem; line-height: 1.5;">
-                            ${this.getSourceCharacteristicsList(rating).map(char => `<li>${char}</li>`).join('')}
-                        </ul>
-                    </div>
-                    ${this.getSourceSpecificWarnings(source, data)}
-                </div>
-                
-                ${this.generateSourceNetworkAnalysis(source, data)}
-                
-                ${source.bias && source.bias !== 'Unknown' ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Political Orientation & Its Impact</h4>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <span style="font-size: 0.9375rem; font-weight: 600; color: #1e293b;">${source.bias}</span>
-                                <span class="badge ${this.getBiasClass(source.bias)}">${this.getBiasLabel(source.bias)}</span>
-                            </div>
-                            <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.875rem; line-height: 1.6;">
-                                ${this.getBiasDescription(source.bias)}
-                            </p>
-                            ${this.getBiasImpactAnalysis(source.bias, data)}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${source.funding_sources || source.ownership ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                        <h4 style="margin: 0 0 12px 0; color: #92400e; font-size: 1rem;">⚠️ Potential Conflicts of Interest</h4>
-                        ${source.ownership ? `
-                            <p style="margin: 0 0 8px 0; color: #78350f; font-size: 0.875rem;">
-                                <strong>Ownership:</strong> ${source.ownership}
-                            </p>
-                        ` : ''}
-                        ${source.funding_sources ? `
-                            <p style="margin: 0; color: #78350f; font-size: 0.875rem;">
-                                <strong>Known funding:</strong> ${source.funding_sources}
-                            </p>
-                        ` : ''}
-                    </div>
-                ` : ''}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read Content from ${domain}</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
-                        ${this.getEnhancedSourceReadingGuidance(rating, source, data).map(guide => `<li>${guide}</li>`).join('')}
-                    </ul>
-                </div>
-                
-                ${source.description ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Additional Context</h5>
-                        <p style="margin: 0; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.6;">
-                            ${source.description}
-                        </p>
-                    </div>
-                ` : ''}
-                
-                ${this.generateAlternativeSourceRecommendations(source, data)}
-            `;
-            
-            return card;
-        }
-
-        createEnhancedManipulationCard(data) {
-            const card = this.createCard('manipulation', '⚠️', 'Manipulation & Persuasion Analysis');
-            
-            const persuasion = data.persuasion_analysis || {};
-            const tactics = data.bias_analysis?.manipulation_tactics || [];
-            const overallScore = persuasion.persuasion_score || 0;
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; font-weight: 800; color: ${overallScore < 30 ? '#059669' : overallScore < 60 ? '#d97706' : '#dc2626'};">
-                        ${overallScore}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Overall Manipulation Score</div>
-                    ${tactics.length > 0 || overallScore > 30 ? `
-                        <div style="padding: 12px; background: #fef2f2; border-radius: 6px;">
-                            <p style="margin: 0; color: #991b1b; font-size: 0.875rem; font-weight: 500;">
-                                ⚠️ ${tactics.length} manipulation tactics detected
-                            </p>
-                        </div>
-                    ` : `
-                        <div style="padding: 12px; background: #f0fdf4; border-radius: 6px;">
-                            <p style="margin: 0; color: #166534; font-size: 0.875rem; font-weight: 500;">
-                                ✓ Minimal manipulation detected
-                            </p>
-                        </div>
-                    `}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getManipulationAnalysisContext(overallScore, tactics, persuasion)}
-                    </p>
-                </div>
-                
-                ${persuasion.emotional_appeals && Object.values(persuasion.emotional_appeals).some(v => v > 0) ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Emotional Manipulation Profile</h4>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
-                            <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.875rem;">
-                                This article targets these specific emotions to influence your judgment:
-                            </p>
-                            <div style="display: grid; gap: 8px;">
-                                ${Object.entries(persuasion.emotional_appeals).filter(([_, v]) => v > 0).map(([emotion, value]) => {
-                                    const emotionData = this.getEmotionData(emotion);
-                                    return `
-                                        <div style="display: flex; align-items: center; gap: 12px;">
-                                            <span style="font-size: 1.5rem;">${emotionData.icon}</span>
-                                            <div style="flex: 1;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                                    <span style="font-size: 0.875rem; font-weight: 600; color: #1e293b; text-transform: capitalize;">
-                                                        ${emotion}
-                                                    </span>
-                                                    <span style="font-size: 0.875rem; font-weight: 700; color: ${emotionData.color};">
-                                                        ${value}%
-                                                    </span>
-                                                </div>
-                                                <div class="progress-bar" style="height: 6px;">
-                                                    <div class="progress-fill" style="width: ${value}%; background: ${emotionData.color};"></div>
-                                                </div>
-                                                <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #64748b;">
-                                                    ${emotionData.description}
-                                                </p>
-                                                ${this.getEmotionManipulationInsight(emotion, value, data)}
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                            ${persuasion.dominant_emotion ? `
-                                <div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px;">
-                                    <p style="margin: 0; color: #92400e; font-size: 0.8125rem;">
-                                        <strong>Primary manipulation vector:</strong> ${persuasion.dominant_emotion} - 
-                                        ${this.getDominantEmotionStrategy(persuasion.dominant_emotion)}
-                                    </p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${persuasion.logical_fallacies && persuasion.logical_fallacies.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #dc2626; font-size: 1.125rem;">⚠️ Logical Fallacies That Deceive</h4>
-                        ${persuasion.logical_fallacies.map(fallacy => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
-                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${fallacy.type}</h5>
-                                <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                    ${fallacy.description}
-                                </p>
-                                <div style="padding: 8px; background: #fee2e2; border-radius: 4px;">
-                                    <p style="margin: 0; color: #991b1b; font-size: 0.75rem;">
-                                        <strong>Why this tricks you:</strong> ${this.getFallacyPsychology(fallacy.type)}
-                                    </p>
-                                </div>
-                                ${this.getFallacyCounterStrategy(fallacy)}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                ${tactics.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Advanced Manipulation Techniques</h4>
-                        ${tactics.map(tactic => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-radius: 4px; border-left: 3px solid ${
-                                tactic.severity === 'high' ? '#dc2626' : 
-                                tactic.severity === 'medium' ? '#f59e0b' : '#6b7280'
-                            };">
-                                <div style="display: flex; justify-content: space-between; align-items: start;">
-                                    <h5 style="margin: 0; color: #991b1b; font-size: 0.9375rem;">${tactic.name || tactic}</h5>
-                                    ${tactic.severity ? `
-                                        <span style="padding: 2px 8px; background: ${
-                                            tactic.severity === 'high' ? '#dc2626' : 
-                                            tactic.severity === 'medium' ? '#f59e0b' : '#6b7280'
-                                        }; color: white; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">
-                                            ${tactic.severity}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                                ${tactic.description ? `
-                                    <p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
-                                        ${tactic.description}
-                                    </p>
-                                ` : ''}
-                                ${this.getManipulationTacticDefense(tactic)}
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                ${persuasion.rhetorical_devices && persuasion.rhetorical_devices.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Rhetorical Manipulation</h4>
-                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
-                            ${persuasion.rhetorical_devices.map(device => `
-                                <div style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 6px;">
-                                    <strong style="color: #1e293b; font-size: 0.875rem;">${device.type}:</strong>
-                                    <span style="color: #475569; font-size: 0.8125rem;">${device.description}</span>
-                                    ${this.getRhetoricalDeviceInsight(device)}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${this.generateManipulationResistanceStrategies(overallScore, persuasion, tactics)}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Your Personalized Defense Plan</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
-                        ${this.getPersonalizedManipulationDefense(overallScore, persuasion, data).map(strategy => `<li>${strategy}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createEnhancedTransparencyCard(data) {
-            const card = this.createCard('transparency', '🔍', 'Transparency & Hidden Context');
-            
-            const transparency = data.transparency_analysis || {};
-            const content = data.content_analysis || {};
-            const connection = data.connection_analysis || {};
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: ${transparency.transparency_score >= 70 ? '#059669' : transparency.transparency_score >= 40 ? '#d97706' : '#dc2626'};">
-                        ${transparency.transparency_score || 0}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 16px;">Transparency Score</div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${transparency.source_count || 0}</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Sources</div>
-                        </div>
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${content.word_count || 0}</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Words</div>
-                        </div>
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${content.depth_score || 0}%</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Depth</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What's Hidden in This Article</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTransparencyAnalysisContext(transparency, content, data)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Source Quality Analysis</h4>
-                
-                ${transparency.source_types ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-                        <div style="margin-bottom: 16px;">
-                            <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1rem;">Who's Really Speaking</h5>
-                            <div style="display: grid; gap: 8px;">
-                                ${Object.entries(transparency.source_types).filter(([_, count]) => count > 0).map(([type, count]) => {
-                                    const sourceData = this.getSourceTypeData(type);
-                                    return `
-                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                <span style="font-size: 1.25rem;">${sourceData.icon}</span>
-                                                <span style="font-size: 0.875rem; color: #334155; text-transform: capitalize;">
-                                                    ${type.replace(/_/g, ' ')}
-                                                </span>
-                                            </div>
-                                            <div style="display: flex; align-items: center; gap: 12px;">
-                                                <span style="font-size: 0.875rem; font-weight: 600; color: #1e293b;">${count}</span>
-                                                <div style="width: 80px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
-                                                    <div style="width: ${(count / transparency.source_count) * 100}%; height: 100%; background: ${sourceData.color};"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                            ${this.getSourceQualityInsights(transparency)}
-                        </div>
-                        
-                        <div style="padding: 12px; background: ${transparency.named_source_ratio >= 60 ? '#f0fdf4' : transparency.named_source_ratio >= 30 ? '#fef3c7' : '#fef2f2'}; border-radius: 6px;">
-                            <p style="margin: 0; color: ${transparency.named_source_ratio >= 60 ? '#166534' : transparency.named_source_ratio >= 30 ? '#92400e' : '#991b1b'}; font-size: 0.875rem;">
-                                <strong>${transparency.named_source_ratio || 0}% named sources:</strong> 
-                                ${this.getNamedSourceImplications(transparency.named_source_ratio, data)}
-                            </p>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${this.generateMissingPerspectivesAnalysis(data)}
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Content Structure Analysis</h4>
-                
-                <div style="margin-bottom: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
-                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Reading Level</div>
-                            <div style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
-                                ${content.reading_level || 'Unknown'}
-                            </div>
-                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
-                                ~${Math.ceil((content.word_count || 0) / 200)} min read
-                            </div>
-                        </div>
-                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Complexity</div>
-                            <div style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
-                                ${content.complexity_ratio || 0}%
-                            </div>
-                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
-                                Complex words
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${content.facts_vs_opinion ? `
-                        <div style="margin-bottom: 16px;">
-                            <h5 style="margin: 0 0 8px 0; color: #1e293b; font-size: 0.9375rem;">What You're Actually Reading</h5>
-                            <div style="display: flex; height: 32px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-                                ${this.createContentBar(content.facts_vs_opinion)}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8125rem;">
-                                <span style="color: #059669;">📊 Facts: ${content.facts_vs_opinion.facts}</span>
-                                <span style="color: #d97706;">🔍 Analysis: ${content.facts_vs_opinion.analysis}</span>
-                                <span style="color: #dc2626;">💭 Opinions: ${content.facts_vs_opinion.opinions}</span>
-                            </div>
-                            ${this.getContentCompositionInsight(content.facts_vs_opinion)}
-                        </div>
-                    ` : ''}
-                </div>
-                
-                ${connection && connection.topic_connections && connection.topic_connections.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Hidden Agenda Connections</h4>
-                        <div style="padding: 16px; background: #faf5ff; border-radius: 8px;">
-                            <p style="margin: 0 0 12px 0; color: #6b21a8; font-size: 0.875rem;">
-                                This article connects to these broader narratives:
-                            </p>
-                            ${connection.topic_connections.slice(0, 5).map(topic => `
-                                <div style="margin-bottom: 8px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                        <span style="font-size: 0.875rem; font-weight: 600; color: #581c87;">${topic.topic}</span>
-                                        <span style="font-size: 0.8125rem; color: #6b21a8;">${topic.strength}% relevance</span>
-                                    </div>
-                                    <div class="progress-bar" style="height: 4px;">
-                                        <div class="progress-fill" style="width: ${topic.strength}%; background: #7c3aed;"></div>
-                                    </div>
-                                    ${this.getTopicConnectionInsight(topic, data)}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">What to Look for When Reading</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTransparencyReadingStrategies(transparency, content, data).map(strategy => `<li>${strategy}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
+}
 
         // Enhanced helper methods with deeper insights
 
@@ -1201,7 +11,7 @@
             const biasScore = Math.abs(data.bias_analysis?.political_lean || 0);
             
             let assessment = `Our comprehensive analysis of this article from <strong>${source}</strong>`;
-            if (data.article?.author) {
+            if (data.article?.author && data.article.author !== 'Unknown Author') {
                 assessment += ` by <strong>${author}</strong>`;
             }
             assessment += ` reveals `;
@@ -2175,6 +985,18 @@
             }
         }
 
+        getEmotionData(emotion) {
+            const emotions = {
+                fear: { icon: '😨', color: '#dc2626', description: 'Appeals to safety concerns and threats' },
+                anger: { icon: '😠', color: '#ef4444', description: 'Triggers outrage and indignation' },
+                hope: { icon: '🌟', color: '#10b981', description: 'Promises positive outcomes' },
+                pride: { icon: '💪', color: '#3b82f6', description: 'Appeals to identity and achievements' },
+                sympathy: { icon: '💔', color: '#8b5cf6', description: 'Evokes compassion for victims' },
+                excitement: { icon: '🎉', color: '#f59e0b', description: 'Creates anticipation and enthusiasm' }
+            };
+            return emotions[emotion] || { icon: '❓', color: '#6b7280', description: 'Emotional appeal' };
+        }
+
         getEmotionManipulationInsight(emotion, value, data) {
             if (value < 20) return '';
             
@@ -2491,7 +1313,7 @@
             return strategies;
         }
 
-        // Core helper methods (keep existing ones)
+        // Core helper methods
         
         createCard(type, icon, title) {
             const card = document.createElement('div');
@@ -2521,8 +1343,8 @@
 
         calculateDetailedTrustBreakdown(data) {
             const sourceScore = this.calculateSourceScore(data.source_credibility);
-            const authorScore = data.author_analysis?.credibility_score || 50;
-            const transparencyScore = data.transparency_analysis?.transparency_score || 50;
+            const authorScore = data.author_analysis.credibility_score;
+            const transparencyScore = data.transparency_analysis.transparency_score;
             const factsScore = this.calculateFactScore(data.fact_checks);
             
             return {
@@ -2550,7 +1372,6 @@
         }
 
         calculateSourceScore(credibility) {
-            if (!credibility) return 50;
             const scoreMap = {
                 'High': 90,
                 'Medium': 60,
@@ -2657,34 +1478,16 @@
             return colors[rating] || '#6b7280';
         }
 
-        getEmotionData(emotion) {
-            const emotions = {
-                fear: { icon: '😨', color: '#dc2626', description: 'Appeals to safety concerns and threats' },
-                anger: { icon: '😠', color: '#ef4444', description: 'Triggers outrage and indignation' },
-                hope: { icon: '🌟', color: '#10b981', description: 'Promises positive outcomes' },
-                pride: { icon: '💪', color: '#3b82f6', description: 'Appeals to identity and achievements' },
-                sympathy: { icon: '💔', color: '#8b5cf6', description: 'Evokes compassion for victims' },
-                excitement: { icon: '🎉', color: '#f59e0b', description: 'Creates anticipation and enthusiasm' }
-            };
-            return emotions[emotion] || { icon: '❓', color: '#6b7280', description: 'Emotional appeal' };
-        }
-
         getSourceTypeData(type) {
             const types = {
                 named_sources: { icon: '👤', color: '#10b981' },
                 anonymous_sources: { icon: '🕵️', color: '#ef4444' },
                 official_sources: { icon: '🏛️', color: '#3b82f6' },
                 expert_sources: { icon: '🎓', color: '#8b5cf6' },
-                document_references: { icon: '📄', color: '#f59e0b' }
+                document_references: { icon: '📄', color: '#f59e0b' },
+                citizen_sources: { icon: '👥', color: '#10b981' }
             };
             return types[type] || { icon: '❓', color: '#6b7280' };
-        }
-
-        getNamedSourceAssessment(ratio) {
-            if (ratio >= 70) return 'Excellent transparency - most sources are clearly identified';
-            if (ratio >= 50) return 'Good transparency - majority of sources are named';
-            if (ratio >= 30) return 'Limited transparency - many anonymous sources';
-            return 'Poor transparency - heavily reliant on unnamed sources';
         }
 
         createContentBar(factsVsOpinion) {
@@ -2836,6 +1639,7 @@
                         <div class="error-content">
                             <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 1.25rem;">Analysis Error</h3>
                             <p style="margin: 0; color: #7f1d1d; line-height: 1.6;">${message}</p>
+                            <p style="margin: 8px 0 0 0; color: #7f1d1d; font-size: 0.875rem;">Please check your article URL and try again.</p>
                         </div>
                     </div>
                 </div>
@@ -3038,4 +1842,1328 @@
         `;
         document.head.appendChild(style);
     }
-})();
+
+    // Log that UI controller is loaded
+    console.log('UI Controller loaded and ready');
+})();// Enhanced UI Controller with Data Validation and Error Handling
+(function() {
+    class UIController {
+        constructor() {
+            this.components = {};
+            this.analysisData = null;
+        }
+
+        registerComponent(name, component) {
+            this.components[name] = component;
+            console.log(`Component registered: ${name}`);
+        }
+
+        buildResults(data) {
+            console.log('Building results with data:', data);
+            
+            if (!data) {
+                this.showError('No data received from analysis');
+                return;
+            }
+            
+            if (!data.success) {
+                this.showError(data.error || 'Analysis failed');
+                return;
+            }
+            
+            // Ensure all required data structures exist with defaults
+            const normalizedData = this.normalizeData(data);
+            
+            const resultsDiv = document.getElementById('results');
+            const analyzerCard = document.querySelector('.analyzer-card');
+            
+            // Clear everything
+            resultsDiv.innerHTML = '';
+            document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
+            document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
+            document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
+            
+            // Store normalized data
+            this.analysisData = normalizedData;
+            
+            // Create the overall assessment summary
+            resultsDiv.innerHTML = this.createOverallAssessment(normalizedData);
+            resultsDiv.classList.remove('hidden');
+            
+            // Create section header
+            const header = document.createElement('h2');
+            header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem; color: #1f2937; font-weight: 600;';
+            header.textContent = 'Comprehensive Analysis Report';
+            analyzerCard.parentNode.insertBefore(header, analyzerCard.nextSibling);
+            
+            // Create main grid
+            const gridWrapper = document.createElement('div');
+            gridWrapper.className = 'cards-grid-wrapper';
+            gridWrapper.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                max-width: 1200px;
+                margin: 0 auto 40px auto;
+                padding: 0 20px;
+            `;
+            
+            // Create all 8 comprehensive cards
+            const cards = [
+                this.createEnhancedTrustScoreCard(normalizedData),
+                this.createEnhancedBiasAnalysisCard(normalizedData),
+                this.createEnhancedFactCheckCard(normalizedData),
+                this.createEnhancedAuthorAnalysisCard(normalizedData),
+                this.createEnhancedClickbaitCard(normalizedData),
+                this.createEnhancedSourceCredibilityCard(normalizedData),
+                this.createEnhancedManipulationCard(normalizedData),
+                this.createEnhancedTransparencyCard(normalizedData)
+            ];
+            
+            // Add all cards to grid
+            cards.forEach(card => gridWrapper.appendChild(card));
+            
+            // Insert grid after header
+            header.parentNode.insertBefore(gridWrapper, header.nextSibling);
+            
+            // Show resources
+            this.showResources(normalizedData);
+        }
+
+        normalizeData(data) {
+            // Ensure all expected data structures exist
+            const normalized = {
+                success: data.success || true,
+                trust_score: this.safeNumber(data.trust_score, 50),
+                clickbait_score: this.safeNumber(data.clickbait_score, 0),
+                development_mode: data.development_mode || false,
+                analysis_mode: data.analysis_mode || 'basic',
+                is_pro: data.is_pro || false,
+                
+                // Article data
+                article: {
+                    title: data.article?.title || data.title || 'Untitled Article',
+                    domain: data.article?.domain || data.domain || 'Unknown Source',
+                    author: data.article?.author || data.author || 'Unknown Author',
+                    publish_date: data.article?.publish_date || data.publish_date || null,
+                    url: data.article?.url || data.url || ''
+                },
+                
+                // Summary data
+                article_summary: data.article_summary || data.summary || '',
+                conversational_summary: data.conversational_summary || '',
+                
+                // Bias analysis
+                bias_analysis: this.normalizeBiasAnalysis(data.bias_analysis || {}),
+                
+                // Source credibility
+                source_credibility: this.normalizeSourceCredibility(data.source_credibility || {}),
+                
+                // Author analysis
+                author_analysis: this.normalizeAuthorAnalysis(data.author_analysis || {}),
+                
+                // Fact checks
+                fact_checks: Array.isArray(data.fact_checks) ? data.fact_checks : [],
+                key_claims: Array.isArray(data.key_claims) ? data.key_claims : [],
+                
+                // Title/clickbait analysis
+                title_analysis: data.title_analysis || {},
+                clickbait_indicators: Array.isArray(data.clickbait_indicators) ? data.clickbait_indicators : [],
+                
+                // Transparency analysis
+                transparency_analysis: this.normalizeTransparencyAnalysis(data.transparency_analysis || {}),
+                
+                // Content analysis
+                content_analysis: this.normalizeContentAnalysis(data.content_analysis || {}),
+                
+                // Persuasion/manipulation analysis
+                persuasion_analysis: this.normalizePersuasionAnalysis(data.persuasion_analysis || {}),
+                
+                // Connection analysis
+                connection_analysis: data.connection_analysis || {}
+            };
+            
+            return normalized;
+        }
+
+        safeNumber(value, defaultValue = 0) {
+            const num = Number(value);
+            return isNaN(num) ? defaultValue : num;
+        }
+
+        normalizeBiasAnalysis(biasData) {
+            return {
+                overall_bias: biasData.overall_bias || 'Unknown',
+                political_lean: this.safeNumber(biasData.political_lean, 0),
+                bias_confidence: this.safeNumber(biasData.bias_confidence, 0),
+                objectivity_score: this.safeNumber(biasData.objectivity_score, 50),
+                bias_dimensions: biasData.bias_dimensions || {},
+                bias_patterns: Array.isArray(biasData.bias_patterns) ? biasData.bias_patterns : [],
+                manipulation_tactics: Array.isArray(biasData.manipulation_tactics) ? biasData.manipulation_tactics : [],
+                loaded_phrases: Array.isArray(biasData.loaded_phrases) ? biasData.loaded_phrases : [],
+                framing_analysis: biasData.framing_analysis || {
+                    frames_detected: 0,
+                    framing_patterns: {}
+                }
+            };
+        }
+
+        normalizeSourceCredibility(sourceData) {
+            return {
+                rating: sourceData.rating || 'Unknown',
+                type: sourceData.type || 'Unknown',
+                bias: sourceData.bias || 'Unknown',
+                description: sourceData.description || '',
+                ownership: sourceData.ownership || '',
+                funding_sources: sourceData.funding_sources || ''
+            };
+        }
+
+        normalizeAuthorAnalysis(authorData) {
+            return {
+                found: authorData.found || false,
+                name: authorData.name || 'Unknown Author',
+                bio: authorData.bio || '',
+                credibility_score: this.safeNumber(authorData.credibility_score, 50),
+                articles_count: this.safeNumber(authorData.articles_count, 0),
+                verification_status: authorData.verification_status || {},
+                professional_info: authorData.professional_info || {},
+                online_presence: authorData.online_presence || {},
+                issues_corrections: authorData.issues_corrections || false,
+                credibility_explanation: authorData.credibility_explanation || {}
+            };
+        }
+
+        normalizeTransparencyAnalysis(transparencyData) {
+            return {
+                transparency_score: this.safeNumber(transparencyData.transparency_score, 50),
+                source_count: this.safeNumber(transparencyData.source_count, 0),
+                named_source_ratio: this.safeNumber(transparencyData.named_source_ratio, 0),
+                source_types: transparencyData.source_types || {}
+            };
+        }
+
+        normalizeContentAnalysis(contentData) {
+            return {
+                word_count: this.safeNumber(contentData.word_count, 0),
+                reading_level: contentData.reading_level || 'Unknown',
+                depth_score: this.safeNumber(contentData.depth_score, 50),
+                complexity_ratio: this.safeNumber(contentData.complexity_ratio, 0),
+                facts_vs_opinion: contentData.facts_vs_opinion || {
+                    facts: 33,
+                    analysis: 33,
+                    opinions: 34
+                }
+            };
+        }
+
+        normalizePersuasionAnalysis(persuasionData) {
+            return {
+                persuasion_score: this.safeNumber(persuasionData.persuasion_score, 0),
+                emotional_appeals: persuasionData.emotional_appeals || {},
+                dominant_emotion: persuasionData.dominant_emotion || null,
+                logical_fallacies: Array.isArray(persuasionData.logical_fallacies) ? persuasionData.logical_fallacies : [],
+                rhetorical_devices: Array.isArray(persuasionData.rhetorical_devices) ? persuasionData.rhetorical_devices : []
+            };
+        }
+
+        createOverallAssessment(data) {
+            const trustScore = data.trust_score;
+            const biasData = data.bias_analysis;
+            const objectivityScore = Math.round(biasData.objectivity_score * 10) / 10;
+            
+            return `
+                <div class="overall-assessment" style="padding: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; margin: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                    <!-- Header with Article Info -->
+                    <div style="margin-bottom: 24px;">
+                        <h1 style="font-size: 1.875rem; margin: 0 0 12px 0; color: #0f172a; font-weight: 700;">${data.article.title}</h1>
+                        <div style="font-size: 0.9rem; color: #64748b;">
+                            <span style="font-weight: 600;">Source:</span> ${data.article.domain} 
+                            ${data.article.author !== 'Unknown Author' ? `<span style="margin: 0 8px;">|</span> <span style="font-weight: 600;">Author:</span> ${data.article.author}` : ''}
+                            ${data.article.publish_date ? `<span style="margin: 0 8px;">|</span> ${new Date(data.article.publish_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Main Metrics Display -->
+                    <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: center;">
+                        <!-- Trust Score Circle -->
+                        <div style="position: relative; width: 200px; height: 200px;">
+                            <svg width="200" height="200" style="transform: rotate(-90deg);">
+                                <defs>
+                                    <linearGradient id="trustGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:${trustScore >= 70 ? '#10b981' : trustScore >= 40 ? '#f59e0b' : '#ef4444'};stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="100" cy="100" r="90" fill="none" stroke="#e2e8f0" stroke-width="20"/>
+                                <circle cx="100" cy="100" r="90" fill="none" 
+                                    stroke="url(#trustGradient)" 
+                                    stroke-width="20"
+                                    stroke-dasharray="${(trustScore / 100) * 565.48} 565.48"
+                                    stroke-linecap="round"/>
+                            </svg>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                <div style="font-size: 3rem; font-weight: 800; color: ${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};">
+                                    ${trustScore}%
+                                </div>
+                                <div style="font-size: 0.875rem; color: #64748b; font-weight: 600; margin-top: -4px;">Trust Score</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Key Metrics Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivityScore}%</div>
+                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Objectivity Score</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Confidence: ${biasData.bias_confidence}%</div>
+                            </div>
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size: 2rem; font-weight: 700; color: ${data.clickbait_score > 60 ? '#ef4444' : data.clickbait_score > 30 ? '#f59e0b' : '#10b981'}; margin-bottom: 4px;">${data.clickbait_score}%</div>
+                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Clickbait Score</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${data.clickbait_score > 60 ? 'High manipulation' : data.clickbait_score > 30 ? 'Some tactics used' : 'Straightforward'}</div>
+                            </div>
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size: 2rem; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">${data.fact_checks.length}</div>
+                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Claims Analyzed</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${this.getFactCheckBrief(data.fact_checks)}</div>
+                            </div>
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: ${this.getSourceColor(data.source_credibility.rating)}; margin-bottom: 4px;">${data.source_credibility.rating}</div>
+                                <div style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Source Rating</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${data.source_credibility.type}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Executive Summary -->
+                    <div style="background: white; padding: 24px; border-radius: 10px; margin-top: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                        <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 1.25rem; font-weight: 600;">Executive Summary</h3>
+                        <p style="line-height: 1.7; color: #475569; margin: 0 0 12px 0; font-size: 0.9375rem;">
+                            ${data.conversational_summary || this.generateEnhancedAssessment(data)}
+                        </p>
+                        ${data.article_summary ? `
+                            <div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 0.875rem;">Article Summary:</h4>
+                                <p style="margin: 0; color: #334155; font-size: 0.875rem; line-height: 1.6;">
+                                    ${data.article_summary}
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Analysis Mode Indicator (if in development) -->
+                    ${data.development_mode ? `
+                        <div style="margin-top: 16px; padding: 12px; background: #dbeafe; border-radius: 8px; text-align: center;">
+                            <p style="margin: 0; color: #1e40af; font-size: 0.8125rem;">
+                                <strong>Analysis Mode:</strong> ${data.analysis_mode} (Development Mode Active)
+                            </p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        createEnhancedTrustScoreCard(data) {
+            const card = this.createCard('trust', '🛡️', 'Trust Score Analysis');
+            
+            const trustScore = data.trust_score || 0;
+            const breakdown = this.calculateDetailedTrustBreakdown(data);
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 3rem; font-weight: 800; color: ${trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626'};">
+                        ${trustScore}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; font-weight: 500;">Overall Trust Score</div>
+                </div>
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 0.875rem; font-weight: 600; color: #334155;">Score Components</h4>
+                    ${Object.entries(breakdown).map(([key, value]) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.875rem; color: #64748b;">${this.formatBreakdownLabel(key)}</span>
+                            <span style="font-weight: 600; color: #1e293b;">${value.score}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getTrustScoreInterpretation(trustScore, breakdown)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Deep Trust Analysis</h4>
+                
+                ${Object.entries(breakdown).map(([key, data]) => `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h5 style="margin: 0; color: #1e293b; font-size: 1rem;">${this.formatBreakdownLabel(key)}</h5>
+                            <span style="font-size: 1.25rem; font-weight: 700; color: ${data.score >= 70 ? '#059669' : data.score >= 40 ? '#d97706' : '#dc2626'};">
+                                ${data.score}%
+                            </span>
+                        </div>
+                        <div class="progress-bar" style="margin-bottom: 12px;">
+                            <div class="progress-fill" style="width: ${data.score}%; background: ${data.score >= 70 ? '#10b981' : data.score >= 40 ? '#f59e0b' : '#ef4444'};"></div>
+                        </div>
+                        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.875rem; line-height: 1.5;">
+                            <strong>What this measures:</strong> ${data.description}
+                        </p>
+                        <p style="margin: 0 0 12px 0; color: #64748b; font-size: 0.8125rem;">
+                            <strong>How we assessed it:</strong> ${data.methodology}
+                        </p>
+                        ${this.getTrustComponentInsights(key, data, this.analysisData)}
+                    </div>
+                `).join('')}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">What You Should Do</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
+                        ${this.getTrustActionItems(trustScore, breakdown).map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Trust Score Methodology</h5>
+                    <p style="margin: 0; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                        Our trust score combines multiple factors weighted by their predictive value for accuracy.
+                        Source credibility (${this.getWeightPercentage('source')}%), 
+                        author track record (${this.getWeightPercentage('author')}%), 
+                        transparency (${this.getWeightPercentage('transparency')}%), 
+                        and factual accuracy (${this.getWeightPercentage('facts')}%) 
+                        are analyzed using our proprietary algorithm.
+                    </p>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createEnhancedSourceCredibilityCard(data) {
+            const card = this.createCard('source', '🏢', 'Source Credibility & Network');
+            
+            const source = data.source_credibility || {};
+            const domain = data.article?.domain || 'Unknown';
+            const rating = source.rating || 'Unknown';
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <h4 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">${domain}</h4>
+                    <div class="credibility-badge ${rating.toLowerCase()}" style="display: inline-block; padding: 8px 24px; font-size: 1.125rem;">
+                        ${rating} Credibility
+                    </div>
+                    <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Political Bias</div>
+                            <div style="font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
+                                ${source.bias || 'Unknown'}
+                            </div>
+                        </div>
+                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Type</div>
+                            <div style="font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
+                                ${source.type || 'Unknown'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Source</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getSourceAnalysisContext(source, data)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">What ${rating} Credibility Means</h4>
+                
+                <div style="margin-bottom: 20px; padding: 16px; background: ${this.getSourceRatingColor(rating)}; border-radius: 8px;">
+                    <h5 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1rem;">${rating} Credibility Sources</h5>
+                    <p style="margin: 0 0 12px 0; color: #334155; font-size: 0.875rem; line-height: 1.6;">
+                        ${this.getSourceRatingDescription(rating)}
+                    </p>
+                    <div style="margin-bottom: 12px;">
+                        <h6 style="margin: 0 0 8px 0; color: #1e293b; font-size: 0.875rem;">Key Characteristics:</h6>
+                        <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 0.8125rem; line-height: 1.5;">
+                            ${this.getSourceCharacteristicsList(rating).map(char => `<li>${char}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ${this.getSourceSpecificWarnings(source, data)}
+                </div>
+                
+                ${this.generateSourceNetworkAnalysis(source, data)}
+                
+                ${source.bias && source.bias !== 'Unknown' ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Political Orientation & Its Impact</h4>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <span style="font-size: 0.9375rem; font-weight: 600; color: #1e293b;">${source.bias}</span>
+                                <span class="badge ${this.getBiasClass(source.bias)}">${this.getBiasLabel(source.bias)}</span>
+                            </div>
+                            <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.875rem; line-height: 1.6;">
+                                ${this.getBiasDescription(source.bias)}
+                            </p>
+                            ${this.getBiasImpactAnalysis(source.bias, data)}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${source.funding_sources || source.ownership ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                        <h4 style="margin: 0 0 12px 0; color: #92400e; font-size: 1rem;">⚠️ Potential Conflicts of Interest</h4>
+                        ${source.ownership ? `
+                            <p style="margin: 0 0 8px 0; color: #78350f; font-size: 0.875rem;">
+                                <strong>Ownership:</strong> ${source.ownership}
+                            </p>
+                        ` : ''}
+                        ${source.funding_sources ? `
+                            <p style="margin: 0; color: #78350f; font-size: 0.875rem;">
+                                <strong>Known funding:</strong> ${source.funding_sources}
+                            </p>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read Content from ${domain}</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
+                        ${this.getEnhancedSourceReadingGuidance(rating, source, data).map(guide => `<li>${guide}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                ${source.description ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Additional Context</h5>
+                        <p style="margin: 0; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.6;">
+                            ${source.description}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                ${this.generateAlternativeSourceRecommendations(source, data)}
+            `;
+            
+            return card;
+        }
+
+        createEnhancedManipulationCard(data) {
+            const card = this.createCard('manipulation', '⚠️', 'Manipulation & Persuasion Analysis');
+            
+            const persuasion = data.persuasion_analysis || {};
+            const tactics = data.bias_analysis?.manipulation_tactics || [];
+            const overallScore = persuasion.persuasion_score || 0;
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: ${overallScore < 30 ? '#059669' : overallScore < 60 ? '#d97706' : '#dc2626'};">
+                        ${overallScore}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Overall Manipulation Score</div>
+                    ${tactics.length > 0 || overallScore > 30 ? `
+                        <div style="padding: 12px; background: #fef2f2; border-radius: 6px;">
+                            <p style="margin: 0; color: #991b1b; font-size: 0.875rem; font-weight: 500;">
+                                ⚠️ ${tactics.length} manipulation tactics detected
+                            </p>
+                        </div>
+                    ` : `
+                        <div style="padding: 12px; background: #f0fdf4; border-radius: 6px;">
+                            <p style="margin: 0; color: #166534; font-size: 0.875rem; font-weight: 500;">
+                                ✓ Minimal manipulation detected
+                            </p>
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getManipulationAnalysisContext(overallScore, tactics, persuasion)}
+                    </p>
+                </div>
+                
+                ${persuasion.emotional_appeals && Object.values(persuasion.emotional_appeals).some(v => v > 0) ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Emotional Manipulation Profile</h4>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+                            <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.875rem;">
+                                This article targets these specific emotions to influence your judgment:
+                            </p>
+                            <div style="display: grid; gap: 8px;">
+                                ${Object.entries(persuasion.emotional_appeals).filter(([_, v]) => v > 0).map(([emotion, value]) => {
+                                    const emotionData = this.getEmotionData(emotion);
+                                    return `
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <span style="font-size: 1.5rem;">${emotionData.icon}</span>
+                                            <div style="flex: 1;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                    <span style="font-size: 0.875rem; font-weight: 600; color: #1e293b; text-transform: capitalize;">
+                                                        ${emotion}
+                                                    </span>
+                                                    <span style="font-size: 0.875rem; font-weight: 700; color: ${emotionData.color};">
+                                                        ${value}%
+                                                    </span>
+                                                </div>
+                                                <div class="progress-bar" style="height: 6px;">
+                                                    <div class="progress-fill" style="width: ${value}%; background: ${emotionData.color};"></div>
+                                                </div>
+                                                <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #64748b;">
+                                                    ${emotionData.description}
+                                                </p>
+                                                ${this.getEmotionManipulationInsight(emotion, value, data)}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${persuasion.dominant_emotion ? `
+                                <div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px;">
+                                    <p style="margin: 0; color: #92400e; font-size: 0.8125rem;">
+                                        <strong>Primary manipulation vector:</strong> ${persuasion.dominant_emotion} - 
+                                        ${this.getDominantEmotionStrategy(persuasion.dominant_emotion)}
+                                    </p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${persuasion.logical_fallacies && persuasion.logical_fallacies.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #dc2626; font-size: 1.125rem;">⚠️ Logical Fallacies That Deceive</h4>
+                        ${persuasion.logical_fallacies.map(fallacy => `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${fallacy.type}</h5>
+                                <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                    ${fallacy.description}
+                                </p>
+                                <div style="padding: 8px; background: #fee2e2; border-radius: 4px;">
+                                    <p style="margin: 0; color: #991b1b; font-size: 0.75rem;">
+                                        <strong>Why this tricks you:</strong> ${this.getFallacyPsychology(fallacy.type)}
+                                    </p>
+                                </div>
+                                ${this.getFallacyCounterStrategy(fallacy)}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${tactics.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Advanced Manipulation Techniques</h4>
+                        ${tactics.map(tactic => `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-radius: 4px; border-left: 3px solid ${
+                                tactic.severity === 'high' ? '#dc2626' : 
+                                tactic.severity === 'medium' ? '#f59e0b' : '#6b7280'
+                            };">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <h5 style="margin: 0; color: #991b1b; font-size: 0.9375rem;">${tactic.name || tactic}</h5>
+                                    ${tactic.severity ? `
+                                        <span style="padding: 2px 8px; background: ${
+                                            tactic.severity === 'high' ? '#dc2626' : 
+                                            tactic.severity === 'medium' ? '#f59e0b' : '#6b7280'
+                                        }; color: white; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">
+                                            ${tactic.severity}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                ${tactic.description ? `
+                                    <p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                        ${tactic.description}
+                                    </p>
+                                ` : ''}
+                                ${this.getManipulationTacticDefense(tactic)}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${persuasion.rhetorical_devices && persuasion.rhetorical_devices.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Rhetorical Manipulation</h4>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+                            ${persuasion.rhetorical_devices.map(device => `
+                                <div style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 6px;">
+                                    <strong style="color: #1e293b; font-size: 0.875rem;">${device.type}:</strong>
+                                    <span style="color: #475569; font-size: 0.8125rem;">${device.description}</span>
+                                    ${this.getRhetoricalDeviceInsight(device)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${this.generateManipulationResistanceStrategies(overallScore, persuasion, tactics)}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Your Personalized Defense Plan</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
+                        ${this.getPersonalizedManipulationDefense(overallScore, persuasion, data).map(strategy => `<li>${strategy}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createEnhancedTransparencyCard(data) {
+            const card = this.createCard('transparency', '🔍', 'Transparency & Hidden Context');
+            
+            const transparency = data.transparency_analysis || {};
+            const content = data.content_analysis || {};
+            const connection = data.connection_analysis || {};
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: ${transparency.transparency_score >= 70 ? '#059669' : transparency.transparency_score >= 40 ? '#d97706' : '#dc2626'};">
+                        ${transparency.transparency_score || 0}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 16px;">Transparency Score</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${transparency.source_count || 0}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Sources</div>
+                        </div>
+                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${content.word_count || 0}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Words</div>
+                        </div>
+                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.25rem; font-weight: 600; color: #1e293b;">${content.depth_score || 0}%</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Depth</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What's Hidden in This Article</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getTransparencyAnalysisContext(transparency, content, data)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Source Quality Analysis</h4>
+                
+                ${transparency.source_types ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                        <div style="margin-bottom: 16px;">
+                            <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1rem;">Who's Really Speaking</h5>
+                            <div style="display: grid; gap: 8px;">
+                                ${Object.entries(transparency.source_types).filter(([_, count]) => count > 0).map(([type, count]) => {
+                                    const sourceData = this.getSourceTypeData(type);
+                                    return `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="font-size: 1.25rem;">${sourceData.icon}</span>
+                                                <span style="font-size: 0.875rem; color: #334155; text-transform: capitalize;">
+                                                    ${type.replace(/_/g, ' ')}
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <span style="font-size: 0.875rem; font-weight: 600; color: #1e293b;">${count}</span>
+                                                <div style="width: 80px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                                                    <div style="width: ${(count / transparency.source_count) * 100}%; height: 100%; background: ${sourceData.color};"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${this.getSourceQualityInsights(transparency)}
+                        </div>
+                        
+                        <div style="padding: 12px; background: ${transparency.named_source_ratio >= 60 ? '#f0fdf4' : transparency.named_source_ratio >= 30 ? '#fef3c7' : '#fef2f2'}; border-radius: 6px;">
+                            <p style="margin: 0; color: ${transparency.named_source_ratio >= 60 ? '#166534' : transparency.named_source_ratio >= 30 ? '#92400e' : '#991b1b'}; font-size: 0.875rem;">
+                                <strong>${transparency.named_source_ratio || 0}% named sources:</strong> 
+                                ${this.getNamedSourceImplications(transparency.named_source_ratio, data)}
+                            </p>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${this.generateMissingPerspectivesAnalysis(data)}
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Content Structure Analysis</h4>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
+                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Reading Level</div>
+                            <div style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
+                                ${content.reading_level || 'Unknown'}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                                ~${Math.ceil((content.word_count || 0) / 200)} min read
+                            </div>
+                        </div>
+                        <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Complexity</div>
+                            <div style="font-size: 1.125rem; font-weight: 600; color: #1e293b; margin-top: 4px;">
+                                ${content.complexity_ratio || 0}%
+                            </div>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                                Complex words
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${content.facts_vs_opinion ? `
+                        <div style="margin-bottom: 16px;">
+                            <h5 style="margin: 0 0 8px 0; color: #1e293b; font-size: 0.9375rem;">What You're Actually Reading</h5>
+                            <div style="display: flex; height: 32px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                                ${this.createContentBar(content.facts_vs_opinion)}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8125rem;">
+                                <span style="color: #059669;">📊 Facts: ${content.facts_vs_opinion.facts}</span>
+                                <span style="color: #d97706;">🔍 Analysis: ${content.facts_vs_opinion.analysis}</span>
+                                <span style="color: #dc2626;">💭 Opinions: ${content.facts_vs_opinion.opinions}</span>
+                            </div>
+                            ${this.getContentCompositionInsight(content.facts_vs_opinion)}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${connection && connection.topic_connections && connection.topic_connections.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Hidden Agenda Connections</h4>
+                        <div style="padding: 16px; background: #faf5ff; border-radius: 8px;">
+                            <p style="margin: 0 0 12px 0; color: #6b21a8; font-size: 0.875rem;">
+                                This article connects to these broader narratives:
+                            </p>
+                            ${connection.topic_connections.slice(0, 5).map(topic => `
+                                <div style="margin-bottom: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <span style="font-size: 0.875rem; font-weight: 600; color: #581c87;">${topic.topic}</span>
+                                        <span style="font-size: 0.8125rem; color: #6b21a8;">${topic.strength}% relevance</span>
+                                    </div>
+                                    <div class="progress-bar" style="height: 4px;">
+                                        <div class="progress-fill" style="width: ${topic.strength}%; background: #7c3aed;"></div>
+                                    </div>
+                                    ${this.getTopicConnectionInsight(topic, data)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">What to Look for When Reading</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getTransparencyReadingStrategies(transparency, content, data).map(strategy => `<li>${strategy}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createEnhancedBiasAnalysisCard(data) {
+            const card = this.createCard('bias', '⚖️', 'Bias Analysis');
+            
+            const biasData = data.bias_analysis || {};
+            const politicalLean = biasData.political_lean || 0;
+            const dimensions = biasData.bias_dimensions || {};
+            const objectivity = Math.round((biasData.objectivity_score || 0) * 10) / 10;
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.125rem;">${biasData.overall_bias || 'Bias Assessment'}</h4>
+                    <div style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">${objectivity}%</div>
+                    <div style="font-size: 0.875rem; color: #64748b;">Objectivity Score</div>
+                    ${biasData.bias_confidence ? `
+                        <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 6px;">
+                            <span style="font-size: 0.8125rem; color: #0369a1;">
+                                Analysis Confidence: ${biasData.bias_confidence}%
+                            </span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div style="margin: 20px 0;">
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Political Spectrum Position</div>
+                    <div class="political-spectrum">
+                        <div class="spectrum-indicator" style="left: ${50 + (politicalLean / 2)}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
+                        <span>Far Left</span>
+                        <span>Center</span>
+                        <span>Far Right</span>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Analysis</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getBiasContextExplanation(biasData, data)}
+                    </p>
+                </div>
+                
+                ${Object.keys(dimensions).length > 0 ? `
+                    <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Multi-Dimensional Bias Breakdown</h4>
+                    
+                    ${Object.entries(dimensions).map(([dimension, dimData]) => `
+                        <div style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h5 style="margin: 0; color: #1e293b; font-size: 1rem; text-transform: capitalize;">${dimension.replace(/_/g, ' ')} Bias</h5>
+                                <span class="badge ${this.getBiasLevelClass(dimData.score)}" style="font-size: 0.875rem;">
+                                    ${dimData.label}
+                                </span>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="font-size: 0.8125rem; color: #64748b;">Bias Score</span>
+                                    <span style="font-size: 0.8125rem; font-weight: 600; color: #334155;">${Math.round(Math.abs(dimData.score) * 100)}%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${dimData.confidence}%; background: #6366f1;"></div>
+                                </div>
+                            </div>
+                            <p style="margin: 0 0 8px 0; color: #64748b; font-size: 0.8125rem; line-height: 1.5;">
+                                <strong>Analysis confidence:</strong> ${dimData.confidence}%
+                            </p>
+                            ${this.getDimensionSpecificInsights(dimension, dimData, data)}
+                        </div>
+                    `).join('')}
+                ` : ''}
+                
+                ${biasData.bias_patterns && biasData.bias_patterns.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Specific Bias Patterns Detected</h4>
+                        ${biasData.bias_patterns.map(pattern => `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${pattern.type}</h5>
+                                <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                    ${pattern.description}
+                                </p>
+                                ${pattern.example ? `
+                                    <div style="padding: 8px; background: #fee2e2; border-radius: 4px;">
+                                        <p style="margin: 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
+                                            Example: "${pattern.example}"
+                                        </p>
+                                    </div>
+                                ` : ''}
+                                ${pattern.impact ? `
+                                    <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem;">
+                                        <strong>Impact:</strong> ${pattern.impact}
+                                    </p>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${biasData.framing_analysis && biasData.framing_analysis.frames_detected > 0 ? `
+                    <div style="margin: 20px 0; padding: 16px; background: #faf5ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #6b21a8; font-size: 1rem;">Narrative Framing Analysis</h5>
+                        <p style="margin: 0 0 12px 0; color: #581c87; font-size: 0.875rem;">
+                            ${biasData.framing_analysis.frames_detected} framing techniques shape how you perceive this story:
+                        </p>
+                        ${Object.entries(biasData.framing_analysis.framing_patterns || {}).filter(([_, pattern]) => pattern.detected).map(([type, pattern]) => `
+                            <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px;">
+                                <strong style="color: #581c87; font-size: 0.875rem;">${type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</strong>
+                                <p style="margin: 4px 0 0 0; color: #6b21a8; font-size: 0.8125rem;">
+                                    ${this.getFramingExplanation(type, pattern)}
+                                </p>
+                                ${pattern.examples && pattern.examples.length > 0 ? `
+                                    <div style="margin-top: 8px;">
+                                        ${pattern.examples.map(ex => `
+                                            <p style="margin: 4px 0 0 20px; padding: 8px; background: #f3f4f6; border-left: 3px solid #7c3aed; color: #374151; font-size: 0.8125rem; font-style: italic; border-radius: 4px;">
+                                                "${ex}"
+                                            </p>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${biasData.loaded_phrases && biasData.loaded_phrases.length > 0 ? `
+                    <div style="margin: 20px 0;">
+                        <h5 style="margin: 0 0 12px 0; color: #dc2626; font-size: 1rem;">🚨 Loaded Language Analysis</h5>
+                        <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 0.875rem;">
+                            These emotionally charged words manipulate your perception:
+                        </p>
+                        ${biasData.loaded_phrases.slice(0, 5).map(phrase => `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid ${
+                                phrase.severity === 'high' ? '#dc2626' : 
+                                phrase.severity === 'medium' ? '#f59e0b' : '#6b7280'
+                            }; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                    <strong style="color: #991b1b; font-size: 0.9375rem;">"${phrase.text}"</strong>
+                                    <span style="padding: 2px 8px; background: ${
+                                        phrase.severity === 'high' ? '#dc2626' : 
+                                        phrase.severity === 'medium' ? '#f59e0b' : '#6b7280'
+                                    }; color: white; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">
+                                        ${phrase.severity || 'medium'} impact
+                                    </span>
+                                </div>
+                                ${phrase.explanation ? `
+                                    <p style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                        ${phrase.explanation}
+                                    </p>
+                                ` : ''}
+                                ${this.getLoadedPhraseAlternative(phrase)}
+                            </div>
+                        `).join('')}
+                        ${biasData.loaded_phrases.length > 5 ? `
+                            <p style="margin: 12px 0 0 0; color: #64748b; font-size: 0.8125rem; text-align: center;">
+                                ... and ${biasData.loaded_phrases.length - 5} more loaded phrases detected
+                            </p>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Article Objectively</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem; line-height: 1.6;">
+                        ${this.getObjectiveReadingStrategies(biasData, data).map(strategy => `<li>${strategy}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                ${this.generateBiasCompensationRecommendation(biasData, data)}
+            `;
+            
+            return card;
+        }
+
+        createEnhancedFactCheckCard(data) {
+            const card = this.createCard('facts', '✓', 'Fact Check Analysis');
+            
+            const factChecks = data.fact_checks || [];
+            const keyClaimsCount = data.key_claims?.length || factChecks.length;
+            const breakdown = this.getFactCheckBreakdown(factChecks);
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #1e293b;">${keyClaimsCount}</div>
+                    <div style="font-size: 0.875rem; color: #64748b;">Key Claims Identified</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 6px;">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #166534;">✓ ${breakdown.verified}</div>
+                        <div style="font-size: 0.75rem; color: #14532d;">Verified True</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: #fef2f2; border-radius: 6px;">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #991b1b;">✗ ${breakdown.false}</div>
+                        <div style="font-size: 0.75rem; color: #7f1d1d;">Found False</div>
+                    </div>
+                </div>
+                ${breakdown.partial > 0 || breakdown.unverified > 0 ? `
+                    <div style="margin-top: 12px; text-align: center; font-size: 0.8125rem; color: #64748b;">
+                        ${breakdown.partial > 0 ? `${breakdown.partial} partially true` : ''}
+                        ${breakdown.partial > 0 && breakdown.unverified > 0 ? ', ' : ''}
+                        ${breakdown.unverified > 0 ? `${breakdown.unverified} unverified` : ''}
+                    </div>
+                ` : ''}
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What Our Fact-Check Reveals</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getFactCheckSummaryAnalysis(breakdown, factChecks, data)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Detailed Claim Analysis</h4>
+                
+                ${factChecks.length > 0 ? factChecks.map((fc, index) => {
+                    const verdict = fc.verdict || 'unverified';
+                    const { icon, color, bgColor, borderColor } = this.getFactCheckStyle(verdict);
+                    
+                    return `
+                        <div style="margin-bottom: 16px; padding: 16px; background: ${bgColor}; border-left: 4px solid ${borderColor}; border-radius: 4px;">
+                            <div style="display: flex; gap: 12px;">
+                                <span style="font-size: 1.5rem; flex-shrink: 0;">${icon}</span>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                        <h5 style="margin: 0; color: #1e293b; font-size: 0.9375rem;">Claim ${index + 1}</h5>
+                                        <span style="padding: 2px 12px; background: ${color}; color: white; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                                            ${verdict.replace(/_/g, ' ').toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <p style="margin: 0 0 8px 0; color: #334155; font-style: italic; font-size: 0.875rem; line-height: 1.5;">
+                                        "${fc.claim || fc.text || 'Claim text'}"
+                                    </p>
+                                    ${fc.explanation ? `
+                                        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.8125rem; line-height: 1.5;">
+                                            <strong>Analysis:</strong> ${fc.explanation}
+                                        </p>
+                                    ` : ''}
+                                    ${this.getClaimContext(fc, data)}
+                                    <div style="display: flex; gap: 16px; font-size: 0.75rem; color: #64748b;">
+                                        ${fc.source ? `<span><strong>Source:</strong> ${fc.source}</span>` : ''}
+                                        ${fc.publisher ? `<span><strong>Verified by:</strong> ${fc.publisher}</span>` : ''}
+                                        ${fc.checked_at ? `<span><strong>Checked:</strong> ${new Date(fc.checked_at).toLocaleDateString()}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('') : `
+                    <p style="color: #64748b; font-style: italic;">No specific fact checks were performed on this article.</p>
+                `}
+                
+                ${this.generateMissingContextAnalysis(data)}
+                
+                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">Fact-Checking Implications</h4>
+                    <p style="margin: 0; color: #166534; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getFactCheckImplications(breakdown, data)}
+                    </p>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Verify Claims Yourself</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
+                        ${this.getSelfVerificationTips(data).map(tip => `<li>${tip}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createEnhancedAuthorAnalysisCard(data) {
+            const card = this.createCard('author', '✍️', 'Author Analysis');
+            
+            const author = data.author_analysis || {};
+            const credScore = author.credibility_score || 0;
+            const hasDetailedInfo = author.found && author.bio && !author.bio.includes('Limited information');
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
+                        ${author.name || data.article?.author || 'Unknown Author'}
+                    </h4>
+                    ${hasDetailedInfo ? `
+                        <div style="margin: 16px 0;">
+                            <div style="font-size: 2.5rem; font-weight: 700; color: ${credScore >= 70 ? '#059669' : credScore >= 40 ? '#d97706' : '#dc2626'};">
+                                ${credScore}/100
+                            </div>
+                            <div style="font-size: 0.875rem; color: #64748b;">Credibility Score</div>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                            ${author.verification_status?.verified ? '<span class="badge verified">✓ Verified</span>' : ''}
+                            ${author.verification_status?.journalist_verified ? '<span class="badge verified">Professional Journalist</span>' : ''}
+                            ${author.verification_status?.outlet_staff ? '<span class="badge info">Staff Writer</span>' : ''}
+                        </div>
+                    ` : `
+                        <div style="margin: 16px 0; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                            <p style="margin: 0; color: #92400e; font-size: 0.875rem;">
+                                Limited author information available. This affects our ability to verify credibility.
+                            </p>
+                        </div>
+                    `}
+                    ${author.articles_count && author.professional_info?.years_experience ? `
+                        <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">
+                            <p style="margin: 0; color: #0369a1; font-size: 0.875rem; font-weight: 500;">
+                                ${author.articles_count} articles published • ${author.professional_info.years_experience}+ years experience
+                            </p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getAuthorAnalysisContext(author, data)}
+                    </p>
+                </div>
+                
+                ${author.bio ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Biography</h4>
+                        <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+                            <p style="margin: 0; color: #334155; line-height: 1.7; font-size: 0.9375rem;">
+                                ${author.bio}
+                            </p>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${this.generateAuthorExpertiseAnalysis(author, data)}
+                
+                ${author.professional_info ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Professional Background</h4>
+                        <div style="display: grid; gap: 12px;">
+                            ${author.professional_info.current_position ? `
+                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Current Position</span>
+                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
+                                        ${author.professional_info.current_position}
+                                    </p>
+                                </div>
+                            ` : ''}
+                            ${author.professional_info.years_experience ? `
+                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Experience</span>
+                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
+                                        ${author.professional_info.years_experience}+ years in journalism
+                                    </p>
+                                </div>
+                            ` : ''}
+                            ${author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
+                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Publications</span>
+                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
+                                        ${author.professional_info.outlets.join(', ')}
+                                    </p>
+                                </div>
+                            ` : ''}
+                            ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
+                                <div style="padding: 12px; background: #f8fafc; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Areas of Expertise</span>
+                                    <p style="margin: 4px 0 0 0; color: #1e293b; font-weight: 600; font-size: 0.9375rem;">
+                                        ${author.professional_info.expertise_areas.join(', ')}
+                                    </p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${this.generateAuthorBiasPatterns(author, data)}
+                
+                <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
+                    <h5 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">Credibility Assessment</h5>
+                    <div style="display: grid; gap: 8px; margin-bottom: 12px;">
+                        ${this.getEnhancedCredibilityFactors(author, data).map(factor => `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.875rem; color: #166534;">${factor.label}</span>
+                                <span style="font-size: 0.875rem; font-weight: 600; color: ${factor.present ? '#059669' : '#dc2626'};">
+                                    ${factor.present ? '✓' : '✗'}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${author.credibility_explanation ? `
+                        <p style="margin: 0; color: #14532d; font-size: 0.875rem; line-height: 1.5;">
+                            <strong>${author.credibility_explanation.level}:</strong> ${author.credibility_explanation.explanation}
+                        </p>
+                    ` : ''}
+                </div>
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Author's Work</h4>
+                    <p style="margin: 0; color: #78350f; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getEnhancedAuthorReadingAdvice(author, data)}
+                    </p>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createEnhancedClickbaitCard(data) {
+            const card = this.createCard('clickbait', '🎣', 'Clickbait & Headline Analysis');
+            
+            const clickbaitScore = data.clickbait_score || 0;
+            const titleAnalysis = data.title_analysis || {};
+            const indicators = data.clickbait_indicators || [];
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 3rem; font-weight: 800; color: ${clickbaitScore < 30 ? '#059669' : clickbaitScore < 60 ? '#d97706' : '#dc2626'};">
+                        ${clickbaitScore}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b;">Clickbait Score</div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <div class="clickbait-gauge">
+                        <div class="clickbait-indicator" style="left: ${clickbaitScore}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
+                        <span>Straightforward</span>
+                        <span>Moderate</span>
+                        <span>Heavy Clickbait</span>
+                    </div>
+                </div>
+                <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 0.8125rem; font-style: italic; color: #475569; text-align: center;">
+                        "${data.article?.title || 'No title available'}"
+                    </p>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Reveals</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getClickbaitAnalysisContext(clickbaitScore, indicators, data)}
+                    </p>
+                </div>
+                
+                ${Object.keys(titleAnalysis).length > 0 ? `
+                    <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Headline Psychology Breakdown</h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+                        ${[
+                            { label: 'Sensationalism', value: titleAnalysis.sensationalism || 0, desc: 'Exaggerated language', insight: this.getSensationalismInsight(titleAnalysis.sensationalism) },
+                            { label: 'Curiosity Gap', value: titleAnalysis.curiosity_gap || 0, desc: 'Withheld information', insight: this.getCuriosityGapInsight(titleAnalysis.curiosity_gap) },
+                            { label: 'Emotional Words', value: titleAnalysis.emotional_words || 0, desc: 'Feeling over facts', insight: this.getEmotionalWordsInsight(titleAnalysis.emotional_words) }
+                        ].map(metric => `
+                            <div style="text-align: center; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                                <div style="font-size: 1.75rem; font-weight: 700; color: ${metric.value > 50 ? '#dc2626' : metric.value > 25 ? '#f59e0b' : '#059669'};">
+                                    ${metric.value}%
+                                </div>
+                                <div style="font-size: 0.875rem; font-weight: 600; color: #1e293b; margin: 4px 0;">
+                                    ${metric.label}
+                                </div>
+                                <div style="font-size: 0.75rem; color: #64748b;">
+                                    ${metric.desc}
+                                </div>
+                                <div style="margin-top: 8px; padding: 8px; background: white; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 0.7rem; color: #475569; line-height: 1.4;">
+                                        ${metric.insight}
+                                    </p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${indicators.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Manipulation Tactics in This Headline</h4>
+                        ${indicators.map(ind => `
+                            <div style="margin-bottom: 12px; padding: 12px; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px;">
+                                <h5 style="margin: 0 0 4px 0; color: #991b1b; font-size: 0.9375rem;">${ind.name}</h5>
+                                <p style="margin: 0; color: #7f1d1d; font-size: 0.8125rem; line-height: 1.5;">
+                                    ${ind.description}
+                                </p>
+                                ${ind.psychology ? `
+                                    <p style="margin: 8px 0 0 0; color: #991b1b; font-size: 0.75rem; font-style: italic;">
+                                        <strong>Psychology:</strong> ${ind.psychology}
+                                    </p>
+                                ` : ''}
+                                ${this.getClickbaitTacticDefense(ind)}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
+                        <h4 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">✓ Good Headline Practice</h4>
+                        <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.6;">
+                            This headline appears straightforward and informative without manipulative tactics. 
+                            It respects the reader's time by clearly indicating what the article is about.
+                        </p>
+                    </div>
+                `}
+                
+                ${this.generateHeadlineContentComparisonCard(data)}
+                
+                <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
