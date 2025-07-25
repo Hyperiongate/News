@@ -1,4 +1,3 @@
-# FILE: services/connection_analyzer.py
 """
 services/connection_analyzer.py - Connection and relationship analysis
 """
