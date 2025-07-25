@@ -653,15 +653,10 @@ from typing import Dict, Any, Optional, List
 
 # Import all analysis services
 from services.news_extractor import NewsExtractor
-from services.bias_analyzer import BiasAnalyzer
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
-from services.manipulation_detector import ManipulationDetector
-from services.transparency_analyzer import TransparencyAnalyzer
-from services.clickbait_analyzer import ClickbaitAnalyzer
-from services.content_analyzer import ContentAnalyzer
-from services.connection_analyzer import ConnectionAnalyzer
+
 
 # OpenAI integration
 try:
