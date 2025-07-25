@@ -68,6 +68,125 @@ SOURCE_CREDIBILITY = {
     'france24.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Public Media'},
 }
 
+
+class SourceCredibility:
+    """Source credibility checker class"""
+    
+    def __init__(self):
+        self.sources = SOURCE_CREDIBILITY
+    
+    def check_credibility(self, domain):
+        """
+        Check credibility for a domain
+        
+        Args:
+            domain: Domain to check (e.g., 'cnn.com')
+            
+        Returns:
+            Dictionary with credibility information
+        """
+        # Clean domain (remove www. if present)
+        if domain:
+            domain = domain.lower().replace('www.', '')
+        
+        # Get source info
+        source_info = self.sources.get(domain, {
+            'credibility': 'Unknown',
+            'bias': 'Unknown',
+            'type': 'Unknown'
+        })
+        
+        # Return in the format expected by news_analyzer.py
+        return {
+            'rating': source_info['credibility'],
+            'bias': source_info['bias'],
+            'type': source_info['type'],
+            'name': self._get_source_name(domain),
+            'description': self._get_credibility_description(source_info)
+        }
+    
+    def _get_source_name(self, domain):
+        """Get human-readable source name from domain"""
+        name_mapping = {
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'bbc.com': 'BBC',
+            'bbc.co.uk': 'BBC',
+            'reuters.com': 'Reuters',
+            'apnews.com': 'Associated Press',
+            'nytimes.com': 'The New York Times',
+            'wsj.com': 'The Wall Street Journal',
+            'theguardian.com': 'The Guardian',
+            'washingtonpost.com': 'The Washington Post',
+            'npr.org': 'NPR',
+            'pbs.org': 'PBS',
+            'bloomberg.com': 'Bloomberg',
+            'economist.com': 'The Economist',
+            'politico.com': 'Politico',
+            'axios.com': 'Axios',
+            'thehill.com': 'The Hill',
+            'usatoday.com': 'USA Today',
+            'businessinsider.com': 'Business Insider',
+            'forbes.com': 'Forbes',
+            'vox.com': 'Vox',
+            'slate.com': 'Slate',
+            'reason.com': 'Reason',
+            'techcrunch.com': 'TechCrunch',
+            'theverge.com': 'The Verge',
+            'arstechnica.com': 'Ars Technica',
+            'wired.com': 'Wired',
+            'aljazeera.com': 'Al Jazeera',
+            'rt.com': 'RT (Russia Today)',
+            'dw.com': 'Deutsche Welle',
+            'france24.com': 'France 24'
+        }
+        
+        if domain in name_mapping:
+            return name_mapping[domain]
+        
+        # Clean up domain for display
+        name = domain.replace('.com', '').replace('.org', '').replace('.net', '')
+        name = name.replace('-', ' ').replace('_', ' ')
+        return name.title()
+    
+    def _get_credibility_description(self, source_info):
+        """Get description based on credibility rating"""
+        descriptions = {
+            'High': 'Generally reliable for news reporting with proper fact-checking and editorial standards',
+            'Medium': 'Generally acceptable but may have some bias or occasional factual errors',
+            'Low': 'Often unreliable with significant bias, poor fact-checking, or misleading content',
+            'Very Low': 'Highly unreliable source known for false information, conspiracy theories, or satire',
+            'Unknown': 'No credibility information available for this source'
+        }
+        
+        return descriptions.get(source_info['credibility'], 'Unknown credibility rating')
+    
+    def get_source_info(self, domain):
+        """Get credibility info for a domain (backward compatibility)"""
+        return self.check_credibility(domain)
+    
+    def get_all_sources(self):
+        """Get all sources in the database"""
+        return self.sources
+    
+    def get_sources_by_credibility(self, credibility_level):
+        """Get all sources with a specific credibility level"""
+        return {
+            domain: info 
+            for domain, info in self.sources.items() 
+            if info['credibility'] == credibility_level
+        }
+    
+    def get_sources_by_bias(self, bias_type):
+        """Get all sources with a specific bias"""
+        return {
+            domain: info 
+            for domain, info in self.sources.items() 
+            if info['bias'] == bias_type
+        }
+
+
+# Keep the standalone functions for backward compatibility
 def get_source_info(domain):
     """Get credibility info for a domain"""
     return SOURCE_CREDIBILITY.get(domain, {
