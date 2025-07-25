@@ -1,4 +1,3 @@
-# FILE: services/manipulation_detector.py
 """
 services/manipulation_detector.py - Manipulation detection service
 """
