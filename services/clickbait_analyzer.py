@@ -1,4 +1,3 @@
-# FILE: services/clickbait_analyzer.py
 """
 services/clickbait_analyzer.py - Clickbait detection service
 """
