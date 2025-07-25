@@ -1,5 +1,3 @@
-
-# FILE: services/transparency_analyzer.py
 """
 services/transparency_analyzer.py - Transparency analysis service
 """
