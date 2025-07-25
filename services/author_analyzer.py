@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Fixed author analyzer with proper method names and no duplicates
+PURPOSE: Fixed author analyzer with proper error handling
 LOCATION: services/author_analyzer.py
 """
 
@@ -35,7 +35,7 @@ class AuthorAnalyzer:
             result = self.analyze_single_author(author_name, domain)
             results.append(result)
         
-        return results  # FIXED: Return results (plural), not result
+        return results
     
     def analyze_single_author(self, author_name, domain=None):
         """Analyze a single author with web search"""
@@ -57,13 +57,14 @@ class AuthorAnalyzer:
             # Database not available, continue without cache
             pass
         
-        # Initialize result structure
+        # Initialize result structure with ALL fields having safe defaults
         result = {
             'name': clean_name,
             'found': False,
             'bio': None,
             'image_url': None,
             'credibility_score': 50,
+            'articles_count': 0,
             'professional_info': {
                 'current_position': None,
                 'outlets': [],
@@ -74,53 +75,76 @@ class AuthorAnalyzer:
                 'twitter': None,
                 'linkedin': None,
                 'personal_website': None,
-                'outlet_profile': None
+                'outlet_profile': None,
+                'email': None
             },
             'verification_status': {
                 'verified': False,
                 'journalist_verified': False,
                 'outlet_staff': False
             },
-            'sources_checked': []
+            'sources_checked': [],
+            'issues_corrections': False,
+            'credibility_explanation': {
+                'level': 'Unknown',
+                'explanation': 'Limited information available',
+                'advice': 'Verify claims through additional sources'
+            }
         }
         
         # Try multiple search strategies
         
         # 1. Check outlet's author page first (most reliable)
         if domain:
-            outlet_result = self._check_outlet_author_page(clean_name, domain)
-            if outlet_result:
-                result.update(outlet_result)
-                result['found'] = True
-                result['sources_checked'].append(f"{domain} author page")
+            try:
+                outlet_result = self._check_outlet_author_page(clean_name, domain)
+                if outlet_result:
+                    # Safely merge results
+                    self._safe_merge_results(result, outlet_result)
+                    result['found'] = True
+                    result['sources_checked'].append(f"{domain} author page")
+            except Exception as e:
+                logger.error(f"Error checking outlet author page: {e}")
         
         # 2. Google search for author + journalist
         if not result['found']:
-            google_result = self._google_search_author(clean_name, domain)
-            if google_result:
-                result.update(google_result)
-                result['found'] = True
-                result['sources_checked'].append("Google search")
+            try:
+                google_result = self._google_search_author(clean_name, domain)
+                if google_result:
+                    self._safe_merge_results(result, google_result)
+                    result['found'] = True
+                    result['sources_checked'].append("Google search")
+            except Exception as e:
+                logger.error(f"Error in Google search: {e}")
         
         # 3. Check LinkedIn
-        linkedin_result = self._check_linkedin(clean_name, domain)
-        if linkedin_result:
-            result['online_presence']['linkedin'] = linkedin_result.get('profile_url')
-            if not result['bio'] and linkedin_result.get('bio'):
-                result['bio'] = linkedin_result['bio']
-            result['sources_checked'].append("LinkedIn search")
+        try:
+            linkedin_result = self._check_linkedin(clean_name, domain)
+            if linkedin_result:
+                result['online_presence']['linkedin'] = linkedin_result.get('profile_url')
+                if not result['bio'] and linkedin_result.get('bio'):
+                    result['bio'] = linkedin_result['bio']
+                result['sources_checked'].append("LinkedIn search")
+        except Exception as e:
+            logger.error(f"Error checking LinkedIn: {e}")
         
         # 4. Check Twitter/X
-        twitter_result = self._check_twitter(clean_name)
-        if twitter_result:
-            result['online_presence']['twitter'] = twitter_result.get('handle')
-            result['sources_checked'].append("Twitter/X search")
+        try:
+            twitter_result = self._check_twitter(clean_name)
+            if twitter_result:
+                result['online_presence']['twitter'] = twitter_result.get('handle')
+                result['sources_checked'].append("Twitter/X search")
+        except Exception as e:
+            logger.error(f"Error checking Twitter: {e}")
         
         # 5. Check known journalist databases
-        journalist_db_result = self._check_journalist_databases(clean_name)
-        if journalist_db_result:
-            result.update(journalist_db_result)
-            result['sources_checked'].append("Journalist databases")
+        try:
+            journalist_db_result = self._check_journalist_databases(clean_name)
+            if journalist_db_result:
+                self._safe_merge_results(result, journalist_db_result)
+                result['sources_checked'].append("Journalist databases")
+        except Exception as e:
+            logger.error(f"Error checking journalist databases: {e}")
         
         # Calculate credibility score based on findings
         result['credibility_score'] = self._calculate_credibility_score(result)
@@ -130,10 +154,14 @@ class AuthorAnalyzer:
         
         # Generate bio if not found
         if not result['bio']:
-            if result['professional_info']['current_position']:
-                result['bio'] = f"{clean_name} is {result['professional_info']['current_position']}"
-                if result['professional_info']['outlets']:
-                    result['bio'] += f" at {result['professional_info']['outlets'][0]}"
+            # FIXED: Safe access to nested dictionary
+            current_position = result.get('professional_info', {}).get('current_position')
+            outlets = result.get('professional_info', {}).get('outlets', [])
+            
+            if current_position:
+                result['bio'] = f"{clean_name} is {current_position}"
+                if outlets:
+                    result['bio'] += f" at {outlets[0]}"
                 result['bio'] += "."
             else:
                 result['bio'] = f"{clean_name} - Limited information available. We searched multiple sources but could not find detailed biographical information."
@@ -159,48 +187,66 @@ class AuthorAnalyzer:
         
         return result
     
+    def _safe_merge_results(self, target, source):
+        """Safely merge source dict into target dict without overwriting None with empty values"""
+        if not source:
+            return
+            
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            elif isinstance(value, dict) and isinstance(target[key], dict):
+                # Recursively merge dictionaries
+                self._safe_merge_results(target[key], value)
+            elif value is not None and (not isinstance(value, (list, str)) or value):
+                # Only update if source value is meaningful
+                target[key] = value
+    
     def _extract_from_json_ld(self, data, author_name, result):
         """Extract author info from JSON-LD structured data"""
-        if isinstance(data, dict):
-            # Direct Person object
-            if data.get('@type') == 'Person' and author_name.lower() in data.get('name', '').lower():
-                if data.get('description'):
-                    result['bio'] = data['description']
-                if data.get('jobTitle'):
-                    result['professional_info']['current_position'] = data['jobTitle']
-                if data.get('image'):
-                    result['image_url'] = data['image'] if isinstance(data['image'], str) else data['image'].get('url')
-                return True
+        try:
+            if isinstance(data, dict):
+                # Direct Person object
+                if data.get('@type') == 'Person' and author_name.lower() in data.get('name', '').lower():
+                    if data.get('description'):
+                        result['bio'] = data['description']
+                    if data.get('jobTitle'):
+                        result.setdefault('professional_info', {})['current_position'] = data['jobTitle']
+                    if data.get('image'):
+                        result['image_url'] = data['image'] if isinstance(data['image'], str) else data['image'].get('url')
+                    return True
+                
+                # Article with author
+                if data.get('@type') in ['Article', 'NewsArticle'] and data.get('author'):
+                    author = data['author']
+                    if isinstance(author, dict) and author_name.lower() in author.get('name', '').lower():
+                        if author.get('description'):
+                            result['bio'] = author['description']
+                        if author.get('jobTitle'):
+                            result.setdefault('professional_info', {})['current_position'] = author['jobTitle']
+                        return True
             
-            # Article with author
-            if data.get('@type') in ['Article', 'NewsArticle'] and data.get('author'):
-                author = data['author']
-                if isinstance(author, dict) and author_name.lower() in author.get('name', '').lower():
-                    if author.get('description'):
-                        result['bio'] = author['description']
-                    if author.get('jobTitle'):
-                        result['professional_info']['current_position'] = author['jobTitle']
-                    return True
-        
-        elif isinstance(data, list):
-            # Check each item in the list
-            for item in data:
-                if self._extract_from_json_ld(item, author_name, result):
-                    return True
+            elif isinstance(data, list):
+                # Check each item in the list
+                for item in data:
+                    if self._extract_from_json_ld(item, author_name, result):
+                        return True
+        except Exception as e:
+            logger.debug(f"Error extracting from JSON-LD: {e}")
         
         return False
     
     def _extract_from_meta_tags(self, soup, author_name, result):
         """Extract author info from meta tags"""
-        # Common meta tag patterns
-        meta_mappings = {
-            'bio': ['description', 'author.description', 'twitter:description'],
-            'image': ['author.image', 'twitter:image', 'og:image'],
-            'title': ['author.title', 'author.jobTitle']
-        }
-        
-        for field, properties in meta_mappings.items():
-            if not result.get(field if field != 'title' else 'professional_info', {}).get('current_position' if field == 'title' else field):
+        try:
+            # Common meta tag patterns
+            meta_mappings = {
+                'bio': ['description', 'author.description', 'twitter:description'],
+                'image': ['author.image', 'twitter:image', 'og:image'],
+                'title': ['author.title', 'author.jobTitle']
+            }
+            
+            for field, properties in meta_mappings.items():
                 for prop in properties:
                     meta = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
                     if meta and meta.get('content'):
@@ -210,7 +256,9 @@ class AuthorAnalyzer:
                         elif field == 'image':
                             result['image_url'] = content
                         elif field == 'title':
-                            result['professional_info']['current_position'] = content
+                            result.setdefault('professional_info', {})['current_position'] = content
+        except Exception as e:
+            logger.debug(f"Error extracting from meta tags: {e}")
     
     def _search_site_for_author(self, author_name, domain):
         """Search the site for author information using site search"""
@@ -277,38 +325,41 @@ class AuthorAnalyzer:
     
     def _parse_muckrack_profile(self, html):
         """Parse Muck Rack journalist profile"""
-        soup = BeautifulSoup(html, 'html.parser')
-        result = {}
-        
-        # Extract bio
-        bio_elem = soup.select_one('div.journalist-bio')
-        if bio_elem:
-            result['bio'] = bio_elem.get_text(strip=True)
-        
-        # Extract current position
-        position_elem = soup.select_one('div.journalist-title')
-        if position_elem:
-            result['professional_info'] = {
-                'current_position': position_elem.get_text(strip=True)
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            result = {}
+            
+            # Extract bio
+            bio_elem = soup.select_one('div.journalist-bio')
+            if bio_elem:
+                result['bio'] = bio_elem.get_text(strip=True)
+            
+            # Extract current position
+            position_elem = soup.select_one('div.journalist-title')
+            if position_elem:
+                result['professional_info'] = {
+                    'current_position': position_elem.get_text(strip=True)
+                }
+            
+            # Extract outlets
+            outlets = []
+            outlet_elems = soup.select('div.outlet-name')
+            for elem in outlet_elems[:5]:  # Limit to 5 outlets
+                outlets.append(elem.get_text(strip=True))
+            
+            if outlets:
+                result.setdefault('professional_info', {})['outlets'] = outlets
+            
+            result['verification_status'] = {
+                'verified': True,
+                'journalist_verified': True,
+                'outlet_staff': bool(outlets)
             }
-        
-        # Extract outlets
-        outlets = []
-        outlet_elems = soup.select('div.outlet-name')
-        for elem in outlet_elems[:5]:  # Limit to 5 outlets
-            outlets.append(elem.get_text(strip=True))
-        
-        if outlets:
-            result['professional_info'] = result.get('professional_info', {})
-            result['professional_info']['outlets'] = outlets
-        
-        result['verification_status'] = {
-            'verified': True,
-            'journalist_verified': True,
-            'outlet_staff': bool(outlets)
-        }
-        
-        return result
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error parsing Muck Rack profile: {e}")
+            return None
     
     def _search_and_extract_info(self, author_name, domain=None):
         """Fallback search method"""
@@ -370,7 +421,7 @@ class AuthorAnalyzer:
             'journalist_database': 20
         }
         
-        # Apply scoring
+        # Apply scoring with safe access
         if author_data.get('bio') and 'Limited information available' not in author_data.get('bio', ''):
             score += criteria['has_bio']
         
@@ -386,7 +437,8 @@ class AuthorAnalyzer:
         if author_data.get('verification_status', {}).get('outlet_staff'):
             score += criteria['outlet_verified']
         
-        if any(author_data.get('online_presence', {}).values()):
+        online_presence = author_data.get('online_presence', {})
+        if any(online_presence.get(key) for key in ['twitter', 'linkedin', 'personal_website', 'outlet_profile']):
             score += criteria['has_social_media']
         
         if author_data.get('verification_status', {}).get('journalist_verified'):
@@ -396,7 +448,7 @@ class AuthorAnalyzer:
     
     def _generate_credibility_explanation(self, author_data):
         """Generate explanation for credibility score"""
-        score = author_data['credibility_score']
+        score = author_data.get('credibility_score', 0)
         
         if score >= 80:
             level = 'High'
@@ -423,6 +475,9 @@ class AuthorAnalyzer:
     
     def _clean_author_name(self, author_name):
         """Clean and standardize author name"""
+        if not author_name:
+            return "Unknown"
+            
         # Remove common suffixes
         name = re.sub(r'\s*(,|and|&)\s*.*', '', author_name)
         
@@ -434,7 +489,7 @@ class AuthorAnalyzer:
         # Remove extra whitespace
         name = ' '.join(name.split())
         
-        return name
+        return name if name else "Unknown"
     
     def _parse_authors(self, author_text):
         """Parse multiple authors from byline text"""
@@ -448,7 +503,7 @@ class AuthorAnalyzer:
         cleaned_authors = []
         for author in authors:
             cleaned = self._clean_author_name(author)
-            if cleaned and len(cleaned) > 2:
+            if cleaned and len(cleaned) > 2 and cleaned != "Unknown":
                 cleaned_authors.append(cleaned)
         
         return cleaned_authors
@@ -502,146 +557,151 @@ class AuthorAnalyzer:
     
     def _parse_author_page_universal(self, html, url, domain, author_name):
         """Universal parser that works for any news site author page"""
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        # Check if this is actually an author page (not a 404 or wrong page)
-        page_text = soup.get_text().lower()
-        author_name_lower = author_name.lower()
-        
-        # Verify this is likely an author page
-        if (author_name_lower not in page_text and 
-            not any(word in author_name_lower.split() for word in page_text.split()) and
-            'page not found' not in page_text and 
-            '404' not in page_text):
-            return None
-        
-        result = {
-            'online_presence': {'outlet_profile': url},
-            'verification_status': {
-                'verified': True,
-                'journalist_verified': True,
-                'outlet_staff': True
-            },
-            'professional_info': {
-                'outlets': [domain.replace('www.', '').split('.')[0].upper()]
-            },
-            'found_author_page': True
-        }
-        
-        # 1. Check JSON-LD structured data first (most reliable)
-        scripts = soup.find_all('script', type='application/ld+json')
-        for script in scripts:
-            try:
-                data = json.loads(script.string)
-                if self._extract_from_json_ld(data, author_name, result):
-                    break
-            except:
-                continue
-        
-        # 2. Check meta tags
-        self._extract_from_meta_tags(soup, author_name, result)
-        
-        # 3. Smart bio extraction - look for paragraphs that mention the author
-        if not result.get('bio'):
-            bio_candidates = []
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
             
-            # Common bio container selectors
-            bio_containers = soup.select('''
-                [class*="bio"], [class*="Bio"], 
-                [class*="author-desc"], [class*="author-info"],
-                [class*="author-about"], [class*="contributor"],
-                [id*="bio"], [id*="Bio"],
-                .description, .about, .profile
-            ''')
+            # Check if this is actually an author page (not a 404 or wrong page)
+            page_text = soup.get_text().lower()
+            author_name_lower = author_name.lower()
             
-            for container in bio_containers:
-                text = container.get_text(strip=True)
-                if len(text) > 50 and author_name.split()[-1].lower() in text.lower():
-                    bio_candidates.append(text)
+            # Verify this is likely an author page
+            if (author_name_lower not in page_text and 
+                not any(word in author_name_lower.split() for word in page_text.split()) and
+                'page not found' not in page_text and 
+                '404' not in page_text):
+                return None
             
-            # Also check all paragraphs
-            for p in soup.find_all('p'):
-                text = p.get_text(strip=True)
-                # Look for paragraphs that mention the author and are biographical
-                if (len(text) > 50 and 
-                    any(name_part.lower() in text.lower() for name_part in author_name.split()) and
-                    any(keyword in text.lower() for keyword in 
-                        ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
-                         'covers', 'reports', 'joined', 'experience', 'previously'])):
-                    bio_candidates.append(text)
+            result = {
+                'online_presence': {'outlet_profile': url},
+                'verification_status': {
+                    'verified': True,
+                    'journalist_verified': True,
+                    'outlet_staff': True
+                },
+                'professional_info': {
+                    'outlets': [domain.replace('www.', '').split('.')[0].upper()]
+                },
+                'found_author_page': True
+            }
             
-            # Pick the best bio (longest relevant one)
-            if bio_candidates:
-                result['bio'] = max(bio_candidates, key=len)
-        
-        # 4. Extract image - look for images with author name or in author sections
-        if not result.get('image_url'):
-            img_candidates = []
-            
-            # Check images with alt text
-            for img in soup.find_all('img', alt=True):
-                if any(name_part.lower() in img['alt'].lower() for name_part in author_name.split()):
-                    img_candidates.append(img)
-            
-            # Check images in author sections
-            author_sections = soup.select('[class*="author"], [id*="author"]')
-            for section in author_sections:
-                imgs = section.find_all('img')
-                img_candidates.extend(imgs)
-            
-            # Get the first valid image
-            for img in img_candidates:
-                if img.get('src'):
-                    img_url = img['src']
-                    if not img_url.startswith('http'):
-                        img_url = f"https://{domain}{img_url}" if img_url.startswith('/') else f"https://{domain}/{img_url}"
-                    result['image_url'] = img_url
-                    break
-        
-        # 5. Extract title/position
-        if not result['professional_info'].get('current_position'):
-            # Look for common patterns
-            title_patterns = [
-                rf"{author_name}\s*,\s*([^,\.\n]+)",  # Name, Title
-                rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^\.\n]+?)(?:\s+at\s+|$)",  # Name is a Title
-                rf"(?:by|By)\s+{author_name}\s*,\s*([^,\.\n]+)",  # By Name, Title
-            ]
-            
-            for pattern in title_patterns:
-                match = re.search(pattern, soup.get_text(), re.IGNORECASE)
-                if match:
-                    title = match.group(1).strip()
-                    if len(title) < 100:  # Reasonable title length
-                        result['professional_info']['current_position'] = title
+            # 1. Check JSON-LD structured data first (most reliable)
+            scripts = soup.find_all('script', type='application/ld+json')
+            for script in scripts:
+                try:
+                    data = json.loads(script.string)
+                    if self._extract_from_json_ld(data, author_name, result):
                         break
-        
-        # 6. Extract social media links
-        social_links = soup.find_all('a', href=True)
-        for link in social_links:
-            href = link['href'].lower()
+                except:
+                    continue
             
-            # Twitter/X
-            if ('twitter.com/' in href or 'x.com/' in href) and '/status/' not in href:
-                match = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', href)
-                if match:
-                    handle = match.group(1).replace('@', '')
-                    if handle not in ['share', 'intent', 'home', 'search']:
-                        result['online_presence']['twitter'] = handle
+            # 2. Check meta tags
+            self._extract_from_meta_tags(soup, author_name, result)
             
-            # LinkedIn
-            elif 'linkedin.com/in/' in href:
-                result['online_presence']['linkedin'] = link['href']
+            # 3. Smart bio extraction - look for paragraphs that mention the author
+            if not result.get('bio'):
+                bio_candidates = []
+                
+                # Common bio container selectors
+                bio_containers = soup.select('''
+                    [class*="bio"], [class*="Bio"], 
+                    [class*="author-desc"], [class*="author-info"],
+                    [class*="author-about"], [class*="contributor"],
+                    [id*="bio"], [id*="Bio"],
+                    .description, .about, .profile
+                ''')
+                
+                for container in bio_containers:
+                    text = container.get_text(strip=True)
+                    if len(text) > 50 and author_name.split()[-1].lower() in text.lower():
+                        bio_candidates.append(text)
+                
+                # Also check all paragraphs
+                for p in soup.find_all('p'):
+                    text = p.get_text(strip=True)
+                    # Look for paragraphs that mention the author and are biographical
+                    if (len(text) > 50 and 
+                        any(name_part.lower() in text.lower() for name_part in author_name.split()) and
+                        any(keyword in text.lower() for keyword in 
+                            ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
+                             'covers', 'reports', 'joined', 'experience', 'previously'])):
+                        bio_candidates.append(text)
+                
+                # Pick the best bio (longest relevant one)
+                if bio_candidates:
+                    result['bio'] = max(bio_candidates, key=len)
             
-            # Email
-            elif href.startswith('mailto:'):
-                email = href.replace('mailto:', '').split('?')[0]
-                if '@' in email:
-                    result['online_presence']['email'] = email
-        
-        # 7. Default bio if none found but we're on an author page
-        if not result.get('bio') and result.get('found_author_page'):
-            position = result['professional_info'].get('current_position', 'journalist')
-            outlet = result['professional_info']['outlets'][0]
-            result['bio'] = f"{author_name} is a {position} at {outlet}."
-        
-        return result
+            # 4. Extract image - look for images with author name or in author sections
+            if not result.get('image_url'):
+                img_candidates = []
+                
+                # Check images with alt text
+                for img in soup.find_all('img', alt=True):
+                    if any(name_part.lower() in img['alt'].lower() for name_part in author_name.split()):
+                        img_candidates.append(img)
+                
+                # Check images in author sections
+                author_sections = soup.select('[class*="author"], [id*="author"]')
+                for section in author_sections:
+                    imgs = section.find_all('img')
+                    img_candidates.extend(imgs)
+                
+                # Get the first valid image
+                for img in img_candidates:
+                    if img.get('src'):
+                        img_url = img['src']
+                        if not img_url.startswith('http'):
+                            img_url = f"https://{domain}{img_url}" if img_url.startswith('/') else f"https://{domain}/{img_url}"
+                        result['image_url'] = img_url
+                        break
+            
+            # 5. Extract title/position
+            if not result.get('professional_info', {}).get('current_position'):
+                # Look for common patterns
+                title_patterns = [
+                    rf"{author_name}\s*,\s*([^,\.\n]+)",  # Name, Title
+                    rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^\.\n]+?)(?:\s+at\s+|$)",  # Name is a Title
+                    rf"(?:by|By)\s+{author_name}\s*,\s*([^,\.\n]+)",  # By Name, Title
+                ]
+                
+                for pattern in title_patterns:
+                    match = re.search(pattern, soup.get_text(), re.IGNORECASE)
+                    if match:
+                        title = match.group(1).strip()
+                        if len(title) < 100:  # Reasonable title length
+                            result.setdefault('professional_info', {})['current_position'] = title
+                            break
+            
+            # 6. Extract social media links
+            social_links = soup.find_all('a', href=True)
+            for link in social_links:
+                href = link['href'].lower()
+                
+                # Twitter/X
+                if ('twitter.com/' in href or 'x.com/' in href) and '/status/' not in href:
+                    match = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', href)
+                    if match:
+                        handle = match.group(1).replace('@', '')
+                        if handle not in ['share', 'intent', 'home', 'search']:
+                            result.setdefault('online_presence', {})['twitter'] = handle
+                
+                # LinkedIn
+                elif 'linkedin.com/in/' in href:
+                    result.setdefault('online_presence', {})['linkedin'] = link['href']
+                
+                # Email
+                elif href.startswith('mailto:'):
+                    email = href.replace('mailto:', '').split('?')[0]
+                    if '@' in email:
+                        result.setdefault('online_presence', {})['email'] = email
+            
+            # 7. Default bio if none found but we're on an author page
+            if not result.get('bio') and result.get('found_author_page'):
+                position = result.get('professional_info', {}).get('current_position', 'journalist')
+                outlets = result.get('professional_info', {}).get('outlets', [])
+                outlet = outlets[0] if outlets else domain
+                result['bio'] = f"{author_name} is a {position} at {outlet}."
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error parsing author page: {e}")
+            return None
