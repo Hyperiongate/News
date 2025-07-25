@@ -6,13 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadedComponents = [];
     
     // Mock pricing dropdown if it doesn't exist
-if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !== 'function') {
-    window.pricingDropdown = {
-        getSelectedPlan: function() {
-            return 'basic'; // Default plan
-        }
-    };
-}
+    if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !== 'function') {
+        window.pricingDropdown = {
+            getSelectedPlan: function() {
+                return 'basic'; // Default plan
+            }
+        };
+    }
     
     // Check if UI controller is loaded
     function checkUIController() {
@@ -157,6 +157,7 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
         }
         
         currentAnalysisData = null;
+        window.LAST_ANALYSIS_DATA = null;
     }
     
     async function performAnalysis(data, type) {
@@ -190,22 +191,41 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
             }
             
             const result = await response.json();
-            console.log('Analysis result received:', result);
-            console.log('Result structure:', {
-                success: result.success,
-                hasArticle: !!result.article,
-                articleKeys: result.article ? Object.keys(result.article) : [],
-                author: result.article?.author,
-                hasAuthorAnalysis: !!result.author_analysis,
-                authorAnalysisKeys: result.author_analysis ? Object.keys(result.author_analysis) : []
-            });
+            
+            // Enhanced debugging
+            console.log('=== COMPLETE ANALYSIS RESULT ===');
+            console.log('Full result:', result);
+            console.log('=== DETAILED BREAKDOWN ===');
+            console.log('Article data:', result.article);
+            console.log('Author from article:', result.article?.author);
+            console.log('Trust score:', result.trust_score);
+            console.log('=== AUTHOR ANALYSIS DATA ===');
+            console.log('Author analysis object:', result.author_analysis);
+            if (result.author_analysis) {
+                console.log('Author name:', result.author_analysis.name);
+                console.log('Author found:', result.author_analysis.found);
+                console.log('Author bio:', result.author_analysis.bio);
+                console.log('Credibility score:', result.author_analysis.credibility_score);
+                console.log('Experience years:', result.author_analysis.experience_years);
+                console.log('Publications:', result.author_analysis.publications);
+                console.log('Awards:', result.author_analysis.awards);
+                console.log('Social media:', result.author_analysis.social_media);
+                console.log('Recent articles:', result.author_analysis.recent_articles);
+                console.log('Expertise areas:', result.author_analysis.expertise_areas);
+            }
+            console.log('=== OTHER ANALYSIS COMPONENTS ===');
+            console.log('Has bias analysis:', !!result.bias_analysis);
+            console.log('Has source credibility:', !!result.source_credibility);
+            console.log('Has fact check:', !!result.fact_check_results);
             
             if (result.success) {
                 // Store analysis data
                 currentAnalysisData = result;
+                window.LAST_ANALYSIS_DATA = result; // For debugging in console
                 
                 // Ensure article data exists with defaults
                 if (!result.article) {
+                    console.warn('No article data in result, creating defaults');
                     result.article = {
                         title: 'Unknown Title',
                         author: 'Unknown Author',
@@ -217,19 +237,41 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
                 
                 // Ensure author is set
                 if (!result.article.author) {
+                    console.warn('No author in article data, setting to Unknown');
                     result.article.author = 'Unknown Author';
                 }
                 
-                console.log('Final data being sent to UI:', {
-                    article: result.article,
-                    trust_score: result.trust_score,
-                    hasAllComponents: !!(result.bias_analysis && result.source_credibility && result.author_analysis)
-                });
+                // Check if author analysis exists but is minimal
+                if (result.author_analysis && !result.author_analysis.found) {
+                    console.warn('Author analysis exists but author was not found in databases');
+                    console.log('Minimal author data:', result.author_analysis);
+                }
+                
+                console.log('=== FINAL DATA BEING SENT TO UI ===');
+                console.log('Final result object:', result);
                 
                 // Use UI controller to build results
                 if (window.UI && window.UI.buildResults) {
                     console.log('Calling UI.buildResults with data');
-                    window.UI.buildResults(result);
+                    try {
+                        window.UI.buildResults(result);
+                        console.log('UI.buildResults completed successfully');
+                        
+                        // Debug: Check what was actually rendered for author
+                        setTimeout(() => {
+                            const authorSection = document.querySelector('.author-analysis-section');
+                            if (authorSection) {
+                                console.log('Author section found in DOM:', authorSection);
+                                console.log('Author section HTML:', authorSection.innerHTML);
+                            } else {
+                                console.warn('No author analysis section found in DOM after rendering');
+                            }
+                        }, 500);
+                        
+                    } catch (uiError) {
+                        console.error('Error in UI.buildResults:', uiError);
+                        console.error('Stack trace:', uiError.stack);
+                    }
                     
                     // Add export buttons if pro user
                     if (result.is_pro && result.export_enabled) {
@@ -245,6 +287,7 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
             }
         } catch (error) {
             console.error('Analysis error:', error);
+            console.error('Error stack:', error.stack);
             showError(error.message || 'Network error occurred');
         } finally {
             loading.classList.add('hidden');
@@ -410,12 +453,30 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
         results.classList.remove('hidden');
     }
     
-    // Fallback display function (if UI controller not available)
+    // Enhanced fallback display function with author data
     function displayResults(data) {
         if (!results) return;
         
         const trustScore = data.trust_score || 0;
         const trustColor = trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626';
+        
+        // Build author section HTML
+        let authorHtml = '';
+        if (data.author_analysis) {
+            const author = data.author_analysis;
+            authorHtml = `
+                <div class="author-section" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                    <h4 style="margin: 0 0 16px 0; color: #1e293b;">Author Analysis</h4>
+                    <p style="margin: 0 0 8px 0;"><strong>Name:</strong> ${author.name || 'Unknown'}</p>
+                    <p style="margin: 0 0 8px 0;"><strong>Found in Database:</strong> ${author.found ? 'Yes' : 'No'}</p>
+                    <p style="margin: 0 0 8px 0;"><strong>Credibility Score:</strong> ${author.credibility_score || 50}/100</p>
+                    ${author.bio ? `<p style="margin: 0 0 8px 0;"><strong>Bio:</strong> ${author.bio}</p>` : ''}
+                    ${author.experience_years ? `<p style="margin: 0 0 8px 0;"><strong>Experience:</strong> ${author.experience_years} years</p>` : ''}
+                    ${author.expertise_areas && author.expertise_areas.length > 0 ? 
+                        `<p style="margin: 0 0 8px 0;"><strong>Expertise:</strong> ${author.expertise_areas.join(', ')}</p>` : ''}
+                </div>
+            `;
+        }
         
         results.innerHTML = `
             <div class="analysis-results" style="padding: 24px; background: #f8fafc; border-radius: 12px; margin: 20px;">
@@ -435,6 +496,8 @@ if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !==
                     </div>
                     <div style="font-size: 1.25rem; color: #64748b;">Trust Score</div>
                 </div>
+                
+                ${authorHtml}
                 
                 <div class="summary" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
                     <h4 style="margin: 0 0 12px 0; color: #1e293b;">Summary</h4>
@@ -522,6 +585,23 @@ ${JSON.stringify(data, null, 2)}
             console.error('UI Controller still not loaded after delay!');
         } else {
             console.log('UI Controller confirmed loaded');
+            console.log('Available UI methods:', Object.keys(window.UI));
         }
     }, 1000);
+    
+    // Add debug helper
+    window.debugAuthorData = function() {
+        if (window.LAST_ANALYSIS_DATA) {
+            console.log('=== LAST ANALYSIS AUTHOR DATA ===');
+            console.log('Full analysis:', window.LAST_ANALYSIS_DATA);
+            console.log('Author analysis:', window.LAST_ANALYSIS_DATA.author_analysis);
+            console.log('Article author:', window.LAST_ANALYSIS_DATA.article?.author);
+            return window.LAST_ANALYSIS_DATA.author_analysis;
+        } else {
+            console.log('No analysis data available. Run an analysis first.');
+            return null;
+        }
+    };
+    
+    console.log('Main.js initialization complete. Debug with: window.debugAuthorData()');
 });
