@@ -216,7 +216,7 @@ class AuthorAnalyzer:
             
             # Social media and online presence
             f'"{author_name}" Twitter journalist',
-            f'"{author_name}" @{author_name.replace(' ', '')}',
+            f'"{author_name}" @{author_name.replace(" ", "")}',
             
             # Wikipedia and notable mentions
             f'"{author_name}" Wikipedia journalist',
