@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Fixed author analyzer with proper method names
+PURPOSE: Fixed author analyzer with proper method names and no duplicates
 LOCATION: services/author_analyzer.py
 """
 
@@ -34,6 +34,128 @@ class AuthorAnalyzer:
         for author_name in authors:
             result = self.analyze_single_author(author_name, domain)
             results.append(result)
+        
+        return results  # FIXED: Return results (plural), not result
+    
+    def analyze_single_author(self, author_name, domain=None):
+        """Analyze a single author with web search"""
+        logger.info(f"Analyzing author: {author_name} from domain: {domain}")
+        
+        # Clean author name
+        clean_name = self._clean_author_name(author_name)
+        
+        # Check cache first (if database is available)
+        try:
+            from models import db, AuthorCache
+            from datetime import timedelta
+            
+            cached = AuthorCache.query.filter_by(author_name=clean_name).first()
+            if cached and not cached.is_expired:
+                logger.info(f"Returning cached author data for {clean_name}")
+                return cached.lookup_data
+        except:
+            # Database not available, continue without cache
+            pass
+        
+        # Initialize result structure
+        result = {
+            'name': clean_name,
+            'found': False,
+            'bio': None,
+            'image_url': None,
+            'credibility_score': 50,
+            'professional_info': {
+                'current_position': None,
+                'outlets': [],
+                'years_experience': None,
+                'expertise_areas': []
+            },
+            'online_presence': {
+                'twitter': None,
+                'linkedin': None,
+                'personal_website': None,
+                'outlet_profile': None
+            },
+            'verification_status': {
+                'verified': False,
+                'journalist_verified': False,
+                'outlet_staff': False
+            },
+            'sources_checked': []
+        }
+        
+        # Try multiple search strategies
+        
+        # 1. Check outlet's author page first (most reliable)
+        if domain:
+            outlet_result = self._check_outlet_author_page(clean_name, domain)
+            if outlet_result:
+                result.update(outlet_result)
+                result['found'] = True
+                result['sources_checked'].append(f"{domain} author page")
+        
+        # 2. Google search for author + journalist
+        if not result['found']:
+            google_result = self._google_search_author(clean_name, domain)
+            if google_result:
+                result.update(google_result)
+                result['found'] = True
+                result['sources_checked'].append("Google search")
+        
+        # 3. Check LinkedIn
+        linkedin_result = self._check_linkedin(clean_name, domain)
+        if linkedin_result:
+            result['online_presence']['linkedin'] = linkedin_result.get('profile_url')
+            if not result['bio'] and linkedin_result.get('bio'):
+                result['bio'] = linkedin_result['bio']
+            result['sources_checked'].append("LinkedIn search")
+        
+        # 4. Check Twitter/X
+        twitter_result = self._check_twitter(clean_name)
+        if twitter_result:
+            result['online_presence']['twitter'] = twitter_result.get('handle')
+            result['sources_checked'].append("Twitter/X search")
+        
+        # 5. Check known journalist databases
+        journalist_db_result = self._check_journalist_databases(clean_name)
+        if journalist_db_result:
+            result.update(journalist_db_result)
+            result['sources_checked'].append("Journalist databases")
+        
+        # Calculate credibility score based on findings
+        result['credibility_score'] = self._calculate_credibility_score(result)
+        
+        # Add credibility explanation
+        result['credibility_explanation'] = self._generate_credibility_explanation(result)
+        
+        # Generate bio if not found
+        if not result['bio']:
+            if result['professional_info']['current_position']:
+                result['bio'] = f"{clean_name} is {result['professional_info']['current_position']}"
+                if result['professional_info']['outlets']:
+                    result['bio'] += f" at {result['professional_info']['outlets'][0]}"
+                result['bio'] += "."
+            else:
+                result['bio'] = f"{clean_name} - Limited information available. We searched multiple sources but could not find detailed biographical information."
+        
+        # Cache the result (if database is available)
+        try:
+            from models import db, AuthorCache
+            from datetime import timedelta
+            
+            # Remove existing cache entry if present
+            AuthorCache.query.filter_by(author_name=clean_name).delete()
+            
+            # Create new cache entry
+            cache_entry = AuthorCache(
+                author_name=clean_name,
+                lookup_data=result,
+                expires_at=datetime.utcnow() + timedelta(days=30)  # Cache for 30 days
+            )
+            db.session.add(cache_entry)
+            db.session.commit()
+        except Exception as e:
+            logger.debug(f"Could not cache author data: {e}")
         
         return result
     
@@ -302,323 +424,7 @@ class AuthorAnalyzer:
     def _clean_author_name(self, author_name):
         """Clean and standardize author name"""
         # Remove common suffixes
-        name = re.sub(r'\s*(,|and|&)\s*.*s
-    
-    def analyze_single_author(self, author_name, domain=None):
-        """Analyze a single author with web search"""
-        logger.info(f"Analyzing author: {author_name} from domain: {domain}")
-        
-        # Clean author name
-        clean_name = self._clean_author_name(author_name)
-        
-        # Check cache first (if database is available)
-        try:
-            from models import db, AuthorCache
-            from datetime import timedelta
-            
-            cached = AuthorCache.query.filter_by(author_name=clean_name).first()
-            if cached and not cached.is_expired:
-                logger.info(f"Returning cached author data for {clean_name}")
-                return cached.lookup_data
-        except:
-            # Database not available, continue without cache
-            pass
-        
-        # Initialize result structure
-        result = {
-            'name': clean_name,
-            'found': False,
-            'bio': None,
-            'image_url': None,
-            'credibility_score': 50,
-            'professional_info': {
-                'current_position': None,
-                'outlets': [],
-                'years_experience': None,
-                'expertise_areas': []
-            },
-            'online_presence': {
-                'twitter': None,
-                'linkedin': None,
-                'personal_website': None,
-                'outlet_profile': None
-            },
-            'verification_status': {
-                'verified': False,
-                'journalist_verified': False,
-                'outlet_staff': False
-            },
-            'sources_checked': []
-        }
-        
-        # Try multiple search strategies
-        
-        # 1. Check outlet's author page first (most reliable)
-        if domain:
-            outlet_result = self._check_outlet_author_page(clean_name, domain)
-            if outlet_result:
-                result.update(outlet_result)
-                result['found'] = True
-                result['sources_checked'].append(f"{domain} author page")
-        
-        # 2. Google search for author + journalist
-        if not result['found']:
-            google_result = self._google_search_author(clean_name, domain)
-            if google_result:
-                result.update(google_result)
-                result['found'] = True
-                result['sources_checked'].append("Google search")
-        
-        # 3. Check LinkedIn
-        linkedin_result = self._check_linkedin(clean_name, domain)
-        if linkedin_result:
-            result['online_presence']['linkedin'] = linkedin_result.get('profile_url')
-            if not result['bio'] and linkedin_result.get('bio'):
-                result['bio'] = linkedin_result['bio']
-            result['sources_checked'].append("LinkedIn search")
-        
-        # 4. Check Twitter/X
-        twitter_result = self._check_twitter(clean_name)
-        if twitter_result:
-            result['online_presence']['twitter'] = twitter_result.get('handle')
-            result['sources_checked'].append("Twitter/X search")
-        
-        # 5. Check known journalist databases
-        journalist_db_result = self._check_journalist_databases(clean_name)
-        if journalist_db_result:
-            result.update(journalist_db_result)
-            result['sources_checked'].append("Journalist databases")
-        
-        # Calculate credibility score based on findings
-        result['credibility_score'] = self._calculate_credibility_score(result)
-        
-        # Add credibility explanation
-        result['credibility_explanation'] = self._generate_credibility_explanation(result)
-        
-        # Generate bio if not found
-        if not result['bio']:
-            if result['professional_info']['current_position']:
-                result['bio'] = f"{clean_name} is {result['professional_info']['current_position']}"
-                if result['professional_info']['outlets']:
-                    result['bio'] += f" at {result['professional_info']['outlets'][0]}"
-                result['bio'] += "."
-            else:
-                result['bio'] = f"{clean_name} - Limited information available. We searched multiple sources but could not find detailed biographical information."
-        
-        # Cache the result (if database is available)
-        try:
-            from models import db, AuthorCache
-            from datetime import timedelta
-            
-            # Remove existing cache entry if present
-            AuthorCache.query.filter_by(author_name=clean_name).delete()
-            
-            # Create new cache entry
-            cache_entry = AuthorCache(
-                author_name=clean_name,
-                lookup_data=result,
-                expires_at=datetime.utcnow() + timedelta(days=30)  # Cache for 30 days
-            )
-            db.session.add(cache_entry)
-            db.session.commit()
-        except Exception as e:
-            logger.debug(f"Could not cache author data: {e}")
-        
-        return result
-    
-    def _check_outlet_author_page(self, author_name, domain):
-        """Universal author page checker that works for any outlet"""
-        # Clean domain
-        clean_domain = domain.replace('www.', '')
-        author_slug = author_name.lower().replace(' ', '-')
-        author_underscore = author_name.lower().replace(' ', '_')
-        author_plus = author_name.lower().replace(' ', '+')
-        
-        # Common author page URL patterns used by most news sites
-        url_patterns = [
-            f"https://{domain}/{author_slug}/",
-            f"https://{domain}/author/{author_slug}/",
-            f"https://{domain}/authors/{author_slug}/",
-            f"https://{domain}/journalist/{author_slug}/",
-            f"https://{domain}/journalists/{author_slug}/",
-            f"https://{domain}/reporter/{author_slug}/",
-            f"https://{domain}/staff/{author_slug}/",
-            f"https://{domain}/contributors/{author_slug}/",
-            f"https://{domain}/by/{author_slug}/",
-            f"https://{domain}/profiles/{author_slug}/",
-            f"https://{domain}/people/{author_slug}/",
-            f"https://{domain}/team/{author_slug}/",
-            f"https://{domain}/writer/{author_slug}/",
-            f"https://www.{clean_domain}/{author_slug}/",
-            f"https://www.{clean_domain}/author/{author_slug}/",
-            # Try underscore versions
-            f"https://{domain}/author/{author_underscore}/",
-            f"https://{domain}/authors/{author_underscore}/",
-            # Try plus sign versions
-            f"https://{domain}/author/{author_plus}/",
-        ]
-        
-        for url in url_patterns:
-            try:
-                response = self.session.get(url, timeout=5)
-                if response.status_code == 200:
-                    # Parse the page universally
-                    result = self._parse_author_page_universal(response.text, url, domain, author_name)
-                    if result and (result.get('bio') or result.get('found_author_page')):
-                        return result
-            except Exception as e:
-                logger.debug(f"Failed to check {url}: {e}")
-                continue
-        
-        # If no author page found, try searching the site
-        return self._search_site_for_author(author_name, domain)
-    
-    def _parse_author_page_universal(self, html, url, domain, author_name):
-        """Universal parser that works for any news site author page"""
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        # Check if this is actually an author page (not a 404 or wrong page)
-        page_text = soup.get_text().lower()
-        author_name_lower = author_name.lower()
-        
-        # Verify this is likely an author page
-        if (author_name_lower not in page_text and 
-            not any(word in author_name_lower.split() for word in page_text.split()) and
-            'page not found' not in page_text and 
-            '404' not in page_text):
-            return None
-        
-        result = {
-            'online_presence': {'outlet_profile': url},
-            'verification_status': {
-                'verified': True,
-                'journalist_verified': True,
-                'outlet_staff': True
-            },
-            'professional_info': {
-                'outlets': [domain.replace('www.', '').split('.')[0].upper()]
-            },
-            'found_author_page': True
-        }
-        
-        # 1. Check JSON-LD structured data first (most reliable)
-        scripts = soup.find_all('script', type='application/ld+json')
-        for script in scripts:
-            try:
-                data = json.loads(script.string)
-                if self._extract_from_json_ld(data, author_name, result):
-                    break
-            except:
-                continue
-        
-        # 2. Check meta tags
-        self._extract_from_meta_tags(soup, author_name, result)
-        
-        # 3. Smart bio extraction - look for paragraphs that mention the author
-        if not result.get('bio'):
-            bio_candidates = []
-            
-            # Common bio container selectors
-            bio_containers = soup.select('''
-                [class*="bio"], [class*="Bio"], 
-                [class*="author-desc"], [class*="author-info"],
-                [class*="author-about"], [class*="contributor"],
-                [id*="bio"], [id*="Bio"],
-                .description, .about, .profile
-            ''')
-            
-            for container in bio_containers:
-                text = container.get_text(strip=True)
-                if len(text) > 50 and author_name.split()[-1].lower() in text.lower():
-                    bio_candidates.append(text)
-            
-            # Also check all paragraphs
-            for p in soup.find_all('p'):
-                text = p.get_text(strip=True)
-                # Look for paragraphs that mention the author and are biographical
-                if (len(text) > 50 and 
-                    any(name_part.lower() in text.lower() for name_part in author_name.split()) and
-                    any(keyword in text.lower() for keyword in 
-                        ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
-                         'covers', 'reports', 'joined', 'experience', 'previously'])):
-                    bio_candidates.append(text)
-            
-            # Pick the best bio (longest relevant one)
-            if bio_candidates:
-                result['bio'] = max(bio_candidates, key=len)
-        
-        # 4. Extract image - look for images with author name or in author sections
-        if not result.get('image_url'):
-            img_candidates = []
-            
-            # Check images with alt text
-            for img in soup.find_all('img', alt=True):
-                if any(name_part.lower() in img['alt'].lower() for name_part in author_name.split()):
-                    img_candidates.append(img)
-            
-            # Check images in author sections
-            author_sections = soup.select('[class*="author"], [id*="author"]')
-            for section in author_sections:
-                imgs = section.find_all('img')
-                img_candidates.extend(imgs)
-            
-            # Get the first valid image
-            for img in img_candidates:
-                if img.get('src'):
-                    img_url = img['src']
-                    if not img_url.startswith('http'):
-                        img_url = f"https://{domain}{img_url}" if img_url.startswith('/') else f"https://{domain}/{img_url}"
-                    result['image_url'] = img_url
-                    break
-        
-        # 5. Extract title/position
-        if not result['professional_info'].get('current_position'):
-            # Look for common patterns
-            title_patterns = [
-                rf"{author_name}\s*,\s*([^,\.\n]+)",  # Name, Title
-                rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^\.\n]+?)(?:\s+at\s+|$)",  # Name is a Title
-                rf"(?:by|By)\s+{author_name}\s*,\s*([^,\.\n]+)",  # By Name, Title
-            ]
-            
-            for pattern in title_patterns:
-                match = re.search(pattern, soup.get_text(), re.IGNORECASE)
-                if match:
-                    title = match.group(1).strip()
-                    if len(title) < 100:  # Reasonable title length
-                        result['professional_info']['current_position'] = title
-                        break
-        
-        # 6. Extract social media links
-        social_links = soup.find_all('a', href=True)
-        for link in social_links:
-            href = link['href'].lower()
-            
-            # Twitter/X
-            if ('twitter.com/' in href or 'x.com/' in href) and '/status/' not in href:
-                match = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', href)
-                if match:
-                    handle = match.group(1).replace('@', '')
-                    if handle not in ['share', 'intent', 'home', 'search']:
-                        result['online_presence']['twitter'] = handle
-            
-            # LinkedIn
-            elif 'linkedin.com/in/' in href:
-                result['online_presence']['linkedin'] = link['href']
-            
-            # Email
-            elif href.startswith('mailto:'):
-                email = href.replace('mailto:', '').split('?')[0]
-                if '@' in email:
-                    result['online_presence']['email'] = email
-        
-        # 7. Default bio if none found but we're on an author page
-        if not result.get('bio') and result.get('found_author_page'):
-            position = result['professional_info'].get('current_position', 'journalist')
-            outlet = result['professional_info']['outlets'][0]
-            result['bio'] = f"{author_name} is a {position} at {outlet}."
-        
-        return result 
-            ', '', author_name)
+        name = re.sub(r'\s*(,|and|&)\s*.*', '', author_name)
         
         # Remove titles
         titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Sir', 'Dame']
@@ -645,129 +451,7 @@ class AuthorAnalyzer:
             if cleaned and len(cleaned) > 2:
                 cleaned_authors.append(cleaned)
         
-        return cleaned_authorss
-    
-    def analyze_single_author(self, author_name, domain=None):
-        """Analyze a single author with web search"""
-        logger.info(f"Analyzing author: {author_name} from domain: {domain}")
-        
-        # Clean author name
-        clean_name = self._clean_author_name(author_name)
-        
-        # Check cache first (if database is available)
-        try:
-            from models import db, AuthorCache
-            from datetime import timedelta
-            
-            cached = AuthorCache.query.filter_by(author_name=clean_name).first()
-            if cached and not cached.is_expired:
-                logger.info(f"Returning cached author data for {clean_name}")
-                return cached.lookup_data
-        except:
-            # Database not available, continue without cache
-            pass
-        
-        # Initialize result structure
-        result = {
-            'name': clean_name,
-            'found': False,
-            'bio': None,
-            'image_url': None,
-            'credibility_score': 50,
-            'professional_info': {
-                'current_position': None,
-                'outlets': [],
-                'years_experience': None,
-                'expertise_areas': []
-            },
-            'online_presence': {
-                'twitter': None,
-                'linkedin': None,
-                'personal_website': None,
-                'outlet_profile': None
-            },
-            'verification_status': {
-                'verified': False,
-                'journalist_verified': False,
-                'outlet_staff': False
-            },
-            'sources_checked': []
-        }
-        
-        # Try multiple search strategies
-        
-        # 1. Check outlet's author page first (most reliable)
-        if domain:
-            outlet_result = self._check_outlet_author_page(clean_name, domain)
-            if outlet_result:
-                result.update(outlet_result)
-                result['found'] = True
-                result['sources_checked'].append(f"{domain} author page")
-        
-        # 2. Google search for author + journalist
-        if not result['found']:
-            google_result = self._google_search_author(clean_name, domain)
-            if google_result:
-                result.update(google_result)
-                result['found'] = True
-                result['sources_checked'].append("Google search")
-        
-        # 3. Check LinkedIn
-        linkedin_result = self._check_linkedin(clean_name, domain)
-        if linkedin_result:
-            result['online_presence']['linkedin'] = linkedin_result.get('profile_url')
-            if not result['bio'] and linkedin_result.get('bio'):
-                result['bio'] = linkedin_result['bio']
-            result['sources_checked'].append("LinkedIn search")
-        
-        # 4. Check Twitter/X
-        twitter_result = self._check_twitter(clean_name)
-        if twitter_result:
-            result['online_presence']['twitter'] = twitter_result.get('handle')
-            result['sources_checked'].append("Twitter/X search")
-        
-        # 5. Check known journalist databases
-        journalist_db_result = self._check_journalist_databases(clean_name)
-        if journalist_db_result:
-            result.update(journalist_db_result)
-            result['sources_checked'].append("Journalist databases")
-        
-        # Calculate credibility score based on findings
-        result['credibility_score'] = self._calculate_credibility_score(result)
-        
-        # Add credibility explanation
-        result['credibility_explanation'] = self._generate_credibility_explanation(result)
-        
-        # Generate bio if not found
-        if not result['bio']:
-            if result['professional_info']['current_position']:
-                result['bio'] = f"{clean_name} is {result['professional_info']['current_position']}"
-                if result['professional_info']['outlets']:
-                    result['bio'] += f" at {result['professional_info']['outlets'][0]}"
-                result['bio'] += "."
-            else:
-                result['bio'] = f"{clean_name} - Limited information available. We searched multiple sources but could not find detailed biographical information."
-        
-        # Cache the result (if database is available)
-        try:
-            from models import db, AuthorCache
-            from datetime import timedelta
-            
-            # Remove existing cache entry if present
-            AuthorCache.query.filter_by(author_name=clean_name).delete()
-            
-            # Create new cache entry
-            cache_entry = AuthorCache(
-                author_name=clean_name,
-                lookup_data=result,
-                expires_at=datetime.utcnow() + timedelta(days=30)  # Cache for 30 days
-            )
-            db.session.add(cache_entry)
-            db.session.commit()
-        except Exception as e:
-            logger.debug(f"Could not cache author data: {e}")
-        
-        return result
+        return cleaned_authors
     
     def _check_outlet_author_page(self, author_name, domain):
         """Universal author page checker that works for any outlet"""
@@ -960,5 +644,4 @@ class AuthorAnalyzer:
             outlet = result['professional_info']['outlets'][0]
             result['bio'] = f"{author_name} is a {position} at {outlet}."
         
-        return result 
-            '
+        return result
