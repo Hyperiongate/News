@@ -526,7 +526,13 @@
             
             const author = data.author_analysis || {};
             const credScore = author.credibility_score || 0;
-            const hasDetailedInfo = author.found && author.bio && !author.bio.includes('Limited information');
+            const hasDetailedInfo = author.found && (
+                (author.bio && !author.bio.includes('Limited information')) ||
+                author.professional_info?.current_position ||
+                author.professional_info?.outlets?.length > 0 ||
+                author.verification_status?.verified ||
+                author.verification_status?.journalist_verified
+            );
             
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
