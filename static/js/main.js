@@ -23,8 +23,8 @@
     // Initialize all event listeners
     function initializeEventListeners() {
         // URL input and analyze button
-        const urlInput = document.getElementById('article-url');
-        const analyzeBtn = document.getElementById('analyze-btn');
+        const urlInput = document.getElementById('urlInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
         
         if (urlInput && analyzeBtn) {
             urlInput.addEventListener('keypress', function(e) {
@@ -37,9 +37,21 @@
         }
 
         // Clear button
-        const clearBtn = document.getElementById('clear-btn');
+        const clearBtn = document.getElementById('resetBtn');
         if (clearBtn) {
             clearBtn.addEventListener('click', clearResults);
+        }
+
+        // Text analyze button
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        if (analyzeTextBtn) {
+            analyzeTextBtn.addEventListener('click', analyzeText);
+        }
+
+        // Text clear button
+        const clearTextBtn = document.getElementById('resetTextBtn');
+        if (clearTextBtn) {
+            clearTextBtn.addEventListener('click', clearTextResults);
         }
 
         // Example URL links
@@ -58,7 +70,6 @@
     // Initialize tab functionality
     function initializeTabs() {
         const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
         
         tabButtons.forEach(button => {
             button.addEventListener('click', function() {
@@ -66,23 +77,23 @@
                 
                 // Update active states
                 tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
                 this.classList.add('active');
-                const targetContent = document.getElementById(`${tabName}-content`);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
                 
-                // Save active tab to localStorage
-                localStorage.setItem('activeTab', tabName);
+                // Show/hide input groups
+                if (tabName === 'url') {
+                    document.getElementById('urlInputGroup').classList.remove('hidden');
+                    document.getElementById('textInputGroup').classList.add('hidden');
+                } else if (tabName === 'text') {
+                    document.getElementById('textInputGroup').classList.remove('hidden');
+                    document.getElementById('urlInputGroup').classList.add('hidden');
+                }
             });
         });
     }
 
-    // Main function to analyze article
+    // Main function to analyze article from URL
     async function analyzeArticle() {
-        const urlInput = document.getElementById('article-url');
+        const urlInput = document.getElementById('urlInput');
         const url = urlInput ? urlInput.value.trim() : '';
         
         if (!url) {
@@ -141,6 +152,59 @@
         }
     }
 
+    // Analyze text function
+    async function analyzeText() {
+        const textInput = document.getElementById('textInput');
+        const text = textInput ? textInput.value.trim() : '';
+        
+        if (!text) {
+            showError('Please enter some text to analyze');
+            return;
+        }
+
+        if (analysisInProgress) {
+            showError('Analysis already in progress. Please wait...');
+            return;
+        }
+
+        try {
+            analysisInProgress = true;
+            showLoadingState();
+            
+            console.log('Starting text analysis...');
+            
+            // Call the API with text
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('Analysis complete:', result);
+            
+            // Store the result
+            currentArticleData = result;
+            
+            // Display results
+            displayResults(result);
+            
+        } catch (error) {
+            console.error('Analysis error:', error);
+            showError(error.message || 'An error occurred during analysis');
+        } finally {
+            analysisInProgress = false;
+            hideLoadingState();
+        }
+    }
+
     // Display analysis results
     function displayResults(result) {
         console.log('=== DISPLAYING RESULTS ===');
@@ -150,35 +214,9 @@
         window.LAST_ANALYSIS_DATA = result;
         
         // Show results section
-        const resultsSection = document.getElementById('results-section');
-        if (resultsSection) {
-            resultsSection.style.display = 'block';
-        }
-
-        // Switch to overview tab
-        const overviewTab = document.querySelector('[data-tab="overview"]');
-        if (overviewTab) {
-            overviewTab.click();
-        }
-
-        // Display article metadata
-        if (result.article) {
-            displayArticleMetadata(result.article);
-        }
-
-        // Display overall credibility
-        if (result.overall_credibility !== undefined) {
-            displayOverallCredibility(result.overall_credibility);
-        }
-
-        // Display claim analysis
-        if (result.claims && result.claims.length > 0) {
-            displayClaimsAnalysis(result.claims);
-        }
-
-        // Display source analysis
-        if (result.source_analysis) {
-            displaySourceAnalysis(result.source_analysis);
+        const resultsDiv = document.getElementById('results');
+        if (resultsDiv) {
+            resultsDiv.classList.remove('hidden');
         }
 
         // Display author analysis with enhanced debugging
@@ -192,247 +230,158 @@
             console.log('Author credibility score:', result.author_analysis.credibility_score);
             console.log('Author bio:', result.author_analysis.bio);
             console.log('Full author data:', JSON.stringify(result.author_analysis, null, 2));
-            
+        }
+
+        // Use UI controller to build results
+        if (window.UI && typeof window.UI.buildResults === 'function') {
+            console.log('Using UI.buildResults to display results');
             try {
-                // Try to use UI controller
-                if (window.UI && typeof window.UI.buildResults === 'function') {
-                    console.log('Using UI.buildResults for author display');
-                    window.UI.buildResults(result);
-                    
-                    // Verify if author section was actually rendered
-                    setTimeout(() => {
-                        const authorSection = document.querySelector('.author-analysis-section');
-                        if (authorSection) {
-                            console.log('Author section found in DOM:', authorSection);
-                            console.log('Author section HTML:', authorSection.innerHTML);
-                        } else {
-                            console.log('WARNING: Author section not found in DOM after UI.buildResults');
-                            displayAuthorAnalysisFallback(result.author_analysis);
-                        }
-                    }, 100);
-                } else {
-                    console.log('UI controller not available, using fallback display');
-                    displayAuthorAnalysisFallback(result.author_analysis);
-                }
+                window.UI.buildResults(result);
+                
+                // Verify if author section was actually rendered
+                setTimeout(() => {
+                    const authorSection = document.querySelector('.author-analysis-section');
+                    if (authorSection) {
+                        console.log('Author section found in DOM:', authorSection);
+                        console.log('Author section HTML:', authorSection.innerHTML);
+                    } else {
+                        console.log('WARNING: Author section not found in DOM after UI.buildResults');
+                    }
+                }, 100);
             } catch (error) {
                 console.error('Error in UI.buildResults:', error);
-                displayAuthorAnalysisFallback(result.author_analysis);
+                displayResultsFallback(result);
             }
         } else {
-            console.log('No author analysis data in result');
-        }
-
-        // Scroll to results
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // Fallback author display function
-    function displayAuthorAnalysisFallback(authorData) {
-        console.log('Using fallback author display with data:', authorData);
-        
-        const authorContent = document.getElementById('author-content');
-        if (!authorContent) {
-            console.error('Author content container not found');
-            return;
-        }
-
-        // Create author display HTML
-        let html = '<div class="author-analysis-section">';
-        html += '<h3>Author Analysis</h3>';
-        
-        if (authorData && authorData.name) {
-            html += `<div class="author-info">`;
-            html += `<p><strong>Author:</strong> ${authorData.name}</p>`;
-            html += `<p><strong>Found:</strong> ${authorData.found ? 'Yes' : 'No'}</p>`;
-            html += `<p><strong>Credibility Score:</strong> ${authorData.credibility_score || 'N/A'}/100</p>`;
-            
-            if (authorData.bio) {
-                html += `<p><strong>Bio:</strong> ${authorData.bio}</p>`;
-            }
-            
-            if (authorData.expertise && authorData.expertise.length > 0) {
-                html += `<p><strong>Expertise:</strong> ${authorData.expertise.join(', ')}</p>`;
-            }
-            
-            if (authorData.bias_indicators && authorData.bias_indicators.length > 0) {
-                html += `<p><strong>Bias Indicators:</strong> ${authorData.bias_indicators.join(', ')}</p>`;
-            }
-            
-            if (authorData.credibility_factors) {
-                html += '<div class="credibility-factors"><strong>Credibility Factors:</strong><ul>';
-                for (const [factor, value] of Object.entries(authorData.credibility_factors)) {
-                    html += `<li>${factor}: ${value}</li>`;
-                }
-                html += '</ul></div>';
-            }
-            
-            html += '</div>';
-        } else {
-            html += '<p>No author information available.</p>';
-        }
-        
-        html += '</div>';
-        
-        authorContent.innerHTML = html;
-        console.log('Fallback author display rendered');
-    }
-
-    // Display article metadata
-    function displayArticleMetadata(article) {
-        const metadataSection = document.querySelector('.article-metadata');
-        if (!metadataSection) return;
-
-        metadataSection.innerHTML = `
-            <h3>${article.title || 'Untitled Article'}</h3>
-            <p class="article-meta">
-                ${article.author ? `By ${article.author}` : 'Unknown Author'} 
-                ${article.publish_date ? `• Published: ${new Date(article.publish_date).toLocaleDateString()}` : ''}
-            </p>
-            ${article.description ? `<p class="article-description">${article.description}</p>` : ''}
-        `;
-    }
-
-    // Display overall credibility score
-    function displayOverallCredibility(score) {
-        const scoreElement = document.querySelector('.credibility-score');
-        const meterFill = document.querySelector('.score-meter-fill');
-        
-        if (scoreElement) {
-            scoreElement.textContent = Math.round(score);
-        }
-        
-        if (meterFill) {
-            meterFill.style.width = `${score}%`;
-            
-            // Color based on score
-            if (score >= 80) {
-                meterFill.style.backgroundColor = '#4CAF50';
-            } else if (score >= 60) {
-                meterFill.style.backgroundColor = '#FFC107';
-            } else {
-                meterFill.style.backgroundColor = '#F44336';
-            }
+            console.log('UI controller not available, using fallback display');
+            displayResultsFallback(result);
         }
     }
 
-    // Display claims analysis
-    function displayClaimsAnalysis(claims) {
-        const claimsContent = document.getElementById('claims-content');
-        if (!claimsContent) return;
+    // Fallback results display
+    function displayResultsFallback(result) {
+        const resultsDiv = document.getElementById('results');
+        if (!resultsDiv) return;
 
-        if (claims.length === 0) {
-            claimsContent.innerHTML = '<p>No specific claims were analyzed in this article.</p>';
-            return;
-        }
-
-        let html = '<div class="claims-list">';
+        let html = '<div class="results-content">';
         
-        claims.forEach((claim, index) => {
-            const statusClass = claim.verdict ? claim.verdict.toLowerCase().replace(' ', '-') : 'unknown';
-            
+        // Article info
+        if (result.article) {
             html += `
-                <div class="claim-item ${statusClass}">
-                    <div class="claim-header">
-                        <span class="claim-number">Claim ${index + 1}</span>
-                        <span class="claim-verdict ${statusClass}">${claim.verdict || 'Unknown'}</span>
-                    </div>
-                    <p class="claim-text">"${claim.claim}"</p>
-                    ${claim.explanation ? `<p class="claim-explanation">${claim.explanation}</p>` : ''}
-                    ${claim.evidence && claim.evidence.length > 0 ? `
-                        <div class="claim-evidence">
-                            <strong>Evidence:</strong>
-                            <ul>
-                                ${claim.evidence.map(e => `<li>${e}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        claimsContent.innerHTML = html;
-    }
-
-    // Display source analysis
-    function displaySourceAnalysis(sourceAnalysis) {
-        const sourceContent = document.getElementById('source-content');
-        if (!sourceContent || !sourceAnalysis) return;
-
-        let html = '<div class="source-analysis">';
-        
-        // Source credibility
-        if (sourceAnalysis.credibility_score !== undefined) {
-            html += `
-                <div class="source-credibility">
-                    <h4>Source Credibility Score: ${Math.round(sourceAnalysis.credibility_score)}/100</h4>
-                    <div class="mini-meter">
-                        <div class="mini-meter-fill" style="width: ${sourceAnalysis.credibility_score}%"></div>
-                    </div>
+                <div class="article-info">
+                    <h3>${result.article.title || 'Untitled Article'}</h3>
+                    <p>By ${result.article.author || 'Unknown Author'}</p>
                 </div>
             `;
         }
 
-        // Domain info
-        if (sourceAnalysis.domain) {
-            html += `<p><strong>Domain:</strong> ${sourceAnalysis.domain}</p>`;
+        // Overall credibility
+        if (result.overall_credibility !== undefined) {
+            html += `
+                <div class="credibility-score">
+                    <h4>Overall Credibility: ${Math.round(result.overall_credibility)}/100</h4>
+                </div>
+            `;
         }
 
-        // Bias assessment
-        if (sourceAnalysis.bias_assessment) {
+        // Author analysis
+        if (result.author_analysis) {
             html += `
-                <div class="bias-assessment">
-                    <h4>Bias Assessment</h4>
-                    <p><strong>Political Leaning:</strong> ${sourceAnalysis.bias_assessment.political_leaning || 'Unknown'}</p>
-                    <p><strong>Bias Score:</strong> ${sourceAnalysis.bias_assessment.bias_score || 'N/A'}</p>
+                <div class="author-analysis">
+                    <h4>Author Analysis</h4>
+                    <p><strong>Name:</strong> ${result.author_analysis.name}</p>
+                    <p><strong>Found:</strong> ${result.author_analysis.found ? 'Yes' : 'No'}</p>
+                    <p><strong>Credibility:</strong> ${result.author_analysis.credibility_score}/100</p>
+                    ${result.author_analysis.bio ? `<p><strong>Bio:</strong> ${result.author_analysis.bio}</p>` : ''}
                 </div>
             `;
         }
 
         html += '</div>';
-        sourceContent.innerHTML = html;
+        resultsDiv.innerHTML = html;
     }
 
     // Show loading state
     function showLoadingState() {
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const loadingIndicator = document.querySelector('.loading-indicator');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        const loadingDiv = document.getElementById('loading');
         
         if (analyzeBtn) {
             analyzeBtn.disabled = true;
-            analyzeBtn.textContent = 'Analyzing...';
+            analyzeBtn.innerHTML = '<span>⏳</span><span>Analyzing...</span>';
         }
         
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'flex';
+        if (analyzeTextBtn) {
+            analyzeTextBtn.disabled = true;
+            analyzeTextBtn.innerHTML = '<span>⏳</span><span>Analyzing...</span>';
+        }
+        
+        if (loadingDiv) {
+            loadingDiv.classList.remove('hidden');
         }
     }
 
     // Hide loading state
     function hideLoadingState() {
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const loadingIndicator = document.querySelector('.loading-indicator');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        const loadingDiv = document.getElementById('loading');
         
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
-            analyzeBtn.textContent = 'Analyze';
+            analyzeBtn.innerHTML = '<span>🔍</span><span>Analyze Article</span>';
         }
         
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
+        if (analyzeTextBtn) {
+            analyzeTextBtn.disabled = false;
+            analyzeTextBtn.innerHTML = '<span>🔍</span><span>Analyze Text</span>';
+        }
+        
+        if (loadingDiv) {
+            loadingDiv.classList.add('hidden');
         }
     }
 
     // Clear results
     function clearResults() {
-        const resultsSection = document.getElementById('results-section');
-        if (resultsSection) {
-            resultsSection.style.display = 'none';
+        const resultsDiv = document.getElementById('results');
+        if (resultsDiv) {
+            resultsDiv.classList.add('hidden');
+            resultsDiv.innerHTML = '';
         }
         
-        const urlInput = document.getElementById('article-url');
+        const urlInput = document.getElementById('urlInput');
         if (urlInput) {
             urlInput.value = '';
+        }
+        
+        // Clear any analysis cards
+        const cardsWrapper = document.querySelector('.cards-grid-wrapper');
+        if (cardsWrapper && cardsWrapper.parentElement) {
+            cardsWrapper.parentElement.remove();
+        }
+        
+        currentArticleData = null;
+    }
+
+    // Clear text results
+    function clearTextResults() {
+        const resultsDiv = document.getElementById('results');
+        if (resultsDiv) {
+            resultsDiv.classList.add('hidden');
+            resultsDiv.innerHTML = '';
+        }
+        
+        const textInput = document.getElementById('textInput');
+        if (textInput) {
+            textInput.value = '';
+        }
+        
+        // Clear any analysis cards
+        const cardsWrapper = document.querySelector('.cards-grid-wrapper');
+        if (cardsWrapper && cardsWrapper.parentElement) {
+            cardsWrapper.parentElement.remove();
         }
         
         currentArticleData = null;
@@ -451,9 +400,10 @@
         errorDiv.className = 'error-message';
         errorDiv.textContent = message;
         
-        const inputSection = document.querySelector('.input-section');
-        if (inputSection) {
-            inputSection.appendChild(errorDiv);
+        // Find the active input group
+        const activeInputGroup = document.querySelector('.input-group:not(.hidden)');
+        if (activeInputGroup) {
+            activeInputGroup.appendChild(errorDiv);
             
             // Auto-remove after 5 seconds
             setTimeout(() => {
@@ -500,14 +450,7 @@
 
     // Restore application state
     function restoreApplicationState() {
-        // Restore active tab
-        const activeTab = localStorage.getItem('activeTab');
-        if (activeTab) {
-            const tabButton = document.querySelector(`[data-tab="${activeTab}"]`);
-            if (tabButton) {
-                tabButton.click();
-            }
-        }
+        // Nothing to restore for now
     }
 
     // Debug helper function
@@ -527,6 +470,13 @@
             if (authorSection) {
                 console.log('Author section HTML:', authorSection.innerHTML);
             }
+            
+            // Check for author card
+            const authorCard = document.querySelector('[data-card-type="author"]');
+            console.log('Author card in DOM:', !!authorCard);
+            if (authorCard) {
+                console.log('Author card expanded:', authorCard.classList.contains('expanded'));
+            }
         } else {
             console.log('No author data available. Run an analysis first.');
         }
@@ -535,6 +485,7 @@
     // Expose functions globally for debugging
     window.factChecker = {
         analyzeArticle: analyzeArticle,
+        analyzeText: analyzeText,
         clearResults: clearResults,
         getCurrentData: () => currentArticleData,
         debugAuthorData: window.debugAuthorData
