@@ -114,6 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const result = await response.json();
             console.log('Analysis result received:', result);
+            console.log('AUTHOR CHECK - article.author:', result.article?.author);
+            console.log('AUTHOR CHECK - full article object:', result.article);
             
             if (result.success) {
                 // Store analysis data
