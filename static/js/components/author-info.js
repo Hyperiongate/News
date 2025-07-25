@@ -1,4 +1,5 @@
 // static/js/components/author-info.js
+// ENHANCED VERSION - Displays ALL collected author data
 
 (function() {
     'use strict';
@@ -59,8 +60,19 @@
         html += '<h3>Author Information</h3>';
         html += '<div class="author-details-card">';
         
-        // Author header with name and credibility
+        // Author header with name, image, and credibility
         html += '<div class="author-header">';
+        
+        // Left side: Image and name
+        html += '<div class="author-identity">';
+        
+        // Author image if available
+        if (authorData.image_url) {
+            html += '<div class="author-image">';
+            html += '<img src="' + authorData.image_url + '" alt="' + authorData.name + '" />';
+            html += '</div>';
+        }
+        
         html += '<div class="author-name-section">';
         html += '<h4>' + authorData.name + '</h4>';
         
@@ -72,15 +84,19 @@
             if (authorData.verification_status.journalist_verified) {
                 html += '<span class="journalist-badge">📰 Professional Journalist</span>';
             }
+            if (authorData.verification_status.outlet_staff) {
+                html += '<span class="staff-badge">🏢 Staff Writer</span>';
+            }
         }
         html += '</div>';
+        html += '</div>'; // End author-identity
         
-        // Credibility score
+        // Right side: Credibility score
         html += '<div class="credibility-score ' + scoreClass + '">';
         html += '<div class="score-value">' + Math.round(credScore) + '%</div>';
         html += '<div class="score-label">Credibility</div>';
         html += '</div>';
-        html += '</div>';
+        html += '</div>'; // End author-header
         
         // Bio section
         if (authorData.bio && authorData.bio !== 'No detailed information available') {
@@ -100,7 +116,7 @@
             
             if (prof.current_position) {
                 html += '<div class="info-item">';
-                html += '<span class="info-label">Position:</span>';
+                html += '<span class="info-label">Current Position:</span>';
                 html += '<span class="info-value">' + prof.current_position + '</span>';
                 html += '</div>';
             }
@@ -119,6 +135,14 @@
                 html += '</div>';
             }
             
+            // Articles count if available
+            if (authorData.articles_count) {
+                html += '<div class="info-item">';
+                html += '<span class="info-label">Articles Written:</span>';
+                html += '<span class="info-value">' + authorData.articles_count + '</span>';
+                html += '</div>';
+            }
+            
             if (prof.expertise_areas && prof.expertise_areas.length > 0) {
                 html += '<div class="info-item full-width">';
                 html += '<span class="info-label">Expertise:</span>';
@@ -130,6 +154,51 @@
                 html += '</div>';
             }
             
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Education section (NEW)
+        if (authorData.education) {
+            html += '<div class="education-section">';
+            html += '<h5>Education</h5>';
+            html += '<p>' + authorData.education + '</p>';
+            html += '</div>';
+        }
+        
+        // Awards and Recognition (NEW)
+        if (authorData.awards && authorData.awards.length > 0) {
+            html += '<div class="awards-section">';
+            html += '<h5>Awards & Recognition</h5>';
+            html += '<ul class="awards-list">';
+            for (var i = 0; i < authorData.awards.length; i++) {
+                html += '<li>🏆 ' + authorData.awards[i] + '</li>';
+            }
+            html += '</ul>';
+            html += '</div>';
+        }
+        
+        // Previous Positions / Career Timeline (NEW)
+        if (authorData.previous_positions && authorData.previous_positions.length > 0) {
+            html += '<div class="career-timeline">';
+            html += '<h5>Career History</h5>';
+            html += '<div class="timeline">';
+            for (var i = 0; i < authorData.previous_positions.length; i++) {
+                var position = authorData.previous_positions[i];
+                html += '<div class="timeline-item">';
+                if (typeof position === 'string') {
+                    html += '<span class="position-description">' + position + '</span>';
+                } else {
+                    html += '<span class="position-title">' + position.title + '</span>';
+                    if (position.outlet) {
+                        html += '<span class="position-outlet"> at ' + position.outlet + '</span>';
+                    }
+                    if (position.dates) {
+                        html += '<span class="position-dates"> (' + position.dates + ')</span>';
+                    }
+                }
+                html += '</div>';
+            }
             html += '</div>';
             html += '</div>';
         }
@@ -163,7 +232,60 @@
                 html += '📰 Publication Profile</a>';
             }
             
+            if (online.email) {
+                html += '<a href="mailto:' + online.email + '" class="social-link email">';
+                html += '✉️ ' + online.email + '</a>';
+            }
+            
             html += '</div>';
+            html += '</div>';
+        }
+        
+        // Recent Articles (NEW)
+        if (authorData.recent_articles && authorData.recent_articles.length > 0) {
+            html += '<div class="recent-articles">';
+            html += '<h5>Recent Articles</h5>';
+            html += '<div class="articles-list">';
+            
+            var articlesToShow = Math.min(5, authorData.recent_articles.length);
+            for (var i = 0; i < articlesToShow; i++) {
+                var article = authorData.recent_articles[i];
+                html += '<div class="article-item">';
+                if (article.url) {
+                    html += '<a href="' + article.url + '" target="_blank">';
+                }
+                html += '<span class="article-title">' + (article.title || article) + '</span>';
+                if (article.date) {
+                    html += '<span class="article-date">' + this.formatDate(article.date) + '</span>';
+                }
+                if (article.outlet) {
+                    html += '<span class="article-outlet"> - ' + article.outlet + '</span>';
+                }
+                if (article.url) {
+                    html += '</a>';
+                }
+                html += '</div>';
+            }
+            
+            if (authorData.recent_articles.length > 5) {
+                html += '<button class="show-more-articles" onclick="window.authorInfo.showAllArticles()">';
+                html += 'Show ' + (authorData.recent_articles.length - 5) + ' more articles';
+                html += '</button>';
+            }
+            
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Issues and Corrections (NEW)
+        if (authorData.issues_corrections !== undefined) {
+            html += '<div class="integrity-section">';
+            html += '<h5>Journalistic Integrity</h5>';
+            if (authorData.issues_corrections) {
+                html += '<p class="warning-text">⚠️ This author has had articles with corrections or retractions</p>';
+            } else {
+                html += '<p class="positive-text">✓ No known issues or corrections</p>';
+            }
             html += '</div>';
         }
         
@@ -180,6 +302,31 @@
             html += '</div>';
         }
         
+        // Data completeness indicator (NEW)
+        html += '<div class="data-completeness">';
+        html += '<h5>Information Coverage</h5>';
+        html += '<div class="completeness-grid">';
+        
+        var dataFields = {
+            'Biography': authorData.bio && authorData.bio !== 'No detailed information available',
+            'Education': !!authorData.education,
+            'Experience': !!(authorData.professional_info && authorData.professional_info.years_experience),
+            'Social Media': this.hasOnlinePresence(authorData.online_presence),
+            'Recent Work': !!(authorData.recent_articles && authorData.recent_articles.length > 0),
+            'Awards': !!(authorData.awards && authorData.awards.length > 0)
+        };
+        
+        for (var field in dataFields) {
+            var hasData = dataFields[field];
+            html += '<div class="completeness-item ' + (hasData ? 'found' : 'missing') + '">';
+            html += '<span class="field-name">' + field + '</span>';
+            html += '<span class="field-status">' + (hasData ? '✓' : '—') + '</span>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
         // Sources checked
         if (authorData.sources_checked && authorData.sources_checked.length > 0) {
             html += '<div class="sources-footer">';
@@ -190,6 +337,9 @@
         
         html += '</div>'; // Close author-details-card
         html += '</div>'; // Close author-info-section
+        
+        // Store data for show more functionality
+        this.currentAuthorData = authorData;
         
         return html;
     };
@@ -265,6 +415,23 @@
         );
     };
     
+    AuthorInfo.prototype.formatDate = function(dateStr) {
+        try {
+            var date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return dateStr;
+        }
+    };
+    
+    AuthorInfo.prototype.showAllArticles = function() {
+        // Function to expand and show all articles
+        if (this.currentAuthorData && this.currentAuthorData.recent_articles) {
+            console.log('Show all articles functionality to be implemented');
+            // This would expand the articles list to show all items
+        }
+    };
+    
     // Add CSS if not already present
     AuthorInfo.prototype.ensureStyles = function() {
         if (document.querySelector('style[data-component="author-info"]')) {
@@ -302,6 +469,27 @@
                 border-bottom: 1px solid #e2e8f0;
             }
             
+            .author-identity {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+            
+            .author-image {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                overflow: hidden;
+                flex-shrink: 0;
+                border: 3px solid #e2e8f0;
+            }
+            
+            .author-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            
             .author-name-section h4 {
                 margin: 0;
                 color: #2d3748;
@@ -309,13 +497,14 @@
                 font-weight: 600;
             }
             
-            .verified-badge, .journalist-badge {
+            .verified-badge, .journalist-badge, .staff-badge {
                 display: inline-block;
                 padding: 4px 12px;
                 border-radius: 20px;
                 font-size: 0.75rem;
                 font-weight: 600;
                 margin-left: 8px;
+                margin-top: 8px;
             }
             
             .verified-badge {
@@ -326,6 +515,11 @@
             .journalist-badge {
                 background: #e6fffa;
                 color: #234e52;
+            }
+            
+            .staff-badge {
+                background: #e0e7ff;
+                color: #312e81;
             }
             
             .credibility-score {
@@ -362,34 +556,97 @@
                 margin-top: 4px;
             }
             
-            .author-bio {
+            .author-bio, .education-section, .awards-section, .career-timeline, .recent-articles, .integrity-section {
                 margin: 24px 0;
             }
             
-            .author-bio h5 {
-                color: #4a5568;
-                font-size: 0.875rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                margin-bottom: 8px;
-            }
-            
-            .author-bio p {
-                color: #2d3748;
-                line-height: 1.6;
-                margin: 0;
-            }
-            
-            .professional-info {
-                margin: 24px 0;
-            }
-            
-            .professional-info h5 {
+            .author-bio h5, .professional-info h5, .education-section h5, 
+            .awards-section h5, .career-timeline h5, .online-presence h5, 
+            .recent-articles h5, .integrity-section h5, .credibility-assessment h5,
+            .data-completeness h5 {
                 color: #4a5568;
                 font-size: 0.875rem;
                 font-weight: 600;
                 text-transform: uppercase;
                 margin-bottom: 12px;
+            }
+            
+            .author-bio p, .education-section p {
+                color: #2d3748;
+                line-height: 1.6;
+                margin: 0;
+            }
+            
+            .awards-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .awards-list li {
+                padding: 8px 0;
+                color: #2d3748;
+                border-bottom: 1px solid #edf2f7;
+            }
+            
+            .awards-list li:last-child {
+                border-bottom: none;
+            }
+            
+            .timeline {
+                position: relative;
+                padding-left: 20px;
+            }
+            
+            .timeline:before {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 8px;
+                bottom: 8px;
+                width: 2px;
+                background: #e2e8f0;
+            }
+            
+            .timeline-item {
+                position: relative;
+                padding: 8px 0;
+                padding-left: 20px;
+            }
+            
+            .timeline-item:before {
+                content: '';
+                position: absolute;
+                left: -16px;
+                top: 12px;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #667eea;
+                border: 2px solid white;
+            }
+            
+            .position-title {
+                font-weight: 600;
+                color: #2d3748;
+            }
+            
+            .position-outlet {
+                color: #4a5568;
+            }
+            
+            .position-dates {
+                color: #718096;
+                font-size: 0.875rem;
+            }
+            
+            .position-description {
+                color: #2d3748;
+                line-height: 1.5;
+            }
+            
+            .professional-info {
+                margin: 24px 0;
             }
             
             .info-grid {
@@ -438,14 +695,6 @@
                 margin: 24px 0;
             }
             
-            .online-presence h5 {
-                color: #4a5568;
-                font-size: 0.875rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                margin-bottom: 12px;
-            }
-            
             .social-links {
                 display: flex;
                 flex-wrap: wrap;
@@ -479,19 +728,85 @@
                 color: #0077b5;
             }
             
+            .social-link.email {
+                color: #ea4335;
+            }
+            
+            .articles-list {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            
+            .article-item {
+                padding: 12px 0;
+                border-bottom: 1px solid #edf2f7;
+            }
+            
+            .article-item:last-child {
+                border-bottom: none;
+            }
+            
+            .article-item a {
+                text-decoration: none;
+                color: inherit;
+                display: block;
+                transition: all 0.2s;
+            }
+            
+            .article-item a:hover {
+                background: #f7fafc;
+                margin: 0 -12px;
+                padding: 12px;
+            }
+            
+            .article-title {
+                color: #2d3748;
+                font-weight: 500;
+                display: block;
+                margin-bottom: 4px;
+            }
+            
+            .article-date {
+                color: #718096;
+                font-size: 0.875rem;
+            }
+            
+            .article-outlet {
+                color: #718096;
+                font-size: 0.875rem;
+            }
+            
+            .show-more-articles {
+                margin-top: 12px;
+                padding: 8px 16px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 0.875rem;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .show-more-articles:hover {
+                background: #5a67d8;
+            }
+            
+            .integrity-section .warning-text {
+                color: #e53e3e;
+                font-weight: 500;
+            }
+            
+            .integrity-section .positive-text {
+                color: #38a169;
+                font-weight: 500;
+            }
+            
             .credibility-assessment {
                 margin: 24px 0;
                 padding: 20px;
                 background: #f7fafc;
                 border-radius: 8px;
-            }
-            
-            .credibility-assessment h5 {
-                color: #4a5568;
-                font-size: 0.875rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                margin-bottom: 12px;
             }
             
             .assessment-level {
@@ -534,6 +849,52 @@
                 color: #2d3748;
                 font-weight: 500;
                 margin-top: 12px;
+            }
+            
+            .data-completeness {
+                margin: 24px 0;
+                padding: 20px;
+                background: #f7fafc;
+                border-radius: 8px;
+            }
+            
+            .completeness-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 12px;
+            }
+            
+            .completeness-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: white;
+                border-radius: 6px;
+                border: 1px solid #e2e8f0;
+            }
+            
+            .completeness-item.found {
+                border-color: #9ae6b4;
+                background: #f0fff4;
+            }
+            
+            .completeness-item.missing {
+                border-color: #e2e8f0;
+            }
+            
+            .field-name {
+                font-size: 0.875rem;
+                color: #4a5568;
+            }
+            
+            .field-status {
+                font-weight: 600;
+                color: #2d3748;
+            }
+            
+            .completeness-item.found .field-status {
+                color: #38a169;
             }
             
             .sources-footer {
@@ -580,6 +941,11 @@
                     gap: 16px;
                 }
                 
+                .author-identity {
+                    flex-direction: column;
+                    text-align: center;
+                }
+                
                 .info-grid {
                     grid-template-columns: 1fr;
                 }
@@ -590,6 +956,10 @@
                 
                 .social-link {
                     justify-content: center;
+                }
+                
+                .completeness-grid {
+                    grid-template-columns: 1fr;
                 }
             }
         `;
