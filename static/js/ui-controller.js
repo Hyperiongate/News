@@ -1,3 +1,5 @@
+
+
 // Enhanced UI Controller with Deeper Analysis - Maintains Existing Layout
 (function() {
     class UIController {
@@ -528,8 +530,6 @@
             console.log('Article author:', data.article?.author);
             
             const author = data.author_analysis || {};
-            const article = data.article || {};
-            const authorName = author.name || article.author || 'Unknown Author';
             const credScore = author.credibility_score || 0;
             const hasDetailedInfo = author.found && (
                 (author.bio && !author.bio.includes('Limited information')) ||
@@ -542,7 +542,7 @@
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
                     <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
-                        ${authorName}
+                        ${author.name || data.article?.author || 'Unknown Author'}
                     </h4>
                     ${hasDetailedInfo ? `
                         <div style="margin: 16px 0;">
@@ -563,12 +563,10 @@
                             </p>
                         </div>
                     `}
-                    ${author.professional_info?.current_position || author.professional_info?.outlets?.length ? `
+                    ${author.articles_count && author.professional_info?.years_experience ? `
                         <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">
                             <p style="margin: 0; color: #0369a1; font-size: 0.875rem; font-weight: 500;">
-                                ${author.professional_info.current_position ? author.professional_info.current_position : ''}
-                                ${author.professional_info.current_position && author.professional_info.outlets?.length ? ' at ' : ''}
-                                ${author.professional_info.outlets?.length ? author.professional_info.outlets[0] : ''}
+                                ${author.articles_count} articles published • ${author.professional_info.years_experience}+ years experience
                             </p>
                         </div>
                     ` : ''}
@@ -583,7 +581,7 @@
                     </p>
                 </div>
                 
-                ${author.bio && !author.bio.includes('Limited information') ? `
+                ${author.bio ? `
                     <div style="margin-bottom: 20px;">
                         <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Biography</h4>
                         <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
@@ -593,6 +591,8 @@
                         </div>
                     </div>
                 ` : ''}
+                
+                ${this.generateAuthorExpertiseAnalysis(author, data)}
                 
                 ${author.professional_info ? `
                     <div style="margin-bottom: 20px;">
@@ -634,33 +634,7 @@
                     </div>
                 ` : ''}
                 
-                ${author.online_presence && Object.keys(author.online_presence).length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Online Presence</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${author.online_presence.twitter ? `
-                                <a href="https://twitter.com/${author.online_presence.twitter}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #eff6ff; color: #3b82f6; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
-                                    <span>🐦</span> @${author.online_presence.twitter}
-                                </a>
-                            ` : ''}
-                            ${author.online_presence.linkedin ? `
-                                <a href="${author.online_presence.linkedin}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #eff6ff; color: #3b82f6; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
-                                    <span>💼</span> LinkedIn
-                                </a>
-                            ` : ''}
-                            ${author.online_presence.outlet_profile ? `
-                                <a href="${author.online_presence.outlet_profile}" target="_blank" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #eff6ff; color: #3b82f6; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
-                                    <span>📰</span> Author Page
-                                </a>
-                            ` : ''}
-                            ${author.online_presence.email ? `
-                                <a href="mailto:${author.online_presence.email}" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #eff6ff; color: #3b82f6; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
-                                    <span>✉️</span> Email
-                                </a>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
+                ${this.generateAuthorBiasPatterns(author, data)}
                 
                 <div style="margin-bottom: 20px; padding: 16px; background: #f0fdf4; border-radius: 8px;">
                     <h5 style="margin: 0 0 8px 0; color: #14532d; font-size: 1rem;">Credibility Assessment</h5>
@@ -680,14 +654,6 @@
                         </p>
                     ` : ''}
                 </div>
-                
-                ${author.sources_checked && author.sources_checked.length > 0 ? `
-                    <div style="margin-bottom: 20px; padding: 12px; background: #f0f9ff; border-radius: 6px;">
-                        <p style="margin: 0; color: #0369a1; font-size: 0.8125rem;">
-                            <strong>Sources checked:</strong> ${author.sources_checked.join(', ')}
-                        </p>
-                    </div>
-                ` : ''}
                 
                 <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Author's Work</h4>
@@ -1194,9 +1160,9 @@
                                 ${this.createContentBar(content.facts_vs_opinion)}
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8125rem;">
-                                <span style="color: #059669;">📊 Facts: ${content.facts_vs_opinion.facts}%</span>
-                                <span style="color: #d97706;">🔍 Analysis: ${content.facts_vs_opinion.analysis}%</span>
-                                <span style="color: #dc2626;">💭 Opinions: ${content.facts_vs_opinion.opinions}%</span>
+                                <span style="color: #059669;">📊 Facts: ${content.facts_vs_opinion.facts}</span>
+                                <span style="color: #d97706;">🔍 Analysis: ${content.facts_vs_opinion.analysis}</span>
+                                <span style="color: #dc2626;">💭 Opinions: ${content.facts_vs_opinion.opinions}</span>
                             </div>
                             ${this.getContentCompositionInsight(content.facts_vs_opinion)}
                         </div>
@@ -1762,6 +1728,67 @@
             } else {
                 return `Despite finding information about this author, their credibility score is concerning. This may indicate a history of inaccurate reporting, extreme bias, or lack of professional standards. Read their work with heightened skepticism and verify all claims independently.`;
             }
+        }
+
+        generateAuthorExpertiseAnalysis(author, data) {
+            if (!author.professional_info?.expertise_areas || author.professional_info.expertise_areas.length === 0) {
+                return '';
+            }
+            
+            const currentTopic = this.inferArticleTopic(data);
+            const expertiseAreas = author.professional_info.expertise_areas;
+            const isExpert = expertiseAreas.some(area => 
+                currentTopic.toLowerCase().includes(area.toLowerCase()) || 
+                area.toLowerCase().includes(currentTopic.toLowerCase())
+            );
+            
+            return `
+                <div style="margin-bottom: 20px; padding: 16px; background: ${isExpert ? '#f0fdf4' : '#fef3c7'}; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px 0; color: ${isExpert ? '#14532d' : '#92400e'}; font-size: 1rem;">
+                        ${isExpert ? '✓ Writing Within Expertise' : '⚠️ Outside Normal Beat'}
+                    </h4>
+                    <p style="margin: 0; color: ${isExpert ? '#166534' : '#78350f'}; font-size: 0.875rem;">
+                        ${isExpert ? 
+                            `The author regularly covers ${expertiseAreas.join(', ')}, making them well-qualified to analyze this topic. Their domain expertise adds credibility to technical details and analysis.` :
+                            `This article appears outside the author's normal expertise in ${expertiseAreas.join(', ')}. While journalists can cover various topics, be extra vigilant about technical accuracy and consider seeking expert opinions.`
+                        }
+                    </p>
+                </div>
+            `;
+        }
+
+        inferArticleTopic(data) {
+            // Simple topic inference from title and content
+            const title = (data.article?.title || '').toLowerCase();
+            const topics = ['politics', 'technology', 'business', 'health', 'science', 'sports', 'entertainment'];
+            
+            for (const topic of topics) {
+                if (title.includes(topic)) {
+                    return topic;
+                }
+            }
+            
+            return 'general news';
+        }
+
+        generateAuthorBiasPatterns(author, data) {
+            if (!author.found || !author.articles_count || author.articles_count < 5) {
+                return '';
+            }
+            
+            return `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Bias Patterns</h4>
+                    <div style="padding: 16px; background: #faf5ff; border-radius: 8px;">
+                        <p style="margin: 0 0 12px 0; color: #6b21a8; font-size: 0.875rem;">
+                            Based on ${author.articles_count} analyzed articles, this author shows:
+                        </p>
+                        <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.8125rem; line-height: 1.6;">
+                            ${this.generateAuthorPatterns(author, data).map(pattern => `<li>${pattern}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
         }
 
         generateAuthorPatterns(author, data) {
@@ -3024,65 +3051,4 @@
         `;
         document.head.appendChild(style);
     }
-})();horExpertiseAnalysis(author, data) {
-            if (!author.professional_info?.expertise_areas || author.professional_info.expertise_areas.length === 0) {
-                return '';
-            }
-            
-            const currentTopic = this.inferArticleTopic(data);
-            const expertiseAreas = author.professional_info.expertise_areas;
-            const isExpert = expertiseAreas.some(area => 
-                currentTopic.toLowerCase().includes(area.toLowerCase()) || 
-                area.toLowerCase().includes(currentTopic.toLowerCase())
-            );
-            
-            return `
-                <div style="margin-bottom: 20px; padding: 16px; background: ${isExpert ? '#f0fdf4' : '#fef3c7'}; border-radius: 8px;">
-                    <h4 style="margin: 0 0 8px 0; color: ${isExpert ? '#14532d' : '#92400e'}; font-size: 1rem;">
-                        ${isExpert ? '✓ Writing Within Expertise' : '⚠️ Outside Normal Beat'}
-                    </h4>
-                    <p style="margin: 0; color: ${isExpert ? '#166534' : '#78350f'}; font-size: 0.875rem;">
-                        ${isExpert ? 
-                            `The author regularly covers ${expertiseAreas.join(', ')}, making them well-qualified to analyze this topic. Their domain expertise adds credibility to technical details and analysis.` :
-                            `This article appears outside the author's normal expertise in ${expertiseAreas.join(', ')}. While journalists can cover various topics, be extra vigilant about technical accuracy and consider seeking expert opinions.`
-                        }
-                    </p>
-                </div>
-            `;
-        }
-
-        inferArticleTopic(data) {
-            // Simple topic inference from title and content
-            const title = (data.article?.title || '').toLowerCase();
-            const topics = ['politics', 'technology', 'business', 'health', 'science', 'sports', 'entertainment'];
-            
-            for (const topic of topics) {
-                if (title.includes(topic)) {
-                    return topic;
-                }
-            }
-            
-            return 'general news';
-        }
-
-        generateAuthorBiasPatterns(author, data) {
-            if (!author.found || !author.articles_count || author.articles_count < 5) {
-                return '';
-            }
-            
-            return `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Bias Patterns</h4>
-                    <div style="padding: 16px; background: #faf5ff; border-radius: 8px;">
-                        <p style="margin: 0 0 12px 0; color: #6b21a8; font-size: 0.875rem;">
-                            Based on ${author.articles_count} analyzed articles, this author shows:
-                        </p>
-                        <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.8125rem; line-height: 1.6;">
-                            ${this.generateAuthorPatterns(author, data).map(pattern => `<li>${pattern}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-
-        generateAut
+})();
