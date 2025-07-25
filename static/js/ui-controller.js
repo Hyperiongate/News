@@ -36,6 +36,11 @@
             // Create the overall assessment summary
             resultsDiv.innerHTML = this.createOverallAssessment(data);
             resultsDiv.classList.remove('hidden');
+            if (this.components.authorInfo && data.author_analysis) {
+                const authorSection = document.createElement('div');
+                authorSection.innerHTML = this.components.authorInfo.render(data);
+                resultsDiv.appendChild(authorSection);
+            }
             
             // Create section header
             const header = document.createElement('h2');
