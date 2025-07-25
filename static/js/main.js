@@ -1,607 +1,543 @@
-// static/js/main.js
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Main.js loaded');
-    
-    // Initialize components list
-    const loadedComponents = [];
-    
-    // Mock pricing dropdown if it doesn't exist
-    if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !== 'function') {
-        window.pricingDropdown = {
-            getSelectedPlan: function() {
-                return 'basic'; // Default plan
-            }
-        };
-    }
-    
-    // Check if UI controller is loaded
-    function checkUIController() {
-        if (!window.UI) {
-            console.error('UI Controller not loaded! Attempting to load...');
-            // Try to load UI controller
-            const script = document.createElement('script');
-            script.src = '/static/js/ui-controller.js';
-            script.onload = () => {
-                console.log('UI Controller loaded dynamically');
-                loadedComponents.push('ui-controller');
-            };
-            script.onerror = () => {
-                console.error('Failed to load UI Controller');
-            };
-            document.head.appendChild(script);
-        } else {
-            console.log('UI Controller already loaded');
-            loadedComponents.push('ui-controller');
+// Main JavaScript file for the fact-checking application
+(function() {
+    'use strict';
+
+    // Global variables
+    let currentArticleData = null;
+    let analysisInProgress = false;
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing Fact Checker Application...');
+        
+        // Initialize UI components
+        initializeEventListeners();
+        initializeTabs();
+        
+        // Check for saved state
+        restoreApplicationState();
+        
+        console.log('Application initialized successfully');
+    });
+
+    // Initialize all event listeners
+    function initializeEventListeners() {
+        // URL input and analyze button
+        const urlInput = document.getElementById('article-url');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        
+        if (urlInput && analyzeBtn) {
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !analysisInProgress) {
+                    analyzeArticle();
+                }
+            });
+            
+            analyzeBtn.addEventListener('click', analyzeArticle);
         }
-    }
-    
-    // Check UI controller on load
-    checkUIController();
-    
-    // Log loaded components
-    console.log('Components loaded:', loadedComponents);
-    
-    // Tab switching
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const urlInputGroup = document.getElementById('urlInputGroup');
-    const textInputGroup = document.getElementById('textInputGroup');
-    
-    if (tabButtons.length > 0) {
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.dataset.tab;
-                
-                // Update active states
-                tabButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                // Show/hide input groups
-                if (tab === 'url') {
-                    if (urlInputGroup) urlInputGroup.classList.remove('hidden');
-                    if (textInputGroup) textInputGroup.classList.add('hidden');
-                } else {
-                    if (urlInputGroup) urlInputGroup.classList.add('hidden');
-                    if (textInputGroup) textInputGroup.classList.remove('hidden');
+
+        // Clear button
+        const clearBtn = document.getElementById('clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', clearResults);
+        }
+
+        // Example URL links
+        document.querySelectorAll('.example-url').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                if (url && urlInput) {
+                    urlInput.value = url;
+                    analyzeArticle();
                 }
             });
         });
     }
-    
-    // Analysis functionality
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const analyzeTextBtn = document.getElementById('analyzeTextBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const resetTextBtn = document.getElementById('resetTextBtn');
-    const urlInput = document.getElementById('urlInput');
-    const textInput = document.getElementById('textInput');
-    const loading = document.getElementById('loading');
-    const results = document.getElementById('results');
-    
-    // Store analysis data globally for export
-    let currentAnalysisData = null;
-    
-    // URL Analysis
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', async () => {
-            const url = urlInput?.value.trim();
-            if (!url) {
-                alert('Please enter a URL');
-                return;
-            }
-            
-            // Basic URL validation
-            try {
-                new URL(url);
-            } catch (e) {
-                alert('Please enter a valid URL');
-                return;
-            }
-            
-            // Force fresh analysis by default
-            await performAnalysis({ url, force_fresh: true }, 'url');
-        });
-    }
-    
-    // Text Analysis
-    if (analyzeTextBtn) {
-        analyzeTextBtn.addEventListener('click', async () => {
-            const text = textInput?.value.trim();
-            if (!text) {
-                alert('Please paste article text');
-                return;
-            }
-            
-            if (text.length < 100) {
-                alert('Please paste a longer article (at least 100 characters)');
-                return;
-            }
-            
-            await performAnalysis({ text, force_fresh: true }, 'text');
-        });
-    }
-    
-    // Reset buttons
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            if (urlInput) urlInput.value = '';
-            resetAnalysis();
-        });
-    }
-    
-    if (resetTextBtn) {
-        resetTextBtn.addEventListener('click', () => {
-            if (textInput) textInput.value = '';
-            resetAnalysis();
-        });
-    }
-    
-    function resetAnalysis() {
-        if (results) {
-            results.innerHTML = '';
-            results.classList.add('hidden');
-        }
+
+    // Initialize tab functionality
+    function initializeTabs() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
         
-        // Remove all analysis elements
-        document.querySelectorAll('.detailed-analysis-container').forEach(el => el.remove());
-        document.querySelectorAll('.analysis-card-standalone').forEach(el => el.remove());
-        document.querySelectorAll('.cards-grid-wrapper').forEach(el => el.remove());
-        document.querySelectorAll('h2').forEach(el => {
-            if (el.textContent === 'Comprehensive Analysis Report') {
-                el.remove();
-            }
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.getAttribute('data-tab');
+                
+                // Update active states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                this.classList.add('active');
+                const targetContent = document.getElementById(`${tabName}-content`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                // Save active tab to localStorage
+                localStorage.setItem('activeTab', tabName);
+            });
         });
-        
-        const resourcesDiv = document.querySelector('#resources');
-        if (resourcesDiv) {
-            resourcesDiv.classList.add('hidden');
-        }
-        
-        currentAnalysisData = null;
-        window.LAST_ANALYSIS_DATA = null;
     }
-    
-    async function performAnalysis(data, type) {
-        if (!loading || !results) {
-            console.error('Required DOM elements not found');
+
+    // Main function to analyze article
+    async function analyzeArticle() {
+        const urlInput = document.getElementById('article-url');
+        const url = urlInput ? urlInput.value.trim() : '';
+        
+        if (!url) {
+            showError('Please enter a valid URL');
             return;
         }
-        
-        loading.classList.remove('hidden');
-        results.classList.add('hidden');
-        
-        // Get selected plan - fixed to handle missing pricingDropdown
-        const selectedPlan = (window.pricingDropdown && typeof window.pricingDropdown.getSelectedPlan === 'function') 
-            ? window.pricingDropdown.getSelectedPlan() 
-            : 'basic';
-        
+
+        if (!isValidUrl(url)) {
+            showError('Please enter a valid URL format');
+            return;
+        }
+
+        if (analysisInProgress) {
+            showError('Analysis already in progress. Please wait...');
+            return;
+        }
+
         try {
-            console.log('Sending analysis request:', data);
+            analysisInProgress = true;
+            showLoadingState();
             
+            console.log('Starting analysis for URL:', url);
+            
+            // Call the API
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ url: url })
             });
-            
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
+            console.log('Analysis complete:', result);
             
-            // Enhanced debugging
-            console.log('=== COMPLETE ANALYSIS RESULT ===');
-            console.log('Full result:', result);
-            console.log('=== DETAILED BREAKDOWN ===');
-            console.log('Article data:', result.article);
-            console.log('Author from article:', result.article?.author);
-            console.log('Trust score:', result.trust_score);
-            console.log('=== AUTHOR ANALYSIS DATA ===');
-            console.log('Author analysis object:', result.author_analysis);
-            if (result.author_analysis) {
-                console.log('Author name:', result.author_analysis.name);
-                console.log('Author found:', result.author_analysis.found);
-                console.log('Author bio:', result.author_analysis.bio);
-                console.log('Credibility score:', result.author_analysis.credibility_score);
-                console.log('Experience years:', result.author_analysis.experience_years);
-                console.log('Publications:', result.author_analysis.publications);
-                console.log('Awards:', result.author_analysis.awards);
-                console.log('Social media:', result.author_analysis.social_media);
-                console.log('Recent articles:', result.author_analysis.recent_articles);
-                console.log('Expertise areas:', result.author_analysis.expertise_areas);
-            }
-            console.log('=== OTHER ANALYSIS COMPONENTS ===');
-            console.log('Has bias analysis:', !!result.bias_analysis);
-            console.log('Has source credibility:', !!result.source_credibility);
-            console.log('Has fact check:', !!result.fact_check_results);
+            // Store the result
+            currentArticleData = result;
             
-            if (result.success) {
-                // Store analysis data
-                currentAnalysisData = result;
-                window.LAST_ANALYSIS_DATA = result; // For debugging in console
-                
-                // Ensure article data exists with defaults
-                if (!result.article) {
-                    console.warn('No article data in result, creating defaults');
-                    result.article = {
-                        title: 'Unknown Title',
-                        author: 'Unknown Author',
-                        domain: 'unknown',
-                        url: data.url || null,
-                        publish_date: null
-                    };
-                }
-                
-                // Ensure author is set
-                if (!result.article.author) {
-                    console.warn('No author in article data, setting to Unknown');
-                    result.article.author = 'Unknown Author';
-                }
-                
-                // Check if author analysis exists but is minimal
-                if (result.author_analysis && !result.author_analysis.found) {
-                    console.warn('Author analysis exists but author was not found in databases');
-                    console.log('Minimal author data:', result.author_analysis);
-                }
-                
-                console.log('=== FINAL DATA BEING SENT TO UI ===');
-                console.log('Final result object:', result);
-                
-                // Use UI controller to build results
-                if (window.UI && window.UI.buildResults) {
-                    console.log('Calling UI.buildResults with data');
-                    try {
-                        window.UI.buildResults(result);
-                        console.log('UI.buildResults completed successfully');
-                        
-                        // Debug: Check what was actually rendered for author
-                        setTimeout(() => {
-                            const authorSection = document.querySelector('.author-analysis-section');
-                            if (authorSection) {
-                                console.log('Author section found in DOM:', authorSection);
-                                console.log('Author section HTML:', authorSection.innerHTML);
-                            } else {
-                                console.warn('No author analysis section found in DOM after rendering');
-                            }
-                        }, 500);
-                        
-                    } catch (uiError) {
-                        console.error('Error in UI.buildResults:', uiError);
-                        console.error('Stack trace:', uiError.stack);
-                    }
-                    
-                    // Add export buttons if pro user
-                    if (result.is_pro && result.export_enabled) {
-                        setTimeout(addExportButtons, 100); // Delay to ensure DOM is ready
-                    }
-                } else {
-                    console.error('UI Controller not available, using fallback display');
-                    // Fallback display
-                    displayResults(result);
-                }
-            } else {
-                showError(result.error || 'Analysis failed');
-            }
+            // Display results
+            displayResults(result);
+            
+            // Save to history
+            saveToHistory(url, result);
+            
         } catch (error) {
             console.error('Analysis error:', error);
-            console.error('Error stack:', error.stack);
-            showError(error.message || 'Network error occurred');
+            showError(error.message || 'An error occurred during analysis');
         } finally {
-            loading.classList.add('hidden');
+            analysisInProgress = false;
+            hideLoadingState();
         }
     }
-    
-    function addExportButtons() {
-        // Check if export buttons already exist
-        if (document.querySelector('.export-buttons')) return;
+
+    // Display analysis results
+    function displayResults(result) {
+        console.log('=== DISPLAYING RESULTS ===');
+        console.log('Full result object:', result);
         
-        // Find the overall assessment div
-        const assessmentDiv = document.querySelector('.overall-assessment');
-        if (!assessmentDiv) {
-            console.log('Assessment div not found, trying again...');
-            setTimeout(addExportButtons, 500);
-            return;
+        // Store globally for debugging
+        window.LAST_ANALYSIS_DATA = result;
+        
+        // Show results section
+        const resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
         }
-        
-        // Create export buttons container
-        const exportContainer = document.createElement('div');
-        exportContainer.className = 'export-buttons';
-        exportContainer.style.cssText = `
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-        `;
-        
-        // PDF Export Button
-        const pdfBtn = document.createElement('button');
-        pdfBtn.className = 'btn btn-primary';
-        pdfBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
-        pdfBtn.innerHTML = '<span>📄</span><span>Export PDF Report</span>';
-        pdfBtn.onclick = exportToPDF;
-        
-        // JSON Export Button
-        const jsonBtn = document.createElement('button');
-        jsonBtn.className = 'btn btn-secondary';
-        jsonBtn.style.cssText = 'display: flex; align-items: center; gap: 8px;';
-        jsonBtn.innerHTML = '<span>{ }</span><span>Export JSON</span>';
-        jsonBtn.onclick = exportToJSON;
-        
-        exportContainer.appendChild(pdfBtn);
-        exportContainer.appendChild(jsonBtn);
-        
-        assessmentDiv.appendChild(exportContainer);
-    }
-    
-    async function exportToPDF() {
-        if (!currentAnalysisData) {
-            alert('No analysis data to export');
-            return;
+
+        // Switch to overview tab
+        const overviewTab = document.querySelector('[data-tab="overview"]');
+        if (overviewTab) {
+            overviewTab.click();
         }
+
+        // Display article metadata
+        if (result.article) {
+            displayArticleMetadata(result.article);
+        }
+
+        // Display overall credibility
+        if (result.overall_credibility !== undefined) {
+            displayOverallCredibility(result.overall_credibility);
+        }
+
+        // Display claim analysis
+        if (result.claims && result.claims.length > 0) {
+            displayClaimsAnalysis(result.claims);
+        }
+
+        // Display source analysis
+        if (result.source_analysis) {
+            displaySourceAnalysis(result.source_analysis);
+        }
+
+        // Display author analysis with enhanced debugging
+        console.log('=== AUTHOR ANALYSIS DATA ===');
+        console.log('Author analysis exists:', !!result.author_analysis);
+        console.log('Author analysis object:', result.author_analysis);
         
-        try {
-            const response = await fetch('/api/export/pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    analysis_data: currentAnalysisData,
-                    analysis_id: currentAnalysisData.analysis_id
-                })
-            });
+        if (result.author_analysis) {
+            console.log('Author name:', result.author_analysis.name);
+            console.log('Author found:', result.author_analysis.found);
+            console.log('Author credibility score:', result.author_analysis.credibility_score);
+            console.log('Author bio:', result.author_analysis.bio);
+            console.log('Full author data:', JSON.stringify(result.author_analysis, null, 2));
             
-            if (response.ok) {
-                // Get the filename from Content-Disposition header
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = 'news_analysis.pdf';
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename="(.+)"/);
-                    if (match) filename = match[1];
+            try {
+                // Try to use UI controller
+                if (window.UI && typeof window.UI.buildResults === 'function') {
+                    console.log('Using UI.buildResults for author display');
+                    window.UI.buildResults(result);
+                    
+                    // Verify if author section was actually rendered
+                    setTimeout(() => {
+                        const authorSection = document.querySelector('.author-analysis-section');
+                        if (authorSection) {
+                            console.log('Author section found in DOM:', authorSection);
+                            console.log('Author section HTML:', authorSection.innerHTML);
+                        } else {
+                            console.log('WARNING: Author section not found in DOM after UI.buildResults');
+                            displayAuthorAnalysisFallback(result.author_analysis);
+                        }
+                    }, 100);
+                } else {
+                    console.log('UI controller not available, using fallback display');
+                    displayAuthorAnalysisFallback(result.author_analysis);
                 }
-                
-                // Download the PDF
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                const error = await response.json();
-                alert('PDF export failed: ' + (error.error || 'Unknown error'));
+            } catch (error) {
+                console.error('Error in UI.buildResults:', error);
+                displayAuthorAnalysisFallback(result.author_analysis);
             }
-        } catch (error) {
-            alert('Export error: ' + error.message);
+        } else {
+            console.log('No author analysis data in result');
         }
+
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    
-    async function exportToJSON() {
-        if (!currentAnalysisData) {
-            alert('No analysis data to export');
+
+    // Fallback author display function
+    function displayAuthorAnalysisFallback(authorData) {
+        console.log('Using fallback author display with data:', authorData);
+        
+        const authorContent = document.getElementById('author-content');
+        if (!authorContent) {
+            console.error('Author content container not found');
             return;
         }
+
+        // Create author display HTML
+        let html = '<div class="author-analysis-section">';
+        html += '<h3>Author Analysis</h3>';
         
-        try {
-            const response = await fetch('/api/export/json', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    analysis_data: currentAnalysisData,
-                    analysis_id: currentAnalysisData.analysis_id
-                })
-            });
+        if (authorData && authorData.name) {
+            html += `<div class="author-info">`;
+            html += `<p><strong>Author:</strong> ${authorData.name}</p>`;
+            html += `<p><strong>Found:</strong> ${authorData.found ? 'Yes' : 'No'}</p>`;
+            html += `<p><strong>Credibility Score:</strong> ${authorData.credibility_score || 'N/A'}/100</p>`;
             
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Create filename
-                const domain = currentAnalysisData.article?.domain || 'article';
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const filename = `news_analysis_${domain}_${timestamp}.json`;
-                
-                // Download JSON
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                const error = await response.json();
-                alert('JSON export failed: ' + (error.error || 'Unknown error'));
+            if (authorData.bio) {
+                html += `<p><strong>Bio:</strong> ${authorData.bio}</p>`;
             }
-        } catch (error) {
-            alert('Export error: ' + error.message);
+            
+            if (authorData.expertise && authorData.expertise.length > 0) {
+                html += `<p><strong>Expertise:</strong> ${authorData.expertise.join(', ')}</p>`;
+            }
+            
+            if (authorData.bias_indicators && authorData.bias_indicators.length > 0) {
+                html += `<p><strong>Bias Indicators:</strong> ${authorData.bias_indicators.join(', ')}</p>`;
+            }
+            
+            if (authorData.credibility_factors) {
+                html += '<div class="credibility-factors"><strong>Credibility Factors:</strong><ul>';
+                for (const [factor, value] of Object.entries(authorData.credibility_factors)) {
+                    html += `<li>${factor}: ${value}</li>`;
+                }
+                html += '</ul></div>';
+            }
+            
+            html += '</div>';
+        } else {
+            html += '<p>No author information available.</p>';
+        }
+        
+        html += '</div>';
+        
+        authorContent.innerHTML = html;
+        console.log('Fallback author display rendered');
+    }
+
+    // Display article metadata
+    function displayArticleMetadata(article) {
+        const metadataSection = document.querySelector('.article-metadata');
+        if (!metadataSection) return;
+
+        metadataSection.innerHTML = `
+            <h3>${article.title || 'Untitled Article'}</h3>
+            <p class="article-meta">
+                ${article.author ? `By ${article.author}` : 'Unknown Author'} 
+                ${article.publish_date ? `• Published: ${new Date(article.publish_date).toLocaleDateString()}` : ''}
+            </p>
+            ${article.description ? `<p class="article-description">${article.description}</p>` : ''}
+        `;
+    }
+
+    // Display overall credibility score
+    function displayOverallCredibility(score) {
+        const scoreElement = document.querySelector('.credibility-score');
+        const meterFill = document.querySelector('.score-meter-fill');
+        
+        if (scoreElement) {
+            scoreElement.textContent = Math.round(score);
+        }
+        
+        if (meterFill) {
+            meterFill.style.width = `${score}%`;
+            
+            // Color based on score
+            if (score >= 80) {
+                meterFill.style.backgroundColor = '#4CAF50';
+            } else if (score >= 60) {
+                meterFill.style.backgroundColor = '#FFC107';
+            } else {
+                meterFill.style.backgroundColor = '#F44336';
+            }
         }
     }
-    
-    // Make export functions globally available
-    window.exportToPDF = exportToPDF;
-    window.exportToJSON = exportToJSON;
-    
-    function showError(message) {
-        if (!results) {
-            alert('Error: ' + message);
+
+    // Display claims analysis
+    function displayClaimsAnalysis(claims) {
+        const claimsContent = document.getElementById('claims-content');
+        if (!claimsContent) return;
+
+        if (claims.length === 0) {
+            claimsContent.innerHTML = '<p>No specific claims were analyzed in this article.</p>';
             return;
         }
+
+        let html = '<div class="claims-list">';
         
-        results.innerHTML = `
-            <div class="error-card" style="background: #fee2e2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 20px;">
-                <div style="display: flex; align-items: start; gap: 16px;">
-                    <div class="error-icon" style="font-size: 2rem;">⚠️</div>
-                    <div class="error-content">
-                        <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 1.25rem;">Analysis Error</h3>
-                        <p style="margin: 0; color: #7f1d1d; line-height: 1.6;">${message}</p>
-                        <p style="margin: 8px 0 0 0; color: #7f1d1d; font-size: 0.875rem;">Please check your input and try again.</p>
+        claims.forEach((claim, index) => {
+            const statusClass = claim.verdict ? claim.verdict.toLowerCase().replace(' ', '-') : 'unknown';
+            
+            html += `
+                <div class="claim-item ${statusClass}">
+                    <div class="claim-header">
+                        <span class="claim-number">Claim ${index + 1}</span>
+                        <span class="claim-verdict ${statusClass}">${claim.verdict || 'Unknown'}</span>
                     </div>
+                    <p class="claim-text">"${claim.claim}"</p>
+                    ${claim.explanation ? `<p class="claim-explanation">${claim.explanation}</p>` : ''}
+                    ${claim.evidence && claim.evidence.length > 0 ? `
+                        <div class="claim-evidence">
+                            <strong>Evidence:</strong>
+                            <ul>
+                                ${claim.evidence.map(e => `<li>${e}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
                 </div>
-            </div>
-        `;
-        results.classList.remove('hidden');
+            `;
+        });
+        
+        html += '</div>';
+        claimsContent.innerHTML = html;
     }
-    
-    // Enhanced fallback display function with author data
-    function displayResults(data) {
-        if (!results) return;
+
+    // Display source analysis
+    function displaySourceAnalysis(sourceAnalysis) {
+        const sourceContent = document.getElementById('source-content');
+        if (!sourceContent || !sourceAnalysis) return;
+
+        let html = '<div class="source-analysis">';
         
-        const trustScore = data.trust_score || 0;
-        const trustColor = trustScore >= 70 ? '#059669' : trustScore >= 40 ? '#d97706' : '#dc2626';
-        
-        // Build author section HTML
-        let authorHtml = '';
-        if (data.author_analysis) {
-            const author = data.author_analysis;
-            authorHtml = `
-                <div class="author-section" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
-                    <h4 style="margin: 0 0 16px 0; color: #1e293b;">Author Analysis</h4>
-                    <p style="margin: 0 0 8px 0;"><strong>Name:</strong> ${author.name || 'Unknown'}</p>
-                    <p style="margin: 0 0 8px 0;"><strong>Found in Database:</strong> ${author.found ? 'Yes' : 'No'}</p>
-                    <p style="margin: 0 0 8px 0;"><strong>Credibility Score:</strong> ${author.credibility_score || 50}/100</p>
-                    ${author.bio ? `<p style="margin: 0 0 8px 0;"><strong>Bio:</strong> ${author.bio}</p>` : ''}
-                    ${author.experience_years ? `<p style="margin: 0 0 8px 0;"><strong>Experience:</strong> ${author.experience_years} years</p>` : ''}
-                    ${author.expertise_areas && author.expertise_areas.length > 0 ? 
-                        `<p style="margin: 0 0 8px 0;"><strong>Expertise:</strong> ${author.expertise_areas.join(', ')}</p>` : ''}
+        // Source credibility
+        if (sourceAnalysis.credibility_score !== undefined) {
+            html += `
+                <div class="source-credibility">
+                    <h4>Source Credibility Score: ${Math.round(sourceAnalysis.credibility_score)}/100</h4>
+                    <div class="mini-meter">
+                        <div class="mini-meter-fill" style="width: ${sourceAnalysis.credibility_score}%"></div>
+                    </div>
                 </div>
             `;
         }
-        
-        results.innerHTML = `
-            <div class="analysis-results" style="padding: 24px; background: #f8fafc; border-radius: 12px; margin: 20px;">
-                <h2 style="margin: 0 0 24px 0; color: #0f172a; font-size: 2rem;">Analysis Complete</h2>
-                
-                <div class="article-info" style="margin-bottom: 24px;">
-                    <h3 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1.5rem;">${data.article?.title || 'Unknown Title'}</h3>
-                    <p style="margin: 0; color: #64748b;">
-                        <strong>Author:</strong> ${data.article?.author || 'Unknown'} | 
-                        <strong>Source:</strong> ${data.article?.domain || 'Unknown'}
-                    </p>
-                </div>
-                
-                <div class="trust-score" style="text-align: center; margin-bottom: 24px;">
-                    <div style="font-size: 4rem; font-weight: 800; color: ${trustColor};">
-                        ${trustScore}%
-                    </div>
-                    <div style="font-size: 1.25rem; color: #64748b;">Trust Score</div>
-                </div>
-                
-                ${authorHtml}
-                
-                <div class="summary" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
-                    <h4 style="margin: 0 0 12px 0; color: #1e293b;">Summary</h4>
-                    <p style="margin: 0; color: #475569; line-height: 1.6;">
-                        ${data.conversational_summary || data.article_summary || 'Analysis completed successfully.'}
-                    </p>
-                </div>
-                
-                <details style="margin-top: 24px;">
-                    <summary style="cursor: pointer; color: #1e40af; font-weight: 600;">View Raw Data</summary>
-                    <pre style="margin-top: 12px; padding: 16px; background: white; border-radius: 8px; overflow-x: auto; font-size: 0.875rem;">
-${JSON.stringify(data, null, 2)}
-                    </pre>
-                </details>
-            </div>
-        `;
-        results.classList.remove('hidden');
-    }
-    
-    // Add CSS for buttons if not already styled
-    if (!document.querySelector('style[data-component="export-buttons"]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-component', 'export-buttons');
-        style.textContent = `
-            .btn {
-                padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                text-decoration: none;
-                display: inline-block;
-            }
-            
-            .btn:disabled {
-                opacity: 0.6;
-                cursor: not-allowed;
-            }
-            
-            .btn-primary {
-                background: #1e40af;
-                color: white;
-            }
-            
-            .btn-primary:hover:not(:disabled) {
-                background: #1e3a8a;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
-            }
-            
-            .btn-secondary {
-                background: #6b7280;
-                color: white;
-            }
-            
-            .btn-secondary:hover:not(:disabled) {
-                background: #4b5563;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-            }
-            
-            .error-card {
-                animation: slideIn 0.3s ease;
-            }
-            
-            @keyframes slideIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Test UI Controller after a delay
-    setTimeout(() => {
-        if (!window.UI) {
-            console.error('UI Controller still not loaded after delay!');
-        } else {
-            console.log('UI Controller confirmed loaded');
-            console.log('Available UI methods:', Object.keys(window.UI));
+
+        // Domain info
+        if (sourceAnalysis.domain) {
+            html += `<p><strong>Domain:</strong> ${sourceAnalysis.domain}</p>`;
         }
-    }, 1000);
-    
-    // Add debug helper
+
+        // Bias assessment
+        if (sourceAnalysis.bias_assessment) {
+            html += `
+                <div class="bias-assessment">
+                    <h4>Bias Assessment</h4>
+                    <p><strong>Political Leaning:</strong> ${sourceAnalysis.bias_assessment.political_leaning || 'Unknown'}</p>
+                    <p><strong>Bias Score:</strong> ${sourceAnalysis.bias_assessment.bias_score || 'N/A'}</p>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        sourceContent.innerHTML = html;
+    }
+
+    // Show loading state
+    function showLoadingState() {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const loadingIndicator = document.querySelector('.loading-indicator');
+        
+        if (analyzeBtn) {
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+        }
+        
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'flex';
+        }
+    }
+
+    // Hide loading state
+    function hideLoadingState() {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const loadingIndicator = document.querySelector('.loading-indicator');
+        
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analyze';
+        }
+        
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+    }
+
+    // Clear results
+    function clearResults() {
+        const resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        
+        const urlInput = document.getElementById('article-url');
+        if (urlInput) {
+            urlInput.value = '';
+        }
+        
+        currentArticleData = null;
+    }
+
+    // Show error message
+    function showError(message) {
+        // Remove any existing error messages
+        const existingError = document.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        // Create and show new error
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        
+        const inputSection = document.querySelector('.input-section');
+        if (inputSection) {
+            inputSection.appendChild(errorDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+    }
+
+    // Validate URL
+    function isValidUrl(string) {
+        try {
+            const url = new URL(string);
+            return url.protocol === 'http:' || url.protocol === 'https:';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // Save analysis to history
+    function saveToHistory(url, result) {
+        try {
+            const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+            
+            const historyItem = {
+                url: url,
+                title: result.article?.title || 'Untitled',
+                date: new Date().toISOString(),
+                credibilityScore: result.overall_credibility || 0
+            };
+            
+            // Add to beginning of array
+            history.unshift(historyItem);
+            
+            // Keep only last 10 items
+            if (history.length > 10) {
+                history.pop();
+            }
+            
+            localStorage.setItem('analysisHistory', JSON.stringify(history));
+        } catch (error) {
+            console.error('Error saving to history:', error);
+        }
+    }
+
+    // Restore application state
+    function restoreApplicationState() {
+        // Restore active tab
+        const activeTab = localStorage.getItem('activeTab');
+        if (activeTab) {
+            const tabButton = document.querySelector(`[data-tab="${activeTab}"]`);
+            if (tabButton) {
+                tabButton.click();
+            }
+        }
+    }
+
+    // Debug helper function
     window.debugAuthorData = function() {
-        if (window.LAST_ANALYSIS_DATA) {
-            console.log('=== LAST ANALYSIS AUTHOR DATA ===');
-            console.log('Full analysis:', window.LAST_ANALYSIS_DATA);
-            console.log('Author analysis:', window.LAST_ANALYSIS_DATA.author_analysis);
-            console.log('Article author:', window.LAST_ANALYSIS_DATA.article?.author);
-            return window.LAST_ANALYSIS_DATA.author_analysis;
+        if (window.LAST_ANALYSIS_DATA && window.LAST_ANALYSIS_DATA.author_analysis) {
+            console.log('=== AUTHOR DATA DEBUG ===');
+            console.log('Raw data:', window.LAST_ANALYSIS_DATA.author_analysis);
+            console.log('Pretty printed:', JSON.stringify(window.LAST_ANALYSIS_DATA.author_analysis, null, 2));
+            
+            // Check if UI controller exists
+            console.log('UI controller available:', !!window.UI);
+            console.log('UI.buildResults available:', !!(window.UI && window.UI.buildResults));
+            
+            // Check DOM
+            const authorSection = document.querySelector('.author-analysis-section');
+            console.log('Author section in DOM:', !!authorSection);
+            if (authorSection) {
+                console.log('Author section HTML:', authorSection.innerHTML);
+            }
         } else {
-            console.log('No analysis data available. Run an analysis first.');
-            return null;
+            console.log('No author data available. Run an analysis first.');
         }
     };
-    
-    console.log('Main.js initialization complete. Debug with: window.debugAuthorData()');
-});
+
+    // Expose functions globally for debugging
+    window.factChecker = {
+        analyzeArticle: analyzeArticle,
+        clearResults: clearResults,
+        getCurrentData: () => currentArticleData,
+        debugAuthorData: window.debugAuthorData
+    };
+
+})();
