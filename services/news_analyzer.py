@@ -1,11 +1,11 @@
+
 """
-services/news_analyzer.py - Main orchestrator with fixed author handling and logging
+services/news_analyzer.py - Main orchestrator with fixed author handling
 """
 
 import os
 import re
 import logging
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
@@ -111,17 +111,6 @@ class NewsAnalyzer:
                     article_data['author'],
                     article_data.get('domain')
                 )
-                # Log the full result
-                logger.info(f"Author analysis result: {json.dumps(analysis_results['author_analysis'], indent=2)}")
-                
-                # Log key fields to debug
-                author_result = analysis_results['author_analysis']
-                logger.info(f"Author found: {author_result.get('found')}")
-                logger.info(f"Author bio: {author_result.get('bio', 'No bio')[:100]}...")
-                logger.info(f"Credibility score: {author_result.get('credibility_score')}")
-                logger.info(f"Professional info: {author_result.get('professional_info')}")
-                logger.info(f"Online presence: {author_result.get('online_presence')}")
-                logger.info(f"Sources checked: {author_result.get('sources_checked')}")
             else:
                 logger.info("No author found in article data")
                 analysis_results['author_analysis'] = {
@@ -209,7 +198,6 @@ class NewsAnalyzer:
             # Log the final structure
             logger.info(f"Final results article author: {final_results['article']['author']}")
             logger.info(f"Final results keys: {list(final_results.keys())}")
-            logger.info(f"Author analysis in final results: {final_results.get('author_analysis', {}).get('found')}")
             
             return final_results
             
