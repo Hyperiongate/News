@@ -6,13 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadedComponents = [];
     
     // Mock pricing dropdown if it doesn't exist
-    if (!window.pricingDropdown) {
-        window.pricingDropdown = {
-            getSelectedPlan: function() {
-                return 'basic'; // Default plan
-            }
-        };
-    }
+if (!window.pricingDropdown || typeof window.pricingDropdown.getSelectedPlan !== 'function') {
+    window.pricingDropdown = {
+        getSelectedPlan: function() {
+            return 'basic'; // Default plan
+        }
+    };
+}
     
     // Check if UI controller is loaded
     function checkUIController() {
@@ -169,8 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         results.classList.add('hidden');
         
         // Get selected plan - fixed to handle missing pricingDropdown
-        const selectedPlan = window.pricingDropdown?.getSelectedPlan() || 'basic';
-        data.plan = selectedPlan;
+        const selectedPlan = (window.pricingDropdown && typeof window.pricingDropdown.getSelectedPlan === 'function') 
+            ? window.pricingDropdown.getSelectedPlan() 
+            : 'basic';
         
         try {
             console.log('Sending analysis request:', data);
