@@ -1,4 +1,3 @@
-# FILE: services/content_analyzer.py
 """
 services/content_analyzer.py - Content analysis service
 """
