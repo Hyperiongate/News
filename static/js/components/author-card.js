@@ -1,8 +1,10 @@
 // static/js/components/author-card.js
+// ENHANCED VERSION - Shows ALL author data with expandable details
 
 class AuthorCard {
     constructor() {
         this.container = null;
+        this.isExpanded = false;
     }
 
     render(data) {
@@ -29,15 +31,21 @@ class AuthorCard {
             
             <div class="author-card-content">
                 <div class="author-main-info">
+                    ${author.image_url ? `
+                    <div class="author-avatar has-image">
+                        <img src="${author.image_url}" alt="${authorName}" onerror="this.parentElement.innerHTML='<span class=\\'author-initials\\'>${this.getInitials(authorName)}</span>'">
+                    </div>
+                    ` : `
                     <div class="author-avatar">
                         <span class="author-initials">${this.getInitials(authorName)}</span>
                     </div>
+                    `}
                     
                     <div class="author-details">
                         <h3 class="author-name">${authorName}</h3>
                         ${author.professional_info?.current_position ? `<p class="author-role">${author.professional_info.current_position}</p>` : ''}
                         ${author.professional_info?.outlets && author.professional_info.outlets.length > 0 ? 
-                            `<p class="author-outlet">${author.professional_info.outlets[0]}</p>` : ''}
+                            `<p class="author-outlet">${author.professional_info.outlets.slice(0, 2).join(', ')}${author.professional_info.outlets.length > 2 ? ' +' + (author.professional_info.outlets.length - 2) + ' more' : ''}</p>` : ''}
                     </div>
                     
                     <div class="author-credibility">
@@ -86,6 +94,17 @@ class AuthorCard {
                 </div>
                 ` : ''}
                 
+                <!-- Expandable Details Section -->
+                <div class="author-expandable-section">
+                    <button class="expand-details-btn" onclick="window.authorCard.toggleDetails(this)">
+                        <span class="expand-icon">▼</span> Show Complete Author Profile
+                    </button>
+                    
+                    <div class="author-extended-details" style="display: none;">
+                        ${this.renderExtendedDetails(author)}
+                    </div>
+                </div>
+                
                 ${author.sources_checked && author.sources_checked.length > 0 ? `
                 <div class="author-sources">
                     <p style="font-size: 0.8rem; color: #6b7280; margin-top: 12px;">
@@ -117,10 +136,197 @@ class AuthorCard {
         
         this.container = container;
         
+        // Store author data for the expand functionality
+        window.authorCard = this;
+        this.currentAuthorData = author;
+        
         // Animate credibility bar
         setTimeout(() => this.animateCredibilityBar(), 100);
         
         return container;
+    }
+
+    renderExtendedDetails(author) {
+        let html = '';
+        
+        // Education
+        if (author.education) {
+            html += `
+            <div class="extended-section">
+                <h5>🎓 Education</h5>
+                <p>${author.education}</p>
+            </div>
+            `;
+        }
+        
+        // Awards
+        if (author.awards && author.awards.length > 0) {
+            html += `
+            <div class="extended-section">
+                <h5>🏆 Awards & Recognition</h5>
+                <ul class="awards-list">
+                    ${author.awards.map(award => `<li>${award}</li>`).join('')}
+                </ul>
+            </div>
+            `;
+        }
+        
+        // Career Timeline
+        if (author.previous_positions && author.previous_positions.length > 0) {
+            html += `
+            <div class="extended-section">
+                <h5>💼 Career History</h5>
+                <div class="career-timeline">
+                    ${author.previous_positions.map(position => {
+                        if (typeof position === 'string') {
+                            return `<div class="timeline-item">📍 ${position}</div>`;
+                        } else {
+                            return `
+                            <div class="timeline-item">
+                                📍 <strong>${position.title}</strong>
+                                ${position.outlet ? ` at ${position.outlet}` : ''}
+                                ${position.dates ? ` (${position.dates})` : ''}
+                            </div>
+                            `;
+                        }
+                    }).join('')}
+                </div>
+            </div>
+            `;
+        }
+        
+        // Recent Articles
+        if (author.recent_articles && author.recent_articles.length > 0) {
+            html += `
+            <div class="extended-section">
+                <h5>📰 Recent Articles</h5>
+                <div class="recent-articles-list">
+                    ${author.recent_articles.slice(0, 5).map(article => {
+                        if (typeof article === 'string') {
+                            return `<div class="article-item">• ${article}</div>`;
+                        } else {
+                            return `
+                            <div class="article-item">
+                                ${article.url ? `<a href="${article.url}" target="_blank">` : ''}
+                                • ${article.title}
+                                ${article.date ? ` <span class="article-date">(${this.formatDate(article.date)})</span>` : ''}
+                                ${article.outlet ? ` - ${article.outlet}` : ''}
+                                ${article.url ? `</a>` : ''}
+                            </div>
+                            `;
+                        }
+                    }).join('')}
+                    ${author.recent_articles.length > 5 ? `
+                    <div class="more-articles-note">
+                        ... and ${author.recent_articles.length - 5} more articles
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+        }
+        
+        // Professional Network
+        if (author.professional_info?.years_experience || author.articles_count) {
+            html += `
+            <div class="extended-section">
+                <h5>📊 Professional Metrics</h5>
+                <div class="pro-metrics-grid">
+                    ${author.professional_info?.years_experience ? `
+                    <div class="metric-box">
+                        <div class="metric-number">${author.professional_info.years_experience}</div>
+                        <div class="metric-label">Years Experience</div>
+                    </div>
+                    ` : ''}
+                    ${author.articles_count ? `
+                    <div class="metric-box">
+                        <div class="metric-number">${author.articles_count.toLocaleString()}</div>
+                        <div class="metric-label">Articles Published</div>
+                    </div>
+                    ` : ''}
+                    ${author.professional_info?.outlets ? `
+                    <div class="metric-box">
+                        <div class="metric-number">${author.professional_info.outlets.length}</div>
+                        <div class="metric-label">Publications</div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+        }
+        
+        // Integrity Check
+        if (author.issues_corrections !== undefined) {
+            html += `
+            <div class="extended-section">
+                <h5>✅ Journalistic Integrity</h5>
+                ${author.issues_corrections ? 
+                    '<p class="warning-text">⚠️ This author has had articles with corrections or retractions</p>' :
+                    '<p class="positive-text">✓ No known issues or corrections found</p>'
+                }
+            </div>
+            `;
+        }
+        
+        // Information Completeness
+        html += `
+        <div class="extended-section">
+            <h5>📋 Information Coverage</h5>
+            <div class="completeness-grid">
+                ${this.renderCompletenessGrid(author)}
+            </div>
+        </div>
+        `;
+        
+        return html;
+    }
+
+    renderCompletenessGrid(author) {
+        const fields = {
+            'Biography': author.bio && !author.bio.includes('Limited information'),
+            'Photo': !!author.image_url,
+            'Education': !!author.education,
+            'Experience': !!(author.professional_info?.years_experience),
+            'Social Media': this.hasOnlinePresence(author.online_presence),
+            'Recent Work': !!(author.recent_articles?.length > 0),
+            'Awards': !!(author.awards?.length > 0),
+            'Career History': !!(author.previous_positions?.length > 0)
+        };
+        
+        return Object.entries(fields).map(([field, hasData]) => `
+            <div class="completeness-item ${hasData ? 'found' : 'missing'}">
+                <span class="field-icon">${hasData ? '✓' : '—'}</span>
+                <span class="field-name">${field}</span>
+            </div>
+        `).join('');
+    }
+
+    toggleDetails(button) {
+        const detailsSection = button.nextElementSibling;
+        const icon = button.querySelector('.expand-icon');
+        
+        if (detailsSection.style.display === 'none') {
+            detailsSection.style.display = 'block';
+            button.innerHTML = '<span class="expand-icon">▲</span> Hide Extended Profile';
+            this.isExpanded = true;
+        } else {
+            detailsSection.style.display = 'none';
+            button.innerHTML = '<span class="expand-icon">▼</span> Show Complete Author Profile';
+            this.isExpanded = false;
+        }
+    }
+
+    formatDate(dateStr) {
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    hasOnlinePresence(presence) {
+        return presence && Object.values(presence).some(v => v);
     }
 
     getInitials(name) {
@@ -131,11 +337,6 @@ class AuthorCard {
             return parts[0][0] + parts[parts.length - 1][0];
         }
         return parts[0][0] + (parts[0][1] || '');
-    }
-
-    calculateCredibilityScore(author) {
-        // This is now calculated by the backend, so we just use the provided score
-        return author.credibility_score || 0;
     }
 
     getCredibilityStatus(score) {
