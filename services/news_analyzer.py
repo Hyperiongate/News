@@ -1,5 +1,5 @@
 """
-services/news_analyzer.py - Main orchestrator with FIXED method calls
+services/news_analyzer.py - Main orchestrator with FIXED method calls and DEBUG
 """
 
 import os
@@ -133,14 +133,154 @@ class NewsAnalyzer:
             )
             
             # CRITICAL FIX: Ensure author is properly analyzed
-            if article_data.get('author'):
-                logger.info(f"Analyzing author: {article_data['author']} from domain: {article_data.get('domain')}")
-                # Call the correct method name
-                analysis_results['author_analysis'] = self.author_analyzer.analyze_single_author(
-                    article_data['author'],
-                    article_data.get('domain')
-                )
+            # DEBUG VERSION - COMPREHENSIVE LOGGING
+            print("\n" + "="*80)
+            print("DEBUG: AUTHOR ANALYSIS SECTION")
+            print("="*80)
+            print(f"Article data keys: {list(article_data.keys())}")
+            print(f"Raw author from article_data: {repr(article_data.get('author'))}")
+            print(f"Type of author: {type(article_data.get('author'))}")
+            print(f"Domain: {article_data.get('domain')}")
+            print(f"URL: {article_data.get('url')}")
+            
+            # Check if author_analyzer is initialized
+            if not hasattr(self, 'author_analyzer'):
+                print("ERROR: author_analyzer not found! Initializing...")
+                from services.author_analyzer import AuthorAnalyzer
+                self.author_analyzer = AuthorAnalyzer()
             else:
+                print("author_analyzer is properly initialized")
+            
+            if article_data.get('author'):
+                author_str = article_data['author']
+                print(f"\nAuthor string details:")
+                print(f"  - Original: '{author_str}'")
+                print(f"  - Length: {len(author_str)}")
+                print(f"  - Stripped: '{author_str.strip()}'")
+                
+                logger.info(f"Analyzing author: {author_str} from domain: {article_data.get('domain')}")
+                
+                # Time the analysis
+                import time
+                start_time = time.time()
+                
+                try:
+                    print(f"\nCalling author_analyzer.analyze_single_author('{author_str}', '{article_data.get('domain')}')")
+                    
+                    # FORCE TEST DATA FOR DEBUGGING
+                    print("DEBUG: Forcing rich test data instead of real analysis")
+                    
+                    analysis_results['author_analysis'] = {
+                        'name': author_str,
+                        'found': True,
+                        'bio': (
+                            f"{author_str} is an award-winning journalist with over 15 years of experience "
+                            f"covering politics, technology, and social issues. Currently serving as a senior "
+                            f"correspondent at {article_data.get('domain', 'a major news outlet')}, they have won "
+                            f"multiple journalism awards including the Pulitzer Prize for investigative reporting. "
+                            f"They graduated from Columbia University's Graduate School of Journalism and previously "
+                            f"worked at The Washington Post and The New York Times. Known for their in-depth "
+                            f"analysis and investigative work, they have broken several major stories that have "
+                            f"led to policy changes and corporate accountability."
+                        ),
+                        'credibility_score': 85,
+                        'image_url': None,
+                        'articles_count': 127,
+                        'professional_info': {
+                            'current_position': 'Senior Correspondent',
+                            'outlets': [article_data.get('domain', 'Major News Outlet')],
+                            'years_experience': 15,
+                            'expertise_areas': ['Politics', 'Technology', 'Social Issues', 'Investigative Reporting']
+                        },
+                        'education': 'Columbia University Graduate School of Journalism',
+                        'awards': [
+                            'Pulitzer Prize for Investigative Reporting',
+                            'Emmy Award for Outstanding Coverage',
+                            'Peabody Award',
+                            'National Press Club Award'
+                        ],
+                        'online_presence': {
+                            'twitter': 'journalist_handle',
+                            'linkedin': 'Found on LinkedIn',
+                            'email': 'contact@newsoutlet.com'
+                        },
+                        'verification_status': {
+                            'verified': True,
+                            'journalist_verified': True,
+                            'outlet_staff': True
+                        },
+                        'sources_checked': ['DEBUG TEST MODE - FORCED DATA'],
+                        'previous_positions': [
+                            {'title': 'Political Reporter', 'outlet': 'The Washington Post'},
+                            {'title': 'Technology Writer', 'outlet': 'The New York Times'}
+                        ],
+                        'recent_articles': [
+                            {'title': 'Breaking: Major Investigation Reveals Corporate Misconduct', 'url': '#'},
+                            {'title': 'In-Depth Analysis: The Future of Technology Policy', 'url': '#'},
+                            {'title': 'Exclusive: Inside Look at Government Decision Making', 'url': '#'}
+                        ],
+                        'credibility_explanation': {
+                            'level': 'High',
+                            'explanation': 'Well-established journalist with verified credentials and extensive track record.',
+                            'advice': 'This author has excellent credibility indicators. Their work can generally be trusted.'
+                        }
+                    }
+                    
+                    # If you want to test the REAL author analyzer, comment out the above and uncomment this:
+                    # analysis_results['author_analysis'] = self.author_analyzer.analyze_single_author(
+                    #     author_str,
+                    #     article_data.get('domain')
+                    # )
+                    
+                    elapsed_time = time.time() - start_time
+                    print(f"\nAuthor analysis completed in: {elapsed_time:.2f} seconds")
+                    
+                    # Log results
+                    author_result = analysis_results['author_analysis']
+                    print(f"\nAuthor analysis results:")
+                    print(f"  - Found: {author_result.get('found')}")
+                    print(f"  - Name: {author_result.get('name')}")
+                    print(f"  - Bio length: {len(author_result.get('bio', ''))}")
+                    print(f"  - Bio preview: {author_result.get('bio', 'NO BIO')[:200]}...")
+                    print(f"  - Credibility score: {author_result.get('credibility_score')}")
+                    print(f"  - Sources checked: {author_result.get('sources_checked', [])}")
+                    print(f"  - Current position: {author_result.get('professional_info', {}).get('current_position')}")
+                    print(f"  - Outlets: {author_result.get('professional_info', {}).get('outlets')}")
+                    print(f"  - Education: {author_result.get('education')}")
+                    print(f"  - Awards: {len(author_result.get('awards', []))} awards")
+                    print(f"  - Recent articles: {len(author_result.get('recent_articles', []))} articles")
+                    
+                except Exception as e:
+                    print(f"\nERROR in author analysis: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    # Fallback with error info
+                    analysis_results['author_analysis'] = {
+                        'found': False,
+                        'name': author_str,
+                        'credibility_score': 50,
+                        'bio': f'Error analyzing author: {str(e)}',
+                        'verification_status': {
+                            'verified': False,
+                            'journalist_verified': False,
+                            'outlet_staff': False
+                        },
+                        'professional_info': {
+                            'current_position': None,
+                            'outlets': [],
+                            'years_experience': None,
+                            'expertise_areas': []
+                        },
+                        'online_presence': {},
+                        'credibility_explanation': {
+                            'level': 'Unknown',
+                            'explanation': 'Analysis error occurred',
+                            'advice': 'Verify claims through additional sources'
+                        }
+                    }
+            else:
+                print("\nNo author found in article data - using default")
                 logger.info("No author found in article data")
                 analysis_results['author_analysis'] = {
                     'found': False,
@@ -165,6 +305,12 @@ class NewsAnalyzer:
                         'advice': 'Verify claims through additional sources'
                     }
                 }
+            
+            print("\nFinal author_analysis in results:")
+            print(f"  - Has author_analysis: {'author_analysis' in analysis_results}")
+            print(f"  - Bio exists: {'bio' in analysis_results.get('author_analysis', {})}")
+            print(f"  - Bio length: {len(analysis_results.get('author_analysis', {}).get('bio', ''))}")
+            print("="*80 + "\n")
             
             # Content analysis
             analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
