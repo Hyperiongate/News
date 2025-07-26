@@ -1,5 +1,5 @@
 """
-services/news_analyzer.py - Main orchestrator with FIXED imports and author data flow
+services/news_analyzer.py - Main orchestrator with FIXED method calls
 """
 
 import os
@@ -13,7 +13,7 @@ from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
-from services.bias_detector import BiasDetector as BiasAnalyzer
+from services.bias_detector import BiasDetector
 from services.manipulation_detector import ManipulationDetector
 from services.transparency_analyzer import TransparencyAnalyzer
 from services.clickbait_analyzer import ClickbaitAnalyzer
@@ -38,7 +38,7 @@ class NewsAnalyzer:
         """Initialize all analysis components"""
         # Core services
         self.extractor = NewsExtractor()
-        self.bias_analyzer = BiasAnalyzer()
+        self.bias_detector = BiasDetector()  # Changed from bias_analyzer to bias_detector
         self.fact_checker = FactChecker()
         self.source_credibility = SourceCredibility()
         self.author_analyzer = AuthorAnalyzer()
@@ -88,11 +88,29 @@ class NewsAnalyzer:
             analysis_results = {}
             
             # Core analyses (always performed)
-            analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+            # FIXED: Use correct BiasDetector methods
+            political_bias_score = self.bias_detector.detect_political_bias(article_data['text'])
+            analysis_results['bias_analysis'] = self.bias_detector.analyze_comprehensive_bias(
+                article_data['text'], 
+                political_bias_score, 
+                article_data.get('domain')
+            )
+            
+            # Clickbait analysis
             analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
                 article_data.get('title', ''),
                 article_data['text']
             )
+            
+            # Add additional clickbait analysis data
+            analysis_results['title_analysis'] = self.clickbait_analyzer.analyze_title(
+                article_data.get('title', '')
+            )
+            analysis_results['clickbait_indicators'] = self.clickbait_analyzer.get_indicators(
+                article_data.get('title', '')
+            )
+            
+            # Source credibility
             analysis_results['source_credibility'] = self.source_credibility.check_credibility(
                 article_data.get('domain', 'unknown')
             )
@@ -133,6 +151,8 @@ class NewsAnalyzer:
             
             # Content analysis
             analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
+            
+            # Transparency analysis
             analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
                 article_data['text'],
                 article_data.get('author')
@@ -144,10 +164,12 @@ class NewsAnalyzer:
                 key_claims = self._extract_key_claims(article_data['text'])
                 analysis_results['key_claims'] = key_claims
                 
-                # Manipulation detection
+                # Manipulation detection - use detect_manipulation method
+                manipulation_tactics = self.bias_detector.detect_manipulation(article_data['text'])
                 analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
                     article_data['text'],
-                    article_data.get('title', '')
+                    article_data.get('title', ''),
+                    manipulation_tactics  # Pass the tactics from bias detector
                 )
                 
                 # Connection analysis
@@ -258,7 +280,7 @@ class NewsAnalyzer:
         score_components.append(source_score)
         weights.append(0.30)
         
-        # Author credibility (20% weight) - CHECK IF AUTHOR EXISTS
+        # Author credibility (20% weight)
         author_analysis = analysis_results.get('author_analysis', {})
         if author_analysis.get('found'):
             author_score = author_analysis.get('credibility_score', 50)
@@ -269,9 +291,10 @@ class NewsAnalyzer:
         
         # Bias impact (15% weight)
         bias_data = analysis_results.get('bias_analysis', {})
-        # Handle both old and new bias format
+        # Handle objectivity score properly
         objectivity = bias_data.get('objectivity_score', 0.5)
-        if objectivity > 1:  # Old format was 0-100
+        if isinstance(objectivity, (int, float)) and objectivity > 1:
+            # If objectivity is 0-100, convert to 0-1
             objectivity = objectivity / 100
         bias_score = objectivity * 100
         score_components.append(bias_score)
@@ -760,3 +783,107 @@ class NewsAnalyzer:
             )
         
         return changes
+    
+    def get_bias_summary(self, bias_analysis: Dict[str, Any]) -> str:
+        """
+        Generate a human-readable bias summary
+        
+        Args:
+            bias_analysis: Bias analysis results
+            
+        Returns:
+            Readable bias summary
+        """
+        overall_bias = bias_analysis.get('overall_bias', 'Unknown')
+        political_lean = bias_analysis.get('political_lean', 0)
+        
+        if political_lean < -50:
+            direction = "strongly left-leaning"
+        elif political_lean < -20:
+            direction = "left-leaning"
+        elif political_lean > 50:
+            direction = "strongly right-leaning"
+        elif political_lean > 20:
+            direction = "right-leaning"
+        else:
+            direction = "relatively centrist"
+        
+        return f"The article shows {overall_bias.lower()} bias and is {direction} in its political perspective."
+    
+    def get_credibility_indicators(self, analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Get list of credibility indicators with their status
+        
+        Args:
+            analysis_results: Complete analysis results
+            
+        Returns:
+            List of credibility indicators
+        """
+        indicators = []
+        
+        # Source credibility
+        source_cred = analysis_results.get('source_credibility', {})
+        indicators.append({
+            'name': 'Source Credibility',
+            'status': source_cred.get('rating', 'Unknown'),
+            'positive': source_cred.get('rating') in ['High', 'Medium']
+        })
+        
+        # Author credibility
+        author_cred = analysis_results.get('author_analysis', {}).get('credibility_score', 0)
+        indicators.append({
+            'name': 'Author Credibility',
+            'status': f"{author_cred}%",
+            'positive': author_cred >= 60
+        })
+        
+        # Transparency
+        trans_score = analysis_results.get('transparency_analysis', {}).get('transparency_score', 0)
+        indicators.append({
+            'name': 'Transparency',
+            'status': f"{trans_score}%",
+            'positive': trans_score >= 60
+        })
+        
+        # Bias level
+        bias_analysis = analysis_results.get('bias_analysis', {})
+        objectivity = bias_analysis.get('objectivity_score', 0.5)
+        if objectivity > 1:
+            objectivity = objectivity / 100
+        indicators.append({
+            'name': 'Objectivity',
+            'status': f"{int(objectivity * 100)}%",
+            'positive': objectivity >= 0.6
+        })
+        
+        # Clickbait
+        clickbait = analysis_results.get('clickbait_score', 0)
+        indicators.append({
+            'name': 'Headline Quality',
+            'status': f"{100 - clickbait}% genuine",
+            'positive': clickbait <= 40
+        })
+        
+        return indicators
+    
+    def get_key_metrics(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract key metrics for dashboard display
+        
+        Args:
+            analysis_results: Complete analysis results
+            
+        Returns:
+            Dictionary of key metrics
+        """
+        return {
+            'trust_score': analysis_results.get('trust_score', 0),
+            'author_credibility': analysis_results.get('author_analysis', {}).get('credibility_score', 0),
+            'source_rating': analysis_results.get('source_credibility', {}).get('rating', 'Unknown'),
+            'bias_level': analysis_results.get('bias_analysis', {}).get('overall_bias', 'Unknown'),
+            'transparency_score': analysis_results.get('transparency_analysis', {}).get('transparency_score', 0),
+            'clickbait_score': analysis_results.get('clickbait_score', 0),
+            'fact_checks': len(analysis_results.get('fact_checks', [])),
+            'key_claims': len(analysis_results.get('key_claims', []))
+        }
