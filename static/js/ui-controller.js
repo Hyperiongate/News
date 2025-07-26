@@ -1,4 +1,4 @@
-// Fixed UI Controller - Ensures cards display properly
+// Fixed UI Controller - Ensures cards display properly and fixes author section warning
 (function() {
     class UIController {
         constructor() {
@@ -84,6 +84,13 @@
                 }
                 
                 console.log('All cards added successfully');
+                
+                // Check if author section exists (to prevent warnings)
+                const authorSection = document.querySelector('.author-analysis-section');
+                if (authorSection) {
+                    console.log('Author section found in DOM');
+                }
+                
             } catch (error) {
                 console.error('Error creating cards:', error);
             }
@@ -380,6 +387,10 @@
 
         createAuthorAnalysisCard(data) {
             const card = this.createCard('author', '✍️', 'Author Analysis');
+            
+            // FIXED: Add the missing class that some code is looking for
+            card.classList.add('author-analysis-section');
+            
             const author = data.author_analysis || {};
             const credScore = author.credibility_score || 0;
             
@@ -417,6 +428,49 @@
                         <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155;">
                             ${author.bio}
                         </p>
+                    </div>
+                ` : ''}
+                
+                ${author.professional_info && Object.keys(author.professional_info).length > 0 ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #0369a1;">Professional Background</h5>
+                        ${author.professional_info.current_position ? `
+                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
+                                <strong>Current Position:</strong> ${author.professional_info.current_position}
+                            </p>
+                        ` : ''}
+                        ${author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
+                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
+                                <strong>Outlets:</strong> ${author.professional_info.outlets.join(', ')}
+                            </p>
+                        ` : ''}
+                        ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
+                            <p style="margin: 0; color: #0c4a6e;">
+                                <strong>Expertise:</strong> ${author.professional_info.expertise_areas.join(', ')}
+                            </p>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                ${author.awards && author.awards.length > 0 ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #92400e;">🏆 Awards & Recognition</h5>
+                        <ul style="margin: 0; padding-left: 20px; color: #78350f;">
+                            ${author.awards.slice(0, 3).map(award => `<li>${award}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${author.recent_articles && author.recent_articles.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Recent Articles</h5>
+                        ${author.recent_articles.slice(0, 3).map(article => `
+                            <div style="margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 4px;">
+                                <a href="${article.url}" target="_blank" style="color: #2563eb; text-decoration: none;">
+                                    ${article.title}
+                                </a>
+                            </div>
+                        `).join('')}
                     </div>
                 ` : ''}
                 
@@ -1003,6 +1057,15 @@
         }
     }
 
+    // Override console.warn to help trace the source of the warning
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('Author section not found')) {
+            console.trace('Warning source traced:');
+        }
+        originalWarn.apply(console, args);
+    };
+
     // Create and expose global instance
     window.UI = new UIController();
     console.log('UI Controller initialized');
@@ -1188,6 +1251,11 @@
             .credibility-badge.unknown {
                 background: #f3f4f6;
                 color: #6b7280;
+            }
+            
+            /* Add specific style for author analysis section */
+            .author-analysis-section {
+                /* This class is now added to the author card */
             }
             
             @media (max-width: 768px) {
