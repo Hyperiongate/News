@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Complete universal author analyzer with rich data extraction
+PURPOSE: Complete universal author analyzer with rich biographical data extraction
 LOCATION: services/author_analyzer.py
 """
 
@@ -45,13 +45,16 @@ class AuthorAnalyzer:
         # Clean author name
         clean_name = self._clean_author_name(author_name)
         
-        # Check cache first (if database is available) - BUT ONLY USE IF RICH DATA
+        # Skip cache or only use if it has substantial data
+        use_cache = False
         try:
             from models import db, Author
             
             cached = Author.query.filter_by(name=clean_name).first()
-            if cached and cached.bio and len(cached.bio) > 100 and cached.credibility_score > 60:
-                logger.info(f"Returning RICH cached author data for {clean_name}")
+            if cached and cached.bio and len(cached.bio) > 200 and cached.credibility_score > 70:
+                # Only use cache if it's really good data
+                logger.info(f"Found RICH cached data for {clean_name}")
+                use_cache = True
                 cached_data = {
                     'name': cached.name,
                     'found': True,
@@ -69,14 +72,12 @@ class AuthorAnalyzer:
                         'journalist_verified': True,
                         'outlet_staff': True if cached.outlet else False
                     },
-                    'sources_checked': ['Database cache (rich data)'],
+                    'sources_checked': ['Database cache'],
                     'credibility_explanation': self._generate_credibility_explanation({
                         'credibility_score': cached.credibility_score
                     })
                 }
                 return cached_data
-            else:
-                logger.info(f"Cache exists but has thin data for {clean_name}, will search fresh")
         except Exception as e:
             logger.debug(f"Could not check cache: {e}")
         
@@ -125,7 +126,16 @@ class AuthorAnalyzer:
             }
         }
         
-        # Try multiple search strategies - ALWAYS RUN ALL
+        # Collect all bio snippets from various sources
+        bio_snippets = []
+        data_points = {
+            'positions': [],
+            'outlets': [],
+            'education': [],
+            'awards': [],
+            'expertise': [],
+            'experience_years': None
+        }
         
         # 1. Check outlet's author page first (most reliable)
         if domain:
@@ -136,11 +146,13 @@ class AuthorAnalyzer:
                     self._safe_merge_results(result, outlet_result)
                     result['found'] = True
                     result['sources_checked'].append(f"{domain} author page")
+                    if outlet_result.get('bio'):
+                        bio_snippets.append(('outlet', outlet_result['bio']))
                     logger.info(f"Found author on {domain}")
             except Exception as e:
                 logger.error(f"Error checking outlet author page: {e}")
         
-        # 2. Enhanced web search using DuckDuckGo - ALWAYS RUN
+        # 2. Enhanced web search using DuckDuckGo
         try:
             logger.info(f"Performing enhanced web search for {clean_name}")
             web_result = self._enhanced_web_search(clean_name, domain)
@@ -149,11 +161,13 @@ class AuthorAnalyzer:
                 result['found'] = True
                 if "Web search" not in result['sources_checked']:
                     result['sources_checked'].append("Web search")
+                if web_result.get('bio'):
+                    bio_snippets.append(('web', web_result['bio']))
                 logger.info("Found information via web search")
         except Exception as e:
             logger.error(f"Error in web search: {e}")
         
-        # 3. Check journalist databases - ALWAYS RUN
+        # 3. Check journalist databases
         try:
             logger.info(f"Checking journalist databases")
             journalist_db_result = self._check_journalist_databases_comprehensive(clean_name)
@@ -161,11 +175,13 @@ class AuthorAnalyzer:
                 self._safe_merge_results(result, journalist_db_result)
                 result['found'] = True
                 result['sources_checked'].extend(journalist_db_result.get('sources_checked', []))
+                if journalist_db_result.get('bio'):
+                    bio_snippets.append(('database', journalist_db_result['bio']))
                 logger.info("Found in journalist databases")
         except Exception as e:
             logger.error(f"Error checking journalist databases: {e}")
         
-        # 4. Search for recent articles by the author - ALWAYS RUN
+        # 4. Search for recent articles by the author
         try:
             if domain or result['professional_info']['outlets']:
                 logger.info(f"Searching for recent articles")
@@ -179,7 +195,7 @@ class AuthorAnalyzer:
         except Exception as e:
             logger.error(f"Error searching recent articles: {e}")
         
-        # 5. Extract education and awards - ALWAYS RUN
+        # 5. Extract education and awards
         try:
             if result['found'] or domain:
                 logger.info(f"Extracting education and awards")
@@ -189,21 +205,59 @@ class AuthorAnalyzer:
         except Exception as e:
             logger.error(f"Error extracting education/awards: {e}")
         
+        # 6. CRITICAL: Generate comprehensive bio
+        # First, try to select the best existing bio
+        if bio_snippets:
+            # Score each bio snippet
+            best_bio = None
+            best_score = 0
+            
+            for source, bio in bio_snippets:
+                score = 0
+                bio_lower = bio.lower()
+                
+                # Score based on content quality
+                if clean_name.lower() in bio_lower:
+                    score += 2
+                if any(word in bio_lower for word in ['journalist', 'reporter', 'correspondent', 'writer']):
+                    score += 2
+                if any(word in bio_lower for word in ['covers', 'reports', 'specializes', 'writes']):
+                    score += 1
+                if any(word in bio_lower for word in ['graduated', 'degree', 'university']):
+                    score += 1
+                if any(word in bio_lower for word in ['award', 'prize', 'winner']):
+                    score += 1
+                if len(bio) > 150:
+                    score += 2
+                if len(bio) > 300:
+                    score += 1
+                
+                # Prefer outlet bios
+                if source == 'outlet':
+                    score += 3
+                
+                if score > best_score:
+                    best_score = score
+                    best_bio = bio
+            
+            if best_bio and len(best_bio) > 100:
+                result['bio'] = best_bio
+        
+        # If no good bio found or it's too short, generate one
+        if not result.get('bio') or len(result.get('bio', '')) < 150:
+            result['bio'] = self._generate_comprehensive_bio(result)
+        
         # Calculate credibility score based on findings
         result['credibility_score'] = self._calculate_credibility_score(result)
-        
-        # Generate comprehensive bio if not found or too short
-        if not result['bio'] or len(result['bio']) < 100:
-            result['bio'] = self._generate_comprehensive_bio(result)
         
         # Generate credibility explanation
         result['credibility_explanation'] = self._generate_credibility_explanation(result)
         
-        # Try to cache the result if it's good
+        # Try to cache the result
         try:
             from models import db, Author
             
-            if result['found'] and result['credibility_score'] > 30 and len(result.get('bio', '')) > 50:
+            if result['found'] and result['credibility_score'] > 30 and len(result.get('bio', '')) > 100:
                 author = Author.query.filter_by(name=clean_name).first()
                 if not author:
                     author = Author(
@@ -216,7 +270,7 @@ class AuthorAnalyzer:
                     )
                     db.session.add(author)
                 else:
-                    # Update existing with better data
+                    # Update with better data
                     if len(result['bio']) > len(author.bio or ''):
                         author.bio = result['bio']
                     author.credibility_score = max(author.credibility_score, result['credibility_score'])
@@ -225,7 +279,7 @@ class AuthorAnalyzer:
                     if result['professional_info']['outlets']:
                         author.outlet = result['professional_info']['outlets'][0]
                 db.session.commit()
-                logger.info(f"Cached/updated author: {clean_name}")
+                logger.info(f"Cached author: {clean_name}")
         except Exception as e:
             logger.debug(f"Could not cache author: {e}")
         
@@ -234,12 +288,13 @@ class AuthorAnalyzer:
         return result
     
     def _check_outlet_author_page_comprehensive(self, author_name, domain):
-        """Comprehensive outlet author page checker with aggressive extraction"""
+        """Comprehensive outlet author page checker"""
         clean_domain = domain.replace('www.', '')
         author_slug = author_name.lower().replace(' ', '-')
         author_underscore = author_name.lower().replace(' ', '_')
         author_plus = author_name.lower().replace(' ', '+')
         author_no_space = author_name.lower().replace(' ', '')
+        author_dot = author_name.lower().replace(' ', '.')
         
         # Comprehensive URL patterns
         url_patterns = [
@@ -266,6 +321,8 @@ class AuthorAnalyzer:
             # Underscore versions
             f"https://{domain}/author/{author_underscore}/",
             f"https://{domain}/authors/{author_underscore}/",
+            # Dot versions
+            f"https://{domain}/author/{author_dot}/",
             # Plus sign versions
             f"https://{domain}/author/{author_plus}/",
             # No space versions
@@ -330,65 +387,76 @@ class AuthorAnalyzer:
             # 2. Extract from meta tags
             self._extract_from_meta_tags_enhanced(soup, author_name, result)
             
-            # 3. Extract author image - try many methods
+            # 3. Extract author image
             image_selectors = [
                 f'img[alt*="{author_name}"]',
                 '.author-image img', '.author-photo img', '.author-avatar img',
                 '.bio-image img', '.profile-image img', '.headshot img',
                 '[class*="author"] img', '[id*="author"] img',
                 '.contributor-photo img', '.writer-image img',
-                'figure img[src*="author"]', 'figure img[src*="profile"]',
-                '.staff-photo img', '.team-member img'
+                'figure img', '.wp-block-image img'
             ]
             
             for selector in image_selectors:
-                img = soup.select_one(selector)
-                if img and img.get('src'):
-                    src = img['src']
-                    if not any(skip in src.lower() for skip in ['logo', 'icon', 'default', 'placeholder']):
-                        result['image_url'] = self._make_absolute_url(src, domain)
-                        break
+                try:
+                    img = soup.select_one(selector)
+                    if img and img.get('src'):
+                        src = img['src']
+                        if not any(skip in src.lower() for skip in ['logo', 'icon', 'default', 'placeholder', 'avatar']):
+                            result['image_url'] = self._make_absolute_url(src, domain)
+                            break
+                except:
+                    continue
             
-            # 4. Enhanced bio extraction - BE AGGRESSIVE
+            # 4. Enhanced bio extraction
             bio_candidates = []
             
-            # Method 1: Look for bio in common containers
+            # Look for bio in common containers
             bio_selectors = [
                 '[class*="bio"]', '[class*="Bio"]', '[class*="author-desc"]',
                 '[class*="author-info"]', '[class*="author-about"]',
                 '[class*="description"]', '[id*="bio"]', '[id*="Bio"]',
                 '.about', '.profile', '.author-details', '.contributor-bio',
                 '.writer-bio', '.journalist-bio', '.staff-bio',
-                '.author-content', '.author-text', '.profile-text'
+                '.author-content', '.author-text', '.profile-content'
             ]
             
             for selector in bio_selectors:
                 elements = soup.select(selector)
                 for elem in elements:
                     text = elem.get_text(separator=' ', strip=True)
-                    if len(text) > 50:
+                    if len(text) > 50 and len(text) < 2000:
                         bio_candidates.append(text)
             
-            # Method 2: Find paragraphs that mention the author with context
-            for p in soup.find_all(['p', 'div']):
+            # Also check paragraphs that mention the author
+            for p in soup.find_all(['p', 'div', 'section']):
                 text = p.get_text(strip=True)
-                if (len(text) > 50 and len(text) < 1000 and
+                if (len(text) > 50 and len(text) < 1500 and
                     any(name_part.lower() in text.lower() for name_part in author_name.split()) and
                     any(keyword in text.lower() for keyword in 
                         ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
                          'covers', 'reports', 'joined', 'experience', 'previously',
-                         'graduated', 'award', 'specializ', 'based in', 'has been'])):
+                         'graduated', 'award', 'specializ', 'has been', 'writes about'])):
                     bio_candidates.append(text)
             
-            # Select the best bio (longest comprehensive one)
+            # Select the best bio
             if bio_candidates:
-                # Filter out navigation/UI text
-                good_bios = [b for b in bio_candidates if not any(skip in b.lower() 
-                            for skip in ['click here', 'read more', 'follow us', 'subscribe', 'navigation'])]
-                if good_bios:
-                    result['bio'] = max(good_bios, key=len)
-                else:
-                    result['bio'] = max(bio_candidates, key=len)
+                # Remove duplicates and sort by quality
+                unique_bios = []
+                seen = set()
+                for bio in bio_candidates:
+                    bio_clean = ' '.join(bio.split())
+                    if bio_clean not in seen:
+                        seen.add(bio_clean)
+                        unique_bios.append(bio)
+                
+                # Select the most comprehensive bio
+                best_bio = max(unique_bios, key=lambda x: (
+                    author_name.lower() in x.lower(),  # Contains author name
+                    sum(1 for word in ['journalist', 'reporter', 'correspondent', 'writer'] if word in x.lower()),
+                    len(x)  # Length
+                ))
+                result['bio'] = best_bio
             
             # 5. Extract title/position
             title_patterns = [
@@ -616,7 +684,8 @@ class AuthorAnalyzer:
         # Build search queries
         search_queries = [
             f'"{author_name}" journalist reporter writer bio',
-            f'"{author_name}" journalism award education',
+            f'"{author_name}" journalism award education experience',
+            f'"{author_name}" correspondent news coverage'
         ]
         
         if domain:
@@ -625,7 +694,7 @@ class AuthorAnalyzer:
         
         all_snippets = []
         
-        for query in search_queries:
+        for query in search_queries[:4]:  # Limit queries
             try:
                 # Use DuckDuckGo HTML version
                 search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
@@ -640,7 +709,7 @@ class AuthorAnalyzer:
                         if author_name in snippet and len(snippet) > 50:
                             all_snippets.append(snippet)
                     
-                    # Also get all text
+                    # Also check if we found anything
                     page_text = soup.get_text()
                     if author_name.lower() in page_text.lower():
                         result['found'] = True
@@ -655,14 +724,16 @@ class AuthorAnalyzer:
         if all_snippets:
             result['found'] = True
             
-            # IMPROVED: Look for the BEST bio paragraph
+            # Find best bio candidates
             bio_candidates = []
             
-            for snippet in all_snippets[:20]:  # Limit to first 20 snippets
+            for snippet in all_snippets[:30]:  # Analyze more snippets
                 snippet_lower = snippet.lower()
                 
-                # Check if this snippet is a good bio candidate
+                # Score this snippet as a potential bio
                 bio_score = 0
+                
+                # Check for bio indicators
                 if f"{author_name.lower()} is" in snippet_lower:
                     bio_score += 3
                 if any(word in snippet_lower for word in ['journalist', 'reporter', 'correspondent', 'writer', 'editor']):
@@ -673,7 +744,13 @@ class AuthorAnalyzer:
                     bio_score += 1
                 if any(word in snippet_lower for word in ['award', 'prize', 'winner', 'honor']):
                     bio_score += 1
-                if len(snippet) > 100 and len(snippet) < 500:
+                if any(word in snippet_lower for word in ['experience', 'years', 'joined']):
+                    bio_score += 1
+                
+                # Length preference
+                if 100 < len(snippet) < 500:
+                    bio_score += 2
+                elif 50 < len(snippet) < 100:
                     bio_score += 1
                 
                 if bio_score >= 3:
@@ -754,14 +831,20 @@ class AuthorAnalyzer:
             
             # Select best bio from candidates
             if bio_candidates:
-                # Sort by score, then by length
+                # Sort by score and length
                 bio_candidates.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
                 result['bio'] = bio_candidates[0][0]
             elif all_snippets:
-                # Fallback: use longest snippet that mentions the author
-                suitable_snippets = [s for s in all_snippets if author_name in s and len(s) > 50]
-                if suitable_snippets:
-                    result['bio'] = max(suitable_snippets, key=len)
+                # Fallback: construct bio from best snippets
+                author_snippets = [s for s in all_snippets if author_name in s and len(s) > 50]
+                if author_snippets:
+                    # Try to find one that starts with author name
+                    for snippet in author_snippets:
+                        if snippet.startswith(author_name):
+                            result['bio'] = snippet
+                            break
+                    else:
+                        result['bio'] = author_snippets[0]
             
             # Verify journalist status
             if any(term in ' '.join(all_snippets).lower() for term in 
@@ -1039,99 +1122,83 @@ class AuthorAnalyzer:
         return min(score, max_score)
     
     def _generate_comprehensive_bio(self, author_data):
-        """Generate a comprehensive bio from collected data - IMPROVED"""
-        # If we already have a good bio, use it
-        if author_data.get('bio') and len(author_data['bio']) > 150:
-            return author_data['bio']
-        
+        """Generate a comprehensive bio from collected data"""
         bio_parts = []
         
         name = author_data['name']
         prof_info = author_data.get('professional_info', {})
         
         # Start with name and current position
-        opening = name
         if prof_info.get('current_position'):
             if prof_info.get('outlets'):
-                opening += f" is {prof_info['current_position']} at {prof_info['outlets'][0]}"
+                bio_parts.append(f"{name} is {prof_info['current_position']} at {prof_info['outlets'][0]}")
             else:
-                opening += f" is {prof_info['current_position']}"
+                bio_parts.append(f"{name} is {prof_info['current_position']}")
         elif prof_info.get('outlets'):
-            opening += f" is a journalist who writes for {', '.join(prof_info['outlets'][:3])}"
+            bio_parts.append(f"{name} is a journalist who writes for {', '.join(prof_info['outlets'][:3])}")
         elif author_data.get('found'):
-            opening += f" is a journalist"
+            bio_parts.append(f"{name} is a journalist")
+        else:
+            bio_parts.append(f"{name} is a journalist")
         
-        bio_parts.append(opening)
-        
-        # Add expertise with better phrasing
+        # Add expertise
         if prof_info.get('expertise_areas'):
             areas = prof_info['expertise_areas'][:3]
             if len(areas) == 1:
-                bio_parts.append(f"specializing in coverage of {areas[0]}")
+                bio_parts.append(f"specializing in {areas[0]}")
             elif len(areas) == 2:
                 bio_parts.append(f"covering {areas[0]} and {areas[1]}")
             else:
                 bio_parts.append(f"with expertise in {', '.join(areas[:-1])}, and {areas[-1]}")
         
-        # Add experience with context
+        # Add experience
         if prof_info.get('years_experience'):
-            years = prof_info['years_experience']
-            bio_parts.append(f"bringing {years} years of journalism experience to their reporting")
+            bio_parts.append(f"with {prof_info['years_experience']} years of experience")
         
-        # Add education with better flow
+        # Add education
         if author_data.get('education'):
-            bio_parts.append(f"{name.split()[-1]} graduated from {author_data['education']}")
+            edu_text = author_data['education']
+            if 'from' not in edu_text.lower():
+                bio_parts.append(f"{name.split()[-1]} graduated from {edu_text}")
+            else:
+                bio_parts.append(f"{name.split()[-1]} {edu_text}")
         
-        # Add awards with impact
+        # Add awards
         if author_data.get('awards'):
             count = len(author_data['awards'])
             if count == 1:
-                bio_parts.append(f"and has been recognized with {author_data['awards'][0]}")
+                bio_parts.append(f"recipient of {author_data['awards'][0]}")
             else:
-                bio_parts.append(f"and has received {count} journalism awards for their work")
+                bio_parts.append(f"recipient of {count} journalism awards")
         
-        # Add previous experience if notable
+        # Add previous positions if notable
         if author_data.get('previous_positions'):
             prev = author_data['previous_positions'][0]
             if isinstance(prev, dict) and prev.get('outlet'):
                 bio_parts.append(f"Previously, {name.split()[-1]} worked at {prev['outlet']}")
         
-        # Add recent work indicator
-        if author_data.get('recent_articles') and len(author_data['recent_articles']) >= 3:
-            bio_parts.append(f"Their recent reporting has focused on current developments in their beat")
-        
         # Combine parts into natural sentences
-        if len(bio_parts) >= 3:
-            # First sentence: name + position
+        if len(bio_parts) > 1:
             bio = bio_parts[0]
-            
-            # Second part: expertise/specialization
-            if len(bio_parts) > 1 and 'specializing' in bio_parts[1]:
-                bio += f", {bio_parts[1]}"
-                remaining_start = 2
+            if len(bio_parts) > 2:
+                bio += ', ' + ', '.join(bio_parts[1:-1]) + ', and ' + bio_parts[-1] + '.'
             else:
-                remaining_start = 1
-            
-            bio += "."
-            
-            # Additional sentences
-            if len(bio_parts) > remaining_start:
-                for part in bio_parts[remaining_start:]:
-                    if part.startswith(name.split()[-1]):  # Education, previous work
-                        bio += f" {part}."
-                    elif 'Previously' in part:
-                        bio += f" {part}."
-                    else:
-                        # Continue the thought
-                        bio = bio.rstrip('.')
-                        bio += f", {part}."
+                bio += ' ' + bio_parts[1] + '.'
         else:
-            bio = ". ".join(bio_parts) + "."
+            bio = bio_parts[0] + '.'
         
-        # Clean up
-        bio = re.sub(r'\.\s*,', ',', bio)
-        bio = re.sub(r'\.\.+', '.', bio)
+        # Clean up the bio
         bio = re.sub(r'\s+', ' ', bio)
+        bio = re.sub(r'\.+', '.', bio)
+        
+        # Ensure minimum length
+        if len(bio) < 100:
+            if author_data.get('recent_articles'):
+                bio = bio.rstrip('.') + f", with {len(author_data['recent_articles'])} recent articles published."
+            elif author_data.get('verification_status', {}).get('outlet_staff'):
+                bio = bio.rstrip('.') + ", and is a verified staff member of their publication."
+            elif author_data.get('online_presence', {}).get('twitter'):
+                bio = bio.rstrip('.') + ", maintaining an active presence on social media."
         
         return bio
     
@@ -1168,11 +1235,6 @@ class AuthorAnalyzer:
         if factors:
             explanation += f" Key credibility factors include: {', '.join(factors)}."
         
-        # Add what we checked
-        sources = author_data.get('sources_checked', [])
-        if sources:
-            explanation += f" Information verified through: {', '.join(sources)}."
-        
         return {
             'level': level,
             'explanation': explanation,
@@ -1180,7 +1242,7 @@ class AuthorAnalyzer:
         }
     
     def _safe_merge_results(self, target, source):
-        """Safely merge source dict into target dict without overwriting None with empty values"""
+        """Safely merge source dict into target dict without overwriting good data"""
         if not source:
             return
             
@@ -1196,12 +1258,12 @@ class AuthorAnalyzer:
                     if item not in target[key]:
                         target[key].append(item)
             elif value is not None and (not isinstance(value, (list, str)) or value):
-                # Only update if source value is meaningful
-                # Special handling for bio - keep longer one
-                if key == 'bio' and target.get(key):
-                    if len(str(value)) > len(str(target[key])):
+                # Special handling for bio - keep the longer/better one
+                if key == 'bio':
+                    if not target.get(key) or (value and len(str(value)) > len(str(target[key]))):
                         target[key] = value
                 else:
+                    # Only update if source value is meaningful
                     target[key] = value
     
     def _is_valid_position(self, position):
@@ -1210,16 +1272,17 @@ class AuthorAnalyzer:
             return False
         
         # Filter out non-position phrases
-        invalid_phrases = ['is', 'was', 'has', 'the', 'article', 'story', 'report']
+        invalid_phrases = ['is', 'was', 'has', 'the', 'article', 'story', 'report', 'who', 'where', 'when']
         position_lower = position.lower()
         
         if any(phrase == position_lower for phrase in invalid_phrases):
             return False
         
-        # Must contain at least one position-related word
+        # Must contain at least one position-related word OR be long enough to be descriptive
         position_words = ['journalist', 'reporter', 'writer', 'editor', 'correspondent', 
                          'columnist', 'contributor', 'author', 'producer', 'anchor',
-                         'analyst', 'critic', 'reviewer', 'blogger', 'freelance']
+                         'analyst', 'critic', 'reviewer', 'blogger', 'freelance',
+                         'senior', 'chief', 'managing', 'executive', 'staff']
         
         return any(word in position_lower for word in position_words) or len(position.split()) >= 2
     
@@ -1229,9 +1292,9 @@ class AuthorAnalyzer:
             return False
         
         # Filter out common non-outlet phrases
-        invalid_outlets = ['the', 'and', 'or', 'is', 'was', 'has', 'with', 'from', 'about']
+        invalid_outlets = ['the', 'and', 'or', 'is', 'was', 'has', 'with', 'from', 'about', 'their', 'his', 'her']
         
-        return outlet.lower() not in invalid_outlets and outlet[0].isupper()
+        return outlet.lower() not in invalid_outlets and (outlet[0].isupper() or any(c.isupper() for c in outlet))
     
     def _extract_from_json_ld_enhanced(self, data, author_name, result):
         """Extract author info from JSON-LD structured data"""
@@ -1294,7 +1357,8 @@ class AuthorAnalyzer:
                         content = meta['content']
                         
                         if field == 'bio' and (author_name.lower() in content.lower() or len(content) > 100):
-                            result['bio'] = content
+                            if not result.get('bio') or len(content) > len(result.get('bio', '')):
+                                result['bio'] = content
                         elif field == 'image':
                             result['image_url'] = content
                         elif field == 'title':
@@ -1361,6 +1425,9 @@ class AuthorAnalyzer:
             
         # Remove common suffixes
         name = re.sub(r'\s*(,|and|&)\s*.*', '', author_name)
+        
+        # Remove common prefixes
+        name = re.sub(r'^(by|written by|article by|reported by)\s+', '', name, flags=re.I)
         
         # Remove titles
         titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Sir', 'Dame']
@@ -1445,6 +1512,9 @@ class AuthorAnalyzer:
         """Parse multiple authors from byline text"""
         if not author_text:
             return []
+        
+        # Clean the byline
+        author_text = re.sub(r'^(by|written by|article by|reported by)\s+', '', author_text, flags=re.I)
         
         # Split by common separators
         authors = re.split(r'\s*(?:,|and|&)\s*', author_text)
