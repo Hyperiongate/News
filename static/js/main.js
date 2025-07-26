@@ -238,14 +238,14 @@
             try {
                 window.UI.buildResults(result);
                 
-                // Verify if author section was actually rendered
+                // Verify if author card was actually rendered (fixed selector)
                 setTimeout(() => {
-                    const authorSection = document.querySelector('.author-analysis-section');
-                    if (authorSection) {
-                        console.log('Author section found in DOM:', authorSection);
-                        console.log('Author section HTML:', authorSection.innerHTML);
+                    const authorCard = document.querySelector('[data-card-type="author"]');
+                    if (authorCard) {
+                        console.log('Author card found in DOM:', authorCard);
+                        console.log('Author card HTML preview:', authorCard.innerHTML.substring(0, 200) + '...');
                     } else {
-                        console.log('WARNING: Author section not found in DOM after UI.buildResults');
+                        console.log('WARNING: Author card not found in DOM after UI.buildResults');
                     }
                 }, 100);
             } catch (error) {
@@ -464,19 +464,20 @@
             console.log('UI controller available:', !!window.UI);
             console.log('UI.buildResults available:', !!(window.UI && window.UI.buildResults));
             
-            // Check DOM
-            const authorSection = document.querySelector('.author-analysis-section');
-            console.log('Author section in DOM:', !!authorSection);
-            if (authorSection) {
-                console.log('Author section HTML:', authorSection.innerHTML);
-            }
-            
-            // Check for author card
+            // Check DOM for author card (fixed selector)
             const authorCard = document.querySelector('[data-card-type="author"]');
             console.log('Author card in DOM:', !!authorCard);
             if (authorCard) {
                 console.log('Author card expanded:', authorCard.classList.contains('expanded'));
+                console.log('Author card content preview:', authorCard.innerHTML.substring(0, 200) + '...');
             }
+            
+            // Check for any author-related elements
+            const authorElements = document.querySelectorAll('[class*="author"], [id*="author"], [data-*="author"]');
+            console.log('Total author-related elements found:', authorElements.length);
+            authorElements.forEach((el, index) => {
+                console.log(`Author element ${index + 1}:`, el.tagName, el.className || el.id || el.getAttribute('data-card-type'));
+            });
         } else {
             console.log('No author data available. Run an analysis first.');
         }
