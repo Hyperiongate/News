@@ -238,16 +238,34 @@
             try {
                 window.UI.buildResults(result);
                 
-                // Verify if author card was actually rendered (fixed selector)
-                setTimeout(() => {
-                    const authorCard = document.querySelector('[data-card-type="author"]');
-                    if (authorCard) {
-                        console.log('Author card found in DOM:', authorCard);
-                        console.log('Author card HTML preview:', authorCard.innerHTML.substring(0, 200) + '...');
-                    } else {
-                        console.log('WARNING: Author card not found in DOM after UI.buildResults');
-                    }
-                }, 100);
+                // Verify if author card was actually rendered with better timing
+                // Use requestAnimationFrame to ensure DOM has been painted
+                requestAnimationFrame(() => {
+                    // Then use setTimeout to give any remaining async operations time to complete
+                    setTimeout(() => {
+                        const authorCard = document.querySelector('[data-card-type="author"]');
+                        if (authorCard) {
+                            console.log('Author card found in DOM:', authorCard);
+                            console.log('Author card HTML preview:', authorCard.innerHTML.substring(0, 200) + '...');
+                        } else {
+                            console.log('WARNING: Author card not found in DOM after UI.buildResults');
+                            
+                            // Additional debugging - check what IS in the DOM
+                            const allCards = document.querySelectorAll('[data-card-type]');
+                            console.log('Total cards found:', allCards.length);
+                            allCards.forEach((card, index) => {
+                                console.log(`Card ${index + 1}:`, card.getAttribute('data-card-type'));
+                            });
+                            
+                            // Check if cards-grid-wrapper exists
+                            const gridWrapper = document.querySelector('.cards-grid-wrapper');
+                            console.log('Grid wrapper found:', !!gridWrapper);
+                            if (gridWrapper) {
+                                console.log('Grid wrapper children:', gridWrapper.children.length);
+                            }
+                        }
+                    }, 250); // Increased timeout
+                });
             } catch (error) {
                 console.error('Error in UI.buildResults:', error);
                 displayResultsFallback(result);
