@@ -1,6 +1,5 @@
-
 """
-services/news_analyzer.py - Main orchestrator with fixed author handling
+services/news_analyzer.py - Main orchestrator with FIXED imports and author data flow
 """
 
 import os
@@ -9,12 +8,17 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-# Import all analysis services with CORRECT names
+# Import all analysis services
 from services.news_extractor import NewsExtractor
-from services.bias_detector import BiasDetector  # Fixed: BiasDetector not BiasAnalyzer
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
+from services.bias_detector import BiasDetector as BiasAnalyzer
+from services.manipulation_detector import ManipulationDetector
+from services.transparency_analyzer import TransparencyAnalyzer
+from services.clickbait_analyzer import ClickbaitAnalyzer
+from services.content_analyzer import ContentAnalyzer
+from services.connection_analyzer import ConnectionAnalyzer
 
 # OpenAI integration
 try:
@@ -34,10 +38,15 @@ class NewsAnalyzer:
         """Initialize all analysis components"""
         # Core services
         self.extractor = NewsExtractor()
-        self.bias_detector = BiasDetector()  # Fixed: Use BiasDetector
+        self.bias_analyzer = BiasAnalyzer()
         self.fact_checker = FactChecker()
         self.source_credibility = SourceCredibility()
         self.author_analyzer = AuthorAnalyzer()
+        self.manipulation_detector = ManipulationDetector()
+        self.transparency_analyzer = TransparencyAnalyzer()
+        self.clickbait_analyzer = ClickbaitAnalyzer()
+        self.content_analyzer = ContentAnalyzer()
+        self.connection_analyzer = ConnectionAnalyzer()
         
     def analyze(self, content: str, content_type: str = 'url', is_pro: bool = False) -> Dict[str, Any]:
         """
@@ -74,32 +83,16 @@ class NewsAnalyzer:
             # Log what we extracted
             logger.info(f"Extracted article data: {article_data.get('title', 'No title')}")
             logger.info(f"Author from extraction: {article_data.get('author', 'No author')}")
-            logger.info(f"Article data keys: {list(article_data.keys())}")
             
-            # Step 2: Initialize analysis results
+            # Step 2: Perform all analyses
             analysis_results = {}
             
             # Core analyses (always performed)
-            # Use the comprehensive bias analysis from BiasDetector
-            basic_bias_score = self.bias_detector.detect_political_bias(article_data['text'])
-            analysis_results['bias_analysis'] = self.bias_detector.analyze_comprehensive_bias(
-                article_data['text'], 
-                basic_bias_score, 
-                article_data.get('domain')
-            )
-            
-            # Simplified clickbait analysis
-            analysis_results['clickbait_score'] = self._analyze_clickbait(
+            analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+            analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
                 article_data.get('title', ''),
                 article_data['text']
             )
-            
-            # Title analysis
-            analysis_results['title_analysis'] = self._analyze_title(article_data.get('title', ''))
-            
-            # Clickbait indicators
-            analysis_results['clickbait_indicators'] = self._get_clickbait_indicators(article_data.get('title', ''))
-            
             analysis_results['source_credibility'] = self.source_credibility.check_credibility(
                 article_data.get('domain', 'unknown')
             )
@@ -107,6 +100,7 @@ class NewsAnalyzer:
             # CRITICAL FIX: Ensure author is properly analyzed
             if article_data.get('author'):
                 logger.info(f"Analyzing author: {article_data['author']} from domain: {article_data.get('domain')}")
+                # Call the correct method name
                 analysis_results['author_analysis'] = self.author_analyzer.analyze_single_author(
                     article_data['author'],
                     article_data.get('domain')
@@ -138,10 +132,8 @@ class NewsAnalyzer:
                 }
             
             # Content analysis
-            analysis_results['content_analysis'] = self._analyze_content_comprehensive(article_data['text'])
-            
-            # Transparency analysis
-            analysis_results['transparency_analysis'] = self._analyze_transparency_comprehensive(
+            analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
+            analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
                 article_data['text'],
                 article_data.get('author')
             )
@@ -151,17 +143,15 @@ class NewsAnalyzer:
                 # Enhanced fact checking
                 key_claims = self._extract_key_claims(article_data['text'])
                 analysis_results['key_claims'] = key_claims
-                analysis_results['fact_checks'] = []  # Placeholder for fact check results
                 
-                # Use BiasDetector's manipulation detection
-                manipulation_tactics = self.bias_detector.detect_manipulation(article_data['text'])
-                analysis_results['persuasion_analysis'] = self._analyze_persuasion(
-                    article_data['text'], 
-                    manipulation_tactics
+                # Manipulation detection
+                analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
+                    article_data['text'],
+                    article_data.get('title', '')
                 )
                 
                 # Connection analysis
-                analysis_results['connection_analysis'] = self._analyze_connections_comprehensive(
+                analysis_results['connection_analysis'] = self.connection_analyzer.analyze_connections(
                     article_data['text'],
                     article_data.get('title', ''),
                     analysis_results.get('key_claims', [])
@@ -178,7 +168,7 @@ class NewsAnalyzer:
             trust_score = self._calculate_trust_score(analysis_results, article_data)
             
             # Step 4: Compile final results with proper structure
-            final_results = {
+            return {
                 'success': True,
                 'article': {
                     'title': article_data.get('title', 'Untitled'),
@@ -195,287 +185,12 @@ class NewsAnalyzer:
                 **analysis_results  # This includes author_analysis with all the detailed info
             }
             
-            # Log the final structure
-            logger.info(f"Final results article author: {final_results['article']['author']}")
-            logger.info(f"Final results keys: {list(final_results.keys())}")
-            
-            return final_results
-            
         except Exception as e:
             logger.error(f"Analysis error: {str(e)}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Analysis failed: {str(e)}'
             }
-    
-    def _analyze_clickbait(self, title: str, text: str) -> int:
-        """Simple clickbait analysis"""
-        if not title:
-            return 0
-            
-        clickbait_words = ['shocking', 'unbelievable', 'you won\'t believe', 
-                          'this one trick', 'doctors hate', 'breaking', 'explosive',
-                          'amazing', 'incredible', 'mind-blowing', 'revealed']
-        title_lower = title.lower()
-        score = 0
-        
-        for word in clickbait_words:
-            if word in title_lower:
-                score += 15
-        
-        # Check for excessive punctuation
-        if '!' in title:
-            score += 10
-        if '?' in title and any(word in title_lower for word in ['really', 'actually']):
-            score += 15
-        
-        # Check for ALL CAPS words
-        caps_words = [word for word in title.split() if word.isupper() and len(word) > 2]
-        if caps_words:
-            score += len(caps_words) * 10
-            
-        return min(score, 100)
-    
-    def _analyze_title(self, title: str) -> Dict[str, Any]:
-        """Analyze title characteristics"""
-        if not title:
-            return {
-                'sensationalism': 0,
-                'curiosity_gap': 0,
-                'emotional_words': 0
-            }
-            
-        title_lower = title.lower()
-        
-        # Sensationalism
-        sensational_words = ['shocking', 'explosive', 'bombshell', 'breaking', 'urgent']
-        sensationalism = sum(10 for word in sensational_words if word in title_lower)
-        
-        # Curiosity gap
-        curiosity_patterns = ['you won\'t believe', 'this is why', 'here\'s how', 'the reason why']
-        curiosity_gap = sum(15 for pattern in curiosity_patterns if pattern in title_lower)
-        
-        # Emotional words
-        emotional_words = ['angry', 'furious', 'terrified', 'amazed', 'stunned', 'outraged']
-        emotional_count = sum(10 for word in emotional_words if word in title_lower)
-        
-        return {
-            'sensationalism': min(sensationalism, 100),
-            'curiosity_gap': min(curiosity_gap, 100),
-            'emotional_words': min(emotional_count, 100)
-        }
-    
-    def _get_clickbait_indicators(self, title: str) -> List[Dict[str, Any]]:
-        """Get specific clickbait indicators"""
-        indicators = []
-        
-        if not title:
-            return indicators
-            
-        title_lower = title.lower()
-        
-        if 'you won\'t believe' in title_lower:
-            indicators.append({
-                'name': 'Curiosity Gap',
-                'description': 'Creates suspense by withholding information',
-                'severity': 'high'
-            })
-            
-        if any(word in title_lower for word in ['shocking', 'explosive', 'bombshell']):
-            indicators.append({
-                'name': 'Sensationalism',
-                'description': 'Uses extreme language to provoke emotional response',
-                'severity': 'medium'
-            })
-            
-        if '!' in title:
-            indicators.append({
-                'name': 'Excessive Punctuation',
-                'description': 'Uses exclamation marks to create false urgency',
-                'severity': 'low'
-            })
-            
-        return indicators
-    
-    def _analyze_content_comprehensive(self, text: str) -> Dict[str, Any]:
-        """Comprehensive content analysis"""
-        word_count = len(text.split())
-        sentence_count = len(re.split(r'[.!?]+', text))
-        avg_sentence_length = word_count / max(sentence_count, 1)
-        
-        # Count paragraphs
-        paragraphs = [p for p in text.split('\n\n') if p.strip()]
-        paragraph_count = len(paragraphs)
-        
-        # Simple readability assessment
-        if avg_sentence_length < 15:
-            reading_level = 'Elementary'
-        elif avg_sentence_length < 20:
-            reading_level = 'High School'
-        elif avg_sentence_length < 25:
-            reading_level = 'College'
-        else:
-            reading_level = 'Graduate'
-        
-        # Depth score based on length and structure
-        depth_score = min(100, (word_count / 10) + (paragraph_count * 5))
-        
-        # Complexity ratio
-        complex_words = [w for w in text.split() if len(w) > 8]
-        complexity_ratio = (len(complex_words) / word_count * 100) if word_count > 0 else 0
-        
-        # Facts vs opinion (simplified)
-        fact_indicators = len(re.findall(r'\d+\s*(?:percent|%)|according to|study|data|research', text, re.IGNORECASE))
-        opinion_indicators = len(re.findall(r'believe|think|feel|seems|appears|arguably|perhaps', text, re.IGNORECASE))
-        
-        total_indicators = fact_indicators + opinion_indicators + 1  # +1 to avoid division by zero
-        facts_ratio = (fact_indicators / total_indicators) * 100
-        opinions_ratio = (opinion_indicators / total_indicators) * 100
-        analysis_ratio = 100 - facts_ratio - opinions_ratio
-        
-        return {
-            'word_count': word_count,
-            'sentence_count': sentence_count,
-            'paragraph_count': paragraph_count,
-            'average_sentence_length': round(avg_sentence_length, 1),
-            'reading_level': reading_level,
-            'depth_score': round(depth_score),
-            'complexity_ratio': round(complexity_ratio, 1),
-            'facts_vs_opinion': {
-                'facts': round(facts_ratio),
-                'analysis': round(analysis_ratio),
-                'opinions': round(opinions_ratio)
-            }
-        }
-    
-    def _analyze_transparency_comprehensive(self, text: str, author: Optional[str]) -> Dict[str, Any]:
-        """Comprehensive transparency analysis"""
-        # Count different types of sources
-        named_sources = len(re.findall(r'(?:said|according to|told)\s+([A-Z][a-z]+ [A-Z][a-z]+)', text))
-        anonymous_sources = len(re.findall(r'anonymous|unnamed source|official who|person familiar', text, re.IGNORECASE))
-        official_sources = len(re.findall(r'(?:spokesperson|official|representative) (?:for|from)', text, re.IGNORECASE))
-        expert_sources = len(re.findall(r'(?:professor|expert|analyst|researcher) (?:at|from|with)', text, re.IGNORECASE))
-        document_refs = len(re.findall(r'document|report|study|paper|memo|email', text, re.IGNORECASE))
-        
-        total_sources = named_sources + anonymous_sources + official_sources + expert_sources
-        
-        # Calculate ratios
-        named_ratio = (named_sources / max(total_sources, 1)) * 100
-        
-        # Base transparency score
-        transparency_score = 40  # Base score
-        
-        if author:
-            transparency_score += 15
-        
-        if named_sources > 0:
-            transparency_score += min(named_sources * 5, 25)
-            
-        if document_refs > 0:
-            transparency_score += min(document_refs * 3, 15)
-            
-        if anonymous_sources > named_sources:
-            transparency_score -= 10
-        
-        return {
-            'transparency_score': max(0, min(100, transparency_score)),
-            'source_count': total_sources,
-            'named_source_ratio': round(named_ratio),
-            'source_types': {
-                'named_sources': named_sources,
-                'anonymous_sources': anonymous_sources,
-                'official_sources': official_sources,
-                'expert_sources': expert_sources,
-                'document_references': document_refs
-            }
-        }
-    
-    def _analyze_persuasion(self, text: str, manipulation_tactics: List[str]) -> Dict[str, Any]:
-        """Analyze persuasion and manipulation techniques"""
-        # Count emotional appeals
-        emotions = {
-            'fear': len(re.findall(r'threat|danger|risk|scary|terrifying|alarming', text, re.IGNORECASE)),
-            'anger': len(re.findall(r'outrage|furious|angry|disgusted|appalled', text, re.IGNORECASE)),
-            'hope': len(re.findall(r'hope|promising|optimistic|bright|opportunity', text, re.IGNORECASE)),
-            'sympathy': len(re.findall(r'victim|suffering|tragic|heartbreaking|poor', text, re.IGNORECASE))
-        }
-        
-        total_emotional = sum(emotions.values())
-        
-        # Normalize emotions to percentages
-        if total_emotional > 0:
-            emotional_appeals = {k: round((v / total_emotional) * 100) for k, v in emotions.items()}
-        else:
-            emotional_appeals = {k: 0 for k in emotions.keys()}
-        
-        # Find dominant emotion
-        dominant_emotion = max(emotions.items(), key=lambda x: x[1])[0] if total_emotional > 0 else None
-        
-        # Calculate persuasion score
-        persuasion_score = min(100, len(manipulation_tactics) * 15 + total_emotional * 2)
-        
-        # Detect logical fallacies (simplified)
-        logical_fallacies = []
-        
-        if re.search(r'everyone knows|everybody agrees|we all', text, re.IGNORECASE):
-            logical_fallacies.append({
-                'type': 'Bandwagon',
-                'description': 'Appeals to popularity rather than facts'
-            })
-            
-        if re.search(r'slippery slope|lead to|result in .* disaster', text, re.IGNORECASE):
-            logical_fallacies.append({
-                'type': 'Slippery Slope',
-                'description': 'Assumes extreme consequences without evidence'
-            })
-        
-        return {
-            'persuasion_score': persuasion_score,
-            'emotional_appeals': emotional_appeals,
-            'dominant_emotion': dominant_emotion,
-            'manipulation_tactics': manipulation_tactics,
-            'logical_fallacies': logical_fallacies,
-            'rhetorical_devices': []  # Placeholder
-        }
-    
-    def _analyze_connections_comprehensive(self, text: str, title: str, claims: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Comprehensive connection analysis"""
-        # Look for connecting phrases
-        connection_phrases = ['therefore', 'thus', 'as a result', 'consequently', 'because', 
-                            'due to', 'leads to', 'causes', 'results in', 'hence', 'so']
-        
-        connections_found = sum(1 for phrase in connection_phrases if phrase in text.lower())
-        
-        # Analyze topic connections (simplified)
-        topics = []
-        
-        # Common news topics
-        topic_keywords = {
-            'Politics': ['election', 'president', 'congress', 'policy', 'government'],
-            'Economy': ['economy', 'market', 'inflation', 'recession', 'jobs'],
-            'Technology': ['tech', 'AI', 'software', 'digital', 'cyber'],
-            'Health': ['health', 'medical', 'disease', 'treatment', 'pandemic'],
-            'Climate': ['climate', 'environment', 'carbon', 'warming', 'renewable']
-        }
-        
-        text_lower = text.lower()
-        for topic, keywords in topic_keywords.items():
-            count = sum(1 for keyword in keywords if keyword in text_lower)
-            if count > 0:
-                topics.append({
-                    'topic': topic,
-                    'strength': min(100, count * 20)
-                })
-        
-        # Sort by strength
-        topics.sort(key=lambda x: x['strength'], reverse=True)
-        
-        return {
-            'total_claims': len(claims),
-            'connections_found': connections_found,
-            'connection_strength': 'strong' if connections_found > 5 else 'moderate' if connections_found > 2 else 'weak',
-            'topic_connections': topics[:5]  # Top 5 topics
-        }
     
     def _extract_title_from_text(self, text: str) -> str:
         """Extract title from pasted text (first line or first sentence)"""
@@ -543,7 +258,7 @@ class NewsAnalyzer:
         score_components.append(source_score)
         weights.append(0.30)
         
-        # Author credibility (20% weight)
+        # Author credibility (20% weight) - CHECK IF AUTHOR EXISTS
         author_analysis = analysis_results.get('author_analysis', {})
         if author_analysis.get('found'):
             author_score = author_analysis.get('credibility_score', 50)
@@ -554,9 +269,9 @@ class NewsAnalyzer:
         
         # Bias impact (15% weight)
         bias_data = analysis_results.get('bias_analysis', {})
-        objectivity = bias_data.get('objectivity_score', 50)
-        if isinstance(objectivity, (int, float)) and objectivity > 1:
-            # If objectivity is 0-100, convert to 0-1
+        # Handle both old and new bias format
+        objectivity = bias_data.get('objectivity_score', 0.5)
+        if objectivity > 1:  # Old format was 0-100
             objectivity = objectivity / 100
         bias_score = objectivity * 100
         score_components.append(bias_score)
@@ -667,3 +382,381 @@ class NewsAnalyzer:
         except Exception as e:
             logger.error(f"Conversational summary generation failed: {e}")
             return None
+
+    def analyze_batch(self, urls: List[str], is_pro: bool = False) -> List[Dict[str, Any]]:
+        """
+        Analyze multiple articles in batch
+        
+        Args:
+            urls: List of URLs to analyze
+            is_pro: Whether to use premium features
+            
+        Returns:
+            List of analysis results
+        """
+        results = []
+        for url in urls[:10]:  # Limit to 10 URLs per batch
+            try:
+                result = self.analyze(url, 'url', is_pro)
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Batch analysis error for {url}: {e}")
+                results.append({
+                    'success': False,
+                    'url': url,
+                    'error': str(e)
+                })
+        
+        return results
+    
+    def get_analysis_metadata(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract key metadata from analysis results"""
+        return {
+            'trust_score': analysis_results.get('trust_score', 0),
+            'bias_level': analysis_results.get('bias_analysis', {}).get('overall_bias', 'Unknown'),
+            'political_lean': analysis_results.get('bias_analysis', {}).get('political_lean', 0),
+            'clickbait_score': analysis_results.get('clickbait_score', 0),
+            'source_credibility': analysis_results.get('source_credibility', {}).get('rating', 'Unknown'),
+            'author_credibility': analysis_results.get('author_analysis', {}).get('credibility_score', 50),
+            'transparency_score': analysis_results.get('transparency_analysis', {}).get('transparency_score', 50),
+            'fact_check_count': len(analysis_results.get('fact_checks', [])),
+            'manipulation_score': analysis_results.get('persuasion_analysis', {}).get('persuasion_score', 0)
+        }
+    
+    def generate_report_summary(self, analysis_results: Dict[str, Any]) -> str:
+        """Generate a comprehensive report summary"""
+        metadata = self.get_analysis_metadata(analysis_results)
+        article = analysis_results.get('article', {})
+        
+        summary = f"""
+# News Analysis Report
+
+## Article Information
+- **Title**: {article.get('title', 'Unknown')}
+- **Source**: {article.get('domain', 'Unknown')}
+- **Author**: {article.get('author', 'Unknown')}
+- **Date**: {article.get('publish_date', 'Unknown')}
+
+## Credibility Assessment
+- **Overall Trust Score**: {metadata['trust_score']}%
+- **Source Credibility**: {metadata['source_credibility']}
+- **Author Credibility**: {metadata['author_credibility']}/100
+
+## Content Analysis
+- **Bias Level**: {metadata['bias_level']}
+- **Political Lean**: {'Left' if metadata['political_lean'] < -20 else 'Right' if metadata['political_lean'] > 20 else 'Center'}
+- **Clickbait Score**: {metadata['clickbait_score']}%
+- **Transparency Score**: {metadata['transparency_score']}%
+- **Manipulation Score**: {metadata['manipulation_score']}%
+
+## Key Findings
+"""
+        
+        # Add key findings based on scores
+        findings = []
+        
+        if metadata['trust_score'] < 40:
+            findings.append("⚠️ Low trust score indicates significant credibility concerns")
+        elif metadata['trust_score'] > 70:
+            findings.append("✓ High trust score suggests reliable information")
+            
+        if metadata['clickbait_score'] > 60:
+            findings.append("⚠️ High clickbait score - headline may be misleading")
+            
+        if abs(metadata['political_lean']) > 50:
+            findings.append("⚠️ Strong political bias detected")
+            
+        if metadata['manipulation_score'] > 60:
+            findings.append("⚠️ High manipulation tactics detected")
+            
+        if metadata['transparency_score'] < 40:
+            findings.append("⚠️ Low transparency - sources not well documented")
+            
+        for finding in findings:
+            summary += f"- {finding}\n"
+        
+        return summary
+    
+    def export_analysis(self, analysis_results: Dict[str, Any], format: str = 'json') -> Any:
+        """
+        Export analysis results in various formats
+        
+        Args:
+            analysis_results: The analysis results
+            format: Export format ('json', 'txt', 'csv')
+            
+        Returns:
+            Formatted export data
+        """
+        if format == 'json':
+            return analysis_results
+            
+        elif format == 'txt':
+            return self.generate_report_summary(analysis_results)
+            
+        elif format == 'csv':
+            # CSV format for spreadsheet analysis
+            metadata = self.get_analysis_metadata(analysis_results)
+            article = analysis_results.get('article', {})
+            
+            headers = [
+                'URL', 'Title', 'Author', 'Source', 'Date',
+                'Trust Score', 'Bias Level', 'Political Lean',
+                'Clickbait Score', 'Source Credibility', 
+                'Author Credibility', 'Transparency Score',
+                'Manipulation Score', 'Fact Checks'
+            ]
+            
+            values = [
+                article.get('url', ''),
+                article.get('title', ''),
+                article.get('author', ''),
+                article.get('domain', ''),
+                article.get('publish_date', ''),
+                metadata['trust_score'],
+                metadata['bias_level'],
+                metadata['political_lean'],
+                metadata['clickbait_score'],
+                metadata['source_credibility'],
+                metadata['author_credibility'],
+                metadata['transparency_score'],
+                metadata['manipulation_score'],
+                metadata['fact_check_count']
+            ]
+            
+            return {
+                'headers': headers,
+                'values': values
+            }
+        
+        else:
+            raise ValueError(f"Unsupported export format: {format}")
+    
+    def compare_articles(self, analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Compare multiple article analyses
+        
+        Args:
+            analyses: List of analysis results to compare
+            
+        Returns:
+            Comparison results
+        """
+        if not analyses:
+            return {'error': 'No analyses to compare'}
+            
+        comparison = {
+            'article_count': len(analyses),
+            'average_trust_score': 0,
+            'average_bias': 0,
+            'most_credible': None,
+            'least_credible': None,
+            'bias_distribution': {
+                'left': 0,
+                'center': 0,
+                'right': 0
+            },
+            'source_credibility_distribution': {
+                'High': 0,
+                'Medium': 0,
+                'Low': 0,
+                'Very Low': 0,
+                'Unknown': 0
+            }
+        }
+        
+        trust_scores = []
+        bias_scores = []
+        
+        for analysis in analyses:
+            if not analysis.get('success'):
+                continue
+                
+            # Trust score
+            trust = analysis.get('trust_score', 0)
+            trust_scores.append(trust)
+            
+            # Track most/least credible
+            if not comparison['most_credible'] or trust > comparison['most_credible']['trust_score']:
+                comparison['most_credible'] = {
+                    'title': analysis.get('article', {}).get('title'),
+                    'trust_score': trust,
+                    'url': analysis.get('article', {}).get('url')
+                }
+                
+            if not comparison['least_credible'] or trust < comparison['least_credible']['trust_score']:
+                comparison['least_credible'] = {
+                    'title': analysis.get('article', {}).get('title'),
+                    'trust_score': trust,
+                    'url': analysis.get('article', {}).get('url')
+                }
+            
+            # Bias analysis
+            bias = analysis.get('bias_analysis', {}).get('political_lean', 0)
+            bias_scores.append(bias)
+            
+            if bias < -20:
+                comparison['bias_distribution']['left'] += 1
+            elif bias > 20:
+                comparison['bias_distribution']['right'] += 1
+            else:
+                comparison['bias_distribution']['center'] += 1
+            
+            # Source credibility
+            source_cred = analysis.get('source_credibility', {}).get('rating', 'Unknown')
+            comparison['source_credibility_distribution'][source_cred] += 1
+        
+        # Calculate averages
+        if trust_scores:
+            comparison['average_trust_score'] = round(sum(trust_scores) / len(trust_scores), 1)
+            
+        if bias_scores:
+            comparison['average_bias'] = round(sum(bias_scores) / len(bias_scores), 1)
+        
+        return comparison
+    
+    def get_reading_time(self, text: str) -> int:
+        """
+        Estimate reading time in minutes
+        
+        Args:
+            text: Article text
+            
+        Returns:
+            Estimated reading time in minutes
+        """
+        # Average reading speed is 200-250 words per minute
+        words = len(text.split())
+        return max(1, round(words / 225))
+    
+    def extract_entities(self, text: str) -> Dict[str, List[str]]:
+        """
+        Extract named entities from text (people, organizations, locations)
+        
+        Args:
+            text: Article text
+            
+        Returns:
+            Dictionary of entity types and their values
+        """
+        entities = {
+            'people': [],
+            'organizations': [],
+            'locations': []
+        }
+        
+        # Simple pattern-based extraction
+        # In production, you'd use NLP libraries like spaCy or NLTK
+        
+        # People (simple pattern for "Mr./Ms./Dr. Name" or "FirstName LastName")
+        people_pattern = r'\b(?:Mr\.|Ms\.|Dr\.|Prof\.)?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)\b'
+        entities['people'] = list(set(re.findall(people_pattern, text)))[:10]
+        
+        # Organizations (words with all caps or ending in Inc., Corp., etc.)
+        org_pattern = r'\b([A-Z]{2,}|[A-Za-z]+\s+(?:Inc\.|Corp\.|LLC|Ltd\.|Company|Organization|Association))\b'
+        entities['organizations'] = list(set(re.findall(org_pattern, text)))[:10]
+        
+        # Locations (simple pattern for "City, State" or known location keywords)
+        location_keywords = ['City', 'County', 'State', 'Country', 'Province', 'District']
+        location_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*,\s*([A-Z][a-z]+)\b'
+        entities['locations'] = list(set(re.findall(location_pattern, text)))[:10]
+        
+        return entities
+    
+    def get_article_topics(self, text: str, title: str = '') -> List[str]:
+        """
+        Extract main topics from article
+        
+        Args:
+            text: Article text
+            title: Article title
+            
+        Returns:
+            List of identified topics
+        """
+        topics = []
+        
+        # Combine title and text for analysis
+        full_text = f"{title} {text}".lower()
+        
+        # Topic categories and their keywords
+        topic_keywords = {
+            'Politics': ['election', 'president', 'congress', 'senate', 'vote', 'campaign', 'policy', 'government'],
+            'Economy': ['economy', 'market', 'stock', 'trade', 'inflation', 'recession', 'gdp', 'unemployment'],
+            'Technology': ['tech', 'ai', 'software', 'internet', 'cyber', 'data', 'digital', 'innovation'],
+            'Health': ['health', 'medical', 'disease', 'vaccine', 'hospital', 'doctor', 'pandemic', 'medicine'],
+            'Environment': ['climate', 'environment', 'pollution', 'carbon', 'renewable', 'conservation', 'sustainability'],
+            'Business': ['business', 'company', 'ceo', 'merger', 'acquisition', 'startup', 'entrepreneur'],
+            'Science': ['research', 'study', 'scientist', 'discovery', 'experiment', 'laboratory', 'findings'],
+            'Sports': ['game', 'player', 'team', 'championship', 'league', 'coach', 'tournament', 'athlete'],
+            'Entertainment': ['movie', 'music', 'celebrity', 'film', 'actor', 'singer', 'entertainment', 'hollywood'],
+            'International': ['international', 'global', 'foreign', 'diplomatic', 'treaty', 'united nations', 'ambassador']
+        }
+        
+        # Count keyword occurrences for each topic
+        topic_scores = {}
+        for topic, keywords in topic_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in full_text)
+            if score > 0:
+                topic_scores[topic] = score
+        
+        # Sort topics by score and return top 3
+        sorted_topics = sorted(topic_scores.items(), key=lambda x: x[1], reverse=True)
+        topics = [topic for topic, score in sorted_topics[:3]]
+        
+        return topics
+    
+    def check_updates(self, original_analysis: Dict[str, Any], 
+                     new_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Check for significant changes between analyses
+        
+        Args:
+            original_analysis: Previous analysis results
+            new_analysis: New analysis results
+            
+        Returns:
+            Dictionary of changes
+        """
+        changes = {
+            'has_updates': False,
+            'trust_score_change': 0,
+            'bias_change': 0,
+            'significant_changes': []
+        }
+        
+        # Compare trust scores
+        old_trust = original_analysis.get('trust_score', 0)
+        new_trust = new_analysis.get('trust_score', 0)
+        trust_change = new_trust - old_trust
+        
+        if abs(trust_change) > 5:
+            changes['has_updates'] = True
+            changes['trust_score_change'] = trust_change
+            changes['significant_changes'].append(
+                f"Trust score {'increased' if trust_change > 0 else 'decreased'} by {abs(trust_change)} points"
+            )
+        
+        # Compare bias
+        old_bias = original_analysis.get('bias_analysis', {}).get('political_lean', 0)
+        new_bias = new_analysis.get('bias_analysis', {}).get('political_lean', 0)
+        bias_change = new_bias - old_bias
+        
+        if abs(bias_change) > 10:
+            changes['has_updates'] = True
+            changes['bias_change'] = bias_change
+            changes['significant_changes'].append(
+                f"Political bias shifted {'right' if bias_change > 0 else 'left'} by {abs(bias_change)} points"
+            )
+        
+        # Check for new fact checks
+        old_facts = len(original_analysis.get('fact_checks', []))
+        new_facts = len(new_analysis.get('fact_checks', []))
+        
+        if new_facts > old_facts:
+            changes['has_updates'] = True
+            changes['significant_changes'].append(
+                f"{new_facts - old_facts} new fact checks added"
+            )
+        
+        return changes
