@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Enhanced author analyzer with comprehensive biographical data extraction
+PURPOSE: Complete universal author analyzer with rich data extraction
 LOCATION: services/author_analyzer.py
 """
 
@@ -18,14 +18,14 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
-    """Enhanced author analyzer that searches for comprehensive journalist information"""
+    """Enhanced author analyzer that searches for journalist information online"""
     
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
-        logger.info("AuthorAnalyzer V2 initialized with enhanced biographical extraction")
+        logger.info("AuthorAnalyzer initialized with enhanced features")
         
     def analyze_authors(self, author_text, domain=None):
         """Analyze multiple authors from byline text"""
@@ -40,18 +40,18 @@ class AuthorAnalyzer:
     
     def analyze_single_author(self, author_name, domain=None):
         """Analyze a single author with comprehensive web search"""
-        logger.info(f"Starting enhanced analysis for author: {author_name} from domain: {domain}")
+        logger.info(f"Analyzing author: {author_name} from domain: {domain}")
         
         # Clean author name
         clean_name = self._clean_author_name(author_name)
         
-        # Check cache first (if database is available)
+        # Check cache first (if database is available) - BUT ONLY USE IF RICH DATA
         try:
             from models import db, Author
             
             cached = Author.query.filter_by(name=clean_name).first()
-            if cached and cached.bio and len(cached.bio) > 50:  # Only use cache if it has substantial bio
-                logger.info(f"Returning cached author data for {clean_name}")
+            if cached and cached.bio and len(cached.bio) > 100 and cached.credibility_score > 60:
+                logger.info(f"Returning RICH cached author data for {clean_name}")
                 cached_data = {
                     'name': cached.name,
                     'found': True,
@@ -69,21 +69,22 @@ class AuthorAnalyzer:
                         'journalist_verified': True,
                         'outlet_staff': True if cached.outlet else False
                     },
-                    'sources_checked': ['Database cache'],
+                    'sources_checked': ['Database cache (rich data)'],
                     'credibility_explanation': self._generate_credibility_explanation({
                         'credibility_score': cached.credibility_score
                     })
                 }
                 return cached_data
+            else:
+                logger.info(f"Cache exists but has thin data for {clean_name}, will search fresh")
         except Exception as e:
             logger.debug(f"Could not check cache: {e}")
         
-        # Initialize comprehensive result structure with enhanced fields
+        # Initialize comprehensive result structure
         result = {
             'name': clean_name,
             'found': False,
             'bio': None,
-            'bio_summary': None,  # NEW: AI-style summary
             'image_url': None,
             'credibility_score': 50,
             'articles_count': 0,
@@ -91,8 +92,7 @@ class AuthorAnalyzer:
                 'current_position': None,
                 'outlets': [],
                 'years_experience': None,
-                'expertise_areas': [],
-                'employment_history': []  # NEW: Full career timeline
+                'expertise_areas': []
             },
             'online_presence': {
                 'twitter': None,
@@ -112,7 +112,7 @@ class AuthorAnalyzer:
                 'journalist_verified': False,
                 'outlet_staff': False
             },
-            'education': [],  # Changed to list for multiple degrees
+            'education': None,
             'awards': [],
             'previous_positions': [],
             'recent_articles': [],
@@ -122,139 +122,84 @@ class AuthorAnalyzer:
                 'level': 'Unknown',
                 'explanation': 'Limited information available',
                 'advice': 'Verify claims through additional sources'
-            },
-            'reputation_analysis': {  # NEW: What we think about the author
-                'strengths': [],
-                'concerns': [],
-                'overall_assessment': None
-            },
-            'data_completeness': {  # NEW: Track what we found
-                'has_photo': False,
-                'has_bio': False,
-                'has_education': False,
-                'has_awards': False,
-                'has_employment_history': False,
-                'has_social_media': False,
-                'has_recent_work': False
             }
         }
         
-        # Enhanced search strategy with better ordering
-        search_performed = False
+        # Try multiple search strategies - ALWAYS RUN ALL
         
         # 1. Check outlet's author page first (most reliable)
         if domain:
             try:
                 logger.info(f"Checking outlet author page on {domain}")
-                outlet_result = self._check_outlet_author_page_comprehensive_v2(clean_name, domain)
-                if outlet_result and outlet_result.get('found_author_page'):
+                outlet_result = self._check_outlet_author_page_comprehensive(clean_name, domain)
+                if outlet_result:
                     self._safe_merge_results(result, outlet_result)
                     result['found'] = True
                     result['sources_checked'].append(f"{domain} author page")
-                    search_performed = True
-                    logger.info(f"Found comprehensive data on {domain}")
+                    logger.info(f"Found author on {domain}")
             except Exception as e:
                 logger.error(f"Error checking outlet author page: {e}")
         
-        # 2. Enhanced Google-style web search
+        # 2. Enhanced web search using DuckDuckGo - ALWAYS RUN
         try:
             logger.info(f"Performing enhanced web search for {clean_name}")
-            web_result = self._enhanced_web_search_v2(clean_name, domain)
+            web_result = self._enhanced_web_search(clean_name, domain)
             if web_result:
                 self._safe_merge_results(result, web_result)
                 result['found'] = True
                 if "Web search" not in result['sources_checked']:
-                    result['sources_checked'].append("Web search (Google/DuckDuckGo)")
-                search_performed = True
-                logger.info("Found comprehensive information via web search")
+                    result['sources_checked'].append("Web search")
+                logger.info("Found information via web search")
         except Exception as e:
             logger.error(f"Error in web search: {e}")
         
-        # 3. Deep journalist database search
+        # 3. Check journalist databases - ALWAYS RUN
         try:
-            logger.info(f"Checking journalist databases deeply")
-            journalist_db_result = self._deep_journalist_database_search(clean_name, domain)
+            logger.info(f"Checking journalist databases")
+            journalist_db_result = self._check_journalist_databases_comprehensive(clean_name)
             if journalist_db_result:
                 self._safe_merge_results(result, journalist_db_result)
                 result['found'] = True
                 result['sources_checked'].extend(journalist_db_result.get('sources_checked', []))
-                search_performed = True
                 logger.info("Found in journalist databases")
         except Exception as e:
             logger.error(f"Error checking journalist databases: {e}")
         
-        # 4. LinkedIn specific search for professional info
-        try:
-            logger.info(f"Performing LinkedIn search")
-            linkedin_result = self._search_linkedin_profile(clean_name, domain)
-            if linkedin_result:
-                self._safe_merge_results(result, linkedin_result)
-                result['found'] = True
-                if "LinkedIn" not in result['sources_checked']:
-                    result['sources_checked'].append("LinkedIn")
-                search_performed = True
-        except Exception as e:
-            logger.error(f"Error in LinkedIn search: {e}")
-        
-        # 5. Search for recent articles with better extraction
+        # 4. Search for recent articles by the author - ALWAYS RUN
         try:
             if domain or result['professional_info']['outlets']:
-                logger.info(f"Searching for recent articles with analysis")
-                recent_articles = self._search_recent_articles_enhanced(clean_name, domain)
+                logger.info(f"Searching for recent articles")
+                recent_articles = self._search_recent_articles(clean_name, domain)
                 if recent_articles:
                     result['recent_articles'] = recent_articles
                     result['articles_count'] = len(recent_articles)
-                    result['data_completeness']['has_recent_work'] = True
                     if not result['found']:
                         result['found'] = True
                         result['sources_checked'].append("Article search")
         except Exception as e:
             logger.error(f"Error searching recent articles: {e}")
         
-        # 6. Twitter/X search for real-time info
+        # 5. Extract education and awards - ALWAYS RUN
         try:
-            logger.info(f"Checking Twitter/X for author")
-            twitter_result = self._search_twitter_profile(clean_name, domain)
-            if twitter_result:
-                self._safe_merge_results(result, twitter_result)
-                if "Twitter/X" not in result['sources_checked']:
-                    result['sources_checked'].append("Twitter/X")
+            if result['found'] or domain:
+                logger.info(f"Extracting education and awards")
+                education_awards = self._extract_education_awards(clean_name, domain)
+                if education_awards:
+                    self._safe_merge_results(result, education_awards)
         except Exception as e:
-            logger.error(f"Error in Twitter search: {e}")
+            logger.error(f"Error extracting education/awards: {e}")
         
-        # 7. Awards and recognition search
-        try:
-            logger.info(f"Deep searching for awards and recognition")
-            awards_result = self._deep_awards_search(clean_name, domain)
-            if awards_result:
-                self._safe_merge_results(result, awards_result)
-                if awards_result.get('awards'):
-                    result['data_completeness']['has_awards'] = True
-        except Exception as e:
-            logger.error(f"Error searching awards: {e}")
+        # Calculate credibility score based on findings
+        result['credibility_score'] = self._calculate_credibility_score(result)
         
-        # Post-processing enhancements
-        
-        # Generate comprehensive bio if missing or thin
+        # Generate comprehensive bio if not found or too short
         if not result['bio'] or len(result['bio']) < 100:
-            result['bio'] = self._generate_comprehensive_bio_v2(result)
+            result['bio'] = self._generate_comprehensive_bio(result)
         
-        # Generate bio summary
-        result['bio_summary'] = self._generate_bio_summary(result)
+        # Generate credibility explanation
+        result['credibility_explanation'] = self._generate_credibility_explanation(result)
         
-        # Update data completeness
-        self._update_data_completeness(result)
-        
-        # Calculate credibility score with enhanced factors
-        result['credibility_score'] = self._calculate_credibility_score_v2(result)
-        
-        # Generate reputation analysis
-        result['reputation_analysis'] = self._analyze_reputation(result)
-        
-        # Generate enhanced credibility explanation
-        result['credibility_explanation'] = self._generate_credibility_explanation_v2(result)
-        
-        # Try to cache the enhanced result
+        # Try to cache the result if it's good
         try:
             from models import db, Author
             
@@ -272,101 +217,71 @@ class AuthorAnalyzer:
                     db.session.add(author)
                 else:
                     # Update existing with better data
-                    author.bio = result['bio']
-                    author.credibility_score = result['credibility_score']
-                    if result['professional_info']['outlets']:
-                        author.outlet = result['professional_info']['outlets'][0]
+                    if len(result['bio']) > len(author.bio or ''):
+                        author.bio = result['bio']
+                    author.credibility_score = max(author.credibility_score, result['credibility_score'])
                     if result['professional_info']['current_position']:
                         author.position = result['professional_info']['current_position']
+                    if result['professional_info']['outlets']:
+                        author.outlet = result['professional_info']['outlets'][0]
                 db.session.commit()
-                logger.info(f"Cached enhanced author data: {clean_name}")
+                logger.info(f"Cached/updated author: {clean_name}")
         except Exception as e:
             logger.debug(f"Could not cache author: {e}")
         
-        logger.info(f"Enhanced analysis complete for {clean_name}: Found={result['found']}, "
-                   f"Score={result['credibility_score']}, Bio length={len(result.get('bio', ''))}, "
-                   f"Sources={result['sources_checked']}")
+        logger.info(f"Analysis complete for {clean_name}: Found={result['found']}, Score={result['credibility_score']}, Bio length={len(result.get('bio', ''))}, Sources={result['sources_checked']}")
         
         return result
     
-    def _check_outlet_author_page_comprehensive_v2(self, author_name, domain):
-        """Enhanced outlet author page checker with better extraction"""
+    def _check_outlet_author_page_comprehensive(self, author_name, domain):
+        """Comprehensive outlet author page checker with aggressive extraction"""
         clean_domain = domain.replace('www.', '')
         author_slug = author_name.lower().replace(' ', '-')
         author_underscore = author_name.lower().replace(' ', '_')
-        author_dot = author_name.lower().replace(' ', '.')
         author_plus = author_name.lower().replace(' ', '+')
         author_no_space = author_name.lower().replace(' ', '')
         
-        # Even more comprehensive URL patterns
+        # Comprehensive URL patterns
         url_patterns = [
-            # Standard patterns
+            f"https://{domain}/{author_slug}/",
             f"https://{domain}/author/{author_slug}/",
             f"https://{domain}/authors/{author_slug}/",
             f"https://{domain}/journalist/{author_slug}/",
             f"https://{domain}/journalists/{author_slug}/",
             f"https://{domain}/reporter/{author_slug}/",
-            f"https://{domain}/reporters/{author_slug}/",
-            f"https://{domain}/writer/{author_slug}/",
-            f"https://{domain}/writers/{author_slug}/",
-            f"https://{domain}/contributor/{author_slug}/",
-            f"https://{domain}/contributors/{author_slug}/",
-            f"https://{domain}/columnist/{author_slug}/",
-            f"https://{domain}/columnists/{author_slug}/",
-            f"https://{domain}/correspondent/{author_slug}/",
-            f"https://{domain}/correspondents/{author_slug}/",
-            f"https://{domain}/editor/{author_slug}/",
-            f"https://{domain}/editors/{author_slug}/",
             f"https://{domain}/staff/{author_slug}/",
-            f"https://{domain}/team/{author_slug}/",
-            f"https://{domain}/people/{author_slug}/",
-            f"https://{domain}/person/{author_slug}/",
+            f"https://{domain}/contributors/{author_slug}/",
+            f"https://{domain}/by/{author_slug}/",
             f"https://{domain}/profile/{author_slug}/",
             f"https://{domain}/profiles/{author_slug}/",
-            f"https://{domain}/bio/{author_slug}/",
-            f"https://{domain}/bios/{author_slug}/",
-            f"https://{domain}/about/{author_slug}/",
-            f"https://{domain}/by/{author_slug}/",
-            f"https://{domain}/{author_slug}/",
+            f"https://{domain}/people/{author_slug}/",
+            f"https://{domain}/team/{author_slug}/",
+            f"https://{domain}/writer/{author_slug}/",
+            f"https://{domain}/columnist/{author_slug}/",
+            f"https://{domain}/editor/{author_slug}/",
+            f"https://{domain}/correspondent/{author_slug}/",
+            f"https://www.{clean_domain}/{author_slug}/",
+            f"https://www.{clean_domain}/author/{author_slug}/",
+            f"https://www.{clean_domain}/profile/{author_slug}/",
             # Underscore versions
             f"https://{domain}/author/{author_underscore}/",
             f"https://{domain}/authors/{author_underscore}/",
-            f"https://{domain}/profile/{author_underscore}/",
-            # Dot versions (e.g., firstname.lastname)
-            f"https://{domain}/author/{author_dot}/",
-            f"https://{domain}/profile/{author_dot}/",
-            # Plus versions
+            # Plus sign versions
             f"https://{domain}/author/{author_plus}/",
             # No space versions
             f"https://{domain}/author/{author_no_space}/",
-            # With www
-            f"https://www.{clean_domain}/author/{author_slug}/",
-            f"https://www.{clean_domain}/authors/{author_slug}/",
-            f"https://www.{clean_domain}/profile/{author_slug}/",
-            f"https://www.{clean_domain}/profiles/{author_slug}/",
-            f"https://www.{clean_domain}/{author_slug}/",
-            # Query string patterns
-            f"https://{domain}/author/?name={author_slug}",
-            f"https://{domain}/profile/?id={author_slug}",
-            f"https://{domain}/staff/?author={author_slug}",
-            # News-specific patterns
-            f"https://{domain}/news/author/{author_slug}/",
-            f"https://{domain}/opinion/author/{author_slug}/",
-            f"https://{domain}/sports/author/{author_slug}/",
-            # International variations
-            f"https://{domain}/en/author/{author_slug}/",
-            f"https://{domain}/us/author/{author_slug}/",
+            # ID-based patterns
+            f"https://{domain}/author/?id={author_slug}",
+            f"https://{domain}/profile/?name={author_slug}",
         ]
         
         for url in url_patterns:
             try:
-                response = self.session.get(url, timeout=8, allow_redirects=True)
+                response = self.session.get(url, timeout=5, allow_redirects=True)
                 if response.status_code == 200:
-                    # Enhanced parsing with more aggressive extraction
-                    result = self._parse_author_page_enhanced_v2(response.text, url, domain, author_name)
-                    if result and (result.get('found_author_page') or 
-                                 (result.get('bio') and len(result.get('bio', '')) > 100)):
-                        logger.info(f"Found author page at: {url}")
+                    # Parse and verify it's an author page
+                    result = self._parse_author_page_enhanced(response.text, url, domain, author_name)
+                    if result and (result.get('bio') or result.get('found_author_page')):
                         return result
             except Exception as e:
                 logger.debug(f"Failed to check {url}: {e}")
@@ -374,26 +289,20 @@ class AuthorAnalyzer:
         
         return None
     
-    def _parse_author_page_enhanced_v2(self, html, url, domain, author_name):
-        """Enhanced parser with aggressive biographical extraction"""
+    def _parse_author_page_enhanced(self, html, url, domain, author_name):
+        """Enhanced parser for author pages with maximum data extraction"""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
-            # More thorough page verification
-            page_text = soup.get_text()
-            page_text_lower = page_text.lower()
+            # Check if this is actually an author page
+            page_text = soup.get_text().lower()
             author_name_lower = author_name.lower()
             
-            # Check multiple indicators that this is an author page
-            author_indicators = [
-                author_name_lower in page_text_lower,
-                any(part.lower() in page_text_lower for part in author_name.split()),
-                'articles by' in page_text_lower,
-                'stories by' in page_text_lower,
-                'bio' in page_text_lower and len(page_text) > 500
-            ]
-            
-            if not any(author_indicators) or '404' in page_text or 'not found' in page_text_lower:
+            # Verify this is likely an author page
+            if (author_name_lower not in page_text and 
+                not any(word in author_name_lower.split() for word in page_text.split()) and
+                'page not found' not in page_text and 
+                '404' not in page_text):
                 return None
             
             result = {
@@ -409,128 +318,275 @@ class AuthorAnalyzer:
                 'found_author_page': True
             }
             
-            # 1. Enhanced JSON-LD extraction
+            # 1. Check JSON-LD structured data first
             scripts = soup.find_all('script', type='application/ld+json')
             for script in scripts:
                 try:
                     data = json.loads(script.string)
-                    self._extract_from_json_ld_enhanced_v2(data, author_name, result)
+                    self._extract_from_json_ld_enhanced(data, author_name, result)
                 except:
                     continue
             
-            # 2. Enhanced meta tag extraction
-            self._extract_from_meta_tags_enhanced_v2(soup, author_name, result)
+            # 2. Extract from meta tags
+            self._extract_from_meta_tags_enhanced(soup, author_name, result)
             
-            # 3. Aggressive image extraction
-            image_found = False
-            
-            # Try multiple strategies for finding author image
-            image_strategies = [
-                # Direct selectors
-                lambda: soup.select_one(f'img[alt*="{author_name}" i]'),
-                lambda: soup.select_one(f'img[title*="{author_name}" i]'),
-                lambda: soup.select_one('.author-image img, .author-photo img, .author-avatar img'),
-                lambda: soup.select_one('.bio-image img, .profile-image img, .headshot img'),
-                lambda: soup.select_one('[class*="author"] img, [id*="author"] img'),
-                lambda: soup.select_one('.contributor-photo img, .writer-image img'),
-                lambda: soup.select_one('figure img, .wp-block-image img'),
-                # Look in author info containers
-                lambda: self._find_image_near_name(soup, author_name),
-                # Check srcset for high-res images
-                lambda: soup.select_one('img[srcset]'),
-                # Schema.org image
-                lambda: soup.select_one('[itemprop="image"]')
+            # 3. Extract author image - try many methods
+            image_selectors = [
+                f'img[alt*="{author_name}"]',
+                '.author-image img', '.author-photo img', '.author-avatar img',
+                '.bio-image img', '.profile-image img', '.headshot img',
+                '[class*="author"] img', '[id*="author"] img',
+                '.contributor-photo img', '.writer-image img',
+                'figure img[src*="author"]', 'figure img[src*="profile"]',
+                '.staff-photo img', '.team-member img'
             ]
             
-            for strategy in image_strategies:
-                try:
-                    img = strategy()
-                    if img and img.get('src'):
-                        src = img['src']
-                        # Filter out common non-author images
-                        if not any(skip in src.lower() for skip in ['logo', 'icon', 'banner', 'ad', 'sprite']):
-                            result['image_url'] = self._make_absolute_url(src, domain)
-                            image_found = True
-                            result['data_completeness'] = {'has_photo': True}
-                            break
-                except:
-                    continue
-            
-            # 4. Super aggressive bio extraction
-            bio_text = None
-            bio_strategies = [
-                # Strategy 1: Look for bio containers
-                lambda: self._extract_from_bio_containers(soup, author_name),
-                # Strategy 2: Find paragraphs mentioning author with context
-                lambda: self._extract_bio_from_paragraphs(soup, author_name),
-                # Strategy 3: Extract from article schema
-                lambda: self._extract_bio_from_schema(soup, author_name),
-                # Strategy 4: Look for "about" sections
-                lambda: self._extract_from_about_section(soup, author_name),
-                # Strategy 5: Extract from author cards
-                lambda: self._extract_from_author_card(soup, author_name)
-            ]
-            
-            for strategy in bio_strategies:
-                try:
-                    bio = strategy()
-                    if bio and len(bio) > 50:
-                        bio_text = bio
+            for selector in image_selectors:
+                img = soup.select_one(selector)
+                if img and img.get('src'):
+                    src = img['src']
+                    if not any(skip in src.lower() for skip in ['logo', 'icon', 'default', 'placeholder']):
+                        result['image_url'] = self._make_absolute_url(src, domain)
                         break
-                except:
-                    continue
             
-            if bio_text:
-                result['bio'] = bio_text
-                result['data_completeness'] = result.get('data_completeness', {})
-                result['data_completeness']['has_bio'] = True
+            # 4. Enhanced bio extraction - BE AGGRESSIVE
+            bio_candidates = []
             
-            # 5. Extract comprehensive employment history
-            employment_history = self._extract_employment_history(soup, page_text, author_name)
-            if employment_history:
-                result['professional_info']['employment_history'] = employment_history
-                result['previous_positions'] = employment_history
+            # Method 1: Look for bio in common containers
+            bio_selectors = [
+                '[class*="bio"]', '[class*="Bio"]', '[class*="author-desc"]',
+                '[class*="author-info"]', '[class*="author-about"]',
+                '[class*="description"]', '[id*="bio"]', '[id*="Bio"]',
+                '.about', '.profile', '.author-details', '.contributor-bio',
+                '.writer-bio', '.journalist-bio', '.staff-bio',
+                '.author-content', '.author-text', '.profile-text'
+            ]
             
-            # 6. Enhanced education extraction
-            education_list = self._extract_education_comprehensive(soup, page_text)
-            if education_list:
-                result['education'] = education_list
-                result['data_completeness'] = result.get('data_completeness', {})
-                result['data_completeness']['has_education'] = True
+            for selector in bio_selectors:
+                elements = soup.select(selector)
+                for elem in elements:
+                    text = elem.get_text(separator=' ', strip=True)
+                    if len(text) > 50:
+                        bio_candidates.append(text)
             
-            # 7. Enhanced awards extraction
-            awards = self._extract_awards_comprehensive(soup, page_text)
+            # Method 2: Find paragraphs that mention the author with context
+            for p in soup.find_all(['p', 'div']):
+                text = p.get_text(strip=True)
+                if (len(text) > 50 and len(text) < 1000 and
+                    any(name_part.lower() in text.lower() for name_part in author_name.split()) and
+                    any(keyword in text.lower() for keyword in 
+                        ['is a', 'journalist', 'reporter', 'correspondent', 'writer', 
+                         'covers', 'reports', 'joined', 'experience', 'previously',
+                         'graduated', 'award', 'specializ', 'based in', 'has been'])):
+                    bio_candidates.append(text)
+            
+            # Select the best bio (longest comprehensive one)
+            if bio_candidates:
+                # Filter out navigation/UI text
+                good_bios = [b for b in bio_candidates if not any(skip in b.lower() 
+                            for skip in ['click here', 'read more', 'follow us', 'subscribe', 'navigation'])]
+                if good_bios:
+                    result['bio'] = max(good_bios, key=len)
+                else:
+                    result['bio'] = max(bio_candidates, key=len)
+            
+            # 5. Extract title/position
+            title_patterns = [
+                rf"{author_name}\s*,\s*([^,\.\n]+)",
+                rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^\.\n]+?)(?:\s+at\s+|$)",
+                rf"(?:by|By)\s+{author_name}\s*,\s*([^,\.\n]+)",
+            ]
+            
+            page_text_full = str(soup)
+            for pattern in title_patterns:
+                match = re.search(pattern, page_text_full, re.IGNORECASE | re.DOTALL)
+                if match:
+                    title = match.group(1).strip()
+                    title = re.sub(r'<[^>]+>', '', title)  # Remove HTML tags
+                    if len(title) < 100 and self._is_valid_position(title):
+                        result.setdefault('professional_info', {})['current_position'] = title
+                        break
+            
+            # 6. Extract social media links
+            social_patterns = {
+                'twitter': [r'twitter\.com/(@?\w+)', r'x\.com/(@?\w+)'],
+                'linkedin': [r'linkedin\.com/in/([\w-]+)'],
+                'facebook': [r'facebook\.com/([\w\.]+)'],
+                'instagram': [r'instagram\.com/([\w\.]+)'],
+                'youtube': [r'youtube\.com/(@?[\w-]+)'],
+                'substack': [r'(\w+)\.substack\.com'],
+                'medium': [r'medium\.com/@([\w-]+)']
+            }
+            
+            links = soup.find_all('a', href=True)
+            for link in links:
+                href = link['href'].lower()
+                
+                for platform, patterns in social_patterns.items():
+                    for pattern in patterns:
+                        match = re.search(pattern, href)
+                        if match:
+                            username = match.group(1).replace('@', '')
+                            if username not in ['share', 'intent', 'home', 'search', 'about']:
+                                result.setdefault('online_presence', {})[platform] = username
+                                break
+                
+                # Email
+                if href.startswith('mailto:'):
+                    email = href.replace('mailto:', '').split('?')[0]
+                    if '@' in email:
+                        result.setdefault('online_presence', {})['email'] = email
+            
+            # 7. Extract education
+            education_patterns = [
+                r'(?:graduated from|alumnus of|attended)\s+([^,\.\n]+(?:University|College)[^,\.\n]*)',
+                r'(?:holds?|earned?|received?)\s+(?:a|an|his|her)\s+([^,\.\n]+)\s+(?:from|at)\s+([^,\.\n]+)',
+                r'(?:B\.A\.|B\.S\.|M\.A\.|M\.S\.|Ph\.D\.|Bachelor|Master|Doctor)[^,\.\n]*\s+(?:from|at)\s+([^,\.\n]+)'
+            ]
+            
+            for pattern in education_patterns:
+                match = re.search(pattern, page_text_full, re.IGNORECASE)
+                if match:
+                    if len(match.groups()) > 1:
+                        result['education'] = f"{match.group(1)} from {match.group(2)}"
+                    else:
+                        result['education'] = match.group(1)
+                    break
+            
+            # 8. Extract awards
+            award_patterns = [
+                r'(?:won|received|awarded|recipient of)\s+(?:the\s+)?([^,\.\n]+?(?:Award|Prize|Honor)[^,\.\n]*)',
+                r'([^,\.\n]+?(?:Award|Prize|Honor)[^,\.\n]*)\s+(?:winner|recipient)',
+            ]
+            
+            awards = []
+            for pattern in award_patterns:
+                matches = re.findall(pattern, page_text_full, re.IGNORECASE)
+                for match in matches:
+                    award = match.strip()
+                    if len(award) < 100 and award not in awards:
+                        awards.append(award)
+            
             if awards:
-                result['awards'] = awards
-                result['data_completeness'] = result.get('data_completeness', {})
-                result['data_completeness']['has_awards'] = True
+                result['awards'] = awards[:10]
             
-            # 8. Extract social media with verification
-            social_media = self._extract_social_media_comprehensive(soup, author_name)
-            if social_media:
-                result['online_presence'].update(social_media)
-                result['data_completeness'] = result.get('data_completeness', {})
-                result['data_completeness']['has_social_media'] = True
+            # 9. Extract previous positions
+            prev_patterns = [
+                r'(?:previously|formerly|former|prior to)\s+(?:was\s+)?(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at\s+([^,\.\n]+))?',
+                r'(?:worked as|served as)\s+(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at\s+([^,\.\n]+))?',
+            ]
             
-            # 9. Extract recent articles with metadata
-            recent_articles = self._extract_recent_articles_from_page(soup, domain)
+            previous_positions = []
+            for pattern in prev_patterns:
+                matches = re.findall(pattern, page_text_full, re.IGNORECASE)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        position = match[0].strip()
+                        outlet = match[1].strip() if len(match) > 1 and match[1] else None
+                    else:
+                        position = match.strip()
+                        outlet = None
+                    
+                    if self._is_valid_position(position):
+                        pos_entry = {'title': position}
+                        if outlet and self._is_valid_outlet(outlet):
+                            pos_entry['outlet'] = outlet
+                        if pos_entry not in previous_positions:
+                            previous_positions.append(pos_entry)
+            
+            if previous_positions:
+                result['previous_positions'] = previous_positions[:5]
+            
+            # 10. Extract recent articles
+            article_selectors = [
+                '.author-articles article', '.articles-list article',
+                '[class*="article-item"]', '[class*="post-item"]',
+                '.author-posts .post', '.stories article',
+                '.latest-articles article', '.recent-posts article'
+            ]
+            
+            recent_articles = []
+            for selector in article_selectors:
+                articles = soup.select(selector)[:10]
+                for article in articles:
+                    title_elem = article.find(['h2', 'h3', 'h4', 'a'])
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        link = article.find('a', href=True)
+                        
+                        article_data = {'title': title}
+                        if link:
+                            article_data['url'] = self._make_absolute_url(link['href'], domain)
+                        
+                        # Try to find date
+                        date_elem = article.find(['time', '.date', '.publish-date'])
+                        if date_elem:
+                            date_text = date_elem.get('datetime') or date_elem.get_text(strip=True)
+                            article_data['date'] = date_text
+                        
+                        recent_articles.append(article_data)
+            
             if recent_articles:
-                result['recent_articles'] = recent_articles
-                result['articles_count'] = len(recent_articles)
+                result['recent_articles'] = recent_articles[:5]
             
-            # 10. Extract expertise and beat
-            expertise = self._extract_expertise_comprehensive(soup, page_text)
-            if expertise:
-                result['professional_info']['expertise_areas'] = expertise
+            # 11. Extract years of experience
+            experience_patterns = [
+                r'(\d+)\+?\s*years?\s+(?:of\s+)?(?:experience|journalism|reporting)',
+                r'(?:experience|journalism|reporting)\s+(?:of\s+)?(\d+)\+?\s*years?',
+                r'(?:for|over|nearly)\s+(\d+)\+?\s*years?'
+            ]
             
-            # 11. Extract years of experience more aggressively
-            years_exp = self._extract_years_experience(page_text)
-            if years_exp:
-                result['professional_info']['years_experience'] = years_exp
+            for pattern in experience_patterns:
+                match = re.search(pattern, page_text_full, re.IGNORECASE)
+                if match:
+                    years = int(match.group(1))
+                    if 1 <= years <= 50:
+                        result.setdefault('professional_info', {})['years_experience'] = years
+                        break
             
-            # 12. Check for corrections/retractions
-            if re.search(r'\b(correction|retraction|corrected|error|mistake)\b', page_text_lower):
+            # 12. Extract expertise areas
+            expertise_patterns = [
+                r'(?:covers?|reports? on|writes? about|specializes? in|focuses? on)\s+([^,\.\n]+)',
+                r'(?:beat|expertise|specialty):\s*([^,\.\n]+)',
+            ]
+            
+            expertise_areas = []
+            for pattern in expertise_patterns:
+                matches = re.findall(pattern, page_text_full, re.IGNORECASE)
+                for match in matches:
+                    areas = match.strip()
+                    # Split by common delimiters
+                    for delimiter in [',', ';', ' and ', ' & ']:
+                        if delimiter in areas:
+                            for area in areas.split(delimiter):
+                                area = area.strip()
+                                if len(area) > 2 and len(area) < 50 and area not in expertise_areas:
+                                    expertise_areas.append(area)
+                            break
+                    else:
+                        if len(areas) > 2 and len(areas) < 50 and areas not in expertise_areas:
+                            expertise_areas.append(areas)
+            
+            if expertise_areas:
+                result.setdefault('professional_info', {})['expertise_areas'] = expertise_areas[:5]
+            
+            # 13. Check for issues/corrections
+            if any(phrase in page_text.lower() for phrase in ['correction', 'retraction', 'corrected', 'updated']):
                 result['issues_corrections'] = True
+            
+            # 14. Extract article count
+            count_patterns = [
+                r'(\d+)\+?\s*(?:articles?|stories?|posts?)',
+                r'(?:written|published|authored)\s+(?:over\s+)?(\d+)\+?\s*(?:articles?|stories?)',
+            ]
+            
+            for pattern in count_patterns:
+                match = re.search(pattern, page_text_full, re.IGNORECASE)
+                if match:
+                    count = int(match.group(1))
+                    if count > 0 and count < 10000:
+                        result['articles_count'] = count
+                        break
             
             return result
             
@@ -538,1627 +594,866 @@ class AuthorAnalyzer:
             logger.error(f"Error parsing author page: {e}")
             return None
     
-    def _find_image_near_name(self, soup, author_name):
-        """Find image near author name mention"""
-        # Find text containing author name
-        for element in soup.find_all(text=re.compile(author_name, re.I)):
-            parent = element.parent
-            # Look up to 3 levels up for images
-            for _ in range(3):
-                if parent:
-                    img = parent.find('img')
-                    if img and img.get('src'):
-                        return img
-                    parent = parent.parent
-        return None
-    
-    def _extract_from_bio_containers(self, soup, author_name):
-        """Extract bio from common bio containers"""
-        bio_selectors = [
-            '.author-bio', '.bio', '.biography', '.author-description',
-            '.author-info', '.author-about', '.profile-bio', '.staff-bio',
-            '.journalist-bio', '.writer-bio', '.contributor-bio',
-            '[class*="bio"]', '[id*="bio"]', '[class*="description"]',
-            '.about-author', '.author-details', '.author-content'
-        ]
-        
-        for selector in bio_selectors:
-            elements = soup.select(selector)
-            for elem in elements:
-                text = elem.get_text(separator=' ', strip=True)
-                # Must be substantial and mention author or be in author context
-                if len(text) > 100 and (author_name.lower() in text.lower() or 
-                                       any(word in text.lower() for word in ['journalist', 'reporter', 'writer', 'correspondent'])):
-                    return self._clean_bio_text(text)
-        return None
-    
-    def _extract_bio_from_paragraphs(self, soup, author_name):
-        """Extract bio from paragraphs with context"""
-        bio_candidates = []
-        
-        # Patterns that indicate biographical content
-        bio_patterns = [
-            rf'{author_name}\s+is\s+(?:a|an|the)\s+',
-            rf'{author_name}.*?(?:journalist|reporter|writer|correspondent|editor|columnist)',
-            rf'(?:is|are|was|has been)\s+.*?{author_name}',
-            rf'{author_name}.*?(?:covers?|writes?|reports?|specializes?)',
-            rf'{author_name}.*?(?:joined|graduated|worked|previously)',
-        ]
-        
-        for p in soup.find_all(['p', 'div']):
-            text = p.get_text(separator=' ', strip=True)
-            if len(text) < 50 or len(text) > 1000:
-                continue
-            
-            # Check if paragraph matches bio patterns
-            for pattern in bio_patterns:
-                if re.search(pattern, text, re.I):
-                    bio_candidates.append((text, len(text)))
-                    break
-        
-        # Return the longest matching bio
-        if bio_candidates:
-            bio_candidates.sort(key=lambda x: x[1], reverse=True)
-            return self._clean_bio_text(bio_candidates[0][0])
-        
-        return None
-    
-    def _extract_bio_from_schema(self, soup, author_name):
-        """Extract bio from schema markup"""
-        # Check for Person schema
-        for elem in soup.find_all(attrs={'itemtype': re.compile('schema.org/Person', re.I)}):
-            name_elem = elem.find(attrs={'itemprop': 'name'})
-            if name_elem and author_name.lower() in name_elem.get_text().lower():
-                desc_elem = elem.find(attrs={'itemprop': 'description'})
-                if desc_elem:
-                    return self._clean_bio_text(desc_elem.get_text(strip=True))
-        return None
-    
-    def _extract_from_about_section(self, soup, author_name):
-        """Extract from about sections"""
-        about_headers = soup.find_all(['h1', 'h2', 'h3', 'h4'], text=re.compile(r'about|bio', re.I))
-        
-        for header in about_headers:
-            # Get the next few siblings
-            content = []
-            sibling = header.find_next_sibling()
-            for _ in range(5):  # Check next 5 elements
-                if sibling:
-                    text = sibling.get_text(strip=True)
-                    if text:
-                        content.append(text)
-                    sibling = sibling.find_next_sibling()
-            
-            full_content = ' '.join(content)
-            if author_name.lower() in full_content.lower() and len(full_content) > 100:
-                return self._clean_bio_text(full_content)
-        
-        return None
-    
-    def _extract_from_author_card(self, soup, author_name):
-        """Extract from author cards or boxes"""
-        # Look for author cards
-        author_cards = soup.find_all(['div', 'section', 'article'], 
-                                   class_=re.compile(r'author|writer|contributor|staff', re.I))
-        
-        for card in author_cards:
-            # Check if this card is about our author
-            card_text = card.get_text()
-            if author_name.lower() in card_text.lower():
-                # Extract all paragraph-like content
-                texts = []
-                for elem in card.find_all(['p', 'div', 'span']):
-                    text = elem.get_text(strip=True)
-                    if len(text) > 30:
-                        texts.append(text)
-                
-                if texts:
-                    combined = ' '.join(texts)
-                    if len(combined) > 100:
-                        return self._clean_bio_text(combined)
-        
-        return None
-    
-    def _extract_employment_history(self, soup, page_text, author_name):
-        """Extract comprehensive employment history"""
-        employment_history = []
-        
-        # Patterns for current and past positions
-        patterns = [
-            # Current position patterns
-            (r'(?:currently|now)\s+(?:is|serves as|works as)\s+(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at|for|with)\s+([^,\.\n]+)', True),
-            (r'(?:is|serves as)\s+(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at|for|with)\s+([^,\.\n]+)', True),
-            # Previous position patterns  
-            (r'(?:previously|formerly|former)\s+(?:was|served as|worked as)\s+(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at|for|with)\s+([^,\.\n]+)', False),
-            (r'(?:before|prior to).*?(?:was|served as)\s+(?:a|an|the)?\s*([^,\.\n]+?)(?:\s+at|for|with)\s+([^,\.\n]+)', False),
-            # Work history patterns
-            (r'(?:worked|served|was)\s+(?:as|at)\s+([^,\.\n]+?)(?:\s+at|for|with)\s+([^,\.\n]+)', False),
-            # Date-based patterns
-            (r'(\d{4})\s*[-–]\s*(\d{4}|present):\s*([^,\.\n]+?)(?:\s+at|for|,)\s+([^,\.\n]+)', False),
-            (r'(?:from|between)\s+(\d{4})\s+(?:to|and)\s+(\d{4})\s*(?:,|:)?\s*([^,\.\n]+)', False),
-        ]
-        
-        for pattern, is_current in patterns:
-            matches = re.findall(pattern, page_text, re.I | re.MULTILINE)
-            for match in matches:
-                position_info = self._parse_employment_match(match, is_current)
-                if position_info and position_info not in employment_history:
-                    employment_history.append(position_info)
-        
-        # Look for timeline/career sections
-        timeline_sections = soup.find_all(['ul', 'ol', 'div'], class_=re.compile(r'timeline|career|history|experience', re.I))
-        for section in timeline_sections:
-            items = section.find_all(['li', 'div', 'p'])
-            for item in items:
-                text = item.get_text(strip=True)
-                position_info = self._parse_timeline_item(text)
-                if position_info and position_info not in employment_history:
-                    employment_history.append(position_info)
-        
-        # Sort by dates if available
-        employment_history.sort(key=lambda x: x.get('start_year', 0), reverse=True)
-        
-        return employment_history[:10]  # Limit to 10 positions
-    
-    def _parse_employment_match(self, match, is_current):
-        """Parse employment pattern match into structured data"""
-        try:
-            if len(match) >= 2:
-                # Handle different match formats
-                if isinstance(match[0], str) and match[0].isdigit():  # Date-based format
-                    start_year = match[0]
-                    end_year = match[1] if match[1] != 'present' else 'Present'
-                    position = match[2].strip() if len(match) > 2 else ''
-                    company = match[3].strip() if len(match) > 3 else ''
-                else:  # Standard format
-                    position = match[0].strip()
-                    company = match[1].strip() if len(match) > 1 else ''
-                    start_year = None
-                    end_year = 'Present' if is_current else None
-                
-                # Validate
-                if position and len(position) < 100 and self._is_valid_position(position):
-                    info = {
-                        'title': position,
-                        'company': company if self._is_valid_outlet(company) else None,
-                        'current': is_current
-                    }
-                    if start_year:
-                        info['start_year'] = start_year
-                    if end_year:
-                        info['end_year'] = end_year
-                    
-                    return info
-        except:
-            pass
-        return None
-    
-    def _parse_timeline_item(self, text):
-        """Parse timeline item into employment info"""
-        # Look for year ranges and positions
-        year_pattern = r'(\d{4})\s*[-–]\s*(\d{4}|present|current)'
-        year_match = re.search(year_pattern, text, re.I)
-        
-        if year_match:
-            # Extract position and company from remaining text
-            remaining_text = text.replace(year_match.group(0), '').strip()
-            
-            # Common patterns in timeline items
-            if ':' in remaining_text:
-                parts = remaining_text.split(':', 1)
-                position = parts[0].strip()
-                company = parts[1].strip() if len(parts) > 1 else None
-            elif ' at ' in remaining_text.lower():
-                parts = re.split(r'\s+at\s+', remaining_text, flags=re.I)
-                position = parts[0].strip()
-                company = parts[1].strip() if len(parts) > 1 else None
-            elif ',' in remaining_text:
-                parts = remaining_text.split(',', 1)
-                position = parts[0].strip()
-                company = parts[1].strip() if len(parts) > 1 else None
-            else:
-                position = remaining_text
-                company = None
-            
-            if position and self._is_valid_position(position):
-                return {
-                    'title': position,
-                    'company': company if company and self._is_valid_outlet(company) else None,
-                    'start_year': year_match.group(1),
-                    'end_year': year_match.group(2).capitalize(),
-                    'current': year_match.group(2).lower() in ['present', 'current']
-                }
-        
-        return None
-    
-    def _extract_education_comprehensive(self, soup, page_text):
-        """Extract all education information"""
-        education_list = []
-        
-        # Comprehensive education patterns
-        patterns = [
-            r'(?:graduated|graduated from|alumnus of|attended)\s+([^,\.\n]+(?:University|College|Institute|School)[^,\.\n]*)',
-            r'(?:holds?|earned?|received?)\s+(?:a|an|his|her|their)?\s*([^\.\n]+?)\s+(?:from|at)\s+([^,\.\n]+)',
-            r'(B\.?A\.?|B\.?S\.?|M\.?A\.?|M\.?S\.?|M\.?B\.?A\.?|Ph\.?D\.?|J\.?D\.?|M\.?D\.?)[^,\.\n]*\s+(?:from|at|,)\s+([^,\.\n]+)',
-            r'(?:Bachelor|Master|Doctor|Doctorate)\s+(?:of|in)\s+([^,\.\n]+)\s+(?:from|at)\s+([^,\.\n]+)',
-            r'studied\s+([^,\.\n]+)\s+at\s+([^,\.\n]+(?:University|College)[^,\.\n]*)',
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, page_text, re.I)
-            for match in matches:
-                edu_info = self._parse_education_match(match)
-                if edu_info and edu_info not in education_list:
-                    education_list.append(edu_info)
-        
-        # Look for education sections
-        edu_sections = soup.find_all(['div', 'section'], class_=re.compile(r'education|academic|qualification', re.I))
-        for section in edu_sections:
-            items = section.find_all(['li', 'p', 'div'])
-            for item in items:
-                text = item.get_text(strip=True)
-                edu_info = self._parse_education_text(text)
-                if edu_info and edu_info not in education_list:
-                    education_list.append(edu_info)
-        
-        return education_list[:5]  # Limit to 5 entries
-    
-    def _parse_education_match(self, match):
-        """Parse education pattern match"""
-        try:
-            if len(match) == 2:
-                # Could be (degree, school) or (field, school)
-                if any(deg in match[0].upper() for deg in ['B.A', 'B.S', 'M.A', 'M.S', 'MBA', 'PHD', 'J.D', 'M.D']):
-                    return {
-                        'degree': match[0].strip(),
-                        'institution': match[1].strip()
-                    }
-                else:
-                    return {
-                        'field': match[0].strip(),
-                        'institution': match[1].strip()
-                    }
-            elif len(match) == 1:
-                # Just institution
-                return {'institution': match[0].strip()}
-        except:
-            pass
-        return None
-    
-    def _parse_education_text(self, text):
-        """Parse education from text"""
-        # Look for degree abbreviations
-        degree_match = re.search(r'(B\.?A\.?|B\.?S\.?|M\.?A\.?|M\.?S\.?|M\.?B\.?A\.?|Ph\.?D\.?|J\.?D\.?|M\.?D\.?)', text, re.I)
-        
-        # Look for institutions
-        inst_match = re.search(r'([A-Z][^,\.\n]+(?:University|College|Institute|School)[^,\.\n]*)', text)
-        
-        if degree_match or inst_match:
-            edu_info = {}
-            if degree_match:
-                edu_info['degree'] = degree_match.group(1)
-            if inst_match:
-                edu_info['institution'] = inst_match.group(1)
-            
-            # Try to find field of study
-            field_patterns = [
-                r'in\s+([A-Z][^,\.\n]+?)(?:\s+from|\s+at|$)',
-                r'(?:studied|majored in)\s+([^,\.\n]+)',
-            ]
-            for pattern in field_patterns:
-                field_match = re.search(pattern, text, re.I)
-                if field_match:
-                    edu_info['field'] = field_match.group(1).strip()
-                    break
-            
-            return edu_info if edu_info else None
-        
-        return None
-    
-    def _extract_awards_comprehensive(self, soup, page_text):
-        """Extract all awards and honors"""
-        awards = []
-        
-        # Award patterns
-        patterns = [
-            r'(?:won|received|awarded|recipient of|winner of)\s+(?:the\s+)?([^,\.\n]+?(?:Award|Prize|Honor|Medal|Recognition|Fellowship)[^,\.\n]*)',
-            r'([^,\.\n]+?(?:Award|Prize|Honor|Medal|Recognition|Fellowship)[^,\.\n]*)\s+(?:winner|recipient|laureate)',
-            r'(?:honored with|recognized with)\s+(?:the\s+)?([^,\.\n]+)',
-            r'(\d{4})\s+([^,\.\n]+?(?:Award|Prize|Honor|Medal))',
-            r'(?:finalist|nominee|shortlisted)\s+(?:for\s+)?(?:the\s+)?([^,\.\n]+?(?:Award|Prize))',
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, page_text, re.I)
-            for match in matches:
-                award_text = match[-1] if isinstance(match, tuple) else match
-                award_text = award_text.strip()
-                
-                # Clean up award text
-                if len(award_text) < 150 and award_text not in awards:
-                    # Try to extract year if in match
-                    year = None
-                    if isinstance(match, tuple) and len(match) > 1 and match[0].isdigit():
-                        year = match[0]
-                    
-                    award_info = {'name': award_text}
-                    if year:
-                        award_info['year'] = year
-                    
-                    awards.append(award_info)
-        
-        # Look for awards sections
-        award_sections = soup.find_all(['div', 'section', 'ul'], 
-                                     class_=re.compile(r'award|honor|recognition|achievement', re.I))
-        for section in award_sections:
-            items = section.find_all(['li', 'p', 'div'])
-            for item in items:
-                text = item.get_text(strip=True)
-                if any(keyword in text.lower() for keyword in ['award', 'prize', 'honor', 'medal', 'recognition']):
-                    if text not in [a.get('name') if isinstance(a, dict) else a for a in awards]:
-                        awards.append({'name': text})
-        
-        # Deduplicate and limit
-        unique_awards = []
-        seen = set()
-        for award in awards:
-            name = award.get('name') if isinstance(award, dict) else award
-            if name not in seen:
-                seen.add(name)
-                unique_awards.append(award)
-        
-        return unique_awards[:15]  # Limit to 15 awards
-    
-    def _extract_social_media_comprehensive(self, soup, author_name):
-        """Extract all social media profiles with verification"""
-        social_media = {}
-        
-        # Platform patterns with multiple URL formats
-        platform_patterns = {
-            'twitter': [
-                r'(?:twitter\.com|x\.com)/(@?[\w\-]+)',
-                r'@([\w\-]+)(?:\s|$|<)',  # Twitter handle
-            ],
-            'linkedin': [
-                r'linkedin\.com/in/([\w\-]+)',
-                r'linkedin\.com/pub/([\w\-]+)',
-                r'linkedin\.com/profile/view\?id=([\w\-]+)',
-            ],
-            'facebook': [
-                r'facebook\.com/([\w\.\-]+)',
-                r'fb\.com/([\w\.\-]+)',
-            ],
-            'instagram': [
-                r'instagram\.com/([\w\.\-]+)',
-                r'instagr\.am/([\w\.\-]+)',
-            ],
-            'youtube': [
-                r'youtube\.com/(?:c/|channel/|user/|@)([\w\-]+)',
-                r'youtube\.com/([\w\-]+)',
-            ],
-            'substack': [
-                r'([\w\-]+)\.substack\.com',
-                r'substack\.com/@([\w\-]+)',
-            ],
-            'medium': [
-                r'medium\.com/@([\w\-]+)',
-                r'([\w\-]+)\.medium\.com',
-            ],
-            'tiktok': [
-                r'tiktok\.com/@([\w\.\-]+)',
-            ],
-            'threads': [
-                r'threads\.net/@([\w\.\-]+)',
-            ]
-        }
-        
-        # First, check all links
-        all_links = soup.find_all('a', href=True)
-        for link in all_links:
-            href = link['href'].lower()
-            link_text = link.get_text(strip=True).lower()
-            
-            # Check each platform
-            for platform, patterns in platform_patterns.items():
-                if platform not in social_media:  # Only if not already found
-                    for pattern in patterns:
-                        match = re.search(pattern, href)
-                        if match:
-                            username = match.group(1).replace('@', '')
-                            # Validate username
-                            if self._is_valid_social_username(username, platform):
-                                # Extra verification for author association
-                                if (author_name.lower() in href or 
-                                    author_name.lower() in link_text or
-                                    username.lower() in author_name.lower().replace(' ', '') or
-                                    self._is_author_social_profile(link, author_name)):
-                                    social_media[platform] = username
-                                    break
-            
-            # Email
-            if 'mailto:' in href and 'email' not in social_media:
-                email = href.replace('mailto:', '').split('?')[0]
-                if '@' in email and self._is_valid_email(email):
-                    social_media['email'] = email
-            
-            # Personal website
-            if 'personal_website' not in social_media:
-                if any(indicator in link_text for indicator in ['website', 'homepage', 'blog', author_name.lower()]):
-                    if not any(social in href for social in ['twitter', 'facebook', 'linkedin', 'instagram']):
-                        social_media['personal_website'] = href
-        
-        # Also check for Twitter handles in text
-        if 'twitter' not in social_media:
-            twitter_pattern = r'(?:follow|twitter|tweet).*?@([\w\-]+)'
-            twitter_match = re.search(twitter_pattern, soup.get_text(), re.I)
-            if twitter_match:
-                username = twitter_match.group(1)
-                if self._is_valid_social_username(username, 'twitter'):
-                    social_media['twitter'] = username
-        
-        return social_media
-    
-    def _is_valid_social_username(self, username, platform):
-        """Validate social media username"""
-        if not username or len(username) < 2:
-            return False
-        
-        # Filter out common non-usernames
-        invalid_usernames = ['share', 'intent', 'home', 'search', 'about', 'help', 
-                            'login', 'signup', 'explore', 'discover', 'settings']
-        
-        if username.lower() in invalid_usernames:
-            return False
-        
-        # Platform-specific validation
-        if platform == 'twitter':
-            return len(username) <= 15 and username.replace('_', '').isalnum()
-        elif platform == 'linkedin':
-            return len(username) <= 100
-        elif platform == 'instagram':
-            return len(username) <= 30 and username.replace('_', '').replace('.', '').isalnum()
-        
-        return True
-    
-    def _is_author_social_profile(self, link_element, author_name):
-        """Check if social link is likely for this author"""
-        # Check surrounding text
-        parent = link_element.parent
-        if parent:
-            parent_text = parent.get_text().lower()
-            author_parts = author_name.lower().split()
-            return any(part in parent_text for part in author_parts)
-        return False
-    
-    def _is_valid_email(self, email):
-        """Validate email address"""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return re.match(pattern, email) is not None
-    
-    def _extract_recent_articles_from_page(self, soup, domain):
-        """Extract recent articles from author page"""
-        articles = []
-        
-        # Multiple strategies for finding articles
-        article_selectors = [
-            'article', '.article', '.post', '.story',
-            '[class*="article-item"]', '[class*="post-item"]',
-            '.author-articles article', '.articles-list article',
-            '.author-posts .post', '.stories article',
-            '.latest-articles article', '.recent-posts article',
-            '.entry', '.content-item', '.news-item'
-        ]
-        
-        article_elements = []
-        for selector in article_selectors:
-            article_elements.extend(soup.select(selector)[:20])
-        
-        # Deduplicate
-        seen_titles = set()
-        
-        for article in article_elements:
-            # Extract title
-            title_elem = article.find(['h1', 'h2', 'h3', 'h4', 'h5', 'a'])
-            if not title_elem:
-                continue
-            
-            title = title_elem.get_text(strip=True)
-            if not title or title in seen_titles or len(title) < 10:
-                continue
-            
-            seen_titles.add(title)
-            
-            article_data = {
-                'title': title[:200]  # Limit title length
-            }
-            
-            # Extract URL
-            link = article.find('a', href=True)
-            if link:
-                article_data['url'] = self._make_absolute_url(link['href'], domain)
-            
-            # Extract date
-            date_elem = article.find(['time', '.date', '.publish-date', '[class*="date"]'])
-            if date_elem:
-                if date_elem.get('datetime'):
-                    article_data['date'] = date_elem['datetime']
-                else:
-                    date_text = date_elem.get_text(strip=True)
-                    article_data['date'] = self._parse_date(date_text)
-            
-            # Extract excerpt
-            excerpt_elem = article.find(['p', '.excerpt', '.summary', '.description'])
-            if excerpt_elem:
-                article_data['excerpt'] = excerpt_elem.get_text(strip=True)[:300]
-            
-            articles.append(article_data)
-            
-            if len(articles) >= 10:
-                break
-        
-        return articles
-    
-    def _extract_expertise_comprehensive(self, soup, page_text):
-        """Extract areas of expertise"""
-        expertise_areas = []
-        
-        # Expertise patterns
-        patterns = [
-            r'(?:covers?|reports? on|writes? about|specializes? in|focuses? on)\s+([^,\.\n]+)',
-            r'(?:beat|expertise|specialty|areas?)(?:\s*:)?\s*([^,\.\n]+)',
-            r'(?:expert in|experienced in|knowledge of)\s+([^,\.\n]+)',
-            r'(?:topics?|subjects?|areas?)(?:\s+include)?\s*:?\s*([^,\.\n]+)',
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, page_text, re.I)
-            for match in matches:
-                # Split by common delimiters
-                areas = re.split(r'[,;]|\s+and\s+|\s+&\s+', match)
-                for area in areas:
-                    area = area.strip()
-                    if 3 < len(area) < 50 and area not in expertise_areas:
-                        expertise_areas.append(area)
-        
-        # Look for expertise sections
-        expertise_sections = soup.find_all(['div', 'ul'], 
-                                         class_=re.compile(r'expertise|specialty|beat|topic', re.I))
-        for section in expertise_sections:
-            items = section.find_all(['li', 'span', 'p'])
-            for item in items:
-                text = item.get_text(strip=True)
-                if 3 < len(text) < 50 and text not in expertise_areas:
-                    expertise_areas.append(text)
-        
-        # Clean and deduplicate
-        cleaned_expertise = []
-        for area in expertise_areas:
-            # Remove common non-expertise phrases
-            if not any(skip in area.lower() for skip in ['click', 'read more', 'see all', 'view']):
-                cleaned_expertise.append(area)
-        
-        return cleaned_expertise[:10]
-    
-    def _extract_years_experience(self, text):
-        """Extract years of experience"""
-        patterns = [
-            r'(\d+)\+?\s*years?\s+(?:of\s+)?(?:experience|journalism|reporting|writing)',
-            r'(?:experience|journalism|reporting|career)\s+(?:of\s+)?(\d+)\+?\s*years?',
-            r'(?:for|over|nearly|almost|about)\s+(\d+)\+?\s*years?',
-            r'(\d+)\+?\s*-?\s*year\s+(?:veteran|journalist|reporter|career)',
-            r'(?:since|from)\s+(\d{4})',  # Calculate from start year
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, text, re.I)
-            if match:
-                if pattern.endswith('(\\d{4})'):  # Start year pattern
-                    start_year = int(match.group(1))
-                    current_year = datetime.now().year
-                    years = current_year - start_year
-                    if 1 <= years <= 60:
-                        return years
-                else:
-                    years = int(match.group(1))
-                    if 1 <= years <= 60:  # Reasonable range
-                        return years
-        
-        return None
-    
-    def _parse_date(self, date_text):
-        """Parse various date formats"""
-        if not date_text:
-            return None
-        
-        # Try common date patterns
-        date_patterns = [
-            r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',  # MM/DD/YYYY or MM-DD-YYYY
-            r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})',  # YYYY-MM-DD
-            r'(\w+)\s+(\d{1,2}),?\s+(\d{4})',  # Month DD, YYYY
-            r'(\d{1,2})\s+(\w+)\s+(\d{4})',  # DD Month YYYY
-        ]
-        
-        for pattern in date_patterns:
-            match = re.search(pattern, date_text)
-            if match:
-                return date_text  # Return original format
-        
-        # Check relative dates
-        if any(rel in date_text.lower() for rel in ['today', 'yesterday', 'ago']):
-            return date_text
-        
-        return None
-    
-    def _clean_bio_text(self, text):
-        """Clean and format bio text"""
-        if not text:
-            return None
-        
-        # Remove excessive whitespace
-        text = ' '.join(text.split())
-        
-        # Remove HTML entities
-        text = re.sub(r'&[a-zA-Z]+;', ' ', text)
-        
-        # Remove redundant punctuation
-        text = re.sub(r'\.{2,}', '.', text)
-        text = re.sub(r'\s+([,\.])', r'\1', text)
-        
-        # Ensure it ends with punctuation
-        if text and text[-1] not in '.!?':
-            text += '.'
-        
-        return text
-    
-    def _enhanced_web_search_v2(self, author_name, domain=None):
-        """Enhanced web search with better result parsing"""
-        logger.info(f"Performing enhanced web search v2 for: {author_name}")
+    def _enhanced_web_search(self, author_name, domain=None):
+        """Enhanced web search using DuckDuckGo"""
+        logger.info(f"Starting enhanced web search for author: {author_name}")
         
         result = {
             'found': False,
-            'sources_checked': ['Web search (Google/DuckDuckGo)']
+            'professional_info': {
+                'outlets': [],
+                'current_position': None,
+                'expertise_areas': []
+            },
+            'online_presence': {},
+            'bio': None,
+            'education': None,
+            'awards': [],
+            'previous_positions': [],
+            'sources_checked': ['Web search']
         }
         
-        # Build comprehensive search queries
-        search_queries = []
+        # Build search queries
+        search_queries = [
+            f'"{author_name}" journalist reporter writer bio',
+            f'"{author_name}" journalism award education',
+        ]
         
         if domain:
-            outlet_name = self._clean_outlet_name(domain)
-            search_queries.extend([
-                f'"{author_name}" {outlet_name} journalist bio',
-                f'"{author_name}" site:{domain}',
-                f'"{author_name}" "{outlet_name}" reporter profile'
-            ])
+            search_queries.insert(0, f'"{author_name}" site:{domain}')
+            search_queries.append(f'"{author_name}" "{self._clean_outlet_name(domain)}"')
         
-        search_queries.extend([
-            f'"{author_name}" journalist biography education awards',
-            f'"{author_name}" reporter "graduated from" "works at"',
-            f'"{author_name}" correspondent profile linkedin',
-            f'"{author_name}" writer journalist twitter bio'
-        ])
+        all_snippets = []
         
-        all_results = []
-        
-        for query in search_queries[:5]:  # Limit queries
+        for query in search_queries:
             try:
-                # Try DuckDuckGo
+                # Use DuckDuckGo HTML version
                 search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-                response = self.session.get(search_url, timeout=10)
                 
+                response = self.session.get(search_url, timeout=10)
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.text, 'html.parser')
                     
                     # Extract search results
-                    for result_elem in soup.find_all(['div', 'article'], class_=['result', 'web-result']):
-                        # Get title, snippet, and URL
-                        title_elem = result_elem.find(['a', 'h2'])
-                        snippet_elem = result_elem.find(['span', 'p', 'div'], class_=['snippet', 'result__snippet'])
-                        
-                        if title_elem and snippet_elem:
-                            result_data = {
-                                'title': title_elem.get_text(strip=True),
-                                'snippet': snippet_elem.get_text(strip=True),
-                                'url': title_elem.get('href', '')
-                            }
-                            
-                            # Only include if author name is mentioned
-                            if author_name.lower() in (result_data['title'] + result_data['snippet']).lower():
-                                all_results.append(result_data)
+                    for result_div in soup.find_all('div', class_='result'):
+                        snippet = result_div.get_text(separator=' ', strip=True)
+                        if author_name in snippet and len(snippet) > 50:
+                            all_snippets.append(snippet)
+                    
+                    # Also get all text
+                    page_text = soup.get_text()
+                    if author_name.lower() in page_text.lower():
+                        result['found'] = True
                 
                 time.sleep(0.5)  # Rate limiting
                 
             except Exception as e:
-                logger.error(f"Search error for query '{query}': {e}")
+                logger.error(f"Error in search query '{query}': {e}")
+                continue
         
-        # Analyze all collected results
-        if all_results:
+        # Analyze all collected snippets
+        if all_snippets:
             result['found'] = True
             
-            # Aggregate information from all results
-            bio_snippets = []
-            positions_found = []
-            outlets_found = []
-            education_mentions = []
-            awards_mentions = []
-            social_mentions = {}
+            # IMPROVED: Look for the BEST bio paragraph
+            bio_candidates = []
             
-            for search_result in all_results[:30]:  # Analyze top 30 results
-                snippet = search_result['snippet']
-                title = search_result['title']
-                combined = f"{title} {snippet}"
+            for snippet in all_snippets[:20]:  # Limit to first 20 snippets
+                snippet_lower = snippet.lower()
+                
+                # Check if this snippet is a good bio candidate
+                bio_score = 0
+                if f"{author_name.lower()} is" in snippet_lower:
+                    bio_score += 3
+                if any(word in snippet_lower for word in ['journalist', 'reporter', 'correspondent', 'writer', 'editor']):
+                    bio_score += 2
+                if any(word in snippet_lower for word in ['covers', 'reports', 'writes', 'specializes']):
+                    bio_score += 1
+                if any(word in snippet_lower for word in ['graduated', 'degree', 'university', 'college']):
+                    bio_score += 1
+                if any(word in snippet_lower for word in ['award', 'prize', 'winner', 'honor']):
+                    bio_score += 1
+                if len(snippet) > 100 and len(snippet) < 500:
+                    bio_score += 1
+                
+                if bio_score >= 3:
+                    bio_candidates.append((snippet, bio_score))
                 
                 # Extract current position
                 position_patterns = [
-                    rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^,\.]+?)(?:\s+at|for|with)\s+([^,\.\n]+)",
-                    rf"{author_name},\s*([^,]+?),\s*(?:at|for|with)\s+([^,\.\n]+)",
-                    rf"by\s+{author_name},\s*([^,\.]+?)(?:\s+at|for|with)?\s*([^,\.\n]*)"
+                    rf"{author_name}\s+is\s+(?:a|an|the)?\s*([^,\.]+?)(?:\s+at\s+|$)",
+                    rf"{author_name},\s*([^,]+?),",
+                    rf"by\s+{author_name},\s*([^,\.]+)"
                 ]
                 
                 for pattern in position_patterns:
-                    match = re.search(pattern, combined, re.I)
-                    if match:
+                    match = re.search(pattern, snippet, re.IGNORECASE)
+                    if match and not result['professional_info']['current_position']:
                         position = match.group(1).strip()
-                        outlet = match.group(2).strip() if len(match.groups()) > 1 else None
-                        
                         if self._is_valid_position(position):
-                            positions_found.append(position)
-                            if outlet and self._is_valid_outlet(outlet):
-                                outlets_found.append(outlet)
+                            result['professional_info']['current_position'] = position
                 
-                # Collect bio snippets
-                if any(bio_word in snippet.lower() for bio_word in ['is a', 'is an', 'journalist', 'reporter', 'correspondent']):
-                    bio_snippets.append(snippet)
+                # Extract outlets
+                outlet_pattern = r'(?:at|for|with|from)\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|$)'
+                outlet_matches = re.findall(outlet_pattern, snippet)
+                for outlet in outlet_matches:
+                    outlet = outlet.strip()
+                    if self._is_valid_outlet(outlet) and outlet not in result['professional_info']['outlets']:
+                        result['professional_info']['outlets'].append(outlet)
                 
                 # Extract education
-                edu_pattern = r'(?:graduated from|degree from|studied at|alumnus of)\s+([^,\.]+)'
-                edu_matches = re.findall(edu_pattern, combined, re.I)
-                education_mentions.extend(edu_matches)
+                if 'graduated' in snippet_lower or 'degree' in snippet_lower or 'university' in snippet_lower:
+                    edu_pattern = r'(?:graduated from|degree from|studied at|attended)\s+([^,\.]+)'
+                    edu_match = re.search(edu_pattern, snippet, re.IGNORECASE)
+                    if edu_match and not result['education']:
+                        result['education'] = edu_match.group(1).strip()
                 
                 # Extract awards
-                award_pattern = r'(?:won|received|awarded)\s+(?:the\s+)?([^,\.]+?(?:award|prize|honor)[^,\.]*)'
-                award_matches = re.findall(award_pattern, combined, re.I)
-                awards_mentions.extend(award_matches)
+                award_keywords = ['award', 'prize', 'honor', 'recognition', 'winner', 'recipient']
+                if any(keyword in snippet_lower for keyword in award_keywords):
+                    award_pattern = r'(?:won|received|awarded|recipient of)\s+(?:the\s+)?([^,\.]+?(?:award|prize|honor)[^,\.]*)'
+                    award_matches = re.findall(award_pattern, snippet, re.IGNORECASE)
+                    for award in award_matches:
+                        award = award.strip()
+                        if award not in result['awards'] and len(award) < 100:
+                            result['awards'].append(award)
                 
-                # Extract social media mentions
-                if 'twitter' in combined.lower() or '@' in combined:
-                    twitter_match = re.search(r'@(\w+)', combined)
+                # Extract expertise areas
+                expertise_keywords = ['covers', 'reports on', 'writes about', 'specializes in', 'focuses on', 'beat']
+                for keyword in expertise_keywords:
+                    if keyword in snippet_lower:
+                        pattern = rf"{keyword}\s+([^,\.]+)"
+                        match = re.search(pattern, snippet_lower)
+                        if match:
+                            expertise = match.group(1).strip()
+                            if len(expertise) < 50 and expertise not in result['professional_info']['expertise_areas']:
+                                result['professional_info']['expertise_areas'].append(expertise)
+                
+                # Extract social media
+                if 'linkedin' in snippet_lower:
+                    result['online_presence']['linkedin'] = 'Found on LinkedIn'
+                
+                if 'twitter' in snippet_lower or '@' in snippet:
+                    twitter_match = re.search(r'@(\w+)', snippet)
                     if twitter_match:
-                        social_mentions['twitter'] = twitter_match.group(1)
+                        result['online_presence']['twitter'] = twitter_match.group(1)
                 
-                if 'linkedin' in combined.lower():
-                    social_mentions['linkedin'] = 'Found on LinkedIn'
+                # Extract previous positions
+                if 'previously' in snippet_lower or 'former' in snippet_lower:
+                    prev_pattern = r'(?:previously|former|formerly)\s+(?:was\s+)?(?:a|an|the)?\s*([^,\.]+?)(?:\s+at\s+([^,\.]+))?'
+                    prev_matches = re.findall(prev_pattern, snippet, re.IGNORECASE)
+                    for match in prev_matches:
+                        position = match[0].strip()
+                        outlet = match[1].strip() if len(match) > 1 else ''
+                        if self._is_valid_position(position):
+                            prev_pos = {'title': position}
+                            if outlet and self._is_valid_outlet(outlet):
+                                prev_pos['outlet'] = outlet
+                            if prev_pos not in result['previous_positions']:
+                                result['previous_positions'].append(prev_pos)
             
-            # Process collected information
+            # Select best bio from candidates
+            if bio_candidates:
+                # Sort by score, then by length
+                bio_candidates.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+                result['bio'] = bio_candidates[0][0]
+            elif all_snippets:
+                # Fallback: use longest snippet that mentions the author
+                suitable_snippets = [s for s in all_snippets if author_name in s and len(s) > 50]
+                if suitable_snippets:
+                    result['bio'] = max(suitable_snippets, key=len)
             
-            # Set best position
-            if positions_found:
-                # Get most common position
-                position_counts = {}
-                for pos in positions_found:
-                    position_counts[pos] = position_counts.get(pos, 0) + 1
-                best_position = max(position_counts.items(), key=lambda x: x[1])[0]
-                result['professional_info'] = {'current_position': best_position}
+            # Verify journalist status
+            if any(term in ' '.join(all_snippets).lower() for term in 
+                   ['journalist', 'reporter', 'correspondent', 'writer', 'editor', 'columnist']):
+                result['verification_status'] = {'journalist_verified': True}
             
-            # Set outlets
-            if outlets_found:
-                unique_outlets = list(set(outlets_found))
-                result['professional_info'] = result.get('professional_info', {})
-                result['professional_info']['outlets'] = unique_outlets[:5]
-            
-            # Generate bio from snippets
-            if bio_snippets:
-                # Select the most comprehensive snippet
-                best_bio = max(bio_snippets, key=lambda x: len(x) if author_name in x else 0)
-                result['bio'] = self._clean_bio_text(best_bio)
-            
-            # Set education
-            if education_mentions:
-                # Get most common education mention
-                edu_counts = {}
-                for edu in education_mentions:
-                    edu_clean = edu.strip()
-                    if edu_clean:
-                        edu_counts[edu_clean] = edu_counts.get(edu_clean, 0) + 1
-                if edu_counts:
-                    best_edu = max(edu_counts.items(), key=lambda x: x[1])[0]
-                    result['education'] = [{'institution': best_edu}]
-            
-            # Set awards
-            if awards_mentions:
-                unique_awards = []
-                seen = set()
-                for award in awards_mentions:
-                    award_clean = award.strip()
-                    if award_clean and award_clean not in seen and len(award_clean) < 150:
-                        seen.add(award_clean)
-                        unique_awards.append({'name': award_clean})
-                result['awards'] = unique_awards[:10]
-            
-            # Set social media
-            if social_mentions:
-                result['online_presence'] = social_mentions
-            
-            # Set verification status
-            if any(term in ' '.join(bio_snippets).lower() for term in 
-                   ['journalist', 'reporter', 'correspondent', 'writer', 'editor']):
+            # If we found them with the domain, they're likely staff
+            if domain and domain.lower() in ' '.join(all_snippets).lower():
                 result['verification_status'] = {
-                    'journalist_verified': True,
-                    'verified': True
+                    'outlet_staff': True,
+                    'verified': True,
+                    'journalist_verified': True
                 }
         
         return result if result['found'] else None
     
-    def _deep_journalist_database_search(self, author_name, domain=None):
-        """Deep search across journalist databases"""
-        logger.info(f"Deep searching journalist databases for {author_name}")
+    def _check_journalist_databases_comprehensive(self, author_name):
+        """Check comprehensive journalist databases"""
+        logger.info(f"Checking journalist databases for {author_name}")
         
         result = {
             'found': False,
             'sources_checked': []
         }
         
-        # List of journalist databases and platforms to check
-        databases = [
-            ('Muck Rack', 'muckrack.com', self._search_muckrack),
-            ('LinkedIn', 'linkedin.com/in', self._search_linkedin_basic),
-            ('Contently', 'contently.com', None),
-            ('Journo Portfolio', 'journoportfolio.com', None),
-            ('Twitter/X', 'twitter.com OR x.com', self._search_twitter_basic),
-            ('Substack', 'substack.com', None),
-            ('Medium', 'medium.com', None),
-        ]
-        
-        for db_name, db_domain, special_handler in databases:
-            try:
-                # Use special handler if available
-                if special_handler:
-                    db_result = special_handler(author_name, domain)
-                    if db_result:
-                        self._safe_merge_results(result, db_result)
-                        result['found'] = True
-                        result['sources_checked'].append(db_name)
-                        continue
-                
-                # Otherwise, search via DuckDuckGo
-                query = f'site:{db_domain} "{author_name}"'
-                if domain and db_name not in ['LinkedIn', 'Twitter/X']:
-                    query += f' "{self._clean_outlet_name(domain)}"'
-                
-                search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-                response = self.session.get(search_url, timeout=8)
-                
-                if response.status_code == 200 and author_name.lower() in response.text.lower():
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    
-                    # Look for profile links
-                    for link in soup.find_all('a', href=True):
-                        href = link['href']
-                        if db_domain in href and author_name.lower() in link.get_text().lower():
-                            result['found'] = True
-                            result['sources_checked'].append(db_name)
-                            
-                            # Extract profile URL
-                            if 'linkedin.com/in' in href:
-                                result['online_presence'] = {'linkedin': href}
-                            elif 'twitter.com' in href or 'x.com' in href:
-                                username = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', href)
-                                if username:
-                                    result['online_presence'] = {'twitter': username.group(1).replace('@', '')}
-                            elif 'muckrack.com' in href:
-                                result['online_presence'] = {'muckrack': href}
-                            
-                            result['verification_status'] = {
-                                'journalist_verified': True,
-                                'verified': True
-                            }
-                            
-                            break
-                
-                time.sleep(0.5)
-                
-            except Exception as e:
-                logger.debug(f"Error checking {db_name}: {e}")
-        
-        return result if result['found'] else None
-    
-    def _search_muckrack(self, author_name, domain=None):
-        """Search Muck Rack specifically"""
+        # Try Muck Rack directly
         try:
             author_slug = author_name.lower().replace(' ', '-')
             muckrack_url = f"https://muckrack.com/{author_slug}"
             
-            response = self.session.get(muckrack_url, timeout=8)
+            response = self.session.get(muckrack_url, timeout=5)
             if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Verify it's the right person
-                if author_name.lower() in soup.get_text().lower():
-                    result = {
-                        'found': True,
-                        'online_presence': {'muckrack': muckrack_url},
-                        'verification_status': {
-                            'journalist_verified': True,
-                            'verified': True
-                        }
+                if author_name.lower() in response.text.lower():
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    result['found'] = True
+                    result['online_presence'] = {'muckrack': muckrack_url}
+                    result['verification_status'] = {
+                        'journalist_verified': True,
+                        'verified': True
                     }
                     
                     # Try to extract bio
-                    bio_elem = soup.find(['div', 'p'], class_=re.compile(r'bio|description', re.I))
+                    bio_elem = soup.find('div', class_='bio')
                     if bio_elem:
-                        result['bio'] = self._clean_bio_text(bio_elem.get_text(strip=True))
+                        result['bio'] = bio_elem.get_text(strip=True)
                     
                     # Try to extract current outlet
-                    outlet_elem = soup.find(['div', 'span'], class_=re.compile(r'outlet|publication|company', re.I))
+                    outlet_elem = soup.find('div', class_='outlet')
                     if outlet_elem:
-                        outlet_text = outlet_elem.get_text(strip=True)
-                        if outlet_text:
-                            result['professional_info'] = {
-                                'outlets': [outlet_text]
-                            }
+                        result['professional_info'] = {
+                            'outlets': [outlet_elem.get_text(strip=True)]
+                        }
                     
+                    result['sources_checked'].append('Muck Rack')
+                    logger.info(f"Found {author_name} on Muck Rack")
                     return result
         except Exception as e:
-            logger.debug(f"Muck Rack search error: {e}")
+            logger.debug(f"Muck Rack check failed: {e}")
         
-        return None
-    
-    def _search_linkedin_basic(self, author_name, domain=None):
-        """Basic LinkedIn search"""
+        # Try searching via DuckDuckGo for author profiles
         try:
-            query = f'site:linkedin.com/in "{author_name}"'
-            if domain:
-                query += f' "{self._clean_outlet_name(domain)}"'
-            
-            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            response = self.session.get(search_url, timeout=8)
-            
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Look for LinkedIn profile links
-                for link in soup.find_all('a', href=True):
-                    href = link['href']
-                    if 'linkedin.com/in/' in href:
-                        # Extract profile path
-                        profile_match = re.search(r'linkedin\.com/in/([\w\-]+)', href)
-                        if profile_match:
-                            return {
-                                'found': True,
-                                'online_presence': {
-                                    'linkedin': f"https://www.linkedin.com/in/{profile_match.group(1)}"
-                                },
-                                'verification_status': {
-                                    'verified': True
-                                }
-                            }
-        except Exception as e:
-            logger.debug(f"LinkedIn search error: {e}")
-        
-        return None
-    
-    def _search_twitter_basic(self, author_name, domain=None):
-        """Basic Twitter/X search"""
-        try:
-            # Search for Twitter profiles
-            query = f'"{author_name}" journalist OR reporter twitter OR x.com'
-            if domain:
-                query += f' "{self._clean_outlet_name(domain)}"'
-            
-            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            response = self.session.get(search_url, timeout=8)
-            
-            if response.status_code == 200:
-                # Look for Twitter handles
-                twitter_pattern = r'(?:twitter\.com|x\.com)/(@?\w+)|@(\w+)'
-                matches = re.findall(twitter_pattern, response.text)
-                
-                for match in matches:
-                    username = match[0] or match[1]
-                    username = username.replace('@', '')
-                    
-                    # Validate username
-                    if (username and 
-                        len(username) <= 15 and 
-                        username not in ['share', 'intent', 'home'] and
-                        not username.startswith('http')):
-                        
-                        return {
-                            'found': True,
-                            'online_presence': {
-                                'twitter': username
-                            }
-                        }
-        except Exception as e:
-            logger.debug(f"Twitter search error: {e}")
-        
-        return None
-    
-    def _search_linkedin_profile(self, author_name, domain=None):
-        """Enhanced LinkedIn profile search"""
-        logger.info(f"Searching LinkedIn for {author_name}")
-        
-        try:
-            # Build LinkedIn search query
-            query = f'site:linkedin.com/in "{author_name}" journalist OR reporter OR correspondent'
-            if domain:
-                outlet_name = self._clean_outlet_name(domain)
-                query += f' "{outlet_name}"'
-            
-            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            response = self.session.get(search_url, timeout=10)
-            
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Analyze search results
-                for result in soup.find_all(['div', 'article'], class_=['result', 'web-result']):
-                    text = result.get_text()
-                    
-                    # Look for LinkedIn profile indicators
-                    if 'linkedin.com/in/' in text and author_name.lower() in text.lower():
-                        # Extract professional info from snippet
-                        result_data = {
-                            'found': True,
-                            'sources_checked': ['LinkedIn']
-                        }
-                        
-                        # Look for current position
-                        position_match = re.search(r'(?:^|\s)([^–\-\|]+?)\s*(?:–|-|at|@)\s*([^–\-\|]+)', text)
-                        if position_match:
-                            position = position_match.group(1).strip()
-                            company = position_match.group(2).strip()
-                            
-                            if self._is_valid_position(position):
-                                result_data['professional_info'] = {
-                                    'current_position': position,
-                                    'outlets': [company] if self._is_valid_outlet(company) else []
-                                }
-                        
-                        # Extract LinkedIn URL
-                        link_elem = result.find('a', href=re.compile(r'linkedin\.com/in/'))
-                        if link_elem:
-                            result_data['online_presence'] = {
-                                'linkedin': link_elem['href']
-                            }
-                        
-                        return result_data
-        
-        except Exception as e:
-            logger.error(f"LinkedIn search error: {e}")
-        
-        return None
-    
-    def _search_twitter_profile(self, author_name, domain=None):
-        """Enhanced Twitter/X profile search"""
-        logger.info(f"Searching Twitter/X for {author_name}")
-        
-        try:
-            # Search for Twitter profile
-            queries = [
-                f'"{author_name}" journalist twitter bio',
-                f'"{author_name}" reporter x.com',
+            sites_to_check = [
+                'site:muckrack.com',
+                'site:contently.com', 
+                'site:journoportfolio.com',
+                'site:linkedin.com/in',
+                'site:twitter.com',
+                'site:substack.com'
             ]
             
-            if domain:
-                outlet = self._clean_outlet_name(domain)
-                queries.append(f'"{author_name}" "{outlet}" twitter')
-            
-            for query in queries:
+            for site in sites_to_check:
+                query = f'{site} "{author_name}"'
                 search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-                response = self.session.get(search_url, timeout=8)
                 
-                if response.status_code == 200:
-                    text = response.text
-                    
-                    # Extract Twitter handles
-                    twitter_patterns = [
-                        r'(?:twitter\.com|x\.com)/(@?\w+)',
-                        r'(?:Follow|follow).*?@(\w+)',
-                        r'@(\w+).*?(?:journalist|reporter|correspondent)',
-                    ]
-                    
-                    for pattern in twitter_patterns:
-                        matches = re.findall(pattern, text, re.I)
-                        for match in matches:
-                            username = match.replace('@', '')
-                            
-                            # Validate it's likely the author's handle
-                            if (self._is_valid_social_username(username, 'twitter') and
-                                (username.lower() in author_name.lower().replace(' ', '') or
-                                 author_name.lower() in text[max(0, text.find(username)-100):text.find(username)+100].lower())):
-                                
-                                return {
-                                    'found': True,
-                                    'online_presence': {
-                                        'twitter': username
-                                    },
-                                    'sources_checked': ['Twitter/X']
-                                }
-                
-                time.sleep(0.5)
+                try:
+                    response = self.session.get(search_url, timeout=5)
+                    if response.status_code == 200 and author_name.lower() in response.text.lower():
+                        result['found'] = True
+                        site_name = site.replace('site:', '').split('.')[0]
+                        result['sources_checked'].append(site_name)
+                        
+                        # Extract LinkedIn URL if found
+                        if 'linkedin.com' in response.text:
+                            linkedin_match = re.search(r'(https?://[a-z]{2,3}\.linkedin\.com/in/[^"\s&]+)', response.text)
+                            if linkedin_match:
+                                result['online_presence'] = {'linkedin': linkedin_match.group(1)}
+                        
+                        # Extract Twitter handle if found
+                        if 'twitter.com' in response.text:
+                            twitter_match = re.search(r'twitter\.com/(@?\w+)', response.text)
+                            if twitter_match:
+                                handle = twitter_match.group(1).replace('@', '')
+                                if handle not in ['share', 'intent']:
+                                    result.setdefault('online_presence', {})['twitter'] = handle
+                        
+                        result['verification_status'] = {
+                            'journalist_verified': True
+                        }
+                        
+                        logger.info(f"Found {author_name} on {site_name}")
+                        break
+                        
+                except Exception as e:
+                    logger.debug(f"Error checking {site}: {e}")
+                    continue
         
         except Exception as e:
-            logger.error(f"Twitter search error: {e}")
+            logger.error(f"Error in journalist database search: {e}")
         
-        return None
+        return result if result['found'] else None
     
-    def _search_recent_articles_enhanced(self, author_name, domain=None):
-        """Enhanced recent articles search with better metadata extraction"""
-        logger.info(f"Searching for recent articles by {author_name}")
-        
+    def _search_recent_articles(self, author_name, domain=None):
+        """Search for recent articles by the author"""
         articles = []
         
         try:
-            # Build search queries
-            queries = [
-                f'"{author_name}" article OR story inurl:2024 OR inurl:2025',
-                f'"by {author_name}" news',
-            ]
-            
+            query = f'"{author_name}" article OR story OR report'
             if domain:
-                queries.insert(0, f'site:{domain} "by {author_name}"')
-                queries.append(f'"{author_name}" "{self._clean_outlet_name(domain)}"')
+                query += f' site:{domain}'
             
-            seen_titles = set()
+            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
             
-            for query in queries[:3]:  # Limit queries
-                search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-                response = self.session.get(search_url, timeout=10)
+            response = self.session.get(search_url, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
                 
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, 'html.parser')
+                # Extract article links and titles
+                for result in soup.find_all('a', class_='result__a')[:10]:
+                    title = result.get_text(strip=True)
+                    url = result.get('href')
                     
-                    # Extract article results
-                    for result in soup.find_all(['div', 'article'], class_=['result', 'web-result']):
-                        title_elem = result.find('a', class_='result__a')
-                        if not title_elem:
-                            continue
+                    if title and url:
+                        # Clean up title
+                        if ' - ' in title:
+                            title = title.split(' - ')[0]
+                        if ' | ' in title:
+                            title = title.split(' | ')[0]
                         
-                        title = title_elem.get_text(strip=True)
-                        url = title_elem.get('href', '')
-                        
-                        # Skip if we've seen this title
-                        if title in seen_titles or len(title) < 20:
-                            continue
-                        
-                        # Verify author name is associated
-                        snippet_elem = result.find(class_='result__snippet')
-                        snippet = snippet_elem.get_text() if snippet_elem else ''
-                        
-                        if author_name.lower() not in (title + snippet).lower():
-                            continue
-                        
-                        seen_titles.add(title)
-                        
-                        article_data = {
+                        articles.append({
                             'title': title,
                             'url': url
-                        }
-                        
-                        # Try to extract date from snippet
-                        date_patterns = [
-                            r'(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})',
-                            r'(\d{4}-\d{2}-\d{2})',
-                            r'(\d{1,2}/\d{1,2}/\d{4})',
-                            r'(\d+\s+(?:hours?|days?|weeks?)\s+ago)',
-                        ]
-                        
-                        for pattern in date_patterns:
-                            date_match = re.search(pattern, snippet, re.I)
-                            if date_match:
-                                article_data['date'] = date_match.group(1)
-                                break
-                        
-                        # Extract outlet from URL if not from main domain
-                        if not domain or domain not in url:
-                            outlet_match = re.search(r'https?://(?:www\.)?([^/]+)', url)
-                            if outlet_match:
-                                article_data['outlet'] = self._clean_outlet_name(outlet_match.group(1))
-                        
-                        articles.append(article_data)
-                        
-                        if len(articles) >= 10:
-                            break
-                
-                if len(articles) >= 10:
-                    break
-                
-                time.sleep(0.5)
+                        })
         
         except Exception as e:
-            logger.error(f"Error searching articles: {e}")
+            logger.error(f"Error searching recent articles: {e}")
         
-        return articles
+        return articles[:5]
     
-    def _deep_awards_search(self, author_name, domain=None):
-        """Deep search for awards and recognition"""
-        logger.info(f"Deep searching for awards for {author_name}")
+    def _extract_education_awards(self, author_name, domain=None):
+        """Extract education and awards information"""
+        result = {}
         
         try:
-            # Search for awards
-            queries = [
-                f'"{author_name}" award OR prize OR honor journalist',
-                f'"{author_name}" winner OR recipient journalism',
-                f'"{author_name}" "excellence in" OR "recognized for"',
-            ]
-            
+            query = f'"{author_name}" journalist "graduated from" OR "degree" OR "award" OR "winner"'
             if domain:
-                outlet = self._clean_outlet_name(domain)
-                queries.append(f'"{author_name}" "{outlet}" award')
+                query += f' "{self._clean_outlet_name(domain)}"'
             
-            awards = []
+            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
             
-            for query in queries:
-                search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-                response = self.session.get(search_url, timeout=8)
+            response = self.session.get(search_url, timeout=10)
+            if response.status_code == 200:
+                text = response.text
                 
-                if response.status_code == 200:
-                    text = response.text
-                    
-                    # Extract awards
-                    award_patterns = [
-                        r'(?:won|received|awarded|recipient of)\s+(?:the\s+)?([^,\.\n]+?(?:Award|Prize|Honor|Medal)[^,\.\n]*)',
-                        r'([^,\.\n]+?(?:Award|Prize|Honor|Medal)[^,\.\n]*)\s+(?:winner|recipient)',
-                        r'(?:honored with|recognized with)\s+(?:the\s+)?([^,\.\n]+)',
-                        r'(\d{4})\s+([^,\.\n]+?(?:Award|Prize))',
-                    ]
-                    
-                    for pattern in award_patterns:
-                        matches = re.findall(pattern, text, re.I)
-                        for match in matches:
-                            if isinstance(match, tuple):
-                                # Handle year + award format
-                                if match[0].isdigit() and len(match) > 1:
-                                    award_name = match[1].strip()
-                                    year = match[0]
-                                else:
-                                    award_name = ' '.join(match).strip()
-                                    year = None
-                            else:
-                                award_name = match.strip()
-                                year = None
-                            
-                            # Validate award
-                            if (len(award_name) < 150 and 
-                                author_name.lower() not in award_name.lower() and
-                                award_name not in [a.get('name') if isinstance(a, dict) else a for a in awards]):
-                                
-                                award_info = {'name': award_name}
-                                if year:
-                                    award_info['year'] = year
-                                awards.append(award_info)
+                # Education patterns
+                edu_patterns = [
+                    r'graduated from ([^,\.]+)',
+                    r'holds a ([^,\.]+) from ([^,\.]+)',
+                    r'earned (?:a|an|his|her) ([^,\.]+) at ([^,\.]+)',
+                    r'([A-Z][^,\.]+University[^,\.]*)',
+                    r'([A-Z][^,\.]+College[^,\.]*)'
+                ]
                 
-                time.sleep(0.5)
-            
-            if awards:
-                return {
-                    'awards': awards[:15],
-                    'sources_checked': ['Award databases']
-                }
+                for pattern in edu_patterns:
+                    matches = re.findall(pattern, text, re.IGNORECASE)
+                    if matches and not result.get('education'):
+                        if isinstance(matches[0], tuple):
+                            result['education'] = ' '.join(matches[0])
+                        else:
+                            result['education'] = matches[0]
+                        break
+                
+                # Award patterns
+                award_patterns = [
+                    r'(?:won|received|awarded) (?:the )?([^,\.]+?(?:Award|Prize|Honor)[^,\.]*)',
+                    r'([^,\.]+?(?:Award|Prize|Honor)[^,\.]*) (?:winner|recipient)',
+                ]
+                
+                awards = []
+                for pattern in award_patterns:
+                    matches = re.findall(pattern, text, re.IGNORECASE)
+                    for match in matches:
+                        award = match.strip()
+                        if len(award) < 100 and award not in awards:
+                            awards.append(award)
+                
+                if awards:
+                    result['awards'] = awards[:5]
         
         except Exception as e:
-            logger.error(f"Awards search error: {e}")
+            logger.error(f"Error extracting education/awards: {e}")
         
-        return None
+        return result
     
-    def _update_data_completeness(self, result):
-        """Update data completeness tracking"""
-        completeness = result.get('data_completeness', {})
-        
-        completeness['has_photo'] = bool(result.get('image_url'))
-        completeness['has_bio'] = bool(result.get('bio') and len(result.get('bio', '')) > 50)
-        completeness['has_education'] = bool(result.get('education'))
-        completeness['has_awards'] = bool(result.get('awards'))
-        completeness['has_employment_history'] = bool(
-            result.get('professional_info', {}).get('employment_history') or
-            result.get('previous_positions')
-        )
-        completeness['has_social_media'] = bool(
-            any(v for k, v in result.get('online_presence', {}).items() if v and k != 'outlet_profile')
-        )
-        completeness['has_recent_work'] = bool(result.get('recent_articles'))
-        
-        result['data_completeness'] = completeness
-    
-    def _calculate_credibility_score_v2(self, author_data):
-        """Enhanced credibility scoring with more factors"""
+    def _calculate_credibility_score(self, author_data):
+        """Calculate author credibility score based on available information"""
         score = 0
         max_score = 100
         
-        # Enhanced scoring criteria
+        # Scoring criteria
         criteria = {
-            # Basic information (30 points)
-            'has_bio': 10,
+            'has_bio': 15,
             'has_comprehensive_bio': 5,
             'has_image': 5,
-            'has_position': 10,
-            
-            # Professional credentials (35 points)
-            'has_outlets': 10,
+            'has_position': 15,
+            'has_outlets': 15,
             'multiple_outlets': 5,
-            'outlet_verified': 10,
-            'years_experience': 5,
-            'employment_history': 5,
-            
-            # Verification (20 points)
-            'journalist_database': 10,
-            'journalist_verified': 10,
-            
-            # Online presence (15 points)
-            'has_social_media': 5,
+            'outlet_verified': 20,
+            'has_social_media': 10,
             'multiple_social': 5,
-            'personal_website': 5,
-            
-            # Achievements (15 points)
+            'journalist_database': 20,
             'has_education': 5,
-            'has_awards': 5,
-            'multiple_awards': 5,
-            
-            # Work evidence (10 points)
+            'has_awards': 10,
+            'has_experience': 5,
             'has_recent_articles': 5,
-            'multiple_articles': 5,
-            
-            # Trust factors (-25 points max)
             'no_issues': 5,
-            'issues_found': -20,
         }
         
         # Apply scoring
-        
-        # Bio scoring
-        if author_data.get('bio'):
-            bio_length = len(author_data['bio'])
-            if bio_length > 50:
-                score += criteria['has_bio']
-            if bio_length > 200:
+        if author_data.get('bio') and 'Limited information' not in author_data.get('bio', ''):
+            score += criteria['has_bio']
+            if len(author_data['bio']) > 200:
                 score += criteria['has_comprehensive_bio']
         
-        # Image
         if author_data.get('image_url'):
             score += criteria['has_image']
         
-        # Position
         if author_data.get('professional_info', {}).get('current_position'):
             score += criteria['has_position']
         
-        # Outlets
         outlets = author_data.get('professional_info', {}).get('outlets', [])
         if outlets:
             score += criteria['has_outlets']
             if len(outlets) > 1:
                 score += criteria['multiple_outlets']
         
-        # Verification
         if author_data.get('verification_status', {}).get('outlet_staff'):
             score += criteria['outlet_verified']
         
-        if author_data.get('verification_status', {}).get('journalist_verified'):
-            score += criteria['journalist_verified']
-        
-        # Check journalist databases
-        sources = author_data.get('sources_checked', [])
-        if any(db in str(sources) for db in ['Muck Rack', 'LinkedIn', 'Contently']):
-            score += criteria['journalist_database']
-        
-        # Experience
-        if author_data.get('professional_info', {}).get('years_experience'):
-            score += criteria['years_experience']
-        
-        if (author_data.get('professional_info', {}).get('employment_history') or 
-            author_data.get('previous_positions')):
-            score += criteria['employment_history']
-        
-        # Social media
         online_presence = author_data.get('online_presence', {})
-        social_count = sum(1 for k, v in online_presence.items() 
-                          if v and k not in ['outlet_profile', 'email'])
-        
+        social_count = sum(1 for v in online_presence.values() if v)
         if social_count > 0:
             score += criteria['has_social_media']
-            if social_count >= 3:
+            if social_count > 2:
                 score += criteria['multiple_social']
         
-        if online_presence.get('personal_website'):
-            score += criteria['personal_website']
+        if author_data.get('verification_status', {}).get('journalist_verified'):
+            score += criteria['journalist_database']
         
-        # Education
         if author_data.get('education'):
             score += criteria['has_education']
         
-        # Awards
-        awards = author_data.get('awards', [])
-        if awards:
+        if author_data.get('awards'):
             score += criteria['has_awards']
-            if len(awards) >= 3:
-                score += criteria['multiple_awards']
         
-        # Recent work
-        articles = author_data.get('recent_articles', [])
-        if articles:
+        if author_data.get('professional_info', {}).get('years_experience'):
+            score += criteria['has_experience']
+        
+        if author_data.get('recent_articles'):
             score += criteria['has_recent_articles']
-            if len(articles) >= 5:
-                score += criteria['multiple_articles']
         
-        # Issues/corrections
-        if author_data.get('issues_corrections'):
-            score += criteria['issues_found']
-        else:
+        if not author_data.get('issues_corrections', False):
             score += criteria['no_issues']
         
-        # Ensure score is within bounds
-        return max(0, min(score, max_score))
+        return min(score, max_score)
     
-    def _generate_bio_summary(self, author_data):
-        """Generate a concise bio summary"""
+    def _generate_comprehensive_bio(self, author_data):
+        """Generate a comprehensive bio from collected data - IMPROVED"""
+        # If we already have a good bio, use it
+        if author_data.get('bio') and len(author_data['bio']) > 150:
+            return author_data['bio']
+        
+        bio_parts = []
+        
         name = author_data['name']
         prof_info = author_data.get('professional_info', {})
         
-        # Build summary components
-        summary_parts = []
-        
-        # Current role
-        if prof_info.get('current_position') and prof_info.get('outlets'):
-            summary_parts.append(f"{prof_info['current_position']} at {prof_info['outlets'][0]}")
-        elif prof_info.get('current_position'):
-            summary_parts.append(prof_info['current_position'])
+        # Start with name and current position
+        opening = name
+        if prof_info.get('current_position'):
+            if prof_info.get('outlets'):
+                opening += f" is {prof_info['current_position']} at {prof_info['outlets'][0]}"
+            else:
+                opening += f" is {prof_info['current_position']}"
         elif prof_info.get('outlets'):
-            summary_parts.append(f"Journalist at {', '.join(prof_info['outlets'][:2])}")
+            opening += f" is a journalist who writes for {', '.join(prof_info['outlets'][:3])}"
+        elif author_data.get('found'):
+            opening += f" is a journalist"
         
-        # Experience
-        if prof_info.get('years_experience'):
-            summary_parts.append(f"{prof_info['years_experience']}+ years experience")
+        bio_parts.append(opening)
         
-        # Expertise
+        # Add expertise with better phrasing
         if prof_info.get('expertise_areas'):
-            areas = prof_info['expertise_areas'][:2]
-            summary_parts.append(f"covers {' and '.join(areas)}")
+            areas = prof_info['expertise_areas'][:3]
+            if len(areas) == 1:
+                bio_parts.append(f"specializing in coverage of {areas[0]}")
+            elif len(areas) == 2:
+                bio_parts.append(f"covering {areas[0]} and {areas[1]}")
+            else:
+                bio_parts.append(f"with expertise in {', '.join(areas[:-1])}, and {areas[-1]}")
         
-        # Awards
+        # Add experience with context
+        if prof_info.get('years_experience'):
+            years = prof_info['years_experience']
+            bio_parts.append(f"bringing {years} years of journalism experience to their reporting")
+        
+        # Add education with better flow
+        if author_data.get('education'):
+            bio_parts.append(f"{name.split()[-1]} graduated from {author_data['education']}")
+        
+        # Add awards with impact
         if author_data.get('awards'):
             count = len(author_data['awards'])
-            summary_parts.append(f"{count} journalism award{'s' if count > 1 else ''}")
+            if count == 1:
+                bio_parts.append(f"and has been recognized with {author_data['awards'][0]}")
+            else:
+                bio_parts.append(f"and has received {count} journalism awards for their work")
         
-        # Education
-        if author_data.get('education'):
-            if isinstance(author_data['education'], list) and author_data['education']:
-                edu = author_data['education'][0]
-                if isinstance(edu, dict):
-                    summary_parts.append(edu.get('institution', ''))
-                else:
-                    summary_parts.append(str(edu))
+        # Add previous experience if notable
+        if author_data.get('previous_positions'):
+            prev = author_data['previous_positions'][0]
+            if isinstance(prev, dict) and prev.get('outlet'):
+                bio_parts.append(f"Previously, {name.split()[-1]} worked at {prev['outlet']}")
         
-        if summary_parts:
-            return f"{name}: {'; '.join(summary_parts)}"
+        # Add recent work indicator
+        if author_data.get('recent_articles') and len(author_data['recent_articles']) >= 3:
+            bio_parts.append(f"Their recent reporting has focused on current developments in their beat")
+        
+        # Combine parts into natural sentences
+        if len(bio_parts) >= 3:
+            # First sentence: name + position
+            bio = bio_parts[0]
+            
+            # Second part: expertise/specialization
+            if len(bio_parts) > 1 and 'specializing' in bio_parts[1]:
+                bio += f", {bio_parts[1]}"
+                remaining_start = 2
+            else:
+                remaining_start = 1
+            
+            bio += "."
+            
+            # Additional sentences
+            if len(bio_parts) > remaining_start:
+                for part in bio_parts[remaining_start:]:
+                    if part.startswith(name.split()[-1]):  # Education, previous work
+                        bio += f" {part}."
+                    elif 'Previously' in part:
+                        bio += f" {part}."
+                    else:
+                        # Continue the thought
+                        bio = bio.rstrip('.')
+                        bio += f", {part}."
         else:
-            return f"{name}: Journalist"
+            bio = ". ".join(bio_parts) + "."
+        
+        # Clean up
+        bio = re.sub(r'\.\s*,', ',', bio)
+        bio = re.sub(r'\.\.+', '.', bio)
+        bio = re.sub(r'\s+', ' ', bio)
+        
+        return bio
     
-    def _analyze_reputation(self, author_data):
-        """Analyze author's reputation based on collected data"""
-        strengths = []
-        concerns = []
-        
-        # Analyze strengths
-        if author_data.get('verification_status', {}).get('outlet_staff'):
-            strengths.append("Verified staff writer at established outlet")
-        
-        if author_data.get('awards'):
-            count = len(author_data['awards'])
-            strengths.append(f"Recognized with {count} journalism award{'s' if count > 1 else ''}")
-        
-        years_exp = author_data.get('professional_info', {}).get('years_experience')
-        if years_exp and years_exp >= 10:
-            strengths.append(f"Veteran journalist with {years_exp}+ years experience")
-        elif years_exp and years_exp >= 5:
-            strengths.append(f"Experienced journalist with {years_exp} years in the field")
-        
-        if author_data.get('education'):
-            strengths.append("Formal journalism/communications education")
-        
-        outlets = author_data.get('professional_info', {}).get('outlets', [])
-        if len(outlets) > 2:
-            strengths.append("Published across multiple reputable outlets")
-        
-        social_count = sum(1 for v in author_data.get('online_presence', {}).values() if v)
-        if social_count >= 3:
-            strengths.append("Strong professional online presence")
-        
-        if author_data.get('recent_articles') and len(author_data['recent_articles']) >= 5:
-            strengths.append("Actively publishing recent work")
-        
-        # Analyze concerns
-        if not author_data.get('found'):
-            concerns.append("Limited public information available")
-        
-        if author_data.get('credibility_score', 0) < 40:
-            concerns.append("Minimal verifiable credentials")
-        
-        if author_data.get('issues_corrections'):
-            concerns.append("Previous corrections or retractions noted")
-        
-        if not author_data.get('verification_status', {}).get('journalist_verified'):
-            concerns.append("Could not verify journalist status through professional databases")
-        
-        if not outlets:
-            concerns.append("No clear outlet affiliations found")
-        
-        # Generate overall assessment
-        if author_data.get('credibility_score', 0) >= 80:
-            assessment = "Highly credible journalist with strong professional credentials"
-        elif author_data.get('credibility_score', 0) >= 60:
-            assessment = "Established journalist with solid credentials"
-        elif author_data.get('credibility_score', 0) >= 40:
-            assessment = "Journalist with moderate verification; standard fact-checking recommended"
-        else:
-            assessment = "Limited verification available; exercise caution and verify claims independently"
-        
-        return {
-            'strengths': strengths,
-            'concerns': concerns,
-            'overall_assessment': assessment
-        }
-    
-    def _generate_credibility_explanation_v2(self, author_data):
-        """Generate enhanced credibility explanation"""
+    def _generate_credibility_explanation(self, author_data):
+        """Generate explanation for credibility score"""
         score = author_data.get('credibility_score', 0)
-        reputation = author_data.get('reputation_analysis', {})
         
-        # Determine credibility level
         if score >= 80:
             level = 'High'
-            base_explanation = "Well-established journalist with excellent credentials."
+            explanation = f"Well-established journalist with verified credentials, clear professional history, and strong online presence."
+            advice = "This author has excellent credibility indicators. Their work can generally be trusted."
         elif score >= 60:
             level = 'Good'
-            base_explanation = "Verified journalist with solid professional background."
+            explanation = f"Verified journalist with substantial professional information and good credentials."
+            advice = "Author appears credible with solid professional background. Standard verification of claims still recommended."
         elif score >= 40:
             level = 'Moderate'
-            base_explanation = "Some professional information verified."
+            explanation = f"Some professional information found, but limited verification or incomplete profile."
+            advice = "Consider cross-referencing important claims with other sources due to limited author information."
         else:
             level = 'Limited'
-            base_explanation = "Minimal verifiable information available."
+            explanation = f"Minimal verifiable information about this author's professional background or credentials."
+            advice = "Exercise caution and verify all claims through additional sources. Limited author credibility."
         
-        # Add specific factors
+        # Add specific factors to explanation
         factors = []
-        
         if author_data.get('verification_status', {}).get('outlet_staff'):
-            factors.append("verified staff position")
-        
+            factors.append("verified staff writer")
         if author_data.get('awards'):
-            factors.append(f"{len(author_data['awards'])} awards")
+            factors.append(f"{len(author_data['awards'])} journalism awards")
+        if author_data.get('professional_info', {}).get('years_experience'):
+            factors.append(f"{author_data['professional_info']['years_experience']} years experience")
         
-        years = author_data.get('professional_info', {}).get('years_experience')
-        if years:
-            factors.append(f"{years} years experience")
-        
-        if author_data.get('education'):
-            factors.append("relevant education")
-        
-        sources = author_data.get('sources_checked', [])
-        if sources:
-            factors.append(f"verified across {len(sources)} sources")
-        
-        # Build complete explanation
         if factors:
-            explanation = f"{base_explanation} Key indicators: {', '.join(factors)}."
-        else:
-            explanation = base_explanation
+            explanation += f" Key credibility factors include: {', '.join(factors)}."
         
         # Add what we checked
+        sources = author_data.get('sources_checked', [])
         if sources:
-            explanation += f" Sources consulted: {', '.join(sources[:5])}."
-        
-        # Advice based on level
-        if level == 'High':
-            advice = "This author demonstrates strong credibility. Their work can generally be trusted with standard verification."
-        elif level == 'Good':
-            advice = "Author shows good credibility indicators. Standard fact-checking of claims is still recommended."
-        elif level == 'Moderate':
-            advice = "Limited author information available. Recommend additional verification of important claims."
-        else:
-            advice = "Minimal author credentials found. Exercise caution and independently verify all significant claims."
+            explanation += f" Information verified through: {', '.join(sources)}."
         
         return {
             'level': level,
             'explanation': explanation,
-            'advice': advice,
-            'factors_checked': factors
+            'advice': advice
         }
+    
+    def _safe_merge_results(self, target, source):
+        """Safely merge source dict into target dict without overwriting None with empty values"""
+        if not source:
+            return
+            
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            elif isinstance(value, dict) and isinstance(target[key], dict):
+                # Recursively merge dictionaries
+                self._safe_merge_results(target[key], value)
+            elif isinstance(value, list) and isinstance(target[key], list):
+                # Merge lists without duplicates
+                for item in value:
+                    if item not in target[key]:
+                        target[key].append(item)
+            elif value is not None and (not isinstance(value, (list, str)) or value):
+                # Only update if source value is meaningful
+                # Special handling for bio - keep longer one
+                if key == 'bio' and target.get(key):
+                    if len(str(value)) > len(str(target[key])):
+                        target[key] = value
+                else:
+                    target[key] = value
+    
+    def _is_valid_position(self, position):
+        """Check if a position title is valid"""
+        if not position or len(position) < 3 or len(position) > 100:
+            return False
+        
+        # Filter out non-position phrases
+        invalid_phrases = ['is', 'was', 'has', 'the', 'article', 'story', 'report']
+        position_lower = position.lower()
+        
+        if any(phrase == position_lower for phrase in invalid_phrases):
+            return False
+        
+        # Must contain at least one position-related word
+        position_words = ['journalist', 'reporter', 'writer', 'editor', 'correspondent', 
+                         'columnist', 'contributor', 'author', 'producer', 'anchor',
+                         'analyst', 'critic', 'reviewer', 'blogger', 'freelance']
+        
+        return any(word in position_lower for word in position_words) or len(position.split()) >= 2
+    
+    def _is_valid_outlet(self, outlet):
+        """Check if an outlet name is valid"""
+        if not outlet or len(outlet) < 2 or len(outlet) > 50:
+            return False
+        
+        # Filter out common non-outlet phrases
+        invalid_outlets = ['the', 'and', 'or', 'is', 'was', 'has', 'with', 'from', 'about']
+        
+        return outlet.lower() not in invalid_outlets and outlet[0].isupper()
+    
+    def _extract_from_json_ld_enhanced(self, data, author_name, result):
+        """Extract author info from JSON-LD structured data"""
+        try:
+            if isinstance(data, dict):
+                # Direct Person object
+                if data.get('@type') == 'Person' and author_name.lower() in data.get('name', '').lower():
+                    if data.get('description'):
+                        result['bio'] = data['description']
+                    if data.get('jobTitle'):
+                        result.setdefault('professional_info', {})['current_position'] = data['jobTitle']
+                    if data.get('image'):
+                        result['image_url'] = data['image'] if isinstance(data['image'], str) else data['image'].get('url')
+                    if data.get('alumniOf'):
+                        alumni = data['alumniOf']
+                        if isinstance(alumni, dict):
+                            result['education'] = alumni.get('name', '')
+                        elif isinstance(alumni, str):
+                            result['education'] = alumni
+                    if data.get('award'):
+                        awards = data['award'] if isinstance(data['award'], list) else [data['award']]
+                        result['awards'] = [a.get('name') if isinstance(a, dict) else str(a) for a in awards]
+                    if data.get('sameAs'):
+                        same_as = data['sameAs'] if isinstance(data['sameAs'], list) else [data['sameAs']]
+                        for url in same_as:
+                            self._extract_social_from_url(url, result)
+                    return True
+                
+                # Article with author
+                if data.get('@type') in ['Article', 'NewsArticle'] and data.get('author'):
+                    author = data['author']
+                    if isinstance(author, dict) and author_name.lower() in author.get('name', '').lower():
+                        return self._extract_from_json_ld_enhanced(author, author_name, result)
+            
+            elif isinstance(data, list):
+                for item in data:
+                    if self._extract_from_json_ld_enhanced(item, author_name, result):
+                        return True
+        except Exception as e:
+            logger.debug(f"Error extracting from JSON-LD: {e}")
+        
+        return False
+    
+    def _extract_from_meta_tags_enhanced(self, soup, author_name, result):
+        """Extract author info from meta tags"""
+        try:
+            # Extended meta tag mappings
+            meta_mappings = {
+                'bio': ['description', 'author.description', 'twitter:description', 'og:description'],
+                'image': ['author.image', 'twitter:image', 'og:image', 'profile:image'],
+                'title': ['author.title', 'author.jobTitle', 'profile:job_title'],
+                'email': ['author.email', 'profile:email'],
+                'twitter': ['twitter:creator', 'twitter:site'],
+            }
+            
+            for field, properties in meta_mappings.items():
+                for prop in properties:
+                    meta = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
+                    if meta and meta.get('content'):
+                        content = meta['content']
+                        
+                        if field == 'bio' and (author_name.lower() in content.lower() or len(content) > 100):
+                            result['bio'] = content
+                        elif field == 'image':
+                            result['image_url'] = content
+                        elif field == 'title':
+                            result.setdefault('professional_info', {})['current_position'] = content
+                        elif field == 'email':
+                            result.setdefault('online_presence', {})['email'] = content
+                        elif field == 'twitter':
+                            handle = content.replace('@', '')
+                            if handle and handle not in ['share', 'intent']:
+                                result.setdefault('online_presence', {})['twitter'] = handle
+        except Exception as e:
+            logger.debug(f"Error extracting from meta tags: {e}")
+    
+    def _extract_social_from_url(self, url, result):
+        """Extract social media username from URL"""
+        if not url:
+            return
+        
+        url_lower = url.lower()
+        
+        # Twitter/X
+        if 'twitter.com/' in url_lower or 'x.com/' in url_lower:
+            match = re.search(r'(?:twitter\.com|x\.com)/(@?\w+)', url_lower)
+            if match:
+                handle = match.group(1).replace('@', '')
+                if handle not in ['share', 'intent', 'home']:
+                    result.setdefault('online_presence', {})['twitter'] = handle
+        
+        # LinkedIn
+        elif 'linkedin.com/in/' in url_lower:
+            result.setdefault('online_presence', {})['linkedin'] = url
+        
+        # Other platforms
+        elif 'facebook.com/' in url_lower:
+            match = re.search(r'facebook\.com/([\w\.]+)', url_lower)
+            if match:
+                result.setdefault('online_presence', {})['facebook'] = match.group(1)
+        
+        elif 'instagram.com/' in url_lower:
+            match = re.search(r'instagram\.com/([\w\.]+)', url_lower)
+            if match:
+                result.setdefault('online_presence', {})['instagram'] = match.group(1)
+    
+    def _make_absolute_url(self, url, domain):
+        """Convert relative URLs to absolute"""
+        if not url:
+            return None
+        
+        if url.startswith('http'):
+            return url
+        
+        if url.startswith('//'):
+            return 'https:' + url
+        
+        if url.startswith('/'):
+            return f'https://{domain}{url}'
+        
+        return f'https://{domain}/{url}'
+    
+    def _clean_author_name(self, author_name):
+        """Clean and standardize author name"""
+        if not author_name:
+            return "Unknown"
+            
+        # Remove common suffixes
+        name = re.sub(r'\s*(,|and|&)\s*.*', '', author_name)
+        
+        # Remove titles
+        titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Sir', 'Dame']
+        for title in titles:
+            name = name.replace(title, '').strip()
+        
+        # Remove extra whitespace
+        name = ' '.join(name.split())
+        
+        return name if name else "Unknown"
+    
+    def _clean_outlet_name(self, domain):
+        """Extract clean outlet name from domain"""
+        if not domain:
+            return "Unknown Outlet"
+        
+        # Remove common domain parts
+        domain = domain.lower()
+        domain = domain.replace('www.', '')
+        domain = domain.replace('.com', '').replace('.org', '').replace('.net', '')
+        domain = domain.replace('.co.uk', '').replace('.co', '')
+        
+        # Special cases for known outlets
+        outlet_map = {
+            'nytimes': 'The New York Times',
+            'washingtonpost': 'The Washington Post',
+            'wsj': 'The Wall Street Journal',
+            'theguardian': 'The Guardian',
+            'bbc': 'BBC',
+            'cnn': 'CNN',
+            'foxnews': 'Fox News',
+            'msnbc': 'MSNBC',
+            'npr': 'NPR',
+            'reuters': 'Reuters',
+            'apnews': 'Associated Press',
+            'bloomberg': 'Bloomberg',
+            'ft': 'Financial Times',
+            'economist': 'The Economist',
+            'politico': 'Politico',
+            'thehill': 'The Hill',
+            'axios': 'Axios',
+            'vox': 'Vox',
+            'slate': 'Slate',
+            'salon': 'Salon',
+            'motherjones': 'Mother Jones',
+            'breitbart': 'Breitbart',
+            'dailywire': 'The Daily Wire',
+            'huffpost': 'HuffPost',
+            'buzzfeed': 'BuzzFeed',
+            'vice': 'VICE',
+            'theatlantic': 'The Atlantic',
+            'newyorker': 'The New Yorker',
+            'time': 'TIME',
+            'newsweek': 'Newsweek',
+            'usatoday': 'USA Today',
+            'latimes': 'Los Angeles Times',
+            'chicagotribune': 'Chicago Tribune',
+            'bostonglobe': 'The Boston Globe',
+            'seattletimes': 'The Seattle Times',
+            'denverpost': 'The Denver Post',
+            'miamiherald': 'Miami Herald',
+            'tampabay': 'Tampa Bay Times',
+            'startribune': 'Star Tribune',
+            'dallasnews': 'The Dallas Morning News',
+            'houstonchronicle': 'Houston Chronicle',
+            'sfchronicle': 'San Francisco Chronicle',
+            'oregonlive': 'The Oregonian',
+            'azcentral': 'The Arizona Republic',
+            'jsonline': 'Milwaukee Journal Sentinel'
+        }
+        
+        # Check if we have a known mapping
+        for key, value in outlet_map.items():
+            if key in domain:
+                return value
+        
+        # Otherwise, capitalize first letter of each word
+        parts = domain.split('-')
+        return ' '.join(word.capitalize() for word in parts)
+    
+    def _parse_authors(self, author_text):
+        """Parse multiple authors from byline text"""
+        if not author_text:
+            return []
+        
+        # Split by common separators
+        authors = re.split(r'\s*(?:,|and|&)\s*', author_text)
+        
+        # Clean each author
+        cleaned_authors = []
+        for author in authors:
+            cleaned = self._clean_author_name(author)
+            if cleaned and len(cleaned) > 2 and cleaned != "Unknown":
+                cleaned_authors.append(cleaned)
+        
+        return cleaned_authors
