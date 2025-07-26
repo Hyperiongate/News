@@ -181,13 +181,18 @@ class NewsAnalyzer:
                 key_claims = self._extract_key_claims(article_data['text'])
                 analysis_results['key_claims'] = key_claims
                 
-                # Manipulation detection - use detect_manipulation method
+                # Manipulation detection - FIXED: analyze_persuasion only takes 2 arguments
                 manipulation_tactics = self.bias_detector.detect_manipulation(article_data['text'])
+                
+                # Call analyze_persuasion with only text and title
                 analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
                     article_data['text'],
-                    article_data.get('title', ''),
-                    manipulation_tactics  # Pass the tactics from bias detector
+                    article_data.get('title', '')
                 )
+                
+                # Add the manipulation tactics to the persuasion analysis result
+                if 'persuasion_analysis' in analysis_results:
+                    analysis_results['persuasion_analysis']['manipulation_tactics'] = manipulation_tactics
                 
                 # Connection analysis
                 analysis_results['connection_analysis'] = self.connection_analyzer.analyze_connections(
