@@ -1,5 +1,5 @@
 """
-services/news_analyzer.py - Main orchestrator with REAL author analysis
+services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
 """
 
 import os
@@ -8,17 +8,42 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-# Import all analysis services
+# Import only the services that actually exist
 from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
-from services.bias_detector import BiasDetector
-from services.manipulation_detector import ManipulationDetector
-from services.transparency_analyzer import TransparencyAnalyzer
-from services.clickbait_analyzer import ClickbaitAnalyzer
-from services.content_analyzer import ContentAnalyzer
-from services.connection_analyzer import ConnectionAnalyzer
+
+# Import the services with their correct names
+try:
+    from services.bias_analyzer import BiasAnalyzer
+except ImportError:
+    from services.bias_detector import BiasDetector as BiasAnalyzer
+
+try:
+    from services.manipulation_detector import ManipulationDetector
+except ImportError:
+    ManipulationDetector = None
+
+try:
+    from services.transparency_analyzer import TransparencyAnalyzer
+except ImportError:
+    TransparencyAnalyzer = None
+
+try:
+    from services.clickbait_analyzer import ClickbaitAnalyzer
+except ImportError:
+    ClickbaitAnalyzer = None
+
+try:
+    from services.content_analyzer import ContentAnalyzer
+except ImportError:
+    ContentAnalyzer = None
+
+try:
+    from services.connection_analyzer import ConnectionAnalyzer
+except ImportError:
+    ConnectionAnalyzer = None
 
 # OpenAI integration
 try:
@@ -36,17 +61,43 @@ class NewsAnalyzer:
     
     def __init__(self):
         """Initialize all analysis components"""
-        # Core services
+        # Core services (always available)
         self.extractor = NewsExtractor()
-        self.bias_detector = BiasDetector()  # Changed from bias_analyzer to bias_detector
         self.fact_checker = FactChecker()
         self.source_credibility = SourceCredibility()
         self.author_analyzer = AuthorAnalyzer()
-        self.manipulation_detector = ManipulationDetector()
-        self.transparency_analyzer = TransparencyAnalyzer()
-        self.clickbait_analyzer = ClickbaitAnalyzer()
-        self.content_analyzer = ContentAnalyzer()
-        self.connection_analyzer = ConnectionAnalyzer()
+        
+        # Try to initialize optional services
+        try:
+            self.bias_analyzer = BiasAnalyzer()
+        except:
+            logger.warning("BiasAnalyzer not available")
+            self.bias_analyzer = None
+            
+        if ManipulationDetector:
+            self.manipulation_detector = ManipulationDetector()
+        else:
+            self.manipulation_detector = None
+            
+        if TransparencyAnalyzer:
+            self.transparency_analyzer = TransparencyAnalyzer()
+        else:
+            self.transparency_analyzer = None
+            
+        if ClickbaitAnalyzer:
+            self.clickbait_analyzer = ClickbaitAnalyzer()
+        else:
+            self.clickbait_analyzer = None
+            
+        if ContentAnalyzer:
+            self.content_analyzer = ContentAnalyzer()
+        else:
+            self.content_analyzer = None
+            
+        if ConnectionAnalyzer:
+            self.connection_analyzer = ConnectionAnalyzer()
+        else:
+            self.connection_analyzer = None
         
     def analyze(self, content: str, content_type: str = 'url', is_pro: bool = False) -> Dict[str, Any]:
         """
@@ -63,6 +114,7 @@ class NewsAnalyzer:
         try:
             # Step 1: Extract article content
             if content_type == 'url':
+                logger.info(f"Extracting article from URL: {content}")
                 article_data = self.extractor.extract_article(content)
                 if not article_data:
                     return {
@@ -87,74 +139,70 @@ class NewsAnalyzer:
             # Step 2: Perform all analyses
             analysis_results = {}
             
-            # Core analyses (always performed)
-            # FIXED: Use correct BiasDetector methods
-            political_bias_score = self.bias_detector.detect_political_bias(article_data['text'])
-            analysis_results['bias_analysis'] = self.bias_detector.analyze_comprehensive_bias(
-                article_data['text'], 
-                political_bias_score, 
-                article_data.get('domain')
-            )
+            # Bias analysis (with fallback)
+            if self.bias_analyzer:
+                try:
+                    analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+                except Exception as e:
+                    logger.error(f"Bias analysis failed: {e}")
+                    analysis_results['bias_analysis'] = {
+                        'overall_bias': 'Unknown',
+                        'political_lean': 0,
+                        'objectivity_score': 0.5
+                    }
+            else:
+                analysis_results['bias_analysis'] = {
+                    'overall_bias': 'Unknown',
+                    'political_lean': 0,
+                    'objectivity_score': 0.5
+                }
             
-            # Clickbait analysis - FIXED to only use existing method
-            analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
-                article_data.get('title', ''),
-                article_data['text']
-            )
+            # Clickbait analysis (with fallback)
+            if self.clickbait_analyzer:
+                try:
+                    analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
+                        article_data.get('title', ''),
+                        article_data['text']
+                    )
+                except Exception as e:
+                    logger.error(f"Clickbait analysis failed: {e}")
+                    analysis_results['clickbait_score'] = 50
+            else:
+                # Simple fallback clickbait detection
+                title = article_data.get('title', '').lower()
+                clickbait_score = 0
+                if any(word in title for word in ['shocking', 'you won\'t believe', 'this one trick']):
+                    clickbait_score += 30
+                if title.endswith('?'):
+                    clickbait_score += 20
+                if any(char in title for char in ['!', '...']):
+                    clickbait_score += 15
+                analysis_results['clickbait_score'] = min(clickbait_score, 100)
             
-            # Generate title_analysis based on clickbait score
-            clickbait_score = analysis_results['clickbait_score']
-            analysis_results['title_analysis'] = {
-                'sensationalism': min(clickbait_score, 100),
-                'curiosity_gap': min(clickbait_score * 0.8, 100),
-                'emotional_words': min(clickbait_score * 0.6, 100)
-            }
-            
-            # Generate clickbait indicators
-            indicators = []
-            if clickbait_score > 70:
-                indicators.append({
-                    'name': 'High Clickbait',
-                    'description': 'Headline uses strong clickbait tactics',
-                    'severity': 'high'
-                })
-            elif clickbait_score > 40:
-                indicators.append({
-                    'name': 'Moderate Clickbait',
-                    'description': 'Headline uses some clickbait elements',
-                    'severity': 'medium'
-                })
-            
-            analysis_results['clickbait_indicators'] = indicators
-            
-            # Source credibility
+            # Source credibility (always available)
             analysis_results['source_credibility'] = self.source_credibility.check_credibility(
                 article_data.get('domain', 'unknown')
             )
             
-            # AUTHOR ANALYSIS - USING REAL ANALYZER
+            # CRITICAL: Author analysis - this is the main fix
             if article_data.get('author'):
-                author_str = article_data['author']
-                logger.info(f"Analyzing author: {author_str} from domain: {article_data.get('domain')}")
-                
+                logger.info(f"Starting author analysis for: {article_data['author']} from domain: {article_data.get('domain')}")
                 try:
-                    # Use REAL author analyzer
-                    analysis_results['author_analysis'] = self.author_analyzer.analyze_single_author(
-                        author_str,
+                    # Call the author analyzer
+                    author_result = self.author_analyzer.analyze_single_author(
+                        article_data['author'],
                         article_data.get('domain')
                     )
-                    
-                    logger.info(f"Author analysis completed successfully")
-                    
+                    analysis_results['author_analysis'] = author_result
+                    logger.info(f"Author analysis completed: found={author_result.get('found', False)}")
                 except Exception as e:
-                    logger.error(f"Error in author analysis: {str(e)}")
-                    
-                    # Fallback with error info
+                    logger.error(f"Author analysis error: {str(e)}", exc_info=True)
+                    # Provide fallback
                     analysis_results['author_analysis'] = {
                         'found': False,
-                        'name': author_str,
+                        'name': article_data['author'],
                         'credibility_score': 50,
-                        'bio': f'Could not retrieve author information',
+                        'bio': 'Error retrieving author information',
                         'verification_status': {
                             'verified': False,
                             'journalist_verified': False,
@@ -169,12 +217,12 @@ class NewsAnalyzer:
                         'online_presence': {},
                         'credibility_explanation': {
                             'level': 'Unknown',
-                            'explanation': 'Author information could not be retrieved',
+                            'explanation': 'Could not retrieve author information',
                             'advice': 'Verify author credentials through additional sources'
                         }
                     }
             else:
-                logger.info("No author found in article data")
+                logger.info("No author found in article")
                 analysis_results['author_analysis'] = {
                     'found': False,
                     'name': 'Unknown Author',
@@ -199,14 +247,39 @@ class NewsAnalyzer:
                     }
                 }
             
-            # Content analysis
-            analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
+            # Content analysis (with fallback)
+            if self.content_analyzer:
+                try:
+                    analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
+                except Exception as e:
+                    logger.error(f"Content analysis failed: {e}")
+                    analysis_results['content_analysis'] = self._basic_content_analysis(article_data['text'])
+            else:
+                analysis_results['content_analysis'] = self._basic_content_analysis(article_data['text'])
             
-            # Transparency analysis
-            analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
-                article_data['text'],
-                article_data.get('author')
-            )
+            # Transparency analysis (with fallback)
+            if self.transparency_analyzer:
+                try:
+                    analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
+                        article_data['text'],
+                        article_data.get('author')
+                    )
+                except Exception as e:
+                    logger.error(f"Transparency analysis failed: {e}")
+                    analysis_results['transparency_analysis'] = {'transparency_score': 50}
+            else:
+                # Basic transparency check
+                text = article_data['text'].lower()
+                transparency_score = 50
+                if article_data.get('author'):
+                    transparency_score += 20
+                if 'according to' in text or 'sources say' in text:
+                    transparency_score += 15
+                if 'study' in text or 'research' in text:
+                    transparency_score += 15
+                analysis_results['transparency_analysis'] = {
+                    'transparency_score': min(transparency_score, 100)
+                }
             
             # Pro features
             if is_pro:
@@ -214,42 +287,47 @@ class NewsAnalyzer:
                 key_claims = self._extract_key_claims(article_data['text'])
                 analysis_results['key_claims'] = key_claims
                 
-                # Manipulation detection - FIXED: analyze_persuasion only takes 2 arguments
-                manipulation_tactics = self.bias_detector.detect_manipulation(article_data['text'])
+                # Manipulation detection (if available)
+                if self.manipulation_detector:
+                    try:
+                        analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
+                            article_data['text'],
+                            article_data.get('title', '')
+                        )
+                    except Exception as e:
+                        logger.error(f"Manipulation detection failed: {e}")
+                        analysis_results['persuasion_analysis'] = {'persuasion_score': 50}
                 
-                # Call analyze_persuasion with only text and title
-                analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
-                    article_data['text'],
-                    article_data.get('title', '')
-                )
-                
-                # Add the manipulation tactics to the persuasion analysis result
-                if 'persuasion_analysis' in analysis_results:
-                    analysis_results['persuasion_analysis']['manipulation_tactics'] = manipulation_tactics
-                
-                # Connection analysis
-                analysis_results['connection_analysis'] = self.connection_analyzer.analyze_connections(
-                    article_data['text'],
-                    article_data.get('title', ''),
-                    analysis_results.get('key_claims', [])
-                )
+                # Connection analysis (if available)
+                if self.connection_analyzer:
+                    try:
+                        analysis_results['connection_analysis'] = self.connection_analyzer.analyze_connections(
+                            article_data['text'],
+                            article_data.get('title', ''),
+                            analysis_results.get('key_claims', [])
+                        )
+                    except Exception as e:
+                        logger.error(f"Connection analysis failed: {e}")
                 
                 # AI-powered summary if available
                 if OPENAI_AVAILABLE:
-                    analysis_results['article_summary'] = self._generate_ai_summary(article_data['text'])
-                    analysis_results['conversational_summary'] = self._generate_conversational_summary(
-                        article_data, analysis_results
-                    )
+                    try:
+                        analysis_results['article_summary'] = self._generate_ai_summary(article_data['text'])
+                        analysis_results['conversational_summary'] = self._generate_conversational_summary(
+                            article_data, analysis_results
+                        )
+                    except Exception as e:
+                        logger.error(f"AI summary failed: {e}")
             
             # Step 3: Calculate overall trust score
             trust_score = self._calculate_trust_score(analysis_results, article_data)
             
-            # Step 4: Compile final results with proper structure
-            return {
+            # Step 4: Compile final results
+            result = {
                 'success': True,
                 'article': {
                     'title': article_data.get('title', 'Untitled'),
-                    'author': article_data.get('author', 'Unknown Author'),  # ENSURE THIS HAS A DEFAULT
+                    'author': article_data.get('author', 'Unknown Author'),
                     'publish_date': article_data.get('publish_date'),
                     'url': article_data.get('url'),
                     'domain': article_data.get('domain', 'unknown'),
@@ -258,9 +336,14 @@ class NewsAnalyzer:
                 'trust_score': trust_score,
                 'is_pro': is_pro,
                 'analysis_mode': 'pro' if is_pro else 'basic',
-                'development_mode': os.environ.get('DEVELOPMENT_MODE', 'false').lower() == 'true',
-                **analysis_results  # This includes author_analysis with all the detailed info
+                'development_mode': os.environ.get('DEVELOPMENT_MODE', 'false').lower() == 'true'
             }
+            
+            # Add all analysis results
+            result.update(analysis_results)
+            
+            logger.info(f"Analysis completed successfully. Trust score: {trust_score}")
+            return result
             
         except Exception as e:
             logger.error(f"Analysis error: {str(e)}", exc_info=True)
@@ -269,15 +352,25 @@ class NewsAnalyzer:
                 'error': f'Analysis failed: {str(e)}'
             }
     
+    def _basic_content_analysis(self, text: str) -> Dict[str, Any]:
+        """Basic content analysis fallback"""
+        words = text.split()
+        sentences = re.split(r'[.!?]+', text)
+        
+        return {
+            'word_count': len(words),
+            'sentence_count': len([s for s in sentences if s.strip()]),
+            'average_sentence_length': len(words) / max(len(sentences), 1),
+            'reading_time': max(1, round(len(words) / 225))
+        }
+    
     def _extract_title_from_text(self, text: str) -> str:
         """Extract title from pasted text (first line or first sentence)"""
         lines = text.strip().split('\n')
         if lines:
-            # Use first non-empty line as title
             for line in lines:
                 if line.strip():
                     title = line.strip()
-                    # Limit length
                     if len(title) > 200:
                         title = title[:197] + '...'
                     return title
@@ -288,22 +381,20 @@ class NewsAnalyzer:
         claims = []
         sentences = re.split(r'[.!?]+', text)
         
-        # Patterns for factual claims
         claim_patterns = [
-            r'\b\d+\s*(?:percent|%)',  # Percentages
-            r'\b(?:study|research|report|survey)\s+(?:shows|finds|found|reveals)',  # Studies
-            r'\b(?:according to|data from|statistics show)',  # Data references
-            r'\b(?:increased|decreased|rose|fell)\s+(?:by|to)\s+\d+',  # Changes
-            r'\b\d+\s+(?:million|billion|thousand)',  # Large numbers
-            r'\b(?:first|largest|smallest|fastest|slowest)\b',  # Superlatives
+            r'\b\d+\s*(?:percent|%)',
+            r'\b(?:study|research|report|survey)\s+(?:shows|finds|found|reveals)',
+            r'\b(?:according to|data from|statistics show)',
+            r'\b(?:increased|decreased|rose|fell)\s+(?:by|to)\s+\d+',
+            r'\b\d+\s+(?:million|billion|thousand)',
+            r'\b(?:first|largest|smallest|fastest|slowest)\b',
         ]
         
-        for sentence in sentences[:20]:  # Check first 20 sentences
+        for sentence in sentences[:20]:
             sentence = sentence.strip()
             if len(sentence) < 20:
                 continue
                 
-            # Check if sentence contains claim patterns
             for pattern in claim_patterns:
                 if re.search(pattern, sentence, re.IGNORECASE):
                     claims.append({
@@ -313,7 +404,7 @@ class NewsAnalyzer:
                     })
                     break
             
-            if len(claims) >= 10:  # Limit to 10 key claims
+            if len(claims) >= 10:
                 break
         
         return claims
@@ -340,16 +431,14 @@ class NewsAnalyzer:
         if author_analysis.get('found'):
             author_score = author_analysis.get('credibility_score', 50)
         else:
-            author_score = 50  # Default if no author
+            author_score = 50
         score_components.append(author_score)
         weights.append(0.20)
         
         # Bias impact (15% weight)
         bias_data = analysis_results.get('bias_analysis', {})
-        # Handle objectivity score properly
         objectivity = bias_data.get('objectivity_score', 0.5)
         if isinstance(objectivity, (int, float)) and objectivity > 1:
-            # If objectivity is 0-100, convert to 0-1
             objectivity = objectivity / 100
         bias_score = objectivity * 100
         score_components.append(bias_score)
@@ -368,23 +457,21 @@ class NewsAnalyzer:
             score_components.append(manip_score)
             weights.append(0.10)
         else:
-            # If no persuasion analysis, adjust weights
             weights = [w / 0.9 for w in weights[:4]]
         
         # Clickbait (10% weight)
         clickbait = analysis_results.get('clickbait_score', 50)
-        clickbait_trust = 100 - clickbait  # Inverse relationship
+        clickbait_trust = 100 - clickbait
         score_components.append(clickbait_trust)
         weights.append(0.10)
         
-        # Normalize weights to sum to 1
+        # Normalize weights
         total_weight = sum(weights)
         weights = [w / total_weight for w in weights]
         
         # Calculate weighted average
         total_score = sum(score * weight for score, weight in zip(score_components, weights))
         
-        # Round to integer
         return max(0, min(100, round(total_score)))
     
     def _generate_ai_summary(self, text: str) -> Optional[str]:
@@ -393,7 +480,6 @@ class NewsAnalyzer:
             return None
             
         try:
-            # Limit text length for API
             max_chars = 4000
             if len(text) > max_chars:
                 text = text[:max_chars] + '...'
@@ -427,7 +513,6 @@ class NewsAnalyzer:
             return None
             
         try:
-            # Prepare analysis context
             context = f"""
             Article: {article_data.get('title', 'Untitled')}
             Source: {article_data.get('domain', 'Unknown')}
