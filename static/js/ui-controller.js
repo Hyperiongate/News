@@ -1,9 +1,12 @@
-// Fixed UI Controller - Ensures cards display properly and fixes author section warning
+// Fixed UI Controller with Refresh Feature
 (function() {
     class UIController {
         constructor() {
             this.components = {};
             this.analysisData = null;
+            this.currentUrl = null;
+            this.currentText = null;
+            this.isAnalyzing = false;
         }
 
         registerComponent(name, component) {
@@ -36,6 +39,14 @@
             // Create overall assessment
             resultsDiv.innerHTML = this.createOverallAssessment(data);
             resultsDiv.classList.remove('hidden');
+            
+            // Add refresh button after overall assessment
+            this.addRefreshButton(resultsDiv);
+            
+            // Show cache notice if applicable
+            if (data.cached && !data.force_fresh) {
+                this.showCacheNotice(resultsDiv);
+            }
             
             // Create header
             const header = document.createElement('h2');
@@ -97,6 +108,254 @@
             
             // Show resources
             this.showResources(data);
+        }
+
+        addRefreshButton(container) {
+            // Check if refresh button already exists
+            let refreshContainer = document.getElementById('refresh-container');
+            if (!refreshContainer) {
+                // Create refresh button container
+                refreshContainer = document.createElement('div');
+                refreshContainer.id = 'refresh-container';
+                refreshContainer.style.cssText = `
+                    text-align: center;
+                    margin: 20px auto;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #e3ecf6 100%);
+                    border-radius: 12px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                    max-width: 800px;
+                `;
+                
+                const refreshText = document.createElement('p');
+                refreshText.style.cssText = `
+                    margin: 0 0 12px 0;
+                    color: #475569;
+                    font-size: 0.95rem;
+                `;
+                refreshText.textContent = 'Want to check for updates or see if anything has changed?';
+                
+                const refreshButton = document.createElement('button');
+                refreshButton.id = 'refresh-analysis-btn';
+                refreshButton.className = 'btn btn-secondary';
+                refreshButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                    </svg>
+                    Refresh Analysis
+                `;
+                refreshButton.style.cssText = `
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 15px;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+                `;
+                
+                refreshButton.addEventListener('mouseenter', () => {
+                    refreshButton.style.transform = 'translateY(-2px)';
+                    refreshButton.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.35)';
+                });
+                
+                refreshButton.addEventListener('mouseleave', () => {
+                    refreshButton.style.transform = 'translateY(0)';
+                    refreshButton.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.25)';
+                });
+                
+                refreshButton.addEventListener('click', () => {
+                    if (!this.isAnalyzing) {
+                        this.performRefreshAnalysis();
+                    }
+                });
+                
+                refreshContainer.appendChild(refreshText);
+                refreshContainer.appendChild(refreshButton);
+                
+                // Find the overall assessment and insert after it
+                const overallAssessment = container.querySelector('.overall-assessment');
+                if (overallAssessment && overallAssessment.parentNode) {
+                    overallAssessment.parentNode.insertBefore(refreshContainer, overallAssessment.nextSibling);
+                } else {
+                    container.appendChild(refreshContainer);
+                }
+            }
+        }
+
+        showCacheNotice(container) {
+            // Remove existing notice if any
+            const existingNotice = document.getElementById('cache-notice');
+            if (existingNotice) {
+                existingNotice.remove();
+            }
+            
+            // Create cache notice
+            const notice = document.createElement('div');
+            notice.id = 'cache-notice';
+            notice.style.cssText = `
+                background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+                border: 1px solid #0ea5e9;
+                color: #0c4a6e;
+                padding: 12px 20px;
+                border-radius: 8px;
+                margin: 16px auto;
+                max-width: 800px;
+                font-size: 0.9rem;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 2px 4px rgba(14, 165, 233, 0.1);
+            `;
+            notice.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>This is a cached analysis from the last 24 hours. Use the "Refresh Analysis" button below for the latest results.</span>
+            `;
+            
+            // Find the overall assessment and insert after it
+            const overallAssessment = container.querySelector('.overall-assessment');
+            if (overallAssessment && overallAssessment.parentNode) {
+                overallAssessment.parentNode.insertBefore(notice, overallAssessment.nextSibling);
+            } else {
+                container.insertBefore(notice, container.firstChild);
+            }
+        }
+
+        performRefreshAnalysis() {
+            if (this.isAnalyzing) return;
+            
+            this.isAnalyzing = true;
+            const refreshBtn = document.getElementById('refresh-analysis-btn');
+            const originalText = refreshBtn.innerHTML;
+            
+            // Update button to show loading state
+            refreshBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; animation: spin 1s linear infinite;">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                </svg>
+                Refreshing...
+            `;
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = '0.7';
+            refreshBtn.style.cursor = 'not-allowed';
+            
+            // Get the current URL or text from the original analysis
+            const article = this.analysisData?.article;
+            let requestData = {
+                force_fresh: true  // This is the key parameter to bypass cache
+            };
+            
+            if (article?.url) {
+                requestData.url = article.url;
+                this.currentUrl = article.url;
+            } else if (article?.text_preview) {
+                // For text analysis, we need the full text, not just the preview
+                // Since we don't store the full text, we need to get it from the input
+                const textInput = document.getElementById('textInput');
+                if (textInput && textInput.value) {
+                    requestData.text = textInput.value;
+                    this.currentText = textInput.value;
+                } else {
+                    // Fallback - use the preview (not ideal but better than nothing)
+                    requestData.text = article.text_preview;
+                    this.currentText = article.text_preview;
+                }
+            } else {
+                // Try to get from current values
+                if (this.currentUrl) {
+                    requestData.url = this.currentUrl;
+                } else if (this.currentText) {
+                    requestData.text = this.currentText;
+                } else {
+                    // Can't refresh without content
+                    this.showError('Unable to refresh - no article content found');
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.disabled = false;
+                    refreshBtn.style.opacity = '1';
+                    refreshBtn.style.cursor = 'pointer';
+                    this.isAnalyzing = false;
+                    return;
+                }
+            }
+            
+            // Perform the analysis
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove cache notice if present
+                    const cacheNotice = document.getElementById('cache-notice');
+                    if (cacheNotice) {
+                        cacheNotice.remove();
+                    }
+                    
+                    // Show success message
+                    this.showRefreshSuccess();
+                    
+                    // Rebuild results with new data
+                    setTimeout(() => {
+                        this.buildResults(data);
+                    }, 500);
+                } else {
+                    this.showError(data.error || 'Refresh failed');
+                }
+            })
+            .catch(error => {
+                console.error('Refresh error:', error);
+                this.showError('Failed to refresh analysis. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = '1';
+                refreshBtn.style.cursor = 'pointer';
+                this.isAnalyzing = false;
+            });
+        }
+
+        showRefreshSuccess() {
+            // Create a temporary success message
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+                font-weight: 500;
+                z-index: 9999;
+                animation: slideIn 0.3s ease-out;
+            `;
+            successMsg.textContent = '✓ Analysis refreshed successfully!';
+            
+            document.body.appendChild(successMsg);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                successMsg.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    successMsg.remove();
+                }, 300);
+            }, 3000);
         }
 
         createOverallAssessment(data) {
@@ -165,6 +424,8 @@
             `;
         }
 
+        // ... [All the other methods remain exactly the same] ...
+        
         createCard(type, icon, title) {
             const card = document.createElement('div');
             card.className = 'analysis-card-standalone';
@@ -855,8 +1116,7 @@
             return card;
         }
 
-        // Helper methods with full content
-        
+        // Helper methods remain the same
         generateSummary(data) {
             const trust = data.trust_score || 0;
             const source = data.article?.domain || 'this source';
@@ -977,7 +1237,7 @@
             return { icon: '❓', color: '#6b7280', bgColor: '#f9fafb', borderColor: '#9ca3af' };
         }
 
-        // Content generation methods
+        // All other helper methods remain exactly the same...
         getTrustInterpretation(score) {
             if (score >= 80) {
                 return 'This article demonstrates exceptional credibility. With strong source credibility, verified author credentials, transparent sourcing, and accurate facts, readers can have high confidence in the information presented.';
@@ -1254,9 +1514,44 @@
 
     // Create and expose global instance
     window.UI = new UIController();
-    console.log('UI Controller initialized');
+    console.log('UI Controller initialized with refresh feature');
 
-    // Add required CSS
+    // Add animation keyframes for the refresh button
+    if (!document.querySelector('style[data-component="refresh-animations"]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-component', 'refresh-animations');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Add required CSS (keeping existing styles)
     if (!document.querySelector('style[data-component="ui-controller-fixed"]')) {
         const style = document.createElement('style');
         style.setAttribute('data-component', 'ui-controller-fixed');
