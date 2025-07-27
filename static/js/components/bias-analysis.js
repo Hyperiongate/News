@@ -1,729 +1,1165 @@
-// static/js/components/bias-analysis.js
-// FIXED VERSION - Ensures enhanced bias data is displayed
+"""
+services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
+Complete version with fact checking integration
+"""
 
-class BiasAnalysis {
-    constructor() {
-        this.container = null;
-        this.chartInstance = null;
-    }
+import os
+import re
+import logging
+from datetime import datetime
+from typing import Dict, Any, Optional, List
 
-    render(data) {
-        console.log('BiasAnalysis render called with data:', data);
+# Import only the services that actually exist
+from services.news_extractor import NewsExtractor
+from services.fact_checker import FactChecker
+from services.source_credibility import SourceCredibility
+from services.author_analyzer import AuthorAnalyzer
+
+# Import the services with their correct names
+try:
+    from services.bias_analyzer import BiasAnalyzer
+except ImportError:
+    from services.bias_detector import BiasDetector as BiasAnalyzer
+
+try:
+    from services.manipulation_detector import ManipulationDetector
+except ImportError:
+    ManipulationDetector = None
+
+try:
+    from services.transparency_analyzer import TransparencyAnalyzer
+except ImportError:
+    TransparencyAnalyzer = None
+
+try:
+    from services.clickbait_analyzer import ClickbaitAnalyzer
+except ImportError:
+    ClickbaitAnalyzer = None
+
+try:
+    from services.content_analyzer import ContentAnalyzer
+except ImportError:
+    ContentAnalyzer = None
+
+try:
+    from services.connection_analyzer import ConnectionAnalyzer
+except ImportError:
+    ConnectionAnalyzer = None
+
+# OpenAI integration
+try:
+    import openai
+    OPENAI_AVAILABLE = bool(os.environ.get('OPENAI_API_KEY'))
+    if OPENAI_AVAILABLE:
+        openai.api_key = os.environ.get('OPENAI_API_KEY')
+except ImportError:
+    OPENAI_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
+class NewsAnalyzer:
+    """Main orchestrator for comprehensive news analysis"""
+    
+    def __init__(self):
+        """Initialize all analysis components"""
+        # Core services (always available)
+        self.extractor = NewsExtractor()
+        self.fact_checker = FactChecker()
+        self.source_credibility = SourceCredibility()
+        self.author_analyzer = AuthorAnalyzer()
         
-        const container = document.createElement('div');
-        container.className = 'bias-analysis-container analysis-card';
-        
-        const bias = data.bias_analysis || {};
-        const isBasicPlan = !data.is_pro;
-        
-        // Log what we have
-        console.log('Bias data available:', {
-            hasBasicFields: !!(bias.overall_bias && bias.political_lean),
-            hasBiasConfidence: !!bias.bias_confidence,
-            hasBiasDimensions: !!(bias.bias_dimensions && Object.keys(bias.bias_dimensions).length > 0),
-            hasBiasPatterns: !!(bias.bias_patterns && bias.bias_patterns.length > 0),
-            hasFramingAnalysis: !!bias.framing_analysis,
-            hasBiasImpact: !!bias.bias_impact
-        });
-        
-        // For basic plan, show limited info
-        if (isBasicPlan) {
-            container.innerHTML = this.renderBasicBias(bias);
-        } else {
-            container.innerHTML = this.renderProBias(bias, data);
-        }
-        
-        this.container = container;
-        
-        // Animate and initialize visualizations after DOM is ready
-        requestAnimationFrame(() => {
-            this.animateBiasIndicator();
+        # Try to initialize optional services
+        try:
+            self.bias_analyzer = BiasAnalyzer()
+        except:
+            logger.warning("BiasAnalyzer not available")
+            self.bias_analyzer = None
             
-            // Try to render radar chart multiple times to ensure canvas is ready
-            if (!isBasicPlan && bias.bias_dimensions && Object.keys(bias.bias_dimensions).length > 0) {
-                let attempts = 0;
-                const tryRenderChart = () => {
-                    attempts++;
-                    const canvas = document.getElementById('biasRadarChart');
-                    if (canvas) {
-                        console.log('Canvas found, rendering radar chart');
-                        this.renderBiasRadarChart(bias.bias_dimensions);
-                    } else if (attempts < 20) {
-                        setTimeout(tryRenderChart, 100);
-                    } else {
-                        console.error('Canvas not found after 20 attempts');
+        if ManipulationDetector:
+            self.manipulation_detector = ManipulationDetector()
+        else:
+            self.manipulation_detector = None
+            
+        if TransparencyAnalyzer:
+            self.transparency_analyzer = TransparencyAnalyzer()
+        else:
+            self.transparency_analyzer = None
+            
+        if ClickbaitAnalyzer:
+            self.clickbait_analyzer = ClickbaitAnalyzer()
+        else:
+            self.clickbait_analyzer = None
+            
+        if ContentAnalyzer:
+            self.content_analyzer = ContentAnalyzer()
+        else:
+            self.content_analyzer = None
+            
+        if ConnectionAnalyzer:
+            self.connection_analyzer = ConnectionAnalyzer()
+        else:
+            self.connection_analyzer = None
+        
+    def analyze(self, content: str, content_type: str = 'url', is_pro: bool = False) -> Dict[str, Any]:
+        """
+        Perform comprehensive analysis on news content
+        
+        Args:
+            content: URL or text to analyze
+            content_type: 'url' or 'text'
+            is_pro: Whether to use premium features
+            
+        Returns:
+            Comprehensive analysis results
+        """
+        try:
+            # Step 1: Extract article content
+            if content_type == 'url':
+                logger.info(f"Extracting article from URL: {content}")
+                article_data = self.extractor.extract_article(content)
+                if not article_data:
+                    return {
+                        'success': False,
+                        'error': 'Could not extract article content'
                     }
-                };
-                tryRenderChart();
-            }
-        });
-        
-        return container;
-    }
-
-    renderBasicBias(bias) {
-        const overallBias = bias.overall_bias || 'Unknown';
-        const biasScore = this.calculateBiasScore(bias);
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">⚖️</span>
-                <span>Bias Analysis</span>
-            </div>
+            else:
+                # For text input, create article data structure
+                article_data = {
+                    'title': self._extract_title_from_text(content),
+                    'text': content,
+                    'author': None,  # No author for pasted text
+                    'publish_date': None,
+                    'url': None,
+                    'domain': 'user_input'
+                }
             
-            <div class="bias-content">
-                <div class="bias-summary">
-                    <p class="bias-basic-text">
-                        Overall bias detected: <strong>${overallBias}</strong>
-                    </p>
-                    <div class="upgrade-prompt">
-                        <span class="lock-icon">🔒</span>
-                        <p>Unlock detailed bias analysis including political lean, manipulation tactics, and emotional language detection with Pro plan.</p>
-                        <button class="upgrade-btn" onclick="window.pricingDropdown?.selectPlan('pro')">
-                            Upgrade to Pro
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderProBias(bias, data) {
-        const biasScore = this.calculateBiasScore(bias);
-        const politicalLean = bias.political_lean || 0;
-        const manipulationTactics = bias.manipulation_tactics || [];
-        
-        // Enhanced fields - with defaults
-        const biasConfidence = bias.bias_confidence || 50;
-        const biasDimensions = bias.bias_dimensions || {};
-        const biasPatterns = bias.bias_patterns || [];
-        const framingAnalysis = bias.framing_analysis || {};
-        const biasImpact = bias.bias_impact || {};
-        const biasVisualization = bias.bias_visualization || {};
-        const sourceAnalysis = bias.source_bias_analysis || {};
-        
-        // Check what enhanced data we actually have
-        const hasEnhancedData = Object.keys(biasDimensions).length > 0 || 
-                               biasPatterns.length > 0 || 
-                               framingAnalysis.frames_detected > 0 ||
-                               biasImpact.severity;
-        
-        console.log('Enhanced data check:', {
-            hasEnhancedData,
-            dimensionCount: Object.keys(biasDimensions).length,
-            patternCount: biasPatterns.length,
-            framesDetected: framingAnalysis.frames_detected || 0
-        });
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">⚖️</span>
-                <span>${hasEnhancedData ? 'Comprehensive' : 'Detailed'} Bias Analysis</span>
-                <span class="pro-indicator">PRO</span>
-            </div>
+            # Log what we extracted
+            logger.info(f"Extracted article data: {article_data.get('title', 'No title')}")
+            logger.info(f"Author from extraction: {article_data.get('author', 'No author')}")
             
-            <div class="bias-content">
-                ${hasEnhancedData ? `
-                    <!-- Bias Confidence Score -->
-                    <div class="bias-confidence-section">
-                        <div class="confidence-header">
-                            <h4>Analysis Confidence</h4>
-                            <span class="confidence-value">${biasConfidence}%</span>
-                        </div>
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" style="width: ${biasConfidence}%"></div>
-                        </div>
-                        <p class="confidence-description">
-                            ${this.getConfidenceDescription(biasConfidence)}
-                        </p>
-                    </div>
-                ` : ''}
-
-                <!-- Multi-dimensional Bias Analysis -->
-                ${Object.keys(biasDimensions).length > 0 ? `
-                    <div class="multi-dimensional-bias">
-                        <h4>Multi-dimensional Bias Analysis</h4>
-                        <div class="bias-dimensions-grid">
-                            <div class="radar-chart-container">
-                                <canvas id="biasRadarChart" width="300" height="300" style="display: block; max-width: 100%;"></canvas>
-                                <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #6b7280;">
-                                    ${Object.keys(biasDimensions).length} bias dimensions analyzed
-                                </p>
-                            </div>
-                            <div class="dimension-details">
-                                ${this.renderDimensionDetails(biasDimensions)}
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Political Bias Scale -->
-                <div class="political-bias-section">
-                    <h4>Political Lean</h4>
-                    <div class="bias-scale-container">
-                        <div class="bias-scale">
-                            <div class="bias-scale-track"></div>
-                            <div class="bias-scale-center"></div>
-                            ${biasVisualization.confidence_bands ? `
-                                <div class="confidence-band" style="left: ${this.calculateIndicatorPosition(biasVisualization.confidence_bands.lower * 100)}%; width: ${(biasVisualization.confidence_bands.upper - biasVisualization.confidence_bands.lower) * 50}%"></div>
-                            ` : ''}
-                            <div class="bias-indicator" style="left: ${this.calculateIndicatorPosition(politicalLean)}%;">
-                                <div class="bias-indicator-dot"></div>
-                                <div class="bias-indicator-label">${this.getPoliticalLeanLabel(politicalLean)}</div>
-                            </div>
-                        </div>
-                        <div class="bias-scale-labels">
-                            <span class="scale-label left">Far Left</span>
-                            <span class="scale-label">Left</span>
-                            <span class="scale-label center">Center</span>
-                            <span class="scale-label">Right</span>
-                            <span class="scale-label right">Far Right</span>
-                        </div>
-                    </div>
-                    <p class="bias-description">${this.getPoliticalDescription(politicalLean)}</p>
-                </div>
-
-                <!-- Bias Patterns (if any) -->
-                ${biasPatterns.length > 0 ? `
-                    <div class="bias-patterns-section">
-                        <h4>🔍 Bias Patterns Detected</h4>
-                        <div class="patterns-grid">
-                            ${biasPatterns.map(pattern => `
-                                <div class="pattern-card severity-${pattern.severity || 'medium'}">
-                                    <div class="pattern-header">
-                                        <span class="pattern-type">${this.formatPatternType(pattern.type)}</span>
-                                        <span class="pattern-severity">${pattern.severity || 'medium'}</span>
-                                    </div>
-                                    <p class="pattern-description">${pattern.description}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Framing Analysis (if detected) -->
-                ${framingAnalysis.frames_detected > 0 ? `
-                    <div class="framing-analysis-section">
-                        <h4>🖼️ Framing Analysis</h4>
-                        <div class="framing-summary">
-                            <p>Article uses <strong>${framingAnalysis.frames_detected}</strong> framing patterns (${framingAnalysis.framing_bias_level || 'moderate'} bias level)</p>
-                        </div>
-                        ${framingAnalysis.framing_patterns ? `
-                            <div class="framing-patterns">
-                                ${this.renderFramingPatterns(framingAnalysis.framing_patterns)}
-                            </div>
-                        ` : ''}
-                    </div>
-                ` : ''}
-
-                <!-- Bias Impact (if available) -->
-                ${biasImpact.severity ? `
-                    <div class="bias-impact-section">
-                        <h4>⚡ Bias Impact Assessment</h4>
-                        <div class="impact-severity severity-${biasImpact.severity}">
-                            <span>Impact Severity: ${biasImpact.severity.toUpperCase()}</span>
-                        </div>
-                        <div class="impact-details">
-                            ${biasImpact.reader_impact && biasImpact.reader_impact.length > 0 ? `
-                                <div class="reader-impact">
-                                    <h5>Potential Reader Impact:</h5>
-                                    <ul>
-                                        ${biasImpact.reader_impact.map(impact => `<li>${impact}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                            ${biasImpact.factual_accuracy ? `
-                                <div class="factual-accuracy">
-                                    <h5>Factual Accuracy:</h5>
-                                    <p>${biasImpact.factual_accuracy}</p>
-                                </div>
-                            ` : ''}
-                            ${biasImpact.recommendation ? `
-                                <div class="recommendation">
-                                    <h5>Recommendation:</h5>
-                                    <p class="recommendation-text">${biasImpact.recommendation}</p>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Source Analysis (if available) -->
-                ${sourceAnalysis.total_sources !== undefined ? `
-                    <div class="source-bias-section">
-                        <h4>📰 Source Selection Analysis</h4>
-                        <div class="source-metrics">
-                            <div class="metric-item">
-                                <span class="metric-label">Total Sources:</span>
-                                <span class="metric-value">${sourceAnalysis.total_sources}</span>
-                            </div>
-                            ${sourceAnalysis.diversity_score !== undefined ? `
-                                <div class="metric-item">
-                                    <span class="metric-label">Source Diversity:</span>
-                                    <div class="diversity-score">
-                                        <div class="diversity-bar">
-                                            <div class="diversity-fill" style="width: ${sourceAnalysis.diversity_score}%"></div>
-                                        </div>
-                                        <span>${sourceAnalysis.diversity_score}%</span>
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                        ${sourceAnalysis.source_types ? this.renderSourceTypes(sourceAnalysis.source_types) : ''}
-                    </div>
-                ` : ''}
-
-                <!-- Original Bias Metrics -->
-                <div class="bias-metrics">
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-icon">🎯</span>
-                            <span>Objectivity Score</span>
-                        </div>
-                        <div class="metric-value">${bias.objectivity_score || 0}%</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: ${bias.objectivity_score || 0}%; background: #10b981;"></div>
-                        </div>
-                    </div>
+            # Step 2: Perform all analyses
+            analysis_results = {}
+            
+            # Always extract key claims for both basic and pro users
+            key_claims = self._extract_key_claims(article_data['text'])
+            analysis_results['key_claims'] = key_claims
+            
+            # Bias analysis (with fallback)
+            if self.bias_analyzer:
+                try:
+                    analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+                except Exception as e:
+                    logger.error(f"Bias analysis failed: {e}")
+                    analysis_results['bias_analysis'] = {
+                        'overall_bias': 'Unknown',
+                        'political_lean': 0,
+                        'objectivity_score': 0.5
+                    }
+            else:
+                analysis_results['bias_analysis'] = {
+                    'overall_bias': 'Unknown',
+                    'political_lean': 0,
+                    'objectivity_score': 0.5
+                }
+            
+            # Clickbait analysis (with fallback)
+            if self.clickbait_analyzer:
+                try:
+                    analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
+                        article_data.get('title', ''),
+                        article_data['text']
+                    )
+                except Exception as e:
+                    logger.error(f"Clickbait analysis failed: {e}")
+                    analysis_results['clickbait_score'] = 50
+            else:
+                # Simple fallback clickbait detection
+                title = article_data.get('title', '').lower()
+                clickbait_score = 0
+                if any(word in title for word in ['shocking', 'you won\'t believe', 'this one trick']):
+                    clickbait_score += 30
+                if title.endswith('?'):
+                    clickbait_score += 20
+                if any(char in title for char in ['!', '...']):
+                    clickbait_score += 15
+                analysis_results['clickbait_score'] = min(clickbait_score, 100)
+            
+            # Source credibility (always available)
+            analysis_results['source_credibility'] = self.source_credibility.check_credibility(
+                article_data.get('domain', 'unknown')
+            )
+            
+            # CRITICAL: Author analysis - this is the main fix
+            if article_data.get('author'):
+                logger.info(f"Starting author analysis for: {article_data['author']} from domain: {article_data.get('domain')}")
+                try:
+                    # Call the author analyzer
+                    author_result = self.author_analyzer.analyze_single_author(
+                        article_data['author'],
+                        article_data.get('domain')
+                    )
+                    analysis_results['author_analysis'] = author_result
+                    logger.info(f"Author analysis completed: found={author_result.get('found', False)}")
+                except Exception as e:
+                    logger.error(f"Author analysis error: {str(e)}", exc_info=True)
+                    # Provide fallback
+                    analysis_results['author_analysis'] = {
+                        'found': False,
+                        'name': article_data['author'],
+                        'credibility_score': 50,
+                        'bio': 'Error retrieving author information',
+                        'verification_status': {
+                            'verified': False,
+                            'journalist_verified': False,
+                            'outlet_staff': False
+                        },
+                        'professional_info': {
+                            'current_position': None,
+                            'outlets': [],
+                            'years_experience': None,
+                            'expertise_areas': []
+                        },
+                        'online_presence': {},
+                        'credibility_explanation': {
+                            'level': 'Unknown',
+                            'explanation': 'Could not retrieve author information',
+                            'advice': 'Verify author credentials through additional sources'
+                        }
+                    }
+            else:
+                logger.info("No author found in article")
+                analysis_results['author_analysis'] = {
+                    'found': False,
+                    'name': 'Unknown Author',
+                    'credibility_score': 50,
+                    'bio': 'No author information available',
+                    'verification_status': {
+                        'verified': False,
+                        'journalist_verified': False,
+                        'outlet_staff': False
+                    },
+                    'professional_info': {
+                        'current_position': None,
+                        'outlets': [],
+                        'years_experience': None,
+                        'expertise_areas': []
+                    },
+                    'online_presence': {},
+                    'credibility_explanation': {
+                        'level': 'Unknown',
+                        'explanation': 'No author information available',
+                        'advice': 'Verify claims through additional sources'
+                    }
+                }
+            
+            # Content analysis (with fallback)
+            if self.content_analyzer:
+                try:
+                    analysis_results['content_analysis'] = self.content_analyzer.analyze(article_data['text'])
+                except Exception as e:
+                    logger.error(f"Content analysis failed: {e}")
+                    analysis_results['content_analysis'] = self._basic_content_analysis(article_data['text'])
+            else:
+                analysis_results['content_analysis'] = self._basic_content_analysis(article_data['text'])
+            
+            # Transparency analysis (with fallback)
+            if self.transparency_analyzer:
+                try:
+                    analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
+                        article_data['text'],
+                        article_data.get('author')
+                    )
+                except Exception as e:
+                    logger.error(f"Transparency analysis failed: {e}")
+                    analysis_results['transparency_analysis'] = {'transparency_score': 50}
+            else:
+                # Basic transparency check
+                text = article_data['text'].lower()
+                transparency_score = 50
+                if article_data.get('author'):
+                    transparency_score += 20
+                if 'according to' in text or 'sources say' in text:
+                    transparency_score += 15
+                if 'study' in text or 'research' in text:
+                    transparency_score += 15
+                analysis_results['transparency_analysis'] = {
+                    'transparency_score': min(transparency_score, 100)
+                }
+            
+            # Pro features
+            if is_pro:
+                # CRITICAL FIX: Actually perform fact checking on the claims!
+                if key_claims:
+                    logger.info(f"Fact checking {len(key_claims)} claims")
                     
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-icon">💭</span>
-                            <span>Opinion vs Facts</span>
-                        </div>
-                        <div class="metric-value">${bias.opinion_percentage || 0}% Opinion</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: ${bias.opinion_percentage || 0}%; background: #f59e0b;"></div>
-                        </div>
-                    </div>
+                    # Extract just the text from claims for fact checking
+                    claim_texts = [claim['text'] for claim in key_claims]
                     
-                    <div class="metric-card">
-                        <div class="metric-header">
-                            <span class="metric-icon">😤</span>
-                            <span>Emotional Language</span>
-                        </div>
-                        <div class="metric-value">${this.getEmotionalLevel(bias.emotional_score)}</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill" style="width: ${bias.emotional_score || 0}%; background: #ef4444;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Manipulation Tactics -->
-                ${manipulationTactics.length > 0 ? `
-                    <div class="manipulation-section">
-                        <h4>⚠️ Manipulation Tactics Detected</h4>
-                        <div class="tactics-list">
-                            ${manipulationTactics.map(tactic => `
-                                <div class="tactic-item severity-${tactic.severity || 'medium'}">
-                                    <span class="tactic-icon">${this.getTacticIcon(tactic.type)}</span>
-                                    <div class="tactic-details">
-                                        <div class="tactic-name">${tactic.name}</div>
-                                        <div class="tactic-description">${tactic.description}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Enhanced Loaded Phrases -->
-                ${bias.loaded_phrases && bias.loaded_phrases.length > 0 ? `
-                    <div class="loaded-language-section">
-                        <h4>🔥 Loaded Language ${bias.loaded_phrases[0].context ? 'Analysis' : 'Examples'}</h4>
-                        <div class="loaded-phrases${bias.loaded_phrases[0].context ? '-enhanced' : ''}">
-                            ${bias.loaded_phrases.map(phrase => 
-                                phrase.context ? `
-                                    <div class="loaded-phrase-card">
-                                        <div class="phrase-header">
-                                            <span class="phrase-text">"${phrase.text}"</span>
-                                            <span class="phrase-severity severity-${phrase.severity || 'medium'}">${phrase.severity || 'medium'}</span>
-                                        </div>
-                                        <div class="phrase-details">
-                                            <span class="phrase-type">${phrase.type}</span>
-                                            ${phrase.impact ? `<span class="phrase-impact">Impact: ${phrase.impact}</span>` : ''}
-                                        </div>
-                                        ${phrase.context ? `<div class="phrase-context">${phrase.context}</div>` : ''}
-                                        ${phrase.explanation ? `<div class="phrase-explanation">${phrase.explanation}</div>` : ''}
-                                    </div>
-                                ` : `
-                                    <div class="loaded-phrase">
-                                        <span class="phrase-text">"${phrase.text || phrase}"</span>
-                                        <span class="phrase-type">${phrase.type || 'loaded'}</span>
-                                    </div>
-                                `
-                            ).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Contributing Factors (if available) -->
-                ${biasVisualization.contributing_factors && biasVisualization.contributing_factors.length > 0 ? `
-                    <div class="contributing-factors-section">
-                        <h4>📊 Main Contributing Factors to Bias</h4>
-                        <div class="factors-list">
-                            ${biasVisualization.contributing_factors.map(factor => `
-                                <div class="factor-item">
-                                    <div class="factor-header">
-                                        <span class="factor-name">${factor.factor}</span>
-                                        <span class="factor-impact">${Math.round(factor.impact * 100)}%</span>
-                                    </div>
-                                    <div class="factor-bar">
-                                        <div class="factor-fill" style="width: ${factor.impact * 100}%"></div>
-                                    </div>
-                                    <p class="factor-description">${factor.description}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- Comparative Context (if available) -->
-                ${bias.comparative_context && bias.comparative_context.industry_standard ? `
-                    <div class="comparative-context-section">
-                        <h4>📈 Industry Context</h4>
-                        <p class="context-description">${bias.comparative_context.industry_standard}</p>
-                    </div>
-                ` : ''}
-
-                <!-- AI Summary -->
-                ${bias.ai_summary ? `
-                    <div class="ai-summary">
-                        <h4>🤖 AI Analysis Summary</h4>
-                        <p>${bias.ai_summary}</p>
-                    </div>
-                ` : ''}
-
-                <!-- Debug Info (remove in production) -->
-                <div style="margin-top: 20px; padding: 10px; background: #f3f4f6; border-radius: 4px; font-size: 12px; color: #6b7280;">
-                    <strong>Debug Info:</strong> 
-                    Enhanced data: ${hasEnhancedData ? 'YES' : 'NO'} | 
-                    Dimensions: ${Object.keys(biasDimensions).length} | 
-                    Patterns: ${biasPatterns.length} | 
-                    Confidence: ${biasConfidence}%
-                </div>
-            </div>
-        `;
-    }
-
-    renderDimensionDetails(dimensions) {
-        if (!dimensions || Object.keys(dimensions).length === 0) {
-            return '<p style="color: #6b7280;">No dimension data available</p>';
-        }
-        
-        return Object.entries(dimensions).map(([key, data]) => `
-            <div class="dimension-item">
-                <div class="dimension-header">
-                    <span class="dimension-name">${this.formatDimensionName(key)}</span>
-                    <span class="dimension-confidence">${data.confidence || 0}% confident</span>
-                </div>
-                <div class="dimension-label">${data.label || 'Unknown'}</div>
-                <div class="dimension-bar">
-                    <div class="dimension-fill" style="width: ${Math.abs(data.score || 0) * 100}%; background: ${this.getDimensionColor(key)}"></div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    renderFramingPatterns(patterns) {
-        if (!patterns) return '';
-        
-        const detectedPatterns = Object.entries(patterns).filter(([_, data]) => data && data.detected);
-        
-        if (detectedPatterns.length === 0) return '<p>No specific framing patterns identified.</p>';
-        
-        return detectedPatterns.map(([frame, data]) => `
-            <div class="framing-pattern">
-                <h5>${this.formatFrameType(frame)}</h5>
-                ${data.examples && data.examples.length > 0 ? `
-                    <div class="frame-examples">
-                        ${data.examples.map(ex => `<p class="frame-example">"${ex}"</p>`).join('')}
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
-    }
-
-    renderSourceTypes(sourceTypes) {
-        if (!sourceTypes) return '';
-        
-        const total = Object.values(sourceTypes).reduce((sum, count) => sum + count, 0);
-        if (total === 0) return '<p class="no-sources">No sources cited in article</p>';
-        
-        return `
-            <div class="source-types-breakdown">
-                ${Object.entries(sourceTypes).filter(([_, count]) => count > 0).map(([type, count]) => `
-                    <div class="source-type-item">
-                        <span class="source-type-name">${this.formatSourceType(type)}</span>
-                        <span class="source-type-count">${count}</span>
-                        <div class="source-type-bar">
-                            <div class="source-type-fill" style="width: ${(count / total) * 100}%"></div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    renderBiasRadarChart(dimensions) {
-        console.log('renderBiasRadarChart called with dimensions:', dimensions);
-        
-        const canvas = document.getElementById('biasRadarChart');
-        if (!canvas) {
-            console.error('Canvas element not found');
-            return;
-        }
-        
-        if (!dimensions || Object.keys(dimensions).length === 0) {
-            console.error('No dimensions data provided');
-            return;
-        }
-        
-        // Get 2D context
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.error('Could not get 2D context');
-            return;
-        }
-        
-        // Set canvas size
-        canvas.width = 300;
-        canvas.height = 300;
-        
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = Math.min(centerX, centerY) - 40;
-        
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Get dimension data
-        const dimensionKeys = Object.keys(dimensions);
-        const values = dimensionKeys.map(key => Math.abs(dimensions[key].score || 0));
-        const labels = dimensionKeys.map(key => this.formatDimensionName(key));
-        
-        // Draw radar chart
-        const angleStep = (Math.PI * 2) / dimensionKeys.length;
-        
-        // Draw grid
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 1;
-        
-        // Draw concentric circles
-        for (let i = 1; i <= 5; i++) {
-            ctx.beginPath();
-            const r = (radius / 5) * i;
-            for (let j = 0; j < dimensionKeys.length; j++) {
-                const angle = j * angleStep - Math.PI / 2;
-                const x = centerX + Math.cos(angle) * r;
-                const y = centerY + Math.sin(angle) * r;
-                if (j === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-        }
-        
-        // Draw axes
-        for (let i = 0; i < dimensionKeys.length; i++) {
-            const angle = i * angleStep - Math.PI / 2;
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(
-                centerX + Math.cos(angle) * radius,
-                centerY + Math.sin(angle) * radius
-            );
-            ctx.stroke();
-        }
-        
-        // Draw data
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        for (let i = 0; i < values.length; i++) {
-            const angle = i * angleStep - Math.PI / 2;
-            const value = values[i];
-            const r = radius * value;
-            const x = centerX + Math.cos(angle) * r;
-            const y = centerY + Math.sin(angle) * r;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Draw points
-        ctx.fillStyle = '#ef4444';
-        for (let i = 0; i < values.length; i++) {
-            const angle = i * angleStep - Math.PI / 2;
-            const value = values[i];
-            const r = radius * value;
-            const x = centerX + Math.cos(angle) * r;
-            const y = centerY + Math.sin(angle) * r;
+                    # Perform fact checking
+                    fact_check_results = self.fact_checker.check_claims(
+                        claims=claim_texts,
+                        article_url=article_data.get('url'),
+                        article_date=article_data.get('publish_date')
+                    )
+                    
+                    analysis_results['fact_checks'] = fact_check_results
+                    
+                    # Generate fact check summary
+                    if fact_check_results:
+                        analysis_results['fact_check_summary'] = self._generate_fact_check_summary(fact_check_results)
+                    
+                    # Get related articles for context
+                    if article_data.get('title'):
+                        related_articles = self.fact_checker.get_related_articles(
+                            article_data['title'], 
+                            max_articles=5
+                        )
+                        analysis_results['related_articles'] = related_articles
+                else:
+                    analysis_results['fact_checks'] = []
+                    analysis_results['fact_check_summary'] = "No factual claims found to verify."
+                
+                # Manipulation detection (if available)
+                if self.manipulation_detector:
+                    try:
+                        analysis_results['persuasion_analysis'] = self.manipulation_detector.analyze_persuasion(
+                            article_data['text'],
+                            article_data.get('title', '')
+                        )
+                    except Exception as e:
+                        logger.error(f"Manipulation detection failed: {e}")
+                        analysis_results['persuasion_analysis'] = {'persuasion_score': 50}
+                
+                # Connection analysis (if available)
+                if self.connection_analyzer:
+                    try:
+                        analysis_results['connection_analysis'] = self.connection_analyzer.analyze_connections(
+                            article_data['text'],
+                            article_data.get('title', ''),
+                            analysis_results.get('key_claims', [])
+                        )
+                    except Exception as e:
+                        logger.error(f"Connection analysis failed: {e}")
+                
+                # AI-powered summary if available
+                if OPENAI_AVAILABLE:
+                    try:
+                        analysis_results['article_summary'] = self._generate_ai_summary(article_data['text'])
+                        analysis_results['conversational_summary'] = self._generate_conversational_summary(
+                            article_data, analysis_results
+                        )
+                    except Exception as e:
+                        logger.error(f"AI summary failed: {e}")
             
-            ctx.beginPath();
-            ctx.arc(x, y, 4, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Draw labels
-        ctx.fillStyle = '#374151';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        for (let i = 0; i < labels.length; i++) {
-            const angle = i * angleStep - Math.PI / 2;
-            const labelRadius = radius + 25;
-            const x = centerX + Math.cos(angle) * labelRadius;
-            const y = centerY + Math.sin(angle) * labelRadius;
+            # Step 3: Calculate overall trust score
+            trust_score = self._calculate_trust_score(analysis_results, article_data)
             
-            // Adjust text alignment based on position
-            if (Math.abs(x - centerX) < 10) {
-                ctx.textAlign = 'center';
-            } else if (x > centerX) {
-                ctx.textAlign = 'left';
-            } else {
-                ctx.textAlign = 'right';
+            # Step 4: Compile final results
+            result = {
+                'success': True,
+                'article': {
+                    'title': article_data.get('title', 'Untitled'),
+                    'author': article_data.get('author', 'Unknown Author'),
+                    'publish_date': article_data.get('publish_date'),
+                    'url': article_data.get('url'),
+                    'domain': article_data.get('domain', 'unknown'),
+                    'text_preview': article_data['text'][:500] + '...' if len(article_data['text']) > 500 else article_data['text']
+                },
+                'trust_score': trust_score,
+                'is_pro': is_pro,
+                'analysis_mode': 'pro' if is_pro else 'basic',
+                'development_mode': os.environ.get('DEVELOPMENT_MODE', 'false').lower() == 'true'
             }
             
-            ctx.fillText(labels[i], x, y);
+            # Add all analysis results
+            result.update(analysis_results)
+            
+            logger.info(f"Analysis completed successfully. Trust score: {trust_score}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Analysis error: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Analysis failed: {str(e)}'
+            }
+    
+    def _basic_content_analysis(self, text: str) -> Dict[str, Any]:
+        """Basic content analysis fallback"""
+        words = text.split()
+        sentences = re.split(r'[.!?]+', text)
+        
+        return {
+            'word_count': len(words),
+            'sentence_count': len([s for s in sentences if s.strip()]),
+            'average_sentence_length': len(words) / max(len(sentences), 1),
+            'reading_time': max(1, round(len(words) / 225))
+        }
+    
+    def _extract_title_from_text(self, text: str) -> str:
+        """Extract title from pasted text (first line or first sentence)"""
+        lines = text.strip().split('\n')
+        if lines:
+            for line in lines:
+                if line.strip():
+                    title = line.strip()
+                    if len(title) > 200:
+                        title = title[:197] + '...'
+                    return title
+        return 'Untitled Article'
+    
+    def _extract_key_claims(self, text: str) -> List[Dict[str, Any]]:
+        """Extract key factual claims from article text"""
+        claims = []
+        sentences = re.split(r'[.!?]+', text)
+        
+        # Enhanced claim patterns
+        claim_patterns = [
+            # Statistical claims
+            (r'\b\d+\s*(?:percent|%)', 'statistical'),
+            (r'\b\d+\s+(?:million|billion|thousand|hundred)\b', 'numerical'),
+            
+            # Research/study claims
+            (r'\b(?:study|research|report|survey|poll)\s+(?:shows|finds|found|reveals|indicates|suggests)', 'research'),
+            (r'(?:according to|data from|statistics show|research indicates)', 'sourced'),
+            (r'(?:scientists|researchers|experts)\s+(?:say|believe|found|discovered)', 'expert_claim'),
+            
+            # Comparative claims
+            (r'(?:increased|decreased|rose|fell|grew|declined)\s+(?:by|to)\s+\d+', 'trend'),
+            (r'(?:more|less|fewer|greater)\s+than', 'comparison'),
+            (r'(?:highest|lowest|fastest|slowest|biggest|smallest)\s+(?:ever|since|in)', 'superlative'),
+            
+            # Causal claims
+            (r'(?:causes|caused|leads to|results in|due to|because of)', 'causal'),
+            
+            # Historical claims
+            (r'(?:first|last|never|always)\s+(?:to|in history)', 'historical'),
+            (r'since\s+\d{4}', 'temporal'),
+        ]
+        
+        seen_claims = set()  # Avoid duplicates
+        
+        for sentence in sentences[:30]:  # Check more sentences
+            sentence = sentence.strip()
+            if len(sentence) < 20 or len(sentence) > 300:
+                continue
+            
+            # Check if sentence contains factual claim patterns
+            for pattern, claim_type in claim_patterns:
+                if re.search(pattern, sentence, re.IGNORECASE):
+                    # Clean the sentence
+                    clean_sentence = re.sub(r'\s+', ' ', sentence).strip()
+                    
+                    # Skip if we've seen similar claim
+                    if clean_sentence.lower() in seen_claims:
+                        continue
+                    
+                    seen_claims.add(clean_sentence.lower())
+                    
+                    # Determine importance based on claim type and position
+                    importance = 'medium'
+                    if claim_type in ['statistical', 'research', 'causal']:
+                        importance = 'high'
+                    elif len(claims) < 3:  # First few claims are usually important
+                        importance = 'high'
+                    
+                    claims.append({
+                        'text': clean_sentence,
+                        'type': claim_type,
+                        'importance': importance,
+                        'confidence': 0.8,
+                        'position': len(claims)
+                    })
+                    break
+            
+            if len(claims) >= 15:  # Get up to 15 claims
+                break
+        
+        # Sort by importance and position
+        claims.sort(key=lambda x: (0 if x['importance'] == 'high' else 1, x['position']))
+        
+        return claims[:10]  # Return top 10 claims
+    
+    def _generate_fact_check_summary(self, fact_checks: List[Dict[str, Any]]) -> str:
+        """Generate a summary of fact check results"""
+        if not fact_checks:
+            return "No fact checks performed."
+        
+        # Count verdicts
+        verdict_counts = {
+            'true': 0,
+            'false': 0,
+            'partially_true': 0,
+            'unverified': 0
         }
         
-        console.log('Radar chart rendered successfully');
-    }
-
-    // Helper methods
-    calculateBiasScore(bias) {
-        const objectivity = bias.objectivity_score || 50;
-        const opinionWeight = 100 - (bias.opinion_percentage || 50);
-        const emotionalWeight = 100 - (bias.emotional_score || 50);
+        high_confidence_true = 0
+        high_confidence_false = 0
         
-        return Math.round((objectivity + opinionWeight + emotionalWeight) / 3);
-    }
+        for fc in fact_checks:
+            verdict = fc.get('verdict', 'unverified').lower()
+            confidence = fc.get('confidence', 0)
+            
+            # Normalize verdict
+            if 'true' in verdict and 'false' not in verdict:
+                verdict_counts['true'] += 1
+                if confidence >= 70:
+                    high_confidence_true += 1
+            elif 'false' in verdict:
+                verdict_counts['false'] += 1
+                if confidence >= 70:
+                    high_confidence_false += 1
+            elif 'partial' in verdict or 'mixed' in verdict:
+                verdict_counts['partially_true'] += 1
+            else:
+                verdict_counts['unverified'] += 1
+        
+        total = len(fact_checks)
+        
+        # Generate summary
+        summary_parts = [f"Verified {total} claims:"]
+        
+        if verdict_counts['true'] > 0:
+            summary_parts.append(f"{verdict_counts['true']} true")
+            if high_confidence_true > 0:
+                summary_parts.append(f"({high_confidence_true} with high confidence)")
+        
+        if verdict_counts['false'] > 0:
+            summary_parts.append(f"{verdict_counts['false']} false")
+            if high_confidence_false > 0:
+                summary_parts.append(f"({high_confidence_false} with high confidence)")
+        
+        if verdict_counts['partially_true'] > 0:
+            summary_parts.append(f"{verdict_counts['partially_true']} partially true")
+        
+        if verdict_counts['unverified'] > 0:
+            summary_parts.append(f"{verdict_counts['unverified']} unverified")
+        
+        # Add overall assessment
+        if verdict_counts['false'] > total * 0.3:
+            summary_parts.append("⚠️ Significant factual issues detected.")
+        elif verdict_counts['true'] > total * 0.7 and verdict_counts['false'] == 0:
+            summary_parts.append("✓ Mostly factually accurate.")
+        elif verdict_counts['unverified'] > total * 0.5:
+            summary_parts.append("ℹ️ Many claims could not be independently verified.")
+        
+        return " ".join(summary_parts)
+    
+    def _calculate_trust_score(self, analysis_results: Dict[str, Any], article_data: Dict[str, Any]) -> int:
+        """Calculate overall trust score based on all factors"""
+        score_components = []
+        weights = []
+        
+        # Source credibility (30% weight)
+        source_cred = analysis_results.get('source_credibility', {})
+        source_score = {
+            'High': 90,
+            'Medium': 60,
+            'Low': 30,
+            'Very Low': 10,
+            'Unknown': 50
+        }.get(source_cred.get('rating', 'Unknown'), 50)
+        score_components.append(source_score)
+        weights.append(0.30)
+        
+        # Author credibility (20% weight)
+        author_analysis = analysis_results.get('author_analysis', {})
+        if author_analysis.get('found'):
+            author_score = author_analysis.get('credibility_score', 50)
+        else:
+            author_score = 50
+        score_components.append(author_score)
+        weights.append(0.20)
+        
+        # Bias impact (15% weight)
+        bias_data = analysis_results.get('bias_analysis', {})
+        objectivity = bias_data.get('objectivity_score', 0.5)
+        if isinstance(objectivity, (int, float)) and objectivity > 1:
+            objectivity = objectivity / 100
+        bias_score = objectivity * 100
+        score_components.append(bias_score)
+        weights.append(0.15)
+        
+        # Transparency (15% weight)
+        transparency = analysis_results.get('transparency_analysis', {})
+        trans_score = transparency.get('transparency_score', 50)
+        score_components.append(trans_score)
+        weights.append(0.15)
+        
+        # Manipulation (10% weight)
+        if 'persuasion_analysis' in analysis_results:
+            persuasion = analysis_results['persuasion_analysis']
+            manip_score = 100 - persuasion.get('persuasion_score', 50)
+            score_components.append(manip_score)
+            weights.append(0.10)
+        else:
+            weights = [w / 0.9 for w in weights[:4]]
+        
+        # Clickbait (10% weight)
+        clickbait = analysis_results.get('clickbait_score', 50)
+        clickbait_trust = 100 - clickbait
+        score_components.append(clickbait_trust)
+        weights.append(0.10)
+        
+        # Normalize weights
+        total_weight = sum(weights)
+        weights = [w / total_weight for w in weights]
+        
+        # Calculate weighted average
+        total_score = sum(score * weight for score, weight in zip(score_components, weights))
+        
+        return max(0, min(100, round(total_score)))
+    
+    def _generate_ai_summary(self, text: str) -> Optional[str]:
+        """Generate AI-powered article summary"""
+        if not OPENAI_AVAILABLE:
+            return None
+            
+        try:
+            max_chars = 4000
+            if len(text) > max_chars:
+                text = text[:max_chars] + '...'
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a news analyst. Provide a concise, neutral summary of the article's main points in 2-3 sentences."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Summarize this article:\n\n{text}"
+                    }
+                ],
+                max_tokens=150,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message['content'].strip()
+            
+        except Exception as e:
+            logger.error(f"AI summary generation failed: {e}")
+            return None
+    
+    def _generate_conversational_summary(self, article_data: Dict[str, Any], 
+                                       analysis_results: Dict[str, Any]) -> Optional[str]:
+        """Generate conversational analysis summary"""
+        if not OPENAI_AVAILABLE:
+            return None
+            
+        try:
+            context = f"""
+            Article: {article_data.get('title', 'Untitled')}
+            Source: {article_data.get('domain', 'Unknown')}
+            Author: {article_data.get('author', 'Unknown')}
+            
+            Trust Score: {self._calculate_trust_score(analysis_results, article_data)}%
+            Bias Level: {analysis_results.get('bias_analysis', {}).get('overall_bias', 'Unknown')}
+            Clickbait Score: {analysis_results.get('clickbait_score', 0)}%
+            Source Credibility: {analysis_results.get('source_credibility', {}).get('rating', 'Unknown')}
+            """
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a friendly news analyst. Provide a conversational 2-3 sentence assessment of the article's credibility and what readers should know."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Based on this analysis, what should readers know?\n\n{context}"
+                    }
+                ],
+                max_tokens=150,
+                temperature=0.5
+            )
+            
+            return response.choices[0].message['content'].strip()
+            
+        except Exception as e:
+            logger.error(f"Conversational summary generation failed: {e}")
+            return None
 
-    calculateIndicatorPosition(lean) {
-        return ((lean + 100) / 200) * 100;
-    }
-
-    getPoliticalLeanLabel(lean) {
-        if (lean < -60) return 'Far Left';
-        if (lean < -20) return 'Left';
-        if (lean < 20) return 'Center';
-        if (lean < 60) return 'Right';
-        return 'Far Right';
-    }
-
-    getPoliticalDescription(lean) {
-        if (Math.abs(lean) < 20) {
-            return 'This article maintains a relatively balanced political perspective.';
-        } else if (lean < -20) {
-            return 'This article shows a left-leaning political bias in its coverage and framing.';
-        } else {
-            return 'This article shows a right-leaning political bias in its coverage and framing.';
+    def analyze_batch(self, urls: List[str], is_pro: bool = False) -> List[Dict[str, Any]]:
+        """
+        Analyze multiple articles in batch
+        
+        Args:
+            urls: List of URLs to analyze
+            is_pro: Whether to use premium features
+            
+        Returns:
+            List of analysis results
+        """
+        results = []
+        for url in urls[:10]:  # Limit to 10 URLs per batch
+            try:
+                result = self.analyze(url, 'url', is_pro)
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Batch analysis error for {url}: {e}")
+                results.append({
+                    'success': False,
+                    'url': url,
+                    'error': str(e)
+                })
+        
+        return results
+    
+    def get_analysis_metadata(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract key metadata from analysis results"""
+        return {
+            'trust_score': analysis_results.get('trust_score', 0),
+            'bias_level': analysis_results.get('bias_analysis', {}).get('overall_bias', 'Unknown'),
+            'political_lean': analysis_results.get('bias_analysis', {}).get('political_lean', 0),
+            'clickbait_score': analysis_results.get('clickbait_score', 0),
+            'source_credibility': analysis_results.get('source_credibility', {}).get('rating', 'Unknown'),
+            'author_credibility': analysis_results.get('author_analysis', {}).get('credibility_score', 50),
+            'transparency_score': analysis_results.get('transparency_analysis', {}).get('transparency_score', 50),
+            'fact_check_count': len(analysis_results.get('fact_checks', [])),
+            'manipulation_score': analysis_results.get('persuasion_analysis', {}).get('persuasion_score', 0)
         }
-    }
+    
+    def generate_report_summary(self, analysis_results: Dict[str, Any]) -> str:
+        """Generate a comprehensive report summary"""
+        metadata = self.get_analysis_metadata(analysis_results)
+        article = analysis_results.get('article', {})
+        
+        summary = f"""
+# News Analysis Report
 
-    getConfidenceDescription(confidence) {
-        if (confidence >= 80) return 'High confidence in bias detection based on substantial evidence';
-        if (confidence >= 60) return 'Moderate confidence with clear bias indicators present';
-        if (confidence >= 40) return 'Limited confidence due to ambiguous language or insufficient content';
-        return 'Low confidence - more content needed for accurate assessment';
-    }
+## Article Information
+- **Title**: {article.get('title', 'Unknown')}
+- **Source**: {article.get('domain', 'Unknown')}
+- **Author**: {article.get('author', 'Unknown')}
+- **Date**: {article.get('publish_date', 'Unknown')}
 
-    getEmotionalLevel(score) {
-        if (!score) return 'Low';
-        if (score < 30) return 'Low';
-        if (score < 60) return 'Moderate';
-        return 'High';
-    }
+## Credibility Assessment
+- **Overall Trust Score**: {metadata['trust_score']}%
+- **Source Credibility**: {metadata['source_credibility']}
+- **Author Credibility**: {metadata['author_credibility']}/100
 
-    getTacticIcon(type) {
-        const icons = {
-            'strawman': '🎯',
-            'ad_hominem': '👤',
-            'false_dilemma': '⚡',
-            'appeal_emotion': '❤️',
-            'loaded_question': '❓',
-            'cherry_picking': '🍒',
-            'bandwagon': '🚂',
-            'slippery_slope': '🎿',
-            'formatting_manipulation': '📝',
-            'clickbait': '🎣',
-            'default': '⚠️'
-        };
-        return icons[type] || icons.default;
-    }
+## Content Analysis
+- **Bias Level**: {metadata['bias_level']}
+- **Political Lean**: {'Left' if metadata['political_lean'] < -20 else 'Right' if metadata['political_lean'] > 20 else 'Center'}
+- **Clickbait Score**: {metadata['clickbait_score']}%
+- **Transparency Score**: {metadata['transparency_score']}%
+- **Manipulation Score**: {metadata['manipulation_score']}%
 
-    formatDimensionName(key) {
-        const names = {
-            'political': 'Political',
-            'corporate': 'Corporate',
-            'sensational': 'Sensational',
-            'nationalistic': 'Nationalistic',
-            'establishment': 'Establishment'
-        };
-        return names[key] || key.charAt(0).toUpperCase() + key.slice(1);
-    }
-
-    getDimensionColor(key) {
-        const colors = {
-            'political': '#3b82f6',
-            'corporate': '#10b981',
-            'sensational': '#f59e0b',
-            'nationalistic': '#8b5cf6',
-            'establishment': '#6b7280'
-        };
-        return colors[key] || '#374151';
-    }
-
-    formatPatternType(type) {
-        return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    formatFrameType(frame) {
-        return frame.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    formatSourceType(type) {
-        return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    animateBiasIndicator() {
-        const indicator = this.container?.querySelector('.bias-indicator');
-        if (indicator) {
-            indicator.style.opacity = '0';
-            indicator.style.transform = 'translateX(-50%) translateY(10px)';
-            setTimeout(() => {
-                indicator.style.transition = 'all 0.8s ease-out';
-                indicator.style.opacity = '1';
-                indicator.style.transform = 'translateX(-50%) translateY(0)';
-            }, 50);
+## Key Findings
+"""
+        
+        # Add key findings based on scores
+        findings = []
+        
+        if metadata['trust_score'] < 40:
+            findings.append("⚠️ Low trust score indicates significant credibility concerns")
+        elif metadata['trust_score'] > 70:
+            findings.append("✓ High trust score suggests reliable information")
+            
+        if metadata['clickbait_score'] > 60:
+            findings.append("⚠️ High clickbait score - headline may be misleading")
+            
+        if abs(metadata['political_lean']) > 50:
+            findings.append("⚠️ Strong political bias detected")
+            
+        if metadata['manipulation_score'] > 60:
+            findings.append("⚠️ High manipulation tactics detected")
+            
+        if metadata['transparency_score'] < 40:
+            findings.append("⚠️ Low transparency - sources not well documented")
+            
+        for finding in findings:
+            summary += f"- {finding}\n"
+        
+        return summary
+    
+    def export_analysis(self, analysis_results: Dict[str, Any], format: str = 'json') -> Any:
+        """
+        Export analysis results in various formats
+        
+        Args:
+            analysis_results: The analysis results
+            format: Export format ('json', 'txt', 'csv')
+            
+        Returns:
+            Formatted export data
+        """
+        if format == 'json':
+            return analysis_results
+            
+        elif format == 'txt':
+            return self.generate_report_summary(analysis_results)
+            
+        elif format == 'csv':
+            # CSV format for spreadsheet analysis
+            metadata = self.get_analysis_metadata(analysis_results)
+            article = analysis_results.get('article', {})
+            
+            headers = [
+                'URL', 'Title', 'Author', 'Source', 'Date',
+                'Trust Score', 'Bias Level', 'Political Lean',
+                'Clickbait Score', 'Source Credibility', 
+                'Author Credibility', 'Transparency Score',
+                'Manipulation Score', 'Fact Checks'
+            ]
+            
+            values = [
+                article.get('url', ''),
+                article.get('title', ''),
+                article.get('author', ''),
+                article.get('domain', ''),
+                article.get('publish_date', ''),
+                metadata['trust_score'],
+                metadata['bias_level'],
+                metadata['political_lean'],
+                metadata['clickbait_score'],
+                metadata['source_credibility'],
+                metadata['author_credibility'],
+                metadata['transparency_score'],
+                metadata['manipulation_score'],
+                metadata['fact_check_count']
+            ]
+            
+            return {
+                'headers': headers,
+                'values': values
+            }
+        
+        else:
+            raise ValueError(f"Unsupported export format: {format}")
+    
+    def compare_articles(self, analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Compare multiple article analyses
+        
+        Args:
+            analyses: List of analysis results to compare
+            
+        Returns:
+            Comparison results
+        """
+        if not analyses:
+            return {'error': 'No analyses to compare'}
+            
+        comparison = {
+            'article_count': len(analyses),
+            'average_trust_score': 0,
+            'average_bias': 0,
+            'most_credible': None,
+            'least_credible': None,
+            'bias_distribution': {
+                'left': 0,
+                'center': 0,
+                'right': 0
+            },
+            'source_credibility_distribution': {
+                'High': 0,
+                'Medium': 0,
+                'Low': 0,
+                'Very Low': 0,
+                'Unknown': 0
+            }
         }
-
-        // Animate metric bars
-        const metricFills = this.container?.querySelectorAll('.metric-fill, .confidence-fill, .diversity-fill, .dimension-fill, .factor-fill, .source-type-fill');
-        metricFills?.forEach((fill, index) => {
-            const width = fill.style.width;
-            fill.style.width = '0%';
-            setTimeout(() => {
-                fill.style.transition = 'width 1s ease-out';
-                fill.style.width = width;
-            }, 100 + (index * 50));
-        });
-    }
-}
-
-// Export and register with UI controller
-window.BiasAnalysis = BiasAnalysis;
-
-// Auto-register when UI controller is available
-if (window.UI) {
-    window.UI.registerComponent('biasAnalysis', new BiasAnalysis());
-}
-
-// Also make it available globally for debugging
-window.BiasAnalysisComponent = BiasAnalysis;
+        
+        trust_scores = []
+        bias_scores = []
+        
+        for analysis in analyses:
+            if not analysis.get('success'):
+                continue
+                
+            # Trust score
+            trust = analysis.get('trust_score', 0)
+            trust_scores.append(trust)
+            
+            # Track most/least credible
+            if not comparison['most_credible'] or trust > comparison['most_credible']['trust_score']:
+                comparison['most_credible'] = {
+                    'title': analysis.get('article', {}).get('title'),
+                    'trust_score': trust,
+                    'url': analysis.get('article', {}).get('url')
+                }
+                
+            if not comparison['least_credible'] or trust < comparison['least_credible']['trust_score']:
+                comparison['least_credible'] = {
+                    'title': analysis.get('article', {}).get('title'),
+                    'trust_score': trust,
+                    'url': analysis.get('article', {}).get('url')
+                }
+            
+            # Bias analysis
+            bias = analysis.get('bias_analysis', {}).get('political_lean', 0)
+            bias_scores.append(bias)
+            
+            if bias < -20:
+                comparison['bias_distribution']['left'] += 1
+            elif bias > 20:
+                comparison['bias_distribution']['right'] += 1
+            else:
+                comparison['bias_distribution']['center'] += 1
+            
+            # Source credibility
+            source_cred = analysis.get('source_credibility', {}).get('rating', 'Unknown')
+            comparison['source_credibility_distribution'][source_cred] += 1
+        
+        # Calculate averages
+        if trust_scores:
+            comparison['average_trust_score'] = round(sum(trust_scores) / len(trust_scores), 1)
+            
+        if bias_scores:
+            comparison['average_bias'] = round(sum(bias_scores) / len(bias_scores), 1)
+        
+        return comparison
+    
+    def get_reading_time(self, text: str) -> int:
+        """
+        Estimate reading time in minutes
+        
+        Args:
+            text: Article text
+            
+        Returns:
+            Estimated reading time in minutes
+        """
+        # Average reading speed is 200-250 words per minute
+        words = len(text.split())
+        return max(1, round(words / 225))
+    
+    def extract_entities(self, text: str) -> Dict[str, List[str]]:
+        """
+        Extract named entities from text (people, organizations, locations)
+        
+        Args:
+            text: Article text
+            
+        Returns:
+            Dictionary of entity types and their values
+        """
+        entities = {
+            'people': [],
+            'organizations': [],
+            'locations': []
+        }
+        
+        # Simple pattern-based extraction
+        # In production, you'd use NLP libraries like spaCy or NLTK
+        
+        # People (simple pattern for "Mr./Ms./Dr. Name" or "FirstName LastName")
+        people_pattern = r'\b(?:Mr\.|Ms\.|Dr\.|Prof\.)?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)\b'
+        entities['people'] = list(set(re.findall(people_pattern, text)))[:10]
+        
+        # Organizations (words with all caps or ending in Inc., Corp., etc.)
+        org_pattern = r'\b([A-Z]{2,}|[A-Za-z]+\s+(?:Inc\.|Corp\.|LLC|Ltd\.|Company|Organization|Association))\b'
+        entities['organizations'] = list(set(re.findall(org_pattern, text)))[:10]
+        
+        # Locations (simple pattern for "City, State" or known location keywords)
+        location_keywords = ['City', 'County', 'State', 'Country', 'Province', 'District']
+        location_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*,\s*([A-Z][a-z]+)\b'
+        entities['locations'] = list(set(re.findall(location_pattern, text)))[:10]
+        
+        return entities
+    
+    def get_article_topics(self, text: str, title: str = '') -> List[str]:
+        """
+        Extract main topics from article
+        
+        Args:
+            text: Article text
+            title: Article title
+            
+        Returns:
+            List of identified topics
+        """
+        topics = []
+        
+        # Combine title and text for analysis
+        full_text = f"{title} {text}".lower()
+        
+        # Topic categories and their keywords
+        topic_keywords = {
+            'Politics': ['election', 'president', 'congress', 'senate', 'vote', 'campaign', 'policy', 'government'],
+            'Economy': ['economy', 'market', 'stock', 'trade', 'inflation', 'recession', 'gdp', 'unemployment'],
+            'Technology': ['tech', 'ai', 'software', 'internet', 'cyber', 'data', 'digital', 'innovation'],
+            'Health': ['health', 'medical', 'disease', 'vaccine', 'hospital', 'doctor', 'pandemic', 'medicine'],
+            'Environment': ['climate', 'environment', 'pollution', 'carbon', 'renewable', 'conservation', 'sustainability'],
+            'Business': ['business', 'company', 'ceo', 'merger', 'acquisition', 'startup', 'entrepreneur'],
+            'Science': ['research', 'study', 'scientist', 'discovery', 'experiment', 'laboratory', 'findings'],
+            'Sports': ['game', 'player', 'team', 'championship', 'league', 'coach', 'tournament', 'athlete'],
+            'Entertainment': ['movie', 'music', 'celebrity', 'film', 'actor', 'singer', 'entertainment', 'hollywood'],
+            'International': ['international', 'global', 'foreign', 'diplomatic', 'treaty', 'united nations', 'ambassador']
+        }
+        
+        # Count keyword occurrences for each topic
+        topic_scores = {}
+        for topic, keywords in topic_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in full_text)
+            if score > 0:
+                topic_scores[topic] = score
+        
+        # Sort topics by score and return top 3
+        sorted_topics = sorted(topic_scores.items(), key=lambda x: x[1], reverse=True)
+        topics = [topic for topic, score in sorted_topics[:3]]
+        
+        return topics
+    
+    def check_updates(self, original_analysis: Dict[str, Any], 
+                     new_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Check for significant changes between analyses
+        
+        Args:
+            original_analysis: Previous analysis results
+            new_analysis: New analysis results
+            
+        Returns:
+            Dictionary of changes
+        """
+        changes = {
+            'has_updates': False,
+            'trust_score_change': 0,
+            'bias_change': 0,
+            'significant_changes': []
+        }
+        
+        # Compare trust scores
+        old_trust = original_analysis.get('trust_score', 0)
+        new_trust = new_analysis.get('trust_score', 0)
+        trust_change = new_trust - old_trust
+        
+        if abs(trust_change) > 5:
+            changes['has_updates'] = True
+            changes['trust_score_change'] = trust_change
+            changes['significant_changes'].append(
+                f"Trust score {'increased' if trust_change > 0 else 'decreased'} by {abs(trust_change)} points"
+            )
+        
+        # Compare bias
+        old_bias = original_analysis.get('bias_analysis', {}).get('political_lean', 0)
+        new_bias = new_analysis.get('bias_analysis', {}).get('political_lean', 0)
+        bias_change = new_bias - old_bias
+        
+        if abs(bias_change) > 10:
+            changes['has_updates'] = True
+            changes['bias_change'] = bias_change
+            changes['significant_changes'].append(
+                f"Political bias shifted {'right' if bias_change > 0 else 'left'} by {abs(bias_change)} points"
+            )
+        
+        # Check for new fact checks
+        old_facts = len(original_analysis.get('fact_checks', []))
+        new_facts = len(new_analysis.get('fact_checks', []))
+        
+        if new_facts > old_facts:
+            changes['has_updates'] = True
+            changes['significant_changes'].append(
+                f"{new_facts - old_facts} new fact checks added"
+            )
+        
+        return changes
+    
+    def get_bias_summary(self, bias_analysis: Dict[str, Any]) -> str:
+        """
+        Generate a human-readable bias summary
+        
+        Args:
+            bias_analysis: Bias analysis results
+            
+        Returns:
+            Readable bias summary
+        """
+        overall_bias = bias_analysis.get('overall_bias', 'Unknown')
+        political_lean = bias_analysis.get('political_lean', 0)
+        
+        if political_lean < -50:
+            direction = "strongly left-leaning"
+        elif political_lean < -20:
+            direction = "left-leaning"
+        elif political_lean > 50:
+            direction = "strongly right-leaning"
+        elif political_lean > 20:
+            direction = "right-leaning"
+        else:
+            direction = "relatively centrist"
+        
+        return f"The article shows {overall_bias.lower()} bias and is {direction} in its political perspective."
+    
+    def get_credibility_indicators(self, analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Get list of credibility indicators with their status
+        
+        Args:
+            analysis_results: Complete analysis results
+            
+        Returns:
+            List of credibility indicators
+        """
+        indicators = []
+        
+        # Source credibility
+        source_cred = analysis_results.get('source_credibility', {})
+        indicators.append({
+            'name': 'Source Credibility',
+            'status': source_cred.get('rating', 'Unknown'),
+            'positive': source_cred.get('rating') in ['High', 'Medium']
+        })
+        
+        # Author credibility
+        author_cred = analysis_results.get('author_analysis', {}).get('credibility_score', 0)
+        indicators.append({
+            'name': 'Author Credibility',
+            'status': f"{author_cred}%",
+            'positive': author_cred >= 60
+        })
+        
+        # Transparency
+        trans_score = analysis_results.get('transparency_analysis', {}).get('transparency_score', 0)
+        indicators.append({
+            'name': 'Transparency',
+            'status': f"{trans_score}%",
+            'positive': trans_score >= 60
+        })
+        
+        # Bias level
+        bias_analysis = analysis_results.get('bias_analysis', {})
+        objectivity = bias_analysis.get('objectivity_score', 0.5)
+        if objectivity > 1:
+            objectivity = objectivity / 100
+        indicators.append({
+            'name': 'Objectivity',
+            'status': f"{int(objectivity * 100)}%",
+            'positive': objectivity >= 0.6
+        })
+        
+        # Clickbait
+        clickbait = analysis_results.get('clickbait_score', 0)
+        indicators.append({
+            'name': 'Headline Quality',
+            'status': f"{100 - clickbait}% genuine",
+            'positive': clickbait <= 40
+        })
+        
+        return indicators
+    
+    def get_key_metrics(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract key metrics for dashboard display
+        
+        Args:
+            analysis_results: Complete analysis results
+            
+        Returns:
+            Dictionary of key metrics
+        """
+        return {
+            'trust_score': analysis_results.get('trust_score', 0),
+            'author_credibility': analysis_results.get('author_analysis', {}).get('credibility_score', 0),
+            'source_rating': analysis_results.get('source_credibility', {}).get('rating', 'Unknown'),
+            'bias_level': analysis_results.get('bias_analysis', {}).get('overall_bias', 'Unknown'),
+            'transparency_score': analysis_results.get('transparency_analysis', {}).get('transparency_score', 0),
+            'clickbait_score': analysis_results.get('clickbait_score', 0),
+            'fact_checks': len(analysis_results.get('fact_checks', [])),
+            'key_claims': len(analysis_results.get('key_claims', []))
+        }
