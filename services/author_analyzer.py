@@ -30,14 +30,13 @@ class AuthorAnalyzer:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         })
         
-        # API Keys and Services
-        self.google_api_key = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
+        # API Keys and Services - FIXED ENVIRONMENT VARIABLE NAMES
+        self.google_api_key = os.environ.get('GOOGLE_API_KEY')  # FIXED!
+        self.google_cse_id = os.environ.get('GOOGLE_CSE_ID')  # FIXED!
         self.news_api_key = os.environ.get('NEWS_API_KEY')
-        self.has_google = bool(self.google_api_key)
-        self.has_news_api = bool(self.news_api_key)
         
-        # Google Custom Search setup (using same API key)
-        self.google_search_cx = os.environ.get('GOOGLE_SEARCH_CX', '017576662512468239146:omuauf_lfve')  # Default CSE ID
+        self.has_google = bool(self.google_api_key and self.google_cse_id)
+        self.has_news_api = bool(self.news_api_key)
         
         # Import bias analyzer for author article analysis
         try:
@@ -52,7 +51,7 @@ class AuthorAnalyzer:
         self.author_cache = {}
         
         logger.info(f"AuthorAnalyzer initialized with resources:")
-        logger.info(f"  - Google API: {'✓' if self.has_google else '✗'}")
+        logger.info(f"  - Google API: {'✓' if self.has_google else '✗'} (key: {'set' if self.google_api_key else 'missing'}, cse: {'set' if self.google_cse_id else 'missing'})")
         logger.info(f"  - News API: {'✓' if self.has_news_api else '✗'}")
         logger.info(f"  - Bias Analysis: {'✓' if self.has_bias_analysis else '✗'}")
         
@@ -93,10 +92,14 @@ class AuthorAnalyzer:
             # 1. Google Custom Search (BEST source)
             if self.has_google:
                 futures.append(('google_search', executor.submit(self._google_custom_search, clean_name, domain)))
+            else:
+                logger.warning("⚠️ Google Search API not configured - missing GOOGLE_API_KEY or GOOGLE_CSE_ID")
             
             # 2. News API - Find all articles by author
             if self.has_news_api:
                 futures.append(('news_articles', executor.submit(self._comprehensive_news_search, clean_name, domain)))
+            else:
+                logger.warning("⚠️ News API not configured - missing NEWS_API_KEY")
             
             # 3. Direct outlet search
             if domain:
@@ -146,7 +149,8 @@ class AuthorAnalyzer:
     
     def _google_custom_search(self, author_name, domain=None):
         """Use Google Custom Search API for comprehensive author search"""
-        if not self.google_api_key:
+        if not self.google_api_key or not self.google_cse_id:
+            logger.error("Google API key or CSE ID not configured")
             return None
             
         try:
@@ -170,17 +174,21 @@ class AuthorAnalyzer:
             for query in search_queries[:3]:  # Limit API calls
                 params = {
                     'key': self.google_api_key,
-                    'cx': self.google_search_cx,
+                    'cx': self.google_cse_id,  # Use the actual CSE ID
                     'q': query,
                     'num': 5
                 }
                 
+                logger.info(f"Google search: {query}")
                 response = self.session.get(base_url, params=params, timeout=5)
                 
                 if response.status_code == 200:
                     data = response.json()
                     if 'items' in data:
                         all_items.extend(data['items'])
+                        logger.info(f"Found {len(data['items'])} results")
+                else:
+                    logger.error(f"Google API error: {response.status_code} - {response.text}")
                 
                 time.sleep(0.2)  # Rate limiting
             
@@ -963,7 +971,7 @@ class AuthorAnalyzer:
                 'limitations': [] if total_completeness > 70 else ['Some information could not be verified']
             }
         else:
-            result['bio'] = f"Unable to find comprehensive information about {clean_name}. This doesn't necessarily indicate a credibility issue, but warrants additional verification."
+            result['bio'] = f"Limited author information available. This doesn't necessarily indicate a credibility issue, but warrants additional verification."
             result['credibility_explanation'] = {
                 'level': 'Unknown',
                 'score': 50,
