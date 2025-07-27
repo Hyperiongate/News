@@ -1,7 +1,7 @@
 """
 FILE: services/news_extractor.py
 LOCATION: services/news_extractor.py
-PURPOSE: UNIVERSAL author extraction that works on ALL news sites
+PURPOSE: ULTIMATE universal author extraction using AI-level pattern recognition
 """
 
 import logging
@@ -9,14 +9,15 @@ import re
 import json
 from datetime import datetime
 from urllib.parse import urlparse
+from collections import Counter
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
 logger = logging.getLogger(__name__)
 
 class NewsExtractor:
-    """Universal news extractor that finds authors ANYWHERE they might be hiding"""
+    """Ultimate universal news extractor with AI-level author detection"""
     
     def __init__(self):
         self.session = requests.Session()
@@ -28,11 +29,29 @@ class NewsExtractor:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
         })
+        
+        # Common first and last names for validation
+        self.common_first_names = {
+            'james', 'john', 'robert', 'michael', 'william', 'david', 'richard', 'joseph',
+            'thomas', 'charles', 'mary', 'patricia', 'jennifer', 'linda', 'elizabeth',
+            'barbara', 'susan', 'jessica', 'sarah', 'karen', 'daniel', 'matthew', 'donald',
+            'mark', 'paul', 'steven', 'andrew', 'kenneth', 'joshua', 'kevin', 'brian',
+            'george', 'edward', 'ronald', 'timothy', 'jason', 'jeffrey', 'ryan', 'jacob',
+            'gary', 'nicholas', 'eric', 'jonathan', 'stephen', 'larry', 'justin', 'scott',
+            'brandon', 'benjamin', 'samuel', 'frank', 'gregory', 'raymond', 'alexander',
+            'patrick', 'jack', 'dennis', 'jerry', 'tyler', 'aaron', 'jose', 'nathan',
+            'henry', 'zachary', 'douglas', 'peter', 'adam', 'noah', 'christopher', 'nancy',
+            'betty', 'helen', 'sandra', 'donna', 'carol', 'ruth', 'sharon', 'michelle',
+            'laura', 'kimberly', 'deborah', 'rachel', 'amy', 'anna', 'maria', 'dorothy',
+            'lisa', 'ashley', 'madison', 'amanda', 'melissa', 'debra', 'stephanie', 'rebecca',
+            'virginia', 'kathleen', 'pamela', 'martha', 'angela', 'katherine', 'christine',
+            'emma', 'olivia', 'sophia', 'isabella', 'charlotte', 'amelia', 'evelyn'
+        }
     
     def extract_article(self, url):
         """Extract article content from URL"""
         try:
-            logger.info(f"Starting UNIVERSAL extraction for: {url}")
+            logger.info(f"🚀 ULTIMATE EXTRACTION STARTING for: {url}")
             
             response = self.session.get(url, timeout=30, allow_redirects=True)
             response.raise_for_status()
@@ -50,12 +69,12 @@ class NewsExtractor:
             title = self._extract_title(soup)
             text = self._extract_text(soup, url)
             
-            # UNIVERSAL AUTHOR EXTRACTION
-            author = self._extract_author_universal(soup, response.text, domain, url)
+            # ULTIMATE AUTHOR EXTRACTION
+            author = self._extract_author_ultimate(soup, response.text, title, text, domain)
             
             publish_date = self._extract_date(soup)
             
-            logger.info(f"EXTRACTION COMPLETE: Title='{title[:50]}...', Author='{author}', Text length={len(text)}")
+            logger.info(f"✅ EXTRACTION COMPLETE: Title='{title[:50]}...', Author='{author}', Text length={len(text)}")
             
             return {
                 'title': title or 'No title found',
@@ -69,6 +88,484 @@ class NewsExtractor:
         except Exception as e:
             logger.error(f"Extraction error for {url}: {str(e)}", exc_info=True)
             return None
+    
+    def _extract_author_ultimate(self, soup, html_text, title, article_text, domain):
+        """ULTIMATE author extraction using every conceivable method"""
+        
+        logger.info("🔍 ULTIMATE AUTHOR EXTRACTION ENGAGED")
+        
+        # Store all candidates with confidence scores
+        author_candidates = {}  # author -> confidence score
+        
+        # METHOD 1: Proximity Analysis - Find names near key indicators
+        logger.info("📍 METHOD 1: Proximity-based extraction")
+        
+        # Find all text nodes
+        all_text_nodes = []
+        for element in soup.find_all(text=True):
+            if element.parent.name not in ['script', 'style', 'meta', 'link']:
+                text = str(element).strip()
+                if text and len(text) > 2:
+                    all_text_nodes.append({
+                        'text': text,
+                        'parent': element.parent,
+                        'tag': element.parent.name,
+                        'classes': element.parent.get('class', [])
+                    })
+        
+        # Look for author indicators and check nearby text
+        author_indicators = ['by', 'author', 'written', 'reporter', 'journalist', 'correspondent', 'contributor']
+        
+        for i, node in enumerate(all_text_nodes):
+            text_lower = node['text'].lower()
+            
+            # Check if this node contains an indicator
+            for indicator in author_indicators:
+                if indicator in text_lower:
+                    # Check this node and next few nodes for names
+                    for j in range(i, min(i + 5, len(all_text_nodes))):
+                        candidate_text = all_text_nodes[j]['text']
+                        
+                        # Extract potential names
+                        names = self._extract_names_from_text(candidate_text)
+                        for name in names:
+                            if self._is_valid_author_name(name):
+                                confidence = 90 if j == i else 80 - (j - i) * 10
+                                author_candidates[name] = max(author_candidates.get(name, 0), confidence)
+                                logger.info(f"  Found near '{indicator}': {name} (confidence: {confidence})")
+        
+        # METHOD 2: Structural Analysis - Find names in specific positions
+        logger.info("🏗️ METHOD 2: Structural position analysis")
+        
+        # After title
+        if title:
+            title_elem = soup.find(text=re.compile(re.escape(title[:30]), re.I))
+            if title_elem:
+                parent = title_elem.parent
+                # Check next siblings
+                for _ in range(10):
+                    parent = parent.find_next_sibling() or parent.find_next()
+                    if parent:
+                        text = parent.get_text().strip()
+                        if text and len(text) < 100:
+                            names = self._extract_names_from_text(text)
+                            for name in names:
+                                if self._is_valid_author_name(name):
+                                    author_candidates[name] = max(author_candidates.get(name, 0), 85)
+                                    logger.info(f"  Found after title: {name}")
+        
+        # Before main text
+        if article_text and len(article_text) > 100:
+            first_sentence = article_text[:200]
+            # Find where article starts
+            article_start = soup.find(text=lambda t: first_sentence[:50] in str(t))
+            if article_start:
+                parent = article_start.parent
+                # Check previous siblings
+                for _ in range(10):
+                    parent = parent.find_previous_sibling() or parent.find_previous()
+                    if parent:
+                        text = parent.get_text().strip()
+                        if text and len(text) < 100:
+                            names = self._extract_names_from_text(text)
+                            for name in names:
+                                if self._is_valid_author_name(name):
+                                    author_candidates[name] = max(author_candidates.get(name, 0), 85)
+                                    logger.info(f"  Found before article: {name}")
+        
+        # METHOD 3: Link Analysis - Authors often have profile links
+        logger.info("🔗 METHOD 3: Link-based extraction")
+        
+        author_link_patterns = [
+            r'/author/', r'/authors/', r'/journalist/', r'/writer/', r'/reporter/',
+            r'/contributor/', r'/staff/', r'/people/', r'/profile/', r'/bio/',
+            r'/about/', r'/team/', r'/news-team/', r'/editorial-team/'
+        ]
+        
+        for link in soup.find_all('a', href=True):
+            href = link.get('href', '').lower()
+            for pattern in author_link_patterns:
+                if pattern in href:
+                    name = link.get_text().strip()
+                    name = self._clean_author_text(name)
+                    if self._is_valid_author_name(name):
+                        author_candidates[name] = max(author_candidates.get(name, 0), 75)
+                        logger.info(f"  Found in author link: {name}")
+                    break
+        
+        # METHOD 4: Statistical Analysis - Find repeated names
+        logger.info("📊 METHOD 4: Statistical name frequency")
+        
+        # Extract all potential names from the page
+        all_names = []
+        text_content = soup.get_text()
+        
+        # Use multiple patterns to find names
+        name_patterns = [
+            # Standard names
+            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b',
+            # Names with middle initials
+            r'\b([A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+)\b',
+            # Names with prefixes
+            r'\b(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b',
+            # Names with suffixes
+            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:Jr\.|Sr\.|III|IV)\b'
+        ]
+        
+        for pattern in name_patterns:
+            matches = re.findall(pattern, text_content)
+            all_names.extend(matches)
+        
+        # Count occurrences
+        name_counts = Counter(all_names)
+        
+        # Names that appear 2-5 times are often authors (not too common like politicians)
+        for name, count in name_counts.items():
+            if 2 <= count <= 5 and self._is_valid_author_name(name):
+                confidence = min(60 + count * 5, 80)
+                author_candidates[name] = max(author_candidates.get(name, 0), confidence)
+                logger.info(f"  Found {count} times: {name}")
+        
+        # METHOD 5: Visual Hierarchy Analysis
+        logger.info("👁️ METHOD 5: Visual hierarchy analysis")
+        
+        # Find elements that visually stand out (specific styles often used for bylines)
+        styled_elements = soup.find_all(style=True)
+        for elem in styled_elements:
+            style = elem.get('style', '').lower()
+            # Bylines often have specific styling
+            if any(prop in style for prop in ['font-weight', 'font-style', 'text-transform']):
+                text = elem.get_text().strip()
+                if text and len(text) < 100:
+                    names = self._extract_names_from_text(text)
+                    for name in names:
+                        if self._is_valid_author_name(name):
+                            author_candidates[name] = max(author_candidates.get(name, 0), 70)
+                            logger.info(f"  Found in styled element: {name}")
+        
+        # METHOD 6: Semantic Role Analysis
+        logger.info("🧠 METHOD 6: Semantic role detection")
+        
+        # Look for names in contexts that suggest authorship
+        semantic_patterns = [
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:is|writes|reports|covers)',
+            r'(?:follow|contact|email)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\'s\s+(?:article|report|story|piece)',
+            r'(?:story|article|report)\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+contributed\s+to',
+            r'reporting\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
+        ]
+        
+        for pattern in semantic_patterns:
+            matches = re.findall(pattern, text_content, re.I)
+            for match in matches:
+                if self._is_valid_author_name(match):
+                    author_candidates[match] = max(author_candidates.get(match, 0), 80)
+                    logger.info(f"  Found in semantic context: {match}")
+        
+        # METHOD 7: Email/Social Media Extraction
+        logger.info("📧 METHOD 7: Contact information extraction")
+        
+        # Authors often have email or social media listed
+        email_pattern = r'([a-zA-Z0-9._%+-]+)@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        emails = re.findall(email_pattern, text_content)
+        
+        for email_local in emails:
+            # Extract name from email
+            name_parts = re.split(r'[._-]', email_local)
+            if len(name_parts) >= 2:
+                potential_name = ' '.join(word.capitalize() for word in name_parts[:2])
+                if self._is_valid_author_name(potential_name):
+                    author_candidates[potential_name] = max(author_candidates.get(potential_name, 0), 70)
+                    logger.info(f"  Found from email: {potential_name}")
+        
+        # Twitter handles
+        twitter_pattern = r'@([a-zA-Z0-9_]+)'
+        handles = re.findall(twitter_pattern, text_content)
+        for handle in handles:
+            # Check if handle appears with a real name nearby
+            handle_context = re.search(rf'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*@{handle}', text_content)
+            if handle_context:
+                name = handle_context.group(1)
+                if self._is_valid_author_name(name):
+                    author_candidates[name] = max(author_candidates.get(name, 0), 75)
+                    logger.info(f"  Found with Twitter handle: {name}")
+        
+        # METHOD 8: Machine Learning-style Feature Extraction
+        logger.info("🤖 METHOD 8: ML-style feature analysis")
+        
+        # Check every element for "author-like" features
+        for elem in soup.find_all(['div', 'span', 'p', 'address', 'footer', 'header']):
+            features = {
+                'has_by': 'by' in elem.get_text().lower(),
+                'near_title': False,  # Would need position calculation
+                'has_date': bool(re.search(r'\d{4}|\d{1,2}/\d{1,2}', elem.get_text())),
+                'short_text': len(elem.get_text().strip()) < 100,
+                'contains_name': bool(self._extract_names_from_text(elem.get_text())),
+                'italic_style': elem.name == 'em' or elem.name == 'i',
+                'has_link': bool(elem.find('a')),
+                'special_class': any(word in ' '.join(elem.get('class', [])).lower() 
+                                   for word in ['author', 'byline', 'writer', 'meta'])
+            }
+            
+            # Score based on features
+            score = sum([
+                features['has_by'] * 30,
+                features['short_text'] * 20,
+                features['contains_name'] * 25,
+                features['italic_style'] * 15,
+                features['has_link'] * 10,
+                features['special_class'] * 40
+            ])
+            
+            if score >= 50:
+                names = self._extract_names_from_text(elem.get_text())
+                for name in names:
+                    if self._is_valid_author_name(name):
+                        confidence = min(score, 90)
+                        author_candidates[name] = max(author_candidates.get(name, 0), confidence)
+                        logger.info(f"  Found by ML features (score={score}): {name}")
+        
+        # METHOD 9: Fallback - Check common metadata locations
+        logger.info("🔍 METHOD 9: Deep metadata search")
+        
+        # Check all meta tags
+        for meta in soup.find_all('meta'):
+            content = meta.get('content', '')
+            if content:
+                names = self._extract_names_from_text(content)
+                for name in names:
+                    if self._is_valid_author_name(name):
+                        author_candidates[name] = max(author_candidates.get(name, 0), 65)
+                        logger.info(f"  Found in meta: {name}")
+        
+        # Check data attributes
+        for elem in soup.find_all(attrs={'data-author': True}):
+            name = elem.get('data-author')
+            if self._is_valid_author_name(name):
+                author_candidates[name] = max(author_candidates.get(name, 0), 85)
+                logger.info(f"  Found in data-author: {name}")
+        
+        # Check any data-* attribute that might contain author
+        for elem in soup.find_all():
+            for attr, value in elem.attrs.items():
+                if attr.startswith('data-') and value and isinstance(value, str):
+                    names = self._extract_names_from_text(value)
+                    for name in names:
+                        if self._is_valid_author_name(name):
+                            author_candidates[name] = max(author_candidates.get(name, 0), 60)
+                            logger.info(f"  Found in {attr}: {name}")
+        
+        # FINAL SELECTION
+        logger.info(f"\n📊 FINAL CANDIDATE ANALYSIS")
+        logger.info(f"Total candidates found: {len(author_candidates)}")
+        
+        if author_candidates:
+            # Sort by confidence
+            sorted_candidates = sorted(author_candidates.items(), key=lambda x: x[1], reverse=True)
+            
+            logger.info("Top candidates:")
+            for name, conf in sorted_candidates[:5]:
+                logger.info(f"  - {name}: {conf}% confidence")
+            
+            # Select the highest confidence author
+            best_author = sorted_candidates[0][0]
+            best_confidence = sorted_candidates[0][1]
+            
+            # Check for co-authors
+            if len(sorted_candidates) > 1:
+                second_author = sorted_candidates[1][0]
+                second_confidence = sorted_candidates[1][1]
+                
+                # If second author has high confidence and different last name, might be co-author
+                if (second_confidence >= 70 and 
+                    best_author.split()[-1].lower() != second_author.split()[-1].lower()):
+                    logger.info(f"🎯 CO-AUTHORS DETECTED: {best_author} and {second_author}")
+                    return f"{best_author} and {second_author}"
+            
+            logger.info(f"🎯 SELECTED AUTHOR: {best_author} (confidence: {best_confidence}%)")
+            return best_author
+        
+        logger.info("❌ NO AUTHOR FOUND DESPITE ULTIMATE EXTRACTION")
+        return None
+    
+    def _extract_names_from_text(self, text):
+        """Extract potential names from text using multiple strategies"""
+        if not text:
+            return []
+        
+        names = []
+        
+        # Clean text first
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        # Strategy 1: Look for capitalized words that could be names
+        # Match 1-4 word names
+        patterns = [
+            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b',  # Standard names
+            r'\b([A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+)\b',  # With middle initial
+            r'\b([A-Z][a-z]+(?:\s+[a-z]+)?(?:\s+[A-Z][a-z]+)+)\b',  # With lowercase middle
+            r'\b([A-Z][a-z]+-[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b',  # Hyphenated
+            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+[A-Z][a-z]+-[A-Z][a-z]+)\b',  # Last name hyphenated
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text)
+            names.extend(matches)
+        
+        # Strategy 2: Remove "By" and similar prefixes, then extract
+        cleaned = re.sub(r'^(By|Written by|Reported by|From|Author):?\s*', '', text, flags=re.I)
+        if cleaned != text:
+            # Something was removed, check what's left
+            remaining = cleaned.split(',')[0].split('|')[0].strip()  # Take first part before comma/pipe
+            if remaining and self._looks_like_name(remaining):
+                names.append(remaining)
+        
+        # Clean and validate names
+        valid_names = []
+        for name in names:
+            name = self._clean_author_text(name)
+            if name and self._looks_like_name(name):
+                valid_names.append(name)
+        
+        return list(set(valid_names))  # Remove duplicates
+    
+    def _looks_like_name(self, text):
+        """Quick check if text looks like a name"""
+        if not text or len(text) < 3 or len(text) > 50:
+            return False
+        
+        # Must have at least one space (full name) or be a known first name
+        words = text.split()
+        if len(words) == 1:
+            # Single word - check if it's a known first name
+            return text.lower() in self.common_first_names
+        
+        if len(words) > 4:
+            return False
+        
+        # Check if words are capitalized
+        for word in words:
+            if not word[0].isupper() and word not in ['de', 'van', 'von', 'der', 'la', 'el']:
+                return False
+        
+        # No numbers
+        if any(char.isdigit() for char in text):
+            return False
+        
+        return True
+    
+    def _is_valid_author_name(self, name):
+        """Comprehensive validation of author names"""
+        if not name:
+            return False
+        
+        # Clean the name
+        name = self._clean_author_text(name)
+        
+        if not name or len(name) < 3 or len(name) > 50:
+            return False
+        
+        # Split into words
+        words = name.split()
+        
+        if len(words) == 0 or len(words) > 4:
+            return False
+        
+        # Check for excluded terms
+        exclude_terms = {
+            'staff', 'admin', 'editor', 'team', 'desk', 'newsroom', 'editorial',
+            'associated', 'press', 'reuters', 'bloomberg', 'agency', 'news',
+            'correspondent', 'reporter', 'journalist', 'writer', 'contributor',
+            'service', 'wire', 'media', 'digital', 'online', 'web', 'content',
+            'production', 'department', 'bureau', 'office', 'international',
+            'national', 'local', 'regional', 'special', 'senior', 'chief'
+        }
+        
+        name_lower = name.lower()
+        
+        # Don't exclude if it's part of a real name (e.g., "John Editor" is valid)
+        if len(words) == 1 and name_lower in exclude_terms:
+            return False
+        
+        # All words together shouldn't be an excluded phrase
+        if name_lower in exclude_terms:
+            return False
+        
+        # Check if first word is a common first name (high confidence)
+        first_word = words[0].lower()
+        if first_word in self.common_first_names:
+            return True
+        
+        # Otherwise, apply stricter validation
+        # Must be mostly alphabetic
+        alpha_chars = sum(c.isalpha() or c in " '-." for c in name)
+        if alpha_chars < len(name) * 0.9:
+            return False
+        
+        # Each word should be capitalized (with exceptions)
+        for word in words:
+            if word.lower() in ['de', 'van', 'von', 'der', 'la', 'el', 'bin', 'al']:
+                continue
+            if not word[0].isupper():
+                return False
+        
+        # No weird patterns
+        if re.search(r'\d{2,}', name):  # Multiple digits
+            return False
+        
+        if name.count('.') > 2:  # Too many dots
+            return False
+        
+        # Looks valid!
+        return True
+    
+    def _clean_author_text(self, text):
+        """Clean author text extensively"""
+        if not text:
+            return ''
+        
+        # Remove HTML tags if any
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Remove common prefixes
+        prefixes = [
+            r'^[Bb]y\s+',
+            r'^[Ww]ritten\s+[Bb]y\s+',
+            r'^[Rr]eported\s+[Bb]y\s+',
+            r'^[Aa]uthor:?\s*',
+            r'^[Jj]ournalist:?\s*',
+            r'^[Cc]orrespondent:?\s*',
+            r'^[Cc]ontributed\s+[Bb]y\s+',
+            r'^[Ff]rom\s+',
+            r'^[Pp]osted\s+[Bb]y\s+',
+            r'^@\s*',
+        ]
+        
+        for prefix in prefixes:
+            text = re.sub(prefix, '', text, count=1)
+        
+        # Remove common suffixes
+        suffixes = [
+            r'\s*\|.*$',  # Pipe and everything after
+            r'\s*[,;].*$',  # Comma/semicolon and everything after  
+            r'\s*[\(\[].*[\)\]].*$',  # Parentheses/brackets
+            r'\s*<.*>.*$',  # HTML tags
+            r'\s*@.*$',  # Email/twitter
+            r'\s+(?:Reporter|Writer|Correspondent|Staff|Editor|Contributor)$',
+            r'\s+\d+.*$',  # Numbers and everything after
+            r'\s+on\s+.*$',  # "on [date]"
+            r'\s+at\s+\d+.*$',  # "at [time]"
+        ]
+        
+        for suffix in suffixes:
+            text = re.sub(suffix, '', text, flags=re.I)
+        
+        # Clean up whitespace
+        text = ' '.join(text.split())
+        
+        return text.strip()
     
     def _extract_title(self, soup):
         """Extract article title"""
@@ -102,14 +599,14 @@ class NewsExtractor:
         article_selectors = [
             'article',
             '[class*="article-body"]',
-            '[class*="story-body"]',
+            '[class*="story-body"]', 
             '[class*="content-body"]',
-            '[class*="RichTextStoryBody"]',
+            '[class*="post-body"]',
+            '[class*="entry-content"]',
+            '[role="main"]',
             'main',
-            '.story-body__inner',
-            '.article__body',
-            '.entry-content',
-            '.post-content'
+            '.content',
+            '#content'
         ]
         
         for selector in article_selectors:
@@ -127,413 +624,6 @@ class NewsExtractor:
         
         return text if text else 'No article text found'
     
-    def _extract_author_universal(self, soup, html_text, domain, url):
-        """UNIVERSAL author extraction using EVERY possible method"""
-        
-        logger.info("=" * 80)
-        logger.info("UNIVERSAL AUTHOR EXTRACTION - TRYING ALL METHODS")
-        logger.info("=" * 80)
-        
-        found_authors = []
-        
-        # METHOD 1: JSON-LD Structured Data (HIGHEST PRIORITY)
-        logger.info("\nMETHOD 1: JSON-LD Structured Data")
-        json_ld_scripts = soup.find_all('script', type='application/ld+json')
-        
-        for script in json_ld_scripts:
-            try:
-                if script.string:
-                    data = json.loads(script.string)
-                    authors = self._extract_authors_from_json_deep(data)
-                    if authors:
-                        logger.info(f"✅ JSON-LD authors found: {authors}")
-                        found_authors.extend(authors)
-            except Exception as e:
-                logger.debug(f"JSON-LD parse error: {e}")
-        
-        # METHOD 2: Meta Tags (ALL POSSIBLE VARIATIONS)
-        logger.info("\nMETHOD 2: Meta Tags")
-        meta_selectors = [
-            ('meta[name="author"]', 'content'),
-            ('meta[property="author"]', 'content'),
-            ('meta[property="article:author"]', 'content'),
-            ('meta[name="byl"]', 'content'),
-            ('meta[name="DC.creator"]', 'content'),
-            ('meta[name="DC.Creator"]', 'content'),
-            ('meta[name="parsely-author"]', 'content'),
-            ('meta[name="twitter:creator"]', 'content'),
-            ('meta[property="og:article:author"]', 'content'),
-            ('meta[name="sailthru.author"]', 'content'),
-            ('meta[name="article.author"]', 'content'),
-            ('meta[name="cXenseParse:author"]', 'content'),
-            ('meta[itemprop="author"]', 'content'),
-            ('meta[name="news_keywords"]', 'content'),  # Sometimes has author
-            ('meta[property="article:author:name"]', 'content'),
-        ]
-        
-        for selector, attr in meta_selectors:
-            elements = soup.select(selector)
-            for elem in elements:
-                content = elem.get(attr, '').strip()
-                if content and self._is_valid_author(content):
-                    logger.info(f"✅ Meta tag {selector}: '{content}'")
-                    found_authors.append(content)
-        
-        # METHOD 3: Byline Elements (COMPREHENSIVE)
-        logger.info("\nMETHOD 3: Byline Elements")
-        byline_selectors = [
-            # Class-based selectors
-            '.byline', '.by-line', '.byline-name', '.author-name',
-            '.article-author', '.story-byline', '.content-author',
-            '.post-author', '.entry-author', '.news-author',
-            '.journalist', '.writer', '.reporter', '.contributor',
-            '.by', '.written-by', '.article-byline', '.story-author',
-            '.author-info', '.author-box', '.bio-byline',
-            '.article__author', '.article-info__author',
-            '[class*="byline"]', '[class*="author"]', '[class*="writer"]',
-            '[class*="journalist"]', '[class*="reporter"]',
-            
-            # ID-based selectors
-            '#byline', '#author', '#writer', '#journalist',
-            '[id*="byline"]', '[id*="author"]',
-            
-            # Semantic HTML5
-            'address', 'address.author',
-            
-            # Data attributes
-            '[data-author]', '[data-byline]', '[data-writer]',
-            
-            # Rel attributes
-            '[rel="author"]',
-            
-            # Itemprop
-            '[itemprop="author"]', '[itemprop="creator"]',
-            
-            # Specific tag combinations
-            'span.byline', 'div.byline', 'p.byline',
-            'span.author', 'div.author', 'p.author',
-            'span[class*="author"]', 'div[class*="author"]',
-            'p[class*="author"]', 'a[class*="author"]',
-            'h3[class*="author"]', 'h4[class*="author"]',
-            'h5[class*="author"]', 'h6[class*="author"]',
-            
-            # Link-based
-            'a[href*="/author/"]', 'a[href*="/authors/"]',
-            'a[href*="/journalist/"]', 'a[href*="/writer/"]',
-            'a[href*="/profile/"]', 'a[href*="/people/"]',
-            'a[href*="/staff/"]', 'a[href*="/contributors/"]',
-            'a[rel="author"]',
-        ]
-        
-        for selector in byline_selectors:
-            elements = soup.select(selector)
-            for elem in elements[:5]:  # Check first 5 of each type
-                text = elem.get_text().strip()
-                
-                # Also check data attributes
-                if elem.get('data-author'):
-                    text = elem.get('data-author')
-                
-                # Clean and validate
-                text = self._clean_author_text(text)
-                if text and self._is_valid_author(text):
-                    logger.info(f"✅ Byline element {selector}: '{text}'")
-                    found_authors.append(text)
-        
-        # METHOD 4: Text Pattern Matching (AGGRESSIVE)
-        logger.info("\nMETHOD 4: Text Pattern Matching")
-        
-        # Pattern for "By Author Name" in various formats
-        author_patterns = [
-            # Standard byline patterns
-            r'[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            r'[Ww]ritten\s+[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            r'[Rr]eported\s+[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            r'[Aa]uthor:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            r'[Jj]ournalist:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            r'[Cc]orrespondent:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            
-            # With titles/credentials
-            r'[Bb]y:?\s+(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)?\s*([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            
-            # Multiple authors
-            r'[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})\s+(?:and|&)\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})',
-            
-            # With email/twitter
-            r'[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})\s*[\(\[]?@',
-            
-            # In specific HTML contexts
-            r'<(?:span|div|p)[^>]*>[Bb]y:?\s+([A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3})</(?:span|div|p)>',
-        ]
-        
-        # Search in different text contexts
-        search_texts = [
-            html_text,  # Full HTML
-            soup.get_text(),  # Extracted text
-            str(soup.find('body')) if soup.find('body') else '',  # Body HTML
-        ]
-        
-        for search_text in search_texts:
-            if not search_text:
-                continue
-                
-            for pattern in author_patterns:
-                matches = re.findall(pattern, search_text[:50000])  # Search first 50k chars
-                for match in matches:
-                    if isinstance(match, tuple):
-                        # Handle multiple authors
-                        for author in match:
-                            if author and self._is_valid_author(author):
-                                logger.info(f"✅ Pattern match: '{author}'")
-                                found_authors.append(author)
-                    else:
-                        if match and self._is_valid_author(match):
-                            logger.info(f"✅ Pattern match: '{match}'")
-                            found_authors.append(match)
-        
-        # METHOD 5: Schema.org Microdata
-        logger.info("\nMETHOD 5: Schema.org Microdata")
-        
-        # Look for itemscope with author
-        author_scopes = soup.find_all(attrs={'itemtype': re.compile('schema.org/Person', re.I)})
-        for scope in author_scopes:
-            name_elem = scope.find(attrs={'itemprop': 'name'})
-            if name_elem:
-                name = name_elem.get_text().strip()
-                if self._is_valid_author(name):
-                    logger.info(f"✅ Schema.org Person: '{name}'")
-                    found_authors.append(name)
-        
-        # METHOD 6: RDFa
-        logger.info("\nMETHOD 6: RDFa")
-        rdfa_authors = soup.find_all(attrs={'property': re.compile('author|creator', re.I)})
-        for elem in rdfa_authors:
-            text = elem.get_text().strip()
-            if self._is_valid_author(text):
-                logger.info(f"✅ RDFa: '{text}'")
-                found_authors.append(text)
-        
-        # METHOD 7: Special Cases - Hidden or JavaScript-rendered content
-        logger.info("\nMETHOD 7: Hidden/JS Content")
-        
-        # Check for hidden author data in data attributes
-        all_elements = soup.find_all(attrs={'data-author': True})
-        for elem in all_elements:
-            author = elem.get('data-author', '').strip()
-            if self._is_valid_author(author):
-                logger.info(f"✅ Data attribute: '{author}'")
-                found_authors.append(author)
-        
-        # Check comments for author info (some sites hide it there)
-        for comment in soup.find_all(string=lambda text: isinstance(text, str) and 'author' in text.lower()):
-            if 'author:' in str(comment).lower():
-                match = re.search(r'author:\s*([A-Z][a-zA-Z\s\'\-]+)', str(comment), re.I)
-                if match and self._is_valid_author(match.group(1)):
-                    logger.info(f"✅ HTML comment: '{match.group(1)}'")
-                    found_authors.append(match.group(1))
-        
-        # METHOD 8: Article vicinity search
-        logger.info("\nMETHOD 8: Article Vicinity Search")
-        
-        # Find the main article element
-        article = soup.find('article') or soup.find(class_=re.compile('article|story|content'))
-        if article:
-            # Look for author-like text near the beginning of the article
-            first_elements = article.find_all(['p', 'div', 'span'])[:20]
-            for elem in first_elements:
-                text = elem.get_text().strip()
-                if len(text) < 100:  # Short text more likely to be byline
-                    # Check if it looks like an author
-                    if re.match(r'^[A-Z][a-zA-Z\'\-]+(?:\s+[A-Z][a-zA-Z\'\-]+){1,3}$', text):
-                        if self._is_valid_author(text):
-                            logger.info(f"✅ Article vicinity: '{text}'")
-                            found_authors.append(text)
-        
-        # FINAL STEP: Deduplicate and select best author
-        logger.info("\n" + "=" * 80)
-        logger.info("AUTHOR EXTRACTION COMPLETE")
-        logger.info(f"Total potential authors found: {len(found_authors)}")
-        
-        if found_authors:
-            # Deduplicate and clean
-            unique_authors = []
-            seen = set()
-            
-            for author in found_authors:
-                clean = self._normalize_author(author)
-                if clean and clean.lower() not in seen:
-                    seen.add(clean.lower())
-                    unique_authors.append(clean)
-            
-            logger.info(f"Unique authors: {unique_authors}")
-            
-            # Return the first valid author (usually the most reliable)
-            if unique_authors:
-                selected = unique_authors[0]
-                # Handle multiple authors
-                if len(unique_authors) > 1 and unique_authors[1] != selected:
-                    # Check if second author is co-author
-                    if len(unique_authors[1].split()) <= 3:  # Likely a name
-                        selected = f"{selected} and {unique_authors[1]}"
-                
-                logger.info(f"🎯 SELECTED AUTHOR: {selected}")
-                return selected
-        
-        logger.info("❌ NO AUTHOR FOUND")
-        logger.info("=" * 80)
-        
-        return None
-    
-    def _extract_authors_from_json_deep(self, obj, authors=None):
-        """Deep recursive extraction of authors from JSON-LD"""
-        if authors is None:
-            authors = []
-        
-        if isinstance(obj, dict):
-            # Direct author fields
-            author_keys = ['author', 'authors', 'creator', 'creators', 'contributor', 'contributors']
-            
-            for key in author_keys:
-                if key in obj:
-                    author_data = obj[key]
-                    
-                    # String author
-                    if isinstance(author_data, str) and self._is_valid_author(author_data):
-                        authors.append(author_data)
-                    
-                    # Object with name
-                    elif isinstance(author_data, dict):
-                        name = author_data.get('name') or author_data.get('@name')
-                        if name and self._is_valid_author(name):
-                            authors.append(name)
-                    
-                    # List of authors
-                    elif isinstance(author_data, list):
-                        for item in author_data:
-                            if isinstance(item, str) and self._is_valid_author(item):
-                                authors.append(item)
-                            elif isinstance(item, dict):
-                                name = item.get('name') or item.get('@name')
-                                if name and self._is_valid_author(name):
-                                    authors.append(name)
-            
-            # Recurse through all values
-            for value in obj.values():
-                self._extract_authors_from_json_deep(value, authors)
-        
-        elif isinstance(obj, list):
-            for item in obj:
-                self._extract_authors_from_json_deep(item, authors)
-        
-        return authors
-    
-    def _clean_author_text(self, text):
-        """Clean author text of common prefixes and suffixes"""
-        if not text:
-            return ''
-        
-        # Remove common prefixes
-        prefixes = [
-            r'^[Bb]y\s+', r'^[Ww]ritten\s+[Bb]y\s+', r'^[Rr]eported\s+[Bb]y\s+',
-            r'^[Aa]uthor:\s+', r'^[Jj]ournalist:\s+', r'^[Cc]orrespondent:\s+',
-            r'^[Ff]rom\s+', r'^[Pp]osted\s+[Bb]y\s+', r'^[Cc]ontributed\s+[Bb]y\s+',
-            r'^@\s*',  # Twitter handles
-        ]
-        
-        for prefix in prefixes:
-            text = re.sub(prefix, '', text, count=1)
-        
-        # Remove common suffixes
-        suffixes = [
-            r'\s*\|.*$',  # Pipe and everything after
-            r'\s*,\s*[A-Z]{2,}.*$',  # Comma and location/outlet
-            r'\s*[\(\[].*[\)\]].*$',  # Parentheses/brackets content
-            r'\s*<.*>.*$',  # HTML tags
-            r'\s*@.*$',  # Email/twitter
-            r'\s+Reporter$', r'\s+Writer$', r'\s+Correspondent$',
-            r'\s+Staff$', r'\s+Editor$', r'\s+Contributor$',
-        ]
-        
-        for suffix in suffixes:
-            text = re.sub(suffix, '', text)
-        
-        # Clean whitespace
-        text = ' '.join(text.split())
-        
-        return text.strip()
-    
-    def _is_valid_author(self, text):
-        """Check if text is a valid author name"""
-        if not text or len(text) < 3 or len(text) > 100:
-            return False
-        
-        # Exclude common non-author strings
-        exclude_patterns = [
-            'staff', 'writer', 'editor', 'team', 'news', 'service', 'wire',
-            'correspondent', 'reporter', 'journalist', 'contributor',
-            'associated press', 'reuters', 'bloomberg', 'admin', 'administrator',
-            'published', 'updated', 'posted', 'share', 'follow', 'email',
-            'facebook', 'twitter', 'linkedin', 'subscribe', 'newsletter',
-            'http', 'www', '.com', 'click', 'read more', 'continue',
-            'advertisement', 'sponsored', 'promotion'
-        ]
-        
-        text_lower = text.lower()
-        
-        # Check exclusions
-        for pattern in exclude_patterns:
-            if pattern in text_lower:
-                return False
-        
-        # Must have at least one uppercase letter (proper name)
-        if not any(c.isupper() for c in text):
-            return False
-        
-        # Should look like a name (at least one space or dash for full name)
-        # But also allow single word names (like "Cher" or international names)
-        words = text.split()
-        if len(words) > 5:  # Too many words for a name
-            return False
-        
-        # Check if it contains mostly alphabetic characters
-        alpha_chars = sum(c.isalpha() or c in " '-." for c in text)
-        if alpha_chars < len(text) * 0.8:
-            return False
-        
-        # Looks like a valid name
-        return True
-    
-    def _normalize_author(self, author):
-        """Normalize author name for consistency"""
-        if not author:
-            return ''
-        
-        # Clean the text first
-        author = self._clean_author_text(author)
-        
-        # Fix common issues
-        author = re.sub(r'\s+', ' ', author)  # Multiple spaces
-        author = re.sub(r'^\W+|\W+$', '', author)  # Leading/trailing non-word chars
-        
-        # Title case for consistency (but preserve McNamara, O'Brien, etc.)
-        words = author.split()
-        normalized_words = []
-        
-        for word in words:
-            if word.isupper() and len(word) > 1:
-                # All caps - convert to title case
-                word = word.capitalize()
-            elif "'" in word or word.startswith('Mc') or word.startswith('Mac'):
-                # Preserve special capitalization
-                pass
-            else:
-                # Standard title case
-                word = word.capitalize()
-            
-            normalized_words.append(word)
-        
-        return ' '.join(normalized_words)
-    
     def _extract_date(self, soup):
         """Extract publish date"""
         date_selectors = [
@@ -546,14 +636,7 @@ class NewsExtractor:
             'time[datetime]',
             'time[pubdate]',
             '[itemprop="datePublished"]',
-            '[property="datePublished"]',
-            '.publish-date',
-            '.post-date',
-            '.article-date',
-            '.date',
-            'span.date',
-            'div.date',
-            'p.date'
+            '[property="datePublished"]'
         ]
         
         for selector in date_selectors:
