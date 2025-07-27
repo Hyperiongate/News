@@ -1,5 +1,5 @@
 // static/js/components/author-info.js
-// ENHANCED VERSION - Displays ALL collected author data
+// FIXED VERSION - Removed DOM search for author-analysis-section
 
 (function() {
     'use strict';
@@ -8,10 +8,23 @@
     
     function AuthorInfo() {
         this.name = 'authorInfo';
+        this.rendered = false;
     }
     
     AuthorInfo.prototype.render = function(data) {
         console.log('AuthorInfo render called with data:', data);
+        
+        // Prevent double rendering
+        if (this.rendered) {
+            console.log('AuthorInfo already rendered, skipping');
+            return null;
+        }
+        
+        // Check if author card is already being handled by UI controller
+        if (document.querySelector('[data-card-type="author"]')) {
+            console.log('Author card already exists in DOM, AuthorInfo component skipping render');
+            return null;
+        }
         
         // Get author data from various possible locations
         var authorData = null;
@@ -37,17 +50,26 @@
         }
         
         if (!authorName || authorName === 'Unknown' || authorName === 'Unknown Author') {
-            console.log('No valid author found');
-            return this.renderUnknownAuthor();
+            console.log('No valid author found in AuthorInfo component');
+            return null;
         }
+        
+        // Mark as rendered
+        this.rendered = true;
+        
+        // Create a container div instead of returning HTML string
+        var container = document.createElement('div');
+        container.className = 'author-info-component';
         
         // If we have author_analysis data, use the detailed view
         if (data.author_analysis && data.author_analysis.found) {
-            return this.renderDetailedAuthor(data.author_analysis);
+            container.innerHTML = this.renderDetailedAuthor(data.author_analysis);
+        } else {
+            // Otherwise, render basic author info
+            container.innerHTML = this.renderBasicAuthor(authorName, authorData);
         }
         
-        // Otherwise, render basic author info
-        return this.renderBasicAuthor(authorName, authorData);
+        return container;
     };
     
     AuthorInfo.prototype.renderDetailedAuthor = function(authorData) {
@@ -158,7 +180,7 @@
             html += '</div>';
         }
         
-        // Education section (NEW)
+        // Education section
         if (authorData.education) {
             html += '<div class="education-section">';
             html += '<h5>Education</h5>';
@@ -166,7 +188,7 @@
             html += '</div>';
         }
         
-        // Awards and Recognition (NEW)
+        // Awards and Recognition
         if (authorData.awards && authorData.awards.length > 0) {
             html += '<div class="awards-section">';
             html += '<h5>Awards & Recognition</h5>';
@@ -178,7 +200,7 @@
             html += '</div>';
         }
         
-        // Previous Positions / Career Timeline (NEW)
+        // Previous Positions / Career Timeline
         if (authorData.previous_positions && authorData.previous_positions.length > 0) {
             html += '<div class="career-timeline">';
             html += '<h5>Career History</h5>';
@@ -241,7 +263,7 @@
             html += '</div>';
         }
         
-        // Recent Articles (NEW)
+        // Recent Articles
         if (authorData.recent_articles && authorData.recent_articles.length > 0) {
             html += '<div class="recent-articles">';
             html += '<h5>Recent Articles</h5>';
@@ -277,7 +299,7 @@
             html += '</div>';
         }
         
-        // Issues and Corrections (NEW)
+        // Issues and Corrections
         if (authorData.issues_corrections !== undefined) {
             html += '<div class="integrity-section">';
             html += '<h5>Journalistic Integrity</h5>';
@@ -302,7 +324,7 @@
             html += '</div>';
         }
         
-        // Data completeness indicator (NEW)
+        // Data completeness indicator
         html += '<div class="data-completeness">';
         html += '<h5>Information Coverage</h5>';
         html += '<div class="completeness-grid">';
@@ -432,6 +454,12 @@
         }
     };
     
+    // Reset render state when needed
+    AuthorInfo.prototype.reset = function() {
+        this.rendered = false;
+        this.currentAuthorData = null;
+    };
+    
     // Add CSS if not already present
     AuthorInfo.prototype.ensureStyles = function() {
         if (document.querySelector('style[data-component="author-info"]')) {
@@ -441,6 +469,10 @@
         var style = document.createElement('style');
         style.setAttribute('data-component', 'author-info');
         style.textContent = `
+            .author-info-component {
+                /* Wrapper to ensure no conflicts */
+            }
+            
             .author-info-section {
                 margin: 30px 0;
             }
