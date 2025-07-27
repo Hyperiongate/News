@@ -1,5 +1,6 @@
 """
 services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
+Complete version with fact checking integration
 """
 
 import os
@@ -138,6 +139,10 @@ class NewsAnalyzer:
             
             # Step 2: Perform all analyses
             analysis_results = {}
+            
+            # Always extract key claims for both basic and pro users
+            key_claims = self._extract_key_claims(article_data['text'])
+            analysis_results['key_claims'] = key_claims
             
             # Bias analysis (with fallback)
             if self.bias_analyzer:
@@ -283,9 +288,36 @@ class NewsAnalyzer:
             
             # Pro features
             if is_pro:
-                # Enhanced fact checking
-                key_claims = self._extract_key_claims(article_data['text'])
-                analysis_results['key_claims'] = key_claims
+                # CRITICAL FIX: Actually perform fact checking on the claims!
+                if key_claims:
+                    logger.info(f"Fact checking {len(key_claims)} claims")
+                    
+                    # Extract just the text from claims for fact checking
+                    claim_texts = [claim['text'] for claim in key_claims]
+                    
+                    # Perform fact checking
+                    fact_check_results = self.fact_checker.check_claims(
+                        claims=claim_texts,
+                        article_url=article_data.get('url'),
+                        article_date=article_data.get('publish_date')
+                    )
+                    
+                    analysis_results['fact_checks'] = fact_check_results
+                    
+                    # Generate fact check summary
+                    if fact_check_results:
+                        analysis_results['fact_check_summary'] = self._generate_fact_check_summary(fact_check_results)
+                    
+                    # Get related articles for context
+                    if article_data.get('title'):
+                        related_articles = self.fact_checker.get_related_articles(
+                            article_data['title'], 
+                            max_articles=5
+                        )
+                        analysis_results['related_articles'] = related_articles
+                else:
+                    analysis_results['fact_checks'] = []
+                    analysis_results['fact_check_summary'] = "No factual claims found to verify."
                 
                 # Manipulation detection (if available)
                 if self.manipulation_detector:
@@ -381,33 +413,137 @@ class NewsAnalyzer:
         claims = []
         sentences = re.split(r'[.!?]+', text)
         
+        # Enhanced claim patterns
         claim_patterns = [
-            r'\b\d+\s*(?:percent|%)',
-            r'\b(?:study|research|report|survey)\s+(?:shows|finds|found|reveals)',
-            r'\b(?:according to|data from|statistics show)',
-            r'\b(?:increased|decreased|rose|fell)\s+(?:by|to)\s+\d+',
-            r'\b\d+\s+(?:million|billion|thousand)',
-            r'\b(?:first|largest|smallest|fastest|slowest)\b',
+            # Statistical claims
+            (r'\b\d+\s*(?:percent|%)', 'statistical'),
+            (r'\b\d+\s+(?:million|billion|thousand|hundred)\b', 'numerical'),
+            
+            # Research/study claims
+            (r'\b(?:study|research|report|survey|poll)\s+(?:shows|finds|found|reveals|indicates|suggests)', 'research'),
+            (r'(?:according to|data from|statistics show|research indicates)', 'sourced'),
+            (r'(?:scientists|researchers|experts)\s+(?:say|believe|found|discovered)', 'expert_claim'),
+            
+            # Comparative claims
+            (r'(?:increased|decreased|rose|fell|grew|declined)\s+(?:by|to)\s+\d+', 'trend'),
+            (r'(?:more|less|fewer|greater)\s+than', 'comparison'),
+            (r'(?:highest|lowest|fastest|slowest|biggest|smallest)\s+(?:ever|since|in)', 'superlative'),
+            
+            # Causal claims
+            (r'(?:causes|caused|leads to|results in|due to|because of)', 'causal'),
+            
+            # Historical claims
+            (r'(?:first|last|never|always)\s+(?:to|in history)', 'historical'),
+            (r'since\s+\d{4}', 'temporal'),
         ]
         
-        for sentence in sentences[:20]:
+        seen_claims = set()  # Avoid duplicates
+        
+        for sentence in sentences[:30]:  # Check more sentences
             sentence = sentence.strip()
-            if len(sentence) < 20:
+            if len(sentence) < 20 or len(sentence) > 300:
                 continue
-                
-            for pattern in claim_patterns:
+            
+            # Check if sentence contains factual claim patterns
+            for pattern, claim_type in claim_patterns:
                 if re.search(pattern, sentence, re.IGNORECASE):
+                    # Clean the sentence
+                    clean_sentence = re.sub(r'\s+', ' ', sentence).strip()
+                    
+                    # Skip if we've seen similar claim
+                    if clean_sentence.lower() in seen_claims:
+                        continue
+                    
+                    seen_claims.add(clean_sentence.lower())
+                    
+                    # Determine importance based on claim type and position
+                    importance = 'medium'
+                    if claim_type in ['statistical', 'research', 'causal']:
+                        importance = 'high'
+                    elif len(claims) < 3:  # First few claims are usually important
+                        importance = 'high'
+                    
                     claims.append({
-                        'text': sentence,
-                        'type': 'factual_claim',
-                        'confidence': 0.8
+                        'text': clean_sentence,
+                        'type': claim_type,
+                        'importance': importance,
+                        'confidence': 0.8,
+                        'position': len(claims)
                     })
                     break
             
-            if len(claims) >= 10:
+            if len(claims) >= 15:  # Get up to 15 claims
                 break
         
-        return claims
+        # Sort by importance and position
+        claims.sort(key=lambda x: (0 if x['importance'] == 'high' else 1, x['position']))
+        
+        return claims[:10]  # Return top 10 claims
+    
+    def _generate_fact_check_summary(self, fact_checks: List[Dict[str, Any]]) -> str:
+        """Generate a summary of fact check results"""
+        if not fact_checks:
+            return "No fact checks performed."
+        
+        # Count verdicts
+        verdict_counts = {
+            'true': 0,
+            'false': 0,
+            'partially_true': 0,
+            'unverified': 0
+        }
+        
+        high_confidence_true = 0
+        high_confidence_false = 0
+        
+        for fc in fact_checks:
+            verdict = fc.get('verdict', 'unverified').lower()
+            confidence = fc.get('confidence', 0)
+            
+            # Normalize verdict
+            if 'true' in verdict and 'false' not in verdict:
+                verdict_counts['true'] += 1
+                if confidence >= 70:
+                    high_confidence_true += 1
+            elif 'false' in verdict:
+                verdict_counts['false'] += 1
+                if confidence >= 70:
+                    high_confidence_false += 1
+            elif 'partial' in verdict or 'mixed' in verdict:
+                verdict_counts['partially_true'] += 1
+            else:
+                verdict_counts['unverified'] += 1
+        
+        total = len(fact_checks)
+        
+        # Generate summary
+        summary_parts = [f"Verified {total} claims:"]
+        
+        if verdict_counts['true'] > 0:
+            summary_parts.append(f"{verdict_counts['true']} true")
+            if high_confidence_true > 0:
+                summary_parts.append(f"({high_confidence_true} with high confidence)")
+        
+        if verdict_counts['false'] > 0:
+            summary_parts.append(f"{verdict_counts['false']} false")
+            if high_confidence_false > 0:
+                summary_parts.append(f"({high_confidence_false} with high confidence)")
+        
+        if verdict_counts['partially_true'] > 0:
+            summary_parts.append(f"{verdict_counts['partially_true']} partially true")
+        
+        if verdict_counts['unverified'] > 0:
+            summary_parts.append(f"{verdict_counts['unverified']} unverified")
+        
+        # Add overall assessment
+        if verdict_counts['false'] > total * 0.3:
+            summary_parts.append("⚠️ Significant factual issues detected.")
+        elif verdict_counts['true'] > total * 0.7 and verdict_counts['false'] == 0:
+            summary_parts.append("✓ Mostly factually accurate.")
+        elif verdict_counts['unverified'] > total * 0.5:
+            summary_parts.append("ℹ️ Many claims could not be independently verified.")
+        
+        return " ".join(summary_parts)
     
     def _calculate_trust_score(self, analysis_results: Dict[str, Any], article_data: Dict[str, Any]) -> int:
         """Calculate overall trust score based on all factors"""
