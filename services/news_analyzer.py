@@ -1,6 +1,6 @@
 """
 services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
-Complete version with fact checking integration
+Complete version with fact checking integration and ENHANCED BIAS ANALYSIS
 """
 
 import os
@@ -144,22 +144,73 @@ class NewsAnalyzer:
             key_claims = self._extract_key_claims(article_data['text'])
             analysis_results['key_claims'] = key_claims
             
-            # Bias analysis (with fallback)
+            # ENHANCED BIAS ANALYSIS SECTION
             if self.bias_analyzer:
                 try:
-                    analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+                    logger.info("Performing comprehensive bias analysis...")
+                    
+                    # Get the source domain for comparative analysis
+                    domain = None
+                    if content_type == 'url' and article_data.get('url'):
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(article_data['url'])
+                        domain = parsed_url.netloc.replace('www.', '')
+                    elif article_data.get('domain'):
+                        domain = article_data['domain']
+                    
+                    # Check if BiasAnalyzer has the comprehensive method
+                    if hasattr(self.bias_analyzer, 'analyze_comprehensive_bias'):
+                        # First get simple bias score for backward compatibility
+                        simple_bias_score = self.bias_analyzer.detect_political_bias(article_data['text'])
+                        
+                        # Then get comprehensive bias analysis
+                        bias_result = self.bias_analyzer.analyze_comprehensive_bias(
+                            text=article_data['text'],
+                            basic_bias_score=simple_bias_score,
+                            domain=domain
+                        )
+                        
+                        # Log what we received
+                        logger.info(f"Comprehensive bias analysis complete. Dimensions: {len(bias_result.get('bias_dimensions', {}))}")
+                        logger.info(f"Patterns detected: {len(bias_result.get('bias_patterns', []))}")
+                        logger.info(f"Confidence: {bias_result.get('bias_confidence', 0)}%")
+                        
+                        # Add AI summary if OpenAI is available and user is pro
+                        if OPENAI_AVAILABLE and is_pro and not bias_result.get('ai_summary'):
+                            try:
+                                bias_summary = self._generate_bias_ai_summary(bias_result)
+                                if bias_summary:
+                                    bias_result['ai_summary'] = bias_summary
+                            except Exception as e:
+                                logger.error(f"Bias AI summary generation failed: {e}")
+                        
+                        analysis_results['bias_analysis'] = bias_result
+                    else:
+                        # Fallback to simple analyze method
+                        logger.info("Using simple bias analysis (comprehensive not available)")
+                        analysis_results['bias_analysis'] = self.bias_analyzer.analyze(article_data['text'])
+                        
                 except Exception as e:
                     logger.error(f"Bias analysis failed: {e}")
                     analysis_results['bias_analysis'] = {
                         'overall_bias': 'Unknown',
                         'political_lean': 0,
-                        'objectivity_score': 0.5
+                        'objectivity_score': 50,
+                        'opinion_percentage': 0,
+                        'emotional_score': 0,
+                        'manipulation_tactics': [],
+                        'loaded_phrases': []
                     }
             else:
+                # No bias analyzer available
                 analysis_results['bias_analysis'] = {
                     'overall_bias': 'Unknown',
                     'political_lean': 0,
-                    'objectivity_score': 0.5
+                    'objectivity_score': 50,
+                    'opinion_percentage': 0,
+                    'emotional_score': 0,
+                    'manipulation_tactics': [],
+                    'loaded_phrases': []
                 }
             
             # Clickbait analysis (with fallback)
@@ -384,6 +435,53 @@ class NewsAnalyzer:
                 'error': f'Analysis failed: {str(e)}'
             }
     
+    def _generate_bias_ai_summary(self, bias_analysis: Dict[str, Any]) -> Optional[str]:
+        """Generate AI summary specifically for bias analysis"""
+        if not OPENAI_AVAILABLE:
+            return None
+            
+        try:
+            # Create a focused prompt for bias summary
+            dimensions_text = ""
+            if bias_analysis.get('bias_dimensions'):
+                dims = bias_analysis['bias_dimensions']
+                strongest_dims = sorted(dims.items(), key=lambda x: abs(x[1].get('score', 0)), reverse=True)[:2]
+                dim_descriptions = [f"{d[0]} ({d[1].get('label', 'Unknown')})" for d in strongest_dims]
+                dimensions_text = f"The strongest bias dimensions are {' and '.join(dim_descriptions)}. "
+            
+            patterns_text = ""
+            if bias_analysis.get('bias_patterns'):
+                pattern_names = [p['type'].replace('_', ' ') for p in bias_analysis['bias_patterns'][:3]]
+                patterns_text = f"Key patterns: {', '.join(pattern_names)}. "
+            
+            prompt = f"""Summarize this bias analysis in 2-3 sentences for a general audience:
+            
+            Overall bias: {bias_analysis.get('overall_bias', 'Unknown')}
+            Political lean: {bias_analysis.get('political_lean', 0)}
+            Confidence: {bias_analysis.get('bias_confidence', 0)}%
+            {dimensions_text}
+            {patterns_text}
+            Impact severity: {bias_analysis.get('bias_impact', {}).get('severity', 'unknown')}
+            
+            Focus on what readers should know about potential bias in this article. Be concise and clear."""
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a media literacy expert explaining bias in simple terms."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=150,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message['content'].strip()
+            
+        except Exception as e:
+            logger.error(f"Bias AI summary generation failed: {e}")
+            return None
+    
+    # [ALL OTHER METHODS REMAIN EXACTLY THE SAME - NO CHANGES]
     def _basic_content_analysis(self, text: str) -> Dict[str, Any]:
         """Basic content analysis fallback"""
         words = text.split()
@@ -573,10 +671,15 @@ class NewsAnalyzer:
         
         # Bias impact (15% weight)
         bias_data = analysis_results.get('bias_analysis', {})
-        objectivity = bias_data.get('objectivity_score', 0.5)
-        if isinstance(objectivity, (int, float)) and objectivity > 1:
-            objectivity = objectivity / 100
-        bias_score = objectivity * 100
+        objectivity = bias_data.get('objectivity_score', 50)
+        # Handle both percentage (0-100) and decimal (0-1) formats
+        if isinstance(objectivity, (int, float)):
+            if objectivity <= 1:
+                bias_score = objectivity * 100
+            else:
+                bias_score = objectivity
+        else:
+            bias_score = 50
         score_components.append(bias_score)
         weights.append(0.15)
         
@@ -682,6 +785,7 @@ class NewsAnalyzer:
             logger.error(f"Conversational summary generation failed: {e}")
             return None
 
+    # [ALL REMAINING METHODS STAY EXACTLY THE SAME]
     def analyze_batch(self, urls: List[str], is_pro: bool = False) -> List[Dict[str, Any]]:
         """
         Analyze multiple articles in batch
@@ -1124,13 +1228,17 @@ class NewsAnalyzer:
         
         # Bias level
         bias_analysis = analysis_results.get('bias_analysis', {})
-        objectivity = bias_analysis.get('objectivity_score', 0.5)
-        if objectivity > 1:
-            objectivity = objectivity / 100
+        objectivity = bias_analysis.get('objectivity_score', 50)
+        # Handle both percentage and decimal formats
+        if isinstance(objectivity, (int, float)):
+            if objectivity <= 1:
+                objectivity = objectivity * 100
+        else:
+            objectivity = 50
         indicators.append({
             'name': 'Objectivity',
-            'status': f"{int(objectivity * 100)}%",
-            'positive': objectivity >= 0.6
+            'status': f"{int(objectivity)}%",
+            'positive': objectivity >= 60
         })
         
         # Clickbait
