@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Fixed author analyzer that returns real data instead of timing out
+PURPOSE: Real fix - searches for any journalist with parallel execution
 LOCATION: services/author_analyzer.py
 """
 
@@ -12,6 +12,8 @@ import time
 from datetime import datetime
 from urllib.parse import quote, urlparse, urljoin
 import hashlib
+import concurrent.futures
+from functools import partial
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,14 +21,18 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
-    """Fixed author analyzer that actually returns data"""
+    """Fast, comprehensive author analyzer using parallel searches"""
     
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         })
-        logger.info("AuthorAnalyzer initialized - FIXED VERSION")
+        # Set adapter for connection pooling
+        adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
+        logger.info("AuthorAnalyzer initialized - Parallel search version")
         
     def analyze_authors(self, author_text, domain=None):
         """Analyze multiple authors from byline text"""
@@ -40,8 +46,9 @@ class AuthorAnalyzer:
         return results
     
     def analyze_single_author(self, author_name, domain=None):
-        """FIXED VERSION - Returns actual author data"""
-        logger.info(f"🔍 Analyzing author: {author_name} from domain: {domain}")
+        """Analyze author using parallel searches for speed"""
+        start_time = time.time()
+        logger.info(f"🔍 Starting parallel search for: {author_name} from domain: {domain}")
         
         # Clean author name
         clean_name = self._clean_author_name(author_name)
@@ -49,7 +56,56 @@ class AuthorAnalyzer:
             clean_name = author_name
         
         # Initialize result structure
-        result = {
+        result = self._initialize_result(clean_name)
+        
+        # Define search tasks to run in parallel
+        search_tasks = []
+        
+        # Task 1: Check outlet author page
+        if domain:
+            search_tasks.append(('outlet_page', partial(self._search_outlet_page, clean_name, domain)))
+        
+        # Task 2: Web search
+        search_tasks.append(('web_search', partial(self._web_search, clean_name, domain)))
+        
+        # Task 3: Journalist databases
+        search_tasks.append(('journalist_db', partial(self._search_journalist_databases, clean_name)))
+        
+        # Task 4: Social media search
+        search_tasks.append(('social_media', partial(self._search_social_media, clean_name)))
+        
+        # Execute searches in parallel with timeout
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all tasks
+            future_to_task = {
+                executor.submit(task_func): task_name 
+                for task_name, task_func in search_tasks
+            }
+            
+            # Collect results as they complete (with 15 second total timeout)
+            for future in concurrent.futures.as_completed(future_to_task, timeout=15):
+                task_name = future_to_task[future]
+                try:
+                    task_result = future.result()
+                    if task_result:
+                        logger.info(f"✅ {task_name} found data")
+                        self._merge_data(result, task_result)
+                        result['found'] = True
+                        result['sources_checked'].append(task_name)
+                except Exception as e:
+                    logger.error(f"❌ {task_name} failed: {e}")
+        
+        # Post-process results
+        self._post_process_results(result, clean_name)
+        
+        elapsed = time.time() - start_time
+        logger.info(f"✅ Search completed in {elapsed:.2f} seconds. Found: {result['found']}, Score: {result['credibility_score']}")
+        
+        return result
+    
+    def _initialize_result(self, clean_name):
+        """Initialize empty result structure"""
+        return {
             'name': clean_name,
             'found': False,
             'bio': None,
@@ -70,396 +126,398 @@ class AuthorAnalyzer:
                 'personal_website': None,
                 'outlet_profile': None,
                 'email': None,
-                'muckrack': None,
-                'facebook': None,
-                'instagram': None,
-                'youtube': None,
-                'substack': None,
-                'medium': None,
-                'mastodon': None,
-                'bluesky': None,
-                'threads': None
+                'muckrack': None
             },
             'verification_status': {
                 'verified': False,
                 'journalist_verified': False,
-                'outlet_staff': False,
-                'press_credentials': False
+                'outlet_staff': False
             },
             'education': [],
             'awards': [],
             'previous_positions': [],
             'recent_articles': [],
-            'speaking_engagements': [],
-            'publications_contributed_to': [],
-            'professional_associations': [],
-            'books_authored': [],
-            'podcast_appearances': [],
-            'issues_corrections': False,
             'sources_checked': [],
             'data_completeness': {},
             'unique_findings': [],
             'credibility_explanation': {}
         }
-        
-        # Special handling for known BBC journalists
-        if domain and 'bbc' in domain.lower() and clean_name.lower() == 'jeremy bowen':
-            logger.info("✅ Recognized BBC journalist Jeremy Bowen")
-            result.update({
-                'found': True,
-                'bio': "Jeremy Bowen is the BBC's International Editor, one of the corporation's most experienced foreign correspondents. He has been the BBC's Middle East Editor since 2005, covering major conflicts and political developments across the region. With over 40 years at the BBC, Bowen has reported from more than 70 countries and covered numerous wars and crises.",
-                'credibility_score': 95,
-                'articles_count': 1000,  # Estimate
-                'professional_info': {
-                    'current_position': 'International Editor',
-                    'outlets': ['BBC News', 'BBC World Service', 'BBC Radio 4'],
-                    'years_experience': 40,
-                    'expertise_areas': ['Middle East', 'International Affairs', 'Conflict Reporting', 'War Correspondence', 'Political Analysis'],
-                    'beat': 'International News and Middle East',
-                    'location': 'London, UK'
-                },
-                'online_presence': {
-                    'twitter': 'BowenBBC',
-                    'outlet_profile': 'https://www.bbc.com/news/correspondents/jeremybowen'
-                },
-                'verification_status': {
-                    'verified': True,
-                    'journalist_verified': True,
-                    'outlet_staff': True,
-                    'press_credentials': True
-                },
-                'education': ['University College Cardiff (History)'],
-                'awards': [
-                    'BAFTA Award for News Coverage',
-                    'Royal Television Society Journalist of the Year',
-                    'International Emmy Award',
-                    'Bayeux-Calvados Award for War Correspondents',
-                    'One World Broadcasting Trust Award'
-                ],
-                'previous_positions': [
-                    {'title': 'Middle East Editor', 'outlet': 'BBC News', 'dates': '2005-present'},
-                    {'title': 'Foreign Correspondent', 'outlet': 'BBC News', 'dates': '1984-2005'},
-                    {'title': 'Moscow Correspondent', 'outlet': 'BBC News'},
-                    {'title': 'Geneva Correspondent', 'outlet': 'BBC News'}
-                ],
-                'sources_checked': ['BBC profile', 'Known journalist database'],
-                'unique_findings': [
-                    'Award-winning war correspondent with 40+ years experience',
-                    'Covered conflicts in over 70 countries',
-                    'Leading expert on Middle East affairs'
-                ]
-            })
-        else:
-            # For other authors, try a quick search
-            try:
-                # PHASE 1: Quick outlet check
-                if domain:
-                    logger.info(f"Checking {domain} for author profile...")
-                    outlet_data = self._quick_outlet_check(clean_name, domain)
-                    if outlet_data:
-                        self._merge_data(result, outlet_data)
-                        result['found'] = True
-                
-                # PHASE 2: Quick web search (with timeout)
-                if not result['found']:
-                    logger.info("Performing quick web search...")
-                    search_data = self._quick_web_search(clean_name, domain)
-                    if search_data:
-                        self._merge_data(result, search_data)
-                        result['found'] = True
-                
-                # PHASE 3: Try specific journalist databases
-                if not result['found']:
-                    logger.info("Checking journalist databases...")
-                    db_data = self._check_journalist_databases(clean_name)
-                    if db_data:
-                        self._merge_data(result, db_data)
-                        result['found'] = True
-                
-            except Exception as e:
-                logger.error(f"Error during author search: {e}")
-        
-        # Calculate data completeness
-        result['data_completeness'] = self._calculate_data_completeness(result)
-        
-        # Generate unique findings
-        if not result['unique_findings']:
-            result['unique_findings'] = self._generate_unique_findings(result)
-        
-        # Set final credibility score and explanation
-        if result['found']:
-            # Calculate based on what we found
-            score_factors = []
-            
-            if result['verification_status']['outlet_staff']:
-                score_factors.append(30)
-            if result['professional_info']['years_experience']:
-                score_factors.append(min(20, result['professional_info']['years_experience']))
-            if result['awards']:
-                score_factors.append(min(20, len(result['awards']) * 5))
-            if result['professional_info']['outlets']:
-                score_factors.append(min(15, len(result['professional_info']['outlets']) * 5))
-            if result['bio']:
-                score_factors.append(10)
-            if result['online_presence']['twitter'] or result['online_presence']['linkedin']:
-                score_factors.append(5)
-            
-            result['credibility_score'] = min(100, 50 + sum(score_factors))
-            
-            level = 'Excellent' if result['credibility_score'] >= 80 else 'Good' if result['credibility_score'] >= 60 else 'Moderate'
-            result['credibility_explanation'] = {
-                'level': level,
-                'score': result['credibility_score'],
-                'explanation': f"{clean_name} is a verified journalist with established credentials. " + 
-                              f"Verified through {len(result['sources_checked'])} sources.",
-                'advice': 'This author has strong credibility indicators. Standard fact-checking still recommended.',
-                'data_completeness': f"{result['data_completeness'].get('overall', 0)}%",
-                'strengths': self._get_credibility_strengths(result),
-                'limitations': self._get_credibility_limitations(result)
-            }
-        else:
-            # Not found - provide helpful explanation
-            result['bio'] = f"Limited information available about {clean_name}. Unable to verify journalist credentials through automated search."
-            result['credibility_explanation'] = {
-                'level': 'Unknown',
-                'score': result['credibility_score'],
-                'explanation': 'Author information could not be verified through available sources.',
-                'advice': 'Unable to verify author credentials. Check the outlet\'s author page or search for the journalist\'s work history.',
-                'data_completeness': '0%',
-                'strengths': [],
-                'limitations': ['No verifiable information found', 'Unable to confirm journalist status']
-            }
-        
-        logger.info(f"✅ Author analysis complete for {clean_name}: Found={result['found']}, Score={result['credibility_score']}")
-        
-        return result
     
-    def _quick_outlet_check(self, author_name, domain):
-        """Quick check of outlet author page"""
+    def _search_outlet_page(self, author_name, domain):
+        """Search outlet's website for author page"""
         try:
             author_slug = author_name.lower().replace(' ', '-')
-            urls = [
-                f"https://{domain}/author/{author_slug}",
-                f"https://{domain}/authors/{author_slug}",
-                f"https://{domain}/people/{author_slug}",
-                f"https://{domain}/correspondents/{author_slug}",
-                f"https://{domain}/contributors/{author_slug}",
-                f"https://{domain}/staff/{author_slug}",
-                f"https://{domain}/team/{author_slug}",
-                f"https://{domain}/about/staff/{author_slug}"
+            author_underscore = author_name.lower().replace(' ', '_')
+            
+            # Common author page patterns
+            url_patterns = [
+                f"/author/{author_slug}",
+                f"/authors/{author_slug}",
+                f"/contributors/{author_slug}",
+                f"/people/{author_slug}",
+                f"/staff/{author_slug}",
+                f"/team/{author_slug}",
+                f"/journalists/{author_slug}",
+                f"/writer/{author_slug}",
+                f"/by/{author_slug}",
+                f"/{author_slug}",
+                # Underscore versions
+                f"/author/{author_underscore}",
+                f"/authors/{author_underscore}",
             ]
             
-            for url in urls[:4]:  # Try only 4 URLs max
+            for pattern in url_patterns[:8]:  # Try up to 8 patterns
+                url = f"https://{domain}{pattern}"
                 try:
                     response = self.session.get(url, timeout=3, allow_redirects=True)
-                    if response.status_code == 200 and author_name.lower() in response.text.lower():
-                        logger.info(f"✅ Found author page at {url}")
-                        
-                        # Try to extract some info from the page
-                        soup = BeautifulSoup(response.text, 'html.parser')
-                        bio_elem = soup.find(['div', 'p'], class_=re.compile('bio|about|description', re.I))
-                        bio = bio_elem.get_text(strip=True)[:500] if bio_elem else None
-                        
-                        return {
-                            'online_presence': {'outlet_profile': url},
-                            'verification_status': {
-                                'verified': True,
-                                'outlet_staff': True
-                            },
-                            'bio': bio or f"{author_name} is a verified staff writer at {self._clean_outlet_name(domain)}.",
-                            'sources_checked': [f'{domain} author page']
-                        }
+                    if response.status_code == 200:
+                        # Check if it's really an author page
+                        text_lower = response.text.lower()
+                        if (author_name.lower() in text_lower and 
+                            any(indicator in text_lower for indicator in ['author', 'journalist', 'reporter', 'writer', 'articles by', 'stories by'])):
+                            
+                            logger.info(f"✅ Found author page at {url}")
+                            return self._extract_from_author_page(response.text, url, author_name, domain)
                 except:
                     continue
+                    
         except Exception as e:
-            logger.error(f"Outlet check error: {e}")
+            logger.error(f"Outlet search error: {e}")
         
         return None
     
-    def _quick_web_search(self, author_name, domain=None):
-        """Quick web search with timeout"""
+    def _web_search(self, author_name, domain=None):
+        """Perform web search for author information"""
         try:
-            query = f'"{author_name}" journalist reporter'
+            # Build search query
+            query_parts = [f'"{author_name}"', 'journalist OR reporter OR correspondent OR writer']
             if domain:
-                query += f' {self._clean_outlet_name(domain)}'
+                query_parts.append(f'"{self._clean_outlet_name(domain)}" OR site:{domain}')
             
+            query = ' '.join(query_parts)
             search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            response = self.session.get(search_url, timeout=5)
             
+            response = self.session.get(search_url, timeout=5)
             if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
+                return self._extract_from_search_results(response.text, author_name)
                 
-                # Collect relevant snippets
-                bio_parts = []
-                outlets = []
-                
-                for result in soup.find_all('div', class_='result')[:5]:
-                    text = result.get_text()
-                    text_lower = text.lower()
-                    
-                    if author_name.lower() in text_lower and any(word in text_lower for word in ['journalist', 'reporter', 'correspondent', 'writer', 'editor']):
-                        
-                        # Extract snippet
-                        snippet = result.get_text(strip=True)
-                        bio_parts.append(snippet[:200])
-                        
-                        # Look for outlet mentions
-                        outlet_pattern = r'(?:at|for|with)\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|;|\s+and|\s+where)'
-                        outlet_matches = re.findall(outlet_pattern, text)
-                        outlets.extend(outlet_matches)
-                
-                if bio_parts:
-                    # Combine bio parts intelligently
-                    bio = ' '.join(bio_parts[:2])
-                    if len(bio) > 300:
-                        bio = bio[:297] + '...'
-                    
-                    return {
-                        'bio': bio,
-                        'sources_checked': ['Web search'],
-                        'professional_info': {
-                            'outlets': list(set([o.strip() for o in outlets if len(o.strip()) > 2]))[:3]
-                        }
-                    }
         except Exception as e:
             logger.error(f"Web search error: {e}")
         
         return None
     
-    def _check_journalist_databases(self, author_name):
-        """Quick check of journalist databases"""
+    def _search_journalist_databases(self, author_name):
+        """Search journalist-specific databases"""
+        results = {}
+        
+        # Search patterns for different databases
+        db_searches = [
+            ('Muck Rack', f'site:muckrack.com "{author_name}"'),
+            ('LinkedIn', f'site:linkedin.com/in "{author_name}" journalist OR reporter'),
+            ('Twitter/X', f'site:twitter.com "{author_name}" journalist bio')
+        ]
+        
+        for db_name, query in db_searches:
+            try:
+                search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
+                response = self.session.get(search_url, timeout=3)
+                
+                if response.status_code == 200 and author_name.lower() in response.text.lower():
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Check if we found relevant results
+                    for result in soup.find_all('div', class_='result')[:3]:
+                        if author_name.lower() in result.get_text().lower():
+                            if 'muckrack.com' in str(result):
+                                results['online_presence'] = {'muckrack': 'Found on Muck Rack'}
+                                results['verification_status'] = {'journalist_verified': True}
+                            elif 'linkedin.com' in str(result):
+                                results['online_presence'] = {'linkedin': 'Found on LinkedIn'}
+                            elif 'twitter.com' in str(result) or 'x.com' in str(result):
+                                # Try to extract Twitter handle
+                                handle_match = re.search(r'(?:twitter\.com/|x\.com/)(@?\w+)', result.get_text())
+                                if handle_match:
+                                    results['online_presence'] = {'twitter': handle_match.group(1).replace('@', '')}
+                            break
+                            
+            except:
+                continue
+        
+        return results if results else None
+    
+    def _search_social_media(self, author_name):
+        """Quick social media presence check"""
         try:
-            # Try Muck Rack search
-            muckrack_url = f"https://html.duckduckgo.com/html/?q=site:muckrack.com+\"{author_name}\""
-            response = self.session.get(muckrack_url, timeout=3)
+            # Single combined search for efficiency
+            query = f'"{author_name}" journalist (twitter OR linkedin OR muckrack)'
+            search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
             
-            if response.status_code == 200 and author_name.lower() in response.text.lower():
-                return {
-                    'online_presence': {'muckrack': 'Found on Muck Rack'},
-                    'verification_status': {'journalist_verified': True},
-                    'sources_checked': ['Muck Rack database']
-                }
+            response = self.session.get(search_url, timeout=4)
+            if response.status_code == 200:
+                text = response.text.lower()
+                results = {}
+                
+                # Check for social media mentions
+                if 'twitter.com' in text or 'x.com' in text:
+                    results.setdefault('online_presence', {})['twitter'] = 'Found on Twitter/X'
+                if 'linkedin.com' in text:
+                    results.setdefault('online_presence', {})['linkedin'] = 'Found on LinkedIn'
+                if 'muckrack.com' in text:
+                    results.setdefault('online_presence', {})['muckrack'] = 'Found on Muck Rack'
+                    results['verification_status'] = {'journalist_verified': True}
+                
+                return results if results else None
+                
         except:
             pass
         
         return None
     
-    def _calculate_data_completeness(self, result):
-        """Calculate how complete the data collection is"""
-        completeness = {
-            'basic_info': {
-                'found': result.get('found', False),
-                'has_bio': bool(result.get('bio')),
-                'has_image': bool(result.get('image_url')),
-                'has_position': bool(result.get('professional_info', {}).get('current_position'))
-            },
-            'professional': {
-                'has_outlets': bool(result.get('professional_info', {}).get('outlets')),
-                'has_experience': bool(result.get('professional_info', {}).get('years_experience')),
-                'has_expertise': bool(result.get('professional_info', {}).get('expertise_areas')),
-                'has_location': bool(result.get('professional_info', {}).get('location'))
-            },
-            'credentials': {
-                'has_education': bool(result.get('education')),
-                'has_awards': bool(result.get('awards')),
-                'has_associations': bool(result.get('professional_associations'))
-            },
-            'digital_presence': {
-                'has_social': bool(any(result.get('online_presence', {}).values())),
-                'has_website': bool(result.get('online_presence', {}).get('personal_website')),
-                'has_profile': bool(result.get('online_presence', {}).get('outlet_profile'))
-            },
-            'work_samples': {
-                'has_articles': bool(result.get('recent_articles')),
-                'has_books': bool(result.get('books_authored')),
-                'has_speaking': bool(result.get('speaking_engagements'))
+    def _extract_from_author_page(self, html, url, author_name, domain):
+        """Extract information from an author page"""
+        soup = BeautifulSoup(html, 'html.parser')
+        result = {
+            'online_presence': {'outlet_profile': url},
+            'verification_status': {
+                'verified': True,
+                'outlet_staff': True
             }
         }
         
-        # Calculate percentage for each category
-        for category, items in completeness.items():
-            if isinstance(items, dict):
-                total = len(items)
-                found = sum(1 for v in items.values() if v)
-                completeness[category]['percentage'] = int((found / total) * 100) if total > 0 else 0
+        # Extract bio
+        bio_selectors = [
+            '.author-bio', '.bio', '.description', '.about',
+            '[class*="author-desc"]', '[class*="author-bio"]',
+            'p.bio', 'div.bio', '.author-description'
+        ]
         
-        # Overall completeness
-        all_items = sum(len(items) for items in completeness.values() if isinstance(items, dict))
-        all_found = sum(sum(1 for k, v in items.items() if k != 'percentage' and v) 
-                       for items in completeness.values() if isinstance(items, dict))
-        completeness['overall'] = int((all_found / all_items) * 100) if all_items > 0 else 0
+        for selector in bio_selectors:
+            bio_elem = soup.select_one(selector)
+            if bio_elem:
+                bio_text = bio_elem.get_text(strip=True)
+                if len(bio_text) > 50:
+                    result['bio'] = bio_text[:500]
+                    break
+        
+        # If no bio found, try to construct one from available text
+        if not result.get('bio'):
+            # Look for paragraphs mentioning the author
+            for p in soup.find_all('p'):
+                text = p.get_text(strip=True)
+                if author_name in text and len(text) > 50:
+                    result['bio'] = text[:500]
+                    break
+        
+        # Extract position/title
+        title_selectors = [
+            '.author-title', '.position', '.title', '.role',
+            '[class*="author-position"]', '[class*="author-title"]'
+        ]
+        
+        for selector in title_selectors:
+            title_elem = soup.select_one(selector)
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+                if title and len(title) < 100:
+                    result.setdefault('professional_info', {})['current_position'] = title
+                    break
+        
+        # Extract social media links
+        social_links = soup.find_all('a', href=True)
+        for link in social_links:
+            href = link['href'].lower()
+            if 'twitter.com' in href or 'x.com' in href:
+                handle_match = re.search(r'(?:twitter\.com/|x\.com/)(@?\w+)', href)
+                if handle_match:
+                    result.setdefault('online_presence', {})['twitter'] = handle_match.group(1).replace('@', '')
+            elif 'linkedin.com/in' in href:
+                result.setdefault('online_presence', {})['linkedin'] = link['href']
+        
+        # Count articles
+        article_count = len(soup.find_all(['article', '.article', '[class*="article-item"]']))
+        if article_count > 0:
+            result['articles_count'] = article_count
+        
+        # Add outlet to professional info
+        result.setdefault('professional_info', {})['outlets'] = [self._clean_outlet_name(domain)]
+        
+        return result
+    
+    def _extract_from_search_results(self, html, author_name):
+        """Extract information from search results"""
+        soup = BeautifulSoup(html, 'html.parser')
+        result = {}
+        
+        bio_parts = []
+        outlets = []
+        positions = []
+        
+        # Analyze each search result
+        for idx, result_div in enumerate(soup.find_all('div', class_='result')[:8]):
+            text = result_div.get_text(strip=True)
+            
+            # Skip if author name not in result
+            if author_name.lower() not in text.lower():
+                continue
+            
+            # Extract biographical snippets
+            if any(word in text.lower() for word in ['journalist', 'reporter', 'correspondent', 'writer', 'editor']):
+                # This is likely a relevant result
+                snippet = text[:300]
+                
+                # Try to extract a sentence about the author
+                sentences = re.split(r'[.!?]', text)
+                for sentence in sentences:
+                    if author_name in sentence and len(sentence) > 30:
+                        bio_parts.append(sentence.strip())
+                        break
+                
+                # Extract outlet mentions
+                outlet_patterns = [
+                    r'(?:at|for|with|from)\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|;|\s+where|\s+and)',
+                    r'([A-Z][A-Za-z\s&]+?)\s+(?:journalist|reporter|correspondent)',
+                    r'(?:works?|writes?)\s+for\s+([A-Z][A-Za-z\s&]+)'
+                ]
+                
+                for pattern in outlet_patterns:
+                    matches = re.findall(pattern, text)
+                    for match in matches:
+                        outlet = match.strip()
+                        if len(outlet) > 2 and len(outlet) < 50 and outlet not in outlets:
+                            outlets.append(outlet)
+                
+                # Extract position/title
+                position_patterns = [
+                    rf"{author_name}(?:,|is a|is an|is the)\s+([A-Za-z\s]+?)(?:\s+at|\s+for|\s+with|\.)",
+                    r'(?:^|\s)([A-Z][a-z]+\s+(?:Reporter|Journalist|Correspondent|Editor|Writer))'
+                ]
+                
+                for pattern in position_patterns:
+                    match = re.search(pattern, text, re.IGNORECASE)
+                    if match:
+                        position = match.group(1).strip()
+                        if position and position not in positions:
+                            positions.append(position)
+        
+        # Compile results
+        if bio_parts:
+            # Use the best bio snippet
+            result['bio'] = max(bio_parts, key=len)
+            if len(result['bio']) > 500:
+                result['bio'] = result['bio'][:497] + '...'
+        
+        if outlets:
+            result.setdefault('professional_info', {})['outlets'] = outlets[:3]
+        
+        if positions:
+            result.setdefault('professional_info', {})['current_position'] = positions[0]
+        
+        return result if result else None
+    
+    def _post_process_results(self, result, clean_name):
+        """Post-process and enhance results"""
+        # Calculate data completeness
+        result['data_completeness'] = self._calculate_completeness(result)
+        
+        # Generate unique findings
+        result['unique_findings'] = self._generate_findings(result)
+        
+        # Calculate credibility score
+        if result['found']:
+            score = 50  # Base score
+            
+            # Add points for various factors
+            if result['verification_status'].get('outlet_staff'):
+                score += 20
+            if result['verification_status'].get('journalist_verified'):
+                score += 15
+            if result.get('bio'):
+                score += 10
+            if len(result['professional_info'].get('outlets', [])) > 0:
+                score += 5 * min(3, len(result['professional_info']['outlets']))
+            if result['online_presence'].get('twitter') or result['online_presence'].get('linkedin'):
+                score += 10
+            if result.get('articles_count', 0) > 10:
+                score += 5
+            
+            result['credibility_score'] = min(100, score)
+            
+            # Generate explanation
+            level = 'High' if score >= 80 else 'Good' if score >= 60 else 'Moderate'
+            result['credibility_explanation'] = {
+                'level': level,
+                'score': result['credibility_score'],
+                'explanation': f"{clean_name} is a {'verified' if result['verification_status'].get('verified') else 'found'} journalist. " +
+                              f"Information gathered from {len(result['sources_checked'])} sources.",
+                'advice': 'Author has established journalism credentials. Apply standard verification practices.',
+                'data_completeness': f"{result['data_completeness'].get('overall', 0)}%"
+            }
+        else:
+            # Not found
+            result['bio'] = f"Limited information available about {clean_name}. Our automated search could not verify journalist credentials."
+            result['credibility_explanation'] = {
+                'level': 'Unknown',
+                'score': 50,
+                'explanation': 'Unable to find verifiable information about this author.',
+                'advice': 'Could not verify author credentials. Check the publication\'s author page or search for their work history.',
+                'data_completeness': '0%'
+            }
+    
+    def _calculate_completeness(self, result):
+        """Calculate data completeness percentage"""
+        fields_to_check = {
+            'basic': ['bio', 'professional_info.current_position', 'professional_info.outlets'],
+            'verification': ['verification_status.verified', 'verification_status.outlet_staff'],
+            'online': ['online_presence.twitter', 'online_presence.linkedin', 'online_presence.outlet_profile']
+        }
+        
+        completeness = {}
+        total_fields = 0
+        completed_fields = 0
+        
+        for category, fields in fields_to_check.items():
+            cat_total = len(fields)
+            cat_completed = 0
+            
+            for field in fields:
+                total_fields += 1
+                if '.' in field:
+                    parts = field.split('.')
+                    value = result
+                    for part in parts:
+                        value = value.get(part, {}) if isinstance(value, dict) else None
+                    if value:
+                        cat_completed += 1
+                        completed_fields += 1
+                else:
+                    if result.get(field):
+                        cat_completed += 1
+                        completed_fields += 1
+            
+            completeness[category] = int((cat_completed / cat_total) * 100) if cat_total > 0 else 0
+        
+        completeness['overall'] = int((completed_fields / total_fields) * 100) if total_fields > 0 else 0
         
         return completeness
     
-    def _generate_unique_findings(self, result):
+    def _generate_findings(self, result):
         """Generate unique findings about the author"""
         findings = []
         
-        # Check for exceptional credentials
-        if result.get('awards'):
-            major_awards = [a for a in result['awards'] if any(major in a for major in ['Pulitzer', 'Emmy', 'Peabody', 'BAFTA'])]
-            if major_awards:
-                findings.append(f"Award-winning journalist with {major_awards[0]}")
+        if result['verification_status'].get('outlet_staff'):
+            findings.append("Verified staff member at publication")
         
-        # Years of experience
-        if result.get('professional_info', {}).get('years_experience', 0) > 20:
-            findings.append(f"Veteran journalist with {result['professional_info']['years_experience']}+ years experience")
+        if result['verification_status'].get('journalist_verified'):
+            findings.append("Found in journalist databases")
         
-        # Multiple outlets
-        if len(result.get('professional_info', {}).get('outlets', [])) > 3:
-            findings.append(f"Published in {len(result['professional_info']['outlets'])} major outlets")
+        outlets = result['professional_info'].get('outlets', [])
+        if len(outlets) > 1:
+            findings.append(f"Published in {len(outlets)} outlets")
         
-        # Specialization
-        if result.get('professional_info', {}).get('expertise_areas'):
-            areas = result['professional_info']['expertise_areas']
-            if areas:
-                findings.append(f"Specialist in {areas[0]}")
+        if result['online_presence'].get('twitter'):
+            findings.append("Active on social media")
         
-        # Books authored
-        if result.get('books_authored'):
-            findings.append(f"Published author of {len(result['books_authored'])} book(s)")
-        
-        return findings[:5]
-    
-    def _get_credibility_strengths(self, result):
-        """Get credibility strengths"""
-        strengths = []
-        
-        if result.get('verification_status', {}).get('outlet_staff'):
-            strengths.append("Verified staff member")
-        
-        if result.get('awards'):
-            strengths.append(f"{len(result['awards'])} journalism awards")
-        
-        if result.get('professional_info', {}).get('years_experience', 0) > 10:
-            strengths.append(f"{result['professional_info']['years_experience']} years experience")
-        
-        if len(result.get('professional_info', {}).get('outlets', [])) > 2:
-            strengths.append("Published in multiple major outlets")
-        
-        if result.get('education'):
-            strengths.append("Verified education credentials")
-        
-        return strengths[:3]
-    
-    def _get_credibility_limitations(self, result):
-        """Get credibility limitations"""
-        limitations = []
-        
-        completeness = result.get('data_completeness', {}).get('overall', 0)
-        
-        if not result.get('found'):
-            limitations.append("No online presence found")
-        elif completeness < 30:
-            limitations.append("Limited information available")
-        
-        if not result.get('professional_info', {}).get('outlets'):
-            limitations.append("No outlet affiliations found")
-        
-        if not result.get('bio') or len(result.get('bio', '')) < 100:
-            limitations.append("Minimal biographical information")
-        
-        return limitations[:2]
+        return findings[:3]
     
     def _merge_data(self, target, source):
         """Merge source data into target"""
@@ -472,10 +530,9 @@ class AuthorAnalyzer:
                 for item in value:
                     if item not in target[key]:
                         target[key].append(item)
-            elif key == 'bio' and value and (not target[key] or len(value) > len(target[key])):
-                target[key] = value
-            elif key == 'credibility_score' and value > target[key]:
-                target[key] = value
+            elif key == 'bio' and value:
+                if not target[key] or len(value) > len(target[key]):
+                    target[key] = value
             elif value and not target[key]:
                 target[key] = value
     
@@ -484,8 +541,8 @@ class AuthorAnalyzer:
         if not author_name:
             return "Unknown"
         
-        # Remove common byline prefixes
-        prefixes = ['by', 'written by', 'reported by', 'article by', 'story by']
+        # Remove common prefixes
+        prefixes = ['by', 'written by', 'reported by', 'article by']
         name = author_name.strip()
         
         for prefix in prefixes:
@@ -493,14 +550,10 @@ class AuthorAnalyzer:
                 name = name[len(prefix):].strip()
         
         # Remove titles
-        titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.']
-        for title in titles:
+        for title in ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.']:
             name = name.replace(title, '').strip()
         
-        # Clean up
-        name = ' '.join(name.split())
-        
-        return name if name else "Unknown"
+        return ' '.join(name.split()) if name else "Unknown"
     
     def _clean_outlet_name(self, domain):
         """Convert domain to outlet name"""
@@ -509,50 +562,29 @@ class AuthorAnalyzer:
         
         domain = domain.lower().replace('www.', '')
         
-        # Known outlet mappings
+        # Known mappings
         outlet_map = {
             'bbc': 'BBC',
+            'cnn': 'CNN',
             'nytimes': 'The New York Times',
             'washingtonpost': 'The Washington Post',
-            'cnn': 'CNN',
-            'foxnews': 'Fox News',
             'theguardian': 'The Guardian',
             'reuters': 'Reuters',
-            'apnews': 'Associated Press',
-            'npr': 'NPR',
-            'wsj': 'The Wall Street Journal',
-            'usatoday': 'USA Today',
-            'latimes': 'Los Angeles Times',
-            'chicagotribune': 'Chicago Tribune',
-            'bostonglobe': 'The Boston Globe'
+            'apnews': 'Associated Press'
         }
         
         for key, value in outlet_map.items():
             if key in domain:
                 return value
         
-        # Clean up domain name
-        name = domain.split('.')[0]
-        name = name.replace('-', ' ').replace('_', ' ')
-        
-        return ' '.join(word.capitalize() for word in name.split())
+        return domain.split('.')[0].title()
     
     def _parse_authors(self, author_text):
         """Parse multiple authors from text"""
         if not author_text:
             return []
         
-        # Clean the text
         author_text = self._clean_author_name(author_text)
+        authors = re.split(r'\s*(?:,|and|&)\s*', author_text)
         
-        # Split by common separators
-        authors = re.split(r'\s*(?:,|and|&|with)\s*', author_text)
-        
-        # Clean each author
-        cleaned = []
-        for author in authors:
-            clean = author.strip()
-            if clean and len(clean) > 2 and clean != "Unknown":
-                cleaned.append(clean)
-        
-        return cleaned[:3]  # Max 3 authors
+        return [a.strip() for a in authors if a.strip() and len(a.strip()) > 2][:3]
