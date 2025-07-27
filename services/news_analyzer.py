@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional, List
 from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
-from services.author_analyzer import AuthorAnalyzer
+from services.author_analyzer_diagnostic import AuthorAnalyzer
 
 # Import the services with their correct names
 try:
