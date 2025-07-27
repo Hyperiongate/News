@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 # Import only the services that actually exist
-from services.news_extractor_diagnostic import NewsExtractor
+from services.news_extractor import NewsExtractor
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
