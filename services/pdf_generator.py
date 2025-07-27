@@ -269,6 +269,78 @@ class PDFGenerator:
         
         return elements
     
+    def _create_connection_section(self, connection_data):
+        """Create connection analysis section"""
+        elements = []
+        
+        elements.append(Paragraph("Connection Web Analysis", self.styles['SectionHeader']))
+        
+        # Coherence score
+        if connection_data.get('coherence_score') is not None:
+            elements.append(self._create_score_bar_graphic(connection_data['coherence_score'], 
+                                                          'Article Coherence'))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        # Topic connections
+        if connection_data.get('topic_connections'):
+            elements.append(Paragraph("Topic Connections", self.styles['SubsectionHeader']))
+            
+            topics = []
+            for topic in connection_data['topic_connections']:
+                topics.append([
+                    topic.get('topic', 'Unknown'),
+                    f"{topic.get('strength', 0)}%",
+                    ', '.join(topic.get('keywords', [])[:3])
+                ])
+            
+            if topics:
+                t = Table([['Topic', 'Strength', 'Key Terms']] + topics, 
+                         colWidths=[1.5*inch, 1*inch, 3*inch])
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ]))
+                elements.append(t)
+                elements.append(Spacer(1, 0.2*inch))
+        
+        # Geographic relevance
+        if connection_data.get('geographic_relevance'):
+            elements.append(Paragraph("Geographic Scope", self.styles['SubsectionHeader']))
+            
+            geo = connection_data['geographic_relevance']
+            primary_scope = connection_data.get('primary_scope', 'general')
+            
+            geo_text = f"Primary scope: <b>{primary_scope.capitalize()}</b> | "
+            geo_text += f"Local: {geo.get('local', 0)}%, "
+            geo_text += f"National: {geo.get('national', 0)}%, "
+            geo_text += f"International: {geo.get('international', 0)}%"
+            
+            elements.append(Paragraph(geo_text, self.styles['CustomBody']))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        # Related entities
+        if connection_data.get('entities'):
+            elements.append(Paragraph("Key Entities Mentioned", self.styles['SubsectionHeader']))
+            
+            entities = connection_data['entities']
+            if entities.get('people'):
+                elements.append(Paragraph(f"<b>People:</b> {', '.join(entities['people'][:5])}", 
+                                        self.styles['CustomBody']))
+            if entities.get('organizations'):
+                elements.append(Paragraph(f"<b>Organizations:</b> {', '.join(entities['organizations'][:5])}", 
+                                        self.styles['CustomBody']))
+            if entities.get('locations'):
+                elements.append(Paragraph(f"<b>Locations:</b> {', '.join(entities['locations'][:5])}", 
+                                        self.styles['CustomBody']))
+        
+        return elements
+    
     def _create_comprehensive_bias_section(self, bias_data):
         """Create comprehensive bias analysis section with all enhanced data"""
         elements = []
