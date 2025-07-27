@@ -612,35 +612,71 @@ class AuthorAnalyzer:
                         result.setdefault('professional_info', {})['years_experience'] = years
                         break
             
-            # 12. Extract expertise areas
-            expertise_patterns = [
-                r'(?:covers?|reports? on|writes? about|specializes? in|focuses? on)\s+([^,\.\n]+)',
-                r'(?:beat|expertise|specialty):\s*([^,\.\n]+)',
-            ]
-            
+            # 12. FIXED: Extract expertise areas more carefully
             expertise_areas = []
-            for pattern in expertise_patterns:
-                matches = re.findall(pattern, page_text_full, re.IGNORECASE)
-                for match in matches:
-                    areas = match.strip()
-                    # Split by common delimiters
-                    for delimiter in [',', ';', ' and ', ' & ']:
-                        if delimiter in areas:
-                            for area in areas.split(delimiter):
-                                area = area.strip()
-                                if len(area) > 2 and len(area) < 50 and area not in expertise_areas:
-                                    expertise_areas.append(area)
-                            break
-                    else:
-                        if len(areas) > 2 and len(areas) < 50 and areas not in expertise_areas:
-                            expertise_areas.append(areas)
+            
+            # First, look for explicit expertise sections
+            expertise_sections = soup.find_all(['div', 'section', 'p'], text=re.compile(r'(?:covers?|reports? on|writes? about|specializes? in|focuses? on|beat)', re.I))
+            
+            for section in expertise_sections[:5]:  # Limit to avoid too much processing
+                text = section.get_text(strip=True)
+                
+                # Only process if it's reasonably sized and mentions the author or is in a bio context
+                if 10 < len(text) < 500:
+                    # More specific patterns that avoid navigation elements
+                    expertise_patterns = [
+                        r'(?:covers?|reports? on|writes? about|specializes? in|focuses? on)\s+([a-zA-Z\s,]+?)(?:\.|,|;|and|\s+for\s+)',
+                        r'(?:beat|expertise|specialty):\s*([a-zA-Z\s,]+?)(?:\.|$)',
+                        r'covering\s+([a-zA-Z\s,]+?)(?:\.|,|;|and|\s+for\s+)',
+                    ]
+                    
+                    for pattern in expertise_patterns:
+                        matches = re.findall(pattern, text, re.IGNORECASE)
+                        for match in matches:
+                            areas = match.strip()
+                            
+                            # Filter out common false positives
+                            if not any(skip in areas.lower() for skip in ['the first', 'preview', 'column', 'link', 'element', 'label', 'button', 'menu', 'navigation']):
+                                # Split by common delimiters
+                                for delimiter in [',', ';', ' and ', ' & ']:
+                                    if delimiter in areas:
+                                        for area in areas.split(delimiter):
+                                            area = area.strip()
+                                            if self._is_valid_expertise_area(area) and area not in expertise_areas:
+                                                expertise_areas.append(area)
+                                        break
+                                else:
+                                    if self._is_valid_expertise_area(areas) and areas not in expertise_areas:
+                                        expertise_areas.append(areas)
+            
+            # Also check the bio if we found one
+            if result.get('bio'):
+                bio_text = result['bio']
+                patterns = [
+                    r'covers?\s+([a-zA-Z\s,]+?)(?:\.|,|;|and|\s+for\s+)',
+                    r'reports? on\s+([a-zA-Z\s,]+?)(?:\.|,|;|and|\s+for\s+)',
+                    r'writes? about\s+([a-zA-Z\s,]+?)(?:\.|,|;|and|\s+for\s+)',
+                ]
+                
+                for pattern in patterns:
+                    matches = re.findall(pattern, bio_text, re.IGNORECASE)
+                    for match in matches:
+                        area = match.strip()
+                        if self._is_valid_expertise_area(area) and area not in expertise_areas:
+                            expertise_areas.append(area)
             
             if expertise_areas:
                 result.setdefault('professional_info', {})['expertise_areas'] = expertise_areas[:5]
             
             # 13. Check for issues/corrections
             if any(phrase in page_text.lower() for phrase in ['correction', 'retraction', 'corrected', 'updated']):
-                result['issues_corrections'] = True
+                # More nuanced check - only flag if it's about the author's work
+                correction_context = soup.find_all(text=re.compile(r'correction|retraction', re.I))
+                for context in correction_context:
+                    parent = context.parent
+                    if parent and author_name.lower() in parent.get_text().lower():
+                        result['issues_corrections'] = True
+                        break
             
             # 14. Extract article count
             count_patterns = [
@@ -661,6 +697,42 @@ class AuthorAnalyzer:
         except Exception as e:
             logger.error(f"Error parsing author page: {e}")
             return None
+    
+    def _is_valid_expertise_area(self, area):
+        """Check if an expertise area is valid"""
+        if not area or len(area) < 3 or len(area) > 50:
+            return False
+        
+        # Must be mostly letters and spaces
+        if not re.match(r'^[a-zA-Z\s\-&]+$', area):
+            return False
+        
+        # Filter out common false positives
+        invalid_terms = [
+            'the first', 'preview', 'column', 'link', 'element', 'label',
+            'button', 'menu', 'navigation', 'header', 'footer', 'sidebar',
+            'content', 'page', 'article', 'story', 'news', 'latest',
+            'more', 'read', 'share', 'follow', 'subscribe', 'comment',
+            'posted', 'published', 'updated', 'by', 'in', 'on', 'at',
+            'home', 'about', 'contact', 'search', 'login', 'register'
+        ]
+        
+        area_lower = area.lower()
+        if any(term in area_lower for term in invalid_terms):
+            return False
+        
+        # Should contain at least one meaningful word
+        meaningful_words = [
+            'politics', 'business', 'technology', 'science', 'health',
+            'sports', 'entertainment', 'culture', 'education', 'environment',
+            'economy', 'finance', 'international', 'national', 'local',
+            'investigative', 'breaking', 'analysis', 'opinion', 'feature',
+            'climate', 'energy', 'justice', 'social', 'media', 'digital',
+            'security', 'defense', 'policy', 'government', 'election',
+            'medicine', 'research', 'innovation', 'startup', 'industry'
+        ]
+        
+        return any(word in area_lower for word in meaningful_words) or len(area.split()) >= 2
     
     def _enhanced_web_search(self, author_name, domain=None):
         """Enhanced web search using DuckDuckGo"""
@@ -795,7 +867,7 @@ class AuthorAnalyzer:
                         if award not in result['awards'] and len(award) < 100:
                             result['awards'].append(award)
                 
-                # Extract expertise areas
+                # Extract expertise areas with better filtering
                 expertise_keywords = ['covers', 'reports on', 'writes about', 'specializes in', 'focuses on', 'beat']
                 for keyword in expertise_keywords:
                     if keyword in snippet_lower:
@@ -803,7 +875,7 @@ class AuthorAnalyzer:
                         match = re.search(pattern, snippet_lower)
                         if match:
                             expertise = match.group(1).strip()
-                            if len(expertise) < 50 and expertise not in result['professional_info']['expertise_areas']:
+                            if self._is_valid_expertise_area(expertise) and expertise not in result['professional_info']['expertise_areas']:
                                 result['professional_info']['expertise_areas'].append(expertise)
                 
                 # Extract social media
@@ -1141,7 +1213,7 @@ class AuthorAnalyzer:
         else:
             bio_parts.append(f"{name} is a journalist")
         
-        # Add expertise
+        # Add expertise with better formatting
         if prof_info.get('expertise_areas'):
             areas = prof_info['expertise_areas'][:3]
             if len(areas) == 1:
