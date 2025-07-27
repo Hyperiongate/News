@@ -854,7 +854,65 @@ class FactChecker {
     }
 }
 
-// Create global instance
+    // Add these helper methods after the existing methods
+    
+    getMethodologyBadge(factCheck) {
+        const methodology = factCheck.methodology || 'unknown';
+        const badges = {
+            'api': '<span class="methodology-badge api" title="Verified via Google Fact Check API">API</span>',
+            'pattern': '<span class="methodology-badge pattern" title="Verified via AI Pattern Analysis">AI</span>',
+            'news': '<span class="methodology-badge news" title="Cross-referenced with news sources">NEWS</span>',
+            'manual': '<span class="methodology-badge manual" title="Manual verification">MANUAL</span>'
+        };
+        
+        return badges[methodology] || '<span class="methodology-badge unknown">VERIFIED</span>';
+    }
+    
+    getConfidenceLevel(confidence) {
+        if (confidence >= 80) return 'Very High';
+        if (confidence >= 60) return 'High';
+        if (confidence >= 40) return 'Medium';
+        if (confidence >= 20) return 'Low';
+        return 'Very Low';
+    }
+    
+    renderFactCheckProcess() {
+        return `
+            <div class="fact-check-process">
+                <h4>How We Verified These Claims:</h4>
+                <div class="process-steps">
+                    <div class="process-step">
+                        <span class="step-icon">1️⃣</span>
+                        <div class="step-content">
+                            <strong>Claim Extraction</strong>
+                            <p>Identified factual claims using AI pattern recognition</p>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <span class="step-icon">2️⃣</span>
+                        <div class="step-content">
+                            <strong>Multi-Source Verification</strong>
+                            <p>Checked against Google's fact-check database and news sources</p>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <span class="step-icon">3️⃣</span>
+                        <div class="step-content">
+                            <strong>Confidence Scoring</strong>
+                            <p>Assigned confidence based on source reliability and consensus</p>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <span class="step-icon">4️⃣</span>
+                        <div class="step-content">
+                            <strong>Evidence Collection</strong>
+                            <p>Gathered supporting evidence and source links</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 window.FactChecker = FactChecker;
 
 // Auto-register with UI controller
