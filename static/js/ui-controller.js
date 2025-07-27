@@ -394,11 +394,22 @@
             const author = data.author_analysis || {};
             const credScore = author.credibility_score || 0;
             
+            // Enhanced summary section with verification badges
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
                     <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
                         ${author.name || data.article?.author || 'Unknown Author'}
                     </h4>
+                    
+                    <!-- Verification Badges -->
+                    ${author.verification_status ? `
+                        <div style="margin: 8px 0;">
+                            ${author.verification_status.verified ? '<span style="display: inline-block; padding: 4px 12px; background: #c6f6d5; color: #22543d; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">✓ Verified</span>' : ''}
+                            ${author.verification_status.journalist_verified ? '<span style="display: inline-block; padding: 4px 12px; background: #e6fffa; color: #234e52; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">📰 Professional Journalist</span>' : ''}
+                            ${author.verification_status.outlet_staff ? '<span style="display: inline-block; padding: 4px 12px; background: #e0e7ff; color: #312e81; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">🏢 Staff Writer</span>' : ''}
+                        </div>
+                    ` : ''}
+                    
                     ${author.found ? `
                         <div style="margin: 16px 0;">
                             <div style="font-size: 2.5rem; font-weight: 700; color: ${credScore >= 70 ? '#059669' : credScore >= 40 ? '#d97706' : '#dc2626'};">
@@ -406,6 +417,24 @@
                             </div>
                             <div style="font-size: 0.875rem; color: #64748b;">Credibility Score</div>
                         </div>
+                        
+                        <!-- Quick Metrics -->
+                        ${(author.articles_count || author.professional_info?.years_experience) ? `
+                            <div style="display: grid; grid-template-columns: repeat(${(author.articles_count ? 1 : 0) + (author.professional_info?.years_experience ? 1 : 0)}, 1fr); gap: 12px; margin-top: 16px;">
+                                ${author.articles_count ? `
+                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
+                                        <div style="font-size: 0.75rem; color: #718096;">Articles</div>
+                                    </div>
+                                ` : ''}
+                                ${author.professional_info?.years_experience ? `
+                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
+                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
                     ` : `
                         <p style="color: #92400e; padding: 16px; background: #fef3c7; border-radius: 8px;">
                             Limited author information available
@@ -414,6 +443,7 @@
                 </div>
             `;
             
+            // Enhanced details section with all features
             card.querySelector('.card-details').innerHTML = `
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
@@ -424,8 +454,8 @@
                 
                 ${author.bio ? `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">Author Biography</h4>
-                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">📝 Author Biography</h4>
+                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155; line-height: 1.6;">
                             ${author.bio}
                         </p>
                     </div>
@@ -433,7 +463,7 @@
                 
                 ${author.professional_info && Object.keys(author.professional_info).length > 0 ? `
                     <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 12px 0; color: #0369a1;">Professional Background</h5>
+                        <h5 style="margin: 0 0 12px 0; color: #0369a1; font-size: 1rem;">💼 Professional Background</h5>
                         ${author.professional_info.current_position ? `
                             <p style="margin: 0 0 8px 0; color: #0c4a6e;">
                                 <strong>Current Position:</strong> ${author.professional_info.current_position}
@@ -441,14 +471,31 @@
                         ` : ''}
                         ${author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
                             <p style="margin: 0 0 8px 0; color: #0c4a6e;">
-                                <strong>Outlets:</strong> ${author.professional_info.outlets.join(', ')}
+                                <strong>Publications:</strong> ${author.professional_info.outlets.join(', ')}
+                            </p>
+                        ` : ''}
+                        ${author.professional_info.years_experience ? `
+                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
+                                <strong>Experience:</strong> ${author.professional_info.years_experience} years
                             </p>
                         ` : ''}
                         ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
-                            <p style="margin: 0; color: #0c4a6e;">
-                                <strong>Expertise:</strong> ${author.professional_info.expertise_areas.join(', ')}
-                            </p>
+                            <div style="margin-top: 12px;">
+                                <strong style="color: #0c4a6e;">Areas of Expertise:</strong>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                                    ${author.professional_info.expertise_areas.map(area => 
+                                        `<span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #1e40af; border-radius: 16px; font-size: 0.875rem;">${area}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
                         ` : ''}
+                    </div>
+                ` : ''}
+                
+                ${author.education ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f3e8ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #5b21b6;">🎓 Education</h5>
+                        <p style="margin: 0; color: #4c1d95;">${author.education}</p>
                     </div>
                 ` : ''}
                 
@@ -456,25 +503,142 @@
                     <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
                         <h5 style="margin: 0 0 8px 0; color: #92400e;">🏆 Awards & Recognition</h5>
                         <ul style="margin: 0; padding-left: 20px; color: #78350f;">
-                            ${author.awards.slice(0, 3).map(award => `<li>${award}</li>`).join('')}
+                            ${author.awards.map(award => `<li style="margin-bottom: 4px;">${award}</li>`).join('')}
                         </ul>
+                    </div>
+                ` : ''}
+                
+                ${author.previous_positions && author.previous_positions.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📍 Career History</h5>
+                        <div style="position: relative; padding-left: 20px;">
+                            <div style="position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background: #e2e8f0;"></div>
+                            ${author.previous_positions.map(position => {
+                                if (typeof position === 'string') {
+                                    return `
+                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
+                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
+                                            <span style="color: #2d3748;">${position}</span>
+                                        </div>
+                                    `;
+                                } else {
+                                    return `
+                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
+                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
+                                            <div>
+                                                <span style="font-weight: 600; color: #2d3748;">${position.title}</span>
+                                                ${position.outlet ? `<span style="color: #4a5568;"> at ${position.outlet}</span>` : ''}
+                                                ${position.dates ? `<span style="color: #718096; font-size: 0.875rem;"> (${position.dates})</span>` : ''}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }).join('')}
+                        </div>
                     </div>
                 ` : ''}
                 
                 ${author.recent_articles && author.recent_articles.length > 0 ? `
                     <div style="margin-bottom: 20px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Recent Articles</h5>
-                        ${author.recent_articles.slice(0, 3).map(article => `
-                            <div style="margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 4px;">
-                                <a href="${article.url}" target="_blank" style="color: #2563eb; text-decoration: none;">
-                                    ${article.title}
-                                </a>
-                            </div>
-                        `).join('')}
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📰 Recent Articles</h5>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${author.recent_articles.map(article => {
+                                if (typeof article === 'string') {
+                                    return `
+                                        <div style="margin-bottom: 8px; padding: 12px; background: #f8fafc; border-radius: 4px;">
+                                            <span style="color: #2d3748;">${article}</span>
+                                        </div>
+                                    `;
+                                } else {
+                                    return `
+                                        <div style="margin-bottom: 8px; padding: 12px; background: #f8fafc; border-radius: 4px; transition: background 0.2s;">
+                                            ${article.url ? `<a href="${article.url}" target="_blank" style="text-decoration: none;">` : ''}
+                                            <div style="color: #2563eb; font-weight: 500;">${article.title}</div>
+                                            ${article.date ? `<div style="font-size: 0.75rem; color: #718096; margin-top: 4px;">${new Date(article.date).toLocaleDateString()}</div>` : ''}
+                                            ${article.outlet ? `<div style="font-size: 0.75rem; color: #718096;">${article.outlet}</div>` : ''}
+                                            ${article.url ? `</a>` : ''}
+                                        </div>
+                                    `;
+                                }
+                            }).join('')}
+                        </div>
                     </div>
                 ` : ''}
                 
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
+                ${author.online_presence && Object.keys(author.online_presence).some(k => author.online_presence[k]) ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">🌐 Online Presence</h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${author.online_presence.twitter ? `
+                                <a href="https://twitter.com/${author.online_presence.twitter}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #1da1f2; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                    𝕏 @${author.online_presence.twitter}
+                                </a>
+                            ` : ''}
+                            ${author.online_presence.linkedin ? `
+                                <a href="${author.online_presence.linkedin}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #0077b5; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                    LinkedIn
+                                </a>
+                            ` : ''}
+                            ${author.online_presence.personal_website ? `
+                                <a href="${author.online_presence.personal_website}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #6b7280; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                    🌐 Website
+                                </a>
+                            ` : ''}
+                            ${author.online_presence.outlet_profile ? `
+                                <a href="${author.online_presence.outlet_profile}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #7c3aed; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                    📰 Profile
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${author.issues_corrections !== undefined ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: ${author.issues_corrections ? '#fef2f2' : '#f0fdf4'}; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: ${author.issues_corrections ? '#991b1b' : '#166534'};">✅ Journalistic Integrity</h5>
+                        ${author.issues_corrections ? 
+                            '<p style="margin: 0; color: #7f1d1d;">⚠️ This author has had articles with corrections or retractions</p>' :
+                            '<p style="margin: 0; color: #14532d;">✓ No known issues or corrections found</p>'
+                        }
+                    </div>
+                ` : ''}
+                
+                ${author.credibility_explanation ? `
+                    <div style="margin-bottom: 20px; padding: 20px; background: #f7fafc; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📊 Credibility Assessment</h5>
+                        <div style="display: inline-block; padding: 8px 16px; background: ${
+                            author.credibility_explanation.level === 'High' ? '#9ae6b4' :
+                            author.credibility_explanation.level === 'Good' ? '#90cdf4' :
+                            author.credibility_explanation.level === 'Moderate' ? '#fbd38d' : '#feb2b2'
+                        }; color: ${
+                            author.credibility_explanation.level === 'High' ? '#22543d' :
+                            author.credibility_explanation.level === 'Good' ? '#1a365d' :
+                            author.credibility_explanation.level === 'Moderate' ? '#744210' : '#742a2a'
+                        }; border-radius: 6px; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 12px;">
+                            ${author.credibility_explanation.level} Credibility
+                        </div>
+                        <p style="margin: 8px 0; color: #4a5568; line-height: 1.6;">${author.credibility_explanation.explanation}</p>
+                        <p style="margin: 8px 0 0 0; color: #2d3748; font-weight: 500;">
+                            <strong>Reader Advice:</strong> ${author.credibility_explanation.advice}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                <!-- Information Coverage Grid -->
+                <div style="margin-bottom: 20px; padding: 16px; background: #f7fafc; border-radius: 8px;">
+                    <h5 style="margin: 0 0 12px 0; color: #1e293b;">📋 Information Coverage</h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;">
+                        ${this.renderInfoCoverageGrid(author)}
+                    </div>
+                </div>
+                
+                ${author.sources_checked && author.sources_checked.length > 0 ? `
+                    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 0.875rem; color: #718096;">
+                        <strong>Sources checked:</strong> ${author.sources_checked.join(', ')}
+                    </div>
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read This Author's Work</h4>
                     <p style="margin: 0; color: #78350f; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getAuthorReadingAdvice(author)}
@@ -1014,6 +1178,28 @@
             } else {
                 return `Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named, readers cannot verify most claims.`;
             }
+        }
+
+        renderInfoCoverageGrid(author) {
+            const fields = {
+                'Biography': author.bio && author.bio !== 'No detailed information available',
+                'Photo': !!author.image_url,
+                'Education': !!author.education,
+                'Experience': !!(author.professional_info?.years_experience),
+                'Social Media': !!(author.online_presence && Object.values(author.online_presence).some(v => v)),
+                'Recent Work': !!(author.recent_articles?.length > 0),
+                'Awards': !!(author.awards?.length > 0),
+                'Career History': !!(author.previous_positions?.length > 0),
+                'Expertise': !!(author.professional_info?.expertise_areas?.length > 0),
+                'Verification': !!(author.verification_status?.verified)
+            };
+            
+            return Object.entries(fields).map(([field, hasData]) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${hasData ? '#f0fff4' : 'white'}; border-radius: 6px; border: 1px solid ${hasData ? '#9ae6b4' : '#e2e8f0'};">
+                    <span style="font-size: 0.875rem; color: #4a5568;">${field}</span>
+                    <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
+                </div>
+            `).join('');
         }
 
         showResources(data) {
