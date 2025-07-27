@@ -90,7 +90,7 @@ class FactChecker:
                 'checked_at': datetime.now().isoformat()
             })
         
-        logger.info(f"Fact-checked {len(fact_check_results)} claims")
+        logger.info(f"Fact-checked {len(fact_check_results)} claims with detailed verification")
         return fact_check_results
     
     def _comprehensive_fact_check(self, claim: str, priority: str, 
