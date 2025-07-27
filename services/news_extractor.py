@@ -1,7 +1,7 @@
 """
 FILE: services/news_extractor.py
-LOCATION: news/services/news_extractor.py
-PURPOSE: Extract article content with better error handling and CNN support
+LOCATION: services/news_extractor.py
+PURPOSE: Enhanced article extraction with better author detection for AP News and other sites
 """
 
 import logging
@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class NewsExtractor:
-    """Extract article content from URLs"""
+    """Extract article content from URLs with enhanced author detection"""
     
     def __init__(self):
         self.session = requests.Session()
@@ -58,6 +58,9 @@ class NewsExtractor:
                 # Try alternative extraction for problematic sites
                 if not text or len(text) < 50:
                     text = self._extract_text_fallback(soup)
+            
+            # Log what we found for debugging
+            logger.info(f"Extracted from {domain}: Title='{title[:50]}...', Author='{author}', Text length={len(text)}")
             
             return {
                 'title': title or 'No title found',
@@ -106,6 +109,36 @@ class NewsExtractor:
         # Remove script and style elements
         for script in soup(['script', 'style']):
             script.decompose()
+        
+        # AP News specific handling
+        if 'apnews.com' in url:
+            # AP News specific selectors
+            ap_selectors = [
+                'div.RichTextStoryBody',
+                'div[class*="RichTextStoryBody"]',
+                'div.Article',
+                'div[class*="Page-content"]',
+                'main p',
+                'div[class*="story-body"] p'
+            ]
+            
+            for selector in ap_selectors:
+                if ' ' in selector:
+                    # Handle compound selectors
+                    container, tag = selector.rsplit(' ', 1)
+                    containers = soup.select(container)
+                    for cont in containers:
+                        paragraphs = cont.find_all(tag)
+                        if paragraphs:
+                            text = ' '.join([p.get_text().strip() for p in paragraphs])
+                            if len(text) > 100:
+                                return text
+                else:
+                    elements = soup.select(selector)
+                    if elements:
+                        text = ' '.join([e.get_text().strip() for e in elements])
+                        if len(text) > 100:
+                            return text
         
         # CNN specific handling
         if 'cnn.com' in url:
@@ -181,7 +214,7 @@ class NewsExtractor:
         return 'No article text found'
     
     def _extract_author(self, soup, url):
-        """Extract author with proper formatting"""
+        """Extract author with enhanced AP News support"""
         
         # List of organization names to filter out
         org_names = [
@@ -189,7 +222,8 @@ class NewsExtractor:
             'Fox News', 'NBC News', 'CBS News', 'MSNBC', 'NPR', 'PBS',
             'The New York Times', 'The Washington Post', 'The Guardian',
             'Bloomberg', 'CNBC', 'The Hill', 'Politico', 'Axios',
-            'The Wall Street Journal', 'USA Today', 'The Independent'
+            'The Wall Street Journal', 'USA Today', 'The Independent',
+            'AP News', 'The Associated Press'
         ]
         
         def is_organization_name(text):
@@ -201,7 +235,7 @@ class NewsExtractor:
                 if org.lower() in text.lower():
                     return True
             # Check for common organization patterns
-            if any(word in text.lower() for word in ['news', 'staff', 'team', 'correspondent', 'newsroom', 'editorial']):
+            if any(word in text.lower() for word in ['news', 'staff', 'team', 'correspondent', 'newsroom', 'editorial', 'wire service']):
                 return True
             # Check if it looks like a person name (First Last)
             parts = text.strip().split()
@@ -219,7 +253,59 @@ class NewsExtractor:
             text = re.sub(r'\s+', ' ', text)
             # Remove "and ABC News" type suffixes
             text = re.sub(r'\s+(and|for)\s+.*(News|Staff|Team).*$', '', text, flags=re.IGNORECASE)
+            # Remove organization names that might be appended
+            for org in org_names:
+                text = text.replace(f' and {org}', '').replace(f' / {org}', '').replace(f', {org}', '')
             return text.strip()
+        
+        # Get domain for site-specific handling
+        domain = urlparse(url).netloc.replace('www.', '')
+        
+        # AP News specific extraction FIRST
+        if 'apnews.com' in domain:
+            logger.info("Using AP News specific author extraction")
+            
+            # AP News specific selectors - updated for their current site structure
+            ap_author_selectors = [
+                'span.Page-authors',
+                'div.Page-authors',
+                'span[class*="Component-authors"]',
+                'div[class*="Component-authors"]',
+                'a[class*="Component-authorLink"]',
+                'span[class*="authorName"]',
+                'div.CardHeadline-author',
+                'div[class*="Byline"]',
+                'a[class*="Link--author"]',
+                'span.Byline-author',
+                'a.author-name',
+                # Look for the author in the hero/header area
+                'div[class*="Page-header"] a[href*="/author/"]',
+                'div[class*="Page-header"] span[class*="author"]',
+                # Sometimes it's just a link with author in the URL
+                'a[href*="/author/"]'
+            ]
+            
+            for selector in ap_author_selectors:
+                elements = soup.select(selector)
+                for element in elements:
+                    text = element.get_text().strip()
+                    
+                    # AP News sometimes prefixes with "By"
+                    text = clean_author_text(text)
+                    
+                    # Skip if it's an organization or empty
+                    if text and not is_organization_name(text) and text.lower() != 'ap':
+                        logger.info(f"Found AP News author: {text}")
+                        return text
+            
+            # Look for author in links that contain /author/ in the URL
+            author_links = soup.find_all('a', href=re.compile(r'/author/|/by/', re.I))
+            for link in author_links:
+                text = link.get_text().strip()
+                text = clean_author_text(text)
+                if text and not is_organization_name(text):
+                    logger.info(f"Found AP News author from link: {text}")
+                    return text
         
         # Method 1: JSON-LD structured data
         json_ld = soup.find_all('script', type='application/ld+json')
@@ -238,10 +324,12 @@ class NewsExtractor:
                             name = author.get('name', '')
                             name = clean_author_text(name)
                             if name and not is_organization_name(name):
+                                logger.info(f"Found author from JSON-LD: {name}")
                                 return name
                         elif isinstance(author, str):
                             name = clean_author_text(author)
                             if name and not is_organization_name(name):
+                                logger.info(f"Found author from JSON-LD string: {name}")
                                 return name
                         elif isinstance(author, list) and author:
                             # If it's a list, get the first valid author
@@ -250,10 +338,12 @@ class NewsExtractor:
                                     name = auth.get('name', '')
                                     name = clean_author_text(name)
                                     if name and not is_organization_name(name):
+                                        logger.info(f"Found author from JSON-LD list: {name}")
                                         return name
                                 elif isinstance(auth, str):
                                     name = clean_author_text(auth)
                                     if name and not is_organization_name(name):
+                                        logger.info(f"Found author from JSON-LD list string: {name}")
                                         return name
                     
                     # Check in @graph structure
@@ -266,10 +356,12 @@ class NewsExtractor:
                                         name = author.get('name', '')
                                         name = clean_author_text(name)
                                         if name and not is_organization_name(name):
+                                            logger.info(f"Found author from @graph: {name}")
                                             return name
                                     elif isinstance(author, str):
                                         name = clean_author_text(author)
                                         if name and not is_organization_name(name):
+                                            logger.info(f"Found author from @graph string: {name}")
                                             return name
             except:
                 continue
@@ -280,7 +372,9 @@ class NewsExtractor:
             'meta[property="article:author"]',
             'meta[name="byl"]',
             'meta[name="DC.creator"]',
-            'meta[name="parsely-author"]'
+            'meta[name="parsely-author"]',
+            'meta[property="og:article:author"]',
+            'meta[name="twitter:creator"]'
         ]
         
         for selector in meta_selectors:
@@ -288,6 +382,7 @@ class NewsExtractor:
             if meta and meta.get('content'):
                 author = clean_author_text(meta['content'])
                 if author and not is_organization_name(author):
+                    logger.info(f"Found author from meta tag: {author}")
                     return author
         
         # Method 3: Common byline patterns with better filtering
@@ -298,9 +393,15 @@ class NewsExtractor:
             '[class*="writer"]',
             'span[itemprop="author"]',
             '[rel="author"]',
-            '.byline__name',  # CNN
-            '.authors__name',  # Various sites
-            '.contributor__name'  # Various sites
+            '.byline__name',
+            '.authors__name',
+            '.contributor__name',
+            '.ArticleByline',
+            '.article-author',
+            '.by-author',
+            '.story-meta__author',
+            '.author-name',
+            '[data-testid="author-name"]'
         ]
         
         for selector in byline_selectors:
@@ -317,21 +418,33 @@ class NewsExtractor:
                 
                 # Skip if it's an organization
                 if text and not is_organization_name(text):
+                    logger.info(f"Found author from byline selector: {text}")
                     return text
         
         # Method 4: Look for "By [Name]" pattern in the article
-        for p in soup.find_all(['p', 'div', 'span']):
-            text = p.get_text().strip()
-            # Look for "By Name" pattern at the start of a line
-            match = re.match(r'^(?:by|By|BY)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
-            if match:
-                author = match.group(1)
-                if not is_organization_name(author):
-                    return author
+        # This is especially important for sites that don't use structured markup
+        by_patterns = [
+            r'^(?:by|By|BY)\s+([A-Z][a-z]+(?:\s+[A-Z]\.?\s+)?[A-Z][a-z]+)',  # Matches "By First Last" or "By First M. Last"
+            r'^(?:by|By|BY)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',  # Matches "By First Last Last"
+            r'^\s*([A-Z][a-z]+(?:\s+[A-Z]\.?\s+)?[A-Z][a-z]+)\s*\|',  # Matches "First Last |"
+        ]
+        
+        # Look in the first part of the article for bylines
+        article_start = soup.find(['article', 'main', '[role="main"]'])
+        if article_start:
+            # Check first few elements
+            for elem in article_start.find_all(['p', 'div', 'span'])[:20]:
+                text = elem.get_text().strip()
+                if text:
+                    for pattern in by_patterns:
+                        match = re.match(pattern, text)
+                        if match:
+                            author = match.group(1)
+                            if not is_organization_name(author):
+                                logger.info(f"Found author from text pattern: {author}")
+                                return author
         
         # Method 5: Site-specific patterns
-        domain = urlparse(url).netloc.replace('www.', '')
-        
         # CNN specific
         if 'cnn.com' in domain:
             # CNN often has author in specific classes
@@ -346,9 +459,11 @@ class NewsExtractor:
                 if elem:
                     author = clean_author_text(elem.get_text())
                     if author and not is_organization_name(author):
+                        logger.info(f"Found CNN author: {author}")
                         return author
         
-        # If no valid author found, return None instead of organization name
+        # If no valid author found, log it and return None
+        logger.info(f"No author found for {domain}")
         return None
     
     def _extract_date(self, soup):
@@ -359,7 +474,11 @@ class NewsExtractor:
             'meta[name="publish_date"]',
             'meta[name="publication_date"]',
             'meta[property="og:published_time"]',
-            'time[datetime]'
+            'meta[property="article:published"]',
+            'meta[name="pubdate"]',
+            'meta[name="publishdate"]',
+            'time[datetime]',
+            'time[pubdate]'
         ]
         
         for selector in date_selectors:
@@ -368,7 +487,7 @@ class NewsExtractor:
                 if element.name == 'meta':
                     date_str = element.get('content', '')
                 else:
-                    date_str = element.get('datetime', '')
+                    date_str = element.get('datetime', '') or element.get('pubdate', '')
                 
                 if date_str:
                     try:
@@ -376,5 +495,14 @@ class NewsExtractor:
                         return datetime.fromisoformat(date_str.replace('Z', '+00:00')).isoformat()
                     except:
                         return date_str
+        
+        # Look for date in common date containers
+        date_containers = soup.select('[class*="date"], [class*="time"], [class*="published"]')
+        for container in date_containers:
+            text = container.get_text().strip()
+            # Try to parse various date formats
+            # This is simplified - in production you'd want more robust date parsing
+            if re.search(r'\d{4}', text):  # Has a year
+                return text
         
         return None
