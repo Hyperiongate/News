@@ -1,6 +1,6 @@
 """
 FILE: services/author_analyzer.py
-PURPOSE: Real fix - searches for any journalist with parallel execution
+PURPOSE: Enhanced author analyzer that uses News API and other resources
 LOCATION: services/author_analyzer.py
 """
 
@@ -9,7 +9,7 @@ import re
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse, urljoin
 import hashlib
 import concurrent.futures
@@ -21,18 +21,19 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
-    """Fast, comprehensive author analyzer using parallel searches"""
+    """Enhanced author analyzer using all available resources"""
     
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         })
-        # Set adapter for connection pooling
-        adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
-        self.session.mount('http://', adapter)
-        self.session.mount('https://', adapter)
-        logger.info("AuthorAnalyzer initialized - Parallel search version")
+        
+        # API Keys
+        self.news_api_key = os.environ.get('NEWS_API_KEY')
+        self.has_news_api = bool(self.news_api_key)
+        
+        logger.info(f"AuthorAnalyzer initialized - News API: {'Available' if self.has_news_api else 'Not Available'}")
         
     def analyze_authors(self, author_text, domain=None):
         """Analyze multiple authors from byline text"""
@@ -46,9 +47,9 @@ class AuthorAnalyzer:
         return results
     
     def analyze_single_author(self, author_name, domain=None):
-        """Analyze author using parallel searches for speed"""
+        """Analyze author using all available resources"""
         start_time = time.time()
-        logger.info(f"🔍 Starting parallel search for: {author_name} from domain: {domain}")
+        logger.info(f"🔍 Starting enhanced search for: {author_name} from domain: {domain}")
         
         # Clean author name
         clean_name = self._clean_author_name(author_name)
@@ -68,32 +69,39 @@ class AuthorAnalyzer:
         # Task 2: Web search
         search_tasks.append(('web_search', partial(self._web_search, clean_name, domain)))
         
-        # Task 3: Journalist databases
+        # Task 3: News API search (if available)
+        if self.has_news_api:
+            search_tasks.append(('news_api', partial(self._search_news_api, clean_name, domain)))
+        
+        # Task 4: Journalist databases
         search_tasks.append(('journalist_db', partial(self._search_journalist_databases, clean_name)))
         
-        # Task 4: Social media search
+        # Task 5: Social media search
         search_tasks.append(('social_media', partial(self._search_social_media, clean_name)))
         
         # Execute searches in parallel with timeout
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # Submit all tasks
             future_to_task = {
                 executor.submit(task_func): task_name 
                 for task_name, task_func in search_tasks
             }
             
-            # Collect results as they complete (with 15 second total timeout)
-            for future in concurrent.futures.as_completed(future_to_task, timeout=15):
-                task_name = future_to_task[future]
-                try:
-                    task_result = future.result()
-                    if task_result:
-                        logger.info(f"✅ {task_name} found data")
-                        self._merge_data(result, task_result)
-                        result['found'] = True
-                        result['sources_checked'].append(task_name)
-                except Exception as e:
-                    logger.error(f"❌ {task_name} failed: {e}")
+            # Collect results as they complete (with 20 second total timeout)
+            try:
+                for future in concurrent.futures.as_completed(future_to_task, timeout=20):
+                    task_name = future_to_task[future]
+                    try:
+                        task_result = future.result()
+                        if task_result:
+                            logger.info(f"✅ {task_name} found data")
+                            self._merge_data(result, task_result)
+                            result['found'] = True
+                            result['sources_checked'].append(task_name)
+                    except Exception as e:
+                        logger.error(f"❌ {task_name} failed: {e}")
+            except concurrent.futures.TimeoutError:
+                logger.warning("Some searches timed out after 20 seconds")
         
         # Post-process results
         self._post_process_results(result, clean_name)
@@ -102,6 +110,86 @@ class AuthorAnalyzer:
         logger.info(f"✅ Search completed in {elapsed:.2f} seconds. Found: {result['found']}, Score: {result['credibility_score']}")
         
         return result
+    
+    def _search_news_api(self, author_name, domain=None):
+        """Search News API for articles by this author"""
+        if not self.news_api_key:
+            return None
+            
+        try:
+            logger.info(f"📰 Searching News API for articles by {author_name}")
+            
+            # Build query
+            query = f'"{author_name}"'
+            if domain:
+                # Add domain to narrow search
+                clean_domain = self._clean_outlet_name(domain)
+                query += f' AND ("{clean_domain}" OR {domain})'
+            
+            # Search for articles by this author
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                'apiKey': self.news_api_key,
+                'q': query,
+                'searchIn': 'author,title,description',
+                'sortBy': 'relevancy',
+                'pageSize': 20,
+                'from': (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')  # Last 30 days
+            }
+            
+            response = self.session.get(url, params=params, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                articles = data.get('articles', [])
+                
+                if articles:
+                    # Extract author's articles and outlets
+                    result = {
+                        'articles_count': len(articles),
+                        'recent_articles': [],
+                        'professional_info': {
+                            'outlets': []
+                        }
+                    }
+                    
+                    outlets = set()
+                    
+                    for article in articles[:10]:  # Process up to 10 articles
+                        # Check if author name matches
+                        article_author = article.get('author', '')
+                        if author_name.lower() in article_author.lower():
+                            # Add to recent articles
+                            result['recent_articles'].append({
+                                'title': article.get('title', ''),
+                                'url': article.get('url', ''),
+                                'date': article.get('publishedAt', ''),
+                                'outlet': article.get('source', {}).get('name', '')
+                            })
+                            
+                            # Collect outlet
+                            outlet = article.get('source', {}).get('name')
+                            if outlet:
+                                outlets.add(outlet)
+                    
+                    # Add outlets to result
+                    result['professional_info']['outlets'] = list(outlets)[:5]
+                    
+                    # Try to extract bio from article descriptions
+                    for article in articles:
+                        desc = article.get('description', '')
+                        if author_name in desc and len(desc) > 100:
+                            if 'is a' in desc or 'reporter' in desc or 'journalist' in desc:
+                                result['bio'] = desc[:300]
+                                break
+                    
+                    logger.info(f"✅ News API found {len(articles)} articles by {author_name}")
+                    return result
+                    
+        except Exception as e:
+            logger.error(f"News API search error: {e}")
+        
+        return None
     
     def _initialize_result(self, clean_name):
         """Initialize empty result structure"""
@@ -416,6 +504,22 @@ class AuthorAnalyzer:
     
     def _post_process_results(self, result, clean_name):
         """Post-process and enhance results"""
+        # If we have News API articles, extract expertise from titles
+        if result.get('recent_articles'):
+            topics = []
+            for article in result['recent_articles']:
+                title = article.get('title', '').lower()
+                # Extract topics
+                for topic in ['politics', 'technology', 'business', 'health', 'climate', 'economy', 'sports']:
+                    if topic in title:
+                        topics.append(topic.capitalize())
+            
+            if topics:
+                # Most common topics become expertise areas
+                from collections import Counter
+                topic_counts = Counter(topics)
+                result['professional_info']['expertise_areas'] = [topic for topic, _ in topic_counts.most_common(3)]
+        
         # Calculate data completeness
         result['data_completeness'] = self._calculate_completeness(result)
         
@@ -438,6 +542,8 @@ class AuthorAnalyzer:
             if result['online_presence'].get('twitter') or result['online_presence'].get('linkedin'):
                 score += 10
             if result.get('articles_count', 0) > 10:
+                score += 10
+            if result.get('recent_articles'):
                 score += 5
             
             result['credibility_score'] = min(100, score)
@@ -448,7 +554,8 @@ class AuthorAnalyzer:
                 'level': level,
                 'score': result['credibility_score'],
                 'explanation': f"{clean_name} is a {'verified' if result['verification_status'].get('verified') else 'found'} journalist. " +
-                              f"Information gathered from {len(result['sources_checked'])} sources.",
+                              f"Information gathered from {len(result['sources_checked'])} sources" +
+                              (f" including {result['articles_count']} articles found." if result.get('articles_count') else "."),
                 'advice': 'Author has established journalism credentials. Apply standard verification practices.',
                 'data_completeness': f"{result['data_completeness'].get('overall', 0)}%"
             }
@@ -458,7 +565,7 @@ class AuthorAnalyzer:
             result['credibility_explanation'] = {
                 'level': 'Unknown',
                 'score': 50,
-                'explanation': 'Unable to find verifiable information about this author.',
+                'explanation': 'Unable to find verifiable information about this author through available sources.',
                 'advice': 'Could not verify author credentials. Check the publication\'s author page or search for their work history.',
                 'data_completeness': '0%'
             }
@@ -468,7 +575,8 @@ class AuthorAnalyzer:
         fields_to_check = {
             'basic': ['bio', 'professional_info.current_position', 'professional_info.outlets'],
             'verification': ['verification_status.verified', 'verification_status.outlet_staff'],
-            'online': ['online_presence.twitter', 'online_presence.linkedin', 'online_presence.outlet_profile']
+            'online': ['online_presence.twitter', 'online_presence.linkedin', 'online_presence.outlet_profile'],
+            'work': ['articles_count', 'recent_articles']
         }
         
         completeness = {}
@@ -510,12 +618,21 @@ class AuthorAnalyzer:
         if result['verification_status'].get('journalist_verified'):
             findings.append("Found in journalist databases")
         
+        if result.get('articles_count', 0) > 50:
+            findings.append(f"Prolific writer with {result['articles_count']} articles")
+        elif result.get('recent_articles'):
+            findings.append(f"Recent work includes {len(result['recent_articles'])} articles")
+        
         outlets = result['professional_info'].get('outlets', [])
         if len(outlets) > 1:
             findings.append(f"Published in {len(outlets)} outlets")
         
         if result['online_presence'].get('twitter'):
             findings.append("Active on social media")
+        
+        expertise = result['professional_info'].get('expertise_areas', [])
+        if expertise:
+            findings.append(f"Specializes in {expertise[0]}")
         
         return findings[:3]
     
@@ -527,12 +644,21 @@ class AuthorAnalyzer:
             elif isinstance(value, dict) and isinstance(target[key], dict):
                 self._merge_data(target[key], value)
             elif isinstance(value, list) and isinstance(target[key], list):
-                for item in value:
-                    if item not in target[key]:
-                        target[key].append(item)
+                # For articles, don't duplicate
+                if key == 'recent_articles':
+                    existing_urls = {a.get('url') for a in target[key] if isinstance(a, dict) and a.get('url')}
+                    for item in value:
+                        if isinstance(item, dict) and item.get('url') not in existing_urls:
+                            target[key].append(item)
+                else:
+                    for item in value:
+                        if item not in target[key]:
+                            target[key].append(item)
             elif key == 'bio' and value:
                 if not target[key] or len(value) > len(target[key]):
                     target[key] = value
+            elif key == 'articles_count' and value:
+                target[key] = max(target.get(key, 0), value)
             elif value and not target[key]:
                 target[key] = value
     
@@ -570,7 +696,13 @@ class AuthorAnalyzer:
             'washingtonpost': 'The Washington Post',
             'theguardian': 'The Guardian',
             'reuters': 'Reuters',
-            'apnews': 'Associated Press'
+            'apnews': 'Associated Press',
+            'npr': 'NPR',
+            'wsj': 'The Wall Street Journal',
+            'foxnews': 'Fox News',
+            'nbcnews': 'NBC News',
+            'abcnews': 'ABC News',
+            'cbsnews': 'CBS News'
         }
         
         for key, value in outlet_map.items():
@@ -588,3 +720,4 @@ class AuthorAnalyzer:
         authors = re.split(r'\s*(?:,|and|&)\s*', author_text)
         
         return [a.strip() for a in authors if a.strip() and len(a.strip()) > 2][:3]
+        
