@@ -280,59 +280,212 @@
     color: #1f2937;
 }
 
-/* Fact Check Details */
+/* Fact Check Details Enhanced */
 .fact-check-details {
     margin-top: 16px;
-    padding: 16px;
+    padding: 20px;
     background: #f9fafb;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
+}
+
+.check-metadata {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .check-source {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
 }
 
-.source-label {
+.check-confidence {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.confidence-label {
     font-size: 0.875rem;
     color: #6b7280;
     font-weight: 600;
 }
 
-.source-name {
-    font-size: 0.875rem;
-    color: #1f2937;
-    font-weight: 500;
+.methodology-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 8px;
 }
 
-.check-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: #3b82f6;
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: color 0.2s;
+.methodology-badge.api {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
 }
 
-.check-link:hover {
-    color: #2563eb;
-    text-decoration: underline;
+.methodology-badge.pattern {
+    background: #e0e7ff;
+    color: #4338ca;
+    border: 1px solid #a5b4fc;
+}
+
+.methodology-badge.news {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.methodology-badge.manual {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
 }
 
 .check-review {
-    margin-top: 12px;
-    padding: 12px;
+    margin: 16px 0;
+    padding: 16px;
     background: white;
     border-radius: 6px;
-    font-size: 0.875rem;
-    color: #4b5563;
-    line-height: 1.6;
     border: 1px solid #e5e7eb;
+    line-height: 1.6;
+}
+
+.check-review strong {
+    color: #1f2937;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.evidence-points {
+    margin: 16px 0;
+}
+
+.evidence-points strong {
+    color: #1f2937;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.evidence-points ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.evidence-points li {
+    color: #4b5563;
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+
+.evidence-links {
+    margin: 16px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.evidence-links strong {
+    width: 100%;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.evidence-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.evidence-link:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+.check-context {
+    margin: 16px 0;
+    padding: 12px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    color: #78350f;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.check-context strong {
+    color: #92400e;
+}
+
+.check-timestamp {
+    margin-top: 16px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-align: right;
+}
+
+/* Fact Check Process */
+.fact-check-process {
+    margin: 32px 0;
+    padding: 24px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 10px;
+}
+
+.fact-check-process h4 {
+    margin: 0 0 20px 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.process-steps {
+    display: grid;
+    gap: 16px;
+}
+
+.process-step {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.step-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.step-content strong {
+    display: block;
+    color: #1f2937;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.step-content p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 /* Unverified Message */
