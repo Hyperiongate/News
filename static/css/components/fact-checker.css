@@ -1,397 +1,700 @@
-// static/js/components/fact-checker.js
+/* static/css/components/fact-checker.css */
+/* Enhanced Fact Check Analysis Card Styles */
 
-class FactChecker {
-    constructor() {
-        this.data = null;
+.fact-checker-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.fact-checker-container:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fact-checker-content {
+    padding: 24px;
+}
+
+/* Fact Check Statistics */
+.fact-check-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 10px;
+    background: #f9fafb;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    transition: all 0.3s ease;
+}
+
+.stat-card.verified {
+    border-color: #10b981;
+}
+
+.stat-card.verified::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.stat-card.false {
+    border-color: #ef4444;
+}
+
+.stat-card.false::before {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.stat-card.mixed {
+    border-color: #f59e0b;
+}
+
+.stat-card.mixed::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.stat-card.unverified {
+    border-color: #6b7280;
+}
+
+.stat-card.unverified::before {
+    background: linear-gradient(90deg, #6b7280, #9ca3af);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    background: white;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.stat-card.verified .stat-icon {
+    color: #10b981;
+}
+
+.stat-card.false .stat-icon {
+    color: #ef4444;
+}
+
+.stat-card.mixed .stat-icon {
+    color: #f59e0b;
+}
+
+.stat-card.unverified .stat-icon {
+    color: #6b7280;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Fact Check Results */
+.fact-check-results {
+    margin: 32px 0;
+}
+
+.fact-check-results h4 {
+    margin: 0 0 20px 0;
+    color: #1f2937;
+    font-size: 1.125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.claims-list {
+    space-y: 16px;
+}
+
+.claim-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    background: white;
+}
+
+.claim-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 10px 0 0 10px;
+    transition: all 0.3s ease;
+}
+
+.claim-item.verified::before {
+    background: #10b981;
+}
+
+.claim-item.false::before {
+    background: #ef4444;
+}
+
+.claim-item.mixed::before {
+    background: #f59e0b;
+}
+
+.claim-item.unverified::before {
+    background: #6b7280;
+}
+
+.claim-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateX(2px);
+}
+
+.claim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.claim-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-icon {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.claim-item.verified .status-icon {
+    color: #10b981;
+}
+
+.claim-item.false .status-icon {
+    color: #ef4444;
+}
+
+.claim-item.mixed .status-icon {
+    color: #f59e0b;
+}
+
+.claim-item.unverified .status-icon {
+    color: #6b7280;
+}
+
+.status-text {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+
+.claim-importance {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.claim-importance.high {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.claim-importance.medium {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.claim-importance.low {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.claim-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #374151;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    font-style: italic;
+    position: relative;
+}
+
+.claim-text::before {
+    content: '"';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 2rem;
+    color: #d1d5db;
+    font-family: Georgia, serif;
+}
+
+.claim-context {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.claim-context strong {
+    color: #1f2937;
+}
+
+/* Fact Check Details */
+.fact-check-details {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.check-source {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.source-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.source-name {
+    font-size: 0.875rem;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.check-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.check-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.check-review {
+    margin-top: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.6;
+    border: 1px solid #e5e7eb;
+}
+
+/* Unverified Message */
+.unverified-message {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Fact Check Sources Section */
+.fact-check-sources {
+    margin: 32px 0;
+    padding: 24px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.fact-check-sources h4 {
+    margin: 0 0 16px 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.sources-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    color: #4b5563;
+    transition: all 0.2s;
+}
+
+.source-chip:hover {
+    background: #e5e7eb;
+    transform: translateY(-1px);
+}
+
+.source-icon {
+    font-size: 1rem;
+}
+
+.sources-note {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* Fact Check Summary Section */
+.fact-check-summary-section {
+    margin-top: 32px;
+    padding: 24px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 10px;
+}
+
+.fact-check-summary-section h4 {
+    margin: 0 0 16px 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.fact-check-summary-section p {
+    margin: 0;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* Basic Claims View */
+.fact-check-summary {
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 10px;
+    margin-bottom: 24px;
+}
+
+.fact-check-basic-text {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+/* Upgrade Prompt */
+.upgrade-prompt {
+    margin-top: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 10px;
+    text-align: center;
+}
+
+.upgrade-prompt p {
+    margin: 0;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.upgrade-prompt a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.upgrade-prompt a:hover {
+    opacity: 0.8;
+}
+
+/* Pro Badge */
+.pro-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: auto;
+}
+
+/* Visual Chart */
+.fact-check-chart {
+    margin: 24px 0;
+    height: 200px;
+    position: relative;
+}
+
+.chart-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animated Progress Bars */
+.verdict-breakdown {
+    margin: 24px 0;
+}
+
+.verdict-item {
+    margin-bottom: 16px;
+}
+
+.verdict-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.verdict-label span:first-child {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.verdict-count {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.verdict-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.verdict-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.verdict-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
     }
-
-    render(data) {
-        this.data = data;
-        
-        const container = document.createElement('div');
-        container.className = 'fact-checker-container analysis-card';
-        
-        // Determine what to render based on available data
-        if (data.is_pro && data.fact_checks && data.fact_checks.length > 0) {
-            container.innerHTML = this.renderProFactCheck();
-        } else if (data.key_claims && data.key_claims.length > 0) {
-            container.innerHTML = this.renderBasicClaims();
-        } else {
-            container.innerHTML = this.renderNoClaims();
-        }
-        
-        return container;
-    }
-
-    renderProFactCheck() {
-        const factChecks = this.data.fact_checks || [];
-        const keyClaims = this.data.key_claims || [];
-        
-        // Merge claims with fact checks
-        const mergedClaims = this.mergeClaimsWithFactChecks(keyClaims, factChecks);
-        
-        // Count verdicts
-        const counts = {
-            verified: 0,
-            false: 0,
-            mixed: 0,
-            unverified: 0
-        };
-        
-        mergedClaims.forEach(item => {
-            const status = this.getClaimStatus(item);
-            counts[status]++;
-        });
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">✓</span>
-                <span>Fact Check Analysis</span>
-                <span class="pro-badge">PRO</span>
-            </div>
-            
-            <div class="fact-checker-content">
-                ${this.renderFactCheckStats(counts)}
-                ${this.renderFactCheckResults(mergedClaims)}
-                ${this.renderFactCheckSources()}
-                ${this.renderFactCheckSummary()}
-            </div>
-        `;
-    }
-
-    renderBasicClaims() {
-        const claims = this.data.key_claims || [];
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">📋</span>
-                <span>Key Claims Identified</span>
-            </div>
-            
-            <div class="fact-checker-content">
-                <div class="fact-check-summary">
-                    <p class="fact-check-basic-text">
-                        We identified ${claims.length} key claim${claims.length !== 1 ? 's' : ''} in this article.
-                        Upgrade to Pro to automatically fact-check these claims using Google's Fact Check API.
-                    </p>
-                </div>
-                
-                <div class="claims-list">
-                    ${claims.map((claim, index) => this.renderBasicClaim(claim, index)).join('')}
-                </div>
-                
-                <div class="upgrade-prompt">
-                    <p>🔍 Want automated fact-checking? 
-                       <a href="#" onclick="window.pricingDropdown?.show(); return false;">Upgrade to Pro</a>
-                    </p>
-                </div>
-            </div>
-        `;
-    }
-
-    renderNoClaims() {
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">📋</span>
-                <span>Fact Checking</span>
-            </div>
-            <div class="fact-checker-content">
-                <div class="fact-check-summary">
-                    <p class="fact-check-basic-text">
-                        No specific factual claims were identified in this article for fact-checking.
-                    </p>
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckStats(counts) {
-        const total = Object.values(counts).reduce((a, b) => a + b, 0);
-        
-        return `
-            <div class="fact-check-stats">
-                <div class="stat-card verified">
-                    <span class="stat-icon">✓</span>
-                    <div class="stat-number">${counts.verified}</div>
-                    <div class="stat-label">Verified</div>
-                </div>
-                <div class="stat-card false">
-                    <span class="stat-icon">✗</span>
-                    <div class="stat-number">${counts.false}</div>
-                    <div class="stat-label">False</div>
-                </div>
-                <div class="stat-card mixed">
-                    <span class="stat-icon">≈</span>
-                    <div class="stat-number">${counts.mixed}</div>
-                    <div class="stat-label">Mixed</div>
-                </div>
-                <div class="stat-card unverified">
-                    <span class="stat-icon">?</span>
-                    <div class="stat-number">${counts.unverified}</div>
-                    <div class="stat-label">Unverified</div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckResults(mergedClaims) {
-        if (!mergedClaims || mergedClaims.length === 0) return '';
-        
-        return `
-            <div class="fact-check-results">
-                <h4>Fact Check Results:</h4>
-                <div class="claims-list">
-                    ${mergedClaims.map((item, index) => this.renderFactCheckedClaim(item, index)).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckedClaim(item, index) {
-        const status = this.getClaimStatus(item);
-        const statusText = this.getStatusText(status);
-        const statusIcon = this.getStatusIcon(status);
-        const importance = this.getClaimImportance(item, index);
-        
-        return `
-            <div class="claim-item ${status}">
-                <div class="claim-header">
-                    <div class="claim-status">
-                        <span class="status-icon">${statusIcon}</span>
-                        <span class="status-text">${statusText}</span>
-                    </div>
-                    <span class="claim-importance ${importance}">${importance.toUpperCase()}</span>
-                </div>
-                
-                <div class="claim-text">
-                    ${this.getClaimText(item)}
-                </div>
-                
-                ${item.factCheck ? this.renderFactCheckDetails(item.factCheck) : ''}
-                
-                ${item.context ? `
-                    <div class="claim-context">
-                        <strong>Context:</strong> ${item.context}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    renderFactCheckDetails(factCheck) {
-        return `
-            <div class="fact-check-details">
-                <div class="check-source">
-                    <span class="source-label">Source:</span>
-                    <span class="source-name">${factCheck.publisher || factCheck.source || 'Fact Check Database'}</span>
-                </div>
-                ${factCheck.url ? `
-                    <a href="${factCheck.url}" target="_blank" class="check-link">
-                        View fact check →
-                    </a>
-                ` : ''}
-            </div>
-            ${factCheck.explanation ? `
-                <div class="check-review">
-                    ${factCheck.explanation}
-                </div>
-            ` : ''}
-        `;
-    }
-
-    renderBasicClaim(claim, index) {
-        const importance = this.getClaimImportance(claim, index);
-        
-        return `
-            <div class="claim-item">
-                <div class="claim-header">
-                    <div class="claim-status">
-                        <span class="status-icon">📌</span>
-                        <span class="status-text">Claim ${index + 1}</span>
-                    </div>
-                    <span class="claim-importance ${importance}">${importance.toUpperCase()}</span>
-                </div>
-                
-                <div class="claim-text">
-                    ${this.getClaimText(claim)}
-                </div>
-                
-                <div class="unverified-message">
-                    Fact check not available in Basic plan
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckSources() {
-        return `
-            <div class="fact-check-sources">
-                <h4>Fact Check Sources:</h4>
-                <div class="sources-list">
-                    <div class="source-chip">
-                        <span class="source-icon">🔍</span>
-                        <span>Google Fact Check API</span>
-                    </div>
-                    <div class="source-chip">
-                        <span class="source-icon">📊</span>
-                        <span>Pattern Analysis</span>
-                    </div>
-                </div>
-                <p class="sources-note">
-                    Claims are verified using Google's Fact Check Tools API and advanced pattern analysis.
-                </p>
-            </div>
-        `;
-    }
-
-    renderFactCheckSummary() {
-        const summary = this.data.fact_check_summary || this.generateSummary();
-        
-        if (!summary) return '';
-        
-        return `
-            <div class="fact-check-summary-section">
-                <h4>Summary:</h4>
-                <p>${summary}</p>
-            </div>
-        `;
-    }
-
-    // Helper methods
-    mergeClaimsWithFactChecks(keyClaims, factChecks) {
-        const merged = [];
-        
-        // Process key claims
-        keyClaims.forEach((claim, index) => {
-            const claimText = this.getClaimText(claim);
-            
-            // Find matching fact check
-            const factCheck = factChecks.find(fc => {
-                const fcClaimText = (fc.claim || '').toLowerCase();
-                return fcClaimText.includes(claimText.toLowerCase().substring(0, 50));
-            });
-            
-            merged.push({
-                claim: claim,
-                factCheck: factCheck,
-                text: claimText,
-                importance: claim.importance || (index === 0 ? 'high' : 'medium'),
-                context: claim.context || null
-            });
-        });
-        
-        // Add any fact checks that didn't match claims
-        factChecks.forEach(fc => {
-            const exists = merged.some(m => m.factCheck === fc);
-            if (!exists) {
-                merged.push({
-                    claim: { text: fc.claim },
-                    factCheck: fc,
-                    text: fc.claim,
-                    importance: 'medium',
-                    context: null
-                });
-            }
-        });
-        
-        return merged;
-    }
-
-    getClaimText(claim) {
-        if (typeof claim === 'string') {
-            return claim;
-        } else if (claim && typeof claim === 'object') {
-            return claim.text || claim.claim || 'Claim text unavailable';
-        }
-        return 'Claim text unavailable';
-    }
-
-    getClaimStatus(item) {
-        if (!item.factCheck) return 'unverified';
-        
-        const verdict = (item.factCheck.verdict || '').toLowerCase();
-        
-        if (verdict.includes('true') && !verdict.includes('false')) {
-            return 'verified';
-        } else if (verdict.includes('false')) {
-            return 'false';
-        } else if (verdict.includes('partial') || verdict.includes('mixed')) {
-            return 'mixed';
-        }
-        
-        return 'unverified';
-    }
-
-    getStatusText(status) {
-        const statusMap = {
-            'verified': 'Verified True',
-            'false': 'False',
-            'mixed': 'Partially True',
-            'unverified': 'Unverified'
-        };
-        
-        return statusMap[status] || 'Unverified';
-    }
-
-    getStatusIcon(status) {
-        const iconMap = {
-            'verified': '✓',
-            'false': '✗',
-            'mixed': '≈',
-            'unverified': '?'
-        };
-        
-        return iconMap[status] || '?';
-    }
-
-    getClaimImportance(claim, index) {
-        if (typeof claim === 'object' && claim.importance) {
-            return claim.importance;
-        }
-        return index === 0 ? 'high' : 'medium';
-    }
-
-    generateSummary() {
-        const factChecks = this.data.fact_checks || [];
-        if (factChecks.length === 0) return null;
-        
-        const counts = {
-            verified: 0,
-            false: 0,
-            mixed: 0,
-            unverified: 0
-        };
-        
-        factChecks.forEach(fc => {
-            const verdict = (fc.verdict || '').toLowerCase();
-            if (verdict.includes('true') && !verdict.includes('false')) {
-                counts.verified++;
-            } else if (verdict.includes('false')) {
-                counts.false++;
-            } else if (verdict.includes('partial') || verdict.includes('mixed')) {
-                counts.mixed++;
-            } else {
-                counts.unverified++;
-            }
-        });
-        
-        const parts = [`Checked ${factChecks.length} claims`];
-        
-        if (counts.verified > 0) parts.push(`${counts.verified} verified as true`);
-        if (counts.false > 0) parts.push(`${counts.false} found false`);
-        if (counts.mixed > 0) parts.push(`${counts.mixed} partially true`);
-        if (counts.unverified > 0) parts.push(`${counts.unverified} unverified`);
-        
-        return parts.join(', ') + '.';
+    100% {
+        transform: translateX(100%);
     }
 }
 
-// Create global instance
-window.FactChecker = FactChecker;
+.verdict-true {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
 
-// Auto-register with UI controller
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.UI) {
-        window.UI.registerComponent('factChecker', new FactChecker());
+.verdict-false {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.verdict-mixed {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.verdict-unverified {
+    background: linear-gradient(90deg, #6b7280, #9ca3af);
+}
+
+/* Loading State */
+.fact-check-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: #6b7280;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
-});
+}
+
+/* Confidence Indicators */
+.confidence-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-left: 8px;
+}
+
+.confidence-bar {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.confidence-level {
+    width: 4px;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.confidence-level.active {
+    background: #10b981;
+}
+
+/* Methodology Info */
+.methodology-info {
+    margin-top: 24px;
+    padding: 16px;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+}
+
+.methodology-info h5 {
+    margin: 0 0 8px 0;
+    color: #1e3a8a;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.methodology-info p {
+    margin: 0;
+    color: #1e40af;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .fact-check-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .claim-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .sources-list {
+        flex-direction: column;
+    }
+    
+    .source-chip {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.claim-item {
+    animation: fadeIn 0.3s ease-out;
+    animation-fill-mode: both;
+}
+
+.claim-item:nth-child(1) { animation-delay: 0.1s; }
+.claim-item:nth-child(2) { animation-delay: 0.2s; }
+.claim-item:nth-child(3) { animation-delay: 0.3s; }
+.claim-item:nth-child(4) { animation-delay: 0.4s; }
+.claim-item:nth-child(5) { animation-delay: 0.5s; }
