@@ -1101,6 +1101,17 @@
                         ${score}%
                     </div>
                     <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 16px;">Transparency Score</div>
+                    
+                    <!-- What is Transparency? -->
+                    <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <p style="margin: 0; font-size: 0.875rem; color: #0c4a6e; line-height: 1.5;">
+                            <strong>What is Article Transparency?</strong><br>
+                            Transparency measures how openly an article reveals its sources, methods, and potential biases. 
+                            High transparency means readers can verify claims and understand where information comes from.
+                        </p>
+                    </div>
+                    
+                    <!-- Quick Metrics -->
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                         <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
                             <div style="font-weight: 600;">${trans.source_count || 0}</div>
@@ -1119,34 +1130,223 @@
             `;
             
             card.querySelector('.card-details').innerHTML = `
+                <!-- How Transparency is Scored -->
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What's Hidden in This Article</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTransparencyContext(trans, data)}
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How We Calculate Transparency</h4>
+                    <p style="margin: 0 0 12px 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        Our transparency score evaluates multiple factors that indicate journalistic openness and accountability:
                     </p>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e293b; font-size: 0.875rem; line-height: 1.6;">
+                        <li><strong>Source Attribution (40%):</strong> Are sources clearly identified and credible?</li>
+                        <li><strong>Author Disclosure (20%):</strong> Is the author named with verifiable credentials?</li>
+                        <li><strong>Data Transparency (20%):</strong> Are statistics and claims backed by accessible sources?</li>
+                        <li><strong>Conflict Disclosure (10%):</strong> Are potential conflicts of interest disclosed?</li>
+                        <li><strong>Methodology (10%):</strong> Is the reporting process explained?</li>
+                    </ul>
                 </div>
                 
-                ${trans.source_types ? `
-                    <h4 style="margin: 0 0 12px 0;">Source Breakdown:</h4>
-                    ${Object.entries(trans.source_types).filter(([_, count]) => count > 0).map(([type, count]) => `
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                            <span style="text-transform: capitalize;">${type.replace(/_/g, ' ')}</span>
-                            <strong>${count}</strong>
-                        </div>
-                    `).join('')}
+                <!-- Current Article Analysis -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">This Article's Transparency</h4>
+                    ${this.getTransparencyAnalysis(trans, data)}
+                </div>
+                
+                <!-- Transparency Indicators Found -->
+                ${trans.indicators && trans.indicators.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1rem;">🔍 Transparency Indicators</h5>
+                        ${trans.indicators.map(indicator => {
+                            const isPositive = !indicator.toLowerCase().includes('missing') && !indicator.toLowerCase().includes('no ');
+                            return `
+                                <div style="margin-bottom: 8px; padding: 12px; background: ${isPositive ? '#f0fdf4' : '#fef2f2'}; border-left: 3px solid ${isPositive ? '#10b981' : '#ef4444'}; border-radius: 4px;">
+                                    <span style="color: ${isPositive ? '#166534' : '#991b1b'}; font-size: 0.875rem;">
+                                        ${isPositive ? '✓' : '✗'} ${indicator}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 ` : ''}
                 
+                <!-- Source Type Breakdown -->
+                ${trans.source_types ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📊 Source Analysis</h5>
+                        ${Object.entries(trans.source_types).filter(([_, count]) => count > 0).map(([type, count]) => `
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                <span style="text-transform: capitalize; color: #4b5563; font-size: 0.875rem;">
+                                    ${type.replace(/_/g, ' ')}
+                                </span>
+                                <span style="font-weight: 600; color: #1e293b;">${count}</span>
+                            </div>
+                        `).join('')}
+                        ${this.getSourceQualityAssessment(trans)}
+                    </div>
+                ` : ''}
+                
+                <!-- Why Transparency Matters -->
+                <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">Why Transparency Matters</h4>
+                    <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
+                        Transparent journalism allows readers to:
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.875rem; line-height: 1.5;">
+                        <li>Verify claims independently</li>
+                        <li>Understand potential biases</li>
+                        <li>Assess the credibility of sources</li>
+                        <li>Make informed judgments about reliability</li>
+                        <li>Track the origin of information</li>
+                    </ul>
+                </div>
+                
+                <!-- Red Flags -->
+                ${this.getTransparencyRedFlags(trans, data)}
+                
+                <!-- What to Look For -->
                 <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">What to Look For</h4>
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Evaluate Transparency</h4>
                     <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
-                        <li>Check if sources have relevant expertise</li>
-                        <li>Notice if all sources share similar viewpoints</li>
-                        <li>Look for missing voices - who should be quoted but isn't?</li>
+                        <li>Check if sources have relevant expertise for their claims</li>
+                        <li>Look for a mix of sources with different viewpoints</li>
+                        <li>Verify that "studies" and "reports" are properly cited</li>
+                        <li>Notice if anonymous sources are overused</li>
+                        <li>Check if the author's potential conflicts are disclosed</li>
                     </ul>
                 </div>
             `;
             
             return card;
+        }
+        
+        getTransparencyAnalysis(trans, data) {
+            const score = trans.transparency_score || 0;
+            const sourceCount = trans.source_count || 0;
+            const namedRatio = trans.named_source_ratio || 0;
+            
+            let analysis = '';
+            
+            // Overall assessment
+            if (score >= 70) {
+                analysis = `<p style="margin: 0 0 12px 0; color: #059669; font-weight: 500;">
+                    ✅ Excellent transparency with ${sourceCount} sources cited, ${namedRatio}% of them clearly identified. 
+                    This level of openness allows readers to verify claims independently.
+                </p>`;
+            } else if (score >= 40) {
+                analysis = `<p style="margin: 0 0 12px 0; color: #d97706; font-weight: 500;">
+                    ⚠️ Moderate transparency with ${sourceCount} sources but limited attribution (only ${namedRatio}% named). 
+                    Some claims may be difficult to verify independently.
+                </p>`;
+            } else {
+                analysis = `<p style="margin: 0 0 12px 0; color: #dc2626; font-weight: 500;">
+                    ❌ Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named attribution, 
+                    readers cannot verify most claims.
+                </p>`;
+            }
+            
+            // Specific observations
+            analysis += '<div style="margin-top: 12px;">';
+            
+            // Author transparency
+            if (data.article?.author && data.article.author !== 'Unknown Author') {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                    <strong>Author:</strong> ${data.article.author} is clearly identified
+                    ${data.author_analysis?.found ? ' and verified' : ' but not independently verified'}
+                </div>`;
+            } else {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #dc2626;">
+                    <strong>Author:</strong> No author attribution reduces accountability
+                </div>`;
+            }
+            
+            // Source quality
+            if (trans.has_quotes) {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                    <strong>Direct Quotes:</strong> Contains first-hand accounts and direct quotations
+                </div>`;
+            }
+            
+            // Data transparency
+            if (trans.indicators?.some(i => i.includes('statistics'))) {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                    <strong>Data Sources:</strong> Statistical claims include source attribution
+                </div>`;
+            }
+            
+            analysis += '</div>';
+            
+            return analysis;
+        }
+        
+        getSourceQualityAssessment(trans) {
+            const totalSources = Object.values(trans.source_types || {}).reduce((a, b) => a + b, 0);
+            const namedRatio = trans.named_source_ratio || 0;
+            
+            let assessment = '<div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 6px;">';
+            assessment += '<h6 style="margin: 0 0 8px 0; font-size: 0.875rem; color: #1e293b;">Source Quality Assessment:</h6>';
+            
+            if (namedRatio >= 70) {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #059669;">✅ High source accountability - most sources are named and verifiable</p>';
+            } else if (namedRatio >= 40) {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #d97706;">⚠️ Mixed source quality - significant reliance on anonymous sources</p>';
+            } else {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #dc2626;">❌ Low source accountability - heavy use of anonymous or vague sources</p>';
+            }
+            
+            assessment += '</div>';
+            return assessment;
+        }
+        
+        getTransparencyRedFlags(trans, data) {
+            const redFlags = [];
+            
+            // Check for common transparency issues
+            if (!data.article?.author || data.article.author === 'Unknown Author') {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'No author attribution',
+                    explanation: 'Articles without named authors have no accountability'
+                });
+            }
+            
+            if (trans.source_count === 0) {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'No sources cited',
+                    explanation: 'Claims are presented without any supporting evidence'
+                });
+            }
+            
+            if (trans.named_source_ratio < 20 && trans.source_count > 0) {
+                redFlags.push({
+                    severity: 'medium',
+                    issue: 'Excessive anonymous sourcing',
+                    explanation: 'Over-reliance on unnamed sources prevents verification'
+                });
+            }
+            
+            if (trans.transparency_score < 30) {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'Opacity in reporting',
+                    explanation: 'Lack of basic transparency elements suggests unreliable content'
+                });
+            }
+            
+            if (redFlags.length === 0) {
+                return '';
+            }
+            
+            return `
+                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #991b1b; font-size: 1rem;">🚩 Transparency Red Flags</h4>
+                    ${redFlags.map(flag => `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; color: #dc2626; font-size: 0.875rem;">${flag.issue}</div>
+                            <div style="color: #7f1d1d; font-size: 0.8125rem; margin-top: 4px;">${flag.explanation}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
         }
 
         // Helper methods remain the same
