@@ -24,6 +24,30 @@ SOURCE_CREDIBILITY = {
     'theguardian.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Newspaper'},
     'economist.com': {'credibility': 'High', 'bias': 'Center-Right', 'type': 'Magazine'},
     
+    # Major US Broadcast Networks - ADDED
+    'nbcnews.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Broadcast News'},
+    'abcnews.go.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Broadcast News'},
+    'cbsnews.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Broadcast News'},
+    
+    # Major newspapers - ADDED
+    'latimes.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Newspaper'},
+    'chicagotribune.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Newspaper'},
+    'bostonglobe.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Newspaper'},
+    'seattletimes.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Newspaper'},
+    'denverpost.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Newspaper'},
+    'miamiherald.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Newspaper'},
+    
+    # Tech news (generally reliable)
+    'techcrunch.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Tech News'},
+    'theverge.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Tech News'},
+    'arstechnica.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Tech News'},
+    'wired.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Tech Magazine'},
+    
+    # Financial news - ADDED
+    'ft.com': {'credibility': 'High', 'bias': 'Center-Right', 'type': 'Business News'},
+    'cnbc.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Business News'},
+    'marketwatch.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Business News'},
+    
     # Medium credibility sources
     'cnn.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Cable News'},
     'foxnews.com': {'credibility': 'Medium', 'bias': 'Right', 'type': 'Cable News'},
@@ -38,8 +62,23 @@ SOURCE_CREDIBILITY = {
     'slate.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
     'reason.com': {'credibility': 'Medium', 'bias': 'Right', 'type': 'Magazine'},
     
+    # Additional medium sources - ADDED
+    'newsweek.com': {'credibility': 'Medium', 'bias': 'Center', 'type': 'Magazine'},
+    'time.com': {'credibility': 'Medium', 'bias': 'Center-Left', 'type': 'Magazine'},
+    'theatlantic.com': {'credibility': 'Medium', 'bias': 'Center-Left', 'type': 'Magazine'},
+    'newyorker.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Magazine'},
+    'huffpost.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'huffingtonpost.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'salon.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'vice.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'thedailybeast.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'motherjones.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Magazine'},
+    'theintercept.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},
+    'propublica.org': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Nonprofit'},
+    
     # Lower credibility sources
     'buzzfeed.com': {'credibility': 'Low', 'bias': 'Left', 'type': 'Digital Media'},
+    'buzzfeednews.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital Media'},  # Note: BuzzFeed News is more credible than main BuzzFeed
     'breitbart.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Digital Media'},
     'dailywire.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Digital Media'},
     'occupydemocrats.com': {'credibility': 'Low', 'bias': 'Far-Left', 'type': 'Digital Media'},
@@ -53,12 +92,6 @@ SOURCE_CREDIBILITY = {
     'yournewswire.com': {'credibility': 'Very Low', 'bias': 'Mixed', 'type': 'Fake News'},
     'worldnewsdailyreport.com': {'credibility': 'Very Low', 'bias': 'Mixed', 'type': 'Satire/Fake'},
     
-    # Tech news (generally reliable)
-    'techcrunch.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Tech News'},
-    'theverge.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Tech News'},
-    'arstechnica.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Tech News'},
-    'wired.com': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Tech Magazine'},
-    
     # International sources
     'aljazeera.com': {'credibility': 'Medium', 'bias': 'Center-Left', 'type': 'International'},
     'rt.com': {'credibility': 'Low', 'bias': 'Pro-Russia', 'type': 'State Media'},
@@ -66,6 +99,14 @@ SOURCE_CREDIBILITY = {
     'xinhuanet.com': {'credibility': 'Low', 'bias': 'Pro-China', 'type': 'State Media'},
     'dw.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Public Media'},
     'france24.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Public Media'},
+    
+    # Additional international - ADDED
+    'scmp.com': {'credibility': 'Medium', 'bias': 'Center', 'type': 'International'},  # South China Morning Post
+    'japantimes.co.jp': {'credibility': 'High', 'bias': 'Center', 'type': 'International'},
+    'theage.com.au': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'International'},
+    'smh.com.au': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'International'},  # Sydney Morning Herald
+    'globeandmail.com': {'credibility': 'High', 'bias': 'Center', 'type': 'International'},  # Canada
+    'cbc.ca': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Public Media'},  # Canadian Broadcasting Corporation
 }
 
 
@@ -138,7 +179,39 @@ class SourceCredibility:
             'aljazeera.com': 'Al Jazeera',
             'rt.com': 'RT (Russia Today)',
             'dw.com': 'Deutsche Welle',
-            'france24.com': 'France 24'
+            'france24.com': 'France 24',
+            # Added new mappings
+            'nbcnews.com': 'NBC News',
+            'abcnews.go.com': 'ABC News',
+            'cbsnews.com': 'CBS News',
+            'latimes.com': 'Los Angeles Times',
+            'chicagotribune.com': 'Chicago Tribune',
+            'bostonglobe.com': 'The Boston Globe',
+            'seattletimes.com': 'The Seattle Times',
+            'denverpost.com': 'The Denver Post',
+            'miamiherald.com': 'The Miami Herald',
+            'ft.com': 'Financial Times',
+            'cnbc.com': 'CNBC',
+            'marketwatch.com': 'MarketWatch',
+            'newsweek.com': 'Newsweek',
+            'time.com': 'TIME',
+            'theatlantic.com': 'The Atlantic',
+            'newyorker.com': 'The New Yorker',
+            'huffpost.com': 'HuffPost',
+            'huffingtonpost.com': 'HuffPost',
+            'salon.com': 'Salon',
+            'vice.com': 'VICE',
+            'thedailybeast.com': 'The Daily Beast',
+            'motherjones.com': 'Mother Jones',
+            'theintercept.com': 'The Intercept',
+            'propublica.org': 'ProPublica',
+            'buzzfeednews.com': 'BuzzFeed News',
+            'scmp.com': 'South China Morning Post',
+            'japantimes.co.jp': 'The Japan Times',
+            'theage.com.au': 'The Age',
+            'smh.com.au': 'Sydney Morning Herald',
+            'globeandmail.com': 'The Globe and Mail',
+            'cbc.ca': 'CBC News'
         }
         
         if domain in name_mapping:
