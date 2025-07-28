@@ -1,4 +1,4 @@
-// Fixed UI Controller with Refresh Feature and PDF Export
+// Fixed UI Controller with PDF Export, Auto-Refresh, and Better Error Handling
 (function() {
     class UIController {
         constructor() {
@@ -63,6 +63,11 @@
                 return;
             }
             
+            // Store the current URL/text for refresh
+            if (data.article?.url) {
+                this.currentUrl = data.article.url;
+            }
+            
             this.displayResults(data);
         }
 
@@ -88,17 +93,30 @@
             
             this.analysisData = data;
             
+            // Check if this is cached data and auto-refresh
+            if (data.cached && !data.force_fresh) {
+                console.log('Cached result detected, auto-refreshing...');
+                
+                // Show initial results with refresh notice
+                this.displayResultsContent(data, resultsDiv, analyzerCard);
+                
+                // Show auto-refresh notice
+                this.showAutoRefreshNotice(resultsDiv);
+                
+                // Auto-refresh after a short delay
+                setTimeout(() => {
+                    this.performAutoRefresh();
+                }, 1500);
+            } else {
+                // Display results normally
+                this.displayResultsContent(data, resultsDiv, analyzerCard);
+            }
+        }
+
+        displayResultsContent(data, resultsDiv, analyzerCard) {
             // Create overall assessment
             resultsDiv.innerHTML = this.createOverallAssessment(data);
             resultsDiv.classList.remove('hidden');
-            
-            // Add refresh button after overall assessment
-            this.addRefreshButton(resultsDiv);
-            
-            // Show cache notice if applicable
-            if (data.cached && !data.force_fresh) {
-                this.showCacheNotice(resultsDiv);
-            }
             
             // Create header
             const header = document.createElement('h2');
@@ -165,6 +183,91 @@
             }, 100);
         }
 
+        showAutoRefreshNotice(container) {
+            const notice = document.createElement('div');
+            notice.id = 'auto-refresh-notice';
+            notice.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 8px;
+                padding: 16px 20px;
+                margin: 20px auto;
+                max-width: 600px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 0.875rem;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                animation: pulse 2s infinite;
+            `;
+            
+            notice.innerHTML = `
+                <div class="refresh-spinner" style="animation: spin 1s linear infinite;">🔄</div>
+                <span>Getting fresh analysis automatically...</span>
+            `;
+            
+            container.appendChild(notice);
+        }
+
+        async performAutoRefresh() {
+            // Prepare the request data
+            const requestData = {};
+            
+            if (this.currentUrl) {
+                requestData.url = this.currentUrl;
+            } else if (this.currentText) {
+                requestData.text = this.currentText;
+            } else if (this.analysisData?.article?.url) {
+                requestData.url = this.analysisData.article.url;
+            } else {
+                console.error('No content to refresh');
+                return;
+            }
+            
+            // Add force_fresh flag
+            requestData.force_fresh = true;
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Refresh failed');
+                }
+                
+                const result = await response.json();
+                console.log('Auto-refresh complete:', result);
+                
+                // Remove the notice
+                const notice = document.getElementById('auto-refresh-notice');
+                if (notice) {
+                    notice.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => notice.remove(), 300);
+                }
+                
+                // Update stored data
+                this.analysisData = result;
+                
+                // Display refreshed results
+                this.displayResults(result);
+                
+                // Show success
+                this.showSuccessToast('Analysis updated with fresh data!');
+                
+            } catch (error) {
+                console.error('Auto-refresh error:', error);
+                // Remove notice and show manual refresh button
+                const notice = document.getElementById('auto-refresh-notice');
+                if (notice) notice.remove();
+                this.addRefreshButton(document.getElementById('results'));
+            }
+        }
+
         addPDFExportButton(container, data) {
             // Only show for pro users
             if (!data.is_pro) {
@@ -224,6 +327,11 @@
 
         async exportPDF(analysisData) {
             const btn = document.getElementById('exportPDFBtn');
+            if (!btn) {
+                console.error('Export button not found');
+                return;
+            }
+            
             const originalContent = btn.innerHTML;
             
             // Show loading state
@@ -234,18 +342,29 @@
             btn.disabled = true;
             
             try {
+                // Debug log
+                console.log('Sending PDF export request with data:', {
+                    has_analysis_data: !!analysisData,
+                    has_article: !!analysisData.article,
+                    data_keys: Object.keys(analysisData)
+                });
+                
                 const response = await fetch('/api/export/pdf', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        analysis_data: analysisData,
-                        analysis_id: analysisData.analysis_id
+                        analysis_data: analysisData
+                        // Remove analysis_id if it's causing issues
                     })
                 });
                 
-                if (response.ok) {
+                // Check response type
+                const contentType = response.headers.get('content-type');
+                console.log('Response content-type:', contentType);
+                
+                if (response.ok && contentType && contentType.includes('application/pdf')) {
                     const blob = await response.blob();
                     
                     // Create download link
@@ -267,24 +386,69 @@
                     window.URL.revokeObjectURL(url);
                     
                     // Show success message
-                    if (window.UIUtils?.showToast) {
-                        window.UIUtils.showToast('PDF exported successfully!', 'success');
-                    }
+                    this.showSuccessToast('PDF exported successfully!');
                 } else {
-                    throw new Error('Export failed');
+                    // Try to get error message
+                    let errorMsg = 'PDF export failed';
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {
+                        // If response is not JSON, use status text
+                        errorMsg = `Export failed: ${response.statusText}`;
+                    }
+                    throw new Error(errorMsg);
                 }
             } catch (error) {
                 console.error('Export error:', error);
-                if (window.UIUtils?.showToast) {
-                    window.UIUtils.showToast('Failed to export PDF. Please try again.', 'error');
-                } else {
-                    alert('Failed to export PDF. Please try again.');
-                }
+                this.showErrorToast(`Failed to export PDF: ${error.message}`);
             } finally {
                 // Restore button
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
             }
+        }
+
+        // Helper methods for toast notifications
+        showSuccessToast(message) {
+            if (window.UIUtils?.showToast) {
+                window.UIUtils.showToast(message, 'success');
+            } else {
+                // Fallback: create simple toast
+                this.showSimpleToast(message, '#10b981');
+            }
+        }
+
+        showErrorToast(message) {
+            if (window.UIUtils?.showToast) {
+                window.UIUtils.showToast(message, 'error');
+            } else {
+                // Fallback: create simple toast
+                this.showSimpleToast(message, '#ef4444');
+            }
+        }
+
+        showSimpleToast(message, color) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${color};
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                animation: slideIn 0.3s ease-out;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         createOverallAssessment(data) {
@@ -416,17 +580,11 @@
                 this.displayResults(result);
                 
                 // Show success message
-                if (window.UIUtils?.showToast) {
-                    window.UIUtils.showToast('Analysis refreshed successfully!', 'success');
-                }
+                this.showSuccessToast('Analysis refreshed successfully!');
                 
             } catch (error) {
                 console.error('Refresh error:', error);
-                if (window.UIUtils?.showToast) {
-                    window.UIUtils.showToast('Failed to refresh analysis. Please try again.', 'error');
-                } else {
-                    alert('Failed to refresh analysis: ' + error.message);
-                }
+                this.showErrorToast('Failed to refresh analysis. Please try again.');
                 
                 // Restore button
                 refreshBtn.innerHTML = originalContent;
@@ -434,31 +592,6 @@
             } finally {
                 this.isAnalyzing = false;
             }
-        }
-
-        showCacheNotice(container) {
-            const notice = document.createElement('div');
-            notice.className = 'cache-notice';
-            notice.style.cssText = `
-                background: #fef3c7;
-                border: 1px solid #fbbf24;
-                border-radius: 8px;
-                padding: 12px 16px;
-                margin: 20px auto;
-                max-width: 600px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                font-size: 0.875rem;
-                color: #92400e;
-            `;
-            
-            notice.innerHTML = `
-                <span style="font-size: 1.25rem;">⚡</span>
-                <span>This is a cached analysis. Click "Refresh Analysis" above for the latest results.</span>
-            `;
-            
-            container.appendChild(notice);
         }
 
         showError(message) {
@@ -519,6 +652,575 @@
             
             card.querySelector('.card-details').innerHTML = `
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Transparency Assessment</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getTransparencyContext(trans, data)}
+                    </p>
+                </div>
+                
+                ${this.getTransparencyAnalysis(trans, data)}
+                
+                ${trans.transparency_issues && trans.transparency_issues.length > 0 ? `
+                    <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 8px 0; color: #991b1b;">Transparency Issues:</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">
+                            ${trans.transparency_issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px;">
+                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">What Makes Articles Transparent</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                        <li>Clear author attribution with credentials</li>
+                        <li>Named sources that can be verified</li>
+                        <li>Links to primary documents and data</li>
+                        <li>Disclosure of conflicts of interest</li>
+                        <li>Corrections and updates clearly marked</li>
+                    </ul>
+                </div>
+                
+                ${this.getSourceQualityAssessment(trans)}
+            `;
+            
+            return card;
+        }
+
+        // Helper methods
+        getTrustScoreColor(score) {
+            if (score >= 80) return '#10b981';
+            if (score >= 60) return '#3b82f6';
+            if (score >= 40) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        getBiasColor(score) {
+            if (score >= 70) return '#ef4444';
+            if (score >= 40) return '#f59e0b';
+            return '#10b981';
+        }
+
+        getClickbaitColor(score) {
+            if (score >= 70) return '#ef4444';
+            if (score >= 40) return '#f59e0b';
+            return '#10b981';
+        }
+
+        getClickbaitLabel(score) {
+            if (score >= 70) return 'High Clickbait';
+            if (score >= 40) return 'Moderate Clickbait';
+            return 'Low Clickbait';
+        }
+
+        getManipulationColor(score) {
+            if (score >= 70) return '#ef4444';
+            if (score >= 40) return '#f59e0b';
+            return '#10b981';
+        }
+
+        getManipulationLabel(score) {
+            if (score >= 70) return 'High Manipulation';
+            if (score >= 40) return 'Moderate Manipulation';
+            return 'Low Manipulation';
+        }
+
+        getSourceIcon(rating) {
+            const icons = {
+                'High': '✓',
+                'Medium': '◐',
+                'Low': '⚠️',
+                'Very Low': '✗'
+            };
+            return icons[rating] || '?';
+        }
+
+        getCredibilityColor(score) {
+            if (score >= 80) return '#10b981';
+            if (score >= 60) return '#3b82f6';
+            if (score >= 40) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        getVerdict(score) {
+            if (score >= 80) return 'Highly Trustworthy';
+            if (score >= 60) return 'Generally Reliable';
+            if (score >= 40) return 'Mixed Reliability';
+            if (score >= 20) return 'Low Credibility';
+            return 'Very Low Credibility';
+        }
+
+        calculateFactAccuracy(factChecks) {
+            if (!factChecks || factChecks.length === 0) return 0;
+            const verified = factChecks.filter(f => f.verdict === 'true').length;
+            return Math.round((verified / factChecks.length) * 100);
+        }
+
+        formatComponentName(key) {
+            return key.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        formatDimension(dimension) {
+            return dimension.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        getFactCheckBreakdown(factChecks) {
+            return {
+                verified: factChecks.filter(f => f.verdict === 'true').length,
+                false: factChecks.filter(f => f.verdict === 'false').length,
+                unverified: factChecks.filter(f => f.verdict === 'unverified').length,
+                mixed: factChecks.filter(f => f.verdict === 'mixed').length
+            };
+        }
+
+        getFactCheckColor(verdict) {
+            const colors = {
+                'true': '#10b981',
+                'false': '#ef4444',
+                'mixed': '#f59e0b',
+                'unverified': '#6b7280'
+            };
+            return colors[verdict] || '#6b7280';
+        }
+
+        // Context generation methods
+        getTrustScoreContext(score) {
+            if (score >= 80) {
+                return 'This article meets the highest standards of journalistic integrity. The facts are well-supported, sources are credible, and the author is transparent about their identity and potential biases.';
+            } else if (score >= 60) {
+                return 'This article is generally reliable with good factual accuracy and reasonable transparency. While there may be minor concerns, the overall quality suggests it can be trusted for most purposes.';
+            } else if (score >= 40) {
+                return 'This article has mixed reliability. While some information may be accurate, there are significant concerns about bias, sourcing, or transparency that require careful reading.';
+            } else {
+                return 'This article has serious credibility issues. Multiple red flags suggest the information should be verified through other sources before accepting any claims as fact.';
+            }
+        }
+
+        getTrustScoreAdvice(score) {
+            if (score >= 80) {
+                return 'You can generally trust this article, but always remain critical. Even high-quality journalism can contain errors or unconscious bias.';
+            } else if (score >= 60) {
+                return 'Read with moderate caution. Cross-check important claims with other reputable sources, especially for decision-making.';
+            } else if (score >= 40) {
+                return 'Approach skeptically. Verify all key facts through independent sources and be aware of potential agenda or bias.';
+            } else {
+                return 'Treat as unreliable. Any information should be independently verified before use. Consider finding alternative sources.';
+            }
+        }
+
+        getBiasContext(level) {
+            if (level < 20) {
+                return 'Minimal bias detected. The language is largely neutral and multiple perspectives appear to be represented fairly.';
+            } else if (level < 40) {
+                return 'This article shows moderate bias that colors the presentation without completely distorting facts. Understanding these patterns helps you read more objectively.';
+            } else {
+                return 'Significant bias detected that substantially affects how information is presented. This doesn\'t mean the facts are wrong, but the interpretation is heavily slanted.';
+            }
+        }
+
+        getObjectiveReadingStrategies(biasData) {
+            const strategies = [];
+            const level = biasData.overall_bias || 0;
+            
+            if (level > 60) {
+                strategies.push('This article has extreme bias - actively seek opposing viewpoints');
+            } else if (level > 30) {
+                strategies.push('Moderate bias detected - mentally adjust for the slant');
+            }
+            
+            strategies.push('Separate factual claims from opinion and interpretation');
+            strategies.push('Check if alternative explanations are considered');
+            strategies.push('Note what perspectives are missing from the story');
+            
+            return strategies;
+        }
+
+        getFactCheckSummary(breakdown, factChecks) {
+            const total = factChecks.length;
+            if (total === 0) {
+                return 'No specific factual claims were verified in this article. This could mean the article is primarily opinion-based, or that claims are too vague to fact-check.';
+            }
+            
+            const verifiedPct = Math.round((breakdown.verified / total) * 100);
+            if (verifiedPct === 100) {
+                return `All ${total} factual claims checked were verified as accurate. This is exceptional and indicates strong journalistic standards.`;
+            } else if (verifiedPct >= 75) {
+                return `${breakdown.verified} of ${total} claims (${verifiedPct}%) were verified as accurate. The few unverified claims don't significantly impact credibility.`;
+            } else if (verifiedPct >= 50) {
+                return `Only ${breakdown.verified} of ${total} claims (${verifiedPct}%) could be verified as true. Readers should be cautious about accepting unchecked claims.`;
+            } else {
+                return `Serious factual problems: only ${breakdown.verified} of ${total} claims (${verifiedPct}%) are verifiably true. This suggests poor research or intentional deception.`;
+            }
+        }
+
+        getAuthorContext(author) {
+            if (!author.found) {
+                return 'We could not verify this author\'s credentials or track record. This is a significant red flag - legitimate journalists typically have verifiable professional histories.';
+            }
+            
+            const credScore = author.credibility_score || 0;
+            if (credScore >= 80) {
+                return `${author.name} is a highly credible journalist with an excellent track record. Their work consistently demonstrates accuracy, fairness, and professional standards.`;
+            } else if (credScore >= 60) {
+                return `${author.name} has a generally good reputation with mostly reliable reporting. While not perfect, their work typically meets professional standards.`;
+            } else if (credScore >= 40) {
+                return `${author.name} has a mixed track record. Some concerns about accuracy or bias in past work suggest reading their articles with appropriate skepticism.`;
+            } else {
+                return `Significant concerns exist about ${author.name}'s credibility based on past work. Their articles should be carefully fact-checked against other sources.`;
+            }
+        }
+
+        renderInfoCoverageGrid(author) {
+            const fields = {
+                'Biography': author.bio && author.bio !== 'No detailed information available',
+                'Photo': !!author.image_url,
+                'Education': !!author.education,
+                'Experience': !!(author.professional_info?.years_experience),
+                'Social Media': !!(author.online_presence && Object.values(author.online_presence).some(v => v)),
+                'Recent Work': !!(author.recent_articles?.length > 0),
+                'Awards': !!(author.awards?.length > 0),
+                'Career History': !!(author.previous_positions?.length > 0),
+                'Expertise': !!(author.professional_info?.expertise_areas?.length > 0),
+                'Verification': !!(author.verification_status?.verified)
+            };
+            
+            return Object.entries(fields).map(([field, hasData]) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${hasData ? '#f0fff4' : 'white'}; border-radius: 6px; border: 1px solid ${hasData ? '#9ae6b4' : '#e2e8f0'};">
+                    <span style="font-size: 0.875rem; color: #4a5568;">${field}</span>
+                    <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
+                </div>
+            `).join('');
+        }
+
+        getClickbaitContext(score, tactics) {
+            if (score < 30) {
+                return 'This headline accurately represents the article content without sensationalism. The title is informative and honest about what readers will find.';
+            } else if (score < 60) {
+                return 'Some clickbait elements detected, but the article generally delivers on its promises. The headline may be somewhat exaggerated but isn\'t completely misleading.';
+            } else {
+                return 'Heavy clickbait tactics are used to manipulate readers into clicking. The headline likely overpromises or misrepresents the actual content significantly.';
+            }
+        }
+
+        getSourceContext(rating, source) {
+            const contexts = {
+                'High': 'This is a highly reputable source with strong editorial standards, fact-checking procedures, and a track record of accuracy. Errors are rare and quickly corrected.',
+                'Medium': 'This source generally provides reliable information but may have occasional lapses in accuracy or show some bias. Read with normal critical thinking.',
+                'Low': 'This source has significant credibility issues including frequent errors, strong bias, or poor editorial standards. Verify all information independently.',
+                'Very Low': 'This source is known for spreading misinformation, extreme bias, or propaganda. Information from this source should not be trusted without extensive verification.',
+                'Unknown': 'We don\'t have enough information about this source to assess its credibility. New or obscure sources require extra caution.'
+            };
+            
+            return contexts[rating] || contexts['Unknown'];
+        }
+
+        getManipulationContext(score, tactics) {
+            if (score < 30) {
+                return 'This article uses straightforward presentation with minimal emotional manipulation. The author relies on facts and logic rather than psychological tactics.';
+            } else if (score < 60) {
+                return 'Moderate use of persuasive techniques detected. While not necessarily deceptive, the article uses emotional appeals and framing to influence your opinion.';
+            } else {
+                return 'Heavy manipulation tactics are employed to shape your thinking. The article prioritizes emotional impact over factual accuracy, using multiple techniques to bypass critical thinking.';
+            }
+        }
+
+        getManipulationDefenses(score) {
+            const defenses = [
+                'Pause before sharing - emotional reactions often fade quickly',
+                'Ask yourself: What specific facts support the claims?',
+                'Notice your emotional response - are you being triggered?',
+                'Look for what\'s missing from the story'
+            ];
+            
+            if (score >= 60) {
+                defenses.unshift('⚠️ High manipulation - read extremely critically');
+            }
+            
+            return defenses;
+        }
+
+        getTransparencyContext(trans, data) {
+            const score = trans.transparency_score || 0;
+            const sourceCount = trans.source_count || 0;
+            const namedRatio = trans.named_source_ratio || 0;
+            
+            if (score >= 70) {
+                return `Excellent transparency with ${sourceCount} sources, ${namedRatio}% of them named. This allows readers to verify claims independently.`;
+            } else if (score >= 40) {
+                return `Moderate transparency with ${sourceCount} sources but heavy anonymous sourcing (only ${namedRatio}% named) makes verification difficult.`;
+            } else {
+                return `Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named, readers cannot verify most claims.`;
+            }
+        }
+
+        getTransparencyAnalysis(trans, data) {
+            let analysis = '<div style="margin-bottom: 16px;">';
+            
+            // Check various transparency indicators
+            const hasAuthor = data.article?.author && data.article.author !== 'Unknown Author';
+            const hasDate = !!data.article?.publish_date;
+            const hasSources = trans.source_count > 0;
+            const hasNamedSources = trans.named_source_ratio > 50;
+            const hasQuotes = trans.has_quotes;
+            const hasData = trans.has_data_transparency;
+            
+            analysis += '<h4 style="margin: 0 0 12px 0; color: #0f172a;">Transparency Checklist:</h4>';
+            analysis += '<div style="display: grid; gap: 8px;">';
+            
+            const checks = [
+                { label: 'Author clearly identified', status: hasAuthor },
+                { label: 'Publication date provided', status: hasDate },
+                { label: 'Sources cited', status: hasSources },
+                { label: 'Majority of sources named', status: hasNamedSources },
+                { label: 'Direct quotes included', status: hasQuotes },
+                { label: 'Data sources transparent', status: hasData }
+            ];
+            
+            checks.forEach(check => {
+                analysis += `
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: ${check.status ? '#f0fdf4' : '#fef2f2'}; border-radius: 4px;">
+                        <span style="color: ${check.status ? '#166534' : '#991b1b'}; font-weight: 600;">
+                            ${check.status ? '✓' : '✗'}
+                        </span>
+                        <span style="color: ${check.status ? '#14532d' : '#7f1d1d'}; font-size: 0.875rem;">
+                            ${check.label}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            analysis += '</div></div>';
+            
+            // Specific observations
+            if (trans.transparency_breakdown) {
+                analysis += '<div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">';
+                analysis += '<h5 style="margin: 0 0 8px 0; color: #334155; font-size: 0.875rem;">Detailed Findings:</h5>';
+                analysis += '<p style="margin: 0; color: #475569; font-size: 0.8125rem; line-height: 1.5;">';
+                analysis += trans.transparency_breakdown;
+                analysis += '</p>';
+                analysis += '</div>';
+            }
+            
+            return analysis;
+        }
+
+        getSourceQualityAssessment(trans) {
+            if (!trans.source_types || Object.keys(trans.source_types).length === 0) {
+                return '';
+            }
+            
+            let assessment = '<div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">';
+            assessment += '<h5 style="margin: 0 0 12px 0; color: #334155; font-size: 0.875rem;">Source Quality Breakdown:</h5>';
+            assessment += '<div style="display: grid; gap: 8px;">';
+            
+            Object.entries(trans.source_types).forEach(([type, count]) => {
+                if (count > 0) {
+                    assessment += `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: white; border-radius: 4px;">
+                            <span style="color: #475569; font-size: 0.875rem;">${this.formatSourceType(type)}</span>
+                            <span style="color: #0f172a; font-weight: 600;">${count}</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            assessment += '</div></div>';
+            
+            return assessment;
+        }
+
+        formatSourceType(type) {
+            const typeMap = {
+                'official': 'Official Sources',
+                'expert': 'Expert Sources',
+                'document': 'Documents/Data',
+                'anonymous': 'Anonymous Sources',
+                'witness': 'Eyewitnesses',
+                'other': 'Other Sources'
+            };
+            return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
+        }
+    }
+
+    // Override console.warn to help trace the source of the warning
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('Author section not found')) {
+            console.trace('Warning source traced:');
+        }
+        originalWarn.apply(console, args);
+    };
+
+    // Create and expose global instance
+    window.UI = new UIController();
+    console.log('UI Controller initialized with PDF export and auto-refresh');
+
+    // Add animation keyframes
+    if (!document.querySelector('style[data-component="ui-animations"]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-component', 'ui-animations');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.9;
+                    transform: scale(0.98);
+                }
+            }
+            
+            @keyframes fadeOut {
+                to {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+            }
+            
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Add required CSS (keeping existing styles)
+    if (!document.querySelector('style[data-component="ui-controller-fixed"]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-component', 'ui-controller-fixed');
+        style.textContent = `
+            /* Card styles */
+            .analysis-card-standalone {
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                padding: 20px;
+                border: 2px solid transparent;
+            }
+            
+            .analysis-card-standalone:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                border-color: #e0e7ff;
+            }
+            
+            .analysis-card-standalone.expanded {
+                border-color: #6366f1;
+                box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+            }
+            
+            .card-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+                position: relative;
+            }
+            
+            .card-icon {
+                font-size: 1.5rem;
+                line-height: 1;
+            }
+            
+            .card-title {
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: #0f172a;
+                margin: 0;
+                flex: 1;
+            }
+            
+            .expand-icon {
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #94a3b8;
+                transition: all 0.3s ease;
+                text-decoration: none;
+            }
+            
+            .expand-icon:hover {
+                color: #6366f1;
+            }
+            
+            .analysis-card-standalone.expanded .expand-icon svg {
+                transform: rotate(180deg);
+            }
+            
+            .card-summary {
+                margin-bottom: 16px;
+            }
+            
+            .card-details {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+                opacity: 0;
+            }
+            
+            .analysis-card-standalone.expanded .card-details {
+                max-height: 2000px;
+                opacity: 1;
+                transition: max-height 0.5s ease, opacity 0.3s ease 0.1s;
+            }
+            
+            .fade-in {
+                animation: fadeIn 0.5s ease forwards;
+            }
+            
+            /* Grid responsive */
+            @media (max-width: 768px) {
+                .cards-grid-wrapper {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+})();-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTrustScoreContext(trustScore)}
@@ -1068,556 +1770,4 @@
             `;
             
             card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Transparency Assessment</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTransparencyContext(trans, data)}
-                    </p>
-                </div>
-                
-                ${this.getTransparencyAnalysis(trans, data)}
-                
-                ${trans.transparency_issues && trans.transparency_issues.length > 0 ? `
-                    <div style="background: #fef2f2; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0; color: #991b1b;">Transparency Issues:</h4>
-                        <ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">
-                            ${trans.transparency_issues.map(issue => `<li>${issue}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px;">
-                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">What Makes Articles Transparent</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                        <li>Clear author attribution with credentials</li>
-                        <li>Named sources that can be verified</li>
-                        <li>Links to primary documents and data</li>
-                        <li>Disclosure of conflicts of interest</li>
-                        <li>Corrections and updates clearly marked</li>
-                    </ul>
-                </div>
-                
-                ${this.getSourceQualityAssessment(trans)}
-            `;
-            
-            return card;
-        }
-
-        // Helper methods
-        getTrustScoreColor(score) {
-            if (score >= 80) return '#10b981';
-            if (score >= 60) return '#3b82f6';
-            if (score >= 40) return '#f59e0b';
-            return '#ef4444';
-        }
-
-        getBiasColor(score) {
-            if (score >= 70) return '#ef4444';
-            if (score >= 40) return '#f59e0b';
-            return '#10b981';
-        }
-
-        getClickbaitColor(score) {
-            if (score >= 70) return '#ef4444';
-            if (score >= 40) return '#f59e0b';
-            return '#10b981';
-        }
-
-        getClickbaitLabel(score) {
-            if (score >= 70) return 'High Clickbait';
-            if (score >= 40) return 'Moderate Clickbait';
-            return 'Low Clickbait';
-        }
-
-        getManipulationColor(score) {
-            if (score >= 70) return '#ef4444';
-            if (score >= 40) return '#f59e0b';
-            return '#10b981';
-        }
-
-        getManipulationLabel(score) {
-            if (score >= 70) return 'High Manipulation';
-            if (score >= 40) return 'Moderate Manipulation';
-            return 'Low Manipulation';
-        }
-
-        getSourceIcon(rating) {
-            const icons = {
-                'High': '✓',
-                'Medium': '◐',
-                'Low': '⚠️',
-                'Very Low': '✗'
-            };
-            return icons[rating] || '?';
-        }
-
-        getCredibilityColor(score) {
-            if (score >= 80) return '#10b981';
-            if (score >= 60) return '#3b82f6';
-            if (score >= 40) return '#f59e0b';
-            return '#ef4444';
-        }
-
-        getVerdict(score) {
-            if (score >= 80) return 'Highly Trustworthy';
-            if (score >= 60) return 'Generally Reliable';
-            if (score >= 40) return 'Mixed Reliability';
-            if (score >= 20) return 'Low Credibility';
-            return 'Very Low Credibility';
-        }
-
-        calculateFactAccuracy(factChecks) {
-            if (!factChecks || factChecks.length === 0) return 0;
-            const verified = factChecks.filter(f => f.verdict === 'true').length;
-            return Math.round((verified / factChecks.length) * 100);
-        }
-
-        formatComponentName(key) {
-            return key.split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-            ).join(' ');
-        }
-
-        formatDimension(dimension) {
-            return dimension.split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-            ).join(' ');
-        }
-
-        getFactCheckBreakdown(factChecks) {
-            return {
-                verified: factChecks.filter(f => f.verdict === 'true').length,
-                false: factChecks.filter(f => f.verdict === 'false').length,
-                unverified: factChecks.filter(f => f.verdict === 'unverified').length,
-                mixed: factChecks.filter(f => f.verdict === 'mixed').length
-            };
-        }
-
-        getFactCheckColor(verdict) {
-            const colors = {
-                'true': '#10b981',
-                'false': '#ef4444',
-                'mixed': '#f59e0b',
-                'unverified': '#6b7280'
-            };
-            return colors[verdict] || '#6b7280';
-        }
-
-        // Context generation methods
-        getTrustScoreContext(score) {
-            if (score >= 80) {
-                return 'This article meets the highest standards of journalistic integrity. The facts are well-supported, sources are credible, and the author is transparent about their identity and potential biases.';
-            } else if (score >= 60) {
-                return 'This article is generally reliable with good factual accuracy and reasonable transparency. While there may be minor concerns, the overall quality suggests it can be trusted for most purposes.';
-            } else if (score >= 40) {
-                return 'This article has mixed reliability. While some information may be accurate, there are significant concerns about bias, sourcing, or transparency that require careful reading.';
-            } else {
-                return 'This article has serious credibility issues. Multiple red flags suggest the information should be verified through other sources before accepting any claims as fact.';
-            }
-        }
-
-        getTrustScoreAdvice(score) {
-            if (score >= 80) {
-                return 'You can generally trust this article, but always remain critical. Even high-quality journalism can contain errors or unconscious bias.';
-            } else if (score >= 60) {
-                return 'Read with moderate caution. Cross-check important claims with other reputable sources, especially for decision-making.';
-            } else if (score >= 40) {
-                return 'Approach skeptically. Verify all key facts through independent sources and be aware of potential agenda or bias.';
-            } else {
-                return 'Treat as unreliable. Any information should be independently verified before use. Consider finding alternative sources.';
-            }
-        }
-
-        getBiasContext(level) {
-            if (level < 20) {
-                return 'Minimal bias detected. The language is largely neutral and multiple perspectives appear to be represented fairly.';
-            } else if (level < 40) {
-                return 'This article shows moderate bias that colors the presentation without completely distorting facts. Understanding these patterns helps you read more objectively.';
-            } else {
-                return 'Significant bias detected that substantially affects how information is presented. This doesn\'t mean the facts are wrong, but the interpretation is heavily slanted.';
-            }
-        }
-
-        getObjectiveReadingStrategies(biasData) {
-            const strategies = [];
-            const level = biasData.overall_bias || 0;
-            
-            if (level > 60) {
-                strategies.push('This article has extreme bias - actively seek opposing viewpoints');
-            } else if (level > 30) {
-                strategies.push('Moderate bias detected - mentally adjust for the slant');
-            }
-            
-            strategies.push('Separate factual claims from opinion and interpretation');
-            strategies.push('Check if alternative explanations are considered');
-            strategies.push('Note what perspectives are missing from the story');
-            
-            return strategies;
-        }
-
-        getFactCheckSummary(breakdown, factChecks) {
-            const total = factChecks.length;
-            if (total === 0) {
-                return 'No specific factual claims were verified in this article. This could mean the article is primarily opinion-based, or that claims are too vague to fact-check.';
-            }
-            
-            const verifiedPct = Math.round((breakdown.verified / total) * 100);
-            if (verifiedPct === 100) {
-                return `All ${total} factual claims checked were verified as accurate. This is exceptional and indicates strong journalistic standards.`;
-            } else if (verifiedPct >= 75) {
-                return `${breakdown.verified} of ${total} claims (${verifiedPct}%) were verified as accurate. The few unverified claims don't significantly impact credibility.`;
-            } else if (verifiedPct >= 50) {
-                return `Only ${breakdown.verified} of ${total} claims (${verifiedPct}%) could be verified as true. Readers should be cautious about accepting unchecked claims.`;
-            } else {
-                return `Serious factual problems: only ${breakdown.verified} of ${total} claims (${verifiedPct}%) are verifiably true. This suggests poor research or intentional deception.`;
-            }
-        }
-
-        getAuthorContext(author) {
-            if (!author.found) {
-                return 'We could not verify this author\'s credentials or track record. This is a significant red flag - legitimate journalists typically have verifiable professional histories.';
-            }
-            
-            const credScore = author.credibility_score || 0;
-            if (credScore >= 80) {
-                return `${author.name} is a highly credible journalist with an excellent track record. Their work consistently demonstrates accuracy, fairness, and professional standards.`;
-            } else if (credScore >= 60) {
-                return `${author.name} has a generally good reputation with mostly reliable reporting. While not perfect, their work typically meets professional standards.`;
-            } else if (credScore >= 40) {
-                return `${author.name} has a mixed track record. Some concerns about accuracy or bias in past work suggest reading their articles with appropriate skepticism.`;
-            } else {
-                return `Significant concerns exist about ${author.name}'s credibility based on past work. Their articles should be carefully fact-checked against other sources.`;
-            }
-        }
-
-        renderInfoCoverageGrid(author) {
-            const fields = {
-                'Biography': author.bio && author.bio !== 'No detailed information available',
-                'Photo': !!author.image_url,
-                'Education': !!author.education,
-                'Experience': !!(author.professional_info?.years_experience),
-                'Social Media': !!(author.online_presence && Object.values(author.online_presence).some(v => v)),
-                'Recent Work': !!(author.recent_articles?.length > 0),
-                'Awards': !!(author.awards?.length > 0),
-                'Career History': !!(author.previous_positions?.length > 0),
-                'Expertise': !!(author.professional_info?.expertise_areas?.length > 0),
-                'Verification': !!(author.verification_status?.verified)
-            };
-            
-            return Object.entries(fields).map(([field, hasData]) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${hasData ? '#f0fff4' : 'white'}; border-radius: 6px; border: 1px solid ${hasData ? '#9ae6b4' : '#e2e8f0'};">
-                    <span style="font-size: 0.875rem; color: #4a5568;">${field}</span>
-                    <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
-                </div>
-            `).join('');
-        }
-
-        getClickbaitContext(score, tactics) {
-            if (score < 30) {
-                return 'This headline accurately represents the article content without sensationalism. The title is informative and honest about what readers will find.';
-            } else if (score < 60) {
-                return 'Some clickbait elements detected, but the article generally delivers on its promises. The headline may be somewhat exaggerated but isn\'t completely misleading.';
-            } else {
-                return 'Heavy clickbait tactics are used to manipulate readers into clicking. The headline likely overpromises or misrepresents the actual content significantly.';
-            }
-        }
-
-        getSourceContext(rating, source) {
-            const contexts = {
-                'High': 'This is a highly reputable source with strong editorial standards, fact-checking procedures, and a track record of accuracy. Errors are rare and quickly corrected.',
-                'Medium': 'This source generally provides reliable information but may have occasional lapses in accuracy or show some bias. Read with normal critical thinking.',
-                'Low': 'This source has significant credibility issues including frequent errors, strong bias, or poor editorial standards. Verify all information independently.',
-                'Very Low': 'This source is known for spreading misinformation, extreme bias, or propaganda. Information from this source should not be trusted without extensive verification.',
-                'Unknown': 'We don\'t have enough information about this source to assess its credibility. New or obscure sources require extra caution.'
-            };
-            
-            return contexts[rating] || contexts['Unknown'];
-        }
-
-        getManipulationContext(score, tactics) {
-            if (score < 30) {
-                return 'This article uses straightforward presentation with minimal emotional manipulation. The author relies on facts and logic rather than psychological tactics.';
-            } else if (score < 60) {
-                return 'Moderate use of persuasive techniques detected. While not necessarily deceptive, the article uses emotional appeals and framing to influence your opinion.';
-            } else {
-                return 'Heavy manipulation tactics are employed to shape your thinking. The article prioritizes emotional impact over factual accuracy, using multiple techniques to bypass critical thinking.';
-            }
-        }
-
-        getManipulationDefenses(score) {
-            const defenses = [
-                'Pause before sharing - emotional reactions often fade quickly',
-                'Ask yourself: What specific facts support the claims?',
-                'Notice your emotional response - are you being triggered?',
-                'Look for what\'s missing from the story'
-            ];
-            
-            if (score >= 60) {
-                defenses.unshift('⚠️ High manipulation - read extremely critically');
-            }
-            
-            return defenses;
-        }
-
-        getTransparencyContext(trans, data) {
-            const score = trans.transparency_score || 0;
-            const sourceCount = trans.source_count || 0;
-            const namedRatio = trans.named_source_ratio || 0;
-            
-            if (score >= 70) {
-                return `Excellent transparency with ${sourceCount} sources, ${namedRatio}% of them named. This allows readers to verify claims independently.`;
-            } else if (score >= 40) {
-                return `Moderate transparency with ${sourceCount} sources but heavy anonymous sourcing (only ${namedRatio}% named) makes verification difficult.`;
-            } else {
-                return `Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named, readers cannot verify most claims.`;
-            }
-        }
-
-        getTransparencyAnalysis(trans, data) {
-            let analysis = '<div style="margin-bottom: 16px;">';
-            
-            // Check various transparency indicators
-            const hasAuthor = data.article?.author && data.article.author !== 'Unknown Author';
-            const hasDate = !!data.article?.publish_date;
-            const hasSources = trans.source_count > 0;
-            const hasNamedSources = trans.named_source_ratio > 50;
-            const hasQuotes = trans.has_quotes;
-            const hasData = trans.has_data_transparency;
-            
-            analysis += '<h4 style="margin: 0 0 12px 0; color: #0f172a;">Transparency Checklist:</h4>';
-            analysis += '<div style="display: grid; gap: 8px;">';
-            
-            const checks = [
-                { label: 'Author clearly identified', status: hasAuthor },
-                { label: 'Publication date provided', status: hasDate },
-                { label: 'Sources cited', status: hasSources },
-                { label: 'Majority of sources named', status: hasNamedSources },
-                { label: 'Direct quotes included', status: hasQuotes },
-                { label: 'Data sources transparent', status: hasData }
-            ];
-            
-            checks.forEach(check => {
-                analysis += `
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: ${check.status ? '#f0fdf4' : '#fef2f2'}; border-radius: 4px;">
-                        <span style="color: ${check.status ? '#166534' : '#991b1b'}; font-weight: 600;">
-                            ${check.status ? '✓' : '✗'}
-                        </span>
-                        <span style="color: ${check.status ? '#14532d' : '#7f1d1d'}; font-size: 0.875rem;">
-                            ${check.label}
-                        </span>
-                    </div>
-                `;
-            });
-            
-            analysis += '</div></div>';
-            
-            // Specific observations
-            if (trans.transparency_breakdown) {
-                analysis += '<div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">';
-                analysis += '<h5 style="margin: 0 0 8px 0; color: #334155; font-size: 0.875rem;">Detailed Findings:</h5>';
-                analysis += '<p style="margin: 0; color: #475569; font-size: 0.8125rem; line-height: 1.5;">';
-                analysis += trans.transparency_breakdown;
-                analysis += '</p>';
-                analysis += '</div>';
-            }
-            
-            return analysis;
-        }
-
-        getSourceQualityAssessment(trans) {
-            if (!trans.source_types || Object.keys(trans.source_types).length === 0) {
-                return '';
-            }
-            
-            let assessment = '<div style="margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">';
-            assessment += '<h5 style="margin: 0 0 12px 0; color: #334155; font-size: 0.875rem;">Source Quality Breakdown:</h5>';
-            assessment += '<div style="display: grid; gap: 8px;">';
-            
-            Object.entries(trans.source_types).forEach(([type, count]) => {
-                if (count > 0) {
-                    assessment += `
-                        <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: white; border-radius: 4px;">
-                            <span style="color: #475569; font-size: 0.875rem;">${this.formatSourceType(type)}</span>
-                            <span style="color: #0f172a; font-weight: 600;">${count}</span>
-                        </div>
-                    `;
-                }
-            });
-            
-            assessment += '</div></div>';
-            
-            return assessment;
-        }
-
-        formatSourceType(type) {
-            const typeMap = {
-                'official': 'Official Sources',
-                'expert': 'Expert Sources',
-                'document': 'Documents/Data',
-                'anonymous': 'Anonymous Sources',
-                'witness': 'Eyewitnesses',
-                'other': 'Other Sources'
-            };
-            return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
-        }
-    }
-
-    // Override console.warn to help trace the source of the warning
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('Author section not found')) {
-            console.trace('Warning source traced:');
-        }
-        originalWarn.apply(console, args);
-    };
-
-    // Create and expose global instance
-    window.UI = new UIController();
-    console.log('UI Controller initialized with refresh feature and PDF export');
-
-    // Add animation keyframes for the refresh button
-    if (!document.querySelector('style[data-component="refresh-animations"]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-component', 'refresh-animations');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Add required CSS (keeping existing styles)
-    if (!document.querySelector('style[data-component="ui-controller-fixed"]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-component', 'ui-controller-fixed');
-        style.textContent = `
-            /* Card styles */
-            .analysis-card-standalone {
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-                overflow: hidden;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                padding: 20px;
-                border: 2px solid transparent;
-            }
-            
-            .analysis-card-standalone:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                border-color: #e0e7ff;
-            }
-            
-            .analysis-card-standalone.expanded {
-                border-color: #6366f1;
-                box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
-            }
-            
-            .card-header {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin-bottom: 16px;
-                position: relative;
-            }
-            
-            .card-icon {
-                font-size: 1.5rem;
-                line-height: 1;
-            }
-            
-            .card-title {
-                font-size: 1.125rem;
-                font-weight: 600;
-                color: #0f172a;
-                margin: 0;
-                flex: 1;
-            }
-            
-            .expand-icon {
-                position: absolute;
-                right: 0;
-                top: 50%;
-                transform: translateY(-50%);
-                color: #94a3b8;
-                transition: all 0.3s ease;
-                text-decoration: none;
-            }
-            
-            .expand-icon:hover {
-                color: #6366f1;
-            }
-            
-            .analysis-card-standalone.expanded .expand-icon svg {
-                transform: rotate(180deg);
-            }
-            
-            .card-summary {
-                margin-bottom: 16px;
-            }
-            
-            .card-details {
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s ease;
-                opacity: 0;
-            }
-            
-            .analysis-card-standalone.expanded .card-details {
-                max-height: 2000px;
-                opacity: 1;
-                transition: max-height 0.5s ease, opacity 0.3s ease 0.1s;
-            }
-            
-            /* Fade in animation */
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            .fade-in {
-                animation: fadeIn 0.5s ease forwards;
-            }
-            
-            /* Grid responsive */
-            @media (max-width: 768px) {
-                .cards-grid-wrapper {
-                    grid-template-columns: 1fr !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-})();
+                <div style="background: #eff6ff; border
