@@ -168,8 +168,27 @@ class NewsExtractor:
     
     def _extract_enhanced(self, url):
         """Enhanced extraction with more aggressive content finding"""
-        response = self.session.get(url, timeout=45, allow_redirects=True)
-        response.raise_for_status()
+        # Try multiple request strategies
+        for attempt in range(3):
+            try:
+                headers = self.session.headers.copy()
+                
+                # Add additional headers that might help
+                headers.update({
+                    'Referer': 'https://www.google.com/',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'cross-site'
+                })
+                
+                response = self.session.get(url, headers=headers, timeout=45, allow_redirects=True)
+                response.raise_for_status()
+                break
+            except Exception as e:
+                if attempt == 2:
+                    raise
+                self._rotate_user_agent()
+                time.sleep(1)
         
         soup = BeautifulSoup(response.content, 'html.parser')
         domain = urlparse(url).netloc.replace('www.', '')
@@ -187,7 +206,13 @@ class NewsExtractor:
         # Enhanced text extraction
         text = self._extract_text_enhanced(soup, url)
         
+        # Use both HTML and cleaned text for author extraction
         author = self._extract_author_ultimate(soup, response.text, title, text, domain)
+        
+        # If no author found, try emergency author extraction
+        if not author:
+            author = self._extract_author_emergency(soup, response.text, domain)
+        
         publish_date = self._extract_date(soup)
         
         return {
@@ -721,6 +746,42 @@ class NewsExtractor:
         
         return None
     
+    def _extract_author_emergency(self, soup, html_text, domain):
+        """Emergency author extraction when all else fails"""
+        logger.info("🚨 EMERGENCY AUTHOR EXTRACTION")
+        
+        # Try to find any text that looks like a byline
+        potential_authors = []
+        
+        # Look for any element containing common name patterns
+        all_elements = soup.find_all(text=re.compile(r'[A-Z][a-z]+\s+[A-Z][a-z]+'))
+        
+        for element in all_elements[:50]:  # Check first 50 matches
+            if isinstance(element, NavigableString):
+                parent = element.parent
+                if parent and parent.name not in ['script', 'style', 'title']:
+                    text = str(element).strip()
+                    
+                    # Look for name patterns
+                    name_matches = re.findall(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})', text)
+                    
+                    for match in name_matches:
+                        if self._is_valid_author_name(match):
+                            # Check context
+                            full_text = parent.get_text().strip()
+                            if len(full_text) < 200:  # Likely a byline, not article text
+                                potential_authors.append(match)
+        
+        # Deduplicate and return most common
+        if potential_authors:
+            from collections import Counter
+            author_counts = Counter(potential_authors)
+            most_common = author_counts.most_common(1)[0][0]
+            logger.info(f"  Emergency extraction found: {most_common}")
+            return most_common
+        
+        return None
+    
     def _extract_title_from_text(self, text):
         """Extract title from article text as fallback"""
         if not text:
@@ -765,6 +826,52 @@ class NewsExtractor:
                 r'class="byline__name">([^<]+)',
                 r'"author":\s*{\s*"name":\s*"([^"]+)"',
                 r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
+            ],
+            'politico.com': [
+                r'class="story-meta__authors">([^<]+)</p>',
+                r'class="byline">([^<]+)</span>',
+                r'class="vcard">([^<]+)</span>',
+                r'itemprop="author"[^>]*>([^<]+)<',
+                r'rel="author"[^>]*>([^<]+)<',
+                r'"authors":\s*\[([^\]]+)\]',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"',
+                r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*(?:and|,)',
+                r'<a[^>]+href="[^"]*\/staff\/[^"]*"[^>]*>([^<]+)</a>'
+            ],
+            'washingtonpost.com': [
+                r'class="author-name">([^<]+)',
+                r'rel="author">([^<]+)</a>',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"'
+            ],
+            'theguardian.com': [
+                r'rel="author">([^<]+)</a>',
+                r'class="byline">([^<]+)</span>',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"'
+            ],
+            'foxnews.com': [
+                r'class="author-byline">([^<]+)',
+                r'class="author">([^<]+)',
+                r'"author":\s*"([^"]+)"'
+            ],
+            'npr.org': [
+                r'class="byline__name">([^<]+)',
+                r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"'
+            ],
+            'wsj.com': [
+                r'class="byline">([^<]+)',
+                r'class="author-name">([^<]+)',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"'
+            ],
+            'bloomberg.com': [
+                r'class="author">([^<]+)',
+                r'rel="author">([^<]+)',
+                r'"author":\s*{\s*"name":\s*"([^"]+)"'
+            ],
+            'apnews.com': [
+                r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
+                r'class="Component-bylines">([^<]+)',
+                r'"author":\s*"([^"]+)"'
             ]
         }
         
@@ -823,7 +930,14 @@ class NewsExtractor:
             '[rel="author"]', '[data-author]', '[data-byline]',
             'address', '.by', '.writtenby', '.author-name', '.author-info',
             '.byline-name', '.contributor', '.story-byline', '.article-byline',
-            '.content-author', '.post-meta-author', '.entry-meta-author'
+            '.content-author', '.post-meta-author', '.entry-meta-author',
+            # Add more specific selectors
+            '.story-meta__authors', '.story-meta', '.metadata', '.meta-author',
+            '.article-meta', '.post-meta', '.entry-meta', '.content-meta',
+            'span.vcard', 'p.vcard', 'div.vcard', '.h-card',
+            '[class*="meta"] [class*="author"]', '[class*="meta"] a[href*="/staff/"]',
+            'a[href*="/author/"]', 'a[href*="/authors/"]', 'a[href*="/staff/"]',
+            'a[href*="/people/"]', 'a[href*="/contributors/"]'
         ]
         
         for selector in byline_selectors:
@@ -952,6 +1066,54 @@ class NewsExtractor:
             if twitter_handle.startswith('@'):
                 twitter_handle = twitter_handle[1:]
             author_candidates[f"@{twitter_handle}"] = author_candidates.get(f"@{twitter_handle}", 0) + 1
+        
+        # METHOD 11: Aggressive link-based extraction
+        logger.info("🔗 METHOD 11: Aggressive link extraction")
+        
+        # Look for any links that might contain author info
+        for link in soup.find_all('a', href=True):
+            href = link.get('href', '')
+            text = link.get_text().strip()
+            
+            # Check if link points to author/staff page
+            if any(pattern in href.lower() for pattern in ['/author/', '/authors/', '/staff/', '/people/', '/contributors/', '/profile/', '/bio/']):
+                if text and self._is_valid_author_name(text):
+                    author_candidates[text] = author_candidates.get(text, 0) + 6
+                    logger.info(f"  Found via author link: {text}")
+            
+            # Check parent elements for byline context
+            parent = link.parent
+            if parent:
+                parent_text = parent.get_text().strip()
+                if any(indicator in parent_text.lower() for indicator in ['by', 'author', 'written', 'reported']):
+                    if text and self._is_valid_author_name(text):
+                        author_candidates[text] = author_candidates.get(text, 0) + 7
+                        logger.info(f"  Found via parent context: {text}")
+        
+        # METHOD 12: Deep text search in first part of article
+        logger.info("📝 METHOD 12: Deep text pattern search")
+        
+        # Get first 1000 chars of clean text
+        all_text = soup.get_text()[:3000]
+        
+        # More aggressive patterns
+        deep_patterns = [
+            r'(?:By|FROM|BY)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})(?:\s*[,\n\r])',
+            r'(?:Written by|Reported by|WRITTEN BY)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})',
+            r'^([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})\s+(?:is|writes|reports)',
+            r'(?:Story by|STORY BY)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})',
+            r'([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})\s+\|\s+\d{1,2}[/\.]\d{1,2}',
+            r'([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})\s+Updated:',
+            r'Contact\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})\s+at'
+        ]
+        
+        for pattern in deep_patterns:
+            matches = re.findall(pattern, all_text, re.MULTILINE)
+            for match in matches:
+                author = self._clean_author_name(match)
+                if author and self._is_valid_author_name(author):
+                    author_candidates[author] = author_candidates.get(author, 0) + 4
+                    logger.info(f"  Found via deep text search: {author}")
         
         # Select best candidate
         if author_candidates:
