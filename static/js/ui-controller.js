@@ -1,4 +1,4 @@
-// Fixed UI Controller with Refresh Feature
+// Fixed UI Controller with Refresh Feature and Transparency Fix
 (function() {
     class UIController {
         constructor() {
@@ -511,6 +511,399 @@
             
             card.querySelector('.card-details').innerHTML = `
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Source</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getSourceContext(source, data)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 12px 0;">What ${rating} Credibility Means:</h4>
+                <p style="margin-bottom: 16px; color: #475569; font-size: 0.875rem;">
+                    ${this.getSourceDescription(rating)}
+                </p>
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read Content from This Source</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
+                        ${this.getSourceReadingGuidance(rating).map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createManipulationCard(data) {
+            const card = this.createCard('manipulation', '⚠️', 'Manipulation Analysis');
+            const score = data.persuasion_analysis?.persuasion_score || 0;
+            const tactics = data.bias_analysis?.manipulation_tactics || [];
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 800; color: ${score < 30 ? '#059669' : score < 60 ? '#d97706' : '#dc2626'};">
+                        ${score}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Manipulation Score</div>
+                    ${tactics.length > 0 ? `
+                        <p style="color: #991b1b; background: #fef2f2; padding: 8px; border-radius: 6px;">
+                            ⚠️ ${tactics.length} tactics detected
+                        </p>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getManipulationContext(score, tactics)}
+                    </p>
+                </div>
+                
+                ${tactics.length > 0 ? `
+                    <h4 style="margin: 0 0 12px 0;">Manipulation Techniques:</h4>
+                    ${tactics.map(t => `
+                        <div style="margin-bottom: 8px; padding: 12px; background: #fef2f2; border-radius: 4px;">
+                            <strong style="color: #991b1b;">${t.name || t}</strong>
+                            ${t.description ? `<p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem;">${t.description}</p>` : ''}
+                        </div>
+                    `).join('')}
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Defense Strategies</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
+                        ${this.getManipulationDefenses(score).map(d => `<li>${d}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createTransparencyCard(data) {
+            const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
+            const trans = data.transparency_analysis || {};
+            const score = trans.transparency_score || 0;
+            const sourceCount = trans.source_count || 0;
+            
+            // Adjust the displayed score if there are zero sources
+            // This is a display adjustment - the actual score calculation should happen server-side
+            const displayScore = sourceCount === 0 ? Math.min(score, 15) : score;
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: ${displayScore >= 70 ? '#059669' : displayScore >= 40 ? '#d97706' : '#dc2626'};">
+                        ${displayScore}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 16px;">Transparency Score</div>
+                    
+                    ${sourceCount === 0 ? `
+                        <div style="background: #fee2e2; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                            <p style="margin: 0; font-size: 0.875rem; color: #991b1b; font-weight: 600;">
+                                ⚠️ Zero Sources Cited - Critical Transparency Failure
+                            </p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- What is Transparency? -->
+                    <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <p style="margin: 0; font-size: 0.875rem; color: #0c4a6e; line-height: 1.5;">
+                            <strong>What is Article Transparency?</strong><br>
+                            Transparency measures how openly an article reveals its sources, methods, and potential biases. 
+                            High transparency means readers can verify claims and understand where information comes from.
+                        </p>
+                    </div>
+                    
+                    <!-- Quick Metrics -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <div style="padding: 8px; background: ${sourceCount === 0 ? '#fee2e2' : '#f8fafc'}; border-radius: 6px; text-align: center;">
+                            <div style="font-weight: 600; color: ${sourceCount === 0 ? '#dc2626' : 'inherit'};">${sourceCount}</div>
+                            <div style="font-size: 0.7rem; color: ${sourceCount === 0 ? '#dc2626' : '#64748b'};">Sources</div>
+                        </div>
+                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
+                            <div style="font-weight: 600;">${data.content_analysis?.word_count || 0}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Words</div>
+                        </div>
+                        <div style="padding: 8px; background: ${sourceCount === 0 ? '#e5e7eb' : '#f8fafc'}; border-radius: 6px; text-align: center;">
+                            <div style="font-weight: 600; color: ${sourceCount === 0 ? '#9ca3af' : 'inherit'};">${sourceCount === 0 ? 'N/A' : trans.named_source_ratio + '%'}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Named</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <!-- How Transparency is Scored -->
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How We Calculate Transparency</h4>
+                    <p style="margin: 0 0 12px 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        Our transparency score evaluates multiple factors that indicate journalistic openness and accountability:
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e293b; font-size: 0.875rem; line-height: 1.6;">
+                        <li><strong>Source Attribution (40%):</strong> Are sources clearly identified and credible?</li>
+                        <li><strong>Author Disclosure (20%):</strong> Is the author named with verifiable credentials?</li>
+                        <li><strong>Data Transparency (20%):</strong> Are statistics and claims backed by accessible sources?</li>
+                        <li><strong>Conflict Disclosure (10%):</strong> Are potential conflicts of interest disclosed?</li>
+                        <li><strong>Methodology (10%):</strong> Is the reporting process explained?</li>
+                    </ul>
+                </div>
+                
+                <!-- Current Article Analysis -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">This Article's Transparency</h4>
+                    ${this.getTransparencyAnalysis(trans, data)}
+                </div>
+                
+                <!-- Transparency Indicators Found -->
+                ${trans.indicators && trans.indicators.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1rem;">🔍 Transparency Indicators</h5>
+                        ${trans.indicators.map(indicator => {
+                            const isPositive = !indicator.toLowerCase().includes('missing') && !indicator.toLowerCase().includes('no ');
+                            return `
+                                <div style="margin-bottom: 8px; padding: 12px; background: ${isPositive ? '#f0fdf4' : '#fef2f2'}; border-left: 3px solid ${isPositive ? '#10b981' : '#ef4444'}; border-radius: 4px;">
+                                    <span style="color: ${isPositive ? '#166534' : '#991b1b'}; font-size: 0.875rem;">
+                                        ${isPositive ? '✓' : '✗'} ${indicator}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : ''}
+                
+                <!-- Source Type Breakdown - Only show if there are sources -->
+                ${trans.source_types && sourceCount > 0 ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📊 Source Analysis</h5>
+                        ${Object.entries(trans.source_types).filter(([_, count]) => count > 0).map(([type, count]) => `
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                <span style="text-transform: capitalize; color: #4b5563; font-size: 0.875rem;">
+                                    ${type.replace(/_/g, ' ')}
+                                </span>
+                                <span style="font-weight: 600; color: #1e293b;">${count}</span>
+                            </div>
+                        `).join('')}
+                        ${this.getSourceQualityAssessment(trans)}
+                    </div>
+                ` : ''}
+                
+                <!-- Why Transparency Matters -->
+                <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">Why Transparency Matters</h4>
+                    <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
+                        Transparent journalism allows readers to:
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.875rem; line-height: 1.5;">
+                        <li>Verify claims independently</li>
+                        <li>Understand potential biases</li>
+                        <li>Assess the credibility of sources</li>
+                        <li>Make informed judgments about reliability</li>
+                        <li>Track the origin of information</li>
+                    </ul>
+                </div>
+                
+                <!-- Red Flags -->
+                ${this.getTransparencyRedFlags(trans, data)}
+                
+                <!-- What to Look For -->
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Evaluate Transparency</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
+                        <li>Check if sources have relevant expertise for their claims</li>
+                        <li>Look for a mix of sources with different viewpoints</li>
+                        <li>Verify that "studies" and "reports" are properly cited</li>
+                        <li>Notice if anonymous sources are overused</li>
+                        <li>Check if the author's potential conflicts are disclosed</li>
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        getTransparencyAnalysis(trans, data) {
+            const score = trans.transparency_score || 0;
+            const sourceCount = trans.source_count || 0;
+            const namedRatio = trans.named_source_ratio || 0;
+            
+            let analysis = '';
+            
+            // CRITICAL: Check for zero sources first - this should override everything else
+            if (sourceCount === 0) {
+                analysis = `<p style="margin: 0 0 12px 0; color: #dc2626; font-weight: 500;">
+                    ❌ Critical transparency failure: No sources cited at all. 
+                    Without any source attribution, readers cannot verify any claims made in this article. 
+                    This is a major red flag for credibility.
+                </p>`;
+            } else if (sourceCount < 3) {
+                // Very few sources
+                analysis = `<p style="margin: 0 0 12px 0; color: #dc2626; font-weight: 500;">
+                    ⚠️ Poor transparency with only ${sourceCount} source${sourceCount === 1 ? '' : 's'} cited. 
+                    ${namedRatio > 0 ? `Only ${namedRatio}% clearly identified.` : 'None are clearly identified.'} 
+                    This minimal sourcing makes verification extremely difficult.
+                </p>`;
+            } else if (score >= 70 && namedRatio >= 60) {
+                // Good score AND good source attribution
+                analysis = `<p style="margin: 0 0 12px 0; color: #059669; font-weight: 500;">
+                    ✅ Excellent transparency with ${sourceCount} sources cited, ${namedRatio}% of them clearly identified. 
+                    This level of openness allows readers to verify claims independently.
+                </p>`;
+            } else if (score >= 40 || sourceCount >= 5) {
+                // Moderate - either decent score or decent number of sources
+                analysis = `<p style="margin: 0 0 12px 0; color: #d97706; font-weight: 500;">
+                    ⚠️ Moderate transparency with ${sourceCount} sources${namedRatio > 0 ? ` but limited attribution (only ${namedRatio}% named)` : ' but none are clearly identified'}. 
+                    Some claims may be difficult to verify independently.
+                </p>`;
+            } else {
+                // Poor transparency
+                analysis = `<p style="margin: 0 0 12px 0; color: #dc2626; font-weight: 500;">
+                    ❌ Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named attribution, 
+                    readers cannot verify most claims.
+                </p>`;
+            }
+            
+            // Specific observations
+            analysis += '<div style="margin-top: 12px;">';
+            
+            // Author transparency
+            if (data.article?.author && data.article.author !== 'Unknown Author') {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                    <strong>Author:</strong> ${data.article.author} is clearly identified
+                    ${data.author_analysis?.found ? ' and verified' : ' but not independently verified'}
+                </div>`;
+            } else {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #dc2626;">
+                    <strong>Author:</strong> No author attribution reduces accountability
+                </div>`;
+            }
+            
+            // Source quality - only show if there are sources
+            if (sourceCount > 0) {
+                if (trans.has_quotes) {
+                    analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                        <strong>Direct Quotes:</strong> Contains first-hand accounts and direct quotations
+                    </div>`;
+                }
+                
+                if (namedRatio === 0) {
+                    analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #dc2626;">
+                        <strong>Source Quality:</strong> All sources are anonymous or vague - major credibility concern
+                    </div>`;
+                } else if (namedRatio < 50) {
+                    analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #d97706;">
+                        <strong>Source Quality:</strong> Heavy reliance on anonymous sources (${100 - namedRatio}% unnamed)
+                    </div>`;
+                }
+            }
+            
+            // Data transparency
+            if (trans.indicators?.some(i => i.includes('statistics')) && sourceCount > 0) {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
+                    <strong>Data Sources:</strong> Statistical claims include source attribution
+                </div>`;
+            } else if (trans.indicators?.some(i => i.includes('statistics'))) {
+                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #dc2626;">
+                    <strong>Data Sources:</strong> Contains statistics but no source attribution
+                </div>`;
+            }
+            
+            analysis += '</div>';
+            
+            return analysis;
+        }
+        
+        getSourceQualityAssessment(trans) {
+            const totalSources = Object.values(trans.source_types || {}).reduce((a, b) => a + b, 0);
+            const namedRatio = trans.named_source_ratio || 0;
+            
+            let assessment = '<div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 6px;">';
+            assessment += '<h6 style="margin: 0 0 8px 0; font-size: 0.875rem; color: #1e293b;">Source Quality Assessment:</h6>';
+            
+            if (namedRatio >= 70) {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #059669;">✅ High source accountability - most sources are named and verifiable</p>';
+            } else if (namedRatio >= 40) {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #d97706;">⚠️ Mixed source quality - significant reliance on anonymous sources</p>';
+            } else {
+                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #dc2626;">❌ Low source accountability - heavy use of anonymous or vague sources</p>';
+            }
+            
+            assessment += '</div>';
+            return assessment;
+        }
+        
+        getTransparencyRedFlags(trans, data) {
+            const redFlags = [];
+            
+            // Check for common transparency issues
+            if (!data.article?.author || data.article.author === 'Unknown Author') {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'No author attribution',
+                    explanation: 'Articles without named authors have no accountability'
+                });
+            }
+            
+            // CRITICAL: Zero sources is always a high severity issue
+            if (trans.source_count === 0) {
+                redFlags.push({
+                    severity: 'critical',
+                    issue: 'No sources cited whatsoever',
+                    explanation: 'Without any sources, this is either pure opinion or unverifiable claims. This is the most serious transparency failure possible.'
+                });
+            } else if (trans.source_count < 3) {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'Insufficient sourcing',
+                    explanation: `Only ${trans.source_count} source${trans.source_count === 1 ? '' : 's'} cited for an entire article suggests poor journalism`
+                });
+            }
+            
+            if (trans.source_count > 0 && trans.named_source_ratio === 0) {
+                redFlags.push({
+                    severity: 'high',
+                    issue: '100% anonymous sourcing',
+                    explanation: 'Every single source is anonymous or vague, making verification impossible'
+                });
+            } else if (trans.named_source_ratio < 20 && trans.source_count > 0) {
+                redFlags.push({
+                    severity: 'medium',
+                    issue: 'Excessive anonymous sourcing',
+                    explanation: `Over ${100 - trans.named_source_ratio}% of sources are unnamed, preventing verification`
+                });
+            }
+            
+            // Only flag low transparency score if it's not already covered by source issues
+            if (trans.transparency_score < 30 && trans.source_count > 2) {
+                redFlags.push({
+                    severity: 'high',
+                    issue: 'Overall opacity in reporting',
+                    explanation: 'Multiple transparency failures beyond just source count'
+                });
+            }
+            
+            if (redFlags.length === 0) {
+                return '';
+            }
+            
+            // Sort by severity (critical > high > medium)
+            const severityOrder = { critical: 0, high: 1, medium: 2 };
+            redFlags.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+            
+            return `
+                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; color: #991b1b; font-size: 1rem;">🚩 Transparency Red Flags</h4>
+                    ${redFlags.map(flag => `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; color: ${flag.severity === 'critical' ? '#7f1d1d' : '#dc2626'}; font-size: 0.875rem;">
+                                ${flag.severity === 'critical' ? '🚨 CRITICAL: ' : ''}${flag.issue}
+                            </div>
+                            <div style="color: #7f1d1d; font-size: 0.8125rem; margin-top: 4px;">${flag.explanation}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTrustInterpretation(trustScore)}
@@ -1019,1065 +1412,4 @@
             `;
             
             card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Source</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getSourceContext(source, data)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 12px 0;">What ${rating} Credibility Means:</h4>
-                <p style="margin-bottom: 16px; color: #475569; font-size: 0.875rem;">
-                    ${this.getSourceDescription(rating)}
-                </p>
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Read Content from This Source</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
-                        ${this.getSourceReadingGuidance(rating).map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createManipulationCard(data) {
-            const card = this.createCard('manipulation', '⚠️', 'Manipulation Analysis');
-            const score = data.persuasion_analysis?.persuasion_score || 0;
-            const tactics = data.bias_analysis?.manipulation_tactics || [];
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; font-weight: 800; color: ${score < 30 ? '#059669' : score < 60 ? '#d97706' : '#dc2626'};">
-                        ${score}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Manipulation Score</div>
-                    ${tactics.length > 0 ? `
-                        <p style="color: #991b1b; background: #fef2f2; padding: 8px; border-radius: 6px;">
-                            ⚠️ ${tactics.length} tactics detected
-                        </p>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getManipulationContext(score, tactics)}
-                    </p>
-                </div>
-                
-                ${tactics.length > 0 ? `
-                    <h4 style="margin: 0 0 12px 0;">Manipulation Techniques:</h4>
-                    ${tactics.map(t => `
-                        <div style="margin-bottom: 8px; padding: 12px; background: #fef2f2; border-radius: 4px;">
-                            <strong style="color: #991b1b;">${t.name || t}</strong>
-                            ${t.description ? `<p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem;">${t.description}</p>` : ''}
-                        </div>
-                    `).join('')}
-                ` : ''}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Defense Strategies</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
-                        ${this.getManipulationDefenses(score).map(d => `<li>${d}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createTransparencyCard(data) {
-            const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
-            const trans = data.transparency_analysis || {};
-            const score = trans.transparency_score || 0;
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: ${score >= 70 ? '#059669' : score >= 40 ? '#d97706' : '#dc2626'};">
-                        ${score}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 16px;">Transparency Score</div>
-                    
-                    <!-- What is Transparency? -->
-                    <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                        <p style="margin: 0; font-size: 0.875rem; color: #0c4a6e; line-height: 1.5;">
-                            <strong>What is Article Transparency?</strong><br>
-                            Transparency measures how openly an article reveals its sources, methods, and potential biases. 
-                            High transparency means readers can verify claims and understand where information comes from.
-                        </p>
-                    </div>
-                    
-                    <!-- Quick Metrics -->
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-weight: 600;">${trans.source_count || 0}</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Sources</div>
-                        </div>
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-weight: 600;">${data.content_analysis?.word_count || 0}</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Words</div>
-                        </div>
-                        <div style="padding: 8px; background: #f8fafc; border-radius: 6px; text-align: center;">
-                            <div style="font-weight: 600;">${trans.named_source_ratio || 0}%</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">Named</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <!-- How Transparency is Scored -->
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How We Calculate Transparency</h4>
-                    <p style="margin: 0 0 12px 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        Our transparency score evaluates multiple factors that indicate journalistic openness and accountability:
-                    </p>
-                    <ul style="margin: 0; padding-left: 20px; color: #1e293b; font-size: 0.875rem; line-height: 1.6;">
-                        <li><strong>Source Attribution (40%):</strong> Are sources clearly identified and credible?</li>
-                        <li><strong>Author Disclosure (20%):</strong> Is the author named with verifiable credentials?</li>
-                        <li><strong>Data Transparency (20%):</strong> Are statistics and claims backed by accessible sources?</li>
-                        <li><strong>Conflict Disclosure (10%):</strong> Are potential conflicts of interest disclosed?</li>
-                        <li><strong>Methodology (10%):</strong> Is the reporting process explained?</li>
-                    </ul>
-                </div>
-                
-                <!-- Current Article Analysis -->
-                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">This Article's Transparency</h4>
-                    ${this.getTransparencyAnalysis(trans, data)}
-                </div>
-                
-                <!-- Transparency Indicators Found -->
-                ${trans.indicators && trans.indicators.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1rem;">🔍 Transparency Indicators</h5>
-                        ${trans.indicators.map(indicator => {
-                            const isPositive = !indicator.toLowerCase().includes('missing') && !indicator.toLowerCase().includes('no ');
-                            return `
-                                <div style="margin-bottom: 8px; padding: 12px; background: ${isPositive ? '#f0fdf4' : '#fef2f2'}; border-left: 3px solid ${isPositive ? '#10b981' : '#ef4444'}; border-radius: 4px;">
-                                    <span style="color: ${isPositive ? '#166534' : '#991b1b'}; font-size: 0.875rem;">
-                                        ${isPositive ? '✓' : '✗'} ${indicator}
-                                    </span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                ` : ''}
-                
-                <!-- Source Type Breakdown -->
-                ${trans.source_types ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📊 Source Analysis</h5>
-                        ${Object.entries(trans.source_types).filter(([_, count]) => count > 0).map(([type, count]) => `
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="text-transform: capitalize; color: #4b5563; font-size: 0.875rem;">
-                                    ${type.replace(/_/g, ' ')}
-                                </span>
-                                <span style="font-weight: 600; color: #1e293b;">${count}</span>
-                            </div>
-                        `).join('')}
-                        ${this.getSourceQualityAssessment(trans)}
-                    </div>
-                ` : ''}
-                
-                <!-- Why Transparency Matters -->
-                <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #6b21a8; font-size: 1rem;">Why Transparency Matters</h4>
-                    <p style="margin: 0 0 12px 0; color: #581c87; line-height: 1.6; font-size: 0.875rem;">
-                        Transparent journalism allows readers to:
-                    </p>
-                    <ul style="margin: 0; padding-left: 20px; color: #581c87; font-size: 0.875rem; line-height: 1.5;">
-                        <li>Verify claims independently</li>
-                        <li>Understand potential biases</li>
-                        <li>Assess the credibility of sources</li>
-                        <li>Make informed judgments about reliability</li>
-                        <li>Track the origin of information</li>
-                    </ul>
-                </div>
-                
-                <!-- Red Flags -->
-                ${this.getTransparencyRedFlags(trans, data)}
-                
-                <!-- What to Look For -->
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">How to Evaluate Transparency</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
-                        <li>Check if sources have relevant expertise for their claims</li>
-                        <li>Look for a mix of sources with different viewpoints</li>
-                        <li>Verify that "studies" and "reports" are properly cited</li>
-                        <li>Notice if anonymous sources are overused</li>
-                        <li>Check if the author's potential conflicts are disclosed</li>
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-        
-        getTransparencyAnalysis(trans, data) {
-            const score = trans.transparency_score || 0;
-            const sourceCount = trans.source_count || 0;
-            const namedRatio = trans.named_source_ratio || 0;
-            
-            let analysis = '';
-            
-            // Overall assessment
-            if (score >= 70) {
-                analysis = `<p style="margin: 0 0 12px 0; color: #059669; font-weight: 500;">
-                    ✅ Excellent transparency with ${sourceCount} sources cited, ${namedRatio}% of them clearly identified. 
-                    This level of openness allows readers to verify claims independently.
-                </p>`;
-            } else if (score >= 40) {
-                analysis = `<p style="margin: 0 0 12px 0; color: #d97706; font-weight: 500;">
-                    ⚠️ Moderate transparency with ${sourceCount} sources but limited attribution (only ${namedRatio}% named). 
-                    Some claims may be difficult to verify independently.
-                </p>`;
-            } else {
-                analysis = `<p style="margin: 0 0 12px 0; color: #dc2626; font-weight: 500;">
-                    ❌ Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named attribution, 
-                    readers cannot verify most claims.
-                </p>`;
-            }
-            
-            // Specific observations
-            analysis += '<div style="margin-top: 12px;">';
-            
-            // Author transparency
-            if (data.article?.author && data.article.author !== 'Unknown Author') {
-                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
-                    <strong>Author:</strong> ${data.article.author} is clearly identified
-                    ${data.author_analysis?.found ? ' and verified' : ' but not independently verified'}
-                </div>`;
-            } else {
-                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #dc2626;">
-                    <strong>Author:</strong> No author attribution reduces accountability
-                </div>`;
-            }
-            
-            // Source quality
-            if (trans.has_quotes) {
-                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
-                    <strong>Direct Quotes:</strong> Contains first-hand accounts and direct quotations
-                </div>`;
-            }
-            
-            // Data transparency
-            if (trans.indicators?.some(i => i.includes('statistics'))) {
-                analysis += `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #374151;">
-                    <strong>Data Sources:</strong> Statistical claims include source attribution
-                </div>`;
-            }
-            
-            analysis += '</div>';
-            
-            return analysis;
-        }
-        
-        getSourceQualityAssessment(trans) {
-            const totalSources = Object.values(trans.source_types || {}).reduce((a, b) => a + b, 0);
-            const namedRatio = trans.named_source_ratio || 0;
-            
-            let assessment = '<div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 6px;">';
-            assessment += '<h6 style="margin: 0 0 8px 0; font-size: 0.875rem; color: #1e293b;">Source Quality Assessment:</h6>';
-            
-            if (namedRatio >= 70) {
-                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #059669;">✅ High source accountability - most sources are named and verifiable</p>';
-            } else if (namedRatio >= 40) {
-                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #d97706;">⚠️ Mixed source quality - significant reliance on anonymous sources</p>';
-            } else {
-                assessment += '<p style="margin: 0; font-size: 0.8125rem; color: #dc2626;">❌ Low source accountability - heavy use of anonymous or vague sources</p>';
-            }
-            
-            assessment += '</div>';
-            return assessment;
-        }
-        
-        getTransparencyRedFlags(trans, data) {
-            const redFlags = [];
-            
-            // Check for common transparency issues
-            if (!data.article?.author || data.article.author === 'Unknown Author') {
-                redFlags.push({
-                    severity: 'high',
-                    issue: 'No author attribution',
-                    explanation: 'Articles without named authors have no accountability'
-                });
-            }
-            
-            if (trans.source_count === 0) {
-                redFlags.push({
-                    severity: 'high',
-                    issue: 'No sources cited',
-                    explanation: 'Claims are presented without any supporting evidence'
-                });
-            }
-            
-            if (trans.named_source_ratio < 20 && trans.source_count > 0) {
-                redFlags.push({
-                    severity: 'medium',
-                    issue: 'Excessive anonymous sourcing',
-                    explanation: 'Over-reliance on unnamed sources prevents verification'
-                });
-            }
-            
-            if (trans.transparency_score < 30) {
-                redFlags.push({
-                    severity: 'high',
-                    issue: 'Opacity in reporting',
-                    explanation: 'Lack of basic transparency elements suggests unreliable content'
-                });
-            }
-            
-            if (redFlags.length === 0) {
-                return '';
-            }
-            
-            return `
-                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 12px 0; color: #991b1b; font-size: 1rem;">🚩 Transparency Red Flags</h4>
-                    ${redFlags.map(flag => `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-weight: 600; color: #dc2626; font-size: 0.875rem;">${flag.issue}</div>
-                            <div style="color: #7f1d1d; font-size: 0.8125rem; margin-top: 4px;">${flag.explanation}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        // Helper methods remain the same
-        generateSummary(data) {
-            const trust = data.trust_score || 0;
-            const source = data.article?.domain || 'this source';
-            
-            if (trust >= 70) {
-                return `This article from ${source} shows high credibility (${trust}% trust score) with strong journalistic standards. While generally reliable, always maintain critical thinking when reading.`;
-            } else if (trust >= 40) {
-                return `This article from ${source} has moderate credibility (${trust}% trust score) with some concerns. Verify key claims through additional sources before making decisions.`;
-            } else {
-                return `This article from ${source} has significant credibility issues (${trust}% trust score). Multiple red flags suggest extreme caution. Seek alternative sources for this information.`;
-            }
-        }
-
-        calculateTrustBreakdown(data) {
-            const sourceScore = this.calculateSourceScore(data.source_credibility);
-            const authorScore = data.author_analysis?.credibility_score || 50;
-            const transparencyScore = data.transparency_analysis?.transparency_score || 50;
-            const factsScore = this.calculateFactScore(data.fact_checks);
-            
-            return {
-                source: {
-                    score: sourceScore,
-                    description: "The reputation and track record of the news outlet",
-                    methodology: "Based on our database of 1000+ news sources"
-                },
-                author: {
-                    score: authorScore,
-                    description: "The credibility and expertise of the article's author",
-                    methodology: "Verified through professional databases"
-                },
-                transparency: {
-                    score: transparencyScore,
-                    description: "How well the article backs up its claims with sources",
-                    methodology: "Analyzed source types and attribution"
-                },
-                facts: {
-                    score: factsScore,
-                    description: "The accuracy of verifiable claims",
-                    methodology: "AI-powered fact extraction and verification"
-                }
-            };
-        }
-
-        calculateSourceScore(credibility) {
-            if (!credibility) return 50;
-            const scoreMap = {
-                'High': 90,
-                'Medium': 60,
-                'Low': 30,
-                'Very Low': 10,
-                'Unknown': 50
-            };
-            return scoreMap[credibility.rating] || 50;
-        }
-
-        calculateFactScore(factChecks) {
-            if (!factChecks || factChecks.length === 0) return 50;
-            const verified = factChecks.filter(fc => 
-                ['true', 'verified', 'correct'].includes((fc.verdict || '').toLowerCase())
-            ).length;
-            return Math.round((verified / factChecks.length) * 100);
-        }
-
-        formatLabel(key) {
-            const labels = {
-                source: 'Source Credibility',
-                author: 'Author Credibility',
-                transparency: 'Content Transparency',
-                facts: 'Factual Accuracy'
-            };
-            return labels[key] || key;
-        }
-
-        getSourceColor(rating) {
-            const colors = {
-                'High': '#059669',
-                'Medium': '#d97706',
-                'Low': '#dc2626',
-                'Very Low': '#7c2d12',
-                'Unknown': '#6b7280'
-            };
-            return colors[rating] || '#6b7280';
-        }
-
-        getFactCheckBreakdown(factChecks) {
-            const breakdown = {
-                verified: 0,
-                false: 0,
-                partial: 0,
-                unverified: 0
-            };
-            
-            factChecks.forEach(fc => {
-                const verdict = (fc.verdict || '').toLowerCase();
-                if (['true', 'verified', 'correct'].includes(verdict)) {
-                    breakdown.verified++;
-                } else if (['false', 'incorrect', 'wrong'].includes(verdict)) {
-                    breakdown.false++;
-                } else if (['partially_true', 'mixed'].includes(verdict)) {
-                    breakdown.partial++;
-                } else {
-                    breakdown.unverified++;
-                }
-            });
-            
-            return breakdown;
-        }
-
-        getFactCheckStyle(verdict) {
-            const verdictLower = verdict.toLowerCase();
-            if (['true', 'verified', 'correct'].includes(verdictLower)) {
-                return { icon: '✅', color: '#059669', bgColor: '#f0fdf4', borderColor: '#10b981' };
-            } else if (['false', 'incorrect', 'wrong'].includes(verdictLower)) {
-                return { icon: '❌', color: '#dc2626', bgColor: '#fef2f2', borderColor: '#ef4444' };
-            } else if (['partially_true', 'mixed'].includes(verdictLower)) {
-                return { icon: '⚠️', color: '#d97706', bgColor: '#fef3c7', borderColor: '#f59e0b' };
-            }
-            return { icon: '❓', color: '#6b7280', bgColor: '#f9fafb', borderColor: '#9ca3af' };
-        }
-
-        getTrustInterpretation(score) {
-            if (score >= 80) {
-                return 'This article demonstrates exceptional credibility. With strong source credibility, verified author credentials, transparent sourcing, and accurate facts, readers can have high confidence in the information presented.';
-            } else if (score >= 60) {
-                return 'This article shows good overall credibility with some areas of concern. While generally reliable, verify claims related to weaker areas and consider seeking additional sources for important decisions.';
-            } else if (score >= 40) {
-                return 'Moderate credibility issues detected. This doesn\'t necessarily mean the information is false, but it requires careful verification. Read critically and be aware of potential bias or inaccuracy.';
-            } else {
-                return 'Significant credibility problems make this article unreliable. Multiple factors score poorly, suggesting either very poor journalism or intentional deception. Verify all claims through reputable alternatives.';
-            }
-        }
-
-        getTrustActionItems(score) {
-            if (score >= 70) {
-                return [
-                    'This article is generally trustworthy - share if relevant to your network',
-                    'Still verify any surprising claims before making important decisions'
-                ];
-            } else if (score >= 40) {
-                return [
-                    'Cross-check key facts with other reputable sources',
-                    'Be aware of potential bias when interpreting conclusions',
-                    'Look for corroborating coverage from different perspectives'
-                ];
-            } else {
-                return [
-                    'Do not share this article without significant verification',
-                    'Seek alternative sources for this information',
-                    'Be extremely skeptical of all claims made',
-                    'Check if other more credible outlets are covering this story'
-                ];
-            }
-        }
-
-        getBiasContext(biasData) {
-            const level = Math.abs(biasData.political_lean || 0);
-            if (level < 20) {
-                return 'This article demonstrates relatively balanced reporting with minimal bias. The language is largely neutral and multiple perspectives appear to be represented fairly.';
-            } else if (level < 40) {
-                return 'This article shows moderate bias that colors the presentation without completely distorting facts. Understanding these patterns helps you read more objectively.';
-            } else {
-                return 'Significant bias detected that substantially affects how information is presented. This doesn\'t mean the facts are wrong, but the interpretation is heavily slanted.';
-            }
-        }
-
-        getObjectiveReadingStrategies(biasData) {
-            const strategies = [];
-            const level = Math.abs(biasData.political_lean || 0);
-            
-            if (level > 60) {
-                strategies.push('This article has extreme bias - actively seek opposing viewpoints');
-            } else if (level > 30) {
-                strategies.push('Moderate bias detected - mentally adjust for the slant');
-            }
-            
-            strategies.push('Separate factual claims from opinion and interpretation');
-            strategies.push('Check if alternative explanations are considered');
-            strategies.push('Note what perspectives are missing from the story');
-            
-            return strategies;
-        }
-
-        getFactCheckSummary(breakdown, factChecks) {
-            const total = factChecks.length;
-            if (total === 0) {
-                return 'No specific factual claims were verified in this article. This could mean the article is primarily opinion-based, or that claims are too vague to fact-check.';
-            }
-            
-            const verifiedPct = Math.round((breakdown.verified / total) * 100);
-            if (verifiedPct === 100) {
-                return `All ${total} factual claims checked were verified as accurate. This is exceptional and indicates strong journalistic standards.`;
-            } else if (verifiedPct >= 75) {
-                return `${breakdown.verified} of ${total} claims (${verifiedPct}%) were verified as accurate. The few unverified claims don't significantly impact credibility.`;
-            } else if (verifiedPct >= 50) {
-                return `Only ${breakdown.verified} of ${total} claims (${verifiedPct}%) could be verified as true. Readers should be cautious about accepting unchecked claims.`;
-            } else {
-                return `Serious factual problems: only ${breakdown.verified} of ${total} claims (${verifiedPct}%) are verifiably true. This suggests poor research or intentional deception.`;
-            }
-        }
-
-        getAuthorContext(author) {
-            if (!author.found) {
-                return 'We could not verify this author\'s credentials or track record. This is a significant red flag - legitimate journalists typically have verifiable professional histories.';
-            } else if (author.credibility_score >= 70) {
-                return 'This author has strong credentials with verified professional experience and a track record of accurate reporting. While author credibility doesn\'t guarantee article accuracy, it\'s a positive indicator.';
-            } else if (author.credibility_score >= 40) {
-                return 'The author has some verifiable credentials but a limited track record. Approach their analysis with normal critical thinking.';
-            } else {
-                return 'Despite finding information about this author, their credibility score is concerning. Read their work with heightened skepticism.';
-            }
-        }
-
-        getAuthorReadingAdvice(author) {
-            if (!author.found) {
-                return 'The lack of verifiable author information demands extreme caution. Verify every claim through known reliable sources and consider why the author\'s identity is hidden.';
-            } else if (author.credibility_score >= 70) {
-                return 'This author\'s strong track record suggests reliable reporting. However, even experienced journalists can have blind spots. Trust but verify remains the best approach.';
-            } else {
-                return 'Low author credibility demands careful reading. Fact-check significant claims, identify emotional manipulation tactics, and seek alternative coverage of the same story.';
-            }
-        }
-
-        getClickbaitContext(score) {
-            if (score < 30) {
-                return `This headline demonstrates professional journalism with a ${score}% clickbait score. It clearly indicates the article's content without manipulation.`;
-            } else if (score < 60) {
-                return `With a ${score}% clickbait score, this headline uses moderate attention-grabbing techniques. Understanding these tactics helps you resist their influence.`;
-            } else {
-                return `This headline scores ${score}% on clickbait detection - a serious red flag. It's designed to bypass rational decision-making and trigger impulsive clicks.`;
-            }
-        }
-
-        getSourceContext(source, data) {
-            const rating = source.rating || 'Unknown';
-            if (rating === 'Unknown') {
-                return 'We don\'t have this source in our credibility database. Exercise extra caution and verify information through known reliable sources.';
-            }
-            
-            let context = `${data.article?.domain || 'This source'} has a ${rating.toLowerCase()} credibility rating based on journalistic standards and fact-checking record. `;
-            
-            if (rating === 'High') {
-                context += 'This indicates strong editorial standards and commitment to accuracy.';
-            } else if (rating === 'Medium') {
-                context += 'This mixed rating suggests generally acceptable journalism with some concerns.';
-            } else {
-                context += 'This poor rating indicates serious problems including frequent inaccuracies or extreme bias.';
-            }
-            
-            return context;
-        }
-
-        getSourceDescription(rating) {
-            const descriptions = {
-                'High': 'These sources maintain rigorous journalistic standards, employ fact-checkers, issue corrections transparently, and have strong track records for accuracy.',
-                'Medium': 'Generally reliable sources with decent editorial standards but may show occasional bias or have mixed track records on complex topics.',
-                'Low': 'Sources with significant credibility issues including frequent errors, strong bias, poor sourcing, or agenda-driven reporting.',
-                'Very Low': 'Highly unreliable sources known for spreading misinformation. Often lack basic journalistic standards.',
-                'Unknown': 'We don\'t have enough data to rate this source. Exercise standard caution.'
-            };
-            return descriptions[rating] || descriptions['Unknown'];
-        }
-
-        getSourceReadingGuidance(rating) {
-            if (rating === 'High') {
-                return [
-                    'While credible, no source is unbiased - note their perspective',
-                    'High credibility means facts are likely accurate'
-                ];
-            } else if (rating === 'Medium') {
-                return [
-                    'Verify surprising or controversial claims',
-                    'Pay attention to source attribution'
-                ];
-            } else {
-                return [
-                    'Treat all claims as unreliable until verified',
-                    'Check if reputable outlets cover the same story',
-                    'Be alert for emotional manipulation'
-                ];
-            }
-        }
-
-        getManipulationContext(score, tactics) {
-            if (score < 30 && tactics.length === 0) {
-                return 'This article shows minimal manipulation. The author appears to prioritize informing over persuading, using straightforward language and logical arguments.';
-            } else if (score < 60) {
-                return `With a ${score}% manipulation score and ${tactics.length} identified tactics, this article uses moderate persuasion techniques beyond mere information sharing.`;
-            } else {
-                return `This article employs heavy manipulation (${score}% score) with ${tactics.length} distinct tactics designed to override rational thinking.`;
-            }
-        }
-
-        getManipulationDefenses(score) {
-            const defenses = [];
-            
-            if (score > 70) {
-                defenses.push('This article uses extreme manipulation - consider not reading further');
-            } else if (score > 40) {
-                defenses.push('Read one paragraph at a time, pausing to identify manipulation');
-            }
-            
-            defenses.push('Before sharing, explain the main point in your own words');
-            defenses.push('Check your physical state - manipulation works better when tired');
-            defenses.push('Ask: "What would I think if my political opponent shared this?"');
-            
-            return defenses;
-        }
-
-        getTransparencyContext(trans, data) {
-            const score = trans.transparency_score || 0;
-            const sourceCount = trans.source_count || 0;
-            const namedRatio = trans.named_source_ratio || 0;
-            
-            if (score >= 70) {
-                return `Excellent transparency with ${sourceCount} sources, ${namedRatio}% of them named. This allows readers to verify claims independently.`;
-            } else if (score >= 40) {
-                return `Moderate transparency with ${sourceCount} sources but heavy anonymous sourcing (only ${namedRatio}% named) makes verification difficult.`;
-            } else {
-                return `Poor transparency is a major red flag. With only ${sourceCount} sources and ${namedRatio}% named, readers cannot verify most claims.`;
-            }
-        }
-
-        renderInfoCoverageGrid(author) {
-            const fields = {
-                'Biography': author.bio && author.bio !== 'No detailed information available',
-                'Photo': !!author.image_url,
-                'Education': !!author.education,
-                'Experience': !!(author.professional_info?.years_experience),
-                'Social Media': !!(author.online_presence && Object.values(author.online_presence).some(v => v)),
-                'Recent Work': !!(author.recent_articles?.length > 0),
-                'Awards': !!(author.awards?.length > 0),
-                'Career History': !!(author.previous_positions?.length > 0),
-                'Expertise': !!(author.professional_info?.expertise_areas?.length > 0),
-                'Verification': !!(author.verification_status?.verified)
-            };
-            
-            return Object.entries(fields).map(([field, hasData]) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${hasData ? '#f0fff4' : 'white'}; border-radius: 6px; border: 1px solid ${hasData ? '#9ae6b4' : '#e2e8f0'};">
-                    <span style="font-size: 0.875rem; color: #4a5568;">${field}</span>
-                    <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
-                </div>
-            `).join('');
-        }
-
-        getInfoCoverageSummary(author) {
-            const interesting = [];
-            
-            // Check for interesting findings
-            if (author.bio && author.bio !== 'No detailed information available') {
-                interesting.push(`${author.name || 'The author'}'s bio reveals: "${author.bio}"`);
-            }
-            
-            if (author.image_url) {
-                interesting.push('A photo of the author is available');
-            }
-            
-            if (author.education) {
-                interesting.push(`Educational background: ${author.education}`);
-            }
-            
-            if (author.professional_info?.years_experience) {
-                interesting.push(`Has ${author.professional_info.years_experience} years of professional experience`);
-            }
-            
-            if (author.online_presence && Object.values(author.online_presence).some(v => v)) {
-                const platforms = [];
-                if (author.online_presence.twitter) platforms.push(`Twitter (@${author.online_presence.twitter})`);
-                if (author.online_presence.linkedin) platforms.push('LinkedIn');
-                if (author.online_presence.personal_website) platforms.push('personal website');
-                if (platforms.length > 0) {
-                    interesting.push(`Active on ${platforms.join(', ')}`);
-                }
-            }
-            
-            if (author.recent_articles?.length > 0) {
-                const recent = author.recent_articles[0];
-                if (typeof recent === 'object' && recent.title) {
-                    interesting.push(`Recently wrote: "${recent.title}"`);
-                } else if (recent) {
-                    interesting.push(`Has published ${author.recent_articles.length} recent articles`);
-                }
-            }
-            
-            if (author.awards?.length > 0) {
-                if (author.awards.length === 1) {
-                    interesting.push(`Award winner: ${author.awards[0]}`);
-                } else {
-                    interesting.push(`Has won ${author.awards.length} awards including ${author.awards[0]}`);
-                }
-            }
-            
-            if (author.previous_positions?.length > 0) {
-                const position = author.previous_positions[0];
-                if (typeof position === 'object' && position.title) {
-                    interesting.push(`Previously worked as ${position.title}${position.outlet ? ` at ${position.outlet}` : ''}`);
-                } else if (position) {
-                    interesting.push(`Career includes: ${position}`);
-                }
-            }
-            
-            if (author.professional_info?.expertise_areas?.length > 0) {
-                const areas = author.professional_info.expertise_areas;
-                if (areas.length === 1) {
-                    interesting.push(`Specializes in ${areas[0]}`);
-                } else {
-                    interesting.push(`Expert in ${areas.slice(0, 2).join(' and ')}${areas.length > 2 ? ` and ${areas.length - 2} other areas` : ''}`);
-                }
-            }
-            
-            if (author.verification_status?.verified) {
-                if (author.verification_status.journalist_verified) {
-                    interesting.push('Verified professional journalist');
-                } else if (author.verification_status.outlet_staff) {
-                    interesting.push('Verified staff writer');
-                } else {
-                    interesting.push('Verified author');
-                }
-            }
-            
-            // Special mentions
-            if (author.issues_corrections === false) {
-                interesting.push('Clean track record with no corrections or retractions');
-            }
-            
-            if (author.professional_info?.outlets?.length > 3) {
-                interesting.push(`Has written for ${author.professional_info.outlets.length} different publications`);
-            }
-            
-            // Build the summary
-            if (interesting.length === 0) {
-                return 'Limited public information is available about this author.';
-            } else if (interesting.length === 1) {
-                return interesting[0] + '.';
-            } else {
-                // Join with proper punctuation
-                return interesting.map((item, index) => {
-                    if (index === 0) {
-                        return item;
-                    } else {
-                        return item.toLowerCase();
-                    }
-                }).join('. ') + '.';
-            }
-        }
-
-        showResources(data) {
-            const resourcesDiv = document.getElementById('resources');
-            if (!resourcesDiv) return;
-            
-            const resourcesList = document.getElementById('resourcesList');
-            if (resourcesList) {
-                const resources = [];
-                
-                if (data.is_pro) {
-                    resources.push('OpenAI GPT-3.5 Turbo');
-                    if (data.fact_checks?.length) resources.push('Google Fact Check API');
-                }
-                resources.push('Source Credibility Database (1000+ sources)');
-                resources.push('Bias Pattern Analysis Engine');
-                resources.push('Content Transparency Analyzer');
-                
-                resourcesList.innerHTML = resources.map(r => 
-                    `<span class="resource-chip" style="display: inline-block; padding: 6px 16px; margin: 4px; background: #e0e7ff; color: #4338ca; border-radius: 16px; font-size: 0.875rem; font-weight: 500;">${r}</span>`
-                ).join('');
-            }
-            
-            resourcesDiv.classList.remove('hidden');
-        }
-
-        showError(message) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `
-                <div class="error-card" style="background: #fee2e2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin: 20px;">
-                    <div style="display: flex; align-items: start; gap: 16px;">
-                        <div style="font-size: 2rem;">⚠️</div>
-                        <div>
-                            <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 1.25rem;">Analysis Error</h3>
-                            <p style="margin: 0; color: #7f1d1d; line-height: 1.6;">${message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            resultsDiv.classList.remove('hidden');
-        }
-    }
-
-    // Override console.warn to help trace the source of the warning
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('Author section not found')) {
-            console.trace('Warning source traced:');
-        }
-        originalWarn.apply(console, args);
-    };
-
-    // Create and expose global instance
-    window.UI = new UIController();
-    console.log('UI Controller initialized with refresh feature');
-
-    // Add animation keyframes for the refresh button
-    if (!document.querySelector('style[data-component="refresh-animations"]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-component', 'refresh-animations');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Add required CSS (keeping existing styles)
-    if (!document.querySelector('style[data-component="ui-controller-fixed"]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-component', 'ui-controller-fixed');
-        style.textContent = `
-            .analysis-card-standalone {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-                overflow: hidden;
-                transition: all 0.3s ease;
-                cursor: pointer;
-            }
-            
-            .analysis-card-standalone:hover {
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-                transform: translateY(-2px);
-            }
-            
-            .analysis-card-standalone.expanded {
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            }
-            
-            .card-header {
-                padding: 20px;
-                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                border-bottom: 1px solid #e5e7eb;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
-            .card-header h3 {
-                margin: 0;
-                font-size: 1.25rem;
-                color: #0f172a;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            
-            .card-header h3 span:first-child {
-                font-size: 1.5rem;
-            }
-            
-            .expand-icon {
-                font-size: 0.875rem;
-                color: #64748b;
-                transition: transform 0.3s ease;
-            }
-            
-            .analysis-card-standalone.expanded .expand-icon {
-                transform: rotate(180deg);
-            }
-            
-            .card-summary {
-                padding: 20px;
-            }
-            
-            .card-details {
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s ease;
-                padding: 0 20px;
-            }
-            
-            .analysis-card-standalone.expanded .card-details {
-                max-height: 2000px;
-                padding: 20px;
-                border-top: 1px solid #e5e7eb;
-            }
-            
-            .badge {
-                display: inline-block;
-                padding: 4px 12px;
-                border-radius: 16px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            
-            .badge.verified {
-                background: #dcfce7;
-                color: #166534;
-            }
-            
-            .badge.info {
-                background: #dbeafe;
-                color: #1e40af;
-            }
-            
-            .badge.warning {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .badge.error {
-                background: #fee2e2;
-                color: #991b1b;
-            }
-            
-            .progress-bar {
-                width: 100%;
-                height: 8px;
-                background: #e5e7eb;
-                border-radius: 4px;
-                overflow: hidden;
-            }
-            
-            .progress-fill {
-                height: 100%;
-                background: #3b82f6;
-                transition: width 0.3s ease;
-            }
-            
-            .political-spectrum {
-                position: relative;
-                width: 100%;
-                height: 8px;
-                background: linear-gradient(to right, #3b82f6 0%, #e5e7eb 50%, #ef4444 100%);
-                border-radius: 4px;
-                margin: 8px 0;
-            }
-            
-            .spectrum-indicator {
-                position: absolute;
-                top: -4px;
-                width: 16px;
-                height: 16px;
-                background: #1e293b;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                transition: left 0.3s ease;
-            }
-            
-            .clickbait-gauge {
-                position: relative;
-                width: 100%;
-                height: 8px;
-                background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-                border-radius: 4px;
-            }
-            
-            .clickbait-indicator {
-                position: absolute;
-                top: -4px;
-                width: 16px;
-                height: 16px;
-                background: #1e293b;
-                border-radius: 50%;
-                border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                transition: left 0.3s ease;
-            }
-            
-            .credibility-badge {
-                font-weight: 600;
-                border-radius: 8px;
-            }
-            
-            .credibility-badge.high {
-                background: #dcfce7;
-                color: #166534;
-            }
-            
-            .credibility-badge.medium {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .credibility-badge.low,
-            .credibility-badge.very.low {
-                background: #fee2e2;
-                color: #991b1b;
-            }
-            
-            .credibility-badge.unknown {
-                background: #f3f4f6;
-                color: #6b7280;
-            }
-            
-            /* Add specific style for author analysis section */
-            .author-analysis-section {
-                /* This class is now added to the author card */
-            }
-            
-            @media (max-width: 768px) {
-                .cards-grid-wrapper {
-                    grid-template-columns: 1fr !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-})();
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius
