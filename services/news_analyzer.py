@@ -1,6 +1,7 @@
 """
 services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
 Complete version with fact checking integration and ENHANCED BIAS ANALYSIS
+Updated to use OpenAI v1.0+ API
 """
 
 import os
@@ -46,14 +47,18 @@ try:
 except ImportError:
     ConnectionAnalyzer = None
 
-# OpenAI integration
+# OpenAI integration - UPDATED FOR v1.0+
 try:
-    import openai
+    from openai import OpenAI
     OPENAI_AVAILABLE = bool(os.environ.get('OPENAI_API_KEY'))
     if OPENAI_AVAILABLE:
-        openai.api_key = os.environ.get('OPENAI_API_KEY')
+        # Initialize the OpenAI client with the API key
+        openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+    else:
+        openai_client = None
 except ImportError:
     OPENAI_AVAILABLE = False
+    openai_client = None
 
 logger = logging.getLogger(__name__)
 
@@ -467,7 +472,7 @@ class NewsAnalyzer:
                             article_data, analysis_results
                         )
                     except Exception as e:
-                        logger.error(f"AI summary failed: {e}")
+                        logger.error(f"AI summary generation failed:\n{e}")
             
             # Step 3: Calculate overall trust score
             trust_score = self._calculate_trust_score(analysis_results, article_data)
@@ -504,7 +509,7 @@ class NewsAnalyzer:
     
     def _generate_bias_ai_summary(self, bias_analysis: Dict[str, Any]) -> Optional[str]:
         """Generate AI summary specifically for bias analysis"""
-        if not OPENAI_AVAILABLE:
+        if not OPENAI_AVAILABLE or not openai_client:
             return None
             
         try:
@@ -532,7 +537,8 @@ class NewsAnalyzer:
             
             Focus on what readers should know about potential bias in this article. Be concise and clear."""
             
-            response = openai.ChatCompletion.create(
+            # UPDATED: Use the new OpenAI client API
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a media literacy expert explaining bias in simple terms."},
@@ -542,7 +548,7 @@ class NewsAnalyzer:
                 temperature=0.3
             )
             
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
             logger.error(f"Bias AI summary generation failed: {e}")
@@ -781,7 +787,7 @@ class NewsAnalyzer:
     
     def _generate_ai_summary(self, text: str) -> Optional[str]:
         """Generate AI-powered article summary"""
-        if not OPENAI_AVAILABLE:
+        if not OPENAI_AVAILABLE or not openai_client:
             return None
             
         try:
@@ -789,7 +795,8 @@ class NewsAnalyzer:
             if len(text) > max_chars:
                 text = text[:max_chars] + '...'
             
-            response = openai.ChatCompletion.create(
+            # UPDATED: Use the new OpenAI client API
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
@@ -805,16 +812,16 @@ class NewsAnalyzer:
                 temperature=0.3
             )
             
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
-            logger.error(f"AI summary generation failed: {e}")
+            logger.error(f"AI summary generation failed:\n{e}")
             return None
     
     def _generate_conversational_summary(self, article_data: Dict[str, Any], 
                                        analysis_results: Dict[str, Any]) -> Optional[str]:
         """Generate conversational analysis summary"""
-        if not OPENAI_AVAILABLE:
+        if not OPENAI_AVAILABLE or not openai_client:
             return None
             
         try:
@@ -829,7 +836,8 @@ class NewsAnalyzer:
             Source Credibility: {analysis_results.get('source_credibility', {}).get('rating', 'Unknown')}
             """
             
-            response = openai.ChatCompletion.create(
+            # UPDATED: Use the new OpenAI client API
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
@@ -845,10 +853,10 @@ class NewsAnalyzer:
                 temperature=0.5
             )
             
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
-            logger.error(f"Conversational summary generation failed: {e}")
+            logger.error(f"Conversational summary generation failed:\n{e}")
             return None
 
     def analyze_batch(self, urls: List[str], is_pro: bool = False) -> List[Dict[str, Any]]:
