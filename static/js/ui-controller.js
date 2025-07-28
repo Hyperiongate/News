@@ -1495,93 +1495,104 @@
         }
 
         getInfoCoverageSummary(author) {
-            const available = [];
-            const missing = [];
+            const interesting = [];
             
-            // Check what information is available
+            // Check for interesting findings
             if (author.bio && author.bio !== 'No detailed information available') {
-                available.push('biography');
-            } else {
-                missing.push('biography');
+                interesting.push(`${author.name || 'The author'}'s bio reveals: "${author.bio}"`);
             }
             
             if (author.image_url) {
-                available.push('photo');
-            } else {
-                missing.push('photo');
+                interesting.push('A photo of the author is available');
             }
             
             if (author.education) {
-                available.push('education details');
-            } else {
-                missing.push('education');
+                interesting.push(`Educational background: ${author.education}`);
             }
             
             if (author.professional_info?.years_experience) {
-                available.push(`${author.professional_info.years_experience} years of experience`);
-            } else {
-                missing.push('experience details');
+                interesting.push(`Has ${author.professional_info.years_experience} years of professional experience`);
             }
             
             if (author.online_presence && Object.values(author.online_presence).some(v => v)) {
                 const platforms = [];
-                if (author.online_presence.twitter) platforms.push('Twitter');
+                if (author.online_presence.twitter) platforms.push(`Twitter (@${author.online_presence.twitter})`);
                 if (author.online_presence.linkedin) platforms.push('LinkedIn');
-                if (author.online_presence.personal_website) platforms.push('website');
+                if (author.online_presence.personal_website) platforms.push('personal website');
                 if (platforms.length > 0) {
-                    available.push(`social media presence (${platforms.join(', ')})`);
+                    interesting.push(`Active on ${platforms.join(', ')}`);
                 }
-            } else {
-                missing.push('social media profiles');
             }
             
             if (author.recent_articles?.length > 0) {
-                available.push(`${author.recent_articles.length} recent articles`);
-            } else {
-                missing.push('recent work samples');
+                const recent = author.recent_articles[0];
+                if (typeof recent === 'object' && recent.title) {
+                    interesting.push(`Recently wrote: "${recent.title}"`);
+                } else if (recent) {
+                    interesting.push(`Has published ${author.recent_articles.length} recent articles`);
+                }
             }
             
             if (author.awards?.length > 0) {
-                available.push(`${author.awards.length} awards/recognitions`);
-            } else {
-                missing.push('awards');
+                if (author.awards.length === 1) {
+                    interesting.push(`Award winner: ${author.awards[0]}`);
+                } else {
+                    interesting.push(`Has won ${author.awards.length} awards including ${author.awards[0]}`);
+                }
             }
             
             if (author.previous_positions?.length > 0) {
-                available.push('career history');
-            } else {
-                missing.push('career history');
+                const position = author.previous_positions[0];
+                if (typeof position === 'object' && position.title) {
+                    interesting.push(`Previously worked as ${position.title}${position.outlet ? ` at ${position.outlet}` : ''}`);
+                } else if (position) {
+                    interesting.push(`Career includes: ${position}`);
+                }
             }
             
             if (author.professional_info?.expertise_areas?.length > 0) {
-                available.push(`expertise in ${author.professional_info.expertise_areas.length} areas`);
-            } else {
-                missing.push('expertise areas');
+                const areas = author.professional_info.expertise_areas;
+                if (areas.length === 1) {
+                    interesting.push(`Specializes in ${areas[0]}`);
+                } else {
+                    interesting.push(`Expert in ${areas.slice(0, 2).join(' and ')}${areas.length > 2 ? ` and ${areas.length - 2} other areas` : ''}`);
+                }
             }
             
             if (author.verification_status?.verified) {
-                available.push('verified status');
-            } else {
-                missing.push('verification');
+                if (author.verification_status.journalist_verified) {
+                    interesting.push('Verified professional journalist');
+                } else if (author.verification_status.outlet_staff) {
+                    interesting.push('Verified staff writer');
+                } else {
+                    interesting.push('Verified author');
+                }
+            }
+            
+            // Special mentions
+            if (author.issues_corrections === false) {
+                interesting.push('Clean track record with no corrections or retractions');
+            }
+            
+            if (author.professional_info?.outlets?.length > 3) {
+                interesting.push(`Has written for ${author.professional_info.outlets.length} different publications`);
             }
             
             // Build the summary
-            let summary = '';
-            
-            if (available.length > 0) {
-                summary += `We found: ${available.join(', ')}.`;
+            if (interesting.length === 0) {
+                return 'Limited public information is available about this author.';
+            } else if (interesting.length === 1) {
+                return interesting[0] + '.';
+            } else {
+                // Join with proper punctuation
+                return interesting.map((item, index) => {
+                    if (index === 0) {
+                        return item;
+                    } else {
+                        return item.toLowerCase();
+                    }
+                }).join('. ') + '.';
             }
-            
-            if (missing.length > 0) {
-                if (summary) summary += ' ';
-                summary += `Missing information includes: ${missing.join(', ')}.`;
-            }
-            
-            if (!summary) {
-                summary = 'Limited information available about this author.';
-            }
-            
-            return summary;
         }
 
         showResources(data) {
