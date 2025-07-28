@@ -918,12 +918,12 @@
                     </div>
                 ` : ''}
                 
-                <!-- Information Coverage Grid -->
+                <!-- Information Coverage Summary -->
                 <div style="margin-bottom: 20px; padding: 16px; background: #f7fafc; border-radius: 8px;">
-                    <h5 style="margin: 0 0 12px 0; color: #1e293b;">📋 Information Coverage</h5>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;">
-                        ${this.renderInfoCoverageGrid(author)}
-                    </div>
+                    <h5 style="margin: 0 0 12px 0; color: #1e293b;">📋 Information Available</h5>
+                    <p style="margin: 0; color: #475569; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getInfoCoverageSummary(author)}
+                    </p>
                 </div>
                 
                 ${author.sources_checked && author.sources_checked.length > 0 ? `
@@ -1492,6 +1492,96 @@
                     <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
                 </div>
             `).join('');
+        }
+
+        getInfoCoverageSummary(author) {
+            const available = [];
+            const missing = [];
+            
+            // Check what information is available
+            if (author.bio && author.bio !== 'No detailed information available') {
+                available.push('biography');
+            } else {
+                missing.push('biography');
+            }
+            
+            if (author.image_url) {
+                available.push('photo');
+            } else {
+                missing.push('photo');
+            }
+            
+            if (author.education) {
+                available.push('education details');
+            } else {
+                missing.push('education');
+            }
+            
+            if (author.professional_info?.years_experience) {
+                available.push(`${author.professional_info.years_experience} years of experience`);
+            } else {
+                missing.push('experience details');
+            }
+            
+            if (author.online_presence && Object.values(author.online_presence).some(v => v)) {
+                const platforms = [];
+                if (author.online_presence.twitter) platforms.push('Twitter');
+                if (author.online_presence.linkedin) platforms.push('LinkedIn');
+                if (author.online_presence.personal_website) platforms.push('website');
+                if (platforms.length > 0) {
+                    available.push(`social media presence (${platforms.join(', ')})`);
+                }
+            } else {
+                missing.push('social media profiles');
+            }
+            
+            if (author.recent_articles?.length > 0) {
+                available.push(`${author.recent_articles.length} recent articles`);
+            } else {
+                missing.push('recent work samples');
+            }
+            
+            if (author.awards?.length > 0) {
+                available.push(`${author.awards.length} awards/recognitions`);
+            } else {
+                missing.push('awards');
+            }
+            
+            if (author.previous_positions?.length > 0) {
+                available.push('career history');
+            } else {
+                missing.push('career history');
+            }
+            
+            if (author.professional_info?.expertise_areas?.length > 0) {
+                available.push(`expertise in ${author.professional_info.expertise_areas.length} areas`);
+            } else {
+                missing.push('expertise areas');
+            }
+            
+            if (author.verification_status?.verified) {
+                available.push('verified status');
+            } else {
+                missing.push('verification');
+            }
+            
+            // Build the summary
+            let summary = '';
+            
+            if (available.length > 0) {
+                summary += `We found: ${available.join(', ')}.`;
+            }
+            
+            if (missing.length > 0) {
+                if (summary) summary += ' ';
+                summary += `Missing information includes: ${missing.join(', ')}.`;
+            }
+            
+            if (!summary) {
+                summary = 'Limited information available about this author.';
+            }
+            
+            return summary;
         }
 
         showResources(data) {
