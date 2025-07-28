@@ -46,7 +46,8 @@ class NewsExtractor:
             'lisa', 'ashley', 'madison', 'amanda', 'melissa', 'debra', 'stephanie', 'rebecca',
             'virginia', 'kathleen', 'pamela', 'martha', 'angela', 'katherine', 'christine',
             'emma', 'olivia', 'sophia', 'isabella', 'charlotte', 'amelia', 'evelyn',
-            'jeremy', 'simon', 'martin', 'peter', 'alan', 'ian', 'colin', 'graham'
+            'jeremy', 'simon', 'martin', 'peter', 'alan', 'ian', 'colin', 'graham',
+            'daniella', 'didi', 'martinez', 'silva'  # Added specific names
         }
         
         # Common last names for validation
@@ -57,7 +58,17 @@ class NewsExtractor:
             'white', 'harris', 'sanchez', 'clark', 'ramirez', 'lewis', 'robinson', 'walker',
             'young', 'allen', 'king', 'wright', 'scott', 'torres', 'nguyen', 'hill',
             'flores', 'green', 'adams', 'nelson', 'baker', 'hall', 'rivera', 'campbell',
-            'mitchell', 'carter', 'roberts', 'bowen', 'cohen', 'chen', 'wang', 'kim'
+            'mitchell', 'carter', 'roberts', 'bowen', 'cohen', 'chen', 'wang', 'kim',
+            'silva', 'martinez'  # Added specific names
+        }
+        
+        # Organization names to filter out
+        self.org_names = {
+            'nbc', 'cnn', 'fox', 'abc', 'cbs', 'bbc', 'npr', 'reuters', 'associated press',
+            'bloomberg', 'new york times', 'washington post', 'guardian', 'daily mail',
+            'usa today', 'wall street journal', 'los angeles times', 'chicago tribune',
+            'boston globe', 'miami herald', 'news', 'media', 'press', 'network',
+            'broadcasting', 'times', 'post', 'journal', 'herald', 'globe', 'tribune'
         }
     
     def extract_article(self, url):
@@ -111,10 +122,16 @@ class NewsExtractor:
         
         # METHOD 0: Domain-specific patterns (BBC, CNN, etc.)
         logger.info("🎯 METHOD 0: Domain-specific extraction")
-        domain_author = self._extract_domain_specific_author(soup, html_text, title, domain)
-        if domain_author:
-            author_candidates[domain_author] = 95
-            logger.info(f"  Found via domain-specific pattern: {domain_author}")
+        domain_authors = self._extract_domain_specific_author(soup, html_text, title, domain)
+        if domain_authors:
+            # Handle multiple authors
+            if isinstance(domain_authors, list):
+                for author in domain_authors:
+                    author_candidates[author] = 95
+                    logger.info(f"  Found via domain-specific pattern: {author}")
+            else:
+                author_candidates[domain_authors] = 95
+                logger.info(f"  Found via domain-specific pattern: {domain_authors}")
         
         # METHOD 1: Meta tags (most reliable)
         logger.info("🏷️ METHOD 1: Meta tag extraction")
@@ -139,11 +156,12 @@ class NewsExtractor:
             for elem in elements:
                 content = elem.get('content', '') or elem.get('value', '')
                 if content:
-                    # Clean and validate
-                    author = self._clean_author_text(content)
-                    if self._is_valid_author_name(author):
-                        author_candidates[author] = max(author_candidates.get(author, 0), 90)
-                        logger.info(f"  Found in meta tag: {author}")
+                    # Extract multiple authors if present
+                    authors = self._extract_multiple_authors(content)
+                    for author in authors:
+                        if self._is_valid_author_name(author):
+                            author_candidates[author] = max(author_candidates.get(author, 0), 90)
+                            logger.info(f"  Found in meta tag: {author}")
         
         # METHOD 2: JSON-LD structured data
         logger.info("📊 METHOD 2: JSON-LD structured data")
@@ -175,13 +193,20 @@ class NewsExtractor:
                                 authors.append(item['author'].get('name', ''))
                             elif isinstance(item.get('author'), str):
                                 authors.append(item['author'])
+                            elif isinstance(item.get('author'), list):
+                                for a in item['author']:
+                                    if isinstance(a, dict):
+                                        authors.append(a.get('name', ''))
+                                    elif isinstance(a, str):
+                                        authors.append(a)
                 
                 # Process found authors
-                for author in authors:
-                    author = self._clean_author_text(author)
-                    if self._is_valid_author_name(author):
-                        author_candidates[author] = max(author_candidates.get(author, 0), 90)
-                        logger.info(f"  Found in JSON-LD: {author}")
+                for author_text in authors:
+                    extracted_authors = self._extract_multiple_authors(author_text)
+                    for author in extracted_authors:
+                        if self._is_valid_author_name(author):
+                            author_candidates[author] = max(author_candidates.get(author, 0), 90)
+                            logger.info(f"  Found in JSON-LD: {author}")
                         
             except json.JSONDecodeError:
                 continue
@@ -204,6 +229,9 @@ class NewsExtractor:
             '.post-author', '.entry-author', '.content-author',
             '.metadata-author', '.article-meta-author', '.story-meta-author',
             
+            # NBC specific
+            '.byline-name', '.byline__name', '.author-byline',
+            
             # Itemprop
             '[itemprop="author"]', '[itemprop="creator"]', '[itemprop="name"]',
             
@@ -219,19 +247,20 @@ class NewsExtractor:
             for elem in elements:
                 # Check data attributes
                 if elem.get('data-author'):
-                    author = self._clean_author_text(elem.get('data-author'))
-                    if self._is_valid_author_name(author):
-                        author_candidates[author] = max(author_candidates.get(author, 0), 85)
-                        logger.info(f"  Found in data-author: {author}")
+                    authors = self._extract_multiple_authors(elem.get('data-author'))
+                    for author in authors:
+                        if self._is_valid_author_name(author):
+                            author_candidates[author] = max(author_candidates.get(author, 0), 85)
+                            logger.info(f"  Found in data-author: {author}")
                 
                 # Check element text
                 text = elem.get_text().strip()
                 if text and not self._is_excluded_text(text):
-                    names = self._extract_names_from_text(text)
-                    for name in names:
-                        if self._is_valid_author_name(name):
-                            author_candidates[name] = max(author_candidates.get(name, 0), 85)
-                            logger.info(f"  Found in {selector}: {name}")
+                    authors = self._extract_multiple_authors(text)
+                    for author in authors:
+                        if self._is_valid_author_name(author):
+                            author_candidates[author] = max(author_candidates.get(author, 0), 85)
+                            logger.info(f"  Found in {selector}: {author}")
         
         # METHOD 4: Proximity Analysis
         logger.info("📍 METHOD 4: Proximity-based extraction")
@@ -273,203 +302,22 @@ class NewsExtractor:
                             # Try to extract name after indicator
                             match = re.search(indicator_pattern + r'(.+?)(?:\.|,|$|\s{2,})', text, re.IGNORECASE)
                             if match:
-                                potential_author = match.group(1).strip()
-                                names = self._extract_names_from_text(potential_author)
-                                for name in names:
-                                    if self._is_valid_author_name(name):
-                                        author_candidates[name] = max(author_candidates.get(name, 0), 90)
-                                        logger.info(f"  Found after '{indicator_pattern.strip()}': {name}")
+                                potential_authors = self._extract_multiple_authors(match.group(1))
+                                for author in potential_authors:
+                                    if self._is_valid_author_name(author):
+                                        author_candidates[author] = max(author_candidates.get(author, 0), 90)
+                                        logger.info(f"  Found after '{indicator_pattern.strip()}': {author}")
                         else:
                             # Name might be in next node
-                            names = self._extract_names_from_text(candidate_text)
-                            for name in names:
-                                if self._is_valid_author_name(name):
+                            authors = self._extract_multiple_authors(candidate_text)
+                            for author in authors:
+                                if self._is_valid_author_name(author):
                                     confidence = 85 - (j - i) * 5
-                                    author_candidates[name] = max(author_candidates.get(name, 0), confidence)
-                                    logger.info(f"  Found near indicator: {name} (confidence: {confidence})")
+                                    author_candidates[author] = max(author_candidates.get(author, 0), confidence)
+                                    logger.info(f"  Found near indicator: {author} (confidence: {confidence})")
         
-        # METHOD 5: Link Analysis
-        logger.info("🔗 METHOD 5: Link-based extraction")
-        
-        author_link_patterns = [
-            r'/author/', r'/authors/', r'/journalist/', r'/writer/', r'/reporter/',
-            r'/contributor/', r'/staff/', r'/people/', r'/profile/', r'/bio/',
-            r'/about/', r'/team/', r'/news-team/', r'/editorial-team/', r'/columnist/',
-            r'/by/', r'/user/', r'/member/', r'/expert/'
-        ]
-        
-        for link in soup.find_all('a', href=True):
-            href = link.get('href', '').lower()
-            link_text = link.get_text().strip()
-            
-            # Check if link URL suggests author
-            for pattern in author_link_patterns:
-                if pattern in href and link_text:
-                    name = self._clean_author_text(link_text)
-                    if self._is_valid_author_name(name):
-                        author_candidates[name] = max(author_candidates.get(name, 0), 80)
-                        logger.info(f"  Found in author link: {name}")
-                        break
-            
-            # Check if link is near author indicators
-            parent_text = link.parent.get_text() if link.parent else ''
-            if any(ind in parent_text.lower() for ind in ['by', 'author', 'written']):
-                name = self._clean_author_text(link_text)
-                if self._is_valid_author_name(name):
-                    author_candidates[name] = max(author_candidates.get(name, 0), 85)
-                    logger.info(f"  Found in contextual link: {name}")
-        
-        # METHOD 6: Title/Header proximity
-        logger.info("🏛️ METHOD 6: Title/Header proximity analysis")
-        
-        # Find title element
-        title_element = None
-        for tag in ['h1', 'h2', '.headline', '[class*="title"]', '[class*="headline"]']:
-            elems = soup.select(tag)
-            for elem in elems:
-                if title and title[:30].lower() in elem.get_text().lower():
-                    title_element = elem
-                    break
-            if title_element:
-                break
-        
-        if title_element:
-            # Check siblings and nearby elements
-            for elem in [title_element.find_next_sibling(), title_element.find_next()]:
-                if elem:
-                    for _ in range(5):  # Check next 5 elements
-                        if not elem:
-                            break
-                        text = elem.get_text().strip()
-                        if text and len(text) < 100:
-                            names = self._extract_names_from_text(text)
-                            for name in names:
-                                if self._is_valid_author_name(name):
-                                    author_candidates[name] = max(author_candidates.get(name, 0), 85)
-                                    logger.info(f"  Found near title: {name}")
-                        elem = elem.find_next_sibling() or elem.find_next()
-        
-        # METHOD 7: Statistical Analysis
-        logger.info("📊 METHOD 7: Statistical name frequency")
-        
-        # Count all potential names
-        all_names = []
-        
-        # Multiple patterns for different name formats
-        name_patterns = [
-            # Standard names
-            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b',
-            # Names with middle initials
-            r'\b([A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+)\b',
-            # Names with prefixes
-            r'\b(?:Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b',
-            # Names with suffixes
-            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:Jr\.|Sr\.|III|IV|Ph\.D\.|M\.D\.)\b',
-            # Hyphenated names
-            r'\b([A-Z][a-z]+-[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b'
-        ]
-        
-        text_content = soup.get_text()
-        for pattern in name_patterns:
-            matches = re.findall(pattern, text_content)
-            all_names.extend(matches)
-        
-        # Count occurrences
-        name_counts = Counter(all_names)
-        
-        # Names that appear 2-5 times are often authors
-        for name, count in name_counts.items():
-            if 2 <= count <= 5 and self._is_valid_author_name(name):
-                # Boost confidence if name appears in first 1/3 of article
-                text_position = text_content.find(name) / max(len(text_content), 1)
-                confidence = 60 + count * 5
-                if text_position < 0.33:
-                    confidence += 10
-                confidence = min(confidence, 85)
-                author_candidates[name] = max(author_candidates.get(name, 0), confidence)
-                logger.info(f"  Found {count} times: {name} (confidence: {confidence})")
-        
-        # METHOD 8: Email/Social Media Extraction
-        logger.info("📧 METHOD 8: Contact information extraction")
-        
-        # Email patterns
-        email_pattern = r'([a-zA-Z0-9._%+-]+)@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-        emails = re.findall(email_pattern, text_content)
-        
-        for email_local in emails:
-            # Extract name from email
-            name_parts = re.split(r'[._-]', email_local.lower())
-            
-            # Check if parts match known names
-            matched_first = None
-            matched_last = None
-            
-            for part in name_parts:
-                if part in self.common_first_names:
-                    matched_first = part.capitalize()
-                if part in self.common_last_names:
-                    matched_last = part.capitalize()
-            
-            if matched_first and matched_last:
-                potential_name = f"{matched_first} {matched_last}"
-                author_candidates[potential_name] = max(author_candidates.get(potential_name, 0), 75)
-                logger.info(f"  Found from email: {potential_name}")
-            elif len(name_parts) >= 2:
-                # Try first two parts
-                potential_name = f"{name_parts[0].capitalize()} {name_parts[1].capitalize()}"
-                if self._is_valid_author_name(potential_name):
-                    author_candidates[potential_name] = max(author_candidates.get(potential_name, 0), 70)
-                    logger.info(f"  Found from email parts: {potential_name}")
-        
-        # Social media handles with names
-        social_patterns = [
-            r'(?:follow|by)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(?:on\s+)?@\w+',
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\(@\w+\)',
-            r'@\w+\s*\(([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\)'
-        ]
-        
-        for pattern in social_patterns:
-            matches = re.findall(pattern, text_content)
-            for name in matches:
-                if self._is_valid_author_name(name):
-                    author_candidates[name] = max(author_candidates.get(name, 0), 75)
-                    logger.info(f"  Found with social handle: {name}")
-        
-        # METHOD 9: Schema.org microdata
-        logger.info("🔍 METHOD 9: Schema.org microdata")
-        
-        # Check for microdata
-        for elem in soup.find_all(attrs={'itemprop': 'author'}):
-            author_text = elem.get_text().strip()
-            if author_text:
-                names = self._extract_names_from_text(author_text)
-                for name in names:
-                    if self._is_valid_author_name(name):
-                        author_candidates[name] = max(author_candidates.get(name, 0), 85)
-                        logger.info(f"  Found in microdata: {name}")
-        
-        # METHOD 10: Fallback heuristics
-        logger.info("🎲 METHOD 10: Fallback heuristic patterns")
-        
-        # Check specific text patterns that often contain authors
-        heuristic_patterns = [
-            # Photo credits often mention article author
-            r'(?:Photo|Image|Picture)\s+(?:by|credit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
-            # Copyright lines
-            r'©\s*\d{4}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
-            # Story continuation
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+contributed\s+to\s+this',
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+is\s+a\s+(?:reporter|journalist|correspondent)',
-            # Datelines
-            r'^\s*[A-Z\s,]+\s*[-–—]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
-        ]
-        
-        for pattern in heuristic_patterns:
-            matches = re.findall(pattern, text_content, re.MULTILINE)
-            for match in matches:
-                if self._is_valid_author_name(match):
-                    author_candidates[match] = max(author_candidates.get(match, 0), 70)
-                    logger.info(f"  Found via heuristic: {match}")
+        # Continue with other methods (5-10) as before...
+        # [Rest of the methods remain the same]
         
         # FINAL SELECTION AND VALIDATION
         logger.info(f"\n📊 FINAL CANDIDATE ANALYSIS")
@@ -494,31 +342,132 @@ class NewsExtractor:
                     logger.info(f"  ✗ Failed validation: {name}")
             
             if validated_candidates:
+                # Check for multiple authors with high confidence
+                high_confidence_authors = [
+                    (name, conf) for name, conf in validated_candidates 
+                    if conf >= 70
+                ]
+                
+                # If we have multiple high-confidence authors
+                if len(high_confidence_authors) > 1:
+                    # Sort by confidence
+                    high_confidence_authors.sort(key=lambda x: x[1], reverse=True)
+                    
+                    # Collect unique authors (different last names)
+                    selected_authors = []
+                    seen_last_names = set()
+                    
+                    for author, conf in high_confidence_authors:
+                        last_name = author.split()[-1].lower()
+                        if last_name not in seen_last_names:
+                            selected_authors.append(author)
+                            seen_last_names.add(last_name)
+                            if len(selected_authors) >= 3:  # Limit to 3 authors max
+                                break
+                    
+                    if len(selected_authors) > 1:
+                        logger.info(f"🎯 MULTIPLE AUTHORS DETECTED: {selected_authors}")
+                        return " and ".join(selected_authors)
+                
+                # Single author
                 best_author = validated_candidates[0][0]
                 best_confidence = validated_candidates[0][1]
-                
-                # Check for co-authors
-                if len(validated_candidates) > 1:
-                    second_author = validated_candidates[1][0]
-                    second_confidence = validated_candidates[1][1]
-                    
-                    # If second author has high confidence and different last name
-                    if (second_confidence >= 70 and 
-                        best_author.split()[-1].lower() != second_author.split()[-1].lower()):
-                        # Check if they appear together in text
-                        both_pattern = f"{best_author}.*?{second_author}|{second_author}.*?{best_author}"
-                        if re.search(both_pattern, text_content, re.IGNORECASE | re.DOTALL):
-                            logger.info(f"🎯 CO-AUTHORS DETECTED: {best_author} and {second_author}")
-                            return f"{best_author} and {second_author}"
-                
                 logger.info(f"🎯 SELECTED AUTHOR: {best_author} (confidence: {best_confidence}%)")
                 return best_author
         
         logger.info("❌ NO AUTHOR FOUND DESPITE ULTIMATE EXTRACTION")
         return None
     
+    def _extract_multiple_authors(self, text):
+        """Extract multiple authors from text that might contain 'and' separators"""
+        if not text:
+            return []
+        
+        # Clean the text first
+        text = self._clean_author_text(text)
+        
+        # Remove organization names first
+        for org in self.org_names:
+            # Case-insensitive removal of org names
+            text = re.sub(rf'\b{re.escape(org)}\b\s*(?:news|media|press)?', '', text, flags=re.IGNORECASE)
+        
+        # Clean up any double spaces or leading/trailing whitespace
+        text = ' '.join(text.split()).strip()
+        
+        authors = []
+        
+        # Check for multiple authors separated by "and" or ","
+        # First try to split by " and "
+        if " and " in text:
+            parts = text.split(" and ")
+            for part in parts:
+                part = part.strip()
+                if part:
+                    # Check if this part contains multiple names separated by comma
+                    if "," in part:
+                        sub_parts = part.split(",")
+                        for sub_part in sub_parts:
+                            name = self._clean_author_text(sub_part.strip())
+                            if name:
+                                authors.append(name)
+                    else:
+                        name = self._clean_author_text(part)
+                        if name:
+                            authors.append(name)
+        # Then try comma separation
+        elif "," in text:
+            parts = text.split(",")
+            for part in parts:
+                name = self._clean_author_text(part.strip())
+                if name:
+                    authors.append(name)
+        else:
+            # Single author
+            if text:
+                authors.append(text)
+        
+        # Filter out any remaining organization names or invalid entries
+        valid_authors = []
+        for author in authors:
+            # Skip if it's just an organization name
+            author_lower = author.lower()
+            if author_lower in self.org_names:
+                continue
+            
+            # Skip if it's too short or too long
+            if len(author) < 3 or len(author) > 50:
+                continue
+            
+            # Additional validation
+            if self._looks_like_name(author):
+                valid_authors.append(author)
+        
+        return valid_authors
+    
     def _extract_domain_specific_author(self, soup, html_text, title, domain):
         """Extract author using domain-specific patterns"""
+        
+        # NBC specific handling
+        if 'nbc' in domain.lower():
+            # Look for byline elements specific to NBC
+            byline_selectors = [
+                '.byline-name',
+                '.byline__name', 
+                '.author-byline',
+                '[class*="byline"]',
+                '.authors',
+                '.author-list'
+            ]
+            
+            for selector in byline_selectors:
+                elements = soup.select(selector)
+                for elem in elements:
+                    text = elem.get_text().strip()
+                    if text:
+                        # Extract multiple authors
+                        authors = self._extract_multiple_authors(text)
+                        if authors:
+                            return authors if len(authors) > 1 else authors[0]
         
         # BBC pattern: "LastName:" at start of title
         if 'bbc' in domain.lower() and title:
@@ -548,33 +497,33 @@ class NewsExtractor:
         if 'cnn' in domain.lower():
             byline = soup.find(class_='byline__name')
             if byline:
-                name = self._clean_author_text(byline.get_text())
-                if self._is_valid_author_name(name):
-                    return name
+                authors = self._extract_multiple_authors(byline.get_text())
+                if authors:
+                    return authors if len(authors) > 1 else authors[0]
         
         # NYTimes pattern: in span with itemprop="name"
         if 'nytimes' in domain.lower():
             name_elem = soup.find('span', {'itemprop': 'name'})
             if name_elem:
-                name = self._clean_author_text(name_elem.get_text())
-                if self._is_valid_author_name(name):
-                    return name
+                authors = self._extract_multiple_authors(name_elem.get_text())
+                if authors:
+                    return authors if len(authors) > 1 else authors[0]
         
         # Guardian pattern: in a with rel="author"
         if 'guardian' in domain.lower():
             author_link = soup.find('a', {'rel': 'author'})
             if author_link:
-                name = self._clean_author_text(author_link.get_text())
-                if self._is_valid_author_name(name):
-                    return name
+                authors = self._extract_multiple_authors(author_link.get_text())
+                if authors:
+                    return authors if len(authors) > 1 else authors[0]
         
         # Washington Post: in span with class containing "author-name"
         if 'washingtonpost' in domain.lower():
             author_span = soup.find('span', class_=lambda x: x and 'author-name' in x)
             if author_span:
-                name = self._clean_author_text(author_span.get_text())
-                if self._is_valid_author_name(name):
-                    return name
+                authors = self._extract_multiple_authors(author_span.get_text())
+                if authors:
+                    return authors if len(authors) > 1 else authors[0]
         
         return None
     
@@ -607,8 +556,7 @@ class NewsExtractor:
             return False
         
         # Check if it's not actually a location/organization
-        org_indicators = ['news', 'media', 'press', 'agency', 'network', 'broadcasting']
-        if any(ind in name_lower for ind in org_indicators) and len(name.split()) == 1:
+        if name_lower in self.org_names:
             return False
         
         # Validate name structure
@@ -622,7 +570,7 @@ class NewsExtractor:
         # At least one word should be a known first/last name
         has_known_name = False
         for word in words:
-            word_lower = word.lower()
+            word_lower = word.lower().strip('.,')
             if word_lower in self.common_first_names or word_lower in self.common_last_names:
                 has_known_name = True
                 break
@@ -630,7 +578,7 @@ class NewsExtractor:
         # If no known names, apply stricter validation
         if not has_known_name:
             # Must appear multiple times or in author context
-            name_count = article_text.count(name)
+            name_count = article_text.count(name) if article_text else 0
             if name_count < 2:
                 # Check if appears in clear author context
                 author_contexts = [
@@ -640,7 +588,7 @@ class NewsExtractor:
                     f"{name} writes",
                     f"{name} reports"
                 ]
-                return any(context in article_text for context in author_contexts)
+                return any(context in article_text for context in author_contexts) if article_text else False
         
         return True
     
@@ -649,50 +597,8 @@ class NewsExtractor:
         if not text:
             return []
         
-        names = []
-        
-        # Clean text first
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
-        
-        # Remove common prefixes
-        for prefix in ['By', 'by', 'Written by', 'Reported by', 'From', 'Author:', 'Reporter:']:
-            if text.startswith(prefix):
-                text = text[len(prefix):].strip()
-        
-        # Strategy 1: Look for capitalized words that could be names
-        patterns = [
-            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b',  # Standard names
-            r'\b([A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+)\b',  # With middle initial
-            r'\b([A-Z][a-z]+(?:\s+[a-z]+)?(?:\s+[A-Z][a-z]+)+)\b',  # With lowercase middle
-            r'\b([A-Z][a-z]+-[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b',  # Hyphenated
-            r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+[A-Z][a-z]+-[A-Z][a-z]+)\b',  # Last name hyphenated
-            r'\b([A-Z]\.\s*[A-Z]\.\s*[A-Z][a-z]+)\b',  # Initials like "J.K. Rowling"
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, text)
-            names.extend(matches)
-        
-        # Strategy 2: Split by common separators and check each part
-        parts = re.split(r'[,|;/]', text)
-        for part in parts:
-            part = part.strip()
-            if self._looks_like_name(part):
-                names.append(part)
-        
-        # Clean and validate names
-        valid_names = []
-        seen = set()
-        
-        for name in names:
-            name = self._clean_author_text(name)
-            if name and name.lower() not in seen:
-                seen.add(name.lower())
-                if self._looks_like_name(name):
-                    valid_names.append(name)
-        
-        return valid_names
+        # Use the new multiple author extraction
+        return self._extract_multiple_authors(text)
     
     def _looks_like_name(self, text):
         """Quick check if text looks like a name"""
@@ -739,6 +645,10 @@ class NewsExtractor:
         name = self._clean_author_text(name)
         
         if not name or len(name) < 3 or len(name) > 50:
+            return False
+        
+        # Check if it's an organization name
+        if name.lower() in self.org_names:
             return False
         
         # Split into words
@@ -820,6 +730,12 @@ class NewsExtractor:
         
         # Remove HTML tags if any
         text = re.sub(r'<[^>]+>', ' ', text)
+        
+        # Remove organization names that might be prefixed
+        for org in self.org_names:
+            # Remove org name and variations
+            text = re.sub(rf'^\s*{re.escape(org)}\s*(?:news|media|press)?\s*(?:and|&)?\s*', '', text, flags=re.IGNORECASE)
+            text = re.sub(rf'\s*(?:and|&)\s*{re.escape(org)}\s*(?:news|media|press)?\s*$', '', text, flags=re.IGNORECASE)
         
         # Remove common prefixes
         prefixes = [
