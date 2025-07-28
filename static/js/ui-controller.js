@@ -15,14 +15,45 @@
         setupEventDelegation() {
             // Use event delegation on document body for card clicks
             document.addEventListener('click', (e) => {
+                // Handle anchor clicks separately to prevent default behavior if href is empty or #
+                const anchor = e.target.closest('a');
+                if (anchor) {
+                    const href = anchor.getAttribute('href');
+                    if (!href || href === '#' || href === '') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                    // Let valid links work normally
+                    return;
+                }
+                
+                // Check if we clicked on a button
+                if (e.target.closest('button')) {
+                    // Let buttons work normally
+                    return;
+                }
+                
                 // Find the closest card element
                 const card = e.target.closest('.analysis-card-standalone');
                 
-                if (card && !e.target.closest('a, button')) {
+                if (card) {
                     e.preventDefault();
+                    e.stopPropagation();
                     card.classList.toggle('expanded');
                 }
             });
+            
+            // Also prevent default on any empty anchors
+            document.addEventListener('click', (e) => {
+                if (e.target.tagName === 'A') {
+                    const href = e.target.getAttribute('href');
+                    if (!href || href === '#' || href === '') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }
+            }, true); // Use capture phase
         }
 
         registerComponent(name, component) {
@@ -822,11 +853,11 @@
                                 } else {
                                     return `
                                         <div style="margin-bottom: 8px; padding: 12px; background: #f8fafc; border-radius: 4px; transition: background 0.2s;">
-                                            ${article.url ? `<a href="${article.url}" target="_blank" style="text-decoration: none;">` : ''}
+                                            ${article.url ? `<a href="${article.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block;">` : '<div>'}
                                             <div style="color: #2563eb; font-weight: 500;">${article.title}</div>
                                             ${article.date ? `<div style="font-size: 0.75rem; color: #718096; margin-top: 4px;">${new Date(article.date).toLocaleDateString()}</div>` : ''}
                                             ${article.outlet ? `<div style="font-size: 0.75rem; color: #718096;">${article.outlet}</div>` : ''}
-                                            ${article.url ? `</a>` : ''}
+                                            ${article.url ? `</a>` : '</div>'}
                                         </div>
                                     `;
                                 }
@@ -840,22 +871,22 @@
                         <h5 style="margin: 0 0 12px 0; color: #1e293b;">🌐 Online Presence</h5>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                             ${author.online_presence.twitter ? `
-                                <a href="https://twitter.com/${author.online_presence.twitter}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #1da1f2; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                <a href="https://twitter.com/${author.online_presence.twitter}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #1da1f2; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
                                     𝕏 @${author.online_presence.twitter}
                                 </a>
                             ` : ''}
                             ${author.online_presence.linkedin ? `
-                                <a href="${author.online_presence.linkedin}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #0077b5; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                <a href="${author.online_presence.linkedin}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #0077b5; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
                                     LinkedIn
                                 </a>
                             ` : ''}
                             ${author.online_presence.personal_website ? `
-                                <a href="${author.online_presence.personal_website}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #6b7280; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                <a href="${author.online_presence.personal_website}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #6b7280; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
                                     🌐 Website
                                 </a>
                             ` : ''}
                             ${author.online_presence.outlet_profile ? `
-                                <a href="${author.online_presence.outlet_profile}" target="_blank" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #7c3aed; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
+                                <a href="${author.online_presence.outlet_profile}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; padding: 8px 16px; background: #7c3aed; color: white; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">
                                     📰 Profile
                                 </a>
                             ` : ''}
