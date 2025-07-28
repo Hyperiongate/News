@@ -7,6 +7,22 @@
             this.currentUrl = null;
             this.currentText = null;
             this.isAnalyzing = false;
+            
+            // Add event delegation for card clicks
+            this.setupEventDelegation();
+        }
+
+        setupEventDelegation() {
+            // Use event delegation on document body for card clicks
+            document.addEventListener('click', (e) => {
+                // Find the closest card element
+                const card = e.target.closest('.analysis-card-standalone');
+                
+                if (card && !e.target.closest('a, button')) {
+                    e.preventDefault();
+                    card.classList.toggle('expanded');
+                }
+            });
         }
 
         registerComponent(name, component) {
@@ -424,8 +440,6 @@
             `;
         }
 
-        // ... [All the other methods remain exactly the same] ...
-        
         createCard(type, icon, title) {
             const card = document.createElement('div');
             card.className = 'analysis-card-standalone';
@@ -442,12 +456,7 @@
                 <div class="card-details"></div>
             `;
             
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('a, button')) {
-                    e.preventDefault();
-                    card.classList.toggle('expanded');
-                }
-            });
+            // Don't add click handler here - it's handled by event delegation
             
             return card;
         }
@@ -1237,7 +1246,6 @@
             return { icon: '❓', color: '#6b7280', bgColor: '#f9fafb', borderColor: '#9ca3af' };
         }
 
-        // All other helper methods remain exactly the same...
         getTrustInterpretation(score) {
             if (score >= 80) {
                 return 'This article demonstrates exceptional credibility. With strong source credibility, verified author credentials, transparent sourcing, and accurate facts, readers can have high confidence in the information presented.';
