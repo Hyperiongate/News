@@ -1,5 +1,5 @@
 // static/js/components/fact-checker.js
-// Enhanced Fact Check Analysis Component
+// Enhanced Fact Check Analysis Component - FIXED VERSION
 
 class FactChecker {
     constructor() {
@@ -852,7 +852,6 @@ class FactChecker {
         
         return index === 0 ? 'high' : 'medium';
     }
-}
 
     // Add these helper methods after the existing methods
     
@@ -913,6 +912,9 @@ class FactChecker {
             </div>
         `;
     }
+}
+
+// Export to window
 window.FactChecker = FactChecker;
 
 // Auto-register with UI controller
