@@ -2,6 +2,7 @@
 services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
 Complete version with fact checking integration and ENHANCED BIAS ANALYSIS
 Updated to use OpenAI v1.0+ API
+ENHANCED: Improved claim extraction to find more claims
 """
 
 import os
@@ -579,76 +580,231 @@ class NewsAnalyzer:
         return 'Untitled Article'
     
     def _extract_key_claims(self, text: str) -> List[Dict[str, Any]]:
-        """Extract key factual claims from article text"""
+        """Extract key factual claims from article text - ENHANCED VERSION"""
         claims = []
         sentences = re.split(r'[.!?]+', text)
         
-        # Enhanced claim patterns
+        # Enhanced claim patterns with more comprehensive coverage
         claim_patterns = [
             # Statistical claims
             (r'\b\d+\s*(?:percent|%)', 'statistical'),
             (r'\b\d+\s+(?:million|billion|thousand|hundred)\b', 'numerical'),
+            (r'\b(?:doubled|tripled|quadrupled|halved)\b', 'statistical'),
+            (r'\b(?:majority|minority)\s+of\b', 'statistical'),
+            (r'\b(?:one|two|three|four|five|half|quarter|third)\s+(?:in|out\s+of)\s+(?:every\s+)?\d+', 'statistical'),
             
             # Research/study claims
-            (r'\b(?:study|research|report|survey|poll)\s+(?:shows|finds|found|reveals|indicates|suggests)', 'research'),
-            (r'(?:according to|data from|statistics show|research indicates)', 'sourced'),
-            (r'(?:scientists|researchers|experts)\s+(?:say|believe|found|discovered)', 'expert_claim'),
+            (r'\b(?:study|research|report|survey|poll|analysis)\s+(?:shows?|finds?|found|reveals?|indicates?|suggests?|demonstrates?|confirms?)', 'research'),
+            (r'(?:according to|data from|statistics show|research indicates|evidence suggests)', 'sourced'),
+            (r'(?:scientists?|researchers?|experts?|analysts?|professors?)\s+(?:say|believe|found|discovered|concluded|determined)', 'expert_claim'),
+            (r'\b(?:peer-reviewed|published|documented)\s+(?:study|research|findings?)', 'research'),
             
             # Comparative claims
-            (r'(?:increased|decreased|rose|fell|grew|declined)\s+(?:by|to)\s+\d+', 'trend'),
-            (r'(?:more|less|fewer|greater)\s+than', 'comparison'),
-            (r'(?:highest|lowest|fastest|slowest|biggest|smallest)\s+(?:ever|since|in)', 'superlative'),
+            (r'(?:increased?|decreased?|rose|fell|grew|declined|surged|plummeted|jumped|dropped)\s+(?:by|to|from)?\s*\d*', 'trend'),
+            (r'(?:more|less|fewer|greater|higher|lower|better|worse)\s+than', 'comparison'),
+            (r'(?:highest|lowest|fastest|slowest|biggest|smallest|largest|greatest|worst|best)\s+(?:ever|since|in|among)', 'superlative'),
+            (r'(?:compared to|versus|vs\.?|relative to|in contrast to)', 'comparison'),
             
             # Causal claims
-            (r'(?:causes|caused|leads to|results in|due to|because of)', 'causal'),
+            (r'(?:causes?|caused|leads?\s+to|results?\s+in|due to|because of|attributed to|linked to|associated with)', 'causal'),
+            (r'(?:therefore|thus|consequently|as a result|hence)', 'causal'),
             
-            # Historical claims
-            (r'(?:first|last|never|always)\s+(?:to|in history)', 'historical'),
-            (r'since\s+\d{4}', 'temporal'),
+            # Historical/temporal claims
+            (r'(?:first|last|never|always|previously|historically|traditionally)\s+(?:to|in\s+history|recorded)', 'historical'),
+            (r'(?:since|until|before|after|during|between)\s+\d{4}', 'temporal'),
+            (r'(?:for the first time|unprecedented|never before|groundbreaking)', 'historical'),
+            (r'\b(?:in|by|since)\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}', 'temporal'),
+            
+            # Factual statements
+            (r'(?:is|are|was|were|has|have|had)\s+(?:the|a|an)?\s*(?:first|only|largest|most|least)', 'factual'),
+            (r'(?:confirmed|verified|proven|established|documented)\s+(?:that|to)', 'factual'),
+            
+            # Quote-based claims
+            (r'(?:said|stated|announced|declared|claimed|argued|insisted)\s+(?:that|")', 'quoted'),
+            (r'"[^"]+"\s*(?:said|stated|according to)', 'quoted'),
+            
+            # Prediction claims
+            (r'(?:will|would|could|may|might|expected to|predicted to|forecast to)\s+(?:increase|decrease|reach|exceed)', 'prediction'),
+            (r'(?:by|in)\s+\d{4}', 'prediction'),
+            
+            # Location-based claims
+            (r'(?:in|at|from)\s+(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:city|state|country|region)', 'location'),
+            
+            # Measurement claims
+            (r'\b\d+\s*(?:degrees?|meters?|feet|miles?|kilometers?|pounds?|kilograms?|tons?|dollars?|euros?|yen)\b', 'measurement'),
+            
+            # Government/official claims
+            (r'(?:government|federal|state|administration|department|agency)\s+(?:announced|reported|confirmed|said)', 'official'),
+            (r'(?:president|governor|mayor|senator|representative|official)\s+(?:said|announced|signed|approved)', 'official'),
+            
+            # Legal/regulatory claims
+            (r'(?:law|regulation|bill|legislation|ruling|verdict|decision)\s+(?:passed|approved|rejected|overturned)', 'legal'),
+            (r'(?:court|judge|jury)\s+(?:ruled|decided|found|determined)', 'legal'),
+            
+            # Economic claims
+            (r'(?:GDP|inflation|unemployment|interest rates?|stock market)\s+(?:rose|fell|increased|decreased)', 'economic'),
+            (r'\$\d+(?:\.\d+)?\s*(?:million|billion|trillion)', 'economic'),
         ]
         
         seen_claims = set()  # Avoid duplicates
         
-        for sentence in sentences[:30]:  # Check more sentences
+        for i, sentence in enumerate(sentences[:50]):  # Check more sentences (up to 50)
             sentence = sentence.strip()
-            if len(sentence) < 20 or len(sentence) > 300:
+            if len(sentence) < 20 or len(sentence) > 400:
+                continue
+            
+            # Skip sentences that are obviously not claims
+            skip_patterns = [
+                r'^(?:Photo|Image|Video|Credit)',
+                r'^\s*\([^)]+\)\s*$',  # Just parenthetical
+                r'^(?:Related|Read more|Subscribe|Advertisement)',
+                r'@[a-zA-Z0-9_]+',  # Twitter handles
+                r'^(?:Follow|Share|Comment)',  # Social media prompts
+                r'^\s*(?:Copyright|©)',  # Copyright notices
+            ]
+            
+            if any(re.match(pattern, sentence, re.IGNORECASE) for pattern in skip_patterns):
                 continue
             
             # Check if sentence contains factual claim patterns
+            claim_found = False
+            claim_types = []
+            match_count = 0
+            
             for pattern, claim_type in claim_patterns:
                 if re.search(pattern, sentence, re.IGNORECASE):
-                    # Clean the sentence
-                    clean_sentence = re.sub(r'\s+', ' ', sentence).strip()
-                    
-                    # Skip if we've seen similar claim
-                    if clean_sentence.lower() in seen_claims:
-                        continue
-                    
-                    seen_claims.add(clean_sentence.lower())
-                    
-                    # Determine importance based on claim type and position
-                    importance = 'medium'
-                    if claim_type in ['statistical', 'research', 'causal']:
-                        importance = 'high'
-                    elif len(claims) < 3:  # First few claims are usually important
-                        importance = 'high'
-                    
-                    claims.append({
-                        'text': clean_sentence,
-                        'type': claim_type,
-                        'importance': importance,
-                        'confidence': 0.8,
-                        'position': len(claims)
-                    })
-                    break
+                    claim_types.append(claim_type)
+                    claim_found = True
+                    match_count += 1
             
-            if len(claims) >= 15:  # Get up to 15 claims
+            if claim_found:
+                # Clean the sentence
+                clean_sentence = re.sub(r'\s+', ' ', sentence).strip()
+                
+                # Skip if we've seen similar claim
+                sentence_lower = clean_sentence.lower()
+                if sentence_lower in seen_claims:
+                    continue
+                
+                # Check for substantial overlap with existing claims
+                skip_claim = False
+                for seen in seen_claims:
+                    # If 70% of words overlap, skip
+                    seen_words = set(seen.split())
+                    current_words = set(sentence_lower.split())
+                    if len(current_words) > 0:
+                        overlap = len(seen_words.intersection(current_words)) / len(current_words)
+                        if overlap > 0.7:
+                            skip_claim = True
+                            break
+                
+                if skip_claim:
+                    continue
+                
+                seen_claims.add(sentence_lower)
+                
+                # Determine importance based on claim types, position, and match count
+                importance = 'medium'
+                
+                # High importance factors
+                high_importance_types = {'statistical', 'research', 'causal', 'superlative', 'official', 'legal', 'economic'}
+                if any(ct in claim_types for ct in high_importance_types):
+                    importance = 'high'
+                elif i < 5:  # Claims in first 5 sentences often important
+                    importance = 'high'
+                elif match_count >= 2:  # Multiple claim types
+                    importance = 'high'
+                
+                # Low importance factors
+                if 'quoted' in claim_types and len(claim_types) == 1:
+                    importance = 'low'
+                elif i > 30 and match_count == 1:  # Later in article with single match
+                    importance = 'low'
+                elif 'location' in claim_types and len(claim_types) == 1:
+                    importance = 'low'
+                
+                # Calculate confidence based on pattern matches and claim characteristics
+                confidence = min(0.95, 0.6 + (match_count * 0.1))
+                
+                # Boost confidence for certain claim types
+                if any(ct in claim_types for ct in ['statistical', 'research', 'official']):
+                    confidence = min(0.95, confidence + 0.1)
+                
+                claims.append({
+                    'text': clean_sentence,
+                    'type': claim_types[0] if claim_types else 'general',
+                    'all_types': claim_types,
+                    'importance': importance,
+                    'confidence': confidence,
+                    'position': i,
+                    'sentence_index': i,
+                    'match_count': match_count
+                })
+            
+            # Stop if we have enough claims
+            if len(claims) >= 25:
                 break
         
-        # Sort by importance and position
-        claims.sort(key=lambda x: (0 if x['importance'] == 'high' else 1, x['position']))
+        # If we found very few claims, try a more lenient approach
+        if len(claims) < 5:
+            # Look for any sentence with numbers or definitive statements
+            lenient_patterns = [
+                r'\b\d+\b',  # Any number
+                r'\b(?:is|are|was|were|will be|has been|have been)\b',  # State of being
+                r'\b(?:announced|revealed|reported|stated|confirmed|showed|found)\b',  # Reporting verbs
+                r'\b(?:new|latest|recent|current|updated)\b',  # Temporal indicators
+            ]
+            
+            for i, sentence in enumerate(sentences[:30]):
+                if len(claims) >= 15:
+                    break
+                    
+                sentence = sentence.strip()
+                if len(sentence) < 30 or len(sentence) > 300:
+                    continue
+                    
+                sentence_lower = sentence.lower()
+                if sentence_lower in seen_claims:
+                    continue
+                
+                pattern_matches = sum(1 for pattern in lenient_patterns if re.search(pattern, sentence, re.IGNORECASE))
+                
+                if pattern_matches >= 2:  # At least 2 patterns must match
+                    seen_claims.add(sentence_lower)
+                    claims.append({
+                        'text': sentence,
+                        'type': 'general',
+                        'all_types': ['general'],
+                        'importance': 'medium' if i < 10 else 'low',
+                        'confidence': 0.5 + (pattern_matches * 0.1),
+                        'position': i,
+                        'sentence_index': i,
+                        'match_count': pattern_matches
+                    })
         
-        return claims[:10]  # Return top 10 claims
+        # Sort by importance and position
+        claims.sort(key=lambda x: (
+            0 if x['importance'] == 'high' else 1 if x['importance'] == 'medium' else 2,
+            -x['confidence'],  # Higher confidence first
+            x['position']
+        ))
+        
+        # Select final claims with balanced importance levels
+        high_importance = [c for c in claims if c['importance'] == 'high'][:8]
+        medium_importance = [c for c in claims if c['importance'] == 'medium'][:5]
+        low_importance = [c for c in claims if c['importance'] == 'low'][:2]
+        
+        final_claims = high_importance + medium_importance + low_importance
+        
+        # Re-sort by position for natural reading order
+        final_claims.sort(key=lambda x: x['position'])
+        
+        # Remove extra fields that aren't needed in output
+        for claim in final_claims:
+            claim.pop('match_count', None)
+            claim.pop('sentence_index', None)
+        
+        return final_claims[:15]  # Return up to 15 claims
     
     def _generate_fact_check_summary(self, fact_checks: List[Dict[str, Any]]) -> str:
         """Generate a summary of fact check results"""
