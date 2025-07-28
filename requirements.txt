@@ -15,20 +15,17 @@ requests==2.31.0
 lxml==4.9.3
 html5lib==1.1
 
-# Advanced extraction libraries
-cloudscraper==1.2.71  # Bypasses Cloudflare and anti-bot protection
-trafilatura==1.6.3    # Advanced content extraction
-newspaper3k==0.2.8    # Article extraction
-readability-lxml==0.8.1  # Mozilla's readability
-goose3==3.1.17       # Another extraction library
+# Anti-bot bypass tools
+cloudscraper==1.2.71  # CRITICAL - Bypasses Cloudflare/anti-bot
+httpx==0.25.2         # HTTP/2 support
+httpx[http2]==0.25.2  # Enable HTTP/2
 
-# JavaScript rendering (optional - comment out if deployment fails)
-# selenium==4.16.0
-# undetected-chromedriver==3.5.4
+# Additional extraction libraries (optional)
+# trafilatura==1.6.3
+# newspaper3k==0.2.8
 
 # AI and NLP
 openai==1.3.8
-httpx==0.25.2
 
 # PDF generation
 reportlab==4.0.7
@@ -38,8 +35,6 @@ werkzeug==3.0.1
 
 # Utilities
 python-dateutil==2.8.2
-chardet==5.2.0  # Character encoding detection
-ftfy==6.1.3     # Fixes text encoding issues
 
 # Production server
 gunicorn==21.2.0
