@@ -547,7 +547,7 @@ class NewsExtractor:
         for elem in soup(['script', 'style', 'noscript', 'nav', 'header', 'footer', 'aside']):
             elem.decompose()
         
-        # Domain-specific selectors
+        # Domain-specific selectors - UPDATED WITH REUTERS
         domain_selectors = {
             'politico.com': [
                 '.story-text',
@@ -581,6 +581,29 @@ class NewsExtractor:
                 '.article-body',
                 '.story-body',
                 '[class*="article-body"]'
+            ],
+            'reuters.com': [
+                '.article-body__content',
+                '[data-testid="article-body"]',
+                '.article__body',
+                '.StandardArticleBody_body',
+                '.ArticleBody__content',
+                '[class*="article-body"]',
+                '.story-content',
+                'div[class*="paragraph-"]',
+                '.Paragraph__component',
+                '[data-testid="paragraph"]',
+                '.text__text',
+                '[class*="__text__"]',
+                'div[data-testid="paragraph-0"]',
+                'div[data-testid="paragraph-1"]',
+                'div[data-testid="paragraph-2"]',
+                '.article-content',
+                'div[class*="Body__container"]',
+                '.article-wrap',
+                '.StandardArticle',
+                '[class*="ArticleBody"]',
+                '.paywall-article'
             ]
         }
         
@@ -672,7 +695,7 @@ class NewsExtractor:
         # Store all candidates with confidence scores
         author_candidates = {}  # author -> confidence score
         
-        # METHOD 0: Domain-specific patterns
+        # METHOD 0: Domain-specific patterns - UPDATED WITH REUTERS
         domain_patterns = {
             'politico.com': [
                 r'<p[^>]*class="story-meta__authors"[^>]*>([^<]+)</p>',
@@ -707,6 +730,18 @@ class NewsExtractor:
                 r'class="author-name"[^>]*>([^<]+)',
                 r'rel="author"[^>]*>([^<]+)',
                 r'"author"[^}]*"name":\s*"([^"]+)"'
+            ],
+            'reuters.com': [
+                r'By\s+([A-Z][a-z]+(?:\s+[A-Z\'][a-z]+){1,3})',
+                r'<a[^>]*href="[^"]*/authors/[^"]*"[^>]*>([^<]+)</a>',
+                r'<span[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)</span>',
+                r'"author"[^}]*"name":\s*"([^"]+)"',
+                r'<div[^>]*class="[^"]*byline[^"]*"[^>]*>([^<]+)</div>',
+                r'itemprop="author"[^>]*>([^<]+)',
+                r'data-testid="author-name"[^>]*>([^<]+)',
+                r'class="ArticleHeader__author"[^>]*>([^<]+)',
+                r'class="author-name"[^>]*>([^<]+)',
+                r'Reporting by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
             ]
         }
         
