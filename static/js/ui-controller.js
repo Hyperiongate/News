@@ -851,13 +851,13 @@
         createAuthorAnalysisCard(data) {
             const card = this.createCard('author', '✍️', 'Author Analysis');
             
-            // FIXED: Add the missing class that some code is looking for
+            // Add the author-analysis-section class
             card.classList.add('author-analysis-section');
             
             const author = data.author_analysis || {};
             const credScore = author.credibility_score || 0;
             
-            // Enhanced summary section with verification badges
+            // Enhanced summary section - showing ALL information openly
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
                     <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
@@ -868,144 +868,154 @@
                     ${author.verification_status ? `
                         <div style="margin: 8px 0;">
                             ${author.verification_status.verified ? '<span style="display: inline-block; padding: 4px 12px; background: #c6f6d5; color: #22543d; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">✓ Verified</span>' : ''}
-                            ${author.verification_status.journalist_verified ? '<span style="display: inline-block; padding: 4px 12px; background: #e6fffa; color: #234e52; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">📰 Professional Journalist</span>' : ''}
-                            ${author.verification_status.outlet_staff ? '<span style="display: inline-block; padding: 4px 12px; background: #fefcbf; color: #744210; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">🏢 Staff Writer</span>' : ''}
+                            ${author.verification_status.journalist_verified ? '<span style="display: inline-block; padding: 4px 12px; background: #bee3f8; color: #2c5282; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">📰 Professional Journalist</span>' : ''}
+                            ${author.verification_status.outlet_staff ? '<span style="display: inline-block; padding: 4px 12px; background: #e9d8fd; color: #553c9a; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">🏢 Staff Writer</span>' : ''}
                         </div>
-                    ` : ''}
-                    
-                    <!-- Current Position -->
-                    ${author.current_position ? `
-                        <p style="margin: 8px 0; color: #64748b; font-size: 0.875rem;">
-                            ${author.current_position}
-                        </p>
                     ` : ''}
                     
                     <!-- Credibility Score -->
-                    ${author.found ? `
-                        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: ${this.getCredibilityColor(credScore)}22; border-radius: 999px; margin-top: 12px;">
-                            <span style="font-size: 1.5rem; font-weight: 700; color: ${this.getCredibilityColor(credScore)};">
-                                ${credScore}%
-                            </span>
-                            <span style="color: #475569; font-size: 0.875rem;">Credibility</span>
+                    <div style="margin: 16px 0;">
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">CREDIBILITY SCORE</div>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: ${this.getScoreColor(credScore)}; margin: 4px 0;">
+                            ${credScore}
                         </div>
-                        
-                        <!-- Quick Stats -->
-                        ${author.articles_count || author.professional_info?.years_experience ? `
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 16px; max-width: 300px; margin-left: auto; margin-right: auto;">
-                                ${author.articles_count ? `
-                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
-                                        <div style="font-size: 0.75rem; color: #718096;">Articles</div>
-                                    </div>
-                                ` : ''}
-                                ${author.professional_info?.years_experience ? `
-                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
-                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        ` : ''}
-                    ` : `
-                        <p style="color: #92400e; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                            Limited author information available
-                        </p>
-                    `}
+                        <div style="font-size: 0.875rem; color: #6b7280;">
+                            ${author.credibility_explanation?.level || this.getCredibilityLevel(credScore)}
+                        </div>
+                    </div>
                 </div>
             `;
             
-            // Enhanced details section with all features but no problematic links
+            // Details section - SHOW ALL DATA OPENLY
             card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getAuthorContext(author)}
-                    </p>
-                </div>
-                
+                <!-- Biography Section -->
                 ${author.bio ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">📝 Author Biography</h4>
-                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155; line-height: 1.6;">
-                            ${author.bio}
-                        </p>
+                    <div style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #334155; font-size: 0.875rem; text-transform: uppercase;">Biography</h5>
+                        <p style="margin: 0; color: #475569; line-height: 1.6;">${author.bio}</p>
                     </div>
                 ` : ''}
                 
-                ${author.professional_info && Object.keys(author.professional_info).length > 0 ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 12px 0; color: #0369a1; font-size: 1rem;">💼 Professional Background</h5>
+                <!-- Professional Information -->
+                ${author.professional_info ? `
+                    <div style="margin-bottom: 24px;">
+                        <h5 style="margin: 0 0 16px 0; color: #334155; font-size: 0.875rem; text-transform: uppercase;">Professional Information</h5>
+                        
                         ${author.professional_info.current_position ? `
-                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
-                                <strong>Current:</strong> ${author.professional_info.current_position}
-                            </p>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #64748b; font-size: 0.875rem;">Position:</span>
+                                <span style="color: #1e293b; font-weight: 500; margin-left: 8px;">${author.professional_info.current_position}</span>
+                            </div>
                         ` : ''}
+                        
+                        ${author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #64748b; font-size: 0.875rem;">Publications:</span>
+                                <div style="margin-top: 8px;">
+                                    ${author.professional_info.outlets.map(outlet => `
+                                        <span style="display: inline-block; padding: 4px 12px; background: #e0e7ff; color: #3730a3; border-radius: 16px; font-size: 0.75rem; margin: 4px 4px 4px 0;">
+                                            ${outlet}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
                         ${author.professional_info.years_experience ? `
-                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
-                                <strong>Experience:</strong> ${author.professional_info.years_experience} years in journalism
-                            </p>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #64748b; font-size: 0.875rem;">Experience:</span>
+                                <span style="color: #1e293b; font-weight: 500; margin-left: 8px;">${author.professional_info.years_experience} years</span>
+                            </div>
                         ` : ''}
+                        
                         ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
-                            <p style="margin: 0; color: #0c4a6e;">
-                                <strong>Expertise:</strong> ${author.professional_info.expertise_areas.join(', ')}
-                            </p>
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #64748b; font-size: 0.875rem;">Expertise:</span>
+                                <div style="margin-top: 8px;">
+                                    ${author.professional_info.expertise_areas.map(area => `
+                                        <span style="display: inline-block; padding: 4px 12px; background: #dbeafe; color: #1e40af; border-radius: 16px; font-size: 0.75rem; margin: 4px 4px 4px 0;">
+                                            ${area}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
                         ` : ''}
                     </div>
                 ` : ''}
                 
-                ${author.education ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f3e8ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 8px 0; color: #5b21b6;">🎓 Education</h5>
-                        <p style="margin: 0; color: #4c1d95;">${author.education}</p>
-                    </div>
-                ` : ''}
-                
-                ${author.awards && author.awards.length > 0 ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                        <h5 style="margin: 0 0 8px 0; color: #92400e;">🏆 Awards & Recognition</h5>
-                        <ul style="margin: 0; padding-left: 20px; color: #78350f;">
-                            ${author.awards.map(award => `<li style="margin-bottom: 4px;">${award}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                ${author.previous_positions && author.previous_positions.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📍 Career History</h5>
-                        <div style="position: relative; padding-left: 20px;">
-                            <div style="position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background: #e2e8f0;"></div>
-                            ${author.previous_positions.map(position => {
-                                if (typeof position === 'string') {
-                                    return `
-                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
-                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
-                                            <span style="color: #2d3748;">${position}</span>
-                                        </div>
-                                    `;
-                                } else {
-                                    return `
-                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
-                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
-                                            <div>
-                                                <span style="font-weight: 600; color: #2d3748;">${position.title}</span>
-                                                ${position.outlet ? `<span style="color: #4a5568;"> at ${position.outlet}</span>` : ''}
-                                                ${position.dates ? `<span style="color: #718096; font-size: 0.875rem;"> (${position.dates})</span>` : ''}
-                                            </div>
-                                        </div>
-                                    `;
-                                }
-                            }).join('')}
+                <!-- Online Presence -->
+                ${author.online_presence && Object.keys(author.online_presence).length > 0 ? `
+                    <div style="margin-bottom: 24px;">
+                        <h5 style="margin: 0 0 16px 0; color: #334155; font-size: 0.875rem; text-transform: uppercase;">Online Presence</h5>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            ${Object.entries(author.online_presence).map(([platform, url]) => `
+                                <a href="${url}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #f1f5f9; color: #475569; border-radius: 8px; text-decoration: none; font-size: 0.875rem; transition: all 0.2s;">
+                                    <span>${platform.charAt(0).toUpperCase() + platform.slice(1)}</span>
+                                    <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            `).join('')}
                         </div>
                     </div>
                 ` : ''}
                 
-                <!-- Coverage Information -->
-                <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 16px; border-radius: 4px;">
-                    <h5 style="margin: 0 0 8px 0; color: #475569; font-size: 0.875rem;">Information Coverage</h5>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                        ${this.renderInfoCoverageGrid(author)}
+                <!-- Credibility Assessment -->
+                ${author.credibility_explanation ? `
+                    <div style="margin-bottom: 24px; padding: 16px; background: ${this.getCredibilityBackground(credScore)}; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #334155; font-size: 0.875rem; text-transform: uppercase;">Credibility Assessment</h5>
+                        <p style="margin: 0 0 12px 0; color: #1e293b; font-weight: 500;">${author.credibility_explanation.explanation}</p>
+                        
+                        ${author.credibility_explanation.factors && author.credibility_explanation.factors.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <span style="color: #64748b; font-size: 0.875rem; font-weight: 500;">Key Factors:</span>
+                                <ul style="margin: 8px 0 0 20px; padding: 0; color: #475569; font-size: 0.875rem;">
+                                    ${author.credibility_explanation.factors.map(factor => `
+                                        <li style="margin: 4px 0;">${factor}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        ${author.credibility_explanation.advice ? `
+                            <div style="padding: 12px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                                <span style="color: #1e293b; font-size: 0.875rem;">
+                                    <strong>Advice:</strong> ${author.credibility_explanation.advice}
+                                </span>
+                            </div>
+                        ` : ''}
                     </div>
-                </div>
+                ` : ''}
+                
+                <!-- Sources Checked -->
+                ${author.sources_checked && author.sources_checked.length > 0 ? `
+                    <div style="margin-bottom: 24px;">
+                        <h5 style="margin: 0 0 12px 0; color: #334155; font-size: 0.875rem; text-transform: uppercase;">Verification Sources</h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${author.sources_checked.map(source => `
+                                <span style="display: inline-block; padding: 4px 12px; background: #f1f5f9; color: #64748b; border-radius: 16px; font-size: 0.75rem;">
+                                    ${source}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- If no data found, show honest message -->
+                ${!author.found ? `
+                    <div style="padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                        <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">Limited Information Available</h5>
+                        <p style="margin: 0; color: #78350f; font-size: 0.875rem; line-height: 1.5;">
+                            We were unable to find comprehensive information about this author through our verification channels. 
+                            This doesn't necessarily reflect on their credibility, but we recommend:
+                        </p>
+                        <ul style="margin: 8px 0 0 20px; padding: 0; color: #78350f; font-size: 0.875rem;">
+                            <li>Checking the publication's credibility</li>
+                            <li>Verifying key claims through multiple sources</li>
+                            <li>Looking for the author's other work on the publication's website</li>
+                        </ul>
+                    </div>
+                ` : ''}
             `;
             
             return card;
@@ -1295,6 +1305,27 @@
             return '#ef4444';
         }
 
+        getScoreColor(score) {
+            if (score >= 80) return '#10b981';
+            if (score >= 60) return '#3b82f6';
+            if (score >= 40) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        getCredibilityLevel(score) {
+            if (score >= 80) return 'Highly Credible';
+            if (score >= 60) return 'Moderately Credible';
+            if (score >= 40) return 'Limited Credibility';
+            return 'Unverified';
+        }
+
+        getCredibilityBackground(score) {
+            if (score >= 80) return '#f0fdf4';
+            if (score >= 60) return '#eff6ff';
+            if (score >= 40) return '#fefce8';
+            return '#fef2f2';
+        }
+
         getVerdict(score) {
             if (score >= 80) return 'Highly Trustworthy';
             if (score >= 60) return 'Generally Reliable';
@@ -1425,28 +1456,6 @@
             } else {
                 return `Significant concerns exist about ${author.name}'s credibility based on past work. Their articles should be carefully fact-checked against other sources.`;
             }
-        }
-
-        renderInfoCoverageGrid(author) {
-            const fields = {
-                'Biography': author.bio && author.bio !== 'No detailed information available',
-                'Photo': !!author.image_url,
-                'Education': !!author.education,
-                'Experience': !!(author.professional_info?.years_experience),
-                'Social Media': !!(author.online_presence && Object.values(author.online_presence).some(v => v)),
-                'Recent Work': !!(author.recent_articles?.length > 0),
-                'Awards': !!(author.awards?.length > 0),
-                'Career History': !!(author.previous_positions?.length > 0),
-                'Expertise': !!(author.professional_info?.expertise_areas?.length > 0),
-                'Verification': !!(author.verification_status?.verified)
-            };
-            
-            return Object.entries(fields).map(([field, hasData]) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: ${hasData ? '#f0fff4' : 'white'}; border-radius: 6px; border: 1px solid ${hasData ? '#9ae6b4' : '#e2e8f0'};">
-                    <span style="font-size: 0.875rem; color: #4a5568;">${field}</span>
-                    <span style="font-weight: 600; color: ${hasData ? '#38a169' : '#cbd5e0'};">${hasData ? '✓' : '—'}</span>
-                </div>
-            `).join('');
         }
 
         getClickbaitContext(score, tactics) {
