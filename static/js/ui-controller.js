@@ -1217,10 +1217,40 @@
                     grid-template-columns: 1fr !important;
                 }
             }
+            
+            /* Export section styles */
+            .export-section-container {
+                margin: 2rem auto;
+                text-align: center;
+                padding: 2rem;
+                background: #f9fafb;
+                border-radius: 12px;
+                max-width: 600px;
+            }
+            
+            /* Refresh and notification styles */
+            .refresh-analysis-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                background: #4f46e5;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            #auto-refresh-notice {
+                animation: pulse 2s infinite;
+            }
         `;
         document.head.appendChild(style);
     }
-})();-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+})(); 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTrustScoreContext(trustScore)}
@@ -1770,4 +1800,4 @@
             `;
             
             card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border
+                <div style="background: #eff6ff; border-left:
