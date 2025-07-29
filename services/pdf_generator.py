@@ -1224,7 +1224,7 @@ class PDFGenerator:
             if quality.get('has_statistics'):
                 elements.append(Paragraph("✓ Includes statistical data", self.styles['Success']))
             if quality.get('has_sources'):
-               elements.append(Paragraph("✓ Cites sources", self.styles['Success']))
+                elements.append(Paragraph("✓ Cites sources", self.styles['Success']))
            if quality.get('has_expert_opinions'):
                elements.append(Paragraph("✓ Includes expert opinions", self.styles['Success']))
        
@@ -1521,4 +1521,4 @@ class PDFGenerator:
        elif lean > 20:
            return "This article leans right in its political perspective and presentation."
        else:
-           return "This article maintains a relatively centrist or balanced political perspective." 
+           return "This article maintains a relatively centrist or balanced political perspective."
