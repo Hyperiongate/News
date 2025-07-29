@@ -1076,9 +1076,13 @@ class PDFGenerator:
         elements.append(Spacer(1, 0.1*inch))
         
         for i, claim in enumerate(claims, 1):
-            claim_text = claim.get('text', 'Unknown claim')
-            claim_type = claim.get('type', 'unknown')
-            importance = claim.get('importance', 'medium')
+            claim_text = claim.get('text', claim) if isinstance(claim, dict) else claim
+            if isinstance(claim, dict):
+                claim_type = claim.get('type', 'unknown')
+                importance = claim.get('importance', 'medium')
+            else:
+                claim_type = 'unknown'
+                importance = 'medium'
             
             importance_color = {
                 'high': colors.HexColor('#ef4444'),
@@ -1220,70 +1224,301 @@ class PDFGenerator:
             if quality.get('has_statistics'):
                 elements.append(Paragraph("✓ Includes statistical data", self.styles['Success']))
             if quality.get('has_sources'):
-                elements.append(Paragraph("✓ Cites sources", self.styles['Success']))
-            if quality.get('has_expert_opinions'):
-                elements.append(Paragraph("✓ Includes expert opinions", self.styles['Success']))
-        
-        return elements
-    
-    def _create_persuasion_section(self, persuasion_data):
-        """Create persuasion analysis section"""
-        elements = []
-        
-        elements.append(Paragraph("Persuasion Techniques", self.styles['SectionHeader']))
-        
-        # Persuasion score
-        score = persuasion_data.get('persuasion_score', 0)
-        elements.append(self._create_score_bar_graphic(score, 'Persuasion Intensity', 
-                                                      reverse_colors=True))
-        elements.append(Spacer(1, 0.2*inch))
-        
-        # Emotional appeals
-        if persuasion_data.get('emotional_appeals'):
-            elements.append(Paragraph("Emotional Appeals Detected", self.styles['SubsectionHeader']))
-            
-            appeals = persuasion_data['emotional_appeals']
-            appeal_data = []
-            
-            for emotion, value in appeals.items():
-                if value > 0:
-                    appeal_data.append([emotion.capitalize(), f"{value}%"])
-            
-            if appeal_data:
-                t = Table([['Emotion', 'Intensity']] + appeal_data, colWidths=[2*inch, 2*inch])
-                t.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ec4899')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('FONT', (0, 1), (-1, -1), 'Helvetica', 10),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-                    ('TOPPADDING', (0, 0), (-1, -1), 6),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                ]))
-                elements.append(t)
-        
-        # Logical fallacies
-        if persuasion_data.get('logical_fallacies'):
-            elements.append(Spacer(1, 0.2*inch))
-            elements.append(Paragraph("Logical Fallacies Detected", self.styles['SubsectionHeader']))
-            
-            for fallacy in persuasion_data['logical_fallacies']:
-                text = f"<b>{fallacy.get('type', 'Unknown')}</b>: {fallacy.get('description', '')}"
-                elements.append(Paragraph(f"• {text}", self.styles['Alert']))
-        
-        # Persuasion techniques
-        if persuasion_data.get('techniques'):
-            elements.append(Spacer(1, 0.2*inch))
-            elements.append(Paragraph("Persuasion Techniques Used", self.styles['SubsectionHeader']))
-            
-            for technique in persuasion_data['techniques']:
-                elements.append(Paragraph(f"• {technique}", self.styles['CustomBody']))
-        
-        return elements
-    
-    def _create_connection_section(self, connection_data):
-        """Create connection analysis section"""
-        elements = []
-        
-        elements
+               elements.append(Paragraph("✓ Cites sources", self.styles['Success']))
+           if quality.get('has_expert_opinions'):
+               elements.append(Paragraph("✓ Includes expert opinions", self.styles['Success']))
+       
+       return elements
+   
+   def _create_persuasion_section(self, persuasion_data):
+       """Create persuasion analysis section"""
+       elements = []
+       
+       elements.append(Paragraph("Persuasion Techniques", self.styles['SectionHeader']))
+       
+       # Persuasion score
+       score = persuasion_data.get('persuasion_score', 0)
+       elements.append(self._create_score_bar_graphic(score, 'Persuasion Intensity', 
+                                                     reverse_colors=True))
+       elements.append(Spacer(1, 0.2*inch))
+       
+       # Emotional appeals
+       if persuasion_data.get('emotional_appeals'):
+           elements.append(Paragraph("Emotional Appeals Detected", self.styles['SubsectionHeader']))
+           
+           appeals = persuasion_data['emotional_appeals']
+           appeal_data = []
+           
+           for emotion, value in appeals.items():
+               if value > 0:
+                   appeal_data.append([emotion.capitalize(), f"{value}%"])
+           
+           if appeal_data:
+               t = Table([['Emotion', 'Intensity']] + appeal_data, colWidths=[2*inch, 2*inch])
+               t.setStyle(TableStyle([
+                   ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ec4899')),
+                   ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                   ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
+                   ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                   ('FONT', (0, 1), (-1, -1), 'Helvetica', 10),
+                   ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                   ('TOPPADDING', (0, 0), (-1, -1), 6),
+                   ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+               ]))
+               elements.append(t)
+       
+       # Logical fallacies
+       if persuasion_data.get('logical_fallacies'):
+           elements.append(Spacer(1, 0.2*inch))
+           elements.append(Paragraph("Logical Fallacies Detected", self.styles['SubsectionHeader']))
+           
+           for fallacy in persuasion_data['logical_fallacies']:
+               text = f"<b>{fallacy.get('type', 'Unknown')}</b>: {fallacy.get('description', '')}"
+               elements.append(Paragraph(f"• {text}", self.styles['Alert']))
+       
+       # Persuasion techniques
+       if persuasion_data.get('techniques'):
+           elements.append(Spacer(1, 0.2*inch))
+           elements.append(Paragraph("Persuasion Techniques Used", self.styles['SubsectionHeader']))
+           
+           for technique in persuasion_data['techniques']:
+               elements.append(Paragraph(f"• {technique}", self.styles['CustomBody']))
+       
+       return elements
+   
+   def _create_manipulation_section(self, persuasion_data):
+       """Create manipulation analysis section"""
+       elements = []
+       
+       elements.append(Paragraph("Manipulation Analysis", self.styles['SectionHeader']))
+       
+       # Manipulation score
+       score = persuasion_data.get('manipulation_score', 0)
+       elements.append(self._create_score_bar_graphic(score, 'Manipulation Score', reverse_colors=True))
+       elements.append(Spacer(1, 0.2*inch))
+       
+       # Tactics
+       if persuasion_data.get('manipulation_tactics'):
+           elements.append(Paragraph("Manipulation Tactics Found", self.styles['SubsectionHeader']))
+           
+           for tactic in persuasion_data['manipulation_tactics']:
+               severity = tactic.get('severity', 'medium')
+               severity_color = {
+                   'high': colors.HexColor('#ef4444'),
+                   'medium': colors.HexColor('#f59e0b'),
+                   'low': colors.HexColor('#3b82f6')
+               }.get(severity, colors.HexColor('#6b7280'))
+               
+               text = f"<b>{tactic.get('type', 'Unknown')}</b> " \
+                      f"<font color='{severity_color}'>({severity.upper()})</font>: " \
+                      f"{tactic.get('description', '')}"
+               elements.append(Paragraph(f"• {text}", self.styles['CustomBody']))
+       
+       return elements
+   
+   def _create_source_section(self, source_data):
+       """Create source credibility section"""
+       elements = []
+       
+       elements.append(Paragraph("Source Credibility", self.styles['SectionHeader']))
+       
+       # Basic info
+       elements.append(Paragraph(f"<b>Source:</b> {source_data.get('name', 'Unknown')}", 
+                               self.styles['CustomBody']))
+       elements.append(Paragraph(f"<b>Rating:</b> {source_data.get('rating', 'Unknown')}", 
+                               self.styles['CustomBody']))
+       elements.append(Paragraph(f"<b>Type:</b> {source_data.get('type', 'Unknown')}", 
+                               self.styles['CustomBody']))
+       
+       if source_data.get('bias'):
+           elements.append(Paragraph(f"<b>Known Bias:</b> {source_data['bias']}", 
+                                   self.styles['CustomBody']))
+       
+       if source_data.get('description'):
+           elements.append(Spacer(1, 0.1*inch))
+           elements.append(Paragraph(source_data['description'], self.styles['Info']))
+       
+       return elements
+   
+   def _create_footer(self):
+       """Create footer elements"""
+       elements = []
+       
+       elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e5e7eb'), 
+                                 spaceAfter=0.2*inch))
+       
+       footer_text = f"Generated by News Analyzer AI on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}"
+       elements.append(Paragraph(footer_text, ParagraphStyle(
+           name='Footer',
+           parent=self.styles['Normal'],
+           fontSize=8,
+           textColor=colors.HexColor('#6b7280'),
+           alignment=TA_CENTER
+       )))
+       
+       disclaimer = "This analysis is provided for informational purposes only. Always verify important information through multiple sources."
+       elements.append(Paragraph(disclaimer, ParagraphStyle(
+           name='Disclaimer',
+           parent=self.styles['Normal'],
+           fontSize=7,
+           textColor=colors.HexColor('#9ca3af'),
+           alignment=TA_CENTER,
+           spaceAfter=20
+       )))
+       
+       return elements
+   
+   def _add_page_number(self, canvas, doc):
+       """Add page numbers to PDF"""
+       canvas.saveState()
+       canvas.setFont('Helvetica', 9)
+       canvas.setFillColor(colors.HexColor('#6b7280'))
+       canvas.drawCentredString(letter[0]/2, 30, f"Page {doc.page}")
+       canvas.restoreState()
+   
+   def _create_score_bar_graphic(self, score, label, reverse_colors=False):
+       """Create a horizontal bar chart for scores"""
+       drawing = Drawing(400, 100)
+       
+       # Determine color based on score
+       if reverse_colors:
+           # For metrics where lower is better (manipulation, clickbait)
+           if score < 30:
+               color = colors.HexColor('#10b981')  # Green
+           elif score < 60:
+               color = colors.HexColor('#f59e0b')  # Yellow
+           else:
+               color = colors.HexColor('#ef4444')  # Red
+       else:
+           # For metrics where higher is better (credibility, transparency)
+           if score >= 70:
+               color = colors.HexColor('#10b981')  # Green
+           elif score >= 40:
+               color = colors.HexColor('#f59e0b')  # Yellow
+           else:
+               color = colors.HexColor('#ef4444')  # Red
+       
+       # Label
+       drawing.add(String(10, 80, label, fontSize=12, fillColor=colors.HexColor('#374151')))
+       
+       # Background bar
+       drawing.add(Rect(10, 40, 350, 25, fillColor=colors.HexColor('#e5e7eb'), 
+                       strokeColor=None))
+       
+       # Score bar
+       bar_width = (score / 100) * 350
+       drawing.add(Rect(10, 40, bar_width, 25, fillColor=color, strokeColor=None))
+       
+       # Score text
+       drawing.add(String(370, 47, f"{score}%", fontSize=14, fontName='Helvetica-Bold',
+                         fillColor=colors.HexColor('#1f2937')))
+       
+       return drawing
+   
+   def _create_political_spectrum_graphic(self, lean):
+       """Create political spectrum visualization"""
+       drawing = Drawing(400, 100)
+       
+       # Spectrum bar
+       spectrum_width = 350
+       spectrum_x = 25
+       spectrum_y = 40
+       
+       # Gradient effect (simplified - just colored sections)
+       sections = [
+           (colors.HexColor('#1e40af'), 'Far Left'),
+           (colors.HexColor('#3b82f6'), 'Left'),
+           (colors.HexColor('#6b7280'), 'Center'),
+           (colors.HexColor('#ef4444'), 'Right'),
+           (colors.HexColor('#991b1b'), 'Far Right')
+       ]
+       
+       section_width = spectrum_width / 5
+       for i, (color, label) in enumerate(sections):
+           drawing.add(Rect(spectrum_x + i * section_width, spectrum_y, section_width, 20, 
+                          fillColor=color, strokeColor=None))
+       
+       # Position indicator
+       # lean is from -100 to 100, convert to 0-350 position
+       indicator_pos = spectrum_x + ((lean + 100) / 200) * spectrum_width
+       
+       # Triangle indicator
+       drawing.add(Circle(indicator_pos, spectrum_y + 10, 8, fillColor=colors.black, 
+                        strokeColor=colors.white, strokeWidth=2))
+       
+       # Labels
+       label_positions = ['Far Left', 'Left', 'Center', 'Right', 'Far Right']
+       for i, label in enumerate(label_positions):
+           x_pos = spectrum_x + (i * section_width) + (section_width / 2)
+           drawing.add(String(x_pos, 20, label, textAnchor='middle', fontSize=10,
+                            fillColor=colors.HexColor('#374151')))
+       
+       # Score label
+       drawing.add(String(200, 75, f"Political Lean: {lean:+.0f}", textAnchor='middle',
+                         fontSize=12, fontName='Helvetica-Bold', 
+                         fillColor=colors.HexColor('#1f2937')))
+       
+       return drawing
+   
+   # Helper methods
+   def _get_confidence_description(self, confidence):
+       """Get description for confidence level"""
+       if confidence >= 80:
+           return "Very high confidence in this analysis - multiple strong indicators support the conclusions."
+       elif confidence >= 60:
+           return "Good confidence in this analysis - several indicators support the conclusions."
+       elif confidence >= 40:
+           return "Moderate confidence in this analysis - some indicators present but not conclusive."
+       else:
+           return "Low confidence in this analysis - limited indicators available."
+   
+   def _format_dimension_name(self, dimension):
+       """Format dimension name for display"""
+       return {
+           'political': 'Political',
+           'corporate': 'Corporate',
+           'sensational': 'Sensational',
+           'ideological': 'Ideological'
+       }.get(dimension, dimension.capitalize())
+   
+   def _format_source_type(self, source_type):
+       """Format source type for display"""
+       return source_type.replace('_', ' ').title()
+   
+   def _format_pattern_type(self, pattern_type):
+       """Format bias pattern type for display"""
+       return pattern_type.replace('_', ' ').title()
+   
+   def _format_frame_type(self, frame_type):
+       """Format framing type for display"""
+       return frame_type.replace('_', ' ').title()
+   
+   def _assess_overall_bias(self, bias):
+       """Assess overall bias level"""
+       if not bias or bias == 'Unknown':
+           return 'Unable to assess'
+       
+       bias_lower = bias.lower()
+       if 'minimal' in bias_lower or 'balanced' in bias_lower:
+           return 'Well-balanced reporting'
+       elif 'slight' in bias_lower:
+           return 'Mostly balanced with minor bias'
+       elif 'moderate' in bias_lower:
+           return 'Noticeable bias present'
+       elif 'strong' in bias_lower or 'heavy' in bias_lower:
+           return 'Significant bias affecting credibility'
+       else:
+           return 'Bias level unclear'
+   
+   def _get_political_description(self, lean):
+       """Get description for political lean"""
+       if lean < -60:
+           return "This article shows strong left-leaning bias in its presentation and framing of issues."
+       elif lean < -20:
+           return "This article leans left in its political perspective and presentation."
+       elif lean > 60:
+           return "This article shows strong right-leaning bias in its presentation and framing of issues."
+       elif lean > 20:
+           return "This article leans right in its political perspective and presentation."
+       else:
+           return "This article maintains a relatively centrist or balanced political perspective." 
