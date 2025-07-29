@@ -172,9 +172,9 @@
                     resultsDiv.appendChild(gridWrapper);
                 }
                 
-                // Add export section if PDF export is enabled
-                if (data.pdf_export_enabled) {
-                    this.addExportSection(gridWrapper.parentNode, data);
+                // FIXED: Add export section if export is enabled OR user is pro
+                if (data.export_enabled !== false || data.pdf_export_enabled || data.is_pro) {
+                    this.addExportSection(gridWrapper.parentNode || resultsDiv, data);
                 }
                 
                 // Animate cards
@@ -899,26 +899,58 @@
             });
         }
 
-        // Export section
+        // FIXED: Export section with better error handling
         addExportSection(container, data) {
+            // Don't add if it already exists
+            if (document.querySelector('.export-section-container')) {
+                console.log('Export section already exists');
+                return;
+            }
+            
             const exportSection = document.createElement('div');
             exportSection.className = 'export-section-container';
             exportSection.style.cssText = 'margin: 2rem auto; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 12px; max-width: 600px;';
             
             exportSection.innerHTML = `
                 <h3 style="margin: 0 0 1rem 0; color: #0f172a;">Export Analysis Report</h3>
-                <button class="export-pdf-btn" onclick="window.UI?.exportPDF()" style="padding: 12px 24px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                <p style="margin-bottom: 1.5rem; color: #6b7280;">Download a comprehensive PDF report of this analysis</p>
+                <button class="export-pdf-btn" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 1rem 2rem;
+                    background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25);
+                ">
                     <span style="margin-right: 8px;">📄</span>
-                    Export as PDF
+                    <span>Export as PDF</span>
                 </button>
             `;
             
-            container.appendChild(exportSection);
+            // Add click handler
+            const btn = exportSection.querySelector('.export-pdf-btn');
+            btn.addEventListener('click', async () => {
+                await this.exportPDF(data || this.analysisData);
+            });
+            
+            // Find the best place to insert it
+            if (container) {
+                container.appendChild(exportSection);
+            }
         }
 
         // PDF Export method
-        async exportPDF() {
-            const analysisData = this.analysisData;
+        async exportPDF(analysisData) {
+            if (!analysisData) {
+                analysisData = this.analysisData;
+            }
             
             if (!analysisData) {
                 this.showErrorToast('No analysis data available');
