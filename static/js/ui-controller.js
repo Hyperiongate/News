@@ -1,5 +1,8 @@
 // Fixed UI Controller with PDF Export, Auto-Refresh, and Better Error Handling
+// Save this as ui-controller-fixed.js and include it in your HTML
 (function() {
+    'use strict';
+    
     class UIController {
         constructor() {
             this.components = {};
@@ -655,6 +658,556 @@
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getTrustScoreContext(trustScore)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Score Breakdown</h4>
+                <div style="space-y: 16px;">
+                    ${Object.entries(components).map(([key, value]) => `
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: #475569; font-size: 0.875rem;">${this.formatComponentName(key)}</span>
+                                <span style="color: #0f172a; font-weight: 600;">${value}%</span>
+                            </div>
+                            <div style="height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                                <div style="height: 100%; width: ${value}%; background: ${this.getTrustScoreColor(value)}; transition: width 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Use This Score</h5>
+                    <p style="margin: 0; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
+                        ${this.getTrustScoreAdvice(trustScore)}
+                    </p>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createBiasAnalysisCard(data) {
+            const card = this.createCard('bias', '⚖️', 'Bias Analysis');
+            const bias = data.bias_analysis || {};
+            const overallBias = bias.overall_bias || 0;
+            const politicalLean = bias.political_lean || 'Center';
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 600; color: ${this.getBiasColor(overallBias)};">
+                        ${overallBias}% Biased
+                    </div>
+                    <div style="font-size: 1rem; color: #64748b; margin-top: 8px;">
+                        Political Lean: ${politicalLean}
+                    </div>
+                    ${bias.bias_confidence ? `
+                        <div style="font-size: 0.875rem; color: #94a3b8; margin-top: 4px;">
+                            Confidence: ${bias.bias_confidence}%
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Bias</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getBiasContext(overallBias)}
+                    </p>
+                </div>
+                
+                ${bias.bias_indicators && bias.bias_indicators.length > 0 ? `
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a;">Bias Indicators Found:</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        ${bias.bias_indicators.map(indicator => `
+                            <li style="padding: 8px 12px; background: #fef3c7; border-radius: 6px; margin-bottom: 8px; color: #92400e;">
+                                • ${indicator}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p style="color: #64748b;">No significant bias indicators detected.</p>'}
+                
+                ${bias.bias_dimensions && Object.keys(bias.bias_dimensions).length > 0 ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a;">Bias Dimensions:</h4>
+                        ${Object.entries(bias.bias_dimensions).map(([dimension, score]) => `
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="color: #475569; font-size: 0.875rem;">${this.formatDimension(dimension)}</span>
+                                    <span style="color: #0f172a; font-weight: 600;">${score}%</span>
+                                </div>
+                                <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                                    <div style="height: 100%; width: ${score}%; background: ${this.getBiasColor(score)}; transition: width 0.5s ease;"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">How to Read Objectively</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                        ${this.getObjectiveReadingStrategies(bias).map(strategy => `<li>${strategy}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createFactCheckCard(data) {
+            const card = this.createCard('facts', '✓', 'Fact Check Results');
+            const factChecks = data.fact_checks || [];
+            const keyClaims = data.key_claims || [];
+            
+            if (!data.is_pro) {
+                card.querySelector('.card-summary').innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
+                        <div style="color: #64748b;">Fact checking available</div>
+                        <div style="margin-top: 12px;">
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem; font-weight: 600;">PRO FEATURE</span>
+                        </div>
+                    </div>
+                `;
+                card.querySelector('.card-details').innerHTML = `
+                    <div style="background: #eff6ff; border-radius: 8px; padding: 16px;">
+                        <p style="margin: 0; color: #1e293b;">Upgrade to Pro to unlock comprehensive fact-checking with Google Fact Check API integration.</p>
+                    </div>
+                `;
+                return card;
+            }
+            
+            const breakdown = this.getFactCheckBreakdown(factChecks);
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #1e293b;">${factChecks.length}</div>
+                    <div style="font-size: 0.875rem; color: #64748b;">Key Claims Identified</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 6px;">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #166534;">✓ ${breakdown.verified}</div>
+                        <div style="font-size: 0.75rem; color: #14532d;">Verified True</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: #fef2f2; border-radius: 6px;">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #991b1b;">✗ ${breakdown.false}</div>
+                        <div style="font-size: 0.75rem; color: #7f1d1d;">Found False</div>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What Our Fact-Check Reveals</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getFactCheckSummary(breakdown, factChecks)}
+                    </p>
+                </div>
+                
+                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Detailed Claim Analysis</h4>
+                
+                ${factChecks.length > 0 ? 
+                    factChecks.map((fc, idx) => {
+                        const claim = keyClaims[idx] || fc.claim || 'Claim';
+                        const verdictColor = this.getFactCheckColor(fc.verdict);
+                        return `
+                            <div style="margin-bottom: 16px; border-left: 3px solid ${verdictColor}; padding-left: 16px;">
+                                <div style="margin-bottom: 8px;">
+                                    <span style="font-weight: 600; color: #1e293b;">Claim ${idx + 1}:</span>
+                                    <span style="color: #334155;"> ${claim}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                    <span style="display: inline-block; padding: 4px 12px; background: ${verdictColor}22; color: ${verdictColor}; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+                                        ${fc.verdict.toUpperCase()}
+                                    </span>
+                                    ${fc.source ? `
+                                        <span style="font-size: 0.75rem; color: #64748b;">
+                                            via ${fc.source}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                ${fc.explanation ? `<p style="margin: 8px 0 0 0; color: #475569; font-size: 0.8125rem;">${fc.explanation}</p>` : ''}
+                            </div>
+                        `;
+                    }).join('') : '<p style="color: #64748b;">No fact checks performed</p>'}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Verify Claims Yourself</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
+                        <li>Search for the original source of statistics and quotes</li>
+                        <li>Check if other reputable outlets report the same facts</li>
+                        <li>Look for primary documents or official statements</li>
+                        <li>Use fact-checking sites like Snopes or FactCheck.org</li>
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createAuthorAnalysisCard(data) {
+            const card = this.createCard('author', '✍️', 'Author Analysis');
+            
+            // FIXED: Add the missing class that some code is looking for
+            card.classList.add('author-analysis-section');
+            
+            const author = data.author_analysis || {};
+            const credScore = author.credibility_score || 0;
+            
+            // Enhanced summary section with verification badges
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
+                        ${author.name || data.article?.author || 'Unknown Author'}
+                    </h4>
+                    
+                    <!-- Verification Badges -->
+                    ${author.verification_status ? `
+                        <div style="margin: 8px 0;">
+                            ${author.verification_status.verified ? '<span style="display: inline-block; padding: 4px 12px; background: #c6f6d5; color: #22543d; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">✓ Verified</span>' : ''}
+                            ${author.verification_status.journalist_verified ? '<span style="display: inline-block; padding: 4px 12px; background: #e6fffa; color: #234e52; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">📰 Professional Journalist</span>' : ''}
+                            ${author.verification_status.outlet_staff ? '<span style="display: inline-block; padding: 4px 12px; background: #fefcbf; color: #744210; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">🏢 Staff Writer</span>' : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Current Position -->
+                    ${author.current_position ? `
+                        <p style="margin: 8px 0; color: #64748b; font-size: 0.875rem;">
+                            ${author.current_position}
+                        </p>
+                    ` : ''}
+                    
+                    <!-- Credibility Score -->
+                    ${author.found ? `
+                        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: ${this.getCredibilityColor(credScore)}22; border-radius: 999px; margin-top: 12px;">
+                            <span style="font-size: 1.5rem; font-weight: 700; color: ${this.getCredibilityColor(credScore)};">
+                                ${credScore}%
+                            </span>
+                            <span style="color: #475569; font-size: 0.875rem;">Credibility</span>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        ${author.articles_count || author.professional_info?.years_experience ? `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 16px; max-width: 300px; margin-left: auto; margin-right: auto;">
+                                ${author.articles_count ? `
+                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
+                                        <div style="font-size: 0.75rem; color: #718096;">Articles</div>
+                                    </div>
+                                ` : ''}
+                                ${author.professional_info?.years_experience ? `
+                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
+                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <p style="color: #92400e; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                            Limited author information available
+                        </p>
+                    `}
+                </div>
+            `;
+            
+            // Enhanced details section with all features but no problematic links
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getAuthorContext(author)}
+                    </p>
+                </div>
+                
+                ${author.bio ? `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">📝 Author Biography</h4>
+                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155; line-height: 1.6;">
+                            ${author.bio}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                ${author.professional_info && Object.keys(author.professional_info).length > 0 ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 12px 0; color: #0369a1; font-size: 1rem;">💼 Professional Background</h5>
+                        ${author.professional_info.current_position ? `
+                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
+                                <strong>Current:</strong> ${author.professional_info.current_position}
+                            </p>
+                        ` : ''}
+                        ${author.professional_info.years_experience ? `
+                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
+                                <strong>Experience:</strong> ${author.professional_info.years_experience} years in journalism
+                            </p>
+                        ` : ''}
+                        ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
+                            <p style="margin: 0; color: #0c4a6e;">
+                                <strong>Expertise:</strong> ${author.professional_info.expertise_areas.join(', ')}
+                            </p>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                ${author.education ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f3e8ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #5b21b6;">🎓 Education</h5>
+                        <p style="margin: 0; color: #4c1d95;">${author.education}</p>
+                    </div>
+                ` : ''}
+                
+                ${author.awards && author.awards.length > 0 ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #92400e;">🏆 Awards & Recognition</h5>
+                        <ul style="margin: 0; padding-left: 20px; color: #78350f;">
+                            ${author.awards.map(award => `<li style="margin-bottom: 4px;">${award}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${author.previous_positions && author.previous_positions.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📍 Career History</h5>
+                        <div style="position: relative; padding-left: 20px;">
+                            <div style="position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background: #e2e8f0;"></div>
+                            ${author.previous_positions.map(position => {
+                                if (typeof position === 'string') {
+                                    return `
+                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
+                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
+                                            <span style="color: #2d3748;">${position}</span>
+                                        </div>
+                                    `;
+                                } else {
+                                    return `
+                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
+                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
+                                            <div>
+                                                <span style="font-weight: 600; color: #2d3748;">${position.title}</span>
+                                                ${position.outlet ? `<span style="color: #4a5568;"> at ${position.outlet}</span>` : ''}
+                                                ${position.dates ? `<span style="color: #718096; font-size: 0.875rem;"> (${position.dates})</span>` : ''}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Coverage Information -->
+                <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 16px; border-radius: 4px;">
+                    <h5 style="margin: 0 0 8px 0; color: #475569; font-size: 0.875rem;">Information Coverage</h5>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                        ${this.renderInfoCoverageGrid(author)}
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createClickbaitCard(data) {
+            const card = this.createCard('clickbait', '🎣', 'Clickbait Detection');
+            const clickbaitScore = data.clickbait_analysis?.clickbait_score || 0;
+            const tactics = data.clickbait_analysis?.tactics_found || [];
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: ${this.getClickbaitColor(clickbaitScore)};">
+                        ${clickbaitScore}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-top: 8px;">
+                        ${this.getClickbaitLabel(clickbaitScore)}
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Means</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getClickbaitContext(clickbaitScore, tactics)}
+                    </p>
+                </div>
+                
+                ${tactics.length > 0 ? `
+                    <h4 style="margin: 0 0 12px 0; color: #0f172a;">Tactics Detected:</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        ${tactics.map(tactic => `
+                            <li style="padding: 8px; background: #fef3c7; border-radius: 4px; margin-bottom: 8px; color: #92400e;">
+                                • ${tactic}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p style="color: #64748b;">No clickbait tactics detected.</p>'}
+                
+                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Spotting Clickbait</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                        <li>Watch for extreme emotional language</li>
+                        <li>Be wary of "You won't believe..." phrases</li>
+                        <li>Check if the headline matches the content</li>
+                        <li>Look for vague claims that sound too good</li>
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createSourceCredibilityCard(data) {
+            const card = this.createCard('source', '🏢', 'Source Credibility');
+            const source = data.source_credibility || {};
+            const rating = source.rating || 'Unknown';
+            const credibilityScore = source.credibility_score || 0;
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">
+                        ${this.getSourceIcon(rating)}
+                    </div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: #0f172a;">
+                        ${rating} Credibility
+                    </div>
+                    <div style="color: #64748b; margin-top: 8px;">
+                        ${source.domain || data.article?.domain || 'Unknown Source'}
+                    </div>
+                    ${credibilityScore ? `
+                        <div style="margin-top: 12px;">
+                            <span style="font-size: 1.75rem; font-weight: 700; color: ${this.getCredibilityColor(credibilityScore)};">
+                                ${credibilityScore}%
+                            </span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">About This Source</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getSourceContext(rating, source)}
+                    </p>
+                </div>
+                
+                ${source.history ? `
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 8px 0; color: #0f172a;">Source History</h4>
+                        <p style="margin: 0; color: #475569; line-height: 1.6;">${source.history}</p>
+                    </div>
+                ` : ''}
+                
+                ${source.ownership ? `
+                    <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 8px 0; color: #92400e;">Ownership</h4>
+                        <p style="margin: 0; color: #78350f;">${source.ownership}</p>
+                    </div>
+                ` : ''}
+                
+                ${source.bias_info ? `
+                    <div style="background: #fee2e2; border-radius: 8px; padding: 16px;">
+                        <h4 style="margin: 0 0 8px 0; color: #991b1b;">Known Biases</h4>
+                        <p style="margin: 0; color: #7f1d1d;">${source.bias_info}</p>
+                    </div>
+                ` : ''}
+                
+                <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Evaluating News Sources</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
+                        <li>Check multiple sources for the same story</li>
+                        <li>Look for transparent ownership information</li>
+                        <li>Verify author credentials and expertise</li>
+                        <li>Be aware of the source's track record</li>
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createManipulationCard(data) {
+            const card = this.createCard('manipulation', '🎭', 'Manipulation Detection');
+            const score = data.manipulation_analysis?.manipulation_score || 0;
+            const tactics = data.manipulation_analysis?.tactics || [];
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: ${score < 30 ? '#059669' : score < 60 ? '#d97706' : '#dc2626'};">
+                        ${score}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Manipulation Score</div>
+                    ${tactics.length > 0 ? `
+                        <p style="color: #991b1b; background: #fef2f2; padding: 8px; border-radius: 6px;">
+                            ⚠️ ${tactics.length} tactics detected
+                        </p>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getManipulationContext(score, tactics)}
+                    </p>
+                </div>
+                
+                ${tactics.length > 0 ? `
+                    <h4 style="margin: 0 0 12px 0;">Manipulation Techniques:</h4>
+                    ${tactics.map(t => `
+                        <div style="margin-bottom: 8px; padding: 12px; background: #fef2f2; border-radius: 4px;">
+                            <strong style="color: #991b1b;">${t.name || t}</strong>
+                            ${t.description ? `<p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem;">${t.description}</p>` : ''}
+                        </div>
+                    `).join('')}
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Defense Strategies</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
+                        ${this.getManipulationDefenses(score).map(d => `<li>${d}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createTransparencyCard(data) {
+            const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
+            const trans = data.transparency_analysis || {};
+            const score = trans.transparency_score || 0;
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: ${score >= 70 ? '#059669' : score >= 40 ? '#d97706' : '#dc2626'};">
+                        ${score}%
+                    </div>
+                    <div style="font-size: 0.875rem; color: #64748b;">Transparency Score</div>
+                    ${trans.source_count !== undefined ? `
+                        <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                <div style="font-size: 1.25rem; font-weight: 600; color: #334155;">${trans.source_count}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">Sources</div>
+                            </div>
+                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                <div style="font-size: 1.25rem; font-weight: 600; color: #334155;">${trans.named_source_ratio || 0}%</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">Named</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTransparencyContext(trans, data)}
                     </p>
                 </div>
@@ -686,7 +1239,6 @@
             
             return card;
         }
-    }  // End of UIController class
 
         // Helper methods
         getTrustScoreColor(score) {
@@ -1252,554 +1804,4 @@
         `;
         document.head.appendChild(style);
     }
-})(); = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getTrustScoreContext(trustScore)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Score Breakdown</h4>
-                <div style="space-y: 16px;">
-                    ${Object.entries(components).map(([key, value]) => `
-                        <div style="margin-bottom: 16px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="color: #475569; font-size: 0.875rem;">${this.formatComponentName(key)}</span>
-                                <span style="color: #0f172a; font-weight: 600;">${value}%</span>
-                            </div>
-                            <div style="height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                                <div style="height: 100%; width: ${value}%; background: ${this.getTrustScoreColor(value)}; transition: width 0.5s ease;"></div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Use This Score</h5>
-                    <p style="margin: 0; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
-                        ${this.getTrustScoreAdvice(trustScore)}
-                    </p>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createBiasAnalysisCard(data) {
-            const card = this.createCard('bias', '⚖️', 'Bias Analysis');
-            const bias = data.bias_analysis || {};
-            const overallBias = bias.overall_bias || 0;
-            const politicalLean = bias.political_lean || 'Center';
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 600; color: ${this.getBiasColor(overallBias)};">
-                        ${overallBias}% Biased
-                    </div>
-                    <div style="font-size: 1rem; color: #64748b; margin-top: 8px;">
-                        Political Lean: ${politicalLean}
-                    </div>
-                    ${bias.bias_confidence ? `
-                        <div style="font-size: 0.875rem; color: #94a3b8; margin-top: 4px;">
-                            Confidence: ${bias.bias_confidence}%
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Bias</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getBiasContext(overallBias)}
-                    </p>
-                </div>
-                
-                ${bias.bias_indicators && bias.bias_indicators.length > 0 ? `
-                    <h4 style="margin: 0 0 12px 0; color: #0f172a;">Bias Indicators Found:</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        ${bias.bias_indicators.map(indicator => `
-                            <li style="padding: 8px 12px; background: #fef3c7; border-radius: 6px; margin-bottom: 8px; color: #92400e;">
-                                • ${indicator}
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : '<p style="color: #64748b;">No significant bias indicators detected.</p>'}
-                
-                ${bias.bias_dimensions && Object.keys(bias.bias_dimensions).length > 0 ? `
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a;">Bias Dimensions:</h4>
-                        ${Object.entries(bias.bias_dimensions).map(([dimension, score]) => `
-                            <div style="margin-bottom: 12px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                    <span style="color: #475569; font-size: 0.875rem;">${this.formatDimension(dimension)}</span>
-                                    <span style="color: #0f172a; font-weight: 600;">${score}%</span>
-                                </div>
-                                <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                                    <div style="height: 100%; width: ${score}%; background: ${this.getBiasColor(score)}; transition: width 0.5s ease;"></div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">How to Read Objectively</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                        ${this.getObjectiveReadingStrategies(bias).map(strategy => `<li>${strategy}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createFactCheckCard(data) {
-            const card = this.createCard('facts', '✓', 'Fact Check Results');
-            const factChecks = data.fact_checks || [];
-            const keyClaims = data.key_claims || [];
-            
-            if (!data.is_pro) {
-                card.querySelector('.card-summary').innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
-                        <div style="color: #64748b;">Fact checking available</div>
-                        <div style="margin-top: 12px;">
-                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem; font-weight: 600;">PRO FEATURE</span>
-                        </div>
-                    </div>
-                `;
-                card.querySelector('.card-details').innerHTML = `
-                    <div style="background: #eff6ff; border-radius: 8px; padding: 16px;">
-                        <p style="margin: 0; color: #1e293b;">Upgrade to Pro to unlock comprehensive fact-checking with Google Fact Check API integration.</p>
-                    </div>
-                `;
-                return card;
-            }
-            
-            const breakdown = this.getFactCheckBreakdown(factChecks);
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: #1e293b;">${factChecks.length}</div>
-                    <div style="font-size: 0.875rem; color: #64748b;">Key Claims Identified</div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    <div style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 6px;">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #166534;">✓ ${breakdown.verified}</div>
-                        <div style="font-size: 0.75rem; color: #14532d;">Verified True</div>
-                    </div>
-                    <div style="text-align: center; padding: 12px; background: #fef2f2; border-radius: 6px;">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #991b1b;">✗ ${breakdown.false}</div>
-                        <div style="font-size: 0.75rem; color: #7f1d1d;">Found False</div>
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What Our Fact-Check Reveals</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getFactCheckSummary(breakdown, factChecks)}
-                    </p>
-                </div>
-                
-                <h4 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.125rem;">Detailed Claim Analysis</h4>
-                
-                ${factChecks.length > 0 ? 
-                    factChecks.map((fc, idx) => {
-                        const claim = keyClaims[idx] || fc.claim || 'Claim';
-                        const verdictColor = this.getFactCheckColor(fc.verdict);
-                        return `
-                            <div style="margin-bottom: 16px; border-left: 3px solid ${verdictColor}; padding-left: 16px;">
-                                <div style="margin-bottom: 8px;">
-                                    <span style="font-weight: 600; color: #1e293b;">Claim ${idx + 1}:</span>
-                                    <span style="color: #334155;"> ${claim}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                    <span style="display: inline-block; padding: 4px 12px; background: ${verdictColor}22; color: ${verdictColor}; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
-                                        ${fc.verdict.toUpperCase()}
-                                    </span>
-                                    ${fc.source ? `
-                                        <span style="font-size: 0.75rem; color: #64748b;">
-                                            via ${fc.source}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                                ${fc.explanation ? `<p style="margin: 8px 0 0 0; color: #475569; font-size: 0.8125rem;">${fc.explanation}</p>` : ''}
-                            </div>
-                        `;
-                    }).join('') : '<p style="color: #64748b;">No fact checks performed</p>'}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Verify Claims Yourself</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
-                        <li>Search for the original source of statistics and quotes</li>
-                        <li>Check if other reputable outlets report the same facts</li>
-                        <li>Look for primary documents or official statements</li>
-                        <li>Use fact-checking sites like Snopes or FactCheck.org</li>
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createAuthorAnalysisCard(data) {
-            const card = this.createCard('author', '✍️', 'Author Analysis');
-            
-            // FIXED: Add the missing class that some code is looking for
-            card.classList.add('author-analysis-section');
-            
-            const author = data.author_analysis || {};
-            const credScore = author.credibility_score || 0;
-            
-            // Enhanced summary section with verification badges
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem; font-weight: 600;">
-                        ${author.name || data.article?.author || 'Unknown Author'}
-                    </h4>
-                    
-                    <!-- Verification Badges -->
-                    ${author.verification_status ? `
-                        <div style="margin: 8px 0;">
-                            ${author.verification_status.verified ? '<span style="display: inline-block; padding: 4px 12px; background: #c6f6d5; color: #22543d; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">✓ Verified</span>' : ''}
-                            ${author.verification_status.journalist_verified ? '<span style="display: inline-block; padding: 4px 12px; background: #e6fffa; color: #234e52; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">📰 Professional Journalist</span>' : ''}
-                            ${author.verification_status.outlet_staff ? '<span style="display: inline-block; padding: 4px 12px; background: #fefcbf; color: #744210; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin: 0 4px;">🏢 Staff Writer</span>' : ''}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Current Position -->
-                    ${author.current_position ? `
-                        <p style="margin: 8px 0; color: #64748b; font-size: 0.875rem;">
-                            ${author.current_position}
-                        </p>
-                    ` : ''}
-                    
-                    <!-- Credibility Score -->
-                    ${author.found ? `
-                        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: ${this.getCredibilityColor(credScore)}22; border-radius: 999px; margin-top: 12px;">
-                            <span style="font-size: 1.5rem; font-weight: 700; color: ${this.getCredibilityColor(credScore)};">
-                                ${credScore}%
-                            </span>
-                            <span style="color: #475569; font-size: 0.875rem;">Credibility</span>
-                        </div>
-                        
-                        <!-- Quick Stats -->
-                        ${author.articles_count || author.professional_info?.years_experience ? `
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-top: 16px; max-width: 300px; margin-left: auto; margin-right: auto;">
-                                ${author.articles_count ? `
-                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
-                                        <div style="font-size: 0.75rem; color: #718096;">Articles</div>
-                                    </div>
-                                ` : ''}
-                                ${author.professional_info?.years_experience ? `
-                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
-                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        ` : ''}
-                    ` : `
-                        <p style="color: #92400e; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                            Limited author information available
-                        </p>
-                    `}
-                </div>
-            `;
-            
-            // Enhanced details section with all features but no problematic links
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Why Author Analysis Matters</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getAuthorContext(author)}
-                    </p>
-                </div>
-                
-                ${author.bio ? `
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1.125rem;">📝 Author Biography</h4>
-                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155; line-height: 1.6;">
-                            ${author.bio}
-                        </p>
-                    </div>
-                ` : ''}
-                
-                ${author.professional_info && Object.keys(author.professional_info).length > 0 ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 12px 0; color: #0369a1; font-size: 1rem;">💼 Professional Background</h5>
-                        ${author.professional_info.current_position ? `
-                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
-                                <strong>Current:</strong> ${author.professional_info.current_position}
-                            </p>
-                        ` : ''}
-                        ${author.professional_info.years_experience ? `
-                            <p style="margin: 0 0 8px 0; color: #0c4a6e;">
-                                <strong>Experience:</strong> ${author.professional_info.years_experience} years in journalism
-                            </p>
-                        ` : ''}
-                        ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
-                            <p style="margin: 0; color: #0c4a6e;">
-                                <strong>Expertise:</strong> ${author.professional_info.expertise_areas.join(', ')}
-                            </p>
-                        ` : ''}
-                    </div>
-                ` : ''}
-                
-                ${author.education ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #f3e8ff; border-radius: 8px;">
-                        <h5 style="margin: 0 0 8px 0; color: #5b21b6;">🎓 Education</h5>
-                        <p style="margin: 0; color: #4c1d95;">${author.education}</p>
-                    </div>
-                ` : ''}
-                
-                ${author.awards && author.awards.length > 0 ? `
-                    <div style="margin-bottom: 20px; padding: 16px; background: #fef3c7; border-radius: 8px;">
-                        <h5 style="margin: 0 0 8px 0; color: #92400e;">🏆 Awards & Recognition</h5>
-                        <ul style="margin: 0; padding-left: 20px; color: #78350f;">
-                            ${author.awards.map(award => `<li style="margin-bottom: 4px;">${award}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                ${author.previous_positions && author.previous_positions.length > 0 ? `
-                    <div style="margin-bottom: 20px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">📍 Career History</h5>
-                        <div style="position: relative; padding-left: 20px;">
-                            <div style="position: absolute; left: 4px; top: 8px; bottom: 8px; width: 2px; background: #e2e8f0;"></div>
-                            ${author.previous_positions.map(position => {
-                                if (typeof position === 'string') {
-                                    return `
-                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
-                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
-                                            <span style="color: #2d3748;">${position}</span>
-                                        </div>
-                                    `;
-                                } else {
-                                    return `
-                                        <div style="position: relative; padding: 8px 0; padding-left: 20px;">
-                                            <div style="position: absolute; left: -16px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #667eea; border: 2px solid white;"></div>
-                                            <div>
-                                                <span style="font-weight: 600; color: #2d3748;">${position.title}</span>
-                                                ${position.outlet ? `<span style="color: #4a5568;"> at ${position.outlet}</span>` : ''}
-                                                ${position.dates ? `<span style="color: #718096; font-size: 0.875rem;"> (${position.dates})</span>` : ''}
-                                            </div>
-                                        </div>
-                                    `;
-                                }
-                            }).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <!-- Coverage Information -->
-                <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 16px; border-radius: 4px;">
-                    <h5 style="margin: 0 0 8px 0; color: #475569; font-size: 0.875rem;">Information Coverage</h5>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                        ${this.renderInfoCoverageGrid(author)}
-                    </div>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createClickbaitCard(data) {
-            const card = this.createCard('clickbait', '🎣', 'Clickbait Detection');
-            const clickbaitScore = data.clickbait_analysis?.clickbait_score || 0;
-            const tactics = data.clickbait_analysis?.tactics_found || [];
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: ${this.getClickbaitColor(clickbaitScore)};">
-                        ${clickbaitScore}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-top: 8px;">
-                        ${this.getClickbaitLabel(clickbaitScore)}
-                    </div>
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Means</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getClickbaitContext(clickbaitScore, tactics)}
-                    </p>
-                </div>
-                
-                ${tactics.length > 0 ? `
-                    <h4 style="margin: 0 0 12px 0; color: #0f172a;">Tactics Detected:</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        ${tactics.map(tactic => `
-                            <li style="padding: 8px; background: #fef3c7; border-radius: 4px; margin-bottom: 8px; color: #92400e;">
-                                • ${tactic}
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : '<p style="color: #64748b;">No clickbait tactics detected.</p>'}
-                
-                <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Spotting Clickbait</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                        <li>Watch for extreme emotional language</li>
-                        <li>Be wary of "You won't believe..." phrases</li>
-                        <li>Check if the headline matches the content</li>
-                        <li>Look for vague claims that sound too good</li>
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createSourceCredibilityCard(data) {
-            const card = this.createCard('source', '🏢', 'Source Credibility');
-            const source = data.source_credibility || {};
-            const rating = source.rating || 'Unknown';
-            const credibilityScore = source.credibility_score || 0;
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">
-                        ${this.getSourceIcon(rating)}
-                    </div>
-                    <div style="font-size: 1.25rem; font-weight: 600; color: #0f172a;">
-                        ${rating} Credibility
-                    </div>
-                    <div style="color: #64748b; margin-top: 8px;">
-                        ${source.domain || data.article?.domain || 'Unknown Source'}
-                    </div>
-                    ${credibilityScore ? `
-                        <div style="margin-top: 12px;">
-                            <span style="font-size: 1.75rem; font-weight: 700; color: ${this.getCredibilityColor(credibilityScore)};">
-                                ${credibilityScore}%
-                            </span>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">About This Source</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getSourceContext(rating, source)}
-                    </p>
-                </div>
-                
-                ${source.history ? `
-                    <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0; color: #0f172a;">Source History</h4>
-                        <p style="margin: 0; color: #475569; line-height: 1.6;">${source.history}</p>
-                    </div>
-                ` : ''}
-                
-                ${source.ownership ? `
-                    <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0; color: #92400e;">Ownership</h4>
-                        <p style="margin: 0; color: #78350f;">${source.ownership}</p>
-                    </div>
-                ` : ''}
-                
-                ${source.bias_info ? `
-                    <div style="background: #fee2e2; border-radius: 8px; padding: 16px;">
-                        <h4 style="margin: 0 0 8px 0; color: #991b1b;">Known Biases</h4>
-                        <p style="margin: 0; color: #7f1d1d;">${source.bias_info}</p>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
-                    <h5 style="margin: 0 0 8px 0; color: #0369a1; font-size: 0.875rem;">Evaluating News Sources</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 0.8125rem; line-height: 1.5;">
-                        <li>Check multiple sources for the same story</li>
-                        <li>Look for transparent ownership information</li>
-                        <li>Verify author credentials and expertise</li>
-                        <li>Be aware of the source's track record</li>
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createManipulationCard(data) {
-            const card = this.createCard('manipulation', '🎭', 'Manipulation Detection');
-            const score = data.manipulation_analysis?.manipulation_score || 0;
-            const tactics = data.manipulation_analysis?.tactics || [];
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: ${score < 30 ? '#059669' : score < 60 ? '#d97706' : '#dc2626'};">
-                        ${score}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 12px;">Manipulation Score</div>
-                    ${tactics.length > 0 ? `
-                        <p style="color: #991b1b; background: #fef2f2; padding: 8px; border-radius: 6px;">
-                            ⚠️ ${tactics.length} tactics detected
-                        </p>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">How This Article Influences You</h4>
-                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
-                        ${this.getManipulationContext(score, tactics)}
-                    </p>
-                </div>
-                
-                ${tactics.length > 0 ? `
-                    <h4 style="margin: 0 0 12px 0;">Manipulation Techniques:</h4>
-                    ${tactics.map(t => `
-                        <div style="margin-bottom: 8px; padding: 12px; background: #fef2f2; border-radius: 4px;">
-                            <strong style="color: #991b1b;">${t.name || t}</strong>
-                            ${t.description ? `<p style="margin: 4px 0 0 0; color: #7f1d1d; font-size: 0.8125rem;">${t.description}</p>` : ''}
-                        </div>
-                    `).join('')}
-                ` : ''}
-                
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1rem;">Defense Strategies</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.875rem;">
-                        ${this.getManipulationDefenses(score).map(d => `<li>${d}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        createTransparencyCard(data) {
-            const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
-            const trans = data.transparency_analysis || {};
-            const score = trans.transparency_score || 0;
-            
-            card.querySelector('.card-summary').innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: ${score >= 70 ? '#059669' : score >= 40 ? '#d97706' : '#dc2626'};">
-                        ${score}%
-                    </div>
-                    <div style="font-size: 0.875rem; color: #64748b;">Transparency Score</div>
-                    ${trans.source_count !== undefined ? `
-                        <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                <div style="font-size: 1.25rem; font-weight: 600; color: #334155;">${trans.source_count}</div>
-                                <div style="font-size: 0.75rem; color: #64748b;">Sources</div>
-                            </div>
-                            <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                <div style="font-size: 1.25rem; font-weight: 600; color: #334155;">${trans.named_source_ratio || 0}%</div>
-                                <div style="font-size: 0.75rem; color: #64748b;">Named</div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML
+})();
