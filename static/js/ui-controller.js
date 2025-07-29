@@ -1251,7 +1251,7 @@
         `;
         document.head.appendChild(style);
     }
-})(); 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+})(); #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTrustScoreContext(trustScore)}
@@ -1797,3 +1797,8 @@
                             </div>
                         </div>
                     ` : ''}
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background:
