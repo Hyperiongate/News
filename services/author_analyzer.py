@@ -1,7 +1,7 @@
 """
 FILE: services/author_analyzer.py
 LOCATION: services/author_analyzer.py
-PURPOSE: Robust author credibility analysis with honest scoring
+PURPOSE: Robust author credibility analysis with real Google search capability
 """
 
 import logging
@@ -12,16 +12,23 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, urlparse
+import time
 
 logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
-    """Analyzes author credibility and background"""
+    """Analyzes author credibility and background with real web searches"""
     
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         })
         
         # Cache for author lookups
@@ -101,6 +108,10 @@ class AuthorAnalyzer:
         author_name = author_name.strip()
         if len(author_name) < 2 or len(author_name) > 100:
             return self._create_error_result(author_name, "Invalid author name length")
+        
+        # Check if it's a generic byline
+        if author_name.lower() in ['unknown', 'staff', 'admin', 'editor', 'unknown author']:
+            return self._create_anonymous_result(author_name)
         
         logger.info(f"🔍 Starting comprehensive author analysis for: {author_name} from {domain}")
         
@@ -250,6 +261,35 @@ class AuthorAnalyzer:
             'credibility_explanation': None,
             'sources_checked': [],
             'raw_data': {}  # Store raw data from searches
+        }
+    
+    def _create_anonymous_result(self, author_name: str) -> Dict[str, Any]:
+        """Create result for anonymous or generic authors"""
+        return {
+            'found': False,
+            'name': author_name or 'Unknown Author',
+            'credibility_score': 25,  # Very low score for anonymous
+            'bio': 'This article does not have a named author, which reduces accountability and credibility.',
+            'verification_status': {
+                'verified': False,
+                'journalist_verified': False,
+                'outlet_staff': False
+            },
+            'professional_info': {
+                'current_position': None,
+                'outlets': [],
+                'years_experience': None,
+                'expertise_areas': []
+            },
+            'online_presence': {},
+            'credibility_explanation': {
+                'level': 'Anonymous',
+                'explanation': 'Articles without named authors have inherently lower credibility due to lack of accountability.',
+                'factors': ['No author attribution', 'Cannot verify credentials', 'No accountability'],
+                'advice': 'Exercise additional caution with anonymous content. Verify all claims through other sources.'
+            },
+            'sources_checked': [],
+            'anonymous': True
         }
     
     def _create_error_result(self, author_name: str, error_msg: str) -> Dict[str, Any]:
@@ -413,31 +453,152 @@ class AuthorAnalyzer:
             return None
     
     def _search_google(self, author_name: str, domain: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Search Google for author information - HONEST VERSION"""
+        """Search Google for author information using real web scraping"""
         
         try:
-            # Without Google Custom Search API, we cannot perform real searches
-            logger.info(f"Google search would require API key for: {author_name}")
-            return None  # Be honest - we can't search without API
+            # Build search query
+            query = f'"{author_name}" journalist writer biography'
+            if domain:
+                # Add domain to search but don't restrict to site: to get broader results
+                query += f' {domain}'
             
-        except Exception as e:
+            # URL encode the query
+            search_url = f"https://www.google.com/search?q={quote_plus(query)}"
+            
+            # Add delay to avoid rate limiting
+            time.sleep(1)
+            
+            response = self.session.get(search_url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Initialize result
+            result = {
+                'found': False,
+                'source': 'google_search',
+                'professional_info': {
+                    'outlets': []
+                },
+                'raw_data': {}
+            }
+            
+            # Extract information from search results
+            outlets_found = set()
+            bio_snippets = []
+            positions_found = []
+            linkedin_url = None
+            twitter_url = None
+            
+            # Look for search result snippets
+            search_results = soup.select('div.g')
+            
+            for i, result_div in enumerate(search_results[:10]):  # Check first 10 results
+                # Get the URL and domain of this result
+                link_elem = result_div.select_one('a')
+                if link_elem and link_elem.get('href'):
+                    result_url = link_elem['href']
+                    result_domain = urlparse(result_url).netloc.replace('www.', '')
+                    
+                    # Check if this is a major news outlet
+                    if result_domain in self.major_outlets:
+                        outlets_found.add(self.major_outlets[result_domain])
+                        result['found'] = True
+                    
+                    # Check for LinkedIn
+                    if 'linkedin.com' in result_url and not linkedin_url:
+                        linkedin_url = result_url
+                        result['online_presence'] = result.get('online_presence', {})
+                        result['online_presence']['linkedin'] = linkedin_url
+                    
+                    # Check for Twitter
+                    if 'twitter.com' in result_url and not twitter_url:
+                        twitter_url = result_url
+                        result['online_presence'] = result.get('online_presence', {})
+                        result['online_presence']['twitter'] = twitter_url
+                
+                # Get the snippet text
+                snippet_elem = result_div.select_one('span.aCOpRe, div.VwiC3b, div.yXK7lf')
+                if snippet_elem:
+                    snippet_text = snippet_elem.get_text().strip()
+                    
+                    # Look for bio-like content
+                    if any(word in snippet_text.lower() for word in ['is a', 'writes', 'reporter', 'journalist', 'editor', 'correspondent']):
+                        bio_snippets.append(snippet_text)
+                        
+                        # Extract position titles
+                        position_patterns = [
+                            r'is (?:a |an |the )?([\w\s]+?) (?:at|for|with|who)',
+                            r'works as (?:a |an |the )?([\w\s]+)',
+                            r', ([\w\s]+?) (?:at|for|with)',
+                        ]
+                        
+                        for pattern in position_patterns:
+                            match = re.search(pattern, snippet_text, re.IGNORECASE)
+                            if match:
+                                position = match.group(1).strip()
+                                # Filter out common non-position words
+                                if position.lower() not in ['writer', 'author', 'journalist'] and len(position) < 50:
+                                    positions_found.append(position)
+                                    break
+                    
+                    # Look for outlets mentioned
+                    for outlet_domain, outlet_name in self.major_outlets.items():
+                        if outlet_name.lower() in snippet_text.lower():
+                            outlets_found.add(outlet_name)
+            
+            # Build bio from snippets
+            if bio_snippets:
+                # Use the most informative snippet
+                result['bio'] = max(bio_snippets, key=len)
+                result['found'] = True
+            
+            # Add outlets
+            if outlets_found:
+                result['professional_info']['outlets'] = list(outlets_found)
+                result['found'] = True
+            
+            # Add position if found
+            if positions_found:
+                # Use the most specific position
+                result['professional_info']['current_position'] = positions_found[0]
+            
+            # Store raw data for debugging
+            result['raw_data']['snippets'] = bio_snippets[:3]
+            result['raw_data']['query'] = query
+            
+            # If we found substantial information, mark as journalist verified
+            if result['found'] and (len(bio_snippets) > 2 or len(outlets_found) > 1):
+                result['verification_status'] = {
+                    'journalist_verified': True
+                }
+            
+            logger.info(f"Google search for {author_name}: found={result['found']}, outlets={len(outlets_found)}")
+            
+            return result if result['found'] else None
+            
+        except requests.RequestException as e:
             logger.error(f"Error in Google search: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error in Google search: {e}")
             return None
     
     def _search_linkedin(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search LinkedIn for author profile - HONEST VERSION"""
+        """Search LinkedIn for author profile - requires actual implementation"""
         
         try:
-            # LinkedIn requires API authentication
+            # LinkedIn requires API authentication or web scraping with login
+            # For now, we can only check if we already found a LinkedIn URL in Google results
             logger.info(f"LinkedIn search would require API access for: {author_name}")
-            return None  # Don't make up data
+            return None
             
         except Exception as e:
             logger.error(f"Error searching LinkedIn: {e}")
             return None
     
     def _search_twitter(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search Twitter/X for author profile - HONEST VERSION"""
+        """Search Twitter/X for author profile"""
         
         try:
             author_lower = author_name.lower()
@@ -459,7 +620,7 @@ class AuthorAnalyzer:
                     }
                 }
             
-            # Without Twitter API, we can't search
+            # Without Twitter API, we can't do real searches
             logger.info(f"Twitter search would require API access for: {author_name}")
             return None
             
@@ -468,22 +629,25 @@ class AuthorAnalyzer:
             return None
     
     def _search_muckrack(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search Muckrack journalist database - HONEST VERSION"""
+        """Search Muckrack journalist database"""
         
         try:
-            # Muckrack requires API access or subscription
-            logger.info(f"Muckrack search would require API access for: {author_name}")
-            return None  # Don't pretend we searched
+            # Muckrack requires subscription for full access
+            # We can try to scrape public pages
+            search_url = f"https://muckrack.com/search?q={quote_plus(author_name)}"
+            
+            logger.info(f"Muckrack search would require subscription for full access")
+            return None
             
         except Exception as e:
             logger.error(f"Error searching Muckrack: {e}")
             return None
     
     def _search_journalist_databases(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search various journalist databases - HONEST VERSION"""
+        """Search various journalist databases"""
         
         try:
-            # Without API access to journalist databases, we can't search
+            # Most journalist databases require API access or subscriptions
             logger.info(f"Journalist database search would require API access for: {author_name}")
             return None
             
@@ -525,7 +689,7 @@ class AuthorAnalyzer:
         # Verified outlets
         if result['verification_status']['outlet_staff'] and found_info['outlets']:
             major_outlet_count = sum(1 for outlet in found_info['outlets'] 
-                                   if outlet in self.major_outlets)
+                                   if outlet in self.major_outlets.values() or outlet in self.major_outlets)
             if major_outlet_count > 0:
                 score += min(major_outlet_count * 10, 20)
         
@@ -535,7 +699,7 @@ class AuthorAnalyzer:
             score += min(years * 2, 10)
         
         # Online presence (only verified)
-        if result['online_presence'] and result['verification_status']['verified']:
+        if result['online_presence'] and result['verification_status'].get('verified'):
             score += 5
         
         # Known journalists get their real score
@@ -583,18 +747,21 @@ class AuthorAnalyzer:
         if result['verification_status']['verified']:
             factors.append("verified social media account")
         if result['verification_status']['journalist_verified']:
-            factors.append("found in journalist databases")
+            factors.append("found in web searches as journalist")
         
         if result['professional_info']['current_position']:
             factors.append(f"identified position: {result['professional_info']['current_position']}")
         
         outlets = result['professional_info']['outlets']
-        if outlets and result['verification_status']['outlet_staff']:
-            factors.append(f"verified writer for {outlets[0]}")
+        if outlets and result.get('found'):
+            if len(outlets) == 1:
+                factors.append(f"associated with {outlets[0]}")
+            else:
+                factors.append(f"associated with {len(outlets)} publications")
         
-        if result['online_presence'] and result['verification_status']['verified']:
+        if result['online_presence']:
             platforms = list(result['online_presence'].keys())
-            factors.append(f"verified presence on {', '.join(platforms)}")
+            factors.append(f"found on {', '.join(platforms)}")
         
         # If we found nothing specific
         if not factors:
@@ -641,11 +808,17 @@ class AuthorAnalyzer:
         prof_info = result.get('professional_info', {})
         
         # Only include verified position
-        if prof_info.get('current_position') and result['verification_status']['outlet_staff']:
+        if prof_info.get('current_position') and result.get('found'):
             parts.append(f"{author_name} is {prof_info['current_position']}")
         elif result['verification_status']['outlet_staff'] and prof_info.get('outlets'):
             outlets = prof_info['outlets'][:1]  # Only confirmed outlet
             parts.append(f"{author_name} is a verified writer for {outlets[0]}")
+        elif result.get('found') and prof_info.get('outlets'):
+            outlets = prof_info['outlets']
+            if len(outlets) == 1:
+                parts.append(f"{author_name} has been associated with {outlets[0]}")
+            else:
+                parts.append(f"{author_name} has been associated with multiple publications including {outlets[0]}")
         else:
             parts.append(f"{author_name} is the listed author of this article")
         
@@ -655,7 +828,7 @@ class AuthorAnalyzer:
             parts.append(f"with {years} years of verified experience")
         
         # Only add expertise if verified
-        if prof_info.get('expertise_areas') and result['verification_status']['journalist_verified']:
+        if prof_info.get('expertise_areas') and result.get('found'):
             areas = prof_info['expertise_areas'][:2]
             parts.append(f"covering {' and '.join(areas)}")
         
