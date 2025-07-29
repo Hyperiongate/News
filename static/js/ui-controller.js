@@ -653,7 +653,7 @@
             
             card.querySelector('.card-details').innerHTML = `
                 <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Transparency Assessment</h4>
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTransparencyContext(trans, data)}
                     </p>
@@ -686,6 +686,7 @@
             
             return card;
         }
+    }  // End of UIController class
 
         // Helper methods
         getTrustScoreColor(score) {
@@ -1251,7 +1252,8 @@
         `;
         document.head.appendChild(style);
     }
-})(); #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+})(); = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">What This Score Means</h4>
                     <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
                         ${this.getTrustScoreContext(trustScore)}
@@ -1800,5 +1802,4 @@
                 </div>
             `;
             
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background:
+            card.querySelector('.card-details').innerHTML
