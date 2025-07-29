@@ -33,14 +33,24 @@ from models import db, User, Analysis, Source, Author, APIUsage, FactCheckCache,
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Try to import PDF generator
+# Try to import PDF generator with better error handling
+PDF_EXPORT_ENABLED = False
+pdf_generator = None
+
 try:
-    from services.pdf_generator import PDFGenerator
-    pdf_generator = PDFGenerator()
-    PDF_EXPORT_ENABLED = True
-except ImportError:
-    logger.warning("ReportLab not installed - PDF export feature disabled")
-    pdf_generator = None
+    import reportlab
+    logger.info(f"ReportLab version {reportlab.__version__} found")
+    try:
+        from services.pdf_generator import PDFGenerator
+        pdf_generator = PDFGenerator()
+        PDF_EXPORT_ENABLED = True
+        logger.info("PDF export enabled successfully")
+    except Exception as e:
+        logger.error(f"Could not import PDFGenerator: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        PDF_EXPORT_ENABLED = False
+except ImportError as e:
+    logger.warning(f"ReportLab not installed - PDF export feature disabled: {e}")
     PDF_EXPORT_ENABLED = False
 
 # Initialize Flask app with explicit static configuration
@@ -186,6 +196,7 @@ def debug_static():
             }
     
     return jsonify(info)
+
 @app.route('/api/debug/pdf', methods=['GET'])
 def debug_pdf():
     """Debug PDF export configuration"""
@@ -195,7 +206,8 @@ def debug_pdf():
         'pdf_export_enabled': PDF_EXPORT_ENABLED,
         'pdf_generator_loaded': pdf_generator is not None,
         'python_version': sys.version,
-        'modules_check': {}
+        'modules_check': {},
+        'services_folder': {}
     }
     
     # Check if reportlab is installed
@@ -224,12 +236,23 @@ def debug_pdf():
             'error': str(e)
         }
     
-    # Check if pdf_generator module exists
+    # Check if services folder exists
+    services_path = os.path.join(os.path.dirname(__file__), 'services')
+    debug_info['services_folder']['exists'] = os.path.exists(services_path)
+    debug_info['services_folder']['path'] = services_path
+    
+    # Check if pdf_generator.py exists
+    pdf_gen_path = os.path.join(services_path, 'pdf_generator.py')
+    debug_info['services_folder']['pdf_generator_exists'] = os.path.exists(pdf_gen_path)
+    
+    # Try to import PDFGenerator
     try:
         from services.pdf_generator import PDFGenerator
         debug_info['pdf_generator_import'] = 'Success'
     except ImportError as e:
         debug_info['pdf_generator_import'] = f'Failed: {str(e)}'
+    except Exception as e:
+        debug_info['pdf_generator_import'] = f'Error: {str(e)} - Type: {type(e).__name__}'
     
     return jsonify(debug_info)
 
@@ -545,7 +568,11 @@ def _map_credibility_to_score(credibility_text):
 def export_pdf():
     """Export analysis as PDF"""
     if not PDF_EXPORT_ENABLED:
-        return jsonify({'error': 'PDF export feature not available'}), 503
+        return jsonify({
+            'error': 'PDF export feature not available - reportlab not installed',
+            'pdf_export_enabled': PDF_EXPORT_ENABLED,
+            'pdf_generator': pdf_generator is not None
+        }), 503
     
     try:
         data = request.json
@@ -569,13 +596,30 @@ def export_pdf():
         if not analysis_data:
             return jsonify({'error': 'No analysis data provided'}), 400
         
-        # Generate PDF
-        pdf_buffer = pdf_generator.generate_analysis_pdf(analysis_data)
+        # Add debug logging
+        logger.info(f"Attempting PDF generation with data keys: {list(analysis_data.keys())}")
+        
+        # Generate PDF with better error handling
+        try:
+            pdf_buffer = pdf_generator.generate_analysis_pdf(analysis_data)
+            logger.info("PDF generated successfully")
+        except Exception as pdf_error:
+            logger.error(f"PDF generation failed: {str(pdf_error)}")
+            logger.error(f"Error type: {type(pdf_error).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return jsonify({
+                'error': 'PDF generation failed',
+                'details': str(pdf_error),
+                'type': type(pdf_error).__name__
+            }), 500
         
         # Create filename
         domain = analysis_data.get('article', {}).get('domain', 'article')
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"news_analysis_{domain}_{timestamp}.pdf"
+        
+        logger.info(f"Sending PDF file: {filename}")
         
         return send_file(
             pdf_buffer,
@@ -586,7 +630,14 @@ def export_pdf():
         
     except Exception as e:
         logger.error(f"PDF export error: {str(e)}")
-        return jsonify({'error': 'PDF export failed'}), 500
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': 'PDF export failed',
+            'details': str(e),
+            'type': type(e).__name__
+        }), 500
 
 @app.route('/api/export/json', methods=['POST'])
 def export_json():
