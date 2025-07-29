@@ -186,6 +186,52 @@ def debug_static():
             }
     
     return jsonify(info)
+@app.route('/api/debug/pdf', methods=['GET'])
+def debug_pdf():
+    """Debug PDF export configuration"""
+    import sys
+    
+    debug_info = {
+        'pdf_export_enabled': PDF_EXPORT_ENABLED,
+        'pdf_generator_loaded': pdf_generator is not None,
+        'python_version': sys.version,
+        'modules_check': {}
+    }
+    
+    # Check if reportlab is installed
+    try:
+        import reportlab
+        debug_info['modules_check']['reportlab'] = {
+            'installed': True,
+            'version': getattr(reportlab, '__version__', 'Unknown')
+        }
+    except ImportError as e:
+        debug_info['modules_check']['reportlab'] = {
+            'installed': False,
+            'error': str(e)
+        }
+    
+    # Check if Pillow is installed
+    try:
+        import PIL
+        debug_info['modules_check']['pillow'] = {
+            'installed': True,
+            'version': getattr(PIL, '__version__', 'Unknown')
+        }
+    except ImportError as e:
+        debug_info['modules_check']['pillow'] = {
+            'installed': False,
+            'error': str(e)
+        }
+    
+    # Check if pdf_generator module exists
+    try:
+        from services.pdf_generator import PDFGenerator
+        debug_info['pdf_generator_import'] = 'Success'
+    except ImportError as e:
+        debug_info['pdf_generator_import'] = f'Failed: {str(e)}'
+    
+    return jsonify(debug_info)
 
 @app.before_request
 def log_request():
