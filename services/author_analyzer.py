@@ -1,7 +1,7 @@
 """
 FILE: services/author_analyzer.py
 LOCATION: services/author_analyzer.py
-PURPOSE: Robust author credibility analysis with comprehensive error handling
+PURPOSE: Robust author credibility analysis with honest scoring
 """
 
 import logging
@@ -164,15 +164,15 @@ class AuthorAnalyzer:
             result['professional_info']['outlets'] = list(found_info['outlets'])
             result['professional_info']['expertise_areas'] = list(found_info['expertise_areas'])
             
-            # Calculate final credibility score
-            result['credibility_score'] = self._calculate_credibility_score(result, found_info)
+            # Calculate final credibility score - HONEST VERSION
+            result['credibility_score'] = self._calculate_honest_credibility_score(result, found_info)
             
-            # Generate credibility explanation
-            result['credibility_explanation'] = self._generate_credibility_explanation(result)
+            # Generate credibility explanation - HONEST VERSION
+            result['credibility_explanation'] = self._generate_honest_credibility_explanation(result)
             
-            # Ensure bio exists
+            # Ensure bio exists - HONEST VERSION
             if not result['bio'] or result['bio'] == 'No bio available':
-                result['bio'] = self._generate_bio(author_name, result, domain)
+                result['bio'] = self._generate_honest_bio(author_name, result, domain)
             
             # Cache the result
             self._author_cache[cache_key] = result
@@ -233,7 +233,7 @@ class AuthorAnalyzer:
         return {
             'found': False,
             'name': author_name,
-            'credibility_score': 50,  # Neutral starting score
+            'credibility_score': 30,  # Start low - build up with evidence
             'bio': None,
             'verification_status': {
                 'verified': False,
@@ -257,8 +257,8 @@ class AuthorAnalyzer:
         return {
             'found': False,
             'name': author_name,
-            'credibility_score': 40,  # Lower score for errors
-            'bio': f"Unable to retrieve information about {author_name}. {error_msg}",
+            'credibility_score': 30,  # Low score for errors
+            'bio': f"Unable to retrieve information about {author_name}.",
             'verification_status': {
                 'verified': False,
                 'journalist_verified': False,
@@ -399,7 +399,9 @@ class AuthorAnalyzer:
                         if article_count > 0:
                             result['articles_count'] = article_count
                         
-                        return result
+                        # Only return if we found actual content
+                        if result.get('bio') or result['professional_info'].get('current_position'):
+                            return result
                         
                 except requests.RequestException:
                     continue
@@ -411,376 +413,257 @@ class AuthorAnalyzer:
             return None
     
     def _search_google(self, author_name: str, domain: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Search Google for author information"""
+        """Search Google for author information - HONEST VERSION"""
         
         try:
-            # Build search query
-            query = f'"{author_name}" journalist writer'
-            if domain:
-                query += f' site:{domain} OR "{domain}"'
-            
-            # Use Google Custom Search API if available (you'd need to implement this)
-            # For now, we'll do a basic web search simulation
-            search_url = f"https://www.google.com/search?q={quote_plus(query)}"
-            
-            # Note: In production, you'd use Google Custom Search API
-            # This is a placeholder that shows the structure
-            result = {
-                'found': False,
-                'source': 'google_search',
-                'professional_info': {
-                    'outlets': []
-                }
-            }
-            
-            # Enhanced logic for known journalists and outlets
-            author_lower = author_name.lower()
-            
-            # Check if author is associated with major outlets
-            if domain and domain in self.major_outlets:
-                result['found'] = True
-                result['professional_info']['outlets'].append(domain)
-                result['verification_status'] = {
-                    'journalist_verified': True
-                }
-                
-                # Add some credibility for major outlet association
-                if 'bbc' in domain and 'bowen' in author_lower:
-                    result['bio'] = f"{author_name} is a journalist with {self.major_outlets[domain]}."
-                    result['professional_info']['current_position'] = 'Journalist'
-            
-            return result
+            # Without Google Custom Search API, we cannot perform real searches
+            logger.info(f"Google search would require API key for: {author_name}")
+            return None  # Be honest - we can't search without API
             
         except Exception as e:
             logger.error(f"Error in Google search: {e}")
             return None
     
     def _search_linkedin(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search LinkedIn for author profile"""
+        """Search LinkedIn for author profile - HONEST VERSION"""
         
         try:
-            # LinkedIn search URL (requires authentication in practice)
-            search_url = f"https://www.linkedin.com/search/results/people/?keywords={quote_plus(author_name)}%20journalist"
-            
-            # This is a placeholder - actual LinkedIn API would be used
-            result = {
-                'found': False,
-                'source': 'linkedin',
-                'online_presence': {}
-            }
-            
-            # Enhanced placeholder logic
-            common_journalist_names = ['jeremy', 'bowen', 'john', 'jane', 'sarah', 'michael', 'david', 'robert']
-            
-            # Check if any part of the name is common
-            name_parts = author_name.lower().split()
-            if any(part in common_journalist_names for part in name_parts):
-                result['found'] = True
-                result['professional_info'] = {
-                    'current_position': 'Journalist',
-                    'years_experience': 5
-                }
-                result['online_presence']['linkedin'] = f"linkedin.com/in/{author_name.replace(' ', '-').lower()}"
-            
-            return result
+            # LinkedIn requires API authentication
+            logger.info(f"LinkedIn search would require API access for: {author_name}")
+            return None  # Don't make up data
             
         except Exception as e:
             logger.error(f"Error searching LinkedIn: {e}")
             return None
     
     def _search_twitter(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search Twitter/X for author profile"""
+        """Search Twitter/X for author profile - HONEST VERSION"""
         
         try:
-            # Twitter search (would use API in production)
-            result = {
-                'found': False,
-                'source': 'twitter',
-                'online_presence': {}
-            }
-            
-            # Enhanced logic for known journalists
             author_lower = author_name.lower()
             
-            # Known Twitter handles
+            # Only return data we actually know
             known_handles = {
                 'jeremy bowen': '@BowenBBC'
             }
             
             if author_lower in known_handles:
-                result['found'] = True
-                result['online_presence']['twitter'] = f"https://twitter.com/{known_handles[author_lower][1:]}"
-                result['verification_status'] = {
-                    'verified': True
+                return {
+                    'found': True,
+                    'source': 'twitter',
+                    'online_presence': {
+                        'twitter': f"https://twitter.com/{known_handles[author_lower][1:]}"
+                    },
+                    'verification_status': {
+                        'verified': True
+                    }
                 }
-            elif len(author_name.split()) >= 2:
-                # Generate probable handle
-                potential_handle = author_name.replace(' ', '').lower()
-                result['online_presence']['twitter'] = f"@{potential_handle}"
             
-            return result
+            # Without Twitter API, we can't search
+            logger.info(f"Twitter search would require API access for: {author_name}")
+            return None
             
         except Exception as e:
             logger.error(f"Error searching Twitter: {e}")
             return None
     
     def _search_muckrack(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search Muckrack journalist database"""
+        """Search Muckrack journalist database - HONEST VERSION"""
         
         try:
-            # Muckrack is a journalist database
-            search_url = f"https://muckrack.com/search?q={quote_plus(author_name)}"
-            
-            # This would require Muckrack API access
-            result = {
-                'found': False,
-                'source': 'muckrack'
-            }
-            
-            # Enhanced simulation
-            # BBC journalists are often in Muckrack
-            if any(word in author_name.lower() for word in ['jeremy', 'bowen', 'reporter', 'correspondent']):
-                result['found'] = True
-                result['verification_status'] = {
-                    'journalist_verified': True
-                }
-                result['professional_info'] = {
-                    'outlets': ['BBC', 'Various Publications'],
-                    'expertise_areas': ['International Affairs', 'Politics']
-                }
-            
-            return result
+            # Muckrack requires API access or subscription
+            logger.info(f"Muckrack search would require API access for: {author_name}")
+            return None  # Don't pretend we searched
             
         except Exception as e:
             logger.error(f"Error searching Muckrack: {e}")
             return None
     
     def _search_journalist_databases(self, author_name: str) -> Optional[Dict[str, Any]]:
-        """Search various journalist databases"""
+        """Search various journalist databases - HONEST VERSION"""
         
         try:
-            result = {
-                'found': False,
-                'source': 'journalist_databases',
-                'professional_info': {
-                    'outlets': []
-                }
-            }
-            
-            # Check multiple journalist databases
-            # This is placeholder - would need actual API access
-            databases_checked = []
-            
-            for platform in self.journalist_platforms:
-                databases_checked.append(platform)
-                
-                # Simulate finding author in databases
-                # BBC journalists would likely be found
-                if 'bowen' in author_name.lower() or 'bbc' in author_name.lower():
-                    result['found'] = True
-                    result['verification_status'] = {
-                        'journalist_verified': True
-                    }
-                    result['professional_info']['expertise_areas'] = ['International News', 'Middle East']
-                    break
-            
-            result['databases_checked'] = databases_checked
-            
-            return result
+            # Without API access to journalist databases, we can't search
+            logger.info(f"Journalist database search would require API access for: {author_name}")
+            return None
             
         except Exception as e:
             logger.error(f"Error searching journalist databases: {e}")
             return None
     
-    def _calculate_credibility_score(self, result: Dict[str, Any], 
-                                    found_info: Dict[str, Any]) -> int:
-        """Calculate author credibility score based on findings"""
+    def _calculate_honest_credibility_score(self, result: Dict[str, Any], 
+                                          found_info: Dict[str, Any]) -> int:
+        """Calculate author credibility score based on ACTUAL findings"""
         
-        score = 50  # Base score
+        # Start with base score
+        score = 30
         
-        # Verification status boosts
-        if result['verification_status']['verified']:
-            score += 20
-        if result['verification_status']['journalist_verified']:
-            score += 15
+        # Only add points for things we ACTUALLY verified
+        
+        # If we found NOTHING, stay low
+        if not result.get('found'):
+            return score
+        
+        # Add points for real verification
         if result['verification_status']['outlet_staff']:
-            score += 15
+            score += 20  # We actually found them on the outlet's site
         
-        # Professional info boosts
+        if result['verification_status']['verified']:
+            score += 15  # Actually verified account
+            
+        if result['verification_status']['journalist_verified']:
+            score += 15  # Actually in journalist databases
+        
+        # Professional info (only if we found it)
         if result['professional_info']['current_position']:
             score += 10
         
-        # Outlet credibility
-        outlets = list(found_info['outlets'])
-        result['professional_info']['outlets'] = outlets
+        # Real bio (not generated)
+        if result.get('bio') and len(result['bio']) > 100 and 'could not find' not in result['bio'].lower():
+            score += 10
         
-        major_outlet_count = sum(1 for outlet in outlets 
-                                if outlet in self.major_outlets)
-        if major_outlet_count > 0:
-            score += min(major_outlet_count * 10, 20)
+        # Verified outlets
+        if result['verification_status']['outlet_staff'] and found_info['outlets']:
+            major_outlet_count = sum(1 for outlet in found_info['outlets'] 
+                                   if outlet in self.major_outlets)
+            if major_outlet_count > 0:
+                score += min(major_outlet_count * 10, 20)
         
-        # Experience
+        # Experience (only if we found real data)
         if result['professional_info']['years_experience']:
             years = result['professional_info']['years_experience']
             score += min(years * 2, 10)
         
-        # Online presence
-        if len(result['online_presence']) > 0:
-            score += min(len(result['online_presence']) * 5, 10)
-        
-        # Expertise areas
-        expertise_list = list(found_info['expertise_areas'])
-        result['professional_info']['expertise_areas'] = expertise_list
-        if expertise_list:
+        # Online presence (only verified)
+        if result['online_presence'] and result['verification_status']['verified']:
             score += 5
         
-        # Article count
-        if found_info['articles_count'] > 10:
-            score += 5
-        if found_info['articles_count'] > 50:
-            score += 5
-        
-        # Special boost for known verified journalists
+        # Known journalists get their real score
         if result.get('name', '').lower() in self.known_journalists_data:
             score = max(score, 85)
         
-        # Penalty if not found anywhere
-        if not result['found']:
-            score = min(score, 40)
+        # Cap based on what we found
+        if not result.get('bio') or 'could not find' in result.get('bio', '').lower():
+            score = min(score, 50)
         
-        # Ensure score is within bounds
         return max(0, min(100, score))
     
-    def _generate_credibility_explanation(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate explanation of credibility assessment"""
+    def _generate_honest_credibility_explanation(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate HONEST explanation of credibility assessment"""
         
         score = result['credibility_score']
         factors = []
         
-        # Determine credibility level
+        # Be honest about what we found
+        if not result.get('found'):
+            return {
+                'level': 'Unverified',
+                'explanation': f"We could not find verifiable information about {result['name']} through our available channels.",
+                'factors': ['No author page found', 'No journalist database entries', 'No verified social media'],
+                'advice': 'Unable to verify author credentials. Consider the publication\'s credibility and verify claims independently.'
+            }
+        
+        # Determine level based on actual findings
         if score >= 80:
             level = 'High'
-            base_explanation = f"{result['name']} is a well-established journalist with strong credentials."
+            base_explanation = f"{result['name']} is a verified journalist with strong credentials."
         elif score >= 60:
             level = 'Moderate'
-            base_explanation = f"{result['name']} appears to be a legitimate journalist with some verifiable credentials."
+            base_explanation = f"{result['name']} appears to be a legitimate journalist with some verified credentials."
         elif score >= 40:
             level = 'Limited'
-            base_explanation = f"Limited information found about {result['name']}'s journalistic credentials."
+            base_explanation = f"We found limited verifiable information about {result['name']}'s journalistic credentials."
         else:
-            level = 'Unknown'
-            base_explanation = f"Unable to verify {result['name']}'s credentials as a journalist."
+            level = 'Minimal'
+            base_explanation = f"Very limited information available about {result['name']}'s credentials."
         
-        # Add specific factors
-        if result['verification_status']['verified']:
-            factors.append("verified account on social media")
-        if result['verification_status']['journalist_verified']:
-            factors.append("listed in journalist databases")
+        # Add ONLY verified factors
         if result['verification_status']['outlet_staff']:
-            factors.append("confirmed staff member")
+            factors.append("confirmed staff page on outlet website")
+        if result['verification_status']['verified']:
+            factors.append("verified social media account")
+        if result['verification_status']['journalist_verified']:
+            factors.append("found in journalist databases")
         
         if result['professional_info']['current_position']:
-            factors.append(f"holds position as {result['professional_info']['current_position']}")
+            factors.append(f"identified position: {result['professional_info']['current_position']}")
         
         outlets = result['professional_info']['outlets']
-        if outlets:
-            major_outlets = [o for o in outlets if o in self.major_outlets.values() or o in self.major_outlets]
-            if major_outlets:
-                if len(major_outlets) == 1:
-                    factors.append(f"writes for {major_outlets[0]}")
-                else:
-                    factors.append(f"has written for {len(major_outlets)} major publications")
-            elif len(outlets) == 1:
-                factors.append(f"writes for {outlets[0]}")
-            else:
-                factors.append(f"has written for {len(outlets)} publications")
+        if outlets and result['verification_status']['outlet_staff']:
+            factors.append(f"verified writer for {outlets[0]}")
         
-        if result['online_presence']:
+        if result['online_presence'] and result['verification_status']['verified']:
             platforms = list(result['online_presence'].keys())
-            if len(platforms) == 1:
-                factors.append(f"active on {platforms[0]}")
-            else:
-                factors.append(f"active on multiple platforms")
+            factors.append(f"verified presence on {', '.join(platforms)}")
+        
+        # If we found nothing specific
+        if not factors:
+            factors = ['Author byline only - no additional verification possible']
         
         # Build explanation
+        explanation = base_explanation
         if factors:
-            explanation = base_explanation + " " + "Key indicators: " + ", ".join(factors) + "."
-        else:
-            explanation = base_explanation
+            explanation += " Verified through: " + ", ".join(factors) + "."
         
-        # Add advice
+        # Honest advice based on what we found
         if score >= 70:
-            advice = "This author appears credible, but always verify important claims."
+            advice = "This author has verified credentials. Still verify important claims through multiple sources."
         elif score >= 50:
-            advice = "Exercise normal caution and cross-reference important claims."
+            advice = "Limited verification available. Cross-reference claims with other reputable sources."
         else:
-            advice = "Unable to verify author credentials - verify all claims independently."
+            advice = "Could not verify author credentials. Exercise appropriate caution and verify all claims independently."
         
         return {
             'level': level,
             'explanation': explanation,
-            'advice': advice,
-            'factors': factors
+            'factors': factors,
+            'advice': advice
         }
     
-    def _generate_bio(self, author_name: str, result: Dict[str, Any], 
-                     domain: Optional[str] = None) -> str:
-        """Generate a bio when none is found"""
+    def _generate_honest_bio(self, author_name: str, result: Dict[str, Any], 
+                            domain: Optional[str] = None) -> str:
+        """Generate an HONEST bio based on what we actually found"""
         
+        # If we have a real bio from searches, use it
+        if result.get('bio') and len(result.get('bio', '')) > 50 and 'could not find' not in result['bio'].lower():
+            return result['bio']
+        
+        # Be honest about what we know
+        if not result.get('found'):
+            if domain:
+                return f"{author_name} is listed as the author of this article on {domain}. We could not find additional biographical information through our verification channels."
+            else:
+                return f"We could not find biographical information about {author_name} through our verification channels. This doesn't necessarily reflect on their credibility."
+        
+        # Build bio from verified information only
         parts = []
         
-        # Start with name and basic role
-        if result['professional_info']['current_position']:
-            parts.append(f"{author_name} is a {result['professional_info']['current_position']}")
+        prof_info = result.get('professional_info', {})
+        
+        # Only include verified position
+        if prof_info.get('current_position') and result['verification_status']['outlet_staff']:
+            parts.append(f"{author_name} is {prof_info['current_position']}")
+        elif result['verification_status']['outlet_staff'] and prof_info.get('outlets'):
+            outlets = prof_info['outlets'][:1]  # Only confirmed outlet
+            parts.append(f"{author_name} is a verified writer for {outlets[0]}")
         else:
-            parts.append(f"{author_name} is a journalist")
+            parts.append(f"{author_name} is the listed author of this article")
         
-        # Add outlet information
-        outlets = result['professional_info']['outlets']
-        major_outlets = []
+        # Only add experience if we verified it
+        if prof_info.get('years_experience') and result.get('found'):
+            years = prof_info['years_experience']
+            parts.append(f"with {years} years of verified experience")
         
-        # Check for major outlets
-        for outlet in outlets:
-            if outlet in self.major_outlets:
-                major_outlets.append(self.major_outlets[outlet])
-            elif outlet in self.major_outlets.values():
-                major_outlets.append(outlet)
-        
-        if major_outlets:
-            if len(major_outlets) == 1:
-                parts.append(f"who writes for {major_outlets[0]}")
-            elif len(major_outlets) == 2:
-                parts.append(f"who has written for {major_outlets[0]} and {major_outlets[1]}")
-            else:
-                parts.append(f"who has written for multiple major publications including {major_outlets[0]}")
-        elif outlets:
-            if len(outlets) == 1:
-                parts.append(f"who writes for {outlets[0]}")
-            elif len(outlets) == 2:
-                parts.append(f"who has written for {outlets[0]} and {outlets[1]}")
-            else:
-                parts.append(f"who has written for multiple publications including {outlets[0]}")
-        elif domain:
-            parts.append(f"contributing to {domain}")
-        
-        # Add expertise if available
-        if result['professional_info']['expertise_areas']:
-            areas = result['professional_info']['expertise_areas'][:2]
+        # Only add expertise if verified
+        if prof_info.get('expertise_areas') and result['verification_status']['journalist_verified']:
+            areas = prof_info['expertise_areas'][:2]
             parts.append(f"covering {' and '.join(areas)}")
         
-        # Add experience if available
-        if result['professional_info']['years_experience']:
-            years = result['professional_info']['years_experience']
-            parts.append(f"with {years} years of experience")
-        
-        # Create bio
         bio = " ".join(parts) + "."
         
-        # Add verification status if notable
-        if result['verification_status']['verified']:
-            bio += " Verified journalist."
-        elif not result['found']:
-            bio += " Limited information available online."
+        # Add verification caveat if limited info
+        if not result['verification_status']['outlet_staff'] and not result['verification_status']['journalist_verified']:
+            bio += " Limited verification information available."
         
         return bio
     
@@ -799,19 +682,19 @@ class AuthorAnalyzer:
         return results
     
     def get_author_summary(self, author_analysis: Dict[str, Any]) -> str:
-        """Get a brief summary of author credibility"""
+        """Get a brief HONEST summary of author credibility"""
         
         score = author_analysis.get('credibility_score', 0)
         name = author_analysis.get('name', 'Unknown')
         
         if score >= 80:
-            return f"{name} is a highly credible, established journalist."
+            return f"{name} is a verified journalist with strong credentials."
         elif score >= 60:
-            return f"{name} is a credible journalist with verified credentials."
+            return f"{name} has some verified journalistic credentials."
         elif score >= 40:
-            return f"{name} has limited verifiable journalistic credentials."
+            return f"Limited verification available for {name}."
         else:
-            return f"{name}'s journalistic credentials could not be verified."
+            return f"Unable to verify {name}'s journalistic credentials."
     
     def clear_cache(self):
         """Clear the author cache"""
