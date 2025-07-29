@@ -636,6 +636,7 @@
         createTrustScoreCard(data) {
             const card = this.createCard('trust', '🛡️', 'Trust Score Analysis');
             const trustScore = data.trust_score || 0;
+            const trans = data.transparency_analysis || {};
             const components = {
                 factual_accuracy: data.fact_checks ? this.calculateFactAccuracy(data.fact_checks) : 0,
                 source_credibility: data.source_credibility?.credibility_score || 0,
@@ -1796,8 +1797,3 @@
                             </div>
                         </div>
                     ` : ''}
-                </div>
-            `;
-            
-            card.querySelector('.card-details').innerHTML = `
-                <div style="background: #eff6ff; border-left:
