@@ -1,107 +1,40 @@
-// analysis-cards.js - Works with UI Controller (not DataManager)
-// This file is called by UI Controller's createAuthorAnalysisCard method
-
+// analysis-cards.js - Complete Analysis Cards Component with Full Data Display
 class AnalysisCards {
     constructor() {
-        this.container = null;
-        this.cards = [];
-        this.components = {};
-        console.log('AnalysisCards: Initialized');
+        this.cardTypes = ['trust', 'bias', 'facts', 'author', 'clickbait', 'source', 'manipulation', 'metrics'];
     }
 
-    render(analysisData, container) {
-        console.log('AnalysisCards: render() called with data:', analysisData);
-        
-        // Store reference to container
-        this.container = container;
-        
-        // Clear previous content
-        container.innerHTML = '';
-        
-        // Check if analysis was successful
-        if (!analysisData.success) {
-            this.renderError(analysisData.error || 'Analysis failed');
+    render(container, data, isPro = false) {
+        if (!container || !data) {
+            console.error('AnalysisCards: Missing container or data');
             return;
         }
+
+        // Store data globally for debugging
+        window.LAST_ANALYSIS_DATA = data;
+        
+        // Clear existing content
+        container.innerHTML = '';
         
         // Create cards container
         const cardsContainer = document.createElement('div');
-        cardsContainer.className = 'analysis-cards-grid';
-        
-        // Define card order and their data mappings
-        const cardConfigs = [
-            {
-                type: 'trust',
-                data: {
-                    trust_score: analysisData.trust_score,
-                    components: this.getTrustComponents(analysisData)
-                }
-            },
-            {
-                type: 'bias',
-                data: analysisData.bias_analysis
-            },
-            {
-                type: 'facts',
-                data: {
-                    fact_checks: analysisData.fact_checks,
-                    key_claims: analysisData.key_claims,
-                    is_pro: analysisData.is_pro
-                }
-            },
-            {
-                type: 'author',
-                data: analysisData // Pass the entire analysis data for author card
-            },
-            {
-                type: 'clickbait',
-                data: {
-                    score: analysisData.clickbait_score,
-                    analysis: analysisData.clickbait_analysis,
-                    is_pro: analysisData.is_pro
-                }
-            },
-            {
-                type: 'source',
-                data: analysisData.source_credibility
-            },
-            {
-                type: 'manipulation',
-                data: analysisData.persuasion_analysis || analysisData.manipulation_analysis
-            },
-            {
-                type: 'metrics',
-                data: {
-                    content_analysis: analysisData.content_analysis,
-                    transparency_analysis: analysisData.transparency_analysis,
-                    connection_analysis: analysisData.connection_analysis
-                }
-            }
-        ];
+        cardsContainer.className = 'analysis-cards-container';
         
         // Create each card
-        cardConfigs.forEach(config => {
-            const card = this.createCard(config.type, config.data, analysisData.is_pro);
+        this.cardTypes.forEach(type => {
+            const card = this.createCard(type, data, isPro);
             if (card) {
                 cardsContainer.appendChild(card);
-                this.cards.push(card);
             }
         });
         
-        // Add cards to container
         container.appendChild(cardsContainer);
         
-        // Add export section if enabled
-        if (analysisData.export_enabled) {
-            this.addExportSection(container, analysisData);
-        }
-        
-        // Trigger animations
-        this.animateCards();
+        // Add export section
+        this.addExportSection(container, data);
     }
 
     createCard(type, data, isPro) {
-        console.log(`Creating ${type} card with data:`, data);
         let card;
         
         switch(type) {
@@ -115,8 +48,6 @@ class AnalysisCards {
                 card = this.createFactsCard(data, isPro);
                 break;
             case 'author':
-                // CRITICAL: Create author card with full data
-                console.log('Creating author card with full analysis data');
                 card = this.createAuthorCard(data);
                 break;
             case 'clickbait':
@@ -144,140 +75,30 @@ class AnalysisCards {
         return card;
     }
 
-    createAuthorCard(data) {
-        console.log('=== CREATE AUTHOR CARD ===');
-        console.log('Full data received:', data);
-        console.log('data.author_analysis:', data.author_analysis);
-        console.log('data.article:', data.article);
-        
-        // Extract author information from various possible locations
-        const author = data.author_analysis || {};
-        const article = data.article || {};
-        const authorName = author.name || article.author || 'Unknown Author';
-        const credibilityScore = author.credibility_score || 0;
-        const found = author.found !== undefined ? author.found : false;
-        
-        console.log('Extracted author name:', authorName);
-        console.log('Author found:', found);
-        console.log('Credibility score:', credibilityScore);
-        
-        const card = document.createElement('div');
-        card.className = 'analysis-card author-card';
-        card.setAttribute('data-card-type', 'author');
-        
-        card.innerHTML = `
-            <div class="analysis-header">
-                <span class="analysis-icon">✍️</span>
-                <span>Author Analysis</span>
-            </div>
-            
-            <div class="author-content">
-                <div class="author-info">
-                    <h3>${authorName}</h3>
-                    
-                    ${found ? `
-                        <div class="credibility-meter">
-                            <span class="label">Credibility Score:</span>
-                            <div class="meter-bar">
-                                <div class="meter-fill" style="width: ${credibilityScore}%; background: ${this.getCredibilityColor(credibilityScore)};"></div>
-                            </div>
-                            <span class="score">${credibilityScore}%</span>
-                        </div>
-                        
-                        ${author.bio ? `<p class="author-bio">${author.bio}</p>` : ''}
-                        
-                        ${author.verification_status ? `
-                            <div class="verification-badges">
-                                ${author.verification_status.verified ? '<span class="badge verified">✓ Verified</span>' : ''}
-                                ${author.verification_status.journalist_verified ? '<span class="badge journalist">📰 Journalist</span>' : ''}
-                                ${author.verification_status.outlet_staff ? '<span class="badge outlet">🏢 Staff Writer</span>' : ''}
-                            </div>
-                        ` : ''}
-                        
-                        ${author.professional_info ? `
-                            <div class="professional-info">
-                                ${author.professional_info.current_position ? `
-                                    <p><strong>Position:</strong> ${author.professional_info.current_position}</p>
-                                ` : ''}
-                                ${author.professional_info.years_experience ? `
-                                    <p><strong>Experience:</strong> ${author.professional_info.years_experience} years</p>
-                                ` : ''}
-                                ${author.professional_info.expertise_areas && author.professional_info.expertise_areas.length > 0 ? `
-                                    <div class="expertise-areas">
-                                        <strong>Expertise:</strong>
-                                        <div class="expertise-tags">
-                                            ${author.professional_info.expertise_areas.map(area => 
-                                                `<span class="badge expertise">${area}</span>`
-                                            ).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        ` : ''}
-                        
-                        ${author.recent_articles && author.recent_articles.length > 0 ? `
-                            <div class="recent-articles">
-                                <h4>Recent Articles</h4>
-                                <ul>
-                                    ${author.recent_articles.slice(0, 3).map(article => {
-                                        if (typeof article === 'string') {
-                                            return `<li>${article}</li>`;
-                                        } else {
-                                            return `<li>
-                                                ${article.url ? `<a href="${article.url}" target="_blank">` : ''}
-                                                ${article.title}
-                                                ${article.url ? '</a>' : ''}
-                                                ${article.date ? ` (${new Date(article.date).toLocaleDateString()})` : ''}
-                                            </li>`;
-                                        }
-                                    }).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-                        
-                        ${author.online_presence ? `
-                            <div class="online-presence">
-                                ${author.online_presence.twitter ? `
-                                    <a href="https://twitter.com/${author.online_presence.twitter}" target="_blank" class="social-link">
-                                        𝕏 @${author.online_presence.twitter}
-                                    </a>
-                                ` : ''}
-                                ${author.online_presence.linkedin ? `
-                                    <a href="${author.online_presence.linkedin}" target="_blank" class="social-link">
-                                        LinkedIn
-                                    </a>
-                                ` : ''}
-                            </div>
-                        ` : ''}
-                    ` : `
-                        <div class="author-not-found">
-                            <p class="warning-text">⚠️ Limited author information available</p>
-                            <p class="explanation">We couldn't find detailed information about this author, which may indicate:</p>
-                            <ul>
-                                <li>They're new to journalism</li>
-                                <li>They write under a pseudonym</li>
-                                <li>The publication doesn't provide author details</li>
-                            </ul>
-                            <p class="advice">Be extra cautious and verify claims through other sources.</p>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-        
-        console.log('Author card HTML created');
-        return card;
-    }
-
     createTrustCard(data) {
-        const { color, label } = this.getTrustScoreInfo(data.trust_score);
+        if (!data) return null;
+        
+        const trustScore = data.trust_score || 0;
+        const components = data.trust_components || [];
         
         const card = document.createElement('div');
         card.className = 'analysis-card trust-card';
+        
+        // Determine color based on score
+        let color = '#ef4444'; // red
+        let label = 'Low Trust';
+        if (trustScore >= 70) {
+            color = '#10b981'; // green
+            label = 'High Trust';
+        } else if (trustScore >= 40) {
+            color = '#f59e0b'; // yellow
+            label = 'Medium Trust';
+        }
+        
         card.innerHTML = `
             <div class="analysis-header">
                 <span class="analysis-icon">🛡️</span>
-                <span>Overall Trust Score</span>
+                <span>Trust Score</span>
             </div>
             
             <div class="trust-content">
@@ -285,27 +106,29 @@ class AnalysisCards {
                     <svg class="trust-meter" viewBox="0 0 200 200">
                         <circle class="trust-bg" cx="100" cy="100" r="90"></circle>
                         <circle class="trust-fill" cx="100" cy="100" r="90" 
-                                style="stroke: ${color}; stroke-dasharray: ${565 * (data.trust_score / 100)} 565;">
+                                style="stroke: ${color}; stroke-dasharray: ${565 * (trustScore / 100)} 565;">
                         </circle>
                     </svg>
                     <div class="trust-score-text">
-                        <div class="trust-score-number">${data.trust_score}</div>
+                        <div class="trust-score-number">${trustScore}</div>
                         <div class="trust-score-label">${label}</div>
                     </div>
                 </div>
                 
-                <div class="trust-components">
-                    <h4>Score Components</h4>
-                    ${data.components.map(comp => `
-                        <div class="component-item">
-                            <span class="component-label">${comp.label}</span>
-                            <div class="component-bar">
-                                <div class="component-fill" style="width: ${comp.value}%; background: ${this.getComponentColor(comp.value)};"></div>
+                ${components.length > 0 ? `
+                    <div class="trust-components">
+                        <h4>Score Components</h4>
+                        ${components.map(comp => `
+                            <div class="component-item">
+                                <span class="component-label">${comp.label || comp.name}</span>
+                                <div class="component-bar">
+                                    <div class="component-fill" style="width: ${comp.value || comp.score}%; background: ${this.getComponentColor(comp.value || comp.score)};"></div>
+                                </div>
+                                <span class="component-value">${comp.value || comp.score}%</span>
                             </div>
-                            <span class="component-value">${comp.value}%</span>
-                        </div>
-                    `).join('')}
-                </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
         `;
         
@@ -313,11 +136,15 @@ class AnalysisCards {
     }
 
     createBiasCard(data) {
-        if (!data) return null;
+        if (!data || !data.bias_analysis) return null;
         
-        const biasLevel = data.overall_bias || 'Unknown';
-        const politicalLean = data.political_lean || 0;
-        const objectivityScore = Math.round((data.objectivity_score || 0.5) * 100);
+        const bias = data.bias_analysis;
+        const overallBias = bias.overall_bias || 0;
+        const politicalLean = bias.political_lean || 'Center';
+        const loadedPhrases = bias.loaded_phrases || [];
+        const manipulationTactics = bias.manipulation_tactics || [];
+        const biasDimensions = bias.bias_dimensions || {};
+        const biasIndicators = bias.bias_indicators || [];
         
         const card = document.createElement('div');
         card.className = 'analysis-card bias-card';
@@ -328,41 +155,68 @@ class AnalysisCards {
             </div>
             
             <div class="bias-content">
-                <div class="bias-overview">
-                    <div class="bias-level ${biasLevel.toLowerCase()}">
-                        <span class="bias-label">Overall Bias:</span>
-                        <span class="bias-value">${biasLevel}</span>
-                    </div>
-                    <div class="objectivity-score">
-                        <span class="objectivity-label">Objectivity:</span>
-                        <span class="objectivity-value">${objectivityScore}%</span>
-                    </div>
+                <div class="bias-summary">
+                    <div class="bias-score">${overallBias}% Biased</div>
+                    <div class="political-lean">Political Lean: <strong>${politicalLean}</strong></div>
+                    ${bias.bias_confidence ? `<div class="confidence">Confidence: ${bias.bias_confidence}%</div>` : ''}
                 </div>
-                
-                <div class="political-spectrum">
-                    <h4>Political Lean</h4>
-                    <div class="spectrum-container">
-                        <div class="spectrum-bar">
-                            <div class="spectrum-marker" style="left: ${50 + (politicalLean / 2)}%;"></div>
+
+                ${loadedPhrases.length > 0 ? `
+                    <div class="loaded-phrases-section">
+                        <h4>Loaded Language Found</h4>
+                        <div class="loaded-phrases-list">
+                            ${loadedPhrases.map(phrase => `
+                                <div class="loaded-phrase-item">
+                                    <div class="phrase-text">"${phrase.text}"</div>
+                                    <div class="phrase-explanation">${phrase.explanation}</div>
+                                    ${phrase.context ? `<div class="phrase-context">Context: "${phrase.context}"</div>` : ''}
+                                    <div class="phrase-impact">Impact: <span class="impact-${phrase.impact}">${phrase.impact}</span></div>
+                                </div>
+                            `).join('')}
                         </div>
-                        <div class="spectrum-labels">
-                            <span>Far Left</span>
-                            <span>Center</span>
-                            <span>Far Right</span>
-                        </div>
-                        <div class="lean-value">${this.getPoliticalLeanLabel(politicalLean)}</div>
                     </div>
-                </div>
-                
-                ${data.bias_indicators && data.bias_indicators.length > 0 ? `
-                <div class="bias-indicators">
-                    <h4>Bias Indicators Found</h4>
-                    <ul>
-                        ${data.bias_indicators.slice(0, 5).map(indicator => `
-                            <li>${indicator}</li>
-                        `).join('')}
-                    </ul>
-                </div>
+                ` : ''}
+
+                ${manipulationTactics.length > 0 ? `
+                    <div class="manipulation-tactics-section">
+                        <h4>Manipulation Tactics</h4>
+                        <div class="tactics-list">
+                            ${manipulationTactics.map(tactic => `
+                                <div class="tactic-item">
+                                    <div class="tactic-name">${tactic.name}</div>
+                                    <div class="tactic-description">${tactic.description}</div>
+                                    <div class="tactic-severity">Severity: <span class="severity-${tactic.severity}">${tactic.severity}</span></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${Object.keys(biasDimensions).length > 0 ? `
+                    <div class="bias-dimensions-section">
+                        <h4>Bias Dimensions</h4>
+                        <div class="dimensions-grid">
+                            ${Object.entries(biasDimensions).map(([key, dim]) => `
+                                <div class="dimension-item">
+                                    <div class="dimension-name">${key.charAt(0).toUpperCase() + key.slice(1)}</div>
+                                    <div class="dimension-score">${dim.label}</div>
+                                    <div class="dimension-bar">
+                                        <div class="dimension-fill" style="width: ${Math.abs(dim.score) * 100}%"></div>
+                                    </div>
+                                    <div class="dimension-confidence">Confidence: ${dim.confidence}%</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${biasIndicators.length > 0 ? `
+                    <div class="bias-indicators-section">
+                        <h4>Bias Indicators</h4>
+                        <ul class="indicators-list">
+                            ${biasIndicators.map(indicator => `<li>${indicator}</li>`).join('')}
+                        </ul>
+                    </div>
                 ` : ''}
             </div>
         `;
@@ -402,43 +256,40 @@ class AnalysisCards {
             card.innerHTML = `
                 <div class="analysis-header">
                     <span class="analysis-icon">✓</span>
-                    <span>Fact Checking</span>
+                    <span>Fact Checking Results</span>
                 </div>
                 
                 <div class="facts-content">
+                    <div class="facts-summary">
+                        <div class="total-claims">${factChecks.length} claims analyzed</div>
+                        ${this.getFactCheckSummary(factChecks)}
+                    </div>
+
                     ${factChecks.length > 0 ? `
                         <div class="fact-checks-list">
                             ${factChecks.map((check, index) => `
-                                <div class="fact-check-item">
-                                    <div class="fact-check-claim">
-                                        <span class="claim-number">${index + 1}</span>
-                                        <span class="claim-text">${check.claim || check.text || 'Claim'}</span>
+                                <div class="fact-check-item ${(check.verdict || check.rating || 'unknown').toLowerCase()}">
+                                    <div class="fact-check-header">
+                                        <span class="claim-number">#${index + 1}</span>
+                                        <span class="verdict-badge">${check.verdict || check.rating || 'Not Verified'}</span>
                                     </div>
-                                    <div class="fact-check-result ${(check.rating || 'unknown').toLowerCase()}">
-                                        <span class="rating-icon">${this.getFactCheckIcon(check.rating)}</span>
-                                        <span class="rating-text">${check.rating || 'Not Verified'}</span>
-                                    </div>
+                                    <div class="claim-text">"${check.claim || check.text || keyClaims[index] || 'Claim'}"</div>
+                                    ${check.explanation ? `<div class="verdict-explanation">${check.explanation}</div>` : ''}
+                                    ${check.evidence ? `
+                                        <div class="evidence-section">
+                                            <h5>Evidence:</h5>
+                                            <div class="evidence-text">${check.evidence}</div>
+                                        </div>
+                                    ` : ''}
                                     ${check.source ? `
-                                        <div class="fact-check-source">
-                                            <a href="${check.url}" target="_blank">Source: ${check.source}</a>
+                                        <div class="source-info">
+                                            <a href="${check.source}" target="_blank" rel="noopener">View Source →</a>
                                         </div>
                                     ` : ''}
                                 </div>
                             `).join('')}
                         </div>
-                    ` : keyClaims.length > 0 ? `
-                        <div class="key-claims">
-                            <h4>Key Claims Identified</h4>
-                            <ul>
-                                ${keyClaims.slice(0, 5).map(claim => `
-                                    <li>${claim.text || claim}</li>
-                                `).join('')}
-                            </ul>
-                            <p class="note">Note: External fact-checking not available for these claims</p>
-                        </div>
-                    ` : `
-                        <p class="no-claims">No specific factual claims identified for verification</p>
-                    `}
+                    ` : '<p>No fact checks available</p>'}
                 </div>
             `;
         }
@@ -446,8 +297,97 @@ class AnalysisCards {
         return card;
     }
 
+    createAuthorCard(data) {
+        const author = data.author_analysis || {};
+        const article = data.article || {};
+        const authorName = author.name || article.author || 'Unknown Author';
+        const found = author.found !== undefined ? author.found : false;
+        const credibilityScore = author.credibility_score || 0;
+        const credentials = author.credentials || [];
+        const expertise = author.expertise || [];
+        const pastWork = author.past_work || [];
+        
+        const card = document.createElement('div');
+        card.className = 'analysis-card author-card';
+        card.setAttribute('data-card-type', 'author');
+        
+        card.innerHTML = `
+            <div class="analysis-header">
+                <span class="analysis-icon">✍️</span>
+                <span>Author Analysis</span>
+            </div>
+            
+            <div class="author-content">
+                <div class="author-info">
+                    <h3>${authorName}</h3>
+                    
+                    ${found ? `
+                        <div class="author-found">
+                            <div class="credibility-score">
+                                <span class="score-label">Credibility Score:</span>
+                                <span class="score-value" style="color: ${this.getCredibilityColor(credibilityScore)}">${credibilityScore}/100</span>
+                            </div>
+                            
+                            ${credentials.length > 0 ? `
+                                <div class="credentials-section">
+                                    <h4>Credentials</h4>
+                                    <ul>
+                                        ${credentials.map(cred => `<li>${cred}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${expertise.length > 0 ? `
+                                <div class="expertise-section">
+                                    <h4>Areas of Expertise</h4>
+                                    <div class="expertise-tags">
+                                        ${expertise.map(exp => `<span class="expertise-tag">${exp}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            ${pastWork.length > 0 ? `
+                                <div class="past-work-section">
+                                    <h4>Notable Past Work</h4>
+                                    <ul>
+                                        ${pastWork.map(work => `<li>${work}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+
+                            ${author.social_media ? `
+                                <div class="social-presence">
+                                    <h4>Social Media Presence</h4>
+                                    <p>${author.social_media}</p>
+                                </div>
+                            ` : ''}
+
+                            ${author.verification_status ? `
+                                <div class="verification-status">
+                                    <span class="status-icon">✓</span>
+                                    ${author.verification_status}
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div class="author-not-found">
+                            <p class="warning-message">⚠️ Author information could not be verified</p>
+                            <p>Unable to find credible information about this author. Consider researching the author independently.</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+        
+        return card;
+    }
+
     createClickbaitCard(data, isPro) {
-        const score = data.score || 0;
+        const clickbait = data.clickbait_analysis || {};
+        const score = clickbait.score || 0;
+        const tactics = clickbait.tactics || [];
+        const elements = clickbait.elements || [];
+        
         const card = document.createElement('div');
         card.className = 'analysis-card clickbait-card';
         
@@ -458,33 +398,36 @@ class AnalysisCards {
             </div>
             
             <div class="clickbait-content">
-                <div class="clickbait-gauge">
-                    <svg viewBox="0 0 200 100">
-                        <path d="M 20 80 A 60 60 0 0 1 180 80" fill="none" stroke="#e5e7eb" stroke-width="20"/>
-                        <path d="M 20 80 A 60 60 0 0 1 180 80" fill="none" 
-                              stroke="${this.getClickbaitColor(score)}" 
-                              stroke-width="20"
-                              stroke-dasharray="${score * 1.57} 157"
-                              class="gauge-fill"/>
-                    </svg>
-                    <div class="gauge-text">
-                        <div class="gauge-score">${score}%</div>
-                        <div class="gauge-label">${this.getClickbaitLabel(score)}</div>
+                <div class="clickbait-score-display">
+                    <div class="score-meter">
+                        <div class="score-fill" style="width: ${score}%; background: ${this.getClickbaitColor(score)}"></div>
+                    </div>
+                    <div class="score-text">
+                        <span class="score-number">${score}%</span>
+                        <span class="score-label">${this.getClickbaitLabel(score)}</span>
                     </div>
                 </div>
                 
-                ${isPro && data.analysis ? `
-                    <div class="clickbait-details">
-                        <h4>Analysis Details</h4>
-                        ${data.analysis.indicators ? `
-                            <ul class="indicators-list">
-                                ${data.analysis.indicators.map(ind => `<li>${ind}</li>`).join('')}
-                            </ul>
-                        ` : ''}
+                ${tactics.length > 0 ? `
+                    <div class="clickbait-tactics">
+                        <h4>Clickbait Tactics Used</h4>
+                        <ul>
+                            ${tactics.map(tactic => `<li>${tactic}</li>`).join('')}
+                        </ul>
                     </div>
-                ` : !isPro ? `
-                    <div class="upgrade-note">
-                        <p>🔒 Get detailed clickbait analysis with Pro</p>
+                ` : ''}
+                
+                ${elements.length > 0 ? `
+                    <div class="clickbait-elements">
+                        <h4>Clickbait Elements Found</h4>
+                        <div class="elements-list">
+                            ${elements.map(element => `
+                                <div class="element-item">
+                                    <span class="element-type">${element.type}:</span>
+                                    <span class="element-text">"${element.text}"</span>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
             </div>
@@ -494,49 +437,66 @@ class AnalysisCards {
     }
 
     createSourceCard(data) {
-        if (!data) return null;
+        const source = data.source_credibility || {};
+        const domain = data.article?.domain || 'Unknown';
         
         const card = document.createElement('div');
         card.className = 'analysis-card source-card';
+        
         card.innerHTML = `
             <div class="analysis-header">
-                <span class="analysis-icon">📰</span>
+                <span class="analysis-icon">🏢</span>
                 <span>Source Credibility</span>
             </div>
             
             <div class="source-content">
-                <div class="source-rating ${(data.rating || 'unknown').toLowerCase()}">
-                    <span class="rating-icon">${this.getSourceIcon(data.rating)}</span>
-                    <span class="rating-text">${data.rating || 'Unknown'}</span>
+                <div class="source-domain">
+                    <h3>${domain}</h3>
                 </div>
-                
-                ${data.name ? `
-                    <div class="source-info">
-                        <h4>${data.name}</h4>
-                        ${data.description ? `<p>${data.description}</p>` : ''}
-                    </div>
-                ` : ''}
                 
                 <div class="source-details">
-                    ${data.type ? `
+                    ${source.credibility ? `
                         <div class="detail-item">
-                            <span class="detail-label">Type:</span>
-                            <span class="detail-value">${data.type}</span>
+                            <span class="detail-label">Overall Credibility:</span>
+                            <span class="detail-value credibility-${source.credibility.toLowerCase()}">${source.credibility}</span>
                         </div>
                     ` : ''}
-                    ${data.bias ? `
+                    
+                    ${source.bias ? `
                         <div class="detail-item">
                             <span class="detail-label">Political Bias:</span>
-                            <span class="detail-value bias-${data.bias.toLowerCase()}">${data.bias}</span>
+                            <span class="detail-value bias-${source.bias.toLowerCase()}">${source.bias}</span>
                         </div>
                     ` : ''}
-                    ${data.factual_reporting ? `
+                    
+                    ${source.factual_reporting ? `
                         <div class="detail-item">
                             <span class="detail-label">Factual Reporting:</span>
-                            <span class="detail-value">${data.factual_reporting}</span>
+                            <span class="detail-value">${source.factual_reporting}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${source.type ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Source Type:</span>
+                            <span class="detail-value">${source.type}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${source.traffic_rank ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Traffic Rank:</span>
+                            <span class="detail-value">#${source.traffic_rank}</span>
                         </div>
                     ` : ''}
                 </div>
+                
+                ${source.description ? `
+                    <div class="source-description">
+                        <h4>About This Source</h4>
+                        <p>${source.description}</p>
+                    </div>
+                ` : ''}
             </div>
         `;
         
@@ -544,13 +504,14 @@ class AnalysisCards {
     }
 
     createManipulationCard(data) {
-        if (!data) return null;
-        
-        const score = data.persuasion_score || data.manipulation_score || 0;
-        const tactics = data.tactics || data.manipulation_tactics || [];
+        const manipulation = data.manipulation_analysis || {};
+        const score = manipulation.score || 0;
+        const tactics = manipulation.tactics || [];
+        const techniques = manipulation.techniques || [];
         
         const card = document.createElement('div');
         card.className = 'analysis-card manipulation-card';
+        
         card.innerHTML = `
             <div class="analysis-header">
                 <span class="analysis-icon">🎭</span>
@@ -567,20 +528,38 @@ class AnalysisCards {
                 </div>
                 
                 ${tactics.length > 0 ? `
-                    <div class="tactics-found">
-                        <h4>Tactics Detected</h4>
+                    <div class="manipulation-tactics">
+                        <h4>Manipulation Tactics Detected</h4>
                         <div class="tactics-list">
                             ${tactics.map(tactic => `
                                 <div class="tactic-item">
                                     <span class="tactic-icon">⚠️</span>
-                                    <span class="tactic-text">${tactic}</span>
+                                    <div class="tactic-content">
+                                        <div class="tactic-name">${tactic.name || tactic}</div>
+                                        ${tactic.description ? `<div class="tactic-description">${tactic.description}</div>` : ''}
+                                        ${tactic.examples ? `
+                                            <div class="tactic-examples">
+                                                <strong>Examples:</strong>
+                                                <ul>
+                                                    ${tactic.examples.map(ex => `<li>"${ex}"</li>`).join('')}
+                                                </ul>
+                                            </div>
+                                        ` : ''}
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                ` : `
-                    <p class="no-tactics">No significant manipulation tactics detected</p>
-                `}
+                ` : ''}
+                
+                ${techniques.length > 0 ? `
+                    <div class="manipulation-techniques">
+                        <h4>Persuasion Techniques</h4>
+                        <ul>
+                            ${techniques.map(tech => `<li>${tech}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
             </div>
         `;
         
@@ -588,12 +567,13 @@ class AnalysisCards {
     }
 
     createMetricsCard(data) {
-        const content = data.content_analysis || {};
-        const transparency = data.transparency_analysis || {};
-        const connection = data.connection_analysis || {};
+        const metrics = data.article_metrics || {};
+        const readability = metrics.readability || {};
+        const engagement = metrics.engagement || {};
         
         const card = document.createElement('div');
         card.className = 'analysis-card metrics-card';
+        
         card.innerHTML = `
             <div class="analysis-header">
                 <span class="analysis-icon">📊</span>
@@ -601,37 +581,45 @@ class AnalysisCards {
             </div>
             
             <div class="metrics-content">
-                ${content.word_count ? `
-                    <div class="metrics-section">
-                        <h4>Content Analysis</h4>
+                ${Object.keys(readability).length > 0 ? `
+                    <div class="readability-section">
+                        <h4>Readability Scores</h4>
                         <div class="metrics-grid">
-                            <div class="metric">
-                                <span class="metric-label">Words</span>
-                                <span class="metric-value">${content.word_count.toLocaleString()}</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Reading Time</span>
-                                <span class="metric-value">${content.reading_time || Math.ceil(content.word_count / 200)} min</span>
-                            </div>
-                            ${content.readability_score ? `
-                                <div class="metric">
-                                    <span class="metric-label">Readability</span>
-                                    <span class="metric-value">${content.readability_score}/100</span>
+                            ${Object.entries(readability).map(([key, value]) => `
+                                <div class="metric-item">
+                                    <span class="metric-label">${key.replace(/_/g, ' ')}:</span>
+                                    <span class="metric-value">${value}</span>
                                 </div>
-                            ` : ''}
+                            `).join('')}
                         </div>
                     </div>
                 ` : ''}
                 
-                ${transparency.transparency_score !== undefined ? `
-                    <div class="metrics-section">
-                        <h4>Transparency Score</h4>
-                        <div class="transparency-meter">
-                            <div class="meter-bar">
-                                <div class="meter-fill" style="width: ${transparency.transparency_score}%;"></div>
-                            </div>
-                            <span class="score-text">${transparency.transparency_score}%</span>
-                        </div>
+                ${metrics.word_count ? `
+                    <div class="metric-item">
+                        <span class="metric-label">Word Count:</span>
+                        <span class="metric-value">${metrics.word_count}</span>
+                    </div>
+                ` : ''}
+                
+                ${metrics.sentence_count ? `
+                    <div class="metric-item">
+                        <span class="metric-label">Sentences:</span>
+                        <span class="metric-value">${metrics.sentence_count}</span>
+                    </div>
+                ` : ''}
+                
+                ${metrics.paragraph_count ? `
+                    <div class="metric-item">
+                        <span class="metric-label">Paragraphs:</span>
+                        <span class="metric-value">${metrics.paragraph_count}</span>
+                    </div>
+                ` : ''}
+                
+                ${engagement.estimated_read_time ? `
+                    <div class="metric-item">
+                        <span class="metric-label">Read Time:</span>
+                        <span class="metric-value">${engagement.estimated_read_time}</span>
                     </div>
                 ` : ''}
             </div>
@@ -642,119 +630,50 @@ class AnalysisCards {
 
     makeCollapsible(card) {
         const header = card.querySelector('.analysis-header');
-        const content = card.querySelector('[class$="-content"]');
+        if (!header) return;
         
-        if (!header || !content) return;
-        
-        // Add collapse button
-        const collapseBtn = document.createElement('button');
-        collapseBtn.className = 'collapse-btn';
-        collapseBtn.innerHTML = '−';
-        collapseBtn.setAttribute('aria-label', 'Collapse card');
-        
-        header.appendChild(collapseBtn);
         header.style.cursor = 'pointer';
-        
-        // Toggle function
-        const toggle = () => {
-            const isCollapsed = card.classList.contains('collapsed');
-            
-            if (isCollapsed) {
-                card.classList.remove('collapsed');
-                content.style.display = 'block';
-                collapseBtn.innerHTML = '−';
-                collapseBtn.setAttribute('aria-label', 'Collapse card');
-            } else {
-                card.classList.add('collapsed');
-                content.style.display = 'none';
-                collapseBtn.innerHTML = '+';
-                collapseBtn.setAttribute('aria-label', 'Expand card');
-            }
-        };
-        
-        // Add event listeners
-        header.addEventListener('click', toggle);
-    }
-
-    renderError(message) {
-        this.container.innerHTML = `
-            <div class="error-container">
-                <div class="error-icon">⚠️</div>
-                <h3>Analysis Error</h3>
-                <p>${message}</p>
-                <button class="retry-btn" onclick="retryAnalysis()">Try Again</button>
-            </div>
-        `;
-    }
-
-    animateCards() {
-        this.cards.forEach((card, index) => {
-            setTimeout(() => {
-                card.classList.add('fade-in');
-            }, index * 100);
+        header.addEventListener('click', () => {
+            card.classList.toggle('collapsed');
         });
     }
 
     // Helper methods
-    getTrustScoreInfo(score) {
-        if (score >= 80) {
-            return { color: '#10b981', label: 'Highly Trustworthy' };
-        } else if (score >= 60) {
-            return { color: '#3b82f6', label: 'Generally Trustworthy' };
-        } else if (score >= 40) {
-            return { color: '#f59e0b', label: 'Questionable' };
-        } else {
-            return { color: '#ef4444', label: 'Low Trust' };
-        }
+    getFactCheckSummary(factChecks) {
+        const counts = {};
+        factChecks.forEach(check => {
+            const verdict = check.verdict || check.rating || 'Unknown';
+            counts[verdict] = (counts[verdict] || 0) + 1;
+        });
+        
+        return `
+            <div class="verdict-summary">
+                ${Object.entries(counts).map(([verdict, count]) => `
+                    <span class="verdict-count ${verdict.toLowerCase()}">
+                        ${count} ${verdict}
+                    </span>
+                `).join('')}
+            </div>
+        `;
     }
 
-    getTrustComponents(data) {
-        return [
-            { label: 'Source Credibility', value: this.mapSourceCredibility(data.source_credibility) },
-            { label: 'Author Credibility', value: data.author_analysis?.credibility_score || 50 },
-            { label: 'Objectivity', value: Math.round((data.bias_analysis?.objectivity_score || 0.5) * 100) },
-            { label: 'Transparency', value: data.transparency_analysis?.transparency_score || 50 },
-            { label: 'Factual Accuracy', value: 100 - (data.clickbait_score || 0) }
-        ];
-    }
-
-    mapSourceCredibility(sourceCred) {
-        if (!sourceCred) return 50;
-        const mapping = {
-            'High': 90,
-            'Medium': 65,
-            'Low': 35,
-            'Very Low': 15,
-            'Unknown': 50
+    getFactCheckIcon(verdict) {
+        const icons = {
+            'true': '✓',
+            'mostly true': '✓',
+            'half true': '◐',
+            'mostly false': '✗',
+            'false': '✗',
+            'unverified': '?'
         };
-        return mapping[sourceCred.rating] || 50;
+        return icons[verdict?.toLowerCase()] || '?';
     }
 
     getComponentColor(value) {
-        if (value >= 70) return '#10b981';
-        if (value >= 50) return '#3b82f6';
-        if (value >= 30) return '#f59e0b';
+        if (value >= 80) return '#10b981';
+        if (value >= 60) return '#3b82f6';
+        if (value >= 40) return '#f59e0b';
         return '#ef4444';
-    }
-
-    getPoliticalLeanLabel(lean) {
-        if (lean < -50) return 'Far Left';
-        if (lean < -20) return 'Left-Leaning';
-        if (lean < 20) return 'Center';
-        if (lean < 50) return 'Right-Leaning';
-        return 'Far Right';
-    }
-
-    getFactCheckIcon(rating) {
-        const icons = {
-            'True': '✓',
-            'Mostly True': '✓',
-            'Half True': '⚠️',
-            'Mostly False': '✗',
-            'False': '✗',
-            'Pants on Fire': '🔥'
-        };
-        return icons[rating] || '?';
     }
 
     getCredibilityColor(score) {
@@ -774,16 +693,6 @@ class AnalysisCards {
         if (score >= 70) return 'High Clickbait';
         if (score >= 40) return 'Moderate Clickbait';
         return 'Low Clickbait';
-    }
-
-    getSourceIcon(rating) {
-        const icons = {
-            'High': '✓',
-            'Medium': '◐',
-            'Low': '⚠️',
-            'Very Low': '✗'
-        };
-        return icons[rating] || '?';
     }
 
     getManipulationColor(score) {
@@ -844,14 +753,7 @@ window.debugAnalysisCards = function() {
     if (window.LAST_ANALYSIS_DATA) {
         console.log('Last analysis data:', window.LAST_ANALYSIS_DATA);
         console.log('Has author_analysis:', !!window.LAST_ANALYSIS_DATA.author_analysis);
-        console.log('Author data:', window.LAST_ANALYSIS_DATA.author_analysis);
+        console.log('Has bias_analysis:', !!window.LAST_ANALYSIS_DATA.bias_analysis);
+        console.log('Bias analysis details:', window.LAST_ANALYSIS_DATA.bias_analysis);
     }
-    
-    // Check DOM for author card
-    const authorCards = document.querySelectorAll('[data-card-type="author"], .author-card');
-    console.log('Author cards in DOM:', authorCards.length);
-    authorCards.forEach((card, i) => {
-        console.log(`Card ${i+1}:`, card);
-        console.log('Content preview:', card.innerHTML.substring(0, 200));
-    });
 };
