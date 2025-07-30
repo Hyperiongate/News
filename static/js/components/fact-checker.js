@@ -1,148 +1,117 @@
 // static/js/components/fact-checker.js
-// Enhanced Fact Check Analysis Component - FIXED VERSION
+// Enhanced Fact Checker Component with Detailed Verification
 
 class FactChecker {
     constructor() {
-        this.data = null;
-        this.chartLoaded = false;
-        this.expandedClaims = new Set();
+        this.container = null;
     }
 
     render(data) {
-        this.data = data;
-        
         const container = document.createElement('div');
         container.className = 'fact-checker-container analysis-card';
         
-        // Determine what to render based on available data
-        if (data.is_pro && data.fact_checks && data.fact_checks.length > 0) {
-            container.innerHTML = this.renderProFactCheck();
-            this.initializeProFeatures(container);
-        } else if (data.key_claims && data.key_claims.length > 0) {
-            container.innerHTML = this.renderBasicClaims();
-        } else {
-            container.innerHTML = this.renderNoClaims();
-        }
+        const factChecks = data.fact_checks || [];
+        const keyClaims = data.key_claims || [];
+        const isPro = data.tier !== 'basic' && data.is_pro !== false;
         
-        // Add event listeners
-        this.attachEventListeners(container);
+        // Merge fact checks with key claims for comprehensive display
+        const mergedClaims = this.mergeClaimsWithFactChecks(keyClaims, factChecks);
+        
+        container.innerHTML = `
+            <div class="analysis-header">
+                <span class="analysis-icon">✓</span>
+                <span>Fact Check Analysis</span>
+                ${isPro ? '<span class="pro-indicator">PRO</span>' : ''}
+            </div>
+            
+            <div class="fact-check-content">
+                ${isPro ? this.renderProFactCheck(mergedClaims, data) : this.renderBasicFactCheck(mergedClaims)}
+            </div>
+        `;
+        
+        this.container = container;
+        this.attachEventListeners();
         
         return container;
     }
 
-    renderProFactCheck() {
-        const factChecks = this.data.fact_checks || [];
-        const keyClaims = this.data.key_claims || [];
-        const relatedArticles = this.data.related_articles || [];
+    renderBasicFactCheck(mergedClaims) {
+        const verifiedCount = mergedClaims.filter(c => this.getClaimStatus(c) === 'verified').length;
         
-        // Merge claims with fact checks
-        const mergedClaims = this.mergeClaimsWithFactChecks(keyClaims, factChecks);
-        
-        // Count verdicts and calculate statistics
+        return `
+            <div class="fact-check-basic">
+                <p><strong>${verifiedCount}/${mergedClaims.length}</strong> claims could be verified</p>
+                <div class="basic-claims-preview">
+                    ${mergedClaims.slice(0, 2).map(claim => `
+                        <div class="claim-preview">
+                            <span class="claim-text">"${this.truncateText(claim.text || claim.claim, 80)}"</span>
+                            <span class="claim-status-basic ${this.getClaimStatus(claim)}">
+                                ${this.getStatusIcon(this.getClaimStatus(claim))}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="upgrade-prompt">
+                    <span class="lock-icon">🔒</span>
+                    <p>Get detailed fact-checking with evidence and confidence scores</p>
+                </div>
+            </div>
+        `;
+    }
+
+    renderProFactCheck(mergedClaims, data) {
         const stats = this.calculateStatistics(mergedClaims);
         
         return `
-            <div class="analysis-header">
-                <span class="analysis-icon">✓</span>
-                <span>Fact Check Analysis</span>
-                <span class="pro-badge">PRO</span>
+            <!-- Fact Check Overview -->
+            <div class="fact-check-overview">
+                <h4>Comprehensive Fact Verification</h4>
+                <p class="methodology-note">
+                    We use Google Fact Check API, cross-reference with 100+ fact-checking organizations,
+                    and apply AI pattern analysis to verify claims. Each claim is scored for confidence
+                    based on multiple sources and evidence quality.
+                </p>
             </div>
-            
-            <div class="fact-checker-content">
-                ${this.renderFactCheckStats(stats)}
-                ${this.renderTrustMeter(stats)}
-                ${this.renderFactCheckChart(stats)}
-                ${this.renderFactCheckResults(mergedClaims)}
-                ${this.renderRelatedArticles(relatedArticles)}
-                ${this.renderFactCheckSources()}
-                ${this.renderMethodology()}
-                ${this.renderFactCheckSummary(stats)}
-            </div>
-        `;
-    }
 
-    renderBasicClaims() {
-        const claims = this.data.key_claims || [];
-        const sampleFactCheck = this.getSampleFactCheck();
-        
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">📋</span>
-                <span>Key Claims Identified</span>
-            </div>
-            
-            <div class="fact-checker-content">
-                <div class="fact-check-summary">
-                    <p class="fact-check-basic-text">
-                        We identified ${claims.length} key claim${claims.length !== 1 ? 's' : ''} in this article.
-                        Upgrade to Pro to automatically fact-check these claims using Google's Fact Check API
-                        and our advanced verification system.
-                    </p>
-                </div>
-                
-                <div class="claims-list">
-                    ${claims.slice(0, 3).map((claim, index) => this.renderBasicClaim(claim, index)).join('')}
-                    ${claims.length > 3 ? `
-                        <div class="more-claims-notice">
-                            <p>+ ${claims.length - 3} more claims to verify...</p>
-                        </div>
-                    ` : ''}
-                </div>
-                
-                ${this.renderProPreview(sampleFactCheck)}
-                
-                <div class="upgrade-prompt">
-                    <p>🔍 Get instant fact-checking with confidence scores and source verification</p>
-                    <a href="#" onclick="window.pricingDropdown?.show(); return false;" class="upgrade-button">
-                        Upgrade to Pro for Full Analysis
-                    </a>
-                </div>
-            </div>
-        `;
-    }
-
-    renderNoClaims() {
-        return `
-            <div class="analysis-header">
-                <span class="analysis-icon">📋</span>
-                <span>Fact Checking</span>
-            </div>
-            <div class="fact-checker-content">
-                <div class="fact-check-summary">
-                    <p class="fact-check-basic-text">
-                        No specific factual claims were identified in this article for fact-checking.
-                        This could indicate an opinion piece or content without verifiable statements.
-                    </p>
-                </div>
-                ${this.renderFactCheckEducation()}
-            </div>
-        `;
-    }
-
-    renderFactCheckStats(stats) {
-        return `
+            <!-- Statistics Dashboard -->
             <div class="fact-check-stats">
-                <div class="stat-card verified" data-tooltip="Claims verified as true">
-                    <span class="stat-icon">✓</span>
-                    <div class="stat-number" data-count="${stats.verified}">${stats.verified}</div>
-                    <div class="stat-label">Verified</div>
+                <div class="stat-card verified">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-number">${stats.verified}</div>
+                    <div class="stat-label">Verified True</div>
+                    <div class="stat-percentage">${this.calculatePercentage(stats.verified, stats.total)}%</div>
                 </div>
-                <div class="stat-card false" data-tooltip="Claims found to be false">
-                    <span class="stat-icon">✗</span>
-                    <div class="stat-number" data-count="${stats.false}">${stats.false}</div>
-                    <div class="stat-label">False</div>
+                <div class="stat-card false">
+                    <div class="stat-icon">❌</div>
+                    <div class="stat-number">${stats.false}</div>
+                    <div class="stat-label">False Claims</div>
+                    <div class="stat-percentage">${this.calculatePercentage(stats.false, stats.total)}%</div>
                 </div>
-                <div class="stat-card mixed" data-tooltip="Claims that are partially true">
-                    <span class="stat-icon">≈</span>
-                    <div class="stat-number" data-count="${stats.mixed}">${stats.mixed}</div>
-                    <div class="stat-label">Mixed</div>
+                <div class="stat-card mixed">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-number">${stats.mixed}</div>
+                    <div class="stat-label">Mixed/Partial</div>
+                    <div class="stat-percentage">${this.calculatePercentage(stats.mixed, stats.total)}%</div>
                 </div>
-                <div class="stat-card unverified" data-tooltip="Claims requiring further verification">
-                    <span class="stat-icon">?</span>
-                    <div class="stat-number" data-count="${stats.unverified}">${stats.unverified}</div>
-                    <div class="stat-label">Unverified</div>
+                <div class="stat-card unverified">
+                    <div class="stat-icon">❓</div>
+                    <div class="stat-number">${stats.unverified}</div>
+                    <div class="stat-label">Unverifiable</div>
+                    <div class="stat-percentage">${this.calculatePercentage(stats.unverified, stats.total)}%</div>
                 </div>
             </div>
+
+            <!-- Trust Meter -->
+            ${this.renderTrustMeter(stats)}
+
+            <!-- Detailed Results -->
+            ${this.renderDetailedResults(mergedClaims)}
+
+            <!-- Evidence Sources -->
+            ${this.renderEvidenceSources(data)}
+
+            <!-- Fact Check Insights -->
+            ${this.renderFactCheckInsights(mergedClaims, stats)}
         `;
     }
 
@@ -153,183 +122,149 @@ class FactChecker {
         return `
             <div class="trust-meter-section">
                 <h4>Factual Accuracy Score</h4>
-                <div class="trust-meter">
-                    <svg width="200" height="100" viewBox="0 0 200 100">
-                        <path d="M 20 80 A 80 80 0 0 1 180 80" fill="none" stroke="#e5e7eb" stroke-width="20"/>
-                        <path d="M 20 80 A 80 80 0 0 1 180 80" fill="none" stroke="${trustLevel.color}" 
-                              stroke-width="20" stroke-dasharray="${trustScore * 2.51} 251" 
-                              stroke-linecap="round" class="trust-meter-fill"/>
-                        <text x="100" y="75" text-anchor="middle" font-size="28" font-weight="bold" fill="#1f2937">
-                            ${trustScore}%
-                        </text>
-                        <text x="100" y="95" text-anchor="middle" font-size="14" fill="#6b7280">
-                            ${trustLevel.label}
-                        </text>
-                    </svg>
+                <div class="trust-meter-container">
+                    <div class="trust-meter">
+                        <svg width="200" height="100" viewBox="0 0 200 100">
+                            <defs>
+                                <linearGradient id="meterGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+                                    <stop offset="50%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M 20 80 A 80 80 0 0 1 180 80" fill="none" stroke="#e5e7eb" stroke-width="20"/>
+                            <path d="M 20 80 A 80 80 0 0 1 180 80" fill="none" stroke="url(#meterGradient)" 
+                                  stroke-width="20" stroke-dasharray="${trustScore * 2.51} 251" 
+                                  stroke-linecap="round" class="trust-meter-fill"/>
+                            <text x="100" y="75" text-anchor="middle" font-size="28" font-weight="bold" fill="#1f2937">
+                                ${trustScore}%
+                            </text>
+                            <text x="100" y="95" text-anchor="middle" font-size="14" fill="#6b7280">
+                                ${trustLevel.label}
+                            </text>
+                        </svg>
+                    </div>
+                    <p class="trust-interpretation">
+                        ${trustLevel.interpretation}
+                    </p>
                 </div>
             </div>
         `;
     }
 
-    renderFactCheckChart(stats) {
-        return `
-            <div class="fact-check-chart">
-                <canvas id="fact-check-chart-${Date.now()}" width="400" height="200"></canvas>
-            </div>
-        `;
-    }
-
-    renderFactCheckResults(mergedClaims) {
-        if (!mergedClaims || mergedClaims.length === 0) return '';
+    renderDetailedResults(mergedClaims) {
+        if (!mergedClaims || mergedClaims.length === 0) {
+            return '<p class="no-claims">No verifiable claims found in this article.</p>';
+        }
         
         return `
             <div class="fact-check-results">
                 <h4>Detailed Fact Check Results</h4>
+                <div class="results-explanation">
+                    Click on any claim to see detailed evidence and verification sources.
+                </div>
                 <div class="claims-list">
-                    ${mergedClaims.map((item, index) => this.renderDetailedFactCheck(item, index)).join('')}
+                    ${mergedClaims.map((item, index) => this.renderDetailedClaim(item, index)).join('')}
                 </div>
             </div>
         `;
     }
 
-    renderDetailedFactCheck(item, index) {
+    renderDetailedClaim(item, index) {
         const status = this.getClaimStatus(item);
-        const statusText = this.getStatusText(status);
-        const statusIcon = this.getStatusIcon(status);
-        const importance = item.importance || this.getClaimImportance(item, index);
+        const statusInfo = this.getStatusInfo(status);
         const confidence = item.factCheck?.confidence || this.calculateConfidence(item);
-        const claimId = `claim-${index}`;
+        const importance = item.importance || this.getClaimImportance(item, index);
         
         return `
-            <div class="claim-item ${status}" id="${claimId}">
+            <div class="claim-item ${status}" data-index="${index}">
                 <div class="claim-header">
-                    <div class="claim-status">
-                        <span class="status-icon">${statusIcon}</span>
-                        <span class="status-text">${statusText}</span>
-                        ${this.renderConfidenceIndicator(confidence)}
+                    <div class="claim-status-badge ${status}">
+                        <span class="status-icon">${statusInfo.icon}</span>
+                        <span class="status-text">${statusInfo.text}</span>
                     </div>
-                    <div class="claim-meta">
-                        <span class="claim-importance ${importance}">${importance.toUpperCase()}</span>
-                        ${item.factCheck?.checked_at ? `
-                            <span class="claim-timestamp" title="Last checked">
-                                ${this.formatTimeAgo(item.factCheck.checked_at)}
-                            </span>
-                        ` : ''}
+                    <div class="claim-metadata">
+                        <span class="confidence-score">
+                            <span class="confidence-icon">🎯</span>
+                            ${confidence}% confidence
+                        </span>
+                        <span class="importance-badge ${importance.toLowerCase()}">
+                            ${importance} importance
+                        </span>
                     </div>
                 </div>
                 
-                <div class="claim-text">
-                    ${this.highlightKeyTerms(this.getClaimText(item))}
-                </div>
-                
-                ${item.factCheck ? `
-                    <div class="fact-check-details">
-                        ${this.renderFactCheckSource(item.factCheck)}
-                        ${this.renderFactCheckExplanation(item.factCheck)}
-                        ${this.renderFactCheckEvidence(item.factCheck)}
-                    </div>
+                <div class="claim-content">
+                    <p class="claim-text">${this.highlightKeyTerms(item.text || item.claim)}</p>
                     
-                    <div class="claim-actions">
-                        <button class="action-btn expand-btn" data-claim="${claimId}">
-                            <span class="expand-icon">▼</span> Show Details
-                        </button>
-                        ${item.factCheck.url ? `
-                            <a href="${item.factCheck.url}" target="_blank" class="action-btn">
-                                View Source →
-                            </a>
-                        ` : ''}
-                    </div>
-                ` : ''}
-                
-                ${item.context ? `
-                    <div class="claim-context">
-                        <strong>Context:</strong> ${item.context}
-                    </div>
-                ` : ''}
-                
-                <div class="claim-expanded-content" style="display: none;">
-                    ${this.renderExpandedClaimDetails(item, index)}
+                    ${item.factCheck ? `
+                        <div class="fact-check-details">
+                            <div class="verdict-section">
+                                <strong>Verdict:</strong> ${item.factCheck.verdict}
+                                ${item.factCheck.rating ? `<span class="rating">(${item.factCheck.rating})</span>` : ''}
+                            </div>
+                            
+                            ${item.factCheck.explanation ? `
+                                <div class="explanation-section">
+                                    <strong>Explanation:</strong>
+                                    <p>${item.factCheck.explanation}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${item.factCheck.evidence ? `
+                                <div class="evidence-section">
+                                    <strong>Evidence:</strong>
+                                    <p>${item.factCheck.evidence}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${item.factCheck.sources && item.factCheck.sources.length > 0 ? `
+                                <div class="sources-section">
+                                    <strong>Sources:</strong>
+                                    <ul class="source-list">
+                                        ${item.factCheck.sources.map(source => `
+                                            <li>
+                                                ${source.url ? `<a href="${source.url}" target="_blank">${source.name || source.publisher}</a>` : source.name || source}
+                                                ${source.date ? `<span class="source-date">(${source.date})</span>` : ''}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="verification-method">
+                                <span class="method-icon">🔍</span>
+                                Verified via: ${item.factCheck.method || 'AI Pattern Analysis'}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="unverified-notice">
+                            <p>This claim could not be independently verified. ${this.getUnverifiedReason(item)}</p>
+                        </div>
+                    `}
                 </div>
+                
+                <button class="expand-claim-btn" onclick="window.FactChecker.toggleClaimDetails(${index})">
+                    <span class="expand-icon">▼</span> Show Details
+                </button>
             </div>
         `;
     }
 
-    renderFactCheckSource(factCheck) {
-        const sourceIcon = this.getSourceIcon(factCheck.source);
+    renderEvidenceSources(data) {
+        const sources = this.extractUniqueSources(data.fact_checks);
+        
+        if (sources.length === 0) return '';
         
         return `
-            <div class="check-source">
-                <span class="source-icon">${sourceIcon}</span>
-                <span class="source-label">Verified by:</span>
-                <span class="source-name">${factCheck.publisher || factCheck.source || 'Fact Check Database'}</span>
-                ${factCheck.methodology ? `
-                    <span class="methodology-badge" title="${factCheck.methodology}">
-                        ${factCheck.methodology === 'api' ? 'API' : 'AI'}
-                    </span>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    renderFactCheckExplanation(factCheck) {
-        if (!factCheck.explanation) return '';
-        
-        return `
-            <div class="check-review">
-                <p>${factCheck.explanation}</p>
-                ${factCheck.evidence_urls ? `
-                    <div class="evidence-links">
-                        ${factCheck.evidence_urls.map(url => `
-                            <a href="${url}" target="_blank" class="evidence-link">
-                                Evidence Source
-                            </a>
-                        `).join('')}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    renderFactCheckEvidence(factCheck) {
-        if (!factCheck.evidence_points) return '';
-        
-        return `
-            <div class="evidence-points">
-                <h5>Supporting Evidence:</h5>
-                <ul>
-                    ${factCheck.evidence_points.map(point => `
-                        <li>${point}</li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
-    }
-
-    renderExpandedClaimDetails(item, index) {
-        return `
-            <div class="expanded-details">
-                <h5>Detailed Analysis</h5>
-                ${this.renderClaimTimeline(item)}
-                ${this.renderSimilarClaims(item)}
-                ${this.renderHistoricalAccuracy(item)}
-            </div>
-        `;
-    }
-
-    renderRelatedArticles(articles) {
-        if (!articles || articles.length === 0) return '';
-        
-        return `
-            <div class="related-articles-section">
-                <h4>Related Coverage</h4>
-                <div class="related-articles-grid">
-                    ${articles.slice(0, 3).map(article => `
-                        <div class="related-article">
-                            <h5>${article.title}</h5>
-                            <p class="article-source">${article.source}</p>
-                            <a href="${article.url}" target="_blank" class="article-link">
-                                Read More →
-                            </a>
+            <div class="evidence-sources-section">
+                <h4>Verification Sources Used</h4>
+                <div class="sources-grid">
+                    ${sources.map(source => `
+                        <div class="source-card">
+                            <div class="source-icon">${this.getSourceIcon(source.type)}</div>
+                            <div class="source-name">${source.name}</div>
+                            <div class="source-count">${source.count} claim${source.count > 1 ? 's' : ''}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -337,255 +272,90 @@ class FactChecker {
         `;
     }
 
-    renderFactCheckSources() {
-        return `
-            <div class="fact-check-sources">
-                <h4>Verification Sources</h4>
-                <div class="sources-list">
-                    <div class="source-chip" data-tooltip="Google's comprehensive fact-checking database">
-                        <span class="source-icon">🔍</span>
-                        <span>Google Fact Check API</span>
-                    </div>
-                    <div class="source-chip" data-tooltip="AI-powered pattern recognition">
-                        <span class="source-icon">🤖</span>
-                        <span>Pattern Analysis AI</span>
-                    </div>
-                    <div class="source-chip" data-tooltip="Cross-referenced news sources">
-                        <span class="source-icon">📰</span>
-                        <span>News API Verification</span>
-                    </div>
-                </div>
-                <p class="sources-note">
-                    Claims are verified using multiple authoritative sources and advanced AI analysis
-                    to ensure accuracy and reduce bias.
-                </p>
-            </div>
-        `;
-    }
-
-    renderMethodology() {
-        return `
-            <div class="methodology-info">
-                <h5>ℹ️ How We Fact-Check</h5>
-                <p>
-                    Our fact-checking process combines automated API verification with AI pattern analysis.
-                    Each claim is assigned a confidence score based on source reliability, corroboration,
-                    and historical accuracy. <a href="#" class="learn-more-link">Learn more</a>
-                </p>
-            </div>
-        `;
-    }
-
-    renderFactCheckSummary(stats) {
-        const summary = this.generateEnhancedSummary(stats);
+    renderFactCheckInsights(claims, stats) {
+        const insights = this.generateInsights(claims, stats);
         
         return `
-            <div class="fact-check-summary-section">
-                <h4>Executive Summary</h4>
-                <p>${summary}</p>
-                ${this.renderRecommendations(stats)}
-            </div>
-        `;
-    }
-
-    renderProPreview(sampleData) {
-        return `
-            <div class="pro-preview">
-                <h4>See What Pro Users Get:</h4>
-                <div class="preview-content">
-                    <div class="preview-item">
-                        <span class="preview-icon">📊</span>
-                        <span>Visual fact-check dashboard with charts</span>
-                    </div>
-                    <div class="preview-item">
-                        <span class="preview-icon">🎯</span>
-                        <span>Confidence scores for each verification</span>
-                    </div>
-                    <div class="preview-item">
-                        <span class="preview-icon">🔗</span>
-                        <span>Direct links to fact-check sources</span>
-                    </div>
-                    <div class="preview-item">
-                        <span class="preview-icon">📈</span>
-                        <span>Historical accuracy tracking</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderBasicClaim(claim, index) {
-        const importance = this.getClaimImportance(claim, index);
-        
-        return `
-            <div class="claim-item">
-                <div class="claim-header">
-                    <div class="claim-status">
-                        <span class="status-icon">📌</span>
-                        <span class="status-text">Claim ${index + 1}</span>
-                    </div>
-                    <span class="claim-importance ${importance}">${importance.toUpperCase()}</span>
-                </div>
-                
-                <div class="claim-text">
-                    ${this.getClaimText(claim)}
-                </div>
-                
-                <div class="unverified-message">
-                    <span class="lock-icon">🔒</span>
-                    Fact check available with Pro subscription
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckEducation() {
-        return `
-            <div class="fact-check-education">
-                <h4>Understanding Fact-Checking</h4>
-                <p>
-                    Fact-checking involves verifying claims against authoritative sources.
-                    Key indicators of factual content include:
-                </p>
-                <ul>
-                    <li>Specific data and statistics</li>
-                    <li>Named sources and citations</li>
-                    <li>Verifiable events and dates</li>
-                    <li>Quoted statements from officials</li>
-                </ul>
-            </div>
-        `;
-    }
-
-    renderConfidenceIndicator(confidence) {
-        const levels = Math.round(confidence / 20);
-        
-        return `
-            <div class="confidence-indicator" title="Confidence: ${confidence}%">
-                <span class="confidence-bar">
-                    ${Array.from({length: 5}, (_, i) => `
-                        <span class="confidence-level ${i < levels ? 'active' : ''}"></span>
+            <div class="fact-check-insights">
+                <h4>Key Insights</h4>
+                <div class="insights-grid">
+                    ${insights.map(insight => `
+                        <div class="insight-card ${insight.type}">
+                            <div class="insight-icon">${insight.icon}</div>
+                            <div class="insight-content">
+                                <div class="insight-title">${insight.title}</div>
+                                <div class="insight-text">${insight.text}</div>
+                            </div>
+                        </div>
                     `).join('')}
-                </span>
-                <span class="confidence-text">${confidence}%</span>
+                </div>
             </div>
         `;
     }
 
-    renderRecommendations(stats) {
-        const recommendations = this.generateRecommendations(stats);
+    mergeClaimsWithFactChecks(keyClaims, factChecks) {
+        const merged = [];
         
-        if (recommendations.length === 0) return '';
-        
-        return `
-            <div class="fact-check-recommendations">
-                <h5>Recommendations:</h5>
-                <ul>
-                    ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-    }
-
-    // Helper Methods
-    initializeProFeatures(container) {
-        // Animate numbers
-        setTimeout(() => {
-            this.animateNumbers(container);
-            this.renderChart(container);
-        }, 100);
-    }
-
-    animateNumbers(container) {
-        const numbers = container.querySelectorAll('.stat-number');
-        numbers.forEach(el => {
-            const target = parseInt(el.dataset.count);
-            const duration = 1000;
-            const increment = target / (duration / 16);
-            let current = 0;
+        // Add all key claims with their fact check data if available
+        keyClaims.forEach(claim => {
+            const factCheck = factChecks.find(fc => 
+                this.claimsMatch(claim.text || claim, fc.claim)
+            );
             
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                el.textContent = Math.round(current);
-            }, 16);
-        });
-    }
-
-    renderChart(container) {
-        const canvas = container.querySelector('canvas');
-        if (!canvas) return;
-        
-        // Simple bar chart visualization
-        const ctx = canvas.getContext('2d');
-        const stats = this.calculateStatistics(
-            this.mergeClaimsWithFactChecks(
-                this.data.key_claims || [],
-                this.data.fact_checks || []
-            )
-        );
-        
-        // Draw bars
-        const barWidth = 60;
-        const barSpacing = 20;
-        const startX = 50;
-        const maxHeight = 150;
-        
-        const data = [
-            { label: 'Verified', value: stats.verified, color: '#10b981' },
-            { label: 'False', value: stats.false, color: '#ef4444' },
-            { label: 'Mixed', value: stats.mixed, color: '#f59e0b' },
-            { label: 'Unverified', value: stats.unverified, color: '#6b7280' }
-        ];
-        
-        const total = stats.total || 1;
-        
-        data.forEach((item, index) => {
-            const x = startX + (index * (barWidth + barSpacing));
-            const height = (item.value / total) * maxHeight;
-            const y = 180 - height;
-            
-            // Draw bar
-            ctx.fillStyle = item.color;
-            ctx.fillRect(x, y, barWidth, height);
-            
-            // Draw label
-            ctx.fillStyle = '#374151';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(item.label, x + barWidth/2, 195);
-            
-            // Draw value
-            ctx.fillText(item.value, x + barWidth/2, y - 5);
-        });
-    }
-
-    attachEventListeners(container) {
-        // Expand/collapse claim details
-        container.querySelectorAll('.expand-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const claimId = e.currentTarget.dataset.claim;
-                const claimEl = container.querySelector(`#${claimId}`);
-                const expandedContent = claimEl.querySelector('.claim-expanded-content');
-                const isExpanded = expandedContent.style.display !== 'none';
-                
-                expandedContent.style.display = isExpanded ? 'none' : 'block';
-                e.currentTarget.innerHTML = isExpanded 
-                    ? '<span class="expand-icon">▼</span> Show Details'
-                    : '<span class="expand-icon">▲</span> Hide Details';
+            merged.push({
+                text: claim.text || claim,
+                importance: claim.importance || 'medium',
+                factCheck: factCheck
             });
         });
         
-        // Learn more links
-        container.querySelectorAll('.learn-more-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showMethodologyModal();
-            });
+        // Add any fact checks that weren't matched to key claims
+        factChecks.forEach(fc => {
+            if (!merged.some(m => m.factCheck === fc)) {
+                merged.push({
+                    text: fc.claim,
+                    importance: 'high', // Fact-checked claims are important
+                    factCheck: fc
+                });
+            }
         });
+        
+        return merged;
+    }
+
+    claimsMatch(claim1, claim2) {
+        // Simple matching - could be enhanced with fuzzy matching
+        if (!claim1 || !claim2) return false;
+        
+        const normalize = (text) => text.toLowerCase().replace(/[^\w\s]/g, '');
+        return normalize(claim1).includes(normalize(claim2)) || 
+               normalize(claim2).includes(normalize(claim1));
+    }
+
+    getClaimStatus(item) {
+        if (!item.factCheck) return 'unverified';
+        
+        const verdict = (item.factCheck.verdict || '').toLowerCase();
+        if (verdict.includes('true') || verdict.includes('correct')) return 'verified';
+        if (verdict.includes('false') || verdict.includes('incorrect')) return 'false';
+        if (verdict.includes('mixed') || verdict.includes('partial')) return 'mixed';
+        
+        return 'unverified';
+    }
+
+    getStatusInfo(status) {
+        const statusMap = {
+            verified: { icon: '✅', text: 'Verified True', color: '#10b981' },
+            false: { icon: '❌', text: 'False', color: '#ef4444' },
+            mixed: { icon: '⚡', text: 'Mixed/Partial', color: '#f59e0b' },
+            unverified: { icon: '❓', text: 'Unverifiable', color: '#6b7280' }
+        };
+        
+        return statusMap[status] || statusMap.unverified;
+    }
+
+    getStatusIcon(status) {
+        return this.getStatusInfo(status).icon;
     }
 
     calculateStatistics(mergedClaims) {
@@ -605,8 +375,14 @@ class FactChecker {
         return stats;
     }
 
+    calculatePercentage(value, total) {
+        if (total === 0) return 0;
+        return Math.round((value / total) * 100);
+    }
+
     calculateTrustScore(stats) {
-        const total = stats.total || 1;
+        if (stats.total === 0) return 50;
+        
         const verifiedWeight = 1.0;
         const mixedWeight = 0.5;
         const falseWeight = 0;
@@ -617,304 +393,248 @@ class FactChecker {
             (stats.mixed * mixedWeight) +
             (stats.false * falseWeight) +
             (stats.unverified * unverifiedWeight)
-        ) / total * 100;
+        ) / stats.total * 100;
         
         return Math.round(score);
     }
 
     getTrustLevel(score) {
-        if (score >= 80) return { label: 'Excellent', color: '#10b981' };
-        if (score >= 60) return { label: 'Good', color: '#3b82f6' };
-        if (score >= 40) return { label: 'Fair', color: '#f59e0b' };
-        return { label: 'Poor', color: '#ef4444' };
+        if (score >= 80) {
+            return {
+                label: 'Excellent',
+                color: '#10b981',
+                interpretation: 'The vast majority of verifiable claims in this article are factually accurate.'
+            };
+        } else if (score >= 60) {
+            return {
+                label: 'Good',
+                color: '#3b82f6',
+                interpretation: 'Most claims are accurate, though some require clarification or contain partial truths.'
+            };
+        } else if (score >= 40) {
+            return {
+                label: 'Fair',
+                color: '#f59e0b',
+                interpretation: 'A significant portion of claims are unverifiable or contain inaccuracies.'
+            };
+        } else {
+            return {
+                label: 'Poor',
+                color: '#ef4444',
+                interpretation: 'Many claims in this article are false or cannot be verified. Exercise caution.'
+            };
+        }
     }
 
     calculateConfidence(item) {
-        // Calculate confidence based on various factors
-        let confidence = 50;
+        let confidence = 50; // Base confidence
         
         if (item.factCheck) {
-            if (item.factCheck.source === 'Google Fact Check API') confidence += 30;
-            else if (item.factCheck.source === 'Pattern Analysis') confidence += 20;
+            // If already has confidence score, use it
+            if (item.factCheck.confidence) return item.factCheck.confidence;
             
-            if (item.factCheck.evidence_urls?.length > 0) confidence += 10;
+            // Otherwise calculate based on available data
+            if (item.factCheck.sources && item.factCheck.sources.length > 0) {
+                confidence += item.factCheck.sources.length * 10;
+            }
+            
+            if (item.factCheck.evidence) confidence += 15;
+            if (item.factCheck.method === 'Google Fact Check API') confidence += 20;
             if (item.factCheck.publisher) confidence += 10;
         }
         
-        return Math.min(confidence, 100);
+        return Math.min(confidence, 95);
+    }
+
+    getClaimImportance(item, index) {
+        // Already has importance
+        if (item.importance) return item.importance;
+        
+        // First few claims are usually more important
+        if (index < 3) return 'high';
+        
+        // Check for certain keywords that indicate importance
+        const text = (item.text || item.claim || '').toLowerCase();
+        const importantKeywords = ['percent', '%', 'million', 'billion', 'study', 'research', 'found', 'discovered'];
+        
+        if (importantKeywords.some(keyword => text.includes(keyword))) {
+            return 'high';
+        }
+        
+        return 'medium';
     }
 
     highlightKeyTerms(text) {
-        // Highlight important terms in claims
-        const keyTerms = ['percent', '%', 'million', 'billion', 'study', 'research', 'report'];
-        let highlighted = text;
+        if (!text) return '';
         
-        keyTerms.forEach(term => {
-            const regex = new RegExp(`\\b${term}\\b`, 'gi');
-            highlighted = highlighted.replace(regex, `<strong>$&</strong>`);
+        // Highlight numbers, percentages, and key terms
+        const patterns = [
+            { regex: /\b\d+\.?\d*%/g, class: 'highlight-percentage' },
+            { regex: /\b\d{1,3}(,\d{3})*(\.\d+)?/g, class: 'highlight-number' },
+            { regex: /\b(study|research|report|survey|poll)\b/gi, class: 'highlight-keyword' },
+            { regex: /\b(found|discovered|revealed|showed|demonstrated)\b/gi, class: 'highlight-finding' }
+        ];
+        
+        let highlighted = text;
+        patterns.forEach(({ regex, class: className }) => {
+            highlighted = highlighted.replace(regex, match => 
+                `<span class="${className}">${match}</span>`
+            );
         });
         
         return highlighted;
     }
 
-    formatTimeAgo(timestamp) {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const seconds = Math.floor((now - date) / 1000);
+    extractUniqueSources(factChecks) {
+        const sourceMap = new Map();
         
-        if (seconds < 60) return 'just now';
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        return `${Math.floor(seconds / 86400)}d ago`;
-    }
-
-    getSourceIcon(source) {
-        const iconMap = {
-            'Google Fact Check API': '🔍',
-            'Pattern Analysis': '🤖',
-            'News API': '📰',
-            'Manual Review': '👤'
-        };
-        
-        return iconMap[source] || '📊';
-    }
-
-    generateEnhancedSummary(stats) {
-        const total = stats.total;
-        const accuracy = this.calculateTrustScore(stats);
-        
-        let summary = `Analysis of ${total} factual claims reveals ${accuracy}% overall accuracy. `;
-        
-        if (stats.false > 0) {
-            summary += `${stats.false} false claim${stats.false > 1 ? 's were' : ' was'} identified. `;
-        }
-        
-        if (stats.verified > stats.false) {
-            summary += `The article contains mostly accurate information with ${stats.verified} verified claims. `;
-        } else if (stats.false > stats.verified) {
-            summary += `Significant factual issues detected. Exercise caution when sharing. `;
-        }
-        
-        if (stats.unverified > total * 0.3) {
-            summary += `Note: ${stats.unverified} claims require additional verification.`;
-        }
-        
-        return summary;
-    }
-
-    generateRecommendations(stats) {
-        const recommendations = [];
-        const accuracy = this.calculateTrustScore(stats);
-        
-        if (accuracy < 50) {
-            recommendations.push('Verify information from additional sources before sharing');
-        }
-        
-        if (stats.false > 0) {
-            recommendations.push('Be aware of the false claims identified in this article');
-        }
-        
-        if (stats.unverified > stats.total * 0.5) {
-            recommendations.push('Many claims could not be independently verified');
-        }
-        
-        if (accuracy > 80) {
-            recommendations.push('This article appears to be factually reliable');
-        }
-        
-        return recommendations;
-    }
-
-    showMethodologyModal() {
-        // Placeholder for methodology modal
-        alert('Detailed fact-checking methodology coming soon!');
-    }
-
-    renderClaimTimeline(item) {
-        // Placeholder for claim timeline feature
-        return '';
-    }
-
-    renderSimilarClaims(item) {
-        // Placeholder for similar claims feature
-        return '';
-    }
-
-    renderHistoricalAccuracy(item) {
-        // Placeholder for historical accuracy feature
-        return '';
-    }
-
-    getSampleFactCheck() {
-        return {
-            stats: { verified: 3, false: 1, mixed: 1, unverified: 2 },
-            sample: 'Professional fact-checking with visual analytics'
-        };
-    }
-
-    mergeClaimsWithFactChecks(keyClaims, factChecks) {
-        const merged = [];
-        
-        // Process key claims
-        keyClaims.forEach((claim, index) => {
-            const claimText = this.getClaimText(claim);
-            
-            // Find matching fact check
-            const factCheck = factChecks.find(fc => {
-                const fcClaimText = (fc.claim || '').toLowerCase();
-                return fcClaimText.includes(claimText.toLowerCase().substring(0, 50));
-            });
-            
-            merged.push({
-                claim: claim,
-                factCheck: factCheck,
-                text: claimText,
-                importance: claim.importance || (index === 0 ? 'high' : 'medium'),
-                context: claim.context || null
-            });
-        });
-        
-        // Add any fact checks that didn't match claims
         factChecks.forEach(fc => {
-            const exists = merged.some(m => m.factCheck === fc);
-            if (!exists) {
-                merged.push({
-                    claim: { text: fc.claim },
-                    factCheck: fc,
-                    text: fc.claim,
-                    importance: 'medium',
-                    context: null
+            const sourceName = fc.publisher || fc.source || 'Pattern Analysis';
+            const sourceType = fc.method || 'AI Analysis';
+            
+            const key = `${sourceName}-${sourceType}`;
+            if (sourceMap.has(key)) {
+                sourceMap.get(key).count++;
+            } else {
+                sourceMap.set(key, {
+                    name: sourceName,
+                    type: sourceType,
+                    count: 1
                 });
             }
         });
         
-        return merged;
+        return Array.from(sourceMap.values()).sort((a, b) => b.count - a.count);
     }
 
-    getClaimText(claim) {
-        if (typeof claim === 'string') {
-            return claim;
-        } else if (claim && typeof claim === 'object') {
-            return claim.text || claim.claim || 'Claim text unavailable';
-        }
-        return 'Claim text unavailable';
-    }
-
-    getClaimStatus(item) {
-        if (!item.factCheck) return 'unverified';
-        
-        const verdict = (item.factCheck.verdict || '').toLowerCase();
-        
-        if (verdict.includes('true') && !verdict.includes('false')) {
-            return 'verified';
-        } else if (verdict.includes('false')) {
-            return 'false';
-        } else if (verdict.includes('partial') || verdict.includes('mixed')) {
-            return 'mixed';
-        }
-        
-        return 'unverified';
-    }
-
-    getStatusText(status) {
-        const statusMap = {
-            'verified': 'Verified True',
-            'false': 'False',
-            'mixed': 'Partially True',
-            'unverified': 'Unverified'
-        };
-        
-        return statusMap[status] || 'Unverified';
-    }
-
-    getStatusIcon(status) {
+    getSourceIcon(type) {
         const iconMap = {
-            'verified': '✓',
-            'false': '✗',
-            'mixed': '≈',
-            'unverified': '?'
+            'Google Fact Check API': '🔍',
+            'Pattern Analysis': '🤖',
+            'AI Analysis': '🧠',
+            'Manual Review': '👤'
         };
         
-        return iconMap[status] || '?';
+        return iconMap[type] || '📊';
     }
 
-    getClaimImportance(claim, index) {
-        if (typeof claim === 'object' && claim.importance) {
-            return claim.importance;
+    generateInsights(claims, stats) {
+        const insights = [];
+        
+        // Accuracy insight
+        const accuracyRate = stats.total > 0 ? (stats.verified / stats.total) * 100 : 0;
+        if (accuracyRate >= 80) {
+            insights.push({
+                type: 'positive',
+                icon: '✅',
+                title: 'High Accuracy',
+                text: `${Math.round(accuracyRate)}% of verifiable claims are accurate`
+            });
+        } else if (stats.false > stats.verified) {
+            insights.push({
+                type: 'negative',
+                icon: '⚠️',
+                title: 'Accuracy Concerns',
+                text: 'More false claims than verified ones detected'
+            });
         }
         
-        // Assign importance based on position and keywords
-        const text = this.getClaimText(claim).toLowerCase();
+        // Verifiability insight
+        const verifiabilityRate = stats.total > 0 ? 
+            ((stats.total - stats.unverified) / stats.total) * 100 : 0;
         
-        if (text.includes('million') || text.includes('billion') || text.includes('death')) {
-            return 'high';
+        if (verifiabilityRate < 50) {
+            insights.push({
+                type: 'neutral',
+                icon: '🔍',
+                title: 'Limited Verifiability',
+                text: 'Many claims lack verifiable sources or evidence'
+            });
         }
         
-        return index === 0 ? 'high' : 'medium';
+        // Specific claim types
+        const numericClaims = claims.filter(c => 
+            /\d+\.?\d*%|\b\d{1,3}(,\d{3})*(\.\d+)?/g.test(c.text || c.claim)
+        ).length;
+        
+        if (numericClaims > 3) {
+            insights.push({
+                type: 'neutral',
+                icon: '📊',
+                title: 'Data-Rich Content',
+                text: `Contains ${numericClaims} statistical or numerical claims`
+            });
+        }
+        
+        // False claims warning
+        if (stats.false > 0) {
+            insights.push({
+                type: 'negative',
+                icon: '❌',
+                title: 'False Claims Detected',
+                text: `${stats.false} claim${stats.false > 1 ? 's' : ''} verified as false`
+            });
+        }
+        
+        return insights;
     }
 
-    // Add these helper methods after the existing methods
-    
-    getMethodologyBadge(factCheck) {
-        const methodology = factCheck.methodology || 'unknown';
-        const badges = {
-            'api': '<span class="methodology-badge api" title="Verified via Google Fact Check API">API</span>',
-            'pattern': '<span class="methodology-badge pattern" title="Verified via AI Pattern Analysis">AI</span>',
-            'news': '<span class="methodology-badge news" title="Cross-referenced with news sources">NEWS</span>',
-            'manual': '<span class="methodology-badge manual" title="Manual verification">MANUAL</span>'
-        };
+    getUnverifiedReason(item) {
+        const text = (item.text || '').toLowerCase();
         
-        return badges[methodology] || '<span class="methodology-badge unknown">VERIFIED</span>';
+        if (text.includes('opinion') || text.includes('believe') || text.includes('think')) {
+            return 'This appears to be an opinion rather than a factual claim.';
+        } else if (text.includes('could') || text.includes('might') || text.includes('may')) {
+            return 'This is a speculative statement that cannot be definitively verified.';
+        } else if (!text.match(/\d/) && !text.includes('study') && !text.includes('research')) {
+            return 'This claim lacks specific data or sources that could be verified.';
+        } else {
+            return 'No reliable sources found to verify this claim.';
+        }
     }
-    
-    getConfidenceLevel(confidence) {
-        if (confidence >= 80) return 'Very High';
-        if (confidence >= 60) return 'High';
-        if (confidence >= 40) return 'Medium';
-        if (confidence >= 20) return 'Low';
-        return 'Very Low';
+
+    truncateText(text, maxLength) {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
     }
-    
-    renderFactCheckProcess() {
-        return `
-            <div class="fact-check-process">
-                <h4>How We Verified These Claims:</h4>
-                <div class="process-steps">
-                    <div class="process-step">
-                        <span class="step-icon">1️⃣</span>
-                        <div class="step-content">
-                            <strong>Claim Extraction</strong>
-                            <p>Identified factual claims using AI pattern recognition</p>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <span class="step-icon">2️⃣</span>
-                        <div class="step-content">
-                            <strong>Multi-Source Verification</strong>
-                            <p>Checked against Google's fact-check database and news sources</p>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <span class="step-icon">3️⃣</span>
-                        <div class="step-content">
-                            <strong>Confidence Scoring</strong>
-                            <p>Assigned confidence based on source reliability and consensus</p>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <span class="step-icon">4️⃣</span>
-                        <div class="step-content">
-                            <strong>Evidence Collection</strong>
-                            <p>Gathered supporting evidence and source links</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+
+    attachEventListeners() {
+        // Add click handlers for expandable claims
+        this.container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('expand-claim-btn') || 
+                e.target.parentElement.classList.contains('expand-claim-btn')) {
+                const btn = e.target.classList.contains('expand-claim-btn') ? 
+                    e.target : e.target.parentElement;
+                const claim = btn.parentElement;
+                const details = claim.querySelector('.fact-check-details, .unverified-notice');
+                
+                if (details) {
+                    details.classList.toggle('expanded');
+                    btn.innerHTML = details.classList.contains('expanded') ?
+                        '<span class="expand-icon">▲</span> Hide Details' :
+                        '<span class="expand-icon">▼</span> Show Details';
+                }
+            }
+        });
+    }
+
+    static toggleClaimDetails(index) {
+        const claim = document.querySelector(`.claim-item[data-index="${index}"]`);
+        if (claim) {
+            const details = claim.querySelector('.fact-check-details, .unverified-notice');
+            const btn = claim.querySelector('.expand-claim-btn');
+            
+            if (details && btn) {
+                details.classList.toggle('expanded');
+                btn.innerHTML = details.classList.contains('expanded') ?
+                    '<span class="expand-icon">▲</span> Hide Details' :
+                    '<span class="expand-icon">▼</span> Show Details';
+            }
+        }
     }
 }
 
-// Export to window
+// Export and register
 window.FactChecker = FactChecker;
 
 // Auto-register with UI controller
