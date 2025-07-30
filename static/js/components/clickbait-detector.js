@@ -9,37 +9,49 @@ class ClickbaitDetector {
                 name: 'Curiosity Gap',
                 description: 'Creates information gap to force clicks',
                 weight: 3,
-                patterns: ['you won\'t believe', 'what happened next', 'shocking truth', 'this one trick']
+                patterns: ['you won\'t believe', 'what happened next', 'shocking truth', 'this one trick', 'doctors hate', 'will blow your mind']
             },
             emotionalTriggers: {
                 name: 'Emotional Manipulation',
                 description: 'Uses strong emotions to drive engagement',
                 weight: 2.5,
-                patterns: ['shocking', 'heartbreaking', 'outrageous', 'disgusting', 'amazing']
+                patterns: ['shocking', 'heartbreaking', 'outrageous', 'disgusting', 'amazing', 'horrifying', 'devastating']
             },
             exaggeration: {
                 name: 'Exaggeration',
                 description: 'Overstates importance or impact',
                 weight: 2,
-                patterns: ['destroyed', 'obliterated', 'perfect', 'ultimate', 'life-changing']
+                patterns: ['destroyed', 'obliterated', 'perfect', 'ultimate', 'life-changing', 'revolutionary', 'game-changing']
             },
             listicles: {
                 name: 'Numbered Lists',
                 description: 'Uses numbers to promise digestible content',
                 weight: 1.5,
-                patterns: [/\d+\s+(ways|reasons|things|tips|facts)/i]
+                patterns: [/\d+\s+(ways|reasons|things|tips|facts|secrets|times|signs)/i]
             },
             urgency: {
                 name: 'False Urgency',
                 description: 'Creates artificial time pressure',
                 weight: 2,
-                patterns: ['breaking', 'urgent', 'right now', 'before it\'s gone']
+                patterns: ['breaking', 'urgent', 'right now', 'before it\'s gone', 'limited time', 'act now']
             },
             personalAddress: {
                 name: 'Direct Address',
                 description: 'Speaks directly to reader',
                 weight: 1,
-                patterns: ['you', 'your', 'you\'re']
+                patterns: ['you', 'your', 'you\'re', 'you\'ll', 'you\'ve']
+            },
+            vagueness: {
+                name: 'Vague References',
+                description: 'Uses unclear pronouns to create mystery',
+                weight: 2.5,
+                patterns: ['this', 'these', 'that', 'what', 'why', 'how']
+            },
+            superlatives: {
+                name: 'Extreme Language',
+                description: 'Uses absolute terms without justification',
+                weight: 2,
+                patterns: ['best', 'worst', 'most', 'least', 'only', 'every', 'never', 'always']
             }
         };
     }
@@ -101,7 +113,8 @@ class ClickbaitDetector {
             punctuation: (title.match(/[!?]/g) || []).length,
             hasNumbers: /\d/.test(title),
             hasQuotes: /["']/.test(title),
-            wordCount: title.split(/\s+/).length
+            wordCount: title.split(/\s+/).length,
+            allCaps: title === title.toUpperCase()
         };
         
         // Tactics analysis
@@ -134,7 +147,8 @@ class ClickbaitDetector {
                     score += indicator.weight;
                 }
             } else {
-                if (title.toLowerCase().includes(pattern.toLowerCase())) {
+                const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+                if (regex.test(title)) {
                     found = true;
                     matches.push(pattern);
                     score += indicator.weight;
@@ -149,19 +163,19 @@ class ClickbaitDetector {
         const tactics = [];
         
         // Withholding information
-        if (title.includes('...') || title.includes('what') || title.includes('how')) {
+        if (title.includes('...') || /\b(what|why|how)\b/i.test(title) && !title.includes('?')) {
             tactics.push({
                 name: 'Information Withholding',
                 description: 'Deliberately hides key information to force clicks',
                 severity: 'high',
-                example: this.extractExample(title, ['...', 'what', 'how'])
+                example: this.extractExample(title, ['...', 'what', 'how', 'why'])
             });
         }
         
         // Superlatives
         const superlatives = ['best', 'worst', 'most', 'least', 'only'];
         const foundSuperlatives = superlatives.filter(s => 
-            title.toLowerCase().includes(s)
+            new RegExp(`\\b${s}\\b`, 'i').test(title)
         );
         if (foundSuperlatives.length > 0) {
             tactics.push({
@@ -172,23 +186,37 @@ class ClickbaitDetector {
             });
         }
         
-        // Vague pronouns
-        if (/\b(this|these|that|those)\b/i.test(title) && !content.includes(title)) {
+        // Vague pronouns without antecedent
+        const vaguePronouns = ['this', 'these', 'that', 'those'];
+        const hasVagueStart = vaguePronouns.some(pronoun => 
+            title.toLowerCase().startsWith(pronoun + ' ')
+        );
+        if (hasVagueStart) {
             tactics.push({
                 name: 'Vague References',
                 description: 'Uses unclear pronouns to create mystery',
                 severity: 'moderate',
-                example: 'Uses "this" or "that" without clear reference'
+                example: 'Starts with vague pronoun without clear reference'
             });
         }
         
         // ALL CAPS
-        if (title.match(/\b[A-Z]{3,}\b/)) {
+        if (title.match(/\b[A-Z]{3,}\b/) && title !== title.toUpperCase()) {
             tactics.push({
                 name: 'Capitalization Abuse',
                 description: 'Uses ALL CAPS for emphasis',
                 severity: 'low',
                 example: title.match(/\b[A-Z]{3,}\b/)[0]
+            });
+        }
+        
+        // Excessive punctuation
+        if ((title.match(/[!?]/g) || []).length > 1) {
+            tactics.push({
+                name: 'Excessive Punctuation',
+                description: 'Multiple exclamation marks or question marks',
+                severity: 'moderate',
+                example: 'Contains ' + (title.match(/[!?]/g) || []).length + ' punctuation marks'
             });
         }
         
@@ -212,15 +240,19 @@ class ClickbaitDetector {
     }
 
     getContextAroundMatch(text, match) {
-        const index = text.toLowerCase().indexOf(match.toLowerCase());
+        const index = text.toLowerCase().indexOf(match.toString().toLowerCase());
         if (index === -1) return text;
         
         const start = Math.max(0, index - 20);
-        const end = Math.min(text.length, index + match.length + 20);
+        const end = Math.min(text.length, index + match.toString().length + 20);
         
         let context = text.substring(start, end);
         if (start > 0) context = '...' + context;
         if (end < text.length) context = context + '...';
+        
+        // Highlight the match
+        const regex = new RegExp(`(${match})`, 'gi');
+        context = context.replace(regex, '<strong>$1</strong>');
         
         return context;
     }
@@ -230,31 +262,36 @@ class ClickbaitDetector {
             return {
                 level: 'minimal',
                 text: 'This headline appears straightforward and informative.',
-                action: 'Safe to read - minimal clickbait detected.'
+                action: 'Safe to read - minimal clickbait detected.',
+                color: '#10b981'
             };
         } else if (score < 40) {
             return {
                 level: 'low',
                 text: 'Some attention-grabbing elements present but within normal bounds.',
-                action: 'Generally trustworthy - proceed with normal skepticism.'
+                action: 'Generally trustworthy - proceed with normal skepticism.',
+                color: '#3b82f6'
             };
         } else if (score < 60) {
             return {
                 level: 'moderate',
                 text: 'Notable clickbait tactics detected. Content may not match headline.',
-                action: 'Read with caution - verify claims independently.'
+                action: 'Read with caution - verify claims independently.',
+                color: '#f59e0b'
             };
         } else if (score < 80) {
             return {
                 level: 'high',
                 text: 'Heavy use of manipulation tactics. High likelihood of disappointment.',
-                action: 'Warning - expect exaggeration and missing context.'
+                action: 'Warning - expect exaggeration and missing context.',
+                color: '#f97316'
             };
         } else {
             return {
                 level: 'extreme',
                 text: 'Extreme clickbait. Content unlikely to deliver on promises.',
-                action: 'Not recommended - seek alternative sources.'
+                action: 'Not recommended - seek alternative sources.',
+                color: '#ef4444'
             };
         }
     }
@@ -265,7 +302,7 @@ class ClickbaitDetector {
         return `
             <div class="clickbait-basic">
                 <p class="clickbait-basic-text">
-                    Clickbait likelihood: <strong>${level}</strong>
+                    Clickbait likelihood: <strong style="color: ${analysis.recommendation.color}">${level}</strong>
                 </p>
                 <div class="simple-meter">
                     <div class="meter-fill ${level.toLowerCase()}" style="width: ${analysis.score}%"></div>
@@ -305,7 +342,7 @@ class ClickbaitDetector {
                     <h5>Clickbait Score: ${analysis.score}/100</h5>
                     <div class="recommendation-box ${analysis.recommendation.level}">
                         <p class="recommendation-text">${analysis.recommendation.text}</p>
-                        <p class="recommendation-action">${analysis.recommendation.action}</p>
+                        <p class="recommendation-action"><strong>${analysis.recommendation.action}</strong></p>
                     </div>
                 </div>
                 
@@ -377,7 +414,7 @@ class ClickbaitDetector {
                         <span class="metric-label">Length</span>
                         <span class="metric-value">${analysis.length} chars</span>
                         <span class="metric-status ${analysis.length > 100 ? 'warning' : 'good'}">
-                            ${analysis.length > 100 ? 'Too long' : 'Good'}
+                            ${analysis.length > 100 ? 'Too long' : analysis.length < 30 ? 'Too short' : 'Good'}
                         </span>
                     </div>
                     <div class="metric">
@@ -452,8 +489,7 @@ class ClickbaitDetector {
                     ${examples.map(example => `
                         <div class="example-item">
                             <span class="example-type">${example.type}:</span>
-                            <span class="example-text">"${example.text}"</span>
-                            <p class="example-context">${example.context}</p>
+                            <div class="example-context">${example.context}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -465,18 +501,20 @@ class ClickbaitDetector {
         const tips = [];
         
         if (score > 40) {
-            tips.push('Check if the article delivers on the headline\'s promise');
-            tips.push('Look for specific facts rather than vague claims');
+            tips.push('Check if the article delivers on the headline\'s promise in the first few paragraphs');
+            tips.push('Look for specific facts and data rather than vague claims');
         }
         
         if (score > 60) {
             tips.push('Be skeptical of extreme claims or emotional language');
             tips.push('Verify shocking statistics with original sources');
+            tips.push('Watch for bait-and-switch where content doesn\'t match headline');
         }
         
         if (score > 80) {
             tips.push('Consider finding alternative sources for this story');
             tips.push('Focus on facts, ignore sensational framing');
+            tips.push('Check if reputable news outlets are covering the same story');
         }
         
         if (tips.length === 0) {
@@ -575,186 +613,298 @@ class ClickbaitDetector {
     }
 }
 
-// Add styles
-const style = document.createElement('style');
-style.textContent = `
-    .clickbait-detector-container {
-        padding: 20px;
-    }
+// Add styles only if not already added
+if (!document.getElementById('clickbait-detector-styles')) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'clickbait-detector-styles';
+    styleElement.textContent = `
+        .clickbait-detector-container {
+            padding: 20px;
+        }
 
-    .clickbait-gauge-container {
-        text-align: center;
-        margin: 20px 0;
-        position: relative;
-    }
+        .clickbait-gauge-container {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
 
-    .gauge-labels {
-        display: flex;
-        justify-content: space-between;
-        padding: 0 20px;
-        font-size: 11px;
-        color: #6b7280;
-        margin-top: -10px;
-    }
+        .gauge-labels {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: -10px;
+        }
 
-    .score-breakdown {
-        margin: 20px 0;
-        text-align: center;
-    }
+        .score-breakdown {
+            margin: 20px 0;
+            text-align: center;
+        }
 
-    .recommendation-box {
-        padding: 15px;
-        border-radius: 8px;
-        margin: 15px 0;
-    }
+        .score-breakdown h5 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
 
-    .recommendation-box.minimal { background: #f0fdf4; border: 1px solid #86efac; }
-    .recommendation-box.low { background: #eff6ff; border: 1px solid #93bbfe; }
-    .recommendation-box.moderate { background: #fef3c7; border: 1px solid #fcd34d; }
-    .recommendation-box.high { background: #fef2e8; border: 1px solid #fdba74; }
-    .recommendation-box.extreme { background: #fee2e2; border: 1px solid #fca5a5; }
+        .recommendation-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
 
-    .indicators-grid {
-        display: grid;
-        gap: 15px;
-        margin-top: 15px;
-    }
+        .recommendation-box.minimal { background: #f0fdf4; border: 1px solid #86efac; }
+        .recommendation-box.low { background: #eff6ff; border: 1px solid #93bbfe; }
+        .recommendation-box.moderate { background: #fef3c7; border: 1px solid #fcd34d; }
+        .recommendation-box.high { background: #fef2e8; border: 1px solid #fdba74; }
+        .recommendation-box.extreme { background: #fee2e2; border: 1px solid #fca5a5; }
 
-    .indicator-card {
-        background: #f9fafb;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-    }
+        .recommendation-text {
+            margin: 0 0 10px 0;
+            color: #374151;
+        }
 
-    .indicator-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
+        .recommendation-action {
+            margin: 0;
+            color: #1f2937;
+        }
 
-    .indicator-score {
-        color: #ef4444;
-        font-weight: 600;
-    }
+        .indicators-grid {
+            display: grid;
+            gap: 15px;
+            margin-top: 15px;
+        }
 
-    .match-chip {
-        display: inline-block;
-        background: #dbeafe;
-        color: #1e40af;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        margin: 2px;
-    }
+        .indicator-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
 
-    .analysis-metrics {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
+        .indicator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
 
-    .metric {
-        background: #f9fafb;
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-    }
+        .indicator-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
 
-    .metric-label {
-        display: block;
-        font-size: 12px;
-        color: #6b7280;
-        margin-bottom: 4px;
-    }
+        .indicator-score {
+            color: #ef4444;
+            font-weight: 600;
+        }
 
-    .metric-value {
-        display: block;
-        font-size: 18px;
-        font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 4px;
-    }
+        .indicator-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
 
-    .metric-status {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-    }
+        .indicator-matches {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
 
-    .metric-status.good { background: #d1fae5; color: #065f46; }
-    .metric-status.warning { background: #fef3c7; color: #92400e; }
-    .metric-status.neutral { background: #e5e7eb; color: #374151; }
+        .matches-label {
+            font-size: 12px;
+            color: #6b7280;
+        }
 
-    .tactics-list {
-        margin-top: 15px;
-    }
+        .match-chip {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
 
-    .tactic-item {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
+        .title-analysis-section,
+        .tactics-section,
+        .examples-section {
+            margin-top: 25px;
+        }
 
-    .tactic-item.low { background: #f3f4f6; }
-    .tactic-item.moderate { background: #fef3c7; }
-    .tactic-item.high { background: #fee2e2; }
+        .analysis-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
 
-    .severity-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        text-transform: uppercase;
-    }
+        .metric {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
 
-    .simple-meter {
-        height: 8px;
-        background: #e5e7eb;
-        border-radius: 4px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
+        .metric-label {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
 
-    .meter-fill {
-        height: 100%;
-        transition: width 0.5s ease;
-    }
+        .metric-value {
+            display: block;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
 
-    .meter-fill.minimal { background: #10b981; }
-    .meter-fill.low { background: #3b82f6; }
-    .meter-fill.moderate { background: #f59e0b; }
-    .meter-fill.high { background: #f97316; }
-    .meter-fill.extreme { background: #ef4444; }
+        .metric-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
 
-    .reader-advisory {
-        background: #f9fafb;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 20px;
-    }
+        .metric-status.good { background: #d1fae5; color: #065f46; }
+        .metric-status.warning { background: #fef3c7; color: #92400e; }
+        .metric-status.neutral { background: #e5e7eb; color: #374151; }
 
-    .reader-advisory h5 {
-        margin-bottom: 10px;
-        color: #1f2937;
-    }
+        .tactics-list {
+            margin-top: 15px;
+        }
 
-    .reader-advisory ul {
-        margin: 0;
-        padding-left: 20px;
-    }
+        .tactic-item {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
 
-    .reader-advisory li {
-        margin-bottom: 5px;
-        color: #4b5563;
-    }
-`;
-document.head.appendChild(style);
+        .tactic-item.low { background: #f3f4f6; }
+        .tactic-item.moderate { background: #fef3c7; }
+        .tactic-item.high { background: #fee2e2; }
+
+        .tactic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .tactic-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .tactic-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .tactic-example {
+            color: #4b5563;
+            font-size: 13px;
+            font-style: italic;
+        }
+
+        .examples-list {
+            margin-top: 15px;
+        }
+
+        .example-item {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .example-type {
+            font-weight: 600;
+            color: #1f2937;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .example-context {
+            color: #4b5563;
+            font-size: 14px;
+        }
+
+        .example-context strong {
+            color: #1e40af;
+            background: #dbeafe;
+            padding: 0 2px;
+        }
+
+        .simple-meter {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .meter-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .meter-fill.minimal { background: #10b981; }
+        .meter-fill.low { background: #3b82f6; }
+        .meter-fill.moderate { background: #f59e0b; }
+        .meter-fill.high { background: #f97316; }
+        .meter-fill.extreme { background: #ef4444; }
+
+        .reader-advisory {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .reader-advisory h5 {
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+
+        .reader-advisory ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .reader-advisory li {
+            margin-bottom: 5px;
+            color: #4b5563;
+        }
+
+        .clickbait-basic-text {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .basic-recommendation {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 15px 0;
+        }
+    `;
+    document.head.appendChild(styleElement);
+}
 
 // Register globally
 window.ClickbaitDetector = ClickbaitDetector;
