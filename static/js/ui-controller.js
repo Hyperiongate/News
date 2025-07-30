@@ -1,6 +1,4 @@
-// Complete Fixed UI Controller with all analysis cards rendering
-// Save this as ui-controller.js and replace your existing file
-
+// ui-controller.js - Complete UI Controller with Full Data Display
 (function() {
     'use strict';
     
@@ -14,9 +12,6 @@
             
             // Add event delegation for card clicks
             this.setupEventDelegation();
-            
-            // Inject required styles
-            this.injectStyles();
         }
 
         setupEventDelegation() {
@@ -75,57 +70,31 @@
                 this.currentUrl = data.article.url;
             }
             
-            this.displayResults(data);
+            this.displayAnalysisResults(data);
         }
 
-        displayResults(data) {
-            console.log('Displaying results...');
+        displayAnalysisResults(data) {
+            this.analysisData = data;
             
-            if (!data || !data.success) {
-                console.error('Invalid data provided to displayResults');
-                return;
-            }
+            // Store globally for debugging
+            window.LAST_ANALYSIS_DATA = data;
             
             const resultsDiv = document.getElementById('results');
-            const analyzerCard = document.querySelector('.analyzer-card');
-            
             if (!resultsDiv) {
                 console.error('Results div not found');
                 return;
             }
             
-            // Clear everything
-            resultsDiv.innerHTML = '';
-            document.querySelectorAll('.detailed-analysis-container, .analysis-card-standalone, .cards-grid-wrapper').forEach(el => el.remove());
-            
-            this.analysisData = data;
-            
-            // Check if this is cached data and auto-refresh
-            if (data.cached && !data.force_fresh) {
-                console.log('Cached result detected, auto-refreshing...');
-                
-                // Show initial results with refresh notice
-                this.displayResultsContent(data, resultsDiv, analyzerCard);
-                
-                // Show auto-refresh notice
-                this.showAutoRefreshNotice(resultsDiv);
-                
-                // Auto-refresh after a short delay
-                setTimeout(() => {
-                    this.performAutoRefresh();
-                }, 1500);
-            } else {
-                // Display results normally
-                this.displayResultsContent(data, resultsDiv, analyzerCard);
-            }
-        }
-
-        displayResultsContent(data, resultsDiv, analyzerCard) {
-            // Create overall assessment
-            resultsDiv.innerHTML = this.createOverallAssessment(data);
+            // Show results section
             resultsDiv.classList.remove('hidden');
+            resultsDiv.innerHTML = '';
             
-            // THIS IS THE MISSING PART - CREATE THE DETAILED ANALYSIS CARDS!
+            // Move analyzer card
+            const analyzerCard = document.querySelector('.analyzer-card');
+            if (analyzerCard) {
+                analyzerCard.classList.add('analyzer-card-minimized');
+            }
+            
             // Create header
             const header = document.createElement('h2');
             header.style.cssText = 'text-align: center; margin: 40px 0 30px 0; font-size: 2rem; color: #1f2937; font-weight: 600;';
@@ -166,661 +135,767 @@
                 });
                 
                 // Insert grid after header
-                if (header.parentNode) {
-                    header.parentNode.insertBefore(gridWrapper, header.nextSibling);
+                if (analyzerCard && analyzerCard.parentNode) {
+                    analyzerCard.parentNode.insertBefore(gridWrapper, header.nextSibling);
                 } else {
                     resultsDiv.appendChild(gridWrapper);
                 }
                 
-                // FIXED: Add export section if export is enabled OR user is pro
-                if (data.export_enabled !== false || data.pdf_export_enabled || data.is_pro) {
-                    this.addExportSection(gridWrapper.parentNode || resultsDiv, data);
+                // Add refresh button
+                this.addRefreshButton(header);
+                
+                // Add export buttons after grid
+                this.addExportSection(gridWrapper);
+                
+                // Move resources section
+                this.moveResourcesSection();
+                
+                // Setup card event listeners
+                this.setupCardEventListeners();
+                
+                // Add executive summary at the top (inside results div)
+                if (this.components.executiveSummary) {
+                    const summaryDiv = document.createElement('div');
+                    summaryDiv.className = 'executive-summary-container';
+                    resultsDiv.insertBefore(summaryDiv, resultsDiv.firstChild);
+                    this.components.executiveSummary.render(summaryDiv, data);
                 }
                 
-                // Animate cards
-                this.animateCards();
+                console.log('All cards added successfully');
                 
             } catch (error) {
-                console.error('Error creating analysis cards:', error);
+                console.error('Error creating cards:', error);
+                this.showError('Failed to display analysis results');
             }
         }
 
-        createOverallAssessment(data) {
-            const trustScore = data.trust_score || 0;
-            const verdict = this.getVerdict(trustScore);
-            const color = this.getTrustScoreColor(trustScore);
+        addRefreshButton(headerElement) {
+            if (!headerElement) return;
             
-            return `
-                <div style="text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                    <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: #0f172a;">Overall Assessment</h3>
-                    <div style="font-size: 4rem; font-weight: 700; color: ${color}; margin-bottom: 10px;">${trustScore}%</div>
-                    <div style="font-size: 1.25rem; color: #475569; margin-bottom: 20px;">${verdict}</div>
-                    ${data.summary ? `<p style="color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.6;">${data.summary}</p>` : ''}
-                    ${data.cached ? `
-                        <div style="margin-top: 20px; padding: 12px 16px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; display: inline-block;">
-                            <span style="color: #92400e; font-size: 0.875rem;">📋 This is a cached result from ${new Date(data.analysis_date).toLocaleString()}</span>
+            const refreshBtn = document.createElement('button');
+            refreshBtn.className = 'refresh-analysis-btn';
+            refreshBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.65 2.35C12.2 0.9 10.21 0 8 0C3.58 0 0 3.58 0 8C0 12.42 3.58 16 8 16C11.73 16 14.84 13.45 15.73 10H13.65C12.83 12.33 10.61 14 8 14C4.69 14 2 11.31 2 8C2 4.69 4.69 2 8 2C9.66 2 11.14 2.69 12.22 3.78L9 7H16V0L13.65 2.35Z" fill="currentColor"/>
+                </svg>
+                Refresh Analysis
+            `;
+            refreshBtn.onclick = () => this.refreshAnalysis();
+            
+            // Create a wrapper div for the header and button
+            const headerWrapper = document.createElement('div');
+            headerWrapper.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 20px; margin: 40px 0 30px 0;';
+            
+            // Move the header content to the wrapper
+            headerWrapper.appendChild(headerElement.cloneNode(true));
+            headerWrapper.appendChild(refreshBtn);
+            
+            // Replace the original header
+            headerElement.parentNode.replaceChild(headerWrapper, headerElement);
+        }
+
+        async refreshAnalysis() {
+            if (this.isAnalyzing) {
+                this.showInfoToast('Analysis already in progress...');
+                return;
+            }
+            
+            if (!this.currentUrl && !this.currentText) {
+                this.showErrorToast('No article to refresh');
+                return;
+            }
+            
+            const refreshBtn = document.querySelector('.refresh-analysis-btn');
+            const originalContent = refreshBtn.innerHTML;
+            
+            try {
+                this.isAnalyzing = true;
+                
+                // Update button to show loading
+                refreshBtn.innerHTML = `
+                    <svg class="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1V4M8 12V15M4 8H1M15 8H12M3.5 3.5L5.5 5.5M10.5 10.5L12.5 12.5M3.5 12.5L5.5 10.5M10.5 5.5L12.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Refreshing...
+                `;
+                refreshBtn.disabled = true;
+                
+                // Show info toast
+                this.showInfoToast('Refreshing analysis...');
+                
+                // Prepare request body
+                const requestBody = this.currentUrl 
+                    ? { url: this.currentUrl }
+                    : { text: this.currentText };
+                
+                // Make API call
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Refresh complete:', result);
+                
+                // Update display
+                this.displayAnalysisResults(result);
+                
+                // Show success toast
+                this.showSuccessToast('Analysis refreshed successfully!');
+                
+            } catch (error) {
+                console.error('Refresh error:', error);
+                this.showErrorToast('Failed to refresh analysis. Please try again.');
+                
+                // Restore button
+                refreshBtn.innerHTML = originalContent;
+                refreshBtn.disabled = false;
+            } finally {
+                this.isAnalyzing = false;
+            }
+        }
+
+        showError(message) {
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv) {
+                resultsDiv.innerHTML = `
+                    <div style="padding: 20px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; color: #991b1b;">
+                        <strong>Error:</strong> ${message}
+                    </div>
+                `;
+                resultsDiv.classList.remove('hidden');
+            }
+        }
+
+        createCard(type, icon, title) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card-standalone';
+            card.setAttribute('data-card-type', type);
+            
+            // Add specific class for author card
+            if (type === 'author') {
+                card.classList.add('author-analysis-section');
+            }
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-icon">${icon}</span>
+                    <h3 class="card-title">${title}</h3>
+                    <a href="#" class="expand-icon" aria-label="Expand ${title} details">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 8L10 12L14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="card-summary"></div>
+                <div class="card-details"></div>
+            `;
+            
+            return card;
+        }
+
+        createTrustScoreCard(data) {
+            const card = this.createCard('trust', '🛡️', 'Trust Score Analysis');
+            const trustScore = data.trust_score || 0;
+            const components = data.trust_components || [];
+            
+            let color = '#ef4444';
+            let label = 'Low Trust';
+            if (trustScore >= 70) {
+                color = '#10b981';
+                label = 'High Trust';
+            } else if (trustScore >= 40) {
+                color = '#f59e0b';
+                label = 'Medium Trust';
+            }
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 700; color: ${color};">${trustScore}</div>
+                    <div style="font-size: 1.25rem; color: #64748b; margin-top: 8px;">${label}</div>
+                </div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${components.length > 0 ? `
+                    <h4>Score Breakdown</h4>
+                    <div class="components-list">
+                        ${components.map(comp => `
+                            <div class="component-item">
+                                <span>${comp.label || comp.name}</span>
+                                <div class="component-bar">
+                                    <div class="component-fill" style="width: ${comp.value || comp.score}%; background: ${this.getComponentColor(comp.value || comp.score)}"></div>
+                                </div>
+                                <span>${comp.value || comp.score}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.875rem;">How to Use This Score</h5>
+                    <p style="margin: 0; color: #78350f; font-size: 0.8125rem; line-height: 1.5;">
+                        ${this.getTrustScoreAdvice(trustScore)}
+                    </p>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        createBiasAnalysisCard(data) {
+            const card = this.createCard('bias', '⚖️', 'Bias Analysis');
+            const bias = data.bias_analysis || {};
+            const overallBias = bias.overall_bias || 0;
+            const politicalLean = bias.political_lean || 'Center';
+            const loadedPhrases = bias.loaded_phrases || [];
+            const manipulationTactics = bias.manipulation_tactics || [];
+            const biasDimensions = bias.bias_dimensions || {};
+            const biasIndicators = bias.bias_indicators || [];
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 600; color: ${this.getBiasColor(overallBias)};">
+                        ${overallBias}% Biased
+                    </div>
+                    <div style="font-size: 1rem; color: #64748b; margin-top: 8px;">
+                        Political Lean: ${politicalLean}
+                    </div>
+                    ${bias.bias_confidence ? `
+                        <div style="font-size: 0.875rem; color: #94a3b8; margin-top: 4px;">
+                            Confidence: ${bias.bias_confidence}%
                         </div>
                     ` : ''}
                 </div>
             `;
-        }
-
-        // Trust Score Card
-        createTrustScoreCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'trust');
             
-            const score = data.trust_score || 0;
-            const color = this.getTrustScoreColor(score);
-            
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">🎯</span> Trust Score Analysis
-                    </h3>
+            card.querySelector('.card-details').innerHTML = `
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 1rem;">Understanding This Bias</h4>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        ${this.getBiasContext(overallBias)}
+                    </p>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="text-align: center;">
-                            <div style="font-size: 3rem; font-weight: 700; color: ${color}; margin-bottom: 8px;">${score}%</div>
-                            <div style="font-size: 1rem; color: #64748b;">${this.getVerdict(score)}</div>
-                        </div>
+                
+                ${loadedPhrases.length > 0 ? `
+                    <h4>Loaded Language Found</h4>
+                    <div class="loaded-phrases-list">
+                        ${loadedPhrases.map(phrase => `
+                            <div class="loaded-phrase-item" style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                                <div style="font-weight: 600; color: #92400e;">"${phrase.text}"</div>
+                                <div style="color: #78350f; font-size: 0.875rem; margin-top: 4px;">${phrase.explanation}</div>
+                                ${phrase.context ? `<div style="color: #64748b; font-size: 0.8125rem; margin-top: 4px;">Context: "${phrase.context}"</div>` : ''}
+                                <div style="margin-top: 4px;">
+                                    <span style="background: ${this.getImpactColor(phrase.impact)}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                                        ${phrase.impact} impact
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 12px;">Score Breakdown</h4>
-                        ${this.createScoreBreakdown(data)}
+                ` : ''}
+                
+                ${manipulationTactics.length > 0 ? `
+                    <h4 style="margin: 20px 0 12px 0;">Manipulation Tactics</h4>
+                    <div class="tactics-list">
+                        ${manipulationTactics.map(tactic => `
+                            <div style="background: #fee2e2; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                                <div style="font-weight: 600; color: #991b1b;">${tactic.name}</div>
+                                <div style="color: #7f1d1d; font-size: 0.875rem; margin-top: 4px;">${tactic.description}</div>
+                                <div style="margin-top: 4px;">
+                                    <span style="background: ${this.getSeverityColor(tactic.severity)}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                                        ${tactic.severity} severity
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
+                ` : ''}
+                
+                ${Object.keys(biasDimensions).length > 0 ? `
+                    <h4 style="margin: 20px 0 12px 0;">Bias Dimensions</h4>
+                    <div class="dimensions-grid" style="display: grid; gap: 12px;">
+                        ${Object.entries(biasDimensions).map(([key, dim]) => `
+                            <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 600; text-transform: capitalize;">${key}</span>
+                                    <span style="color: #3b82f6; font-weight: 600;">${dim.label}</span>
+                                </div>
+                                <div style="background: #e2e8f0; height: 8px; border-radius: 4px; margin: 8px 0;">
+                                    <div style="background: #3b82f6; height: 100%; border-radius: 4px; width: ${Math.abs(dim.score) * 100}%"></div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #64748b;">Confidence: ${dim.confidence}%</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${biasIndicators.length > 0 ? `
+                    <h4 style="margin: 20px 0 12px 0;">Bias Indicators Found</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        ${biasIndicators.map(indicator => `
+                            <li style="padding: 8px 12px; background: #fef3c7; border-radius: 6px; margin-bottom: 8px; color: #92400e;">
+                                • ${indicator}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p style="color: #64748b;">No significant bias indicators detected.</p>'}
             `;
             
             return card;
         }
 
-        // Bias Analysis Card
-        createBiasAnalysisCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'bias');
-            
-            const bias = data.bias_analysis || {};
-            const biasLevel = bias.overall_bias || 'Unknown';
-            const objectivityScore = bias.objectivity_score || 0;
-            
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #6366f115 0%, #6366f105 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">⚖️</span> Bias Analysis
-                    </h3>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Overall Bias</div>
-                                <div style="font-size: 1.125rem; font-weight: 600; color: #0f172a; margin-top: 4px;">${biasLevel}</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Objectivity</div>
-                                <div style="font-size: 1.125rem; font-weight: 600; color: ${this.getObjectivityColor(objectivityScore)}; margin-top: 4px;">${objectivityScore}%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createBiasDetails(bias)}
-                    </div>
-                </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
-            `;
-            
-            return card;
-        }
-
-        // Fact Check Card
         createFactCheckCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'factcheck');
-            
+            const card = this.createCard('facts', '✓', 'Fact Check Results');
             const factChecks = data.fact_checks || [];
-            const keyClaimsCount = (data.key_claims || []).length;
-            const verifiedCount = factChecks.filter(fc => fc.verdict?.toLowerCase() === 'true' || fc.verdict?.toLowerCase() === 'verified').length;
+            const keyClaims = data.key_claims || [];
+            const isPro = data.is_pro || factChecks.length > 0;
             
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #10b98115 0%, #10b98105 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">✅</span> Fact Checking
-                    </h3>
+            if (!isPro && factChecks.length === 0) {
+                card.querySelector('.card-summary').innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
+                        <div style="color: #64748b;">Fact checking available</div>
+                        <div style="margin-top: 12px;">
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem; font-weight: 600;">PRO FEATURE</span>
+                        </div>
+                    </div>
+                `;
+                card.querySelector('.card-details').innerHTML = `
+                    <div style="background: #eff6ff; border-radius: 8px; padding: 16px;">
+                        <p style="margin: 0; color: #1e293b;">Upgrade to Pro to unlock comprehensive fact-checking with Google Fact Check API integration.</p>
+                    </div>
+                `;
+                return card;
+            }
+            
+            const breakdown = this.getFactCheckBreakdown(factChecks);
+            
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #1e293b;">${factChecks.length}</div>
+                    <div style="font-size: 1rem; color: #64748b;">Claims Analyzed</div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                        ${breakdown}
+                    </div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 8px;">
-                                ${keyClaimsCount} claims identified
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${factChecks.length > 0 ? `
+                    <div class="fact-checks-list">
+                        ${factChecks.map((check, index) => `
+                            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <span style="background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.875rem; font-weight: 600;">
+                                        Claim #${index + 1}
+                                    </span>
+                                    <span style="background: ${this.getVerdictColor(check.verdict || check.rating)}; color: white; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem; font-weight: 600;">
+                                        ${check.verdict || check.rating || 'Not Verified'}
+                                    </span>
+                                </div>
+                                <div style="color: #1e293b; font-weight: 500; margin-bottom: 8px;">
+                                    "${check.claim || check.text || keyClaims[index] || 'Claim'}"
+                                </div>
+                                ${check.explanation ? `
+                                    <div style="color: #64748b; font-size: 0.875rem; margin-bottom: 8px;">
+                                        ${check.explanation}
+                                    </div>
+                                ` : ''}
+                                ${check.evidence ? `
+                                    <div style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 8px;">
+                                        <div style="font-weight: 600; color: #475569; font-size: 0.875rem; margin-bottom: 4px;">Evidence:</div>
+                                        <div style="color: #64748b; font-size: 0.875rem;">${check.evidence}</div>
+                                    </div>
+                                ` : ''}
+                                ${check.source ? `
+                                    <div style="margin-top: 8px;">
+                                        <a href="${check.source}" target="_blank" rel="noopener" style="color: #3b82f6; text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 4px;">
+                                            View Source
+                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                <path d="M9 3L3 9M9 3H5M9 3V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                ` : ''}
                             </div>
-                            ${factChecks.length > 0 ? `
-                                <div style="font-size: 1.125rem; font-weight: 600; color: #10b981;">
-                                    ${verifiedCount}/${factChecks.length} verified
-                                </div>
-                            ` : `
-                                <div style="font-size: 0.875rem; color: #94a3b8;">
-                                    ${data.is_pro ? 'No fact checks performed' : 'Upgrade to Pro for fact checking'}
-                                </div>
-                            `}
-                        </div>
+                        `).join('')}
                     </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createFactCheckDetails(data)}
-                    </div>
-                </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
+                ` : '<p style="color: #64748b;">No fact checks available for this article.</p>'}
             `;
             
             return card;
         }
 
-        // Author Analysis Card
         createAuthorAnalysisCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'author');
-            
+            const card = this.createCard('author', '✍️', 'Author Analysis');
             const author = data.author_analysis || {};
-            const authorName = author.name || data.article?.author || 'Unknown';
-            const credScore = author.credibility_score || 0;
+            const article = data.article || {};
+            const authorName = author.name || article.author || 'Unknown Author';
+            const found = author.found !== undefined ? author.found : false;
+            const credibilityScore = author.credibility_score || 0;
+            const credentials = author.credentials || [];
+            const expertise = author.expertise || [];
+            const pastWork = author.past_work || [];
             
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #8b5cf615 0%, #8b5cf605 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">👤</span> Author Analysis
-                    </h3>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div>
-                            <div style="font-size: 1.125rem; font-weight: 600; color: #0f172a; margin-bottom: 8px;">${authorName}</div>
-                            ${author.found ? `
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <span style="font-size: 0.875rem; color: #64748b;">Credibility:</span>
-                                    <span style="font-size: 1.125rem; font-weight: 600; color: ${this.getCredibilityColor(credScore)};">${credScore}/100</span>
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem;">${authorName}</h4>
+                    ${found ? `
+                        <div style="font-size: 2rem; font-weight: 700; color: ${this.getCredibilityColor(credibilityScore)};">
+                            ${credibilityScore}/100
+                        </div>
+                        <div style="color: #64748b; margin-top: 4px;">Credibility Score</div>
+                        
+                        ${author.articles_count ? `
+                            <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
+                                <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                    <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
+                                    <div style="font-size: 0.75rem; color: #718096;">Articles</div>
                                 </div>
-                            ` : `
-                                <div style="font-size: 0.875rem; color: #94a3b8;">No author information found</div>
-                            `}
+                                ${author.professional_info?.years_experience ? `
+                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
+                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    ` : `
+                        <div style="color: #ef4444; font-size: 1.125rem;">
+                            ⚠️ Author Not Verified
                         </div>
-                    </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createAuthorDetails(author)}
-                    </div>
+                    `}
                 </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${found ? `
+                    ${credentials.length > 0 ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Credentials</h5>
+                            <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                                ${credentials.map(cred => `<li>${cred}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    ${expertise.length > 0 ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Areas of Expertise</h5>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                ${expertise.map(exp => `
+                                    <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem;">
+                                        ${exp}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${pastWork.length > 0 ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Notable Past Work</h5>
+                            <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                                ${pastWork.map(work => `<li>${work}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    ${author.social_media ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="margin: 0 0 8px 0; color: #1e293b;">Social Media Presence</h5>
+                            <p style="margin: 0; color: #475569;">${author.social_media}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${author.bio ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="margin: 0 0 8px 0; color: #1e293b;">Biography</h5>
+                            <p style="margin: 0; color: #475569; line-height: 1.6;">${author.bio}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${author.verification_status ? `
+                        <div style="background: #dcfce7; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #166534;">
+                                <span>✓</span>
+                                <span>${author.verification_status}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                ` : `
+                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px;">
+                        <p style="margin: 0 0 8px 0; color: #991b1b; font-weight: 600;">Author information could not be verified</p>
+                        <p style="margin: 0; color: #7f1d1d; font-size: 0.875rem;">
+                            Unable to find credible information about this author. Consider researching the author independently to verify their credentials and expertise.
+                        </p>
+                    </div>
+                `}
             `;
             
             return card;
         }
 
-        // Clickbait Analysis Card
         createClickbaitCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'clickbait');
+            const card = this.createCard('clickbait', '🎣', 'Clickbait Detection');
+            const clickbait = data.clickbait_analysis || {};
+            const score = clickbait.score || 0;
+            const tactics = clickbait.tactics || [];
+            const elements = clickbait.elements || [];
             
-            const score = data.clickbait_score || 0;
-            const level = score < 30 ? 'Low' : score < 60 ? 'Moderate' : 'High';
-            const color = score < 30 ? '#10b981' : score < 60 ? '#f59e0b' : '#ef4444';
+            const color = this.getClickbaitColor(score);
+            const label = this.getClickbaitLabel(score);
             
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">🎣</span> Clickbait Detection
-                    </h3>
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 700; color: ${color};">${score}%</div>
+                    <div style="font-size: 1.125rem; color: #64748b; margin-top: 8px;">${label}</div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; font-weight: 700; color: ${color}; margin-bottom: 4px;">${score}%</div>
-                            <div style="font-size: 1rem; color: #64748b;">${level} Clickbait</div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${tactics.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Clickbait Tactics Used</h5>
+                        <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                            ${tactics.map(tactic => `<li>${tactic}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${elements.length > 0 ? `
+                    <div>
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Clickbait Elements Found</h5>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${elements.map(element => `
+                                <div style="background: #fef3c7; padding: 12px; border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #92400e;">${element.type}:</span>
+                                    <span style="color: #78350f;">"${element.text}"</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${data.clickbait_analysis ? this.createClickbaitDetails(data.clickbait_analysis) : '<p style="color: #94a3b8; font-size: 0.875rem;">No detailed clickbait analysis available</p>'}
-                    </div>
+                ` : ''}
+                
+                <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <p style="margin: 0; color: #475569; font-size: 0.875rem; line-height: 1.5;">
+                        ${this.getClickbaitAdvice(score)}
+                    </p>
                 </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
             `;
             
             return card;
         }
 
-        // Source Credibility Card
         createSourceCredibilityCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'source');
-            
+            const card = this.createCard('source', '🏢', 'Source Credibility');
             const source = data.source_credibility || {};
             const domain = data.article?.domain || 'Unknown';
-            const rating = source.rating || 'Unknown';
-            const ratingColor = this.getSourceRatingColor(rating);
             
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #0ea5e915 0%, #0ea5e905 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">🏢</span> Source Credibility
-                    </h3>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div>
-                            <div style="font-size: 1rem; font-weight: 600; color: #0f172a; margin-bottom: 8px;">${domain}</div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 0.875rem; color: #64748b;">Rating:</span>
-                                <span style="font-size: 1rem; font-weight: 600; color: ${ratingColor};">${rating}</span>
-                            </div>
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <h4 style="margin: 0 0 16px 0; color: #1e293b;">${domain}</h4>
+                    ${source.credibility ? `
+                        <div style="display: inline-block; padding: 8px 24px; background: ${this.getCredibilityBgColor(source.credibility)}; border-radius: 999px;">
+                            <span style="color: ${this.getCredibilityTextColor(source.credibility)}; font-weight: 600; font-size: 1.125rem;">
+                                ${source.credibility}
+                            </span>
                         </div>
-                    </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createSourceDetails(source)}
-                    </div>
+                    ` : '<div style="color: #64748b;">Credibility Unknown</div>'}
                 </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                <div style="display: grid; gap: 12px;">
+                    ${source.bias ? `
+                        <div style="display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b;">Political Bias:</span>
+                            <span style="font-weight: 600; color: ${this.getBiasTextColor(source.bias)};">${source.bias}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${source.factual_reporting ? `
+                        <div style="display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b;">Factual Reporting:</span>
+                            <span style="font-weight: 600; color: #1e293b;">${source.factual_reporting}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${source.type ? `
+                        <div style="display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b;">Source Type:</span>
+                            <span style="font-weight: 600; color: #1e293b;">${source.type}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${source.traffic_rank ? `
+                        <div style="display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b;">Traffic Rank:</span>
+                            <span style="font-weight: 600; color: #1e293b;">#${source.traffic_rank}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${source.description ? `
+                    <div style="margin-top: 20px; padding: 16px; background: #eff6ff; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #1e40af;">About This Source</h5>
+                        <p style="margin: 0; color: #1e293b; font-size: 0.875rem; line-height: 1.5;">${source.description}</p>
+                    </div>
+                ` : ''}
             `;
             
             return card;
         }
 
-        // Manipulation Analysis Card
         createManipulationCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'manipulation');
+            const card = this.createCard('manipulation', '🎭', 'Manipulation Detection');
+            const manipulation = data.manipulation_analysis || {};
+            const score = manipulation.score || 0;
+            const tactics = manipulation.tactics || [];
+            const techniques = manipulation.techniques || [];
             
-            const manipulation = data.persuasion_analysis || data.manipulation_analysis || {};
-            const score = manipulation.manipulation_score || manipulation.persuasion_score || 0;
-            const tactics = manipulation.manipulation_tactics || [];
+            const color = this.getManipulationColor(score);
+            const label = this.getManipulationLabel(score);
             
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #f5970b15 0%, #f5970b05 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">🎭</span> Manipulation Analysis
-                    </h3>
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 700; color: ${color};">${score}%</div>
+                    <div style="font-size: 1.125rem; color: #64748b; margin-top: 8px;">${label}</div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 4px;">Manipulation Score</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: ${this.getManipulationColor(score)};">${score}%</div>
-                            ${tactics.length > 0 ? `
-                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">${tactics.length} tactics detected</div>
-                            ` : ''}
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${tactics.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Manipulation Tactics Detected</h5>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            ${tactics.map(tactic => `
+                                <div style="background: #fee2e2; padding: 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                                    <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
+                                        ${typeof tactic === 'string' ? tactic : tactic.name}
+                                    </div>
+                                    ${tactic.description ? `
+                                        <div style="color: #7f1d1d; font-size: 0.875rem; margin-bottom: 4px;">${tactic.description}</div>
+                                    ` : ''}
+                                    ${tactic.examples && tactic.examples.length > 0 ? `
+                                        <div style="margin-top: 8px;">
+                                            <div style="font-weight: 600; color: #991b1b; font-size: 0.875rem; margin-bottom: 4px;">Examples:</div>
+                                            <ul style="margin: 0; padding-left: 20px; color: #7f1d1d; font-size: 0.875rem;">
+                                                ${tactic.examples.map(ex => `<li>"${ex}"</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createManipulationDetails(manipulation)}
+                ` : ''}
+                
+                ${techniques.length > 0 ? `
+                    <div>
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Persuasion Techniques</h5>
+                        <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                            ${techniques.map(tech => `<li>${tech}</li>`).join('')}
+                        </ul>
                     </div>
+                ` : ''}
+                
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <p style="margin: 0; color: #92400e; font-size: 0.875rem; line-height: 1.5;">
+                        ${this.getManipulationAdvice(score)}
+                    </p>
                 </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
             `;
             
             return card;
         }
 
-        // Transparency Analysis Card
         createTransparencyCard(data) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card-standalone';
-            card.setAttribute('data-card-type', 'transparency');
+            const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
+            const transparency = data.transparency_analysis || {};
+            const score = transparency.score || 0;
+            const factors = transparency.factors || [];
             
-            const trans = data.transparency_analysis || {};
-            const score = trans.transparency_score || 0;
-            const color = this.getTransparencyColor(score);
-            
-            card.innerHTML = `
-                <div class="card-header" style="background: linear-gradient(135deg, #06b6d415 0%, #06b6d405 100%); padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">🔍</span> Transparency Analysis
-                    </h3>
+            card.querySelector('.card-summary').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; font-weight: 700; color: ${this.getTransparencyColor(score)};">${score}%</div>
+                    <div style="font-size: 1.125rem; color: #64748b; margin-top: 8px;">Transparency Score</div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <div class="card-summary">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; font-weight: 700; color: ${color}; margin-bottom: 4px;">${score}%</div>
-                            <div style="font-size: 0.875rem; color: #64748b;">Transparency Score</div>
+            `;
+            
+            card.querySelector('.card-details').innerHTML = `
+                ${factors.length > 0 ? `
+                    <div>
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Transparency Factors</h5>
+                        <div style="display: grid; gap: 8px;">
+                            ${factors.map(factor => `
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: ${factor.present ? '#10b981' : '#ef4444'}; font-size: 1.25rem;">
+                                        ${factor.present ? '✓' : '✗'}
+                                    </span>
+                                    <span style="color: #475569;">${factor.name}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                    <div class="card-details" style="margin-top: 20px;">
-                        ${this.createTransparencyDetails(trans)}
-                    </div>
+                ` : '<p style="color: #64748b;">No transparency data available.</p>'}
+                
+                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.5;">
+                        ${this.getTransparencyAdvice(score)}
+                    </p>
                 </div>
-                <a href="#" class="expand-icon" aria-label="Toggle details">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </a>
             `;
             
             return card;
         }
 
-        // Helper methods for creating detailed content
-        createScoreBreakdown(data) {
-            const components = [
-                { name: 'Source Credibility', value: data.source_credibility?.credibility_score || 50 },
-                { name: 'Author Credibility', value: data.author_analysis?.credibility_score || 50 },
-                { name: 'Content Quality', value: 100 - (data.clickbait_score || 50) },
-                { name: 'Transparency', value: data.transparency_analysis?.transparency_score || 50 },
-                { name: 'Objectivity', value: data.bias_analysis?.objectivity_score || 50 }
-            ];
+        // Helper methods
+        getFactCheckBreakdown(factChecks) {
+            const counts = {};
+            factChecks.forEach(check => {
+                const verdict = check.verdict || check.rating || 'Unknown';
+                counts[verdict] = (counts[verdict] || 0) + 1;
+            });
             
-            return components.map(comp => `
-                <div style="margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span style="font-size: 0.875rem; color: #64748b;">${comp.name}</span>
-                        <span style="font-size: 0.875rem; font-weight: 600; color: #0f172a;">${comp.value}%</span>
-                    </div>
-                    <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                        <div style="height: 100%; width: ${comp.value}%; background: ${this.getTrustScoreColor(comp.value)}; transition: width 0.5s ease;"></div>
-                    </div>
-                </div>
+            return Object.entries(counts).map(([verdict, count]) => `
+                <span style="background: ${this.getVerdictColor(verdict)}; color: white; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem;">
+                    ${count} ${verdict}
+                </span>
             `).join('');
         }
 
-        createBiasDetails(bias) {
-            let details = '';
-            
-            if (bias.political_lean !== undefined) {
-                details += `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Political Lean</h4>
-                        <div style="height: 8px; background: linear-gradient(to right, #3b82f6, #e5e7eb, #ef4444); border-radius: 999px; position: relative;">
-                            <div style="position: absolute; top: 50%; transform: translate(-50%, -50%); left: ${50 + (bias.political_lean * 50)}%; width: 16px; height: 16px; background: #0f172a; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: #94a3b8;">
-                            <span>Left</span>
-                            <span>Center</span>
-                            <span>Right</span>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (bias.loaded_phrases && bias.loaded_phrases.length > 0) {
-                details += `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Loaded Language Examples</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${bias.loaded_phrases.slice(0, 3).map(phrase => 
-                                `<span style="padding: 4px 8px; background: #fee2e2; color: #991b1b; border-radius: 4px; font-size: 0.75rem;">"${phrase}"</span>`
-                            ).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (bias.bias_dimensions) {
-                details += `
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin: 0 0 12px 0; color: #0f172a;">Bias Dimensions:</h4>
-                        ${Object.entries(bias.bias_dimensions).map(([dimension, dimData]) => `
-                            <div style="margin-bottom: 12px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                    <span style="color: #475569; font-size: 0.875rem;">${this.formatDimension(dimension)}</span>
-                                    <span style="color: #0f172a; font-weight: 600;">${Math.abs(dimData.score * 100).toFixed(0)}%</span>
-                                </div>
-                                <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                                    <div style="height: 100%; width: ${Math.abs(dimData.score * 100)}%; background: ${this.getBiasColor(Math.abs(dimData.score * 100))}; transition: width 0.5s ease;"></div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            return details || '<p style="color: #94a3b8; font-size: 0.875rem;">No detailed bias analysis available</p>';
+        getVerdictColor(verdict) {
+            const colors = {
+                'true': '#10b981',
+                'mostly true': '#10b981',
+                'half true': '#f59e0b',
+                'mostly false': '#ef4444',
+                'false': '#ef4444',
+                'unverified': '#64748b'
+            };
+            return colors[verdict?.toLowerCase()] || '#64748b';
         }
 
-        createFactCheckDetails(data) {
-            const factChecks = data.fact_checks || [];
-            const keyClaims = data.key_claims || [];
-            
-            let details = '';
-            
-            if (factChecks.length > 0) {
-                details += `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Fact Check Results</h4>
-                        ${factChecks.slice(0, 3).map(fc => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-                                <div style="font-size: 0.875rem; color: #0f172a; margin-bottom: 4px;">"${fc.claim || fc.text}"</div>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="padding: 2px 8px; background: ${this.getVerdictColor(fc.verdict)}; color: white; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
-                                        ${fc.verdict || 'Unverified'}
-                                    </span>
-                                    ${fc.confidence ? `<span style="font-size: 0.75rem; color: #94a3b8;">Confidence: ${fc.confidence}%</span>` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } else if (keyClaims.length > 0) {
-                details += `
-                    <div>
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Key Claims Identified</h4>
-                        ${keyClaims.slice(0, 5).map(claim => 
-                            `<div style="margin-bottom: 8px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; font-size: 0.875rem; color: #475569;">
-                                • ${typeof claim === 'string' ? claim : claim.text}
-                            </div>`
-                        ).join('')}
-                    </div>
-                `;
-            }
-            
-            return details || '<p style="color: #94a3b8; font-size: 0.875rem;">No fact checking data available</p>';
-        }
-
-        createAuthorDetails(author) {
-            if (!author.found) {
-                return '<p style="color: #94a3b8; font-size: 0.875rem;">No detailed author information available</p>';
-            }
-            
-            let details = '';
-            
-            if (author.bio) {
-                details += `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Biography</h4>
-                        <p style="font-size: 0.875rem; color: #64748b; line-height: 1.5;">${author.bio}</p>
-                    </div>
-                `;
-            }
-            
-            if (author.expertise_areas && author.expertise_areas.length > 0) {
-                details += `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Expertise Areas</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            ${author.expertise_areas.map(area => 
-                                `<span style="padding: 4px 12px; background: #e0e7ff; color: #4338ca; border-radius: 999px; font-size: 0.75rem;">${area}</span>`
-                            ).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (author.recent_articles && author.recent_articles.length > 0) {
-                details += `
-                    <div>
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Recent Articles</h4>
-                        ${author.recent_articles.slice(0, 3).map(article => 
-                            `<div style="margin-bottom: 8px; font-size: 0.875rem; color: #64748b;">• ${article.title || article}</div>`
-                        ).join('')}
-                    </div>
-                `;
-            }
-            
-            return details;
-        }
-
-        createClickbaitDetails(analysis) {
-            if (!analysis || !analysis.indicators) {
-                return '<p style="color: #94a3b8; font-size: 0.875rem;">No detailed clickbait analysis available</p>';
-            }
-            
-            return `
-                <div>
-                    <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Clickbait Indicators</h4>
-                    ${analysis.indicators.map(indicator => 
-                        `<div style="margin-bottom: 8px; padding: 8px 12px; background: #fef3c7; border-radius: 6px; font-size: 0.875rem; color: #78350f;">
-                            • ${indicator}
-                        </div>`
-                    ).join('')}
-                </div>
-            `;
-        }
-
-        createSourceDetails(source) {
-            let details = '';
-            
-            if (source.type) {
-                details += `<p style="font-size: 0.875rem; color: #64748b; margin-bottom: 8px;"><strong>Type:</strong> ${source.type}</p>`;
-            }
-            
-            if (source.bias) {
-                details += `<p style="font-size: 0.875rem; color: #64748b; margin-bottom: 8px;"><strong>Known Bias:</strong> ${source.bias}</p>`;
-            }
-            
-            if (source.description) {
-                details += `<p style="font-size: 0.875rem; color: #64748b; line-height: 1.5;">${source.description}</p>`;
-            }
-            
-            return details || '<p style="color: #94a3b8; font-size: 0.875rem;">No detailed source information available</p>';
-        }
-
-        createManipulationDetails(manipulation) {
-            let details = '';
-            
-            if (manipulation.manipulation_tactics && manipulation.manipulation_tactics.length > 0) {
-                details += `
-                    <div>
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Detected Tactics</h4>
-                        ${manipulation.manipulation_tactics.map(tactic => `
-                            <div style="margin-bottom: 12px; padding: 12px; background: #fef3c7; border-radius: 8px;">
-                                <div style="font-size: 0.875rem; font-weight: 600; color: #78350f; margin-bottom: 4px;">
-                                    ${typeof tactic === 'string' ? tactic : tactic.name || tactic.type}
-                                </div>
-                                ${tactic.description ? `<div style="font-size: 0.75rem; color: #92400e;">${tactic.description}</div>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            if (manipulation.emotional_appeals) {
-                details += `
-                    <div style="margin-top: 16px;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Emotional Appeals</h4>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                            ${Object.entries(manipulation.emotional_appeals).map(([emotion, value]) => 
-                                value > 0 ? `
-                                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f9fafb; border-radius: 6px;">
-                                        <span style="font-size: 0.75rem; color: #64748b;">${emotion}</span>
-                                        <span style="font-size: 0.75rem; font-weight: 600; color: #0f172a;">${value}%</span>
-                                    </div>
-                                ` : ''
-                            ).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return details || '<p style="color: #94a3b8; font-size: 0.875rem;">No manipulation tactics detected</p>';
-        }
-
-        createTransparencyDetails(trans) {
-            let details = '';
-            
-            // Key metrics
-            const metrics = [
-                { label: 'Named Sources', value: trans.named_source_ratio },
-                { label: 'Direct Quotes', value: trans.quote_ratio },
-                { label: 'Total Sources', value: trans.total_sources, isCount: true }
-            ];
-            
-            details += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">';
-            metrics.forEach(metric => {
-                if (metric.value !== undefined) {
-                    details += `
-                        <div style="padding: 12px; background: #f0f9ff; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #0369a1;">${metric.isCount ? metric.value : `${metric.value}%`}</div>
-                            <div style="font-size: 0.75rem; color: #0c4a6e; margin-top: 4px;">${metric.label}</div>
-                        </div>
-                    `;
-                }
-            });
-            details += '</div>';
-            
-            // Transparency checks
-            if (trans.transparency_checks) {
-                details += `
-                    <div>
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Transparency Checks</h4>
-                        ${trans.transparency_checks.map(check => `
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 12px; background: ${check.status ? '#f0fdf4' : '#fef2f2'}; border-radius: 6px;">
-                                <span style="color: ${check.status ? '#166534' : '#991b1b'}; font-weight: 600;">
-                                    ${check.status ? '✓' : '✗'}
-                                </span>
-                                <span style="color: ${check.status ? '#14532d' : '#7f1d1d'}; font-size: 0.875rem;">
-                                    ${check.label}
-                                </span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            return details || '<p style="color: #94a3b8; font-size: 0.875rem;">No transparency data available</p>';
-        }
-
-        // Helper methods for colors and formatting
-        getTrustScoreColor(score) {
-            if (score >= 70) return '#10b981';
-            if (score >= 40) return '#f59e0b';
+        getComponentColor(value) {
+            if (value >= 80) return '#10b981';
+            if (value >= 60) return '#3b82f6';
+            if (value >= 40) return '#f59e0b';
             return '#ef4444';
         }
 
-        getObjectivityColor(score) {
-            if (score >= 70) return '#10b981';
-            if (score >= 40) return '#3b82f6';
-            return '#ef4444';
+        getBiasColor(bias) {
+            if (bias >= 70) return '#ef4444';
+            if (bias >= 40) return '#f59e0b';
+            return '#10b981';
         }
 
         getCredibilityColor(score) {
@@ -830,20 +905,59 @@
             return '#ef4444';
         }
 
-        getSourceRatingColor(rating) {
-            const colorMap = {
-                'High': '#10b981',
-                'Medium': '#3b82f6',
-                'Low': '#f59e0b',
-                'Very Low': '#ef4444'
+        getCredibilityBgColor(credibility) {
+            const colors = {
+                'high': '#dcfce7',
+                'medium': '#dbeafe',
+                'low': '#fef3c7',
+                'very low': '#fee2e2'
             };
-            return colorMap[rating] || '#94a3b8';
+            return colors[credibility?.toLowerCase()] || '#f3f4f6';
+        }
+
+        getCredibilityTextColor(credibility) {
+            const colors = {
+                'high': '#166534',
+                'medium': '#1e40af',
+                'low': '#92400e',
+                'very low': '#991b1b'
+            };
+            return colors[credibility?.toLowerCase()] || '#475569';
+        }
+
+        getBiasTextColor(bias) {
+            const colors = {
+                'left': '#1e40af',
+                'left-center': '#3b82f6',
+                'center': '#10b981',
+                'right-center': '#f59e0b',
+                'right': '#ef4444'
+            };
+            return colors[bias?.toLowerCase()] || '#475569';
+        }
+
+        getClickbaitColor(score) {
+            if (score >= 70) return '#ef4444';
+            if (score >= 40) return '#f59e0b';
+            return '#10b981';
+        }
+
+        getClickbaitLabel(score) {
+            if (score >= 70) return 'High Clickbait';
+            if (score >= 40) return 'Moderate Clickbait';
+            return 'Low Clickbait';
         }
 
         getManipulationColor(score) {
-            if (score < 30) return '#10b981';
-            if (score < 60) return '#f59e0b';
-            return '#ef4444';
+            if (score >= 70) return '#ef4444';
+            if (score >= 40) return '#f59e0b';
+            return '#10b981';
+        }
+
+        getManipulationLabel(score) {
+            if (score >= 70) return 'High Manipulation';
+            if (score >= 40) return 'Moderate Manipulation';
+            return 'Low Manipulation';
         }
 
         getTransparencyColor(score) {
@@ -852,335 +966,243 @@
             return '#ef4444';
         }
 
-        getVerdictColor(verdict) {
-            const verdictLower = (verdict || '').toLowerCase();
-            if (verdictLower === 'true' || verdictLower === 'verified') return '#10b981';
-            if (verdictLower === 'false' || verdictLower === 'incorrect') return '#ef4444';
-            if (verdictLower.includes('partial') || verdictLower.includes('mixed')) return '#f59e0b';
-            return '#94a3b8';
-        }
-
-        getBiasColor(score) {
-            if (score < 30) return '#10b981';
-            if (score < 60) return '#f59e0b';
-            return '#ef4444';
-        }
-
-        getVerdict(score) {
-            if (score >= 80) return 'Highly Credible';
-            if (score >= 60) return 'Generally Credible';
-            if (score >= 40) return 'Mixed Credibility';
-            if (score >= 20) return 'Low Credibility';
-            return 'Very Low Credibility';
-        }
-
-        formatDimension(dimension) {
-            const dimensionMap = {
-                'political': 'Political',
-                'corporate': 'Corporate',
-                'sensational': 'Sensational',
-                'ideological': 'Ideological'
+        getImpactColor(impact) {
+            const colors = {
+                'high': '#ef4444',
+                'medium': '#f59e0b',
+                'low': '#10b981'
             };
-            return dimensionMap[dimension] || dimension;
+            return colors[impact?.toLowerCase()] || '#64748b';
         }
 
-        // Animation method
-        animateCards() {
-            const cards = document.querySelectorAll('.analysis-card-standalone');
-            cards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    card.style.transition = 'all 0.5s ease';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, index * 100);
+        getSeverityColor(severity) {
+            const colors = {
+                'high': '#ef4444',
+                'medium': '#f59e0b',
+                'low': '#10b981'
+            };
+            return colors[severity?.toLowerCase()] || '#64748b';
+        }
+
+        // Advice methods
+        getTrustScoreAdvice(score) {
+            if (score >= 70) {
+                return "This article appears to be from a trustworthy source with good journalistic standards. However, always cross-reference important claims.";
+            } else if (score >= 40) {
+                return "This article has moderate trustworthiness. Verify key claims with additional sources before sharing or making decisions based on this information.";
+            } else {
+                return "This article has low trustworthiness indicators. Exercise caution and seek multiple reputable sources to verify the information presented.";
+            }
+        }
+
+        getBiasContext(bias) {
+            if (bias >= 70) {
+                return "This article shows significant bias. The author presents information from a strongly partisan perspective. Look for more balanced sources to get a complete picture.";
+            } else if (bias >= 40) {
+                return "This article contains moderate bias. While not extreme, the author's perspective influences the presentation. Consider reading multiple viewpoints.";
+            } else {
+                return "This article shows minimal bias. The author attempts to present information objectively, though complete neutrality is rare in journalism.";
+            }
+        }
+
+        getAuthorContext(author) {
+            if (!author.found) {
+                return "Author verification helps establish credibility and expertise. When author information cannot be verified, approach the content with additional scrutiny.";
+            }
+            
+            const score = author.credibility_score || 0;
+            if (score >= 70) {
+                return "This author has established credibility in their field. Their expertise and track record suggest reliable reporting.";
+            } else if (score >= 40) {
+                return "This author has moderate credibility. While they have some established presence, verify important claims independently.";
+            } else {
+                return "Limited information is available about this author's credentials or expertise. Exercise caution with claims made.";
+            }
+        }
+
+        getClickbaitAdvice(score) {
+            if (score >= 70) {
+                return "This headline uses strong clickbait tactics designed to manipulate emotions and drive clicks. The actual content may not match the sensational headline.";
+            } else if (score >= 40) {
+                return "This headline uses some clickbait elements. While not extreme, it may exaggerate or sensationalize to attract attention.";
+            } else {
+                return "This headline appears straightforward and informative, using minimal clickbait tactics.";
+            }
+        }
+
+        getManipulationAdvice(score) {
+            if (score >= 70) {
+                return "High levels of manipulative language detected. This article uses multiple techniques to influence reader emotions and opinions rather than inform objectively.";
+            } else if (score >= 40) {
+                return "Moderate manipulation tactics present. The article uses some persuasive techniques that may influence your perception of the topic.";
+            } else {
+                return "Minimal manipulation detected. The article primarily focuses on presenting information rather than influencing reader opinions.";
+            }
+        }
+
+        getTransparencyAdvice(score) {
+            if (score >= 70) {
+                return "Good transparency practices observed. The article provides clear attribution, sources, and disclosure of potential conflicts of interest.";
+            } else if (score >= 40) {
+                return "Moderate transparency. Some important information about sources or author background may be missing. Look for additional context.";
+            } else {
+                return "Poor transparency. Key information about sources, funding, or author credentials is missing. This reduces the article's credibility.";
+            }
+        }
+
+        setupCardEventListeners() {
+            document.querySelectorAll('.expand-icon').forEach(icon => {
+                icon.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const card = e.target.closest('.analysis-card-standalone');
+                    if (card) {
+                        card.classList.toggle('expanded');
+                        const isExpanded = card.classList.contains('expanded');
+                        icon.setAttribute('aria-expanded', isExpanded);
+                        
+                        // Rotate icon
+                        const svg = icon.querySelector('svg');
+                        if (svg) {
+                            svg.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+                            svg.style.transition = 'transform 0.3s ease';
+                        }
+                    }
+                });
             });
         }
 
-        // FIXED: Export section with better error handling
-        addExportSection(container, data) {
-            // Don't add if it already exists
-            if (document.querySelector('.export-section-container')) {
-                console.log('Export section already exists');
-                return;
-            }
-            
+        addExportSection(gridWrapper) {
             const exportSection = document.createElement('div');
-            exportSection.className = 'export-section-container';
-            exportSection.style.cssText = 'margin: 2rem auto; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 12px; max-width: 600px;';
+            exportSection.className = 'export-section';
+            exportSection.style.cssText = 'text-align: center; margin: 40px 0; padding: 40px; background: #f8fafc; border-radius: 12px;';
             
             exportSection.innerHTML = `
-                <h3 style="margin: 0 0 1rem 0; color: #0f172a;">Export Analysis Report</h3>
-                <p style="margin-bottom: 1.5rem; color: #6b7280;">Download a comprehensive PDF report of this analysis</p>
-                <button class="export-pdf-btn" style="
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 1rem 2rem;
-                    background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    font-size: 1rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25);
-                ">
-                    <span style="margin-right: 8px;">📄</span>
-                    <span>Export as PDF</span>
-                </button>
+                <h3 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1.5rem;">Export Your Analysis</h3>
+                <p style="margin: 0 0 24px 0; color: #64748b;">Download this report for future reference</p>
+                <div style="display: flex; gap: 16px; justify-content: center;">
+                    <button class="export-btn" onclick="window.UI.exportPDF()" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer;">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 2V10M10 10L13 7M10 10L7 7M3 12V15C3 16.1046 3.89543 17 5 17H15C16.1046 17 17 16.1046 17 15V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Export as PDF
+                    </button>
+                    <button class="export-btn" onclick="window.UI.exportJSON()" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer;">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 16V14C4 13.4477 4.44772 13 5 13H15C15.5523 13 16 13.4477 16 14V16M8 5L10 3M10 3L12 5M10 3V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Export as JSON
+                    </button>
+                </div>
             `;
             
-            // Add click handler
-            const btn = exportSection.querySelector('.export-pdf-btn');
-            btn.addEventListener('click', async () => {
-                await this.exportPDF(data || this.analysisData);
-            });
-            
-            // Find the best place to insert it
-            if (container) {
-                container.appendChild(exportSection);
+            if (gridWrapper.parentNode) {
+                gridWrapper.parentNode.insertBefore(exportSection, gridWrapper.nextSibling);
             }
         }
 
-        // PDF Export method
-        async exportPDF(analysisData) {
-            if (!analysisData) {
-                analysisData = this.analysisData;
-            }
+        moveResourcesSection() {
+            const resources = document.getElementById('resources');
+            const analyzerCard = document.querySelector('.analyzer-card');
             
-            if (!analysisData) {
-                this.showErrorToast('No analysis data available');
+            if (resources && analyzerCard && analyzerCard.parentNode) {
+                analyzerCard.parentNode.insertBefore(resources, analyzerCard.nextSibling);
+                resources.classList.remove('hidden');
+            }
+        }
+
+        // Export methods
+        async exportPDF() {
+            if (!this.analysisData) {
+                this.showErrorToast('No analysis data to export');
                 return;
             }
-            
-            // Show loading state
-            const btn = document.querySelector('.export-pdf-btn');
-            if (!btn) return;
-            
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<span style="margin-right: 8px;">⏳</span> Generating PDF...';
-            btn.disabled = true;
-            
+
             try {
+                this.showInfoToast('Generating PDF...');
+                
                 const response = await fetch('/api/export/pdf', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        analysis_data: analysisData
-                    })
+                    body: JSON.stringify(this.analysisData)
                 });
-                
-                if (response.ok && response.headers.get('content-type')?.includes('application/pdf')) {
-                    const blob = await response.blob();
-                    
-                    // Create download link
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    
-                    // Generate filename
-                    const domain = analysisData.article?.domain || 'article';
-                    const date = new Date().toISOString().split('T')[0];
-                    a.download = `news_analysis_${domain}_${date}.pdf`;
-                    
-                    // Trigger download
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    
-                    // Clean up
-                    window.URL.revokeObjectURL(url);
-                    
-                    // Show success message
-                    this.showSuccessToast('PDF exported successfully!');
-                } else {
-                    throw new Error('PDF export failed');
+
+                if (!response.ok) {
+                    throw new Error('PDF generation failed');
                 }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `news-analysis-${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                this.showSuccessToast('PDF downloaded successfully!');
+                
             } catch (error) {
-                console.error('Export error:', error);
-                this.showErrorToast(`Failed to export PDF: ${error.message}`);
-            } finally {
-                // Restore button
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
+                console.error('PDF export error:', error);
+                this.showErrorToast('Failed to generate PDF. Please try again.');
             }
         }
 
-        // Auto-refresh methods
-        showAutoRefreshNotice(container) {
-            const notice = document.createElement('div');
-            notice.id = 'auto-refresh-notice';
-            notice.style.cssText = 'margin: 20px 0; padding: 16px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; text-align: center;';
-            notice.innerHTML = `
-                <p style="margin: 0; color: #78350f; font-size: 0.875rem;">
-                    <span style="margin-right: 8px;">🔄</span>
-                    This is a cached result. Fetching fresh analysis...
-                </p>
-            `;
-            container.appendChild(notice);
-        }
-
-        async performAutoRefresh() {
-            // Prepare the request data
-            const requestData = {};
-            
-            if (this.currentUrl) {
-                requestData.url = this.currentUrl;
-            } else if (this.currentText) {
-                requestData.text = this.currentText;
-            } else if (this.analysisData?.article?.url) {
-                requestData.url = this.analysisData.article.url;
-            } else {
-                console.error('No content to refresh');
+        exportJSON() {
+            if (!this.analysisData) {
+                this.showErrorToast('No analysis data to export');
                 return;
             }
-            
-            // Add force_fresh flag
-            requestData.force_fresh = true;
-            
-            try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Refresh failed');
-                }
-                
-                const result = await response.json();
-                console.log('Auto-refresh complete:', result);
-                
-                // Remove the notice
-                const notice = document.getElementById('auto-refresh-notice');
-                if (notice) {
-                    notice.style.animation = 'fadeOut 0.3s ease-out';
-                    setTimeout(() => notice.remove(), 300);
-                }
-                
-                // Update stored data
-                this.analysisData = result;
-                
-                // Display refreshed results
-                this.displayResults(result);
-                
-                // Show success
-                this.showSuccessToast('Analysis updated with fresh data!');
-                
-            } catch (error) {
-                console.error('Auto-refresh error:', error);
-                // Update the notice to show error
-                const notice = document.getElementById('auto-refresh-notice');
-                if (notice) {
-                    notice.style.background = '#fee2e2';
-                    notice.style.borderColor = '#fca5a5';
-                    notice.innerHTML = `
-                        <p style="margin: 0; color: #991b1b; font-size: 0.875rem;">
-                            Failed to refresh. Using cached results.
-                            <button onclick="window.UI?.refreshAnalysis()" style="margin-left: 8px; padding: 4px 12px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                Try Again
-                            </button>
-                        </p>
-                    `;
-                }
-            }
-        }
 
-        async refreshAnalysis() {
-            if (this.isAnalyzing) {
-                this.showErrorToast('Analysis already in progress');
-                return;
-            }
-            
-            this.isAnalyzing = true;
-            
             try {
-                // Prepare the request data
-                const requestData = {};
+                const dataStr = JSON.stringify(this.analysisData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
                 
-                if (this.currentUrl) {
-                    requestData.url = this.currentUrl;
-                } else if (this.currentText) {
-                    requestData.text = this.currentText;
-                } else if (this.analysisData?.article?.url) {
-                    requestData.url = this.analysisData.article.url;
-                } else {
-                    throw new Error('No content to refresh');
-                }
+                const a = document.createElement('a');
+                a.href = dataUri;
+                a.download = `news-analysis-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 
-                // Add force_fresh flag
-                requestData.force_fresh = true;
-                
-                console.log('Refreshing analysis with:', requestData);
-                
-                // Call the API
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Refresh failed');
-                }
-                
-                const result = await response.json();
-                console.log('Refresh complete:', result);
-                
-                // Update stored data
-                this.analysisData = result;
-                
-                // Display refreshed results
-                this.displayResults(result);
-                
-                // Show success message
-                this.showSuccessToast('Analysis refreshed successfully!');
+                this.showSuccessToast('JSON exported successfully!');
                 
             } catch (error) {
-                console.error('Refresh error:', error);
-                this.showErrorToast('Failed to refresh analysis. Please try again.');
-            } finally {
-                this.isAnalyzing = false;
+                console.error('JSON export error:', error);
+                this.showErrorToast('Failed to export JSON. Please try again.');
             }
         }
 
         // Toast notification methods
-        showSuccessToast(message) {
-            this.showToast(message, '#10b981');
-        }
-
-        showErrorToast(message) {
-            this.showToast(message, '#ef4444');
-        }
-
-        showToast(message, color) {
+        showToast(message, type = 'info') {
             const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
             toast.style.cssText = `
                 position: fixed;
-                bottom: 20px;
+                top: 20px;
                 right: 20px;
-                background: ${color};
-                color: white;
                 padding: 16px 24px;
                 border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 9999;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
                 animation: slideIn 0.3s ease-out;
                 max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             `;
+            
+            const colors = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'info': '#3b82f6',
+                'warning': '#f59e0b'
+            };
+            
+            toast.style.backgroundColor = colors[type] || colors.info;
             toast.textContent = message;
+            
             document.body.appendChild(toast);
             
             setTimeout(() => {
@@ -1189,152 +1211,164 @@
             }, 3000);
         }
 
-        showError(message) {
-            const resultsDiv = document.getElementById('results');
-            if (resultsDiv) {
-                resultsDiv.innerHTML = `
-                    <div style="text-align: center; padding: 40px; background: #fee2e2; border-radius: 12px; margin: 20px 0;">
-                        <p style="color: #991b1b; font-size: 1.125rem;">${message}</p>
-                    </div>
-                `;
-                resultsDiv.classList.remove('hidden');
-            }
+        showSuccessToast(message) {
+            this.showToast(message, 'success');
         }
 
-        // Inject required styles
-        injectStyles() {
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                
-                @keyframes fadeOut {
-                    from { opacity: 1; transform: translateY(0); }
-                    to { opacity: 0; transform: translateY(10px); }
-                }
-                
-                @keyframes slideIn {
-                    from { opacity: 0; transform: translateX(100px); }
-                    to { opacity: 1; transform: translateX(0); }
-                }
-                
-                @keyframes slideOut {
-                    from { opacity: 1; transform: translateX(0); }
-                    to { opacity: 0; transform: translateX(100px); }
-                }
-                
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                }
-                
-                .analysis-card-standalone {
-                    position: relative;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                }
-                
-                .analysis-card-standalone:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
-                }
-                
-                .expand-icon {
-                    position: absolute;
-                    bottom: 12px;
-                    right: 12px;
-                    width: 36px;
-                    height: 36px;
-                    background: #f1f5f9;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transform: translateY(-50%);
-                    color: #94a3b8;
-                    transition: all 0.3s ease;
-                    text-decoration: none;
-                }
-                
-                .expand-icon:hover {
-                    color: #6366f1;
-                    background: #e0e7ff;
-                }
-                
-                .analysis-card-standalone.expanded .expand-icon svg {
-                    transform: rotate(180deg);
-                }
-                
-                .card-summary {
-                    margin-bottom: 16px;
-                }
-                
-                .card-details {
-                    max-height: 0;
-                    overflow: hidden;
-                    transition: max-height 0.3s ease;
-                    opacity: 0;
-                }
-                
-                .analysis-card-standalone.expanded .card-details {
-                    max-height: 2000px;
-                    opacity: 1;
-                    transition: max-height 0.5s ease, opacity 0.3s ease 0.1s;
-                }
-                
-                .fade-in {
-                    animation: fadeIn 0.5s ease forwards;
-                }
-                
-                /* Grid responsive */
-                @media (max-width: 768px) {
-                    .cards-grid-wrapper {
-                        grid-template-columns: 1fr !important;
-                    }
-                }
-                
-                /* Export section styles */
-                .export-section-container {
-                    margin: 2rem auto;
-                    text-align: center;
-                    padding: 2rem;
-                    background: #f9fafb;
-                    border-radius: 12px;
-                    max-width: 600px;
-                }
-                
-                /* Refresh and notification styles */
-                .refresh-analysis-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 10px 20px;
-                    background: #4f46e5;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                
-                .refresh-analysis-btn:hover {
-                    background: #4338ca;
-                    transform: translateY(-1px);
-                }
-                
-                #auto-refresh-notice {
-                    animation: pulse 2s infinite;
-                }
-            `;
-            document.head.appendChild(style);
+        showErrorToast(message) {
+            this.showToast(message, 'error');
+        }
+
+        showInfoToast(message) {
+            this.showToast(message, 'info');
+        }
+
+        // Debug method
+        getSourceTypeName(type) {
+            const typeMap = {
+                'academic': 'Academic Papers',
+                'government': 'Government Sources',
+                'mainstream': 'Mainstream Media',
+                'independent': 'Independent Media',
+                'social': 'Social Media',
+                'blog': 'Blogs/Personal Sites',
+                'press': 'Press Releases',
+                'think_tank': 'Think Tanks',
+                'advocacy': 'Advocacy Groups',
+                'wiki': 'Wikipedia',
+                'fact_check': 'Fact Checkers',
+                'expert': 'Expert Sources',
+                'document': 'Documents/Data',
+                'anonymous': 'Anonymous Sources',
+                'witness': 'Eyewitnesses',
+                'other': 'Other Sources'
+            };
+            return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
         }
     }
 
-    // Initialize and expose globally
+    // Override console.warn to help trace the source of the warning
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('Author section not found')) {
+            console.trace('Warning source traced:');
+        }
+        originalWarn.apply(console, args);
+    };
+
+    // Create and expose global instance
     window.UI = new UIController();
-    console.log('UI Controller initialized and ready');
+    console.log('UI Controller initialized with PDF export and auto-refresh');
+
+    // Add animation keyframes
+    if (!document.querySelector('style[data-component="ui-animations"]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-component', 'ui-animations');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.9;
+                    transform: scale(0.98);
+                }
+            }
+            
+            @keyframes fadeOut {
+                to {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+            }
+            
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+            
+            .toast {
+                animation: slideIn 0.3s ease-out;
+            }
+            
+            .refresh-analysis-btn {
+                transition: all 0.2s ease;
+                cursor: pointer;
+                background: #f3f4f6;
+                border: 1px solid #e5e7eb;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 0.875rem;
+                color: #4b5563;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .refresh-analysis-btn:hover {
+                background: #e5e7eb;
+                color: #1f2937;
+            }
+            
+            .refresh-analysis-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            
+            .export-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .analysis-card-standalone {
+                transition: all 0.3s ease;
+            }
+            
+            .analysis-card-standalone.expanded .card-details {
+                max-height: 2000px;
+                opacity: 1;
+            }
+            
+            .analysis-card-standalone .card-details {
+                max-height: 0;
+                opacity: 0;
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+            
+            .analyzer-card-minimized {
+                transform: scale(0.95);
+                opacity: 0.9;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
 })();
