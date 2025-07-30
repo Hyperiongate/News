@@ -540,152 +540,233 @@ class NewsExtractor:
         return 'No title found'
     
     def _extract_text(self, soup, url):
-        """Extract main article text"""
+        """Extract main article text with improved universal approach"""
         domain = urlparse(url).netloc.replace('www.', '')
         
-        # Remove unwanted elements
-        for elem in soup(['script', 'style', 'noscript', 'nav', 'header', 'footer', 'aside']):
+        # Remove unwanted elements first
+        for elem in soup(['script', 'style', 'noscript', 'nav', 'header', 'footer', 'aside', 
+                         'form', 'button', 'input', 'select', 'textarea']):
             elem.decompose()
         
-        # Domain-specific selectors - UPDATED WITH REUTERS
-        domain_selectors = {
-            'politico.com': [
-                '.story-text',
-                '[class*="story-text"]',
-                '.RichTextStoryBody',
-                'div[class*="RichTextStoryBody"]',
-                'div[class*="content-"]',
-                'div[class*="article-"]',
-                'section[data-type="text"]',
-                '.story-body'
-            ],
-            'cnn.com': [
-                '.zn-body__paragraph',
-                '.l-container',
-                '[class*="body__content"]',
-                '.article__content'
-            ],
-            'bbc.com': [
-                '[data-component="text-block"]',
-                '.story-body__inner',
-                '[class*="text-block"]',
-                '.article__body-content'
-            ],
-            'nytimes.com': [
-                '.StoryBodyCompanionColumn',
-                '.story-body',
-                '[class*="StoryBody"]',
-                '.article-body'
-            ],
-            'washingtonpost.com': [
-                '.article-body',
-                '.story-body',
-                '[class*="article-body"]'
-            ],
-            'reuters.com': [
-                '.article-body__content',
-                '[data-testid="article-body"]',
-                '.article__body',
-                '.StandardArticleBody_body',
-                '.ArticleBody__content',
-                '[class*="article-body"]',
-                '.story-content',
-                'div[class*="paragraph-"]',
-                '.Paragraph__component',
-                '[data-testid="paragraph"]',
-                '.text__text',
-                '[class*="__text__"]',
-                'div[data-testid="paragraph-0"]',
-                'div[data-testid="paragraph-1"]',
-                'div[data-testid="paragraph-2"]',
-                '.article-content',
-                'div[class*="Body__container"]',
-                '.article-wrap',
-                '.StandardArticle',
-                '[class*="ArticleBody"]',
-                '.paywall-article'
-            ]
-        }
-        
-        # Try domain-specific selectors first
-        article_text = ""
-        
-        if domain in domain_selectors:
-            for selector in domain_selectors[domain]:
-                elements = soup.select(selector)
-                for element in elements:
-                    paragraphs = element.find_all(['p', 'h2', 'h3', 'h4', 'blockquote'])
-                    if len(paragraphs) > 3:
-                        texts = []
-                        for p in paragraphs:
-                            text = p.get_text().strip()
-                            if text and len(text) > 20:
-                                texts.append(text)
-                        
-                        if texts:
-                            article_text = ' '.join(texts)
-                            if len(article_text) > 500:
-                                return article_text
-        
-        # Try generic selectors
-        generic_selectors = [
-            'article',
-            '[role="main"]',
-            'main',
-            '[class*="article-body"]',
-            '[class*="story-body"]', 
-            '[class*="content-body"]',
-            '[class*="post-body"]',
-            '[class*="entry-content"]',
-            '[class*="article-content"]',
-            '[class*="story-content"]',
-            '[id*="article-body"]',
-            '[id*="story-body"]',
-            '[itemprop="articleBody"]',
-            '.content',
-            '#content',
-            '.story',
-            '.post',
-            '.article',
-            '.prose',
-            '.body-copy'
+        # Remove elements with specific classes/ids that typically contain non-article content
+        noise_selectors = [
+            '[class*="comment"]', '[class*="sidebar"]', '[class*="widget"]',
+            '[class*="advertisement"]', '[class*="promo"]', '[class*="related"]',
+            '[class*="newsletter"]', '[class*="signup"]', '[class*="social"]',
+            '[id*="comment"]', '[id*="sidebar"]', '[id*="widget"]'
         ]
         
-        for selector in generic_selectors:
+        for selector in noise_selectors:
+            for elem in soup.select(selector):
+                elem.decompose()
+        
+        # Method 1: Try JSON-LD articleBody first
+        for script in soup.find_all('script', type='application/ld+json'):
             try:
-                article = soup.select_one(selector)
-                if article:
-                    paragraphs = article.find_all(['p', 'h2', 'h3', 'h4', 'blockquote'])
-                    if paragraphs:
-                        texts = []
-                        for p in paragraphs:
-                            if p.find_parent(['nav', 'menu']):
-                                continue
-                            text = p.get_text().strip()
-                            if text and len(text) > 20:
-                                texts.append(text)
-                        
-                        if texts:
-                            article_text = ' '.join(texts)
-                            if len(article_text) > 200:
-                                break
+                data = json.loads(script.string)
+                if isinstance(data, dict):
+                    if 'articleBody' in data and data['articleBody']:
+                        return data['articleBody']
+                    if '@graph' in data:
+                        for item in data['@graph']:
+                            if isinstance(item, dict) and 'articleBody' in item:
+                                return item['articleBody']
             except:
                 continue
         
-        # Fallback: get all paragraphs if no article container found
-        if not article_text or len(article_text) < 200:
-            paragraphs = soup.find_all('p')
+        # Method 2: Look for semantic HTML5 tags and common article containers
+        article_text = ""
+        
+        # Comprehensive list of selectors in priority order
+        universal_selectors = [
+            # Semantic HTML5
+            'article[role="main"]',
+            'article[itemtype*="Article"]',
+            'article[itemtype*="NewsArticle"]',
+            'article',
+            'main article',
+            'main [role="main"]',
+            'main',
+            
+            # Common class patterns (using contains to catch variations)
+            '[class*="article-body"]',
+            '[class*="article-content"]',
+            '[class*="article-text"]',
+            '[class*="story-body"]',
+            '[class*="story-content"]',
+            '[class*="story-text"]',
+            '[class*="post-body"]',
+            '[class*="post-content"]',
+            '[class*="entry-content"]',
+            '[class*="content-body"]',
+            '[class*="text-body"]',
+            '[class*="body-text"]',
+            
+            # ID patterns
+            '[id*="article-body"]',
+            '[id*="story-body"]',
+            '[id*="post-body"]',
+            '[id*="content-body"]',
+            
+            # Data attributes
+            '[data-component*="article"]',
+            '[data-component*="text"]',
+            '[data-testid*="article"]',
+            '[data-testid*="body"]',
+            
+            # Microdata
+            '[itemprop="articleBody"]',
+            '[itemprop="text"]',
+            
+            # Generic content areas
+            '.article',
+            '.story',
+            '.post',
+            '.content',
+            '.prose',
+            '.entry',
+            '.body',
+            '#article',
+            '#story',
+            '#content',
+            '#main-content',
+            
+            # WordPress common classes
+            '.entry-content',
+            '.post-content',
+            '.the-content',
+            
+            # Medium-style
+            '.postArticle-content',
+            '.section-content',
+            
+            # News site patterns
+            '.body-copy',
+            '.article-wrap',
+            '.story-wrap',
+            '.text-wrap'
+        ]
+        
+        # Try each selector and find the one with the most content
+        best_content = ""
+        best_content_length = 0
+        
+        for selector in universal_selectors:
+            try:
+                elements = soup.select(selector)
+                for element in elements[:3]:  # Check up to 3 matches per selector
+                    # Extract paragraphs, headers, lists, and blockquotes
+                    content_elements = element.find_all(['p', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                                                        'blockquote', 'ul', 'ol', 'li'])
+                    
+                    if len(content_elements) < 3:  # Skip if too few content elements
+                        continue
+                    
+                    texts = []
+                    for elem in content_elements:
+                        # Skip if element is inside a link or nav
+                        if elem.find_parent(['nav', 'menu', 'header', 'footer']):
+                            continue
+                        
+                        text = elem.get_text().strip()
+                        
+                        # Basic quality checks
+                        if len(text) < 20:  # Skip very short text
+                            continue
+                        if text.lower().startswith(('share', 'tweet', 'follow', 'subscribe')):
+                            continue
+                        if re.match(r'^(copyright|©)', text, re.IGNORECASE):
+                            continue
+                        
+                        texts.append(text)
+                    
+                    content = ' '.join(texts)
+                    
+                    # Keep the longest coherent content
+                    if len(content) > best_content_length and len(content) > 200:
+                        best_content = content
+                        best_content_length = len(content)
+                        
+                        # If we found substantial content (>2000 chars), we can stop
+                        if best_content_length > 2000:
+                            return best_content
+                            
+            except Exception as e:
+                logger.debug(f"Selector {selector} failed: {e}")
+                continue
+        
+        # If we found good content, return it
+        if best_content_length > 500:
+            return best_content
+        
+        # Method 3: Fallback - analyze paragraph distribution
+        # Find the container with the highest density of paragraphs
+        all_containers = soup.find_all(['div', 'section', 'article', 'main'])
+        
+        best_container = None
+        best_score = 0
+        
+        for container in all_containers:
+            paragraphs = container.find_all('p')
+            if len(paragraphs) < 3:
+                continue
+            
+            # Calculate a score based on paragraph count and average length
+            total_length = sum(len(p.get_text().strip()) for p in paragraphs)
+            avg_length = total_length / len(paragraphs) if paragraphs else 0
+            
+            # Score favors containers with many paragraphs of reasonable length
+            score = len(paragraphs) * (avg_length / 100) if avg_length > 50 else 0
+            
+            if score > best_score:
+                best_score = score
+                best_container = container
+        
+        if best_container:
             texts = []
-            for p in paragraphs[:100]:  # Limit to first 100 paragraphs
-                if p.find_parent(['nav', 'menu', 'header', 'footer']):
-                    continue
+            for p in best_container.find_all(['p', 'h2', 'h3', 'h4', 'blockquote']):
                 text = p.get_text().strip()
-                if text and len(text) > 50:
+                if text and len(text) > 20:
                     texts.append(text)
             
-            article_text = ' '.join(texts)
+            if texts:
+                return ' '.join(texts)
         
-        return article_text if article_text else 'No article text found'
+        # Method 4: Last resort - get all paragraphs
+        all_paragraphs = soup.find_all('p')
+        texts = []
+        
+        for p in all_paragraphs:
+            # Skip paragraphs in navigation, footers, etc.
+            if p.find_parent(['nav', 'menu', 'header', 'footer', 'aside']):
+                continue
+            
+            text = p.get_text().strip()
+            
+            # Quality checks
+            if len(text) < 50:  # Skip short paragraphs
+                continue
+            
+            # Skip obvious non-article content
+            lower_text = text.lower()
+            skip_phrases = ['cookie', 'privacy policy', 'terms of service', 'subscribe',
+                          'newsletter', 'follow us', 'share this', 'advertisement']
+            if any(phrase in lower_text for phrase in skip_phrases):
+                continue
+            
+            texts.append(text)
+            
+            # Stop if we have enough content
+            if len(' '.join(texts)) > 3000:
+                break
+        
+        article_text = ' '.join(texts) if texts else ""
+        
+        # Return what we found, or indicate failure
+        if article_text and len(article_text) > 200:
+            return article_text
+        else:
+            return "No article text found - the content may be behind a paywall or dynamically loaded"
     
     def _extract_author_ultimate(self, soup, html_text, title, article_text, domain):
         """ULTIMATE author extraction using every conceivable method"""
@@ -695,74 +776,7 @@ class NewsExtractor:
         # Store all candidates with confidence scores
         author_candidates = {}  # author -> confidence score
         
-        # METHOD 0: Domain-specific patterns - UPDATED WITH REUTERS
-        domain_patterns = {
-            'politico.com': [
-                r'<p[^>]*class="story-meta__authors"[^>]*>([^<]+)</p>',
-                r'<span[^>]*class="story-by-author"[^>]*>([^<]+)</span>',
-                r'<div[^>]*class="byline"[^>]*>([^<]+)</div>',
-                r'href="/staff/([^"]+)"[^>]*>([^<]+)</a>',
-                r'"authors":\s*\[([^\]]+)\]',
-                r'data-authors="([^"]+)"',
-                r'<address[^>]*>([^<]+)</address>',
-                r'class="vcard"[^>]*>([^<]+)<',
-                r'itemprop="author"[^>]*>([^<]+)<',
-                r'rel="author"[^>]*>([^<]+)<',
-                r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
-                r'<a[^>]+href="[^"]*\/people\/[^"]*"[^>]*>([^<]+)</a>'
-            ],
-            'cnn.com': [
-                r'class="byline__name"[^>]*>([^<]+)',
-                r'class="metadata__byline__author"[^>]*>([^<]+)',
-                r'"author"[^}]*"name":\s*"([^"]+)"'
-            ],
-            'bbc.com': [
-                r'<span[^>]*class="byline__name"[^>]*>([^<]+)</span>',
-                r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
-                r'<p[^>]*class="contributor[^>]*>([^<]+)</p>'
-            ],
-            'nytimes.com': [
-                r'itemprop="author"[^>]*>([^<]+)',
-                r'class="byline-author"[^>]*>([^<]+)',
-                r'"author"[^}]*"name":\s*"([^"]+)"'
-            ],
-            'washingtonpost.com': [
-                r'class="author-name"[^>]*>([^<]+)',
-                r'rel="author"[^>]*>([^<]+)',
-                r'"author"[^}]*"name":\s*"([^"]+)"'
-            ],
-            'reuters.com': [
-                r'By\s+([A-Z][a-z]+(?:\s+[A-Z\'][a-z]+){1,3})',
-                r'<a[^>]*href="[^"]*/authors/[^"]*"[^>]*>([^<]+)</a>',
-                r'<span[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)</span>',
-                r'"author"[^}]*"name":\s*"([^"]+)"',
-                r'<div[^>]*class="[^"]*byline[^"]*"[^>]*>([^<]+)</div>',
-                r'itemprop="author"[^>]*>([^<]+)',
-                r'data-testid="author-name"[^>]*>([^<]+)',
-                r'class="ArticleHeader__author"[^>]*>([^<]+)',
-                r'class="author-name"[^>]*>([^<]+)',
-                r'Reporting by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
-            ]
-        }
-        
-        # Apply domain-specific patterns
-        for pattern_domain, patterns in domain_patterns.items():
-            if pattern_domain in domain:
-                for pattern in patterns:
-                    try:
-                        matches = re.findall(pattern, html_text, re.IGNORECASE | re.DOTALL)
-                        for match in matches:
-                            if isinstance(match, tuple):
-                                match = match[-1]  # Take last group
-                            
-                            author = self._clean_author_name(match)
-                            if author and self._is_valid_author_name(author):
-                                author_candidates[author] = author_candidates.get(author, 0) + 10
-                                logger.info(f"  Found via domain pattern: {author}")
-                    except:
-                        continue
-        
-        # METHOD 1: JSON-LD structured data
+        # METHOD 1: JSON-LD structured data (most reliable)
         json_ld_scripts = soup.find_all('script', type='application/ld+json')
         for script in json_ld_scripts:
             try:
@@ -797,22 +811,56 @@ class NewsExtractor:
                         if self._is_valid_author_name(author):
                             author_candidates[author] = author_candidates.get(author, 0) + 8
         
-        # METHOD 3: Common byline patterns
+        # METHOD 3: Common byline patterns - EXPANDED
         byline_selectors = [
+            # Class selectors
             '[class*="author"]', '[class*="byline"]', '[class*="writer"]',
             '[class*="reporter"]', '[class*="contributor"]', '[class*="journalist"]',
             '[class*="by-line"]', '[class*="article-author"]', '[class*="post-author"]',
             '[class*="entry-author"]', '[class*="news-author"]', '[class*="story-author"]',
-            '[id*="author"]', '[id*="byline"]', '[itemprop="author"]',
-            '[rel="author"]', '[data-author]', '[data-byline]',
-            'address', '.by', '.writtenby', '.author-name', '.author-info',
-            '.byline-name', '.contributor', '.story-byline', '.article-byline',
-            '.content-author', '.post-meta-author', '.entry-meta-author',
-            '.story-meta__authors', '.story-meta', '.metadata', '.meta-author',
-            '.article-meta', '.post-meta', '.entry-meta', '.content-meta',
-            'span.vcard', 'p.vcard', 'div.vcard', '.h-card',
-            'a[href*="/author/"]', 'a[href*="/authors/"]', 'a[href*="/staff/"]',
-            'a[href*="/people/"]', 'a[href*="/contributors/"]'
+            '[class*="Author"]', '[class*="Byline"]', '[class*="Writer"]',
+            
+            # ID selectors
+            '[id*="author"]', '[id*="byline"]', '[id*="writer"]',
+            
+            # Semantic/microdata
+            '[itemprop="author"]',
+            '[rel="author"]',
+            '[data-author]',
+            '[data-byline]',
+            '[data-authors]',
+            
+            # Specific elements
+            'address',
+            '.by',
+            '.writtenby',
+            '.author-name',
+            '.author-info',
+            '.byline-name',
+            '.contributor',
+            '.story-byline',
+            '.article-byline',
+            '.content-author',
+            '.post-meta-author',
+            '.entry-meta-author',
+            '.metadata__byline',
+            '.article-meta',
+            
+            # Structured data
+            'span.vcard',
+            'p.vcard',
+            'div.vcard',
+            '.h-card',
+            
+            # Link patterns
+            'a[href*="/author/"]',
+            'a[href*="/authors/"]',
+            'a[href*="/staff/"]',
+            'a[href*="/people/"]',
+            'a[href*="/contributors/"]',
+            'a[href*="/profile/"]',
+            'a[href*="/journalist/"]',
+            'a[href*="/writer/"]'
         ]
         
         for selector in byline_selectors:
@@ -829,7 +877,7 @@ class NewsExtractor:
             except:
                 continue
         
-        # METHOD 4: "By" pattern in text
+        # METHOD 4: "By" pattern in text - ENHANCED
         by_patterns = [
             r'[Bb]y\s+([A-Z][a-z]+(?:\s+[A-Z\'][a-z]+){1,3})',
             r'[Ww]ritten\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
@@ -839,7 +887,10 @@ class NewsExtractor:
             r'–\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\s*$',
             r'—\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\s*$',
             r'Story by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-            r'From\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})'
+            r'Article by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
+            r'Written for .+ by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
+            r'From\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
+            r'Reporting by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})'
         ]
         
         # Search in HTML and article text
@@ -853,7 +904,7 @@ class NewsExtractor:
                     if author and self._is_valid_author_name(author):
                         author_candidates[author] = author_candidates.get(author, 0) + 6
         
-        # METHOD 5: Link patterns
+        # METHOD 5: Look for author in URL patterns
         author_link_patterns = [
             r'/author/([^/"]+)',
             r'/authors/([^/"]+)',
@@ -863,7 +914,8 @@ class NewsExtractor:
             r'/people/([^/"]+)',
             r'/by/([^/"]+)',
             r'/writer/([^/"]+)',
-            r'/journalist/([^/"]+)'
+            r'/journalist/([^/"]+)',
+            r'/columnist/([^/"]+)'
         ]
         
         for a_tag in soup.find_all('a', href=True):
@@ -873,7 +925,7 @@ class NewsExtractor:
             # Check link text first
             if link_text and self._is_valid_author_name(link_text):
                 # Higher score if link contains author-related path
-                if any(pattern in href for pattern in ['/author/', '/staff/', '/people/']):
+                if any(pattern in href for pattern in ['/author/', '/staff/', '/people/', '/profile/']):
                     author_candidates[link_text] = author_candidates.get(link_text, 0) + 6
                 else:
                     author_candidates[link_text] = author_candidates.get(link_text, 0) + 3
@@ -884,7 +936,7 @@ class NewsExtractor:
                 if match:
                     author_slug = match.group(1)
                     # Convert slug to name
-                    name = author_slug.replace('-', ' ').title()
+                    name = author_slug.replace('-', ' ').replace('_', ' ').title()
                     if self._is_valid_author_name(name):
                         author_candidates[name] = author_candidates.get(name, 0) + 3
         
@@ -913,6 +965,17 @@ class NewsExtractor:
                     author = author.strip()
                     if self._is_valid_author_name(author):
                         author_candidates[author] = author_candidates.get(author, 0) + 7
+        
+        # METHOD 7: Look near "By" text in visible page
+        by_elements = soup.find_all(text=re.compile(r'^\s*[Bb]y\s+'))
+        for elem in by_elements:
+            if elem.parent:
+                parent_text = elem.parent.get_text().strip()
+                match = re.match(r'[Bb]y\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})', parent_text)
+                if match:
+                    author = self._clean_author_name(match.group(1))
+                    if author and self._is_valid_author_name(author):
+                        author_candidates[author] = author_candidates.get(author, 0) + 5
         
         # Select best candidate
         if author_candidates:
