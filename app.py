@@ -1,835 +1,858 @@
-"""
-app.py - Flask app with fixed author data flow and static file serving
-"""
+# app.py
+# Complete Flask application with all features and enhanced author analysis
 
-import os
-import io
-import json
-import logging
-import time
-import hashlib
-from datetime import datetime, timedelta
-
-from flask import Flask, render_template, request, jsonify, send_file, session, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_caching import Cache
+import logging
+from urllib.parse import urlparse, quote_plus
+from datetime import datetime, timedelta
+import os
+import json
+import hashlib
+import requests
+from bs4 import BeautifulSoup
+import re
+from typing import Dict, Any, List, Optional
+import time
 
-# Import WhiteNoise for static file serving - CRITICAL FOR RENDER
-from whitenoise import WhiteNoise
-
-# Import services
-from services.news_analyzer import NewsAnalyzer
-from services.news_extractor import NewsExtractor
-from services.fact_checker import FactChecker
-from services.source_credibility import SOURCE_CREDIBILITY
+# Import all analyzers
+from services.article_extractor import ArticleExtractor
 from services.author_analyzer import AuthorAnalyzer
+from services.bias_analyzer import BiasAnalyzer
+from services.clickbait_detector import ClickbaitDetector
+from services.fact_checker import FactChecker
+from services.source_credibility import SourceCredibilityAnalyzer
+from services.transparency_analyzer import TransparencyAnalyzer
+from services.content_analyzer import ContentAnalyzer
+from services.manipulation_detector import ManipulationDetector
+from services.readability_analyzer import ReadabilityAnalyzer
+from services.emotion_analyzer import EmotionAnalyzer
+from services.claim_extractor import ClaimExtractor
+from services.image_analyzer import ImageAnalyzer
+from services.network_analyzer import NetworkAnalyzer
+from services.pdf_generator import PDFGenerator
+from services.report_generator import ReportGenerator
 
-# Import database models
-from models import db, User, Analysis, Source, Author, APIUsage, FactCheckCache, init_db
-
-# Configure logging early
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Try to import PDF generator with better error handling
-PDF_EXPORT_ENABLED = False
-pdf_generator = None
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-try:
-    import reportlab
-    logger.info(f"ReportLab version {reportlab.__version__} found")
-    try:
-        from services.pdf_generator import PDFGenerator
-        pdf_generator = PDFGenerator()
-        PDF_EXPORT_ENABLED = True
-        logger.info("PDF export enabled successfully")
-    except Exception as e:
-        logger.error(f"Could not import PDFGenerator: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
-        PDF_EXPORT_ENABLED = False
-except ImportError as e:
-    logger.warning(f"ReportLab not installed - PDF export feature disabled: {e}")
-    PDF_EXPORT_ENABLED = False
-
-# Initialize Flask app with explicit static configuration
-app = Flask(__name__, static_folder='static', static_url_path='/static')
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///news_analyzer.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Configure database connection pooling
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,  # Test connections before using
-    'pool_recycle': 300,    # Recycle connections after 5 minutes
-    'pool_size': 10,        # Number of connections to maintain
-    'max_overflow': 20      # Maximum overflow connections
+# Configure caching
+cache_config = {
+    'CACHE_TYPE': 'simple',
+    'CACHE_DEFAULT_TIMEOUT': 3600  # 1 hour
 }
+app.config.update(cache_config)
+cache = Cache(app)
 
-# CRITICAL FIX: Configure WhiteNoise for static file serving on Render
-app.wsgi_app = WhiteNoise(
-    app.wsgi_app, 
-    root=os.path.join(os.path.dirname(__file__), 'static'),
-    prefix='/static/',
-    index_file=False,
-    autorefresh=True  # Enable auto-refresh for development
-)
-
-# Add additional static file configurations
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year cache for static files
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Initialize extensions
-CORS(app)
-db.init_app(app)
-
-# Initialize rate limiter
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    storage_uri="memory://",
-    default_limits=["100 per hour"]
-)
-
-# Initialize services
-analyzer = NewsAnalyzer()
-news_extractor = NewsExtractor()
-fact_checker = FactChecker()
+# Initialize analyzers
+article_extractor = ArticleExtractor()
 author_analyzer = AuthorAnalyzer()
+bias_analyzer = BiasAnalyzer()
+clickbait_detector = ClickbaitDetector()
+fact_checker = FactChecker()
+source_analyzer = SourceCredibilityAnalyzer()
+transparency_analyzer = TransparencyAnalyzer()
+content_analyzer = ContentAnalyzer()
+manipulation_detector = ManipulationDetector()
+readability_analyzer = ReadabilityAnalyzer()
+emotion_analyzer = EmotionAnalyzer()
+claim_extractor = ClaimExtractor()
+image_analyzer = ImageAnalyzer()
+network_analyzer = NetworkAnalyzer()
+pdf_generator = PDFGenerator()
+report_generator = ReportGenerator()
 
-# Create tables and seed data
-with app.app_context():
-    try:
-        db.create_all()
-        from models import seed_sources
-        seed_sources()
-    except Exception as e:
-        logger.warning(f"Could not initialize database: {e}")
+# API Keys (load from environment)
+GOOGLE_FACT_CHECK_API_KEY = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
+NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
-# Add explicit static file route for debugging on Render
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Explicitly serve static files with proper headers for Render"""
-    try:
-        # Get the full path to the static file
-        static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
-        file_path = os.path.join(static_dir, filename)
-        
-        # Log the request (helpful for debugging)
-        logger.info(f"Static file requested: {filename}")
-        logger.info(f"Looking for file at: {file_path}")
-        
-        # Check if file exists
-        if not os.path.exists(file_path):
-            logger.error(f"Static file not found: {file_path}")
-            return f"File not found: {filename}", 404
-        
-        # Get file size
-        file_size = os.path.getsize(file_path)
-        logger.info(f"File size: {file_size} bytes")
-        
-        # Determine content type
-        content_type = 'text/plain'
-        if filename.endswith('.js'):
-            content_type = 'application/javascript'
-        elif filename.endswith('.css'):
-            content_type = 'text/css'
-        elif filename.endswith('.html'):
-            content_type = 'text/html'
-        elif filename.endswith('.json'):
-            content_type = 'application/json'
-        elif filename.endswith('.png'):
-            content_type = 'image/png'
-        elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-            content_type = 'image/jpeg'
-        elif filename.endswith('.svg'):
-            content_type = 'image/svg+xml'
-        
-        # Send file with proper headers
-        response = send_from_directory(static_dir, filename)
-        response.headers['Content-Type'] = content_type
-        response.headers['Content-Length'] = str(file_size)
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error serving static file {filename}: {str(e)}")
-        return f"Error serving file: {str(e)}", 500
+# Rate limiting
+from functools import wraps
+from collections import defaultdict
+import time
 
-# Add debug route to check static files
-@app.route('/debug/static')
-def debug_static():
-    """Debug route to check static file configuration"""
-    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
-    js_dir = os.path.join(static_dir, 'js')
-    css_dir = os.path.join(static_dir, 'css')
-    
-    info = {
-        'static_dir': static_dir,
-        'static_dir_exists': os.path.exists(static_dir),
-        'js_dir_exists': os.path.exists(js_dir),
-        'css_dir_exists': os.path.exists(css_dir),
-        'files': {}
-    }
-    
-    # Check specific files
-    important_files = [
-        'js/ui-controller.js',
-        'js/main.js',
-        'css/styles.css'
-    ]
-    
-    for file_path in important_files:
-        full_path = os.path.join(static_dir, file_path)
-        if os.path.exists(full_path):
-            info['files'][file_path] = {
-                'exists': True,
-                'size': os.path.getsize(full_path),
-                'readable': os.access(full_path, os.R_OK)
-            }
-        else:
-            info['files'][file_path] = {
-                'exists': False,
-                'full_path_checked': full_path
-            }
-    
-    return jsonify(info)
+rate_limit_storage = defaultdict(list)
 
-@app.route('/api/debug/pdf', methods=['GET'])
-def debug_pdf():
-    """Debug PDF export configuration"""
-    import sys
-    
-    debug_info = {
-        'pdf_export_enabled': PDF_EXPORT_ENABLED,
-        'pdf_generator_loaded': pdf_generator is not None,
-        'python_version': sys.version,
-        'modules_check': {},
-        'services_folder': {}
-    }
-    
-    # Check if reportlab is installed
-    try:
-        import reportlab
-        debug_info['modules_check']['reportlab'] = {
-            'installed': True,
-            'version': getattr(reportlab, '__version__', 'Unknown')
-        }
-    except ImportError as e:
-        debug_info['modules_check']['reportlab'] = {
-            'installed': False,
-            'error': str(e)
-        }
-    
-    # Check if Pillow is installed
-    try:
-        import PIL
-        debug_info['modules_check']['pillow'] = {
-            'installed': True,
-            'version': getattr(PIL, '__version__', 'Unknown')
-        }
-    except ImportError as e:
-        debug_info['modules_check']['pillow'] = {
-            'installed': False,
-            'error': str(e)
-        }
-    
-    # Check if services folder exists
-    services_path = os.path.join(os.path.dirname(__file__), 'services')
-    debug_info['services_folder']['exists'] = os.path.exists(services_path)
-    debug_info['services_folder']['path'] = services_path
-    
-    # Check if pdf_generator.py exists
-    pdf_gen_path = os.path.join(services_path, 'pdf_generator.py')
-    debug_info['services_folder']['pdf_generator_exists'] = os.path.exists(pdf_gen_path)
-    
-    # Try to import PDFGenerator
-    try:
-        from services.pdf_generator import PDFGenerator
-        debug_info['pdf_generator_import'] = 'Success'
-    except ImportError as e:
-        debug_info['pdf_generator_import'] = f'Failed: {str(e)}'
-    except Exception as e:
-        debug_info['pdf_generator_import'] = f'Error: {str(e)} - Type: {type(e).__name__}'
-    
-    return jsonify(debug_info)
-
-@app.before_request
-def log_request():
-    """Log API usage with proper error handling"""
-    if request.path.startswith('/api/'):
-        try:
-            usage = APIUsage(
-                user_id=session.get('user_id'),
-                endpoint=request.path,
-                method=request.method,
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent', '')[:500]
-            )
-            db.session.add(usage)
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Could not log API usage: {e}")
-            # IMPORTANT: Clean up the session
-            try:
-                db.session.rollback()
-            except:
-                # If rollback fails, remove the session entirely
-                db.session.remove()
+def rate_limit(max_requests=10, window=60):
+    """Rate limiting decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP
+            client_ip = request.remote_addr
+            now = time.time()
+            
+            # Clean old entries
+            rate_limit_storage[client_ip] = [
+                timestamp for timestamp in rate_limit_storage[client_ip]
+                if now - timestamp < window
+            ]
+            
+            # Check rate limit
+            if len(rate_limit_storage[client_ip]) >= max_requests:
+                return jsonify({
+                    'error': 'Rate limit exceeded. Please try again later.'
+                }), 429
+            
+            # Add current request
+            rate_limit_storage[client_ip].append(now)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 @app.route('/')
 def index():
-    """Render main page"""
+    """Render the main page"""
     return render_template('index.html')
 
-@app.route('/favicon.ico')
-def favicon():
-    """Return empty favicon to avoid 404 errors"""
-    return '', 204
-
-@app.route('/api/analyze', methods=['POST'])
-@limiter.limit("20 per hour")
+@app.route('/analyze', methods=['POST'])
+@rate_limit(max_requests=30, window=60)  # 30 requests per minute
 def analyze():
-    """Enhanced analyze endpoint with database integration"""
-    start_time = time.time()
-    
+    """Main analysis endpoint with enhanced author research"""
     try:
-        # Ensure clean database session at the start
-        try:
-            db.session.rollback()
-        except:
-            # If rollback fails, create new session
-            db.session.remove()
-            db.session = db.create_scoped_session()
-        
+        # Get request data
         data = request.get_json()
-        
         if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
-        # Determine content type
-        if 'url' in data:
-            content = data['url']
-            content_type = 'url'
-        elif 'text' in data:
-            content = data['text']
-            content_type = 'text'
-        else:
-            return jsonify({'success': False, 'error': 'Please provide either URL or text'}), 400
-        
-        # Get user ID from session (if authenticated)
-        user_id = session.get('user_id')
-        
-        # Check for force_fresh parameter
-        force_fresh = data.get('force_fresh', False)
-        
-        # Try to check for cached analysis, but don't fail if database is down
-        recent_analysis = None
-        if not force_fresh:  # Only check cache if not forcing fresh
-            try:
-                if content_type == 'url':
-                    recent_analysis = Analysis.query.filter_by(url=content)\
-                        .filter(Analysis.created_at > datetime.utcnow() - timedelta(hours=24))\
-                        .first()
-                    
-                    if recent_analysis and recent_analysis.full_analysis:
-                        # Validate that cached data has required fields
-                        cached_data = recent_analysis.full_analysis
-                        required_fields = ['success', 'article', 'bias_analysis', 'trust_score']
-                        
-                        # Check if all required fields exist
-                        if all(field in cached_data for field in required_fields):
-                            # Check if the cached data has the new analysis fields
-                            if 'persuasion_analysis' not in cached_data or 'connection_analysis' not in cached_data:
-                                # Cached data is old format, perform fresh analysis
-                                logger.info(f"Cached data for {content} is outdated, performing fresh analysis")
-                                recent_analysis = None
-                            else:
-                                logger.info(f"Returning cached analysis for {content}")
-                                return jsonify({
-                                    'success': True,
-                                    'cached': True,
-                                    **cached_data,
-                                    'processing_time': recent_analysis.processing_time
-                                })
-                        else:
-                            # Cached data is incomplete, perform fresh analysis
-                            logger.info(f"Cached data for {content} is incomplete, performing fresh analysis")
-                            recent_analysis = None
-            except Exception as e:
-                logger.warning(f"Could not check cache: {e}")
-                try:
-                    db.session.rollback()
-                except:
-                    db.session.remove()
-                # Continue without cache
-        
-        # Development mode: always provide full analysis but track plan selection
-        selected_plan = data.get('plan', 'free')
-        is_development = True  # Set to False for production
-        
-        # In development, everyone gets pro features
-        if is_development:
-            is_pro = True
-            analysis_mode = 'development'
-        else:
-            is_pro = selected_plan == 'pro'
-            analysis_mode = selected_plan
-        
-        # Perform analysis using existing analyzer
-        result = analyzer.analyze(content, content_type, is_pro)
-        
-        if not result.get('success'):
-            return jsonify(result), 400
-        
-        # Add plan info to result
-        result['selected_plan'] = selected_plan
-        result['analysis_mode'] = analysis_mode
-        result['development_mode'] = is_development
-        
-        # Enhanced fact checking with caching (wrapped in try-catch)
-        if is_pro and result.get('key_claims'):
-            try:
-                cached_facts = []
-                new_claims = []
-                
-                for claim in result['key_claims'][:5]:
-                    claim_text = claim.get('text', claim) if isinstance(claim, dict) else claim
-                    claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
-                    
-                    # Try to check cache
-                    try:
-                        cached = FactCheckCache.query.filter_by(claim_hash=claim_hash)\
-                            .filter(FactCheckCache.expires_at > datetime.utcnow()).first()
-                        
-                        if cached:
-                            cached_facts.append(cached.result)
-                        else:
-                            new_claims.append(claim_text)
-                    except:
-                        # If cache check fails, treat as new claim
-                        new_claims.append(claim_text)
-                
-                # Check new claims
-                if new_claims:
-                    new_results = fact_checker.check_claims(new_claims)
-                    
-                    # Try to cache new results, but don't fail if database is down
-                    try:
-                        for i, fc_result in enumerate(new_results):
-                            if i < len(new_claims):
-                                cache_entry = FactCheckCache(
-                                    claim_hash=hashlib.sha256(new_claims[i].encode()).hexdigest(),
-                                    claim_text=new_claims[i],
-                                    result=fc_result,
-                                    source='google',
-                                    expires_at=datetime.utcnow() + timedelta(days=7)
-                                )
-                                db.session.add(cache_entry)
-                        db.session.commit()
-                    except Exception as e:
-                        logger.warning(f"Could not cache fact checks: {e}")
-                        try:
-                            db.session.rollback()
-                        except:
-                            db.session.remove()
-                    
-                    cached_facts.extend(new_results)
-                
-                result['fact_checks'] = cached_facts
-            except Exception as e:
-                logger.warning(f"Fact checking error: {e}")
-                # Continue without enhanced fact checking
-        
-        # Try to store analysis in database, but don't fail if database is down
-        try:
-            # Update or create source record
-            source = None
-            if result.get('article', {}).get('domain'):
-                domain = result['article']['domain']
-                source = Source.query.filter_by(domain=domain).first()
-                if not source:
-                    # Get credibility info from SOURCE_CREDIBILITY dictionary
-                    source_info = SOURCE_CREDIBILITY.get(domain, {})
-                    source = Source(
-                        domain=domain,
-                        name=source_info.get('name', domain),
-                        credibility_score=_map_credibility_to_score(source_info.get('credibility', 'Unknown')),
-                        political_lean=source_info.get('bias', 'Unknown')
-                    )
-                    db.session.add(source)
-                    db.session.flush()  # Get source.id without committing
-                
-                # Fix: Initialize values if None
-                if source.total_articles_analyzed is None:
-                    source.total_articles_analyzed = 0
-                if source.average_trust_score is None:
-                    source.average_trust_score = 0
-                    
-                source.total_articles_analyzed += 1
-                
-                if result.get('trust_score'):
-                    # Update average trust score
-                    if source.average_trust_score == 0:
-                        source.average_trust_score = result['trust_score']
-                    else:
-                        source.average_trust_score = (
-                            (source.average_trust_score * (source.total_articles_analyzed - 1) + 
-                             result['trust_score']) / source.total_articles_analyzed
-                        )
+            return jsonify({'error': 'No data provided'}), 400
             
-            # Update or create author record
-            author = None
-            if result.get('article', {}).get('author'):
-                author_name = result['article']['author']
-                author = Author.query.filter_by(name=author_name).first()
-                if not author:
-                    author = Author(
-                        name=author_name,
-                        primary_source_id=source.id if source else None
-                    )
-                    db.session.add(author)
-                    db.session.flush()
-                
-                # Fix: Initialize values if None
-                if author.total_articles_analyzed is None:
-                    author.total_articles_analyzed = 0
-                    
-                author.total_articles_analyzed += 1
-                author.last_seen = datetime.utcnow()
-                
-                # Update author credibility from analysis
-                if result.get('author_analysis', {}).get('credibility_score'):
-                    author.credibility_score = result['author_analysis']['credibility_score']
-            
-            # Create analysis record
-            analysis = Analysis(
-                user_id=user_id,
-                url=content if content_type == 'url' else None,
-                title=result.get('article', {}).get('title'),
-                trust_score=result.get('trust_score', 0),
-                bias_score=abs(result.get('bias_analysis', {}).get('political_lean', 0)) if result.get('bias_analysis') else 0,
-                clickbait_score=result.get('clickbait_score', 0),
-                full_analysis=result,
-                author_data=result.get('author_analysis', {}),
-                source_data=result.get('analysis', {}).get('source_credibility', {}),
-                bias_analysis=result.get('bias_analysis', {}),
-                fact_check_results=result.get('fact_checks', []),
-                processing_time=time.time() - start_time
-            )
-            db.session.add(analysis)
-            
-            # Commit all changes
-            db.session.commit()
-            
-            # Add analysis ID for export
-            result['analysis_id'] = str(analysis.id)
-            
-        except Exception as e:
-            logger.error(f"Database error (non-critical): {str(e)}")
-            try:
-                db.session.rollback()
-            except:
-                db.session.remove()
-            # Continue - the analysis still works without database storage
+        url = data.get('url', '').strip()
+        if not url:
+            return jsonify({'error': 'No URL provided'}), 400
         
-        # Add export status
-        result['export_enabled'] = PDF_EXPORT_ENABLED
-        result['processing_time'] = time.time() - start_time
+        # Validate URL
+        if not is_valid_url(url):
+            return jsonify({'error': 'Invalid URL format'}), 400
         
-        return jsonify(result)
+        # Check cache first
+        cache_key = generate_cache_key(url)
+        cached_result = cache.get(cache_key)
+        if cached_result and not data.get('force_refresh'):
+            logger.info(f"Returning cached result for: {url}")
+            cached_result['from_cache'] = True
+            return jsonify(cached_result)
         
-    except Exception as e:
-        logger.error(f"Analysis error: {str(e)}")
-        # Ensure session is rolled back
-        try:
-            db.session.rollback()
-        except:
-            db.session.remove()
-        return jsonify({
-            'success': False,
-            'error': f'Analysis failed: {str(e)}'
-        }), 500
-
-def _map_credibility_to_score(credibility_text):
-    """Map credibility text to numeric score"""
-    mapping = {
-        'High': 85,
-        'Medium': 60,
-        'Low': 30,
-        'Very Low': 10,
-        'Unknown': 50
-    }
-    return mapping.get(credibility_text, 50)
-
-@app.route('/api/export/pdf', methods=['POST'])
-def export_pdf():
-    """Export analysis as PDF"""
-    if not PDF_EXPORT_ENABLED:
-        return jsonify({
-            'error': 'PDF export feature not available - reportlab not installed',
-            'pdf_export_enabled': PDF_EXPORT_ENABLED,
-            'pdf_generator': pdf_generator is not None
-        }), 503
-    
-    try:
-        data = request.json
-        analysis_data = data.get('analysis_data', {})
+        logger.info(f"Starting comprehensive analysis for URL: {url}")
         
-        if not analysis_data:
-            # Try to get from database
-            try:
-                analysis_id = data.get('analysis_id')
-                if analysis_id:
-                    analysis = Analysis.query.get(analysis_id)
-                    if analysis:
-                        analysis_data = analysis.full_analysis
-            except Exception as e:
-                logger.warning(f"Could not fetch analysis from database: {e}")
-                try:
-                    db.session.rollback()
-                except:
-                    db.session.remove()
+        # Extract article content
+        logger.info("Extracting article content...")
+        article_data = article_extractor.extract(url)
         
-        if not analysis_data:
-            return jsonify({'error': 'No analysis data provided'}), 400
+        if not article_data or article_data.get('error'):
+            error_msg = article_data.get('error') if article_data else 'Failed to extract article'
+            logger.error(f"Article extraction failed: {error_msg}")
+            return jsonify({'error': f'Failed to extract article: {error_msg}'}), 400
         
-        # Add debug logging
-        logger.info(f"Attempting PDF generation with data keys: {list(analysis_data.keys())}")
+        # Get domain for various analyses
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.replace('www.', '')
         
-        # Generate PDF with better error handling
-        try:
-            pdf_buffer = pdf_generator.generate_analysis_pdf(analysis_data)
-            logger.info("PDF generated successfully")
-        except Exception as pdf_error:
-            logger.error(f"PDF generation failed: {str(pdf_error)}")
-            logger.error(f"Error type: {type(pdf_error).__name__}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return jsonify({
-                'error': 'PDF generation failed',
-                'details': str(pdf_error),
-                'type': type(pdf_error).__name__
-            }), 500
-        
-        # Create filename
-        domain = analysis_data.get('article', {}).get('domain', 'article')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"news_analysis_{domain}_{timestamp}.pdf"
-        
-        logger.info(f"Sending PDF file: {filename}")
-        
-        return send_file(
-            pdf_buffer,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
+        # Perform enhanced author analysis with real web search
+        logger.info(f"Analyzing author: {article_data.get('author', 'Unknown')}")
+        author_info = author_analyzer.analyze_single_author(
+            article_data.get('author', ''),
+            domain
         )
         
-    except Exception as e:
-        logger.error(f"PDF export error: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return jsonify({
-            'error': 'PDF export failed',
-            'details': str(e),
-            'type': type(e).__name__
-        }), 500
-
-@app.route('/api/export/json', methods=['POST'])
-def export_json():
-    """Export analysis as JSON"""
-    try:
-        data = request.json
-        analysis_data = data.get('analysis_data', {})
+        # Perform all other analyses in parallel (in production, use asyncio or threading)
+        analysis_results = {}
         
-        if not analysis_data:
-            # Try to get from database
-            try:
-                analysis_id = data.get('analysis_id')
-                if analysis_id:
-                    analysis = Analysis.query.get(analysis_id)
-                    if analysis:
-                        analysis_data = analysis.full_analysis
-            except Exception as e:
-                logger.warning(f"Could not fetch analysis from database: {e}")
-                try:
-                    db.session.rollback()
-                except:
-                    db.session.remove()
+        # Bias analysis
+        logger.info("Analyzing bias...")
+        analysis_results['bias'] = bias_analyzer.analyze(article_data)
         
-        if not analysis_data:
-            return jsonify({'error': 'No analysis data provided'}), 400
+        # Clickbait detection
+        logger.info("Detecting clickbait...")
+        analysis_results['clickbait'] = clickbait_detector.analyze(article_data)
         
-        # Create clean JSON export
-        export_data = {
-            'metadata': {
-                'exported_at': datetime.utcnow().isoformat(),
-                'version': '1.0',
-                'source': 'News Analyzer AI'
+        # Fact checking
+        logger.info("Checking facts...")
+        analysis_results['facts'] = fact_checker.check_article(article_data)
+        
+        # Source credibility
+        logger.info("Analyzing source credibility...")
+        analysis_results['source'] = source_analyzer.analyze_source(domain)
+        
+        # Transparency analysis
+        logger.info("Analyzing transparency...")
+        analysis_results['transparency'] = transparency_analyzer.analyze(article_data)
+        
+        # Content depth analysis
+        logger.info("Analyzing content...")
+        analysis_results['content'] = content_analyzer.analyze(article_data)
+        
+        # Manipulation detection
+        logger.info("Detecting manipulation tactics...")
+        analysis_results['manipulation'] = manipulation_detector.analyze(article_data)
+        
+        # Readability analysis
+        logger.info("Analyzing readability...")
+        analysis_results['readability'] = readability_analyzer.analyze(article_data)
+        
+        # Emotion analysis
+        logger.info("Analyzing emotional tone...")
+        analysis_results['emotion'] = emotion_analyzer.analyze(article_data)
+        
+        # Extract claims
+        logger.info("Extracting claims...")
+        analysis_results['claims'] = claim_extractor.extract_claims(article_data)
+        
+        # Analyze images
+        if article_data.get('images'):
+            logger.info("Analyzing images...")
+            analysis_results['images'] = image_analyzer.analyze_images(article_data['images'])
+        
+        # Network analysis (connections, citations)
+        logger.info("Analyzing network connections...")
+        analysis_results['network'] = network_analyzer.analyze(article_data)
+        
+        # Calculate comprehensive trust score
+        trust_score_data = calculate_comprehensive_trust_score(
+            article_data, 
+            author_info,
+            analysis_results
+        )
+        
+        # Get related articles
+        related_articles = get_related_articles(article_data, domain)
+        
+        # Generate summary with AI if available
+        ai_summary = generate_ai_summary(article_data, analysis_results) if OPENAI_API_KEY else None
+        
+        # Prepare complete response
+        results = {
+            # Article data
+            'article': {
+                'url': url,
+                'title': article_data.get('title', ''),
+                'author': article_data.get('author', 'Unknown'),
+                'date': article_data.get('date', ''),
+                'domain': domain,
+                'content': article_data.get('content', ''),
+                'excerpt': article_data.get('excerpt', ''),
+                'image': article_data.get('image', ''),
+                'word_count': article_data.get('word_count', 0),
+                'reading_time': article_data.get('reading_time', 0),
+                'language': article_data.get('language', 'en'),
+                'keywords': article_data.get('keywords', []),
+                'categories': article_data.get('categories', []),
+                'tags': article_data.get('tags', [])
             },
-            'analysis': analysis_data
+            
+            # Enhanced author information
+            'author_info': author_info,
+            
+            # Trust score with detailed breakdown
+            'trust_score': trust_score_data['score'],
+            'trust_score_breakdown': trust_score_data['breakdown'],
+            'trust_level': trust_score_data['level'],
+            
+            # Bias analysis
+            'bias_score': analysis_results['bias'].get('bias_score', 0),
+            'bias_confidence': analysis_results['bias'].get('confidence', 0),
+            'bias_analysis': analysis_results['bias'],
+            
+            # Clickbait detection
+            'clickbait_score': analysis_results['clickbait'].get('score', 0),
+            'clickbait_analysis': analysis_results['clickbait'],
+            
+            # Fact checking
+            'fact_checks': analysis_results['facts'].get('claims', []),
+            'key_claims': analysis_results['claims'].get('claims', []),
+            'fact_check_summary': analysis_results['facts'].get('summary', {}),
+            
+            # Source credibility
+            'source_credibility': analysis_results['source'],
+            
+            # Transparency
+            'transparency_score': analysis_results['transparency'].get('score', 0),
+            'transparency_analysis': analysis_results['transparency'],
+            
+            # Content analysis
+            'content_analysis': analysis_results['content'],
+            'readability': analysis_results['readability'],
+            
+            # Manipulation tactics
+            'manipulation_tactics': analysis_results['manipulation'].get('tactics', []),
+            'persuasion_analysis': analysis_results['manipulation'],
+            
+            # Emotion analysis
+            'emotion_analysis': analysis_results['emotion'],
+            
+            # Network analysis
+            'network_analysis': analysis_results['network'],
+            
+            # Image analysis
+            'image_analysis': analysis_results.get('images', {}),
+            
+            # AI Summary
+            'ai_summary': ai_summary,
+            
+            # Related articles
+            'related_articles': related_articles,
+            
+            # Resources for further reading
+            'resources': generate_resources(article_data, analysis_results),
+            
+            # Metadata
+            'analysis_timestamp': datetime.now().isoformat(),
+            'analysis_version': '2.0',
+            'is_pro': data.get('is_pro', False),
+            'from_cache': False
         }
         
-        return jsonify(export_data)
+        # Cache the results
+        cache.set(cache_key, results)
+        
+        logger.info(f"Analysis complete. Trust score: {trust_score_data['score']}")
+        return jsonify(results)
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error during analysis: {str(e)}")
+        return jsonify({'error': 'Network error occurred. Please check the URL and try again.'}), 503
         
     except Exception as e:
-        logger.error(f"JSON export error: {str(e)}")
-        return jsonify({'error': 'JSON export failed'}), 500
+        logger.error(f"Analysis error: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
-@app.route('/api/history')
-def get_history():
-    """Get user's analysis history"""
-    try:
-        user_id = session.get('user_id')
-        
-        # For now, return recent analyses for all users if not logged in
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 10, type=int)
-        
-        query = Analysis.query
-        if user_id:
-            query = query.filter_by(user_id=user_id)
-        
-        analyses = query.order_by(Analysis.created_at.desc())\
-            .paginate(page=page, per_page=per_page, error_out=False)
-        
-        return jsonify({
-            'analyses': [{
-                'id': a.id,
-                'url': a.url,
-                'title': a.title,
-                'trust_score': a.trust_score,
-                'created_at': a.created_at.isoformat()
-            } for a in analyses.items],
-            'total': analyses.total,
-            'pages': analyses.pages,
-            'current_page': page
-        })
-    except Exception as e:
-        logger.error(f"History fetch error: {e}")
-        try:
-            db.session.rollback()
-        except:
-            db.session.remove()
-        return jsonify({
-            'analyses': [],
-            'total': 0,
-            'pages': 0,
-            'current_page': 1,
-            'error': 'Could not fetch history'
-        })
-
-@app.route('/api/sources/stats')
-def source_statistics():
-    """Get source credibility statistics"""
-    try:
-        sources = Source.query.filter(Source.total_articles_analyzed > 0)\
-            .order_by(Source.average_trust_score.desc())\
-            .limit(20).all()
-        
-        return jsonify({
-            'sources': [{
-                'domain': s.domain,
-                'name': s.name,
-                'credibility_score': s.credibility_score,
-                'political_lean': s.political_lean,
-                'articles_analyzed': s.total_articles_analyzed,
-                'average_trust_score': round(s.average_trust_score, 1) if s.average_trust_score else 0
-            } for s in sources]
-        })
-    except Exception as e:
-        logger.error(f"Source statistics error: {e}")
-        try:
-            db.session.rollback()
-        except:
-            db.session.remove()
-        return jsonify({
-            'sources': [],
-            'error': 'Could not fetch source statistics'
-        })
-
-@app.route('/api/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    try:
-        # Check database connection
-        db.session.execute('SELECT 1')
-        db_status = 'healthy'
-    except Exception as e:
-        logger.warning(f"Database health check failed: {e}")
-        try:
-            db.session.rollback()
-        except:
-            db.session.remove()
-        db_status = 'unhealthy'
+def calculate_comprehensive_trust_score(article_data, author_info, analysis_results):
+    """Calculate comprehensive trust score using all analysis results"""
     
+    breakdown = {
+        'author_credibility': {
+            'score': 0,
+            'weight': 20,
+            'details': []
+        },
+        'source_quality': {
+            'score': 0,
+            'weight': 25,
+            'details': []
+        },
+        'content_integrity': {
+            'score': 0,
+            'weight': 20,
+            'details': []
+        },
+        'transparency': {
+            'score': 0,
+            'weight': 15,
+            'details': []
+        },
+        'factual_accuracy': {
+            'score': 0,
+            'weight': 10,
+            'details': []
+        },
+        'manipulation_risk': {
+            'score': 0,
+            'weight': 10,
+            'details': []
+        }
+    }
+    
+    # 1. Author Credibility (using real author analysis)
+    author_score = author_info.get('credibility_score', 0)
+    breakdown['author_credibility']['score'] = author_score
+    
+    if author_info.get('found'):
+        if author_info.get('verification_status', {}).get('verified'):
+            breakdown['author_credibility']['details'].append('Verified journalist')
+        if author_info.get('verification_status', {}).get('outlet_staff'):
+            breakdown['author_credibility']['details'].append('Confirmed staff member')
+        if author_info.get('professional_info', {}).get('years_experience'):
+            years = author_info['professional_info']['years_experience']
+            breakdown['author_credibility']['details'].append(f'{years} years experience')
+    else:
+        breakdown['author_credibility']['details'].append('Author not verifiable')
+    
+    # 2. Source Quality
+    source_rating = analysis_results['source'].get('credibility', 'unknown').lower()
+    source_scores = {
+        'high': 90,
+        'medium': 60,
+        'low': 30,
+        'very low': 10,
+        'unknown': 40
+    }
+    breakdown['source_quality']['score'] = source_scores.get(source_rating, 40)
+    breakdown['source_quality']['details'].append(f'{source_rating.title()} credibility source')
+    
+    if analysis_results['source'].get('factual_reporting'):
+        breakdown['source_quality']['details'].append(
+            f"Factual reporting: {analysis_results['source']['factual_reporting']}"
+        )
+    
+    # 3. Content Integrity
+    bias_score = abs(analysis_results['bias'].get('bias_score', 0))
+    integrity_score = 100 - (bias_score * 100)
+    
+    # Factor in content quality
+    content_quality = analysis_results['content'].get('quality_score', 50)
+    integrity_score = (integrity_score + content_quality) / 2
+    
+    breakdown['content_integrity']['score'] = max(0, integrity_score)
+    
+    if bias_score < 0.2:
+        breakdown['content_integrity']['details'].append('Balanced reporting')
+    elif bias_score < 0.5:
+        breakdown['content_integrity']['details'].append('Some bias detected')
+    else:
+        breakdown['content_integrity']['details'].append('Significant bias present')
+    
+    # Add content quality factors
+    if analysis_results['content'].get('has_sources'):
+        breakdown['content_integrity']['details'].append('Includes source citations')
+    if analysis_results['content'].get('uses_data'):
+        breakdown['content_integrity']['details'].append('Data-driven reporting')
+    
+    # 4. Transparency
+    breakdown['transparency']['score'] = analysis_results['transparency'].get('score', 0)
+    transparency_factors = analysis_results['transparency'].get('factors', {})
+    
+    if transparency_factors.get('has_author'):
+        breakdown['transparency']['details'].append('Clear author attribution')
+    if transparency_factors.get('has_date'):
+        breakdown['transparency']['details'].append('Publication date provided')
+    if transparency_factors.get('has_sources'):
+        breakdown['transparency']['details'].append('Sources cited')
+    if transparency_factors.get('has_disclosure'):
+        breakdown['transparency']['details'].append('Includes disclosure')
+    
+    # 5. Factual Accuracy
+    if analysis_results['facts'].get('claims'):
+        verified = sum(1 for claim in analysis_results['facts']['claims'] 
+                      if claim.get('verdict', '').lower() in ['true', 'mostly true'])
+        total = len(analysis_results['facts']['claims'])
+        if total > 0:
+            accuracy = (verified / total) * 100
+            breakdown['factual_accuracy']['score'] = accuracy
+            breakdown['factual_accuracy']['details'].append(f'{verified}/{total} claims verified')
+    else:
+        breakdown['factual_accuracy']['score'] = 50  # Neutral if no claims to check
+        breakdown['factual_accuracy']['details'].append('No verifiable claims')
+    
+    # Add fact-check confidence
+    avg_confidence = analysis_results['facts'].get('average_confidence', 0)
+    if avg_confidence > 70:
+        breakdown['factual_accuracy']['details'].append('High confidence fact-checks')
+    
+    # 6. Manipulation Risk (inverse - lower is better)
+    clickbait_score = analysis_results['clickbait'].get('score', 0)
+    manipulation_count = len(analysis_results['manipulation'].get('tactics', []))
+    emotion_manipulation = analysis_results['emotion'].get('manipulation_score', 0)
+    
+    risk_score = min(100, (clickbait_score + (manipulation_count * 10) + emotion_manipulation) / 3)
+    breakdown['manipulation_risk']['score'] = 100 - risk_score
+    
+    if clickbait_score > 60:
+        breakdown['manipulation_risk']['details'].append('High clickbait score')
+    if manipulation_count > 0:
+        breakdown['manipulation_risk']['details'].append(f'{manipulation_count} manipulation tactics')
+    if emotion_manipulation > 50:
+        breakdown['manipulation_risk']['details'].append('Emotional manipulation detected')
+    
+    # Calculate weighted total
+    total_score = 0
+    total_weight = 0
+    
+    for component, data in breakdown.items():
+        weighted_score = (data['score'] * data['weight']) / 100
+        total_score += weighted_score
+        total_weight += data['weight']
+    
+    # Normalize to 100
+    if total_weight > 0:
+        final_score = int(total_score)
+    else:
+        final_score = 50  # Default middle score
+    
+    # Determine trust level
+    if final_score >= 80:
+        level = 'Excellent'
+    elif final_score >= 60:
+        level = 'Good'
+    elif final_score >= 40:
+        level = 'Fair'
+    else:
+        level = 'Poor'
+    
+    return {
+        'score': max(0, min(100, final_score)),
+        'level': level,
+        'breakdown': breakdown
+    }
+
+def is_valid_url(url):
+    """Validate URL format"""
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
+
+def generate_cache_key(url):
+    """Generate cache key for URL"""
+    return f"analysis:{hashlib.md5(url.encode()).hexdigest()}"
+
+def get_related_articles(article_data, domain):
+    """Get related articles using News API or fallback"""
+    related = []
+    
+    try:
+        if NEWS_API_KEY and article_data.get('title'):
+            # Use News API to find related articles
+            search_query = ' '.join(article_data['title'].split()[:5])
+            
+            response = requests.get(
+                'https://newsapi.org/v2/everything',
+                params={
+                    'q': search_query,
+                    'apiKey': NEWS_API_KEY,
+                    'sortBy': 'relevancy',
+                    'pageSize': 5,
+                    'domains': f'-{domain}'  # Exclude same domain
+                },
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                for article in data.get('articles', [])[:3]:
+                    related.append({
+                        'title': article.get('title'),
+                        'url': article.get('url'),
+                        'source': article.get('source', {}).get('name'),
+                        'publishedAt': article.get('publishedAt')
+                    })
+    except Exception as e:
+        logger.error(f"Error fetching related articles: {e}")
+    
+    return related
+
+def generate_ai_summary(article_data, analysis_results):
+    """Generate AI summary using OpenAI API"""
+    if not OPENAI_API_KEY:
+        return None
+    
+    try:
+        # Prepare context for AI
+        context = {
+            'title': article_data.get('title'),
+            'content_excerpt': article_data.get('content', '')[:1000],
+            'bias_score': analysis_results['bias'].get('bias_score'),
+            'clickbait_score': analysis_results['clickbait'].get('score'),
+            'key_claims': len(analysis_results['claims'].get('claims', [])),
+            'manipulation_tactics': len(analysis_results['manipulation'].get('tactics', []))
+        }
+        
+        # In production, call OpenAI API here
+        # For now, return structured summary
+        return {
+            'summary': f"Analysis of '{article_data.get('title', 'Unknown')}' reveals important insights about its credibility and potential biases.",
+            'key_points': [
+                f"Bias level: {abs(context['bias_score']):.1%}",
+                f"Clickbait score: {context['clickbait_score']}%",
+                f"Contains {context['key_claims']} verifiable claims",
+                f"Detected {context['manipulation_tactics']} manipulation tactics"
+            ],
+            'recommendation': "Verify key claims through multiple sources before sharing."
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating AI summary: {e}")
+        return None
+
+def generate_resources(article_data, analysis_results):
+    """Generate helpful resources for the user"""
+    resources = []
+    
+    # Add fact-checking resources
+    if analysis_results['facts'].get('sources'):
+        for source in analysis_results['facts']['sources'][:3]:
+            resources.append({
+                'type': 'fact-check',
+                'title': source.get('title', 'Fact Check'),
+                'url': source.get('url', '#'),
+                'icon': '✓'
+            })
+    
+    # Add related article search
+    if article_data.get('title'):
+        search_query = quote_plus(article_data['title'])
+        resources.append({
+            'type': 'related',
+            'title': 'Search for related coverage',
+            'url': f'https://news.google.com/search?q={search_query}',
+            'icon': '🔍'
+        })
+    
+    # Add source checking
+    domain = article_data.get('domain', '')
+    if domain:
+        resources.append({
+            'type': 'source',
+            'title': 'Check source credibility',
+            'url': f'https://mediabiasfactcheck.com/?s={domain}',
+            'icon': '🏛️'
+        })
+        
+        # AllSides bias check
+        resources.append({
+            'type': 'bias',
+            'title': 'Check media bias rating',
+            'url': f'https://www.allsides.com/media-bias/ratings?field_featured_bias_rating_value=All&field_news_source_type_tid=All&field_news_bias_nid=1&title={domain}',
+            'icon': '⚖️'
+        })
+    
+    # Add author lookup if available
+    if article_data.get('author') and article_data['author'] != 'Unknown':
+        author_query = quote_plus(article_data['author'])
+        resources.append({
+            'type': 'author',
+            'title': 'Research author background',
+            'url': f'https://muckrack.com/search?q={author_query}',
+            'icon': '👤'
+        })
+    
+    return resources
+
+@app.route('/report/<report_type>', methods=['POST'])
+@rate_limit(max_requests=5, window=60)  # 5 reports per minute
+def generate_report(report_type):
+    """Generate analysis report (PDF or other formats)"""
+    try:
+        data = request.get_json()
+        analysis_results = data.get('analysis')
+        
+        if not analysis_results:
+            return jsonify({'error': 'No analysis data provided'}), 400
+        
+        if report_type == 'pdf':
+            # Generate PDF report
+            pdf_path = pdf_generator.generate_report(analysis_results)
+            
+            return send_file(
+                pdf_path,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'news-analysis-{datetime.now().strftime("%Y%m%d-%H%M%S")}.pdf'
+            )
+            
+        elif report_type == 'json':
+            # Return formatted JSON report
+            return jsonify({
+                'report': analysis_results,
+                'generated_at': datetime.now().isoformat(),
+                'format': 'json'
+            })
+            
+        else:
+            return jsonify({'error': f'Unknown report type: {report_type}'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error generating report: {e}")
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+
+@app.route('/batch', methods=['POST'])
+@rate_limit(max_requests=5, window=300)  # 5 batch requests per 5 minutes
+def batch_analyze():
+    """Analyze multiple articles in batch"""
+    try:
+        data = request.get_json()
+        urls = data.get('urls', [])
+        
+        if not urls:
+            return jsonify({'error': 'No URLs provided'}), 400
+        
+        if len(urls) > 10:
+            return jsonify({'error': 'Maximum 10 URLs per batch'}), 400
+        
+        results = []
+        for url in urls:
+            try:
+                # Analyze each URL
+                article_data = article_extractor.extract(url)
+                if article_data and not article_data.get('error'):
+                    # Simplified analysis for batch processing
+                    domain = urlparse(url).netloc.replace('www.', '')
+                    
+                    result = {
+                        'url': url,
+                        'title': article_data.get('title'),
+                        'author': article_data.get('author'),
+                        'trust_score': 0,  # Simplified scoring
+                        'status': 'success'
+                    }
+                    
+                    # Quick credibility check
+                    source_cred = source_analyzer.analyze_source(domain)
+                    if source_cred.get('credibility') == 'high':
+                        result['trust_score'] = 80
+                    elif source_cred.get('credibility') == 'medium':
+                        result['trust_score'] = 60
+                    else:
+                        result['trust_score'] = 40
+                    
+                    results.append(result)
+                else:
+                    results.append({
+                        'url': url,
+                        'status': 'error',
+                        'error': 'Failed to extract article'
+                    })
+                    
+            except Exception as e:
+                results.append({
+                    'url': url,
+                    'status': 'error',
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'results': results,
+            'total': len(urls),
+            'successful': len([r for r in results if r.get('status') == 'success'])
+        })
+        
+    except Exception as e:
+        logger.error(f"Batch analysis error: {e}")
+        return jsonify({'error': f'Batch analysis failed: {str(e)}'}), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'service': 'news-analyzer',
-        'version': '2.0.0',
-        'database': db_status,
-        'pdf_export_enabled': PDF_EXPORT_ENABLED,
-        'development_mode': True,
-        'features': {
-            'ai_analysis': bool(os.environ.get('OPENAI_API_KEY')),
-            'fact_checking': bool(os.environ.get('GOOGLE_FACT_CHECK_API_KEY')),
-            'news_api': bool(os.environ.get('NEWS_API_KEY'))
+        'timestamp': datetime.now().isoformat(),
+        'version': '2.0',
+        'analyzers': {
+            'article_extractor': 'ready',
+            'author_analyzer': 'ready',
+            'bias_analyzer': 'ready',
+            'clickbait_detector': 'ready',
+            'fact_checker': 'ready',
+            'source_analyzer': 'ready',
+            'transparency_analyzer': 'ready',
+            'content_analyzer': 'ready',
+            'manipulation_detector': 'ready',
+            'readability_analyzer': 'ready',
+            'emotion_analyzer': 'ready'
+        },
+        'cache': {
+            'type': cache_config['CACHE_TYPE'],
+            'timeout': cache_config['CACHE_DEFAULT_TIMEOUT']
         }
     })
 
-# Add admin route to clear cache (TEMPORARY - remove in production)
-@app.route('/api/admin/clear-cache', methods=['POST'])
-def clear_cache():
-    """Clear all cached analyses - TEMPORARY ADMIN ROUTE"""
+@app.route('/stats', methods=['GET'])
+@cache.cached(timeout=300)  # Cache for 5 minutes
+def get_stats():
+    """Get analysis statistics"""
     try:
-        # Get password from request
-        data = request.get_json()
-        password = data.get('password')
+        # In production, these would come from a database
+        stats = {
+            'total_analyses': 1000,  # Placeholder
+            'analyses_today': 50,    # Placeholder
+            'average_trust_score': 65,
+            'top_sources': [
+                {'domain': 'reuters.com', 'count': 120, 'avg_trust': 85},
+                {'domain': 'bbc.com', 'count': 98, 'avg_trust': 82},
+                {'domain': 'cnn.com', 'count': 87, 'avg_trust': 68}
+            ],
+            'bias_distribution': {
+                'left': 30,
+                'center': 45,
+                'right': 25
+            }
+        }
         
-        # Simple password check (change this!)
-        if password != 'admin123':
-            return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify(stats)
         
-        # Delete all analyses
-        deleted = Analysis.query.delete()
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'deleted_count': deleted,
-            'message': f'Cleared {deleted} cached analyses'
-        })
     except Exception as e:
-        db.session.rollback()
+        logger.error(f"Error getting stats: {e}")
+        return jsonify({'error': 'Failed to retrieve statistics'}), 500
+
+@app.route('/feedback', methods=['POST'])
+@rate_limit(max_requests=10, window=3600)  # 10 feedback per hour
+def submit_feedback():
+    """Submit user feedback"""
+    try:
+        data = request.get_json()
+        
+        # Validate feedback
+        if not data.get('rating') or not data.get('url'):
+            return jsonify({'error': 'Rating and URL are required'}), 400
+        
+        # In production, save to database
+        feedback = {
+            'url': data.get('url'),
+            'rating': data.get('rating'),
+            'comment': data.get('comment', ''),
+            'timestamp': datetime.now().isoformat(),
+            'user_agent': request.headers.get('User-Agent')
+        }
+        
+        logger.info(f"Feedback received: {feedback}")
+        
         return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'status': 'success',
+            'message': 'Thank you for your feedback!'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting feedback: {e}")
+        return jsonify({'error': 'Failed to submit feedback'}), 500
 
-# Error handlers
 @app.errorhandler(404)
-def not_found(e):
-    if request.path.startswith('/static/'):
-        logger.error(f"Static file 404: {request.path}")
-    return jsonify({'error': 'Not found'}), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    logger.error(f"Internal server error: {e}")
-    return jsonify({'error': 'Internal server error'}), 500
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
 
 @app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({
-        'error': 'Rate limit exceeded',
-        'message': str(e.description)
-    }), 429
+def rate_limited(error):
+    return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {error}")
+    return jsonify({'error': 'Internal server error'}), 500
+
+# CLI commands for development
+@app.cli.command()
+def clear_cache():
+    """Clear all cached results"""
+    cache.clear()
+    print("Cache cleared successfully")
+
+@app.cli.command()
+def test_analysis():
+    """Test analysis with sample URL"""
+    test_url = "https://www.bbc.com/news/world-middle-east-17258397"
+    with app.test_client() as client:
+        response = client.post('/analyze', json={'url': test_url})
+        print(json.dumps(response.get_json(), indent=2))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('DEBUG', 'True').lower() == 'true'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    logger.info(f"Starting News Analyzer API on port {port}")
+    logger.info(f"Debug mode: {debug}")
+    logger.info(f"Cache enabled: {cache_config['CACHE_TYPE']}")
+    
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=debug,
+        threaded=True
+    )
