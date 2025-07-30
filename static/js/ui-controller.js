@@ -1,4 +1,4 @@
-// ui-controller.js - Complete UI Controller with Full Data Display
+// ui-controller.js - Complete UI Controller with Full Data Display and Fixed Data Structures
 (function() {
     'use strict';
     
@@ -534,6 +534,7 @@
             return card;
         }
 
+        // FIXED: Updated createAuthorAnalysisCard to handle found=false with bio
         createAuthorAnalysisCard(data) {
             const card = this.createCard('author', '✍️', 'Author Analysis');
             const author = data.author_analysis || {};
@@ -541,115 +542,81 @@
             const authorName = author.name || article.author || 'Unknown Author';
             const found = author.found !== undefined ? author.found : false;
             const credibilityScore = author.credibility_score || 0;
-            const credentials = author.credentials || [];
-            const expertise = author.expertise || [];
-            const pastWork = author.past_work || [];
             
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
                     <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 1.25rem;">${authorName}</h4>
-                    ${found ? `
+                    ${found || author.bio ? `
                         <div style="font-size: 2rem; font-weight: 700; color: ${this.getCredibilityColor(credibilityScore)};">
                             ${credibilityScore}/100
                         </div>
                         <div style="color: #64748b; margin-top: 4px;">Credibility Score</div>
-                        
-                        ${author.articles_count ? `
-                            <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-                                <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                    <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.articles_count}</div>
-                                    <div style="font-size: 0.75rem; color: #718096;">Articles</div>
-                                </div>
-                                ${author.professional_info?.years_experience ? `
-                                    <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                                        <div style="font-size: 1.25rem; font-weight: 600; color: #4a5568;">${author.professional_info.years_experience}</div>
-                                        <div style="font-size: 0.75rem; color: #718096;">Years Exp.</div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        ` : ''}
                     ` : `
                         <div style="color: #ef4444; font-size: 1.125rem;">
-                            ⚠️ Author Not Verified
+                            ⚠️ Limited Information Available
                         </div>
                     `}
                 </div>
             `;
             
             card.querySelector('.card-details').innerHTML = `
-                ${found ? `
-                    ${credentials.length > 0 ? `
-                        <div style="margin-bottom: 20px;">
-                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Credentials</h5>
-                            <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                                ${credentials.map(cred => `<li>${cred}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    
-                    ${expertise.length > 0 ? `
-                        <div style="margin-bottom: 20px;">
-                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Areas of Expertise</h5>
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                ${expertise.map(exp => `
-                                    <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 999px; font-size: 0.875rem;">
-                                        ${exp}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${pastWork.length > 0 ? `
-                        <div style="margin-bottom: 20px;">
-                            <h5 style="margin: 0 0 12px 0; color: #1e293b;">Notable Past Work</h5>
-                            <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                                ${pastWork.map(work => `<li>${work}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    
-                    ${author.social_media ? `
-                        <div style="margin-bottom: 20px;">
-                            <h5 style="margin: 0 0 8px 0; color: #1e293b;">Social Media Presence</h5>
-                            <p style="margin: 0; color: #475569;">${author.social_media}</p>
-                        </div>
-                    ` : ''}
-                    
-                    ${author.bio ? `
-                        <div style="margin-bottom: 20px;">
-                            <h5 style="margin: 0 0 8px 0; color: #1e293b;">Biography</h5>
-                            <p style="margin: 0; color: #475569; line-height: 1.6;">${author.bio}</p>
-                        </div>
-                    ` : ''}
-                    
-                    ${author.verification_status ? `
-                        <div style="background: #dcfce7; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px;">
-                            <div style="display: flex; align-items: center; gap: 8px; color: #166534;">
-                                <span>✓</span>
-                                <span>${author.verification_status}</span>
-                            </div>
-                        </div>
-                    ` : ''}
-                ` : `
-                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px;">
-                        <p style="margin: 0 0 8px 0; color: #991b1b; font-weight: 600;">Author information could not be verified</p>
-                        <p style="margin: 0; color: #7f1d1d; font-size: 0.875rem;">
-                            Unable to find credible information about this author. Consider researching the author independently to verify their credentials and expertise.
+                ${author.bio ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Author Information</h5>
+                        <p style="padding: 16px; background: #f8fafc; border-radius: 8px; margin: 0; color: #334155; line-height: 1.6;">
+                            ${author.bio}
                         </p>
                     </div>
-                `}
+                ` : ''}
+                
+                ${author.credibility_explanation ? `
+                    <div style="margin-bottom: 20px; padding: 16px; background: #fef8e6; border-radius: 8px;">
+                        <h5 style="margin: 0 0 8px 0; color: #854d0e;">Credibility Assessment</h5>
+                        <p style="margin: 0; color: #713f12; font-size: 0.875rem; line-height: 1.5;">
+                            ${typeof author.credibility_explanation === 'string' 
+                                ? author.credibility_explanation 
+                                : author.credibility_explanation.explanation || 'Unable to fully verify author credentials.'}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                ${!found && !author.bio ? `
+                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px;">
+                        <p style="margin: 0 0 8px 0; color: #991b1b; font-weight: 600;">Limited author information available</p>
+                        <p style="margin: 0; color: #7f1d1d; font-size: 0.875rem;">
+                            We found minimal information about this author through our verification channels. Consider researching the author independently to verify their credentials and expertise.
+                        </p>
+                    </div>
+                ` : ''}
+                
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-top: 20px;">
+                    <h5 style="margin: 0 0 8px 0; color: #1e40af; font-size: 0.875rem;">Why Author Analysis Matters</h5>
+                    <p style="margin: 0; color: #1e293b; line-height: 1.6; font-size: 0.875rem;">
+                        Author credibility helps establish trust in the information presented. When full verification isn't possible, approach the content with appropriate scrutiny.
+                    </p>
+                </div>
             `;
             
             return card;
         }
 
+        // FIXED: Updated createClickbaitCard to use clickbait_score
         createClickbaitCard(data) {
             const card = this.createCard('clickbait', '🎣', 'Clickbait Detection');
-            const clickbait = data.clickbait_analysis || {};
-            const score = clickbait.score || 0;
-            const tactics = clickbait.tactics || [];
-            const elements = clickbait.elements || [];
+            const score = data.clickbait_score || 0;
+            
+            // Look for clickbait tactics in bias_analysis or other fields
+            const tactics = [];
+            const elements = [];
+            
+            // Check if headline uses common clickbait patterns
+            if (data.article?.title) {
+                const title = data.article.title;
+                if (title.includes('!')) tactics.push('Excessive exclamation marks');
+                if (title.match(/\b(SHOCKING|AMAZING|UNBELIEVABLE|INCREDIBLE)\b/i)) tactics.push('Sensational language');
+                if (title.includes('You Won\'t Believe')) tactics.push('Curiosity gap technique');
+                if (title.match(/^\d+\s/)) tactics.push('Numbered list format');
+            }
             
             const color = this.getClickbaitColor(score);
             const label = this.getClickbaitLabel(score);
@@ -664,23 +631,18 @@
             card.querySelector('.card-details').innerHTML = `
                 ${tactics.length > 0 ? `
                     <div style="margin-bottom: 20px;">
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Clickbait Tactics Used</h5>
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Clickbait Indicators</h5>
                         <ul style="margin: 0; padding-left: 20px; color: #475569;">
                             ${tactics.map(tactic => `<li>${tactic}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
                 
-                ${elements.length > 0 ? `
-                    <div>
-                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Clickbait Elements Found</h5>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            ${elements.map(element => `
-                                <div style="background: #fef3c7; padding: 12px; border-radius: 6px;">
-                                    <span style="font-weight: 600; color: #92400e;">${element.type}:</span>
-                                    <span style="color: #78350f;">"${element.text}"</span>
-                                </div>
-                            `).join('')}
+                ${data.article?.title ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; color: #1e293b;">Headline Analysis</h5>
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
+                            <p style="margin: 0; color: #475569; font-style: italic;">"${data.article.title}"</p>
                         </div>
                     </div>
                 ` : ''}
@@ -755,12 +717,16 @@
             return card;
         }
 
+        // FIXED: Updated createManipulationCard to pull data from bias_analysis
         createManipulationCard(data) {
             const card = this.createCard('manipulation', '🎭', 'Manipulation Detection');
-            const manipulation = data.manipulation_analysis || {};
-            const score = manipulation.score || 0;
-            const tactics = manipulation.tactics || [];
-            const techniques = manipulation.techniques || [];
+            
+            // Pull manipulation data from bias_analysis instead of manipulation_analysis
+            const manipulationTactics = data.bias_analysis?.manipulation_tactics || [];
+            const persuasionTechniques = data.bias_analysis?.persuasion_techniques || [];
+            
+            // Calculate a manipulation score based on tactics count
+            const score = Math.min(manipulationTactics.length * 25, 100);
             
             const color = this.getManipulationColor(score);
             const label = this.getManipulationLabel(score);
@@ -773,17 +739,27 @@
             `;
             
             card.querySelector('.card-details').innerHTML = `
-                ${tactics.length > 0 ? `
+                ${manipulationTactics.length > 0 ? `
                     <div style="margin-bottom: 20px;">
                         <h5 style="margin: 0 0 12px 0; color: #1e293b;">Manipulation Tactics Detected</h5>
                         <div style="display: flex; flex-direction: column; gap: 12px;">
-                            ${tactics.map(tactic => `
+                            ${manipulationTactics.map(tactic => `
                                 <div style="background: #fee2e2; padding: 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
                                     <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">
                                         ${typeof tactic === 'string' ? tactic : tactic.name}
                                     </div>
                                     ${tactic.description ? `
                                         <div style="color: #7f1d1d; font-size: 0.875rem; margin-bottom: 4px;">${tactic.description}</div>
+                                    ` : ''}
+                                    ${tactic.type ? `
+                                        <div style="color: #7f1d1d; font-size: 0.75rem; font-style: italic;">Type: ${tactic.type}</div>
+                                    ` : ''}
+                                    ${tactic.severity ? `
+                                        <div style="margin-top: 4px;">
+                                            <span style="background: ${this.getSeverityColor(tactic.severity)}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                                                ${tactic.severity} severity
+                                            </span>
+                                        </div>
                                     ` : ''}
                                     ${tactic.examples && tactic.examples.length > 0 ? `
                                         <div style="margin-top: 8px;">
@@ -797,13 +773,13 @@
                             `).join('')}
                         </div>
                     </div>
-                ` : ''}
+                ` : '<p style="color: #64748b;">No manipulation tactics detected.</p>'}
                 
-                ${techniques.length > 0 ? `
+                ${persuasionTechniques && persuasionTechniques.length > 0 ? `
                     <div>
                         <h5 style="margin: 0 0 12px 0; color: #1e293b;">Persuasion Techniques</h5>
                         <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                            ${techniques.map(tech => `<li>${tech}</li>`).join('')}
+                            ${persuasionTechniques.map(tech => `<li>${tech}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
@@ -818,11 +794,18 @@
             return card;
         }
 
+        // FIXED: Updated createTransparencyCard to use indicators instead of factors
         createTransparencyCard(data) {
             const card = this.createCard('transparency', '🔍', 'Transparency Analysis');
             const transparency = data.transparency_analysis || {};
             const score = transparency.score || 0;
-            const factors = transparency.factors || [];
+            const indicators = transparency.indicators || [];
+            
+            // Convert indicators to factors format
+            const factors = indicators.map(indicator => ({
+                name: indicator,
+                present: !indicator.toLowerCase().includes('no ') && !indicator.toLowerCase().includes('not ')
+            }));
             
             card.querySelector('.card-summary').innerHTML = `
                 <div style="text-align: center;">
@@ -847,6 +830,29 @@
                         </div>
                     </div>
                 ` : '<p style="color: #64748b;">No transparency data available.</p>'}
+                
+                ${transparency.has_author !== undefined ? `
+                    <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                        <div style="display: grid; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Author Attribution:</span>
+                                <span style="color: ${transparency.has_author ? '#10b981' : '#ef4444'}; font-weight: 600;">
+                                    ${transparency.has_author ? 'Yes' : 'No'}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Sources Cited:</span>
+                                <span style="font-weight: 600;">${transparency.sources_cited || 0}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Contains Quotes:</span>
+                                <span style="color: ${transparency.has_quotes ? '#10b981' : '#ef4444'}; font-weight: 600;">
+                                    ${transparency.has_quotes ? 'Yes' : 'No'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
                 
                 <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin-top: 20px;">
                     <p style="margin: 0; color: #166534; font-size: 0.875rem; line-height: 1.5;">
