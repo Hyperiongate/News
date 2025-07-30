@@ -4,14 +4,51 @@
 class ClickbaitDetector {
     constructor() {
         this.container = null;
+        this.indicators = {
+            curiosityGap: {
+                name: 'Curiosity Gap',
+                description: 'Creates information gap to force clicks',
+                weight: 3,
+                patterns: ['you won\'t believe', 'what happened next', 'shocking truth', 'this one trick']
+            },
+            emotionalTriggers: {
+                name: 'Emotional Manipulation',
+                description: 'Uses strong emotions to drive engagement',
+                weight: 2.5,
+                patterns: ['shocking', 'heartbreaking', 'outrageous', 'disgusting', 'amazing']
+            },
+            exaggeration: {
+                name: 'Exaggeration',
+                description: 'Overstates importance or impact',
+                weight: 2,
+                patterns: ['destroyed', 'obliterated', 'perfect', 'ultimate', 'life-changing']
+            },
+            listicles: {
+                name: 'Numbered Lists',
+                description: 'Uses numbers to promise digestible content',
+                weight: 1.5,
+                patterns: [/\d+\s+(ways|reasons|things|tips|facts)/i]
+            },
+            urgency: {
+                name: 'False Urgency',
+                description: 'Creates artificial time pressure',
+                weight: 2,
+                patterns: ['breaking', 'urgent', 'right now', 'before it\'s gone']
+            },
+            personalAddress: {
+                name: 'Direct Address',
+                description: 'Speaks directly to reader',
+                weight: 1,
+                patterns: ['you', 'your', 'you\'re']
+            }
+        };
     }
 
     render(data) {
         const container = document.createElement('div');
         container.className = 'clickbait-detector-container analysis-card';
         
-        const clickbaitScore = data.clickbait_score || 0;
-        const analysis = data.clickbait_analysis || {};
+        const analysis = this.performDetailedAnalysis(data);
         const isBasicPlan = !data.is_pro;
         
         container.innerHTML = `
@@ -22,24 +59,218 @@ class ClickbaitDetector {
             </div>
             
             <div class="clickbait-content">
-                ${isBasicPlan ? this.renderBasicClickbait(clickbaitScore) : this.renderProClickbait(clickbaitScore, analysis)}
+                ${isBasicPlan ? this.renderBasicClickbait(analysis) : this.renderProClickbait(analysis)}
             </div>
         `;
         
         this.container = container;
         
         // Initialize animations
-        setTimeout(() => this.initializeAnimations(), 100);
+        if (!isBasicPlan) {
+            setTimeout(() => this.initializeGauge(analysis.score), 100);
+        }
         
         return container;
     }
 
-    renderBasicClickbait(score) {
+    performDetailedAnalysis(data) {
+        const title = data.article?.title || '';
+        const content = data.article?.content || '';
+        
+        // Analyze title for clickbait indicators
+        const detectedIndicators = [];
+        let totalScore = 0;
+        
+        Object.entries(this.indicators).forEach(([key, indicator]) => {
+            const detected = this.detectIndicator(title, indicator);
+            if (detected.found) {
+                detectedIndicators.push({
+                    ...indicator,
+                    key: key,
+                    matches: detected.matches,
+                    score: detected.score
+                });
+                totalScore += detected.score;
+            }
+        });
+        
+        // Additional analysis
+        const titleAnalysis = {
+            length: title.length,
+            capitalizedWords: (title.match(/[A-Z][A-Z]+/g) || []).length,
+            punctuation: (title.match(/[!?]/g) || []).length,
+            hasNumbers: /\d/.test(title),
+            hasQuotes: /["']/.test(title),
+            wordCount: title.split(/\s+/).length
+        };
+        
+        // Tactics analysis
+        const tactics = this.analyzeTactics(title, content);
+        
+        // Calculate final score (0-100)
+        const clickbaitScore = Math.min(100, Math.round(totalScore * 10));
+        
+        return {
+            score: clickbaitScore,
+            indicators: detectedIndicators,
+            titleAnalysis: titleAnalysis,
+            tactics: tactics,
+            recommendation: this.getRecommendation(clickbaitScore),
+            examples: this.findExamples(title, detectedIndicators)
+        };
+    }
+
+    detectIndicator(title, indicator) {
+        let found = false;
+        const matches = [];
+        let score = 0;
+        
+        indicator.patterns.forEach(pattern => {
+            if (pattern instanceof RegExp) {
+                const match = title.match(pattern);
+                if (match) {
+                    found = true;
+                    matches.push(match[0]);
+                    score += indicator.weight;
+                }
+            } else {
+                if (title.toLowerCase().includes(pattern.toLowerCase())) {
+                    found = true;
+                    matches.push(pattern);
+                    score += indicator.weight;
+                }
+            }
+        });
+        
+        return { found, matches, score };
+    }
+
+    analyzeTactics(title, content) {
+        const tactics = [];
+        
+        // Withholding information
+        if (title.includes('...') || title.includes('what') || title.includes('how')) {
+            tactics.push({
+                name: 'Information Withholding',
+                description: 'Deliberately hides key information to force clicks',
+                severity: 'high',
+                example: this.extractExample(title, ['...', 'what', 'how'])
+            });
+        }
+        
+        // Superlatives
+        const superlatives = ['best', 'worst', 'most', 'least', 'only'];
+        const foundSuperlatives = superlatives.filter(s => 
+            title.toLowerCase().includes(s)
+        );
+        if (foundSuperlatives.length > 0) {
+            tactics.push({
+                name: 'Superlative Abuse',
+                description: 'Uses extreme descriptors without justification',
+                severity: 'moderate',
+                example: foundSuperlatives.join(', ')
+            });
+        }
+        
+        // Vague pronouns
+        if (/\b(this|these|that|those)\b/i.test(title) && !content.includes(title)) {
+            tactics.push({
+                name: 'Vague References',
+                description: 'Uses unclear pronouns to create mystery',
+                severity: 'moderate',
+                example: 'Uses "this" or "that" without clear reference'
+            });
+        }
+        
+        // ALL CAPS
+        if (title.match(/\b[A-Z]{3,}\b/)) {
+            tactics.push({
+                name: 'Capitalization Abuse',
+                description: 'Uses ALL CAPS for emphasis',
+                severity: 'low',
+                example: title.match(/\b[A-Z]{3,}\b/)[0]
+            });
+        }
+        
+        return tactics;
+    }
+
+    findExamples(title, indicators) {
+        const examples = [];
+        
+        indicators.forEach(indicator => {
+            if (indicator.matches.length > 0) {
+                examples.push({
+                    text: indicator.matches[0],
+                    type: indicator.name,
+                    context: this.getContextAroundMatch(title, indicator.matches[0])
+                });
+            }
+        });
+        
+        return examples.slice(0, 3); // Top 3 examples
+    }
+
+    getContextAroundMatch(text, match) {
+        const index = text.toLowerCase().indexOf(match.toLowerCase());
+        if (index === -1) return text;
+        
+        const start = Math.max(0, index - 20);
+        const end = Math.min(text.length, index + match.length + 20);
+        
+        let context = text.substring(start, end);
+        if (start > 0) context = '...' + context;
+        if (end < text.length) context = context + '...';
+        
+        return context;
+    }
+
+    getRecommendation(score) {
+        if (score < 20) {
+            return {
+                level: 'minimal',
+                text: 'This headline appears straightforward and informative.',
+                action: 'Safe to read - minimal clickbait detected.'
+            };
+        } else if (score < 40) {
+            return {
+                level: 'low',
+                text: 'Some attention-grabbing elements present but within normal bounds.',
+                action: 'Generally trustworthy - proceed with normal skepticism.'
+            };
+        } else if (score < 60) {
+            return {
+                level: 'moderate',
+                text: 'Notable clickbait tactics detected. Content may not match headline.',
+                action: 'Read with caution - verify claims independently.'
+            };
+        } else if (score < 80) {
+            return {
+                level: 'high',
+                text: 'Heavy use of manipulation tactics. High likelihood of disappointment.',
+                action: 'Warning - expect exaggeration and missing context.'
+            };
+        } else {
+            return {
+                level: 'extreme',
+                text: 'Extreme clickbait. Content unlikely to deliver on promises.',
+                action: 'Not recommended - seek alternative sources.'
+            };
+        }
+    }
+
+    renderBasicClickbait(analysis) {
+        const level = this.getClickbaitLevel(analysis.score);
+        
         return `
             <div class="clickbait-basic">
                 <p class="clickbait-basic-text">
-                    Clickbait likelihood: <strong>${this.getClickbaitLevel(score)}</strong>
+                    Clickbait likelihood: <strong>${level}</strong>
                 </p>
+                <div class="simple-meter">
+                    <div class="meter-fill ${level.toLowerCase()}" style="width: ${analysis.score}%"></div>
+                </div>
+                <p class="basic-recommendation">${analysis.recommendation.action}</p>
                 <div class="upgrade-prompt compact">
                     <span class="lock-icon">🔒</span>
                     <p>Get detailed clickbait analysis with Pro</p>
@@ -48,465 +279,482 @@ class ClickbaitDetector {
         `;
     }
 
-    renderProClickbait(score, analysis) {
-        const level = this.getClickbaitDetails(score);
-        const indicators = analysis.indicators || [];
-        const titleAnalysis = analysis.title_analysis || {};
-        const tactics = analysis.tactics || [];
-        
+    renderProClickbait(analysis) {
         return `
-            <!-- Clickbait Overview -->
-            <div class="clickbait-overview">
+            <div class="clickbait-pro">
                 <h4>Headline Manipulation Analysis</h4>
                 <p class="analysis-explanation">
-                    Our system detects 15+ clickbait indicators including emotional manipulation, 
-                    curiosity gaps, sensationalism, misleading claims, and exaggeration patterns.
+                    Our AI detects ${Object.keys(this.indicators).length}+ clickbait indicators including emotional manipulation, 
+                    curiosity gaps, and exaggeration patterns.
                 </p>
-            </div>
-
-            <!-- Main Gauge Display -->
-            <div class="clickbait-gauge-section">
-                <div class="gauge-wrapper">
-                    <div class="gauge-container">
-                        <svg class="clickbait-gauge" viewBox="0 0 200 120">
-                            <defs>
-                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
-                                    <stop offset="50%" style="stop-color:#f59e0b;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
-                                </linearGradient>
-                            </defs>
-                            
-                            <!-- Background arc -->
-                            <path d="M 30 100 A 70 70 0 0 1 170 100" 
-                                  fill="none" 
-                                  stroke="#e5e7eb" 
-                                  stroke-width="20"/>
-                            
-                            <!-- Score arc -->
-                            <path d="M 30 100 A 70 70 0 0 1 170 100" 
-                                  fill="none" 
-                                  stroke="url(#gaugeGradient)" 
-                                  stroke-width="20"
-                                  stroke-dasharray="220"
-                                  stroke-dashoffset="${220 - (score / 100 * 220)}"
-                                  class="gauge-fill"
-                                  stroke-linecap="round"/>
-                            
-                            <!-- Needle -->
-                            <g class="gauge-needle" transform="rotate(${-90 + (score / 100 * 180)}, 100, 100)">
-                                <line x1="100" y1="100" x2="100" y2="40" stroke="#1f2937" stroke-width="3"/>
-                                <circle cx="100" cy="100" r="5" fill="#1f2937"/>
-                            </g>
-                            
-                            <!-- Score text -->
-                            <text x="100" y="90" text-anchor="middle" font-size="32" font-weight="bold" fill="#1f2937">
-                                ${score}%
-                            </text>
-                            <text x="100" y="110" text-anchor="middle" font-size="14" fill="#6b7280">
-                                ${level.label}
-                            </text>
-                        </svg>
-                    </div>
-                    
-                    <div class="gauge-interpretation">
-                        <div class="level-indicator ${level.class}">
-                            <span class="level-icon">${level.icon}</span>
-                            <span class="level-text">${level.label} Clickbait</span>
-                        </div>
-                        <p class="level-description">${level.description}</p>
+                
+                <!-- Visual Gauge -->
+                <div class="clickbait-gauge-container">
+                    <canvas id="clickbaitGauge" width="300" height="150"></canvas>
+                    <div class="gauge-labels">
+                        <span class="minimal">Minimal</span>
+                        <span class="low">Low</span>
+                        <span class="moderate">Moderate</span>
+                        <span class="high">High</span>
+                        <span class="extreme">Extreme</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Detected Indicators -->
-            ${indicators.length > 0 ? `
-                <div class="indicators-section">
-                    <h4>Clickbait Indicators Detected</h4>
-                    <div class="indicators-grid">
-                        ${indicators.map(indicator => this.renderIndicator(indicator)).join('')}
+                
+                <!-- Score Breakdown -->
+                <div class="score-breakdown">
+                    <h5>Clickbait Score: ${analysis.score}/100</h5>
+                    <div class="recommendation-box ${analysis.recommendation.level}">
+                        <p class="recommendation-text">${analysis.recommendation.text}</p>
+                        <p class="recommendation-action">${analysis.recommendation.action}</p>
                     </div>
                 </div>
-            ` : ''}
-
-            <!-- Title Analysis -->
-            ${Object.keys(titleAnalysis).length > 0 ? `
-                <div class="title-analysis-section">
-                    <h4>Headline Analysis Breakdown</h4>
-                    ${this.renderTitleAnalysis(titleAnalysis)}
-                </div>
-            ` : ''}
-
-            <!-- Clickbait Tactics -->
-            ${tactics.length > 0 ? `
-                <div class="tactics-section">
-                    <h4>Manipulation Tactics Used</h4>
-                    <div class="tactics-list">
-                        ${tactics.map(tactic => this.renderTactic(tactic)).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- Recommendations -->
-            ${score > 40 ? `
-                <div class="recommendations-section">
-                    <h4>Reader Advisory</h4>
-                    <div class="recommendations-box">
-                        ${this.getRecommendations(score, indicators)}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- How We Detect Clickbait -->
-            <div class="methodology-section">
-                <h4>How We Detect Clickbait</h4>
-                <div class="methodology-grid">
-                    <div class="method-item">
-                        <span class="method-icon">🧠</span>
-                        <span class="method-name">AI Pattern Analysis</span>
-                        <p class="method-desc">Machine learning models trained on thousands of clickbait examples</p>
-                    </div>
-                    <div class="method-item">
-                        <span class="method-icon">📊</span>
-                        <span class="method-name">Statistical Analysis</span>
-                        <p class="method-desc">Word frequency, punctuation patterns, and structural indicators</p>
-                    </div>
-                    <div class="method-item">
-                        <span class="method-icon">🎯</span>
-                        <span class="method-name">Psychological Tactics</span>
-                        <p class="method-desc">Detection of curiosity gaps, fear appeals, and emotional triggers</p>
-                    </div>
-                    <div class="method-item">
-                        <span class="method-icon">📝</span>
-                        <span class="method-name">Linguistic Analysis</span>
-                        <p class="method-desc">Examination of superlatives, vague language, and exaggerations</p>
-                    </div>
+                
+                <!-- Detected Indicators -->
+                ${this.renderIndicators(analysis.indicators)}
+                
+                <!-- Title Analysis -->
+                ${this.renderTitleAnalysis(analysis.titleAnalysis)}
+                
+                <!-- Manipulation Tactics -->
+                ${this.renderTactics(analysis.tactics)}
+                
+                <!-- Examples -->
+                ${this.renderExamples(analysis.examples)}
+                
+                <!-- Reader Advisory -->
+                <div class="reader-advisory">
+                    <h5>How to Read This Article</h5>
+                    <ul>
+                        ${this.getReadingTips(analysis.score).map(tip => 
+                            `<li>${tip}</li>`
+                        ).join('')}
+                    </ul>
                 </div>
             </div>
         `;
     }
 
-    renderIndicator(indicator) {
-        const indicatorInfo = this.getIndicatorInfo(indicator.type || indicator);
+    renderIndicators(indicators) {
+        if (indicators.length === 0) {
+            return `
+                <div class="indicators-section">
+                    <h5>No Significant Clickbait Indicators Detected</h5>
+                    <p>This headline appears to be straightforward and honest.</p>
+                </div>
+            `;
+        }
         
         return `
-            <div class="indicator-card ${indicatorInfo.severity}">
-                <div class="indicator-header">
-                    <span class="indicator-icon">${indicatorInfo.icon}</span>
-                    <span class="indicator-name">${indicator.name || indicatorInfo.name}</span>
-                    <span class="indicator-severity severity-${indicatorInfo.severity}">${indicatorInfo.severity}</span>
+            <div class="indicators-section">
+                <h5>Detected Clickbait Indicators</h5>
+                <div class="indicators-grid">
+                    ${indicators.map(indicator => `
+                        <div class="indicator-card">
+                            <div class="indicator-header">
+                                <span class="indicator-name">${indicator.name}</span>
+                                <span class="indicator-score">+${indicator.score.toFixed(1)}</span>
+                            </div>
+                            <p class="indicator-description">${indicator.description}</p>
+                            <div class="indicator-matches">
+                                <span class="matches-label">Found:</span>
+                                ${indicator.matches.map(match => 
+                                    `<span class="match-chip">"${match}"</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-                <p class="indicator-description">${indicatorInfo.description}</p>
-                ${indicator.example ? `
-                    <div class="indicator-example">
-                        <strong>Example found:</strong> "${indicator.example}"
-                    </div>
-                ` : ''}
-                ${indicator.count && indicator.count > 1 ? `
-                    <div class="indicator-count">Found ${indicator.count} times</div>
-                ` : ''}
             </div>
         `;
     }
 
     renderTitleAnalysis(analysis) {
-        const metrics = [
-            {
-                name: 'Sensationalism',
-                value: analysis.sensationalism || 0,
-                icon: '🔥',
-                description: 'Use of extreme or exaggerated language'
-            },
-            {
-                name: 'Curiosity Gap',
-                value: analysis.curiosity_gap || 0,
-                icon: '❓',
-                description: 'Withholding key information to force clicks'
-            },
-            {
-                name: 'Emotional Triggers',
-                value: analysis.emotional_triggers || 0,
-                icon: '❤️',
-                description: 'Words designed to provoke strong emotions'
-            },
-            {
-                name: 'Urgency/FOMO',
-                value: analysis.urgency || 0,
-                icon: '⏰',
-                description: 'Creating false sense of urgency'
-            },
-            {
-                name: 'Vague Language',
-                value: analysis.vagueness || 0,
-                icon: '🌫️',
-                description: 'Unclear or ambiguous wording'
-            },
-            {
-                name: 'Exaggeration',
-                value: analysis.exaggeration || 0,
-                icon: '📈',
-                description: 'Overstating facts or numbers'
-            }
-        ];
-        
         return `
-            <div class="title-metrics-grid">
-                ${metrics.map(metric => `
-                    <div class="title-metric">
-                        <div class="metric-header">
-                            <span class="metric-icon">${metric.icon}</span>
-                            <span class="metric-name">${metric.name}</span>
-                        </div>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar">
-                                <div class="metric-fill" style="width: ${metric.value}%; background: ${this.getMetricColor(metric.value)}"></div>
-                            </div>
-                            <span class="metric-value">${metric.value}%</span>
-                        </div>
-                        <p class="metric-description">${metric.description}</p>
+            <div class="title-analysis-section">
+                <h5>Headline Structure Analysis</h5>
+                <div class="analysis-metrics">
+                    <div class="metric">
+                        <span class="metric-label">Length</span>
+                        <span class="metric-value">${analysis.length} chars</span>
+                        <span class="metric-status ${analysis.length > 100 ? 'warning' : 'good'}">
+                            ${analysis.length > 100 ? 'Too long' : 'Good'}
+                        </span>
                     </div>
-                `).join('')}
-            </div>
-            
-            ${analysis.headline_issues && analysis.headline_issues.length > 0 ? `
-                <div class="headline-issues">
-                    <h5>Specific Issues Found</h5>
-                    <ul class="issues-list">
-                        ${analysis.headline_issues.map(issue => `<li>${issue}</li>`).join('')}
-                    </ul>
+                    <div class="metric">
+                        <span class="metric-label">ALL CAPS Words</span>
+                        <span class="metric-value">${analysis.capitalizedWords}</span>
+                        <span class="metric-status ${analysis.capitalizedWords > 1 ? 'warning' : 'good'}">
+                            ${analysis.capitalizedWords > 1 ? 'Excessive' : 'Normal'}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Punctuation (!?)</span>
+                        <span class="metric-value">${analysis.punctuation}</span>
+                        <span class="metric-status ${analysis.punctuation > 1 ? 'warning' : 'good'}">
+                            ${analysis.punctuation > 1 ? 'Excessive' : 'Normal'}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Contains Numbers</span>
+                        <span class="metric-value">${analysis.hasNumbers ? 'Yes' : 'No'}</span>
+                        <span class="metric-status neutral">
+                            ${analysis.hasNumbers ? 'Listicle likely' : 'Standard'}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Word Count</span>
+                        <span class="metric-value">${analysis.wordCount}</span>
+                        <span class="metric-status ${analysis.wordCount > 15 ? 'warning' : 'good'}">
+                            ${analysis.wordCount > 15 ? 'Verbose' : 'Concise'}
+                        </span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Has Quotes</span>
+                        <span class="metric-value">${analysis.hasQuotes ? 'Yes' : 'No'}</span>
+                        <span class="metric-status neutral">
+                            ${analysis.hasQuotes ? 'Attribution' : 'Direct'}
+                        </span>
+                    </div>
                 </div>
-            ` : ''}
+            </div>
         `;
     }
 
-    renderTactic(tactic) {
-        const tacticInfo = {
-            'curiosity_gap': {
-                icon: '🕳️',
-                name: 'Curiosity Gap',
-                description: 'Headline teases information without revealing it'
-            },
-            'emotional_manipulation': {
-                icon: '😱',
-                name: 'Emotional Manipulation',
-                description: 'Uses shock, fear, or outrage to drive clicks'
-            },
-            'misleading_claim': {
-                icon: '🎭',
-                name: 'Misleading Claims',
-                description: 'Implies something not supported by content'
-            },
-            'false_urgency': {
-                icon: '⚡',
-                name: 'False Urgency',
-                description: 'Creates artificial time pressure'
-            },
-            'listicle': {
-                icon: '📋',
-                name: 'Listicle Format',
-                description: 'Uses numbered lists to attract clicks'
-            },
-            'superlatives': {
-                icon: '🌟',
-                name: 'Extreme Superlatives',
-                description: 'Uses words like "shocking", "amazing", "unbelievable"'
-            }
-        };
-        
-        const info = tacticInfo[tactic.type] || {
-            icon: '📌',
-            name: tactic.name || tactic,
-            description: tactic.description || 'Clickbait tactic detected'
-        };
+    renderTactics(tactics) {
+        if (tactics.length === 0) return '';
         
         return `
-            <div class="tactic-card">
-                <div class="tactic-icon">${info.icon}</div>
-                <div class="tactic-content">
-                    <div class="tactic-name">${info.name}</div>
-                    <p class="tactic-description">${info.description}</p>
-                    ${tactic.example ? `
-                        <div class="tactic-example">
-                            <strong>Example:</strong> "${tactic.example}"
+            <div class="tactics-section">
+                <h5>Manipulation Tactics Detected</h5>
+                <div class="tactics-list">
+                    ${tactics.map(tactic => `
+                        <div class="tactic-item ${tactic.severity}">
+                            <div class="tactic-header">
+                                <span class="tactic-name">${tactic.name}</span>
+                                <span class="severity-badge">${tactic.severity}</span>
+                            </div>
+                            <p class="tactic-description">${tactic.description}</p>
+                            <p class="tactic-example">Example: ${tactic.example}</p>
                         </div>
-                    ` : ''}
+                    `).join('')}
                 </div>
             </div>
         `;
+    }
+
+    renderExamples(examples) {
+        if (examples.length === 0) return '';
+        
+        return `
+            <div class="examples-section">
+                <h5>Specific Examples Found</h5>
+                <div class="examples-list">
+                    ${examples.map(example => `
+                        <div class="example-item">
+                            <span class="example-type">${example.type}:</span>
+                            <span class="example-text">"${example.text}"</span>
+                            <p class="example-context">${example.context}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    getReadingTips(score) {
+        const tips = [];
+        
+        if (score > 40) {
+            tips.push('Check if the article delivers on the headline\'s promise');
+            tips.push('Look for specific facts rather than vague claims');
+        }
+        
+        if (score > 60) {
+            tips.push('Be skeptical of extreme claims or emotional language');
+            tips.push('Verify shocking statistics with original sources');
+        }
+        
+        if (score > 80) {
+            tips.push('Consider finding alternative sources for this story');
+            tips.push('Focus on facts, ignore sensational framing');
+        }
+        
+        if (tips.length === 0) {
+            tips.push('This appears to be straightforward reporting');
+            tips.push('Standard critical reading practices apply');
+        }
+        
+        return tips;
+    }
+
+    initializeGauge(score) {
+        const canvas = document.getElementById('clickbaitGauge');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const centerX = width / 2;
+        const centerY = height - 20;
+        const radius = 100;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background arc
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.stroke();
+        
+        // Calculate angle for score
+        const angle = Math.PI + (score / 100) * Math.PI;
+        
+        // Draw score arc with gradient
+        const gradient = ctx.createLinearGradient(50, 0, 250, 0);
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(0.3, '#3b82f6');
+        gradient.addColorStop(0.6, '#f59e0b');
+        gradient.addColorStop(1, '#ef4444');
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, angle);
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = gradient;
+        ctx.stroke();
+        
+        // Draw pointer
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle - Math.PI / 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, -radius + 30);
+        ctx.lineTo(-5, -radius + 45);
+        ctx.lineTo(5, -radius + 45);
+        ctx.closePath();
+        ctx.fillStyle = '#1f2937';
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Draw center circle
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = '#1f2937';
+        ctx.fill();
+        
+        // Draw score text
+        ctx.font = 'bold 36px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#1f2937';
+        ctx.fillText(score, centerX, centerY - 30);
+        
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#6b7280';
+        ctx.fillText('CLICKBAIT SCORE', centerX, centerY - 10);
     }
 
     getClickbaitLevel(score) {
-        if (score < 30) return 'Low';
+        if (score < 20) return 'Minimal';
+        if (score < 40) return 'Low';
         if (score < 60) return 'Moderate';
         if (score < 80) return 'High';
         return 'Extreme';
     }
 
-    getClickbaitDetails(score) {
-        if (score < 30) {
-            return {
-                label: 'Low',
-                class: 'low',
-                icon: '✅',
-                description: 'This headline uses straightforward language without sensationalism or manipulation tactics.'
-            };
-        } else if (score < 60) {
-            return {
-                label: 'Moderate',
-                class: 'moderate',
-                icon: '⚠️',
-                description: 'Some clickbait elements detected. The headline may exaggerate or use emotional triggers.'
-            };
-        } else if (score < 80) {
-            return {
-                label: 'High',
-                class: 'high',
-                icon: '🚨',
-                description: 'Significant clickbait tactics used. Be cautious of sensationalism and misleading claims.'
-            };
-        } else {
-            return {
-                label: 'Extreme',
-                class: 'extreme',
-                icon: '❗',
-                description: 'Heavy use of clickbait tactics. Content likely does not match the sensational headline.'
-            };
-        }
-    }
-
-    getIndicatorInfo(type) {
-        const indicators = {
-            'all_caps': {
-                name: 'ALL CAPS Words',
-                icon: '🔤',
-                severity: 'medium',
-                description: 'Excessive use of capital letters to grab attention'
-            },
-            'excessive_punctuation': {
-                name: 'Excessive Punctuation',
-                icon: '❗❓',
-                severity: 'medium',
-                description: 'Multiple exclamation marks or question marks'
-            },
-            'you_wont_believe': {
-                name: '"You Won\'t Believe"',
-                icon: '😮',
-                severity: 'high',
-                description: 'Classic clickbait phrase that overpromises'
-            },
-            'number_list': {
-                name: 'Numbered List',
-                icon: '🔢',
-                severity: 'low',
-                description: 'Uses numbers to create list-based content'
-            },
-            'shocking_words': {
-                name: 'Shock Words',
-                icon: '💥',
-                severity: 'high',
-                description: 'Words like "shocking", "devastating", "mind-blowing"'
-            },
-            'vague_pronouns': {
-                name: 'Vague References',
-                icon: '👤',
-                severity: 'medium',
-                description: 'Uses "this", "what happened", without clarity'
-            },
-            'curiosity_gap': {
-                name: 'Curiosity Gap',
-                icon: '🕳️',
-                severity: 'high',
-                description: 'Withholds key information to force clicks'
-            },
-            'emotional_trigger': {
-                name: 'Emotional Triggers',
-                icon: '😡',
-                severity: 'medium',
-                description: 'Targets emotions like anger, fear, or outrage'
+    extractExample(text, terms) {
+        for (const term of terms) {
+            if (text.toLowerCase().includes(term.toLowerCase())) {
+                return `Uses "${term}"`;
             }
-        };
-        
-        return indicators[type] || {
-            name: type,
-            icon: '📌',
-            severity: 'medium',
-            description: 'Clickbait indicator detected'
-        };
-    }
-
-    getRecommendations(score, indicators) {
-        const recommendations = [];
-        
-        if (score > 70) {
-            recommendations.push('⚠️ This article uses heavy clickbait tactics. The actual content may not match the sensational headline.');
         }
-        
-        if (indicators.some(i => i.type === 'curiosity_gap')) {
-            recommendations.push('🕳️ The headline deliberately withholds information. Be prepared for disappointment.');
-        }
-        
-        if (indicators.some(i => i.type === 'emotional_trigger')) {
-            recommendations.push('😡 Emotional manipulation detected. Read with a critical mindset.');
-        }
-        
-        recommendations.push('💡 Always verify sensational claims with multiple sources.');
-        recommendations.push('🔍 Check if the article content actually delivers on the headline\'s promise.');
-        
-        return `
-            <ul class="recommendations-list">
-                ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
-            </ul>
-        `;
-    }
-
-    getMetricColor(value) {
-        if (value < 30) return '#10b981';
-        if (value < 60) return '#f59e0b';
-        return '#ef4444';
-    }
-
-    initializeAnimations() {
-        // Animate gauge
-        const gaugeFill = this.container.querySelector('.gauge-fill');
-        if (gaugeFill) {
-            const dashoffset = gaugeFill.getAttribute('stroke-dashoffset');
-            gaugeFill.setAttribute('stroke-dashoffset', '220');
-            setTimeout(() => {
-                gaugeFill.style.transition = 'stroke-dashoffset 1.5s ease-out';
-                gaugeFill.setAttribute('stroke-dashoffset', dashoffset);
-            }, 100);
-        }
-        
-        // Animate needle
-        const needle = this.container.querySelector('.gauge-needle');
-        if (needle) {
-            const transform = needle.getAttribute('transform');
-            needle.setAttribute('transform', 'rotate(-90, 100, 100)');
-            setTimeout(() => {
-                needle.style.transition = 'transform 1.5s ease-out';
-                needle.setAttribute('transform', transform);
-            }, 100);
-        }
-        
-        // Animate metric bars
-        const metricFills = this.container.querySelectorAll('.metric-fill');
-        metricFills.forEach(fill => {
-            const width = fill.style.width;
-            fill.style.width = '0';
-            setTimeout(() => {
-                fill.style.transition = 'width 1s ease-out';
-                fill.style.width = width;
-            }, 200);
-        });
+        return 'Pattern detected';
     }
 }
 
-// Export and register
-window.ClickbaitDetector = ClickbaitDetector;
-
-// Auto-register with UI controller
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.UI) {
-        window.UI.registerComponent('clickbaitDetector', new ClickbaitDetector());
+// Add styles
+const style = document.createElement('style');
+style.textContent = `
+    .clickbait-detector-container {
+        padding: 20px;
     }
-});
+
+    .clickbait-gauge-container {
+        text-align: center;
+        margin: 20px 0;
+        position: relative;
+    }
+
+    .gauge-labels {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 20px;
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: -10px;
+    }
+
+    .score-breakdown {
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .recommendation-box {
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+
+    .recommendation-box.minimal { background: #f0fdf4; border: 1px solid #86efac; }
+    .recommendation-box.low { background: #eff6ff; border: 1px solid #93bbfe; }
+    .recommendation-box.moderate { background: #fef3c7; border: 1px solid #fcd34d; }
+    .recommendation-box.high { background: #fef2e8; border: 1px solid #fdba74; }
+    .recommendation-box.extreme { background: #fee2e2; border: 1px solid #fca5a5; }
+
+    .indicators-grid {
+        display: grid;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .indicator-card {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .indicator-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .indicator-score {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .match-chip {
+        display: inline-block;
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin: 2px;
+    }
+
+    .analysis-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .metric {
+        background: #f9fafb;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .metric-label {
+        display: block;
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .metric-value {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+    }
+
+    .metric-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .metric-status.good { background: #d1fae5; color: #065f46; }
+    .metric-status.warning { background: #fef3c7; color: #92400e; }
+    .metric-status.neutral { background: #e5e7eb; color: #374151; }
+
+    .tactics-list {
+        margin-top: 15px;
+    }
+
+    .tactic-item {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .tactic-item.low { background: #f3f4f6; }
+    .tactic-item.moderate { background: #fef3c7; }
+    .tactic-item.high { background: #fee2e2; }
+
+    .severity-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .simple-meter {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+
+    .meter-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .meter-fill.minimal { background: #10b981; }
+    .meter-fill.low { background: #3b82f6; }
+    .meter-fill.moderate { background: #f59e0b; }
+    .meter-fill.high { background: #f97316; }
+    .meter-fill.extreme { background: #ef4444; }
+
+    .reader-advisory {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    .reader-advisory h5 {
+        margin-bottom: 10px;
+        color: #1f2937;
+    }
+
+    .reader-advisory ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .reader-advisory li {
+        margin-bottom: 5px;
+        color: #4b5563;
+    }
+`;
+document.head.appendChild(style);
+
+// Register globally
+window.ClickbaitDetector = ClickbaitDetector;
