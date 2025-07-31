@@ -289,8 +289,22 @@ emotion_analyzer = EmotionAnalyzer()
 claim_extractor = ClaimExtractor()
 image_analyzer = ImageAnalyzer()
 network_analyzer = NetworkAnalyzer()
-pdf_generator = PDFGenerator()
 report_generator = ReportGenerator()
+
+# PDF Generator with proper error handling
+PDF_EXPORT_ENABLED = False
+pdf_generator = None
+
+try:
+    from services.pdf_generator import PDFGenerator
+    pdf_generator = PDFGenerator()
+    if pdf_generator.available:
+        PDF_EXPORT_ENABLED = True
+        logger.info("PDF export enabled")
+    else:
+        logger.warning("PDFGenerator initialized but reportlab not available")
+except Exception as e:
+    logger.warning(f"PDF export disabled: {e}")
 
 @app.route('/')
 def index():
@@ -471,8 +485,55 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '2.0'
+        'version': '2.0',
+        'pdf_export_enabled': PDF_EXPORT_ENABLED
     })
+
+@app.route('/report/<report_type>', methods=['POST'])
+@rate_limit(max_requests=5, window=60)  # 5 reports per minute
+def generate_report(report_type):
+    """Generate analysis report (PDF or other formats)"""
+    try:
+        data = request.get_json()
+        analysis_results = data.get('analysis')
+        
+        if not analysis_results:
+            return jsonify({'error': 'No analysis data provided'}), 400
+        
+        if report_type == 'pdf':
+            if not PDF_EXPORT_ENABLED:
+                return jsonify({
+                    'error': 'PDF export is not available. Please install reportlab.',
+                    'pdf_available': False
+                }), 503
+            
+            # Generate PDF report
+            pdf_path = pdf_generator.generate_report(analysis_results)
+            
+            if pdf_path and os.path.exists(pdf_path):
+                return send_file(
+                    pdf_path,
+                    mimetype='application/pdf',
+                    as_attachment=True,
+                    download_name=f'news-analysis-{datetime.now().strftime("%Y%m%d-%H%M%S")}.pdf'
+                )
+            else:
+                return jsonify({'error': 'Failed to generate PDF'}), 500
+            
+        elif report_type == 'json':
+            # Return formatted JSON report
+            return jsonify(report_generator.generate(analysis_results, 'json'))
+            
+        elif report_type == 'markdown':
+            # Return markdown report
+            return jsonify(report_generator.generate(analysis_results, 'markdown'))
+            
+        else:
+            return jsonify({'error': f'Unknown report type: {report_type}'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error generating report: {e}", exc_info=True)
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
 
 @app.route('/stats', methods=['GET'])
 @cache.cached(timeout=300)  # Cache for 5 minutes
