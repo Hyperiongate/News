@@ -3,7 +3,7 @@
 
 class DataManager {
     constructor() {
-        this.analysisData = null;
+        this.analysisData = null; 
         this.listeners = new Map();
         this.loadingState = 'idle'; // idle, loading, success, error
         this.errorDetails = null;
