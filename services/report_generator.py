@@ -1,150 +1,236 @@
+# services/report_generator.py
 """
-FILE: services/report_generator.py
-LOCATION: news/services/report_generator.py
-PURPOSE: Generate PDF reports for news analysis (future monetization feature)
+Report Generation Service
+Creates various report formats from analysis results
 """
 
-import io
 import json
+import logging
 from datetime import datetime
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.colors import HexColor
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from typing import Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 class ReportGenerator:
-    """Generate professional PDF reports for analysis results"""
+    """Generate various report formats from analysis results"""
     
-    def __init__(self):
-        self.styles = getSampleStyleSheet()
-        self._create_custom_styles()
-    
-    def _create_custom_styles(self):
-        """Create custom styles for the report"""
-        self.styles.add(ParagraphStyle(
-            name='CustomTitle',
-            parent=self.styles['Title'],
-            fontSize=24,
-            textColor=HexColor('#1f2937'),
-            spaceAfter=30
-        ))
-        
-        self.styles.add(ParagraphStyle(
-            name='SectionHeader',
-            parent=self.styles['Heading2'],
-            fontSize=16,
-            textColor=HexColor('#6366f1'),
-            spaceAfter=12
-        ))
-        
-        self.styles.add(ParagraphStyle(
-            name='TrustScore',
-            parent=self.styles['Normal'],
-            fontSize=36,
-            textColor=HexColor('#10b981'),
-            alignment=1  # Center
-        ))
-    
-    def generate_pdf(self, analysis_data):
+    def generate(self, analysis_results, format='summary'):
         """
-        Generate a PDF report from analysis data
+        Generate report in specified format
         
         Args:
-            analysis_data: Dictionary containing analysis results
+            analysis_results: Dictionary containing analysis results
+            format: Report format ('summary', 'detailed', 'json', 'markdown')
             
         Returns:
-            bytes: PDF file content
+            Report in specified format
         """
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        story = []
-        
-        # Title
-        story.append(Paragraph("News Analysis Report", self.styles['CustomTitle']))
-        story.append(Spacer(1, 0.2*inch))
-        
-        # Metadata
-        article = analysis_data.get('article', {})
-        if article.get('title'):
-            story.append(Paragraph(f"<b>Article:</b> {article['title']}", self.styles['Normal']))
-        if article.get('author'):
-            story.append(Paragraph(f"<b>Author:</b> {article['author']}", self.styles['Normal']))
-        if article.get('domain'):
-            story.append(Paragraph(f"<b>Source:</b> {article['domain']}", self.styles['Normal']))
-        
-        story.append(Paragraph(f"<b>Analysis Date:</b> {datetime.now().strftime('%B %d, %Y')}", self.styles['Normal']))
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Trust Score
-        trust_score = analysis_data.get('trust_score', 0)
-        story.append(Paragraph("Overall Trust Score", self.styles['SectionHeader']))
-        story.append(Paragraph(f"{trust_score}%", self.styles['TrustScore']))
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Summary
-        if analysis_data.get('summary'):
-            story.append(Paragraph("Executive Summary", self.styles['SectionHeader']))
-            story.append(Paragraph(analysis_data['summary'], self.styles['Normal']))
-            story.append(Spacer(1, 0.3*inch))
-        
-        # Source Credibility
-        if analysis_data.get('source_credibility'):
-            cred = analysis_data['source_credibility']
-            story.append(Paragraph("Source Credibility", self.styles['SectionHeader']))
-            story.append(Paragraph(f"Credibility Rating: {cred.get('credibility', 'Unknown')}", self.styles['Normal']))
-            story.append(Paragraph(f"Political Bias: {cred.get('bias', 'Unknown')}", self.styles['Normal']))
-            story.append(Paragraph(f"Source Type: {cred.get('type', 'Unknown')}", self.styles['Normal']))
-            story.append(Spacer(1, 0.3*inch))
-        
-        # Bias Analysis
-        bias_score = analysis_data.get('bias_score', 0)
-        story.append(Paragraph("Bias Analysis", self.styles['SectionHeader']))
-        bias_label = 'Center/Neutral'
-        if bias_score < -0.3:
-            bias_label = 'Left-leaning'
-        elif bias_score > 0.3:
-            bias_label = 'Right-leaning'
-        story.append(Paragraph(f"Political Lean: {bias_label}", self.styles['Normal']))
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Manipulation Tactics
-        if analysis_data.get('manipulation_tactics'):
-            story.append(Paragraph("Manipulation Tactics Detected", self.styles['SectionHeader']))
-            for tactic in analysis_data['manipulation_tactics']:
-                story.append(Paragraph(f"• {tactic}", self.styles['Normal']))
-            story.append(Spacer(1, 0.3*inch))
-        
-        # Key Claims and Fact Checks
-        if analysis_data.get('key_claims'):
-            story.append(Paragraph("Key Claims Analysis", self.styles['SectionHeader']))
-            fact_checks = analysis_data.get('fact_checks', [])
-            
-            for i, claim in enumerate(analysis_data['key_claims']):
-                story.append(Paragraph(f"<b>Claim {i+1}:</b> {claim}", self.styles['Normal']))
-                
-                if i < len(fact_checks):
-                    check = fact_checks[i]
-                    verdict = check.get('verdict', 'unverified').upper()
-                    story.append(Paragraph(f"Verdict: {verdict}", self.styles['Normal']))
-                    if check.get('explanation'):
-                        story.append(Paragraph(f"Explanation: {check['explanation']}", self.styles['Normal']))
-                
-                story.append(Spacer(1, 0.1*inch))
-        
-        # Footer
-        story.append(Spacer(1, 0.5*inch))
-        story.append(Paragraph("Generated by Facts & Fakes AI - News Analyzer", self.styles['Normal']))
-        story.append(Paragraph("factsandfakes.ai", self.styles['Normal']))
-        
-        # Build PDF
-        doc.build(story)
-        buffer.seek(0)
-        
-        return buffer.getvalue()
+        if format == 'summary':
+            return self._generate_summary_report(analysis_results)
+        elif format == 'detailed':
+            return self._generate_detailed_report(analysis_results)
+        elif format == 'json':
+            return self._generate_json_report(analysis_results)
+        elif format == 'markdown':
+            return self._generate_markdown_report(analysis_results)
+        else:
+            logger.warning(f"Unknown report format: {format}")
+            return self._generate_summary_report(analysis_results)
     
-    def generate_batch_report(self, analyses):
-        """Generate a report for multiple analyses (future feature)"""
-        # TODO: Implement batch reporting for enterprise users
-        pass
+    def _generate_summary_report(self, data):
+        """Generate summary report"""
+        article = data.get('article', {})
+        
+        summary = {
+            'report_type': 'summary',
+            'generated_at': datetime.now().isoformat(),
+            'article_info': {
+                'title': article.get('title', 'Unknown'),
+                'source': article.get('domain', 'Unknown'),
+                'author': article.get('author', 'Unknown'),
+                'url': article.get('url', '')
+            },
+            'key_metrics': {
+                'trust_score': data.get('trust_score', 0),
+                'bias_score': data.get('bias_score', 0),
+                'clickbait_score': data.get('clickbait_analysis', {}).get('score', 0),
+                'transparency_score': data.get('transparency_analysis', {}).get('score', 0)
+            },
+            'summary': self._create_text_summary(data),
+            'recommendations': self._get_key_recommendations(data)
+        }
+        
+        return summary
+    
+    def _generate_detailed_report(self, data):
+        """Generate detailed report"""
+        report = {
+            'report_type': 'detailed',
+            'generated_at': datetime.now().isoformat(),
+            'article_info': data.get('article', {}),
+            'analysis_results': {
+                'trust_analysis': {
+                    'score': data.get('trust_score', 0),
+                    'level': data.get('trust_level', 'Unknown'),
+                    'breakdown': data.get('trust_score_breakdown', {})
+                },
+                'bias_analysis': data.get('bias_analysis', {}),
+                'source_credibility': data.get('source_credibility', {}),
+                'author_credibility': data.get('author_info', {}),
+                'transparency': data.get('transparency_analysis', {}),
+                'manipulation_detection': data.get('persuasion_analysis', {}),
+                'fact_checking': {
+                    'claims_checked': len(data.get('fact_checks', [])),
+                    'results': data.get('fact_checks', [])
+                }
+            },
+            'sections': self._create_detailed_sections(data)
+        }
+        
+        return report
+    
+    def _generate_json_report(self, data):
+        """Generate JSON report"""
+        # Clean up data for JSON serialization
+        clean_data = self._clean_for_json(data)
+        
+        return {
+            'report_type': 'json',
+            'generated_at': datetime.now().isoformat(),
+            'data': clean_data
+        }
+    
+    def _generate_markdown_report(self, data):
+        """Generate Markdown report"""
+        article = data.get('article', {})
+        
+        markdown = f"""# News Article Analysis Report
+
+## Article Information
+- **Title**: {article.get('title', 'Unknown')}
+- **Source**: {article.get('domain', 'Unknown')}
+- **Author**: {article.get('author', 'Unknown')}
+- **URL**: {article.get('url', 'N/A')}
+- **Analysis Date**: {datetime.now().strftime('%B %d, %Y')}
+
+## Overall Assessment
+- **Trust Score**: {data.get('trust_score', 0)}% ({data.get('trust_level', 'Unknown')})
+- **Political Bias**: {data.get('bias_analysis', {}).get('political_lean', 0)}
+- **Clickbait Score**: {data.get('clickbait_analysis', {}).get('score', 0)}%
+- **Transparency Score**: {data.get('transparency_analysis', {}).get('score', 0)}%
+
+## Key Findings
+
+### Bias Analysis
+{self._format_bias_findings(data.get('bias_analysis', {}))}
+
+### Source Credibility
+- **Rating**: {data.get('source_credibility', {}).get('credibility', 'Unknown')}
+- **Factual Reporting**: {data.get('source_credibility', {}).get('factual_reporting', 'Unknown')}
+
+### Transparency
+{self._format_transparency_findings(data.get('transparency_analysis', {}))}
+
+## Recommendations
+{self._format_recommendations(data)}
+
+---
+*Generated by News Analyzer*
+"""
+        
+        return {
+            'report_type': 'markdown',
+            'generated_at': datetime.now().isoformat(),
+            'content': markdown
+        }
+    
+    def _create_text_summary(self, data):
+        """Create text summary of analysis"""
+        trust_score = data.get('trust_score', 0)
+        bias_score = abs(data.get('bias_score', 0))
+        
+        if trust_score >= 70:
+            trust_assessment = "high credibility"
+        elif trust_score >= 40:
+            trust_assessment = "moderate credibility"
+        else:
+            trust_assessment = "low credibility"
+        
+        if bias_score < 0.3:
+            bias_assessment = "minimal bias"
+        elif bias_score < 0.6:
+            bias_assessment = "moderate bias"
+        else:
+            bias_assessment = "significant bias"
+        
+        summary = f"""
+        This article from {data.get('article', {}).get('domain', 'unknown source')} shows {trust_assessment} 
+        with a trust score of {trust_score}%. The analysis detected {bias_assessment} with a political lean 
+        score of {data.get('bias_analysis', {}).get('political_lean', 0)}. 
+        
+        The source has a {data.get('source_credibility', {}).get('credibility', 'unknown')} credibility rating.
+        Transparency score is {data.get('transparency_analysis', {}).get('score', 0)}%, 
+        indicating {'good' if data.get('transparency_analysis', {}).get('score', 0) > 60 else 'poor'} disclosure practices.
+        """
+        
+        return summary.strip()
+    
+    def _get_key_recommendations(self, data):
+        """Get key recommendations from analysis"""
+        recommendations = []
+        
+        # Trust-based recommendations
+        if data.get('trust_score', 0) < 40:
+            recommendations.append("Verify claims through multiple independent sources")
+        
+        # Bias recommendations
+        if abs(data.get('bias_score', 0)) > 0.6:
+            recommendations.append("Be aware of strong political bias in reporting")
+        
+        # Clickbait recommendations
+        if data.get('clickbait_analysis', {}).get('score', 0) > 60:
+            recommendations.append("Headline may be misleading - focus on article content")
+        
+        # Transparency recommendations
+        if data.get('transparency_analysis', {}).get('score', 0) < 40:
+            recommendations.append("Limited transparency - seek additional context")
+        
+        if not recommendations:
+            recommendations.append("Article appears reasonably credible - standard verification recommended")
+        
+        return recommendations
+    
+    def _create_detailed_sections(self, data):
+        """Create detailed report sections"""
+        sections = []
+        
+        # Bias section
+        if data.get('bias_analysis'):
+            sections.append({
+                'title': 'Bias Analysis',
+                'content': self._format_bias_section(data['bias_analysis'])
+            })
+        
+        # Credibility section
+        sections.append({
+            'title': 'Credibility Assessment',
+            'content': self._format_credibility_section(data)
+        })
+        
+        # Transparency section
+        if data.get('transparency_analysis'):
+            sections.append({
+                'title': 'Transparency Analysis',
+                'content': self._format_transparency_section(data['transparency_analysis'])
+            })
+        
+        return sections
+    
+    def _format_bias_findings(self, bias_data):
+        """Format bias findings for markdown"""
+        if not bias_data:
+            return "No bias analysis available"
+        
+        findings = []
+        findings.append(f"- **Political Lean**: {bias_data.get('political_lean', 0)}")
+        findings.append(f"- **Objectivity Score**: {bias_data.get('objectivity_score',
