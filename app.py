@@ -309,15 +309,7 @@ except Exception as e:
 @app.route('/')
 def index():
     """Render the main page"""
-    return jsonify({
-        'status': 'News Analyzer API is running',
-        'version': '2.0',
-        'endpoints': [
-            '/analyze',
-            '/health',
-            '/stats'
-        ]
-    })
+    return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
 @rate_limit(max_requests=30, window=60)  # 30 requests per minute
