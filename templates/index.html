@@ -624,7 +624,7 @@
     <script src="/static/js/components/author-card.js"></script>
     <script src="/static/js/components/clickbait-detector.js"></script>
     <script src="/static/js/components/source-credibility.js"></script>
-    <script src="/static/js/components/manipulation-detector.js"></script>
+    <!-- REMOVED: manipulation-detector.js doesn't exist as a JS component -->
     <script src="/static/js/components/transparency-analysis.js"></script>
 
     <!-- Initialize components -->
@@ -704,10 +704,37 @@
                         
                         // Render Manipulation Detector
                         const manipulationContainer = document.getElementById('manipulationContainer');
-                        if (window.ManipulationDetector && manipulationContainer) {
-                            manipulationContainer.innerHTML = '';
-                            const manipulationDetector = new window.ManipulationDetector();
-                            manipulationContainer.appendChild(manipulationDetector.render(data));
+                        if (manipulationContainer && data.manipulation_analysis) {
+                            // Use the manipulation data from the API response
+                            manipulationContainer.innerHTML = `
+                                <div class="analysis-card">
+                                    <div class="analysis-header">
+                                        <span class="analysis-icon">🎭</span>
+                                        <span>Manipulation Tactics</span>
+                                    </div>
+                                    <div class="manipulation-content">
+                                        <div class="manipulation-score">
+                                            <strong>Manipulation Score:</strong> 
+                                            <span class="${data.manipulation_analysis.persuasion_score > 70 ? 'poor' : data.manipulation_analysis.persuasion_score > 40 ? 'fair' : 'good'}">
+                                                ${data.manipulation_analysis.persuasion_score || 0}/100
+                                            </span>
+                                        </div>
+                                        ${data.manipulation_analysis.tactics_found && data.manipulation_analysis.tactics_found.length > 0 ? `
+                                            <div class="tactics-list">
+                                                <h4>Detected Tactics:</h4>
+                                                <ul>
+                                                    ${data.manipulation_analysis.tactics_found.map(tactic => `
+                                                        <li>
+                                                            <strong>${tactic.name}:</strong> ${tactic.description}
+                                                            <span class="severity-badge ${tactic.severity}">${tactic.severity}</span>
+                                                        </li>
+                                                    `).join('')}
+                                                </ul>
+                                            </div>
+                                        ` : '<p>No significant manipulation tactics detected.</p>'}
+                                    </div>
+                                </div>
+                            `;
                         }
                         
                         // Render Transparency Analysis
