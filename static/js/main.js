@@ -1,101 +1,78 @@
-// main.js - Complete News Analyzer Application
-// Updated to work with YOUR file structure
+// static/js/main.js - Complete Fixed Version
+// Main application logic with correct API format
 
 // Global state
 let currentAnalysis = null;
 let analysisInProgress = false;
 
-// Initialize application when DOM is ready
+// DOM elements
+const urlInput = document.getElementById('urlInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const resultsSection = document.getElementById('results');
+const errorAlert = document.getElementById('errorAlert');
+const errorMessage = document.getElementById('errorMessage');
+const progressBar = document.querySelector('.progress-container');
+const progressFill = document.querySelector('.progress-fill');
+const progressText = document.querySelector('.progress-text');
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-function initializeApp() {
+    console.log('News Analyzer initialized');
+    
     // Set up event listeners
-    setupEventListeners();
-    
-    // Initialize with sample URL if in development
-    if (window.location.hostname === 'localhost') {
-        document.getElementById('url-input').value = 'https://www.example.com/article';
-    }
-}
-
-// Set up all event listeners
-function setupEventListeners() {
-    // Analyze button
-    const analyzeBtn = document.getElementById('analyze-btn');
-    const urlInput = document.getElementById('url-input');
-    
     if (analyzeBtn) {
         analyzeBtn.addEventListener('click', handleAnalyze);
     }
     
-    // Enter key in URL input
     if (urlInput) {
-        urlInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        urlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !analysisInProgress) {
                 handleAnalyze();
             }
         });
     }
-}
+    
+    // Add example URL buttons
+    setupExampleUrls();
+    
+    // Check for URL in query params
+    checkUrlParams();
+});
 
 // Handle analyze button click
 async function handleAnalyze() {
-    const urlInput = document.getElementById('url-input');
-    const url = urlInput.value.trim();
+    const url = urlInput ? urlInput.value.trim() : '';
     
     if (!url) {
-        showError('Please enter a URL to analyze');
-        return;
-    }
-    
-    if (!isValidUrl(url)) {
         showError('Please enter a valid URL');
         return;
     }
     
-    if (analysisInProgress) {
-        showError('Analysis already in progress');
+    if (!isValidUrl(url)) {
+        showError('Please enter a valid news article URL');
         return;
     }
     
     await analyzeArticle(url);
 }
 
-// Validate URL
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
-
-// Main analysis function with progress animation
+// Main analysis function - FIXED API FORMAT
 async function analyzeArticle(url) {
-    analysisInProgress = true;
-    
-    const resultsSection = document.getElementById('results-section');
-    const progressBar = document.querySelector('.progress-bar');
-    const progressFill = document.querySelector('.progress-fill');
-    const progressText = document.querySelector('.progress-text');
-    const analyzeBtn = document.getElementById('analyze-btn');
-    
-    // Hide previous results and errors
-    if (resultsSection) {
-        resultsSection.style.display = 'none';
+    if (analysisInProgress) {
+        console.log('Analysis already in progress');
+        return;
     }
+    
+    analysisInProgress = true;
     hideError();
     
-    // Disable analyze button
+    // Update UI
     if (analyzeBtn) {
         analyzeBtn.disabled = true;
         analyzeBtn.textContent = 'Analyzing...';
     }
     
-    // Show and animate progress bar
+    // Show progress bar
     if (progressBar) {
         progressBar.style.display = 'block';
         progressFill.style.width = '0%';
@@ -125,17 +102,18 @@ async function analyzeArticle(url) {
     }, 400);
     
     try {
-        // Make API call
+        // Make API call with CORRECT FORMAT
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url })
+            body: JSON.stringify({ url })  // ← FIXED: Just { url } not { input: url, input_type: 'url' }
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.text();
+            throw new Error(errorData || `HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
@@ -218,157 +196,207 @@ function displayResults(data) {
     // Clear previous results
     container.innerHTML = '';
     
-    // Define all cards using YOUR component names from file structure
-    const cards = [
-        { component: window.BiasAnalysis, name: 'BiasAnalysis' },
-        { component: window.FactChecker, name: 'FactChecker' },
-        { component: window.TransparencyAnalysis, name: 'TransparencyAnalysis' },
-        { component: window.AuthorCard, name: 'AuthorCard' },
-        { component: window.ContextCard, name: 'ContextCard' },
-        { component: window.ReadabilityCard, name: 'ReadabilityCard' },
-        { component: window.EmotionalToneCard, name: 'EmotionalToneCard' },
-        { component: window.ComparisonCard, name: 'ComparisonCard' }
+    // Create cards for each analysis component
+    const components = [
+        { name: 'bias-analysis', data: data.bias_analysis, title: 'Bias Analysis' },
+        { name: 'fact-checker', data: data.fact_checks || data.fact_checking, title: 'Fact Checking' },
+        { name: 'transparency-analysis', data: data.transparency_analysis, title: 'Transparency' },
+        { name: 'author-card', data: data.author_info || data.author_analysis, title: 'Author Analysis' },
+        { name: 'context-card', data: data.context_analysis, title: 'Context' },
+        { name: 'readability-card', data: data.readability_analysis || data.readability, title: 'Readability' },
+        { name: 'emotional-tone-card', data: data.emotional_tone_analysis || data.emotional_tone, title: 'Emotional Tone' },
+        { name: 'comparison-card', data: data.comparison_analysis || data.comparison, title: 'Source Comparison' }
     ];
     
-    // Render all cards
-    cards.forEach(({ component, name }) => {
-        if (!component) {
-            console.warn(`${name} component not found - check if file exists and exports class correctly`);
-            return;
-        }
-        
-        try {
-            const cardInstance = new component();
-            const element = cardInstance.render(data);
-            if (element) {
-                container.appendChild(element);
-            }
-        } catch (error) {
-            console.error(`Error rendering ${name}:`, error);
+    components.forEach(comp => {
+        const card = createAnalysisCard(comp.name, comp.data, comp.title);
+        if (card) {
+            container.appendChild(card);
         }
     });
     
-    // Initialize dropdowns after cards are rendered
-    setTimeout(initializeDropdowns, 100);
+    // Update trust score if available
+    updateTrustScore(data.trust_score);
+    
+    // Show article info
+    if (data.article) {
+        updateArticleInfo(data.article);
+    }
 }
 
-// Initialize dropdown functionality for all cards
-function initializeDropdowns() {
-    // Add click handlers to all analysis headers
-    document.querySelectorAll('.analysis-header').forEach(header => {
-        // Skip if already initialized
-        if (header.dataset.dropdownInit) return;
-        header.dataset.dropdownInit = 'true';
+// Create analysis card
+function createAnalysisCard(componentName, data, title) {
+    const card = document.createElement('div');
+    card.className = 'analysis-card';
+    card.setAttribute('data-component', componentName);
+    
+    // Basic card structure
+    card.innerHTML = `
+        <div class="card-header">
+            <h3>${title}</h3>
+            <button class="expand-btn" onclick="toggleCard('${componentName}')">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="card-content" id="${componentName}-content">
+            <div class="loading-placeholder">Loading component...</div>
+        </div>
+    `;
+    
+    // Load component dynamically
+    loadComponent(componentName, data);
+    
+    return card;
+}
+
+// Load component dynamically
+async function loadComponent(componentName, data) {
+    try {
+        // Check if component exists
+        const ComponentClass = window[toCamelCase(componentName)];
         
-        header.style.cursor = 'pointer';
-        
-        // Add dropdown arrow if not present
-        if (!header.querySelector('.dropdown-arrow')) {
-            const arrow = document.createElement('span');
-            arrow.className = 'dropdown-arrow';
-            arrow.innerHTML = '▼';
-            arrow.style.marginLeft = 'auto';
-            arrow.style.transition = 'transform 0.3s';
-            header.appendChild(arrow);
-        }
-        
-        header.addEventListener('click', function(e) {
-            // Prevent event bubbling
-            e.stopPropagation();
+        if (ComponentClass) {
+            const instance = new ComponentClass();
+            const content = await instance.render(data);
             
-            const card = this.closest('.analysis-card');
-            if (!card) return;
-            
-            // Find the content section (try ALL possible class names)
-            const contentSelectors = [
-                '.card-content',
-                '.bias-content',
-                '.fact-check-content',
-                '.transparency-content',
-                '.author-content',
-                '.context-content',
-                '.readability-content',
-                '.emotional-content',
-                '.comparison-content',
-                '.bias-analysis-content',      // For bias-analysis.js
-                '.fact-checker-content',        // For fact-checker.js
-                '.transparency-analysis-content' // For transparency-analysis.js
-            ];
-            
-            let content = null;
-            for (const selector of contentSelectors) {
-                content = card.querySelector(selector);
-                if (content) break;
-            }
-            
-            const arrow = this.querySelector('.dropdown-arrow');
-            
-            if (content) {
-                // Toggle expanded state
-                const isExpanded = content.style.display === 'block';
-                content.style.display = isExpanded ? 'none' : 'block';
-                if (arrow) {
-                    arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+            const container = document.getElementById(`${componentName}-content`);
+            if (container) {
+                container.innerHTML = '';
+                if (typeof content === 'string') {
+                    container.innerHTML = content;
+                } else {
+                    container.appendChild(content);
                 }
-                
-                // Add/remove expanded class
-                card.classList.toggle('expanded', !isExpanded);
-            } else {
-                console.warn('No content section found for card:', card);
             }
-        });
-        
-        // Start with first two cards expanded
-        const allHeaders = document.querySelectorAll('.analysis-header');
-        const index = Array.from(allHeaders).indexOf(header);
-        if (index < 2) {
-            header.click();
+        } else {
+            console.warn(`Component ${componentName} not found`);
         }
-    });
+    } catch (error) {
+        console.error(`Error loading component ${componentName}:`, error);
+    }
 }
 
-// Show error message
+// Toggle card expansion
+function toggleCard(componentName) {
+    const card = document.querySelector(`[data-component="${componentName}"]`);
+    if (card) {
+        card.classList.toggle('expanded');
+    }
+}
+
+// Update trust score display
+function updateTrustScore(score) {
+    const scoreElement = document.getElementById('trustScore');
+    const scoreMeter = document.getElementById('trustScoreMeter');
+    
+    if (scoreElement && score !== undefined) {
+        scoreElement.textContent = Math.round(score);
+        
+        // Update meter color based on score
+        if (scoreMeter) {
+            scoreMeter.style.width = `${score}%`;
+            
+            if (score >= 80) {
+                scoreMeter.className = 'score-meter high';
+            } else if (score >= 60) {
+                scoreMeter.className = 'score-meter medium';
+            } else {
+                scoreMeter.className = 'score-meter low';
+            }
+        }
+    }
+}
+
+// Update article info display
+function updateArticleInfo(article) {
+    const titleElement = document.getElementById('articleTitle');
+    const sourceElement = document.getElementById('articleSource');
+    const dateElement = document.getElementById('articleDate');
+    
+    if (titleElement && article.title) {
+        titleElement.textContent = article.title;
+    }
+    
+    if (sourceElement && article.domain) {
+        sourceElement.textContent = article.domain;
+    }
+    
+    if (dateElement && article.publish_date) {
+        const date = new Date(article.publish_date);
+        dateElement.textContent = date.toLocaleDateString();
+    }
+}
+
+// Utility functions
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+        return false;
+    }
+}
+
 function showError(message) {
-    const errorEl = document.getElementById('error-message');
-    if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.style.display = 'block';
-        
-        // Hide after 5 seconds
-        setTimeout(() => {
-            errorEl.style.display = 'none';
-        }, 5000);
+    if (errorAlert) {
+        errorMessage.textContent = message;
+        errorAlert.style.display = 'block';
     }
 }
 
-// Hide error message
 function hideError() {
-    const errorEl = document.getElementById('error-message');
-    if (errorEl) {
-        errorEl.style.display = 'none';
+    if (errorAlert) {
+        errorAlert.style.display = 'none';
     }
 }
 
-// Export for debugging
-window.debugAnalysis = {
-    getCurrentData: () => currentAnalysis,
-    rerunDisplay: () => displayResults(currentAnalysis),
-    testProgress: () => analyzeArticle('https://test.com'),
-    checkComponents: () => {
-        const components = {
-            'BiasAnalysis': window.BiasAnalysis,
-            'FactChecker': window.FactChecker,
-            'TransparencyAnalysis': window.TransparencyAnalysis,
-            'AuthorCard': window.AuthorCard,
-            'ComparisonCard': window.ComparisonCard,
-            'ContextCard': window.ContextCard,
-            'EmotionalToneCard': window.EmotionalToneCard,
-            'ReadabilityCard': window.ReadabilityCard
-        };
-        
-        console.log('Component Status:');
-        Object.entries(components).forEach(([name, component]) => {
-            console.log(`${name}: ${component ? '✓ Loaded' : '✗ Missing'}`);
+function toCamelCase(str) {
+    return str.split('-').map((word, index) => {
+        if (index === 0) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join('');
+}
+
+// Setup example URLs
+function setupExampleUrls() {
+    const exampleUrls = [
+        { text: 'CNN Politics', url: 'https://www.cnn.com/2024/01/25/politics/index.html' },
+        { text: 'BBC Technology', url: 'https://www.bbc.com/news/technology' },
+        { text: 'Reuters AI', url: 'https://www.reuters.com/technology/artificial-intelligence/' }
+    ];
+    
+    const exampleContainer = document.getElementById('exampleUrls');
+    if (exampleContainer) {
+        exampleUrls.forEach(example => {
+            const btn = document.createElement('button');
+            btn.className = 'example-url-btn';
+            btn.textContent = example.text;
+            btn.onclick = () => {
+                if (urlInput) {
+                    urlInput.value = example.url;
+                    handleAnalyze();
+                }
+            };
+            exampleContainer.appendChild(btn);
         });
     }
-};
+}
+
+// Check URL parameters
+function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get('url');
+    
+    if (url && urlInput) {
+        urlInput.value = url;
+        // Auto-analyze if URL provided
+        setTimeout(() => handleAnalyze(), 500);
+    }
+}
+
+// Export functions for global use
+window.analyzeArticle = analyzeArticle;
+window.toggleCard = toggleCard;
+window.currentAnalysis = () => currentAnalysis;
