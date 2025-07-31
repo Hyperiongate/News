@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Analyzer - Debug Test</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1f2937;
+            margin-bottom: 30px;
+        }
+        
+        .component-test {
+            margin: 10px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .component-name {
+            font-weight: bold;
+            color: #374151;
+        }
+        
+        .status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status.loaded {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.missing {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .test-button {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .test-button:hover {
+            background: #2563eb;
+        }
+        
+        .results-area {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .mini-card {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        
+        .mini-card.missing {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        
+        .mini-card .icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .mini-card .title {
+            font-weight: 600;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 News Analyzer Component Test</h1>
+        
+        <h2>Component Loading Status:</h2>
+        <div id="component-list"></div>
+        
+        <button class="test-button" onclick="testComponents()">Run Component Test</button>
+        
+        <div class="results-area" id="results">
+            <h3>Test Results:</h3>
+            <div id="test-output"></div>
+            
+            <h3>Component Preview:</h3>
+            <div class="results-grid" id="preview-grid"></div>
+        </div>
+    </div>
+
+    <!-- Load all your component scripts -->
+    <script src="/static/js/components/bias-analysis.js"></script>
+    <script src="/static/js/components/fact-checker.js"></script>
+    <script src="/static/js/components/transparency-analysis.js"></script>
+    <script src="/static/js/components/author-card.js"></script>
+    <script src="/static/js/comparison-card.js"></script>
+    <script src="/static/js/context-card.js"></script>
+    <script src="/static/js/emotional-tone-card.js"></script>
+    <script src="/static/js/readability-card.js"></script>
+    
+    <script>
+        // Component definitions
+        const componentDefs = [
+            { name: 'BiasAnalysis', file: 'bias-analysis.js', icon: '⚖️' },
+            { name: 'FactChecker', file: 'fact-checker.js', icon: '✓' },
+            { name: 'TransparencyAnalysis', file: 'transparency-analysis.js', icon: '🔍' },
+            { name: 'AuthorCard', file: 'author-card.js', icon: '👤' },
+            { name: 'ComparisonCard', file: 'comparison-card.js', icon: '📊' },
+            { name: 'ContextCard', file: 'context-card.js', icon: '🌐' },
+            { name: 'EmotionalToneCard', file: 'emotional-tone-card.js', icon: '😊' },
+            { name: 'ReadabilityCard', file: 'readability-card.js', icon: '📖' }
+        ];
+        
+        // Check components on load
+        window.addEventListener('load', () => {
+            checkComponents();
+        });
+        
+        function checkComponents() {
+            const listEl = document.getElementById('component-list');
+            listEl.innerHTML = '';
+            
+            componentDefs.forEach(comp => {
+                const div = document.createElement('div');
+                div.className = 'component-test';
+                
+                const isLoaded = window[comp.name] !== undefined;
+                
+                div.innerHTML = `
+                    <div>
+                        <span class="component-name">${comp.icon} ${comp.name}</span>
+                        <span style="color: #6b7280; font-size: 14px; margin-left: 10px;">${comp.file}</span>
+                    </div>
+                    <span class="status ${isLoaded ? 'loaded' : 'missing'}">
+                        ${isLoaded ? '✓ Loaded' : '✗ Missing'}
+                    </span>
+                `;
+                
+                listEl.appendChild(div);
+            });
+        }
+        
+        function testComponents() {
+            const resultsEl = document.getElementById('results');
+            const outputEl = document.getElementById('test-output');
+            const previewEl = document.getElementById('preview-grid');
+            
+            resultsEl.style.display = 'block';
+            outputEl.innerHTML = '<p>Testing components...</p>';
+            previewEl.innerHTML = '';
+            
+            // Test data
+            const testData = {
+                success: true,
+                is_pro: true,
+                article: { title: 'Test Article' },
+                bias_analysis: { bias_score: 0.3, political_lean: 'Center' },
+                fact_checks: [{ claim: 'Test claim', rating: 'True' }],
+                transparency_analysis: { transparency_score: 75 },
+                author_info: { name: 'Test Author' },
+                context_analysis: { summary: 'Test context' },
+                readability_analysis: { readability_score: 65 },
+                emotional_tone_analysis: { dominant_emotion: 'Neutral' },
+                comparison_analysis: { similar_articles: [] }
+            };
+            
+            let loadedCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            componentDefs.forEach(comp => {
+                const miniCard = document.createElement('div');
+                miniCard.className = 'mini-card';
+                
+                if (window[comp.name]) {
+                    try {
+                        const instance = new window[comp.name]();
+                        const element = instance.render(testData);
+                        
+                        if (element) {
+                            loadedCount++;
+                            miniCard.innerHTML = `
+                                <div class="icon">${comp.icon}</div>
+                                <div class="title">${comp.name}</div>
+                                <div style="color: #10b981; font-size: 14px; margin-top: 5px;">✓ Renders OK</div>
+                            `;
+                        } else {
+                            throw new Error('No element returned');
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        errors.push(`${comp.name}: ${error.message}`);
+                        miniCard.className = 'mini-card missing';
+                        miniCard.innerHTML = `
+                            <div class="icon">${comp.icon}</div>
+                            <div class="title">${comp.name}</div>
+                            <div style="color: #dc2626; font-size: 14px; margin-top: 5px;">✗ Render Error</div>
+                        `;
+                    }
+                } else {
+                    miniCard.className = 'mini-card missing';
+                    miniCard.innerHTML = `
+                        <div class="icon">${comp.icon}</div>
+                        <div class="title">${comp.name}</div>
+                        <div style="color: #dc2626; font-size: 14px; margin-top: 5px;">✗ Not Loaded</div>
+                    `;
+                }
+                
+                previewEl.appendChild(miniCard);
+            });
+            
+            // Summary
+            outputEl.innerHTML = `
+                <h4>Test Summary:</h4>
+                <p>✓ Successfully rendered: ${loadedCount}/8 components</p>
+                <p>✗ Failed to render: ${errorCount} components</p>
+                <p>✗ Not loaded: ${8 - loadedCount - errorCount} components</p>
+                
+                ${errors.length > 0 ? `
+                    <h4>Errors:</h4>
+                    <ul style="color: #dc2626;">
+                        ${errors.map(err => `<li>${err}</li>`).join('')}
+                    </ul>
+                ` : ''}
+                
+                <h4>Next Steps:</h4>
+                <ol>
+                    <li>For missing components: Check if files exist in the correct location</li>
+                    <li>For render errors: Check console for detailed error messages</li>
+                    <li>Ensure each component file ends with: <code>window.ComponentName = ComponentName;</code></li>
+                </ol>
+            `;
+        }
+    </script>
+</body>
+</html>
