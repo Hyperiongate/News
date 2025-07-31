@@ -1,14 +1,14 @@
 // static/js/main.js - Complete Fixed Version
-// Main application logic with correct API format
+// Main application logic with correct API format and component mapping
 
 // Global state
 let currentAnalysis = null;
 let analysisInProgress = false;
 
-// DOM elements
-const urlInput = document.getElementById('urlInput');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const resultsSection = document.getElementById('results');
+// DOM elements - Fixed to use correct IDs
+const urlInput = document.getElementById('url-input') || document.getElementById('urlInput');
+const analyzeBtn = document.getElementById('analyze-btn') || document.getElementById('analyzeBtn');
+const resultsSection = document.getElementById('results-section') || document.getElementById('results');
 const errorAlert = document.getElementById('errorAlert');
 const errorMessage = document.getElementById('errorMessage');
 const progressBar = document.querySelector('.progress-container');
@@ -69,7 +69,7 @@ async function analyzeArticle(url) {
     // Update UI
     if (analyzeBtn) {
         analyzeBtn.disabled = true;
-        analyzeBtn.textContent = 'Analyzing...';
+        analyzeBtn.innerHTML = '<span>🔄</span> Analyzing...';
     }
     
     // Show progress bar
@@ -145,7 +145,7 @@ async function analyzeArticle(url) {
         analysisInProgress = false;
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
-            analyzeBtn.textContent = 'Analyze Article';
+            analyzeBtn.innerHTML = '<span>🔍</span> Analyze Article';
         }
     }
 }
@@ -251,30 +251,79 @@ function createAnalysisCard(componentName, data, title) {
     return card;
 }
 
-// Load component dynamically
+// Load component dynamically - FIXED WITH CORRECT MAPPING
 async function loadComponent(componentName, data) {
     try {
-        // Check if component exists
-        const ComponentClass = window[toCamelCase(componentName)];
+        console.log(`Loading component: ${componentName}`);
+        
+        // Map kebab-case names to PascalCase class names
+        const componentMap = {
+            'bias-analysis': 'BiasAnalysis',
+            'fact-checker': 'FactChecker',
+            'transparency-analysis': 'TransparencyAnalysis',
+            'author-card': 'AuthorCard',
+            'context-card': 'ContextCard',
+            'readability-card': 'ReadabilityCard',
+            'emotional-tone-card': 'EmotionalToneCard',
+            'comparison-card': 'ComparisonCard'
+        };
+        
+        // Get the correct class name
+        const className = componentMap[componentName];
+        const ComponentClass = window[className];
         
         if (ComponentClass) {
+            console.log(`Found component class: ${className}`);
             const instance = new ComponentClass();
-            const content = await instance.render(data);
             
-            const container = document.getElementById(`${componentName}-content`);
-            if (container) {
-                container.innerHTML = '';
-                if (typeof content === 'string') {
-                    container.innerHTML = content;
-                } else {
-                    container.appendChild(content);
+            // Check if render method exists
+            if (typeof instance.render === 'function') {
+                const content = await instance.render(data);
+                
+                const container = document.getElementById(`${componentName}-content`);
+                if (container) {
+                    container.innerHTML = '';
+                    if (typeof content === 'string') {
+                        container.innerHTML = content;
+                    } else if (content instanceof HTMLElement) {
+                        container.appendChild(content);
+                    } else {
+                        // Fallback: show raw data
+                        container.innerHTML = `
+                            <div class="component-data">
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">
+${JSON.stringify(data, null, 2)}
+                                </pre>
+                            </div>
+                        `;
+                    }
                 }
+            } else {
+                console.error(`Component ${className} missing render method`);
+                showFallbackData(componentName, data);
             }
         } else {
-            console.warn(`Component ${componentName} not found`);
+            console.warn(`Component class ${className} not found`);
+            showFallbackData(componentName, data);
         }
     } catch (error) {
         console.error(`Error loading component ${componentName}:`, error);
+        showFallbackData(componentName, data);
+    }
+}
+
+// Show fallback data when component fails to load
+function showFallbackData(componentName, data) {
+    const container = document.getElementById(`${componentName}-content`);
+    if (container && data) {
+        container.innerHTML = `
+            <div class="component-fallback" style="padding: 15px;">
+                <p style="color: #666; font-style: italic;">Component visualization unavailable. Showing raw data:</p>
+                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">
+${JSON.stringify(data, null, 2)}
+                </pre>
+            </div>
+        `;
     }
 }
 
@@ -343,6 +392,9 @@ function showError(message) {
     if (errorAlert) {
         errorMessage.textContent = message;
         errorAlert.style.display = 'block';
+    } else {
+        // Fallback error display
+        alert(message);
     }
 }
 
@@ -352,7 +404,10 @@ function hideError() {
     }
 }
 
+// Fixed toCamelCase function - NO LONGER NEEDED but kept for compatibility
 function toCamelCase(str) {
+    // This function is no longer used in loadComponent
+    // but kept here in case other code depends on it
     return str.split('-').map((word, index) => {
         if (index === 0) return word;
         return word.charAt(0).toUpperCase() + word.slice(1);
@@ -400,3 +455,23 @@ function checkUrlParams() {
 window.analyzeArticle = analyzeArticle;
 window.toggleCard = toggleCard;
 window.currentAnalysis = () => currentAnalysis;
+
+// Component verification on load
+window.addEventListener('load', function() {
+    console.log('Verifying component availability:');
+    const requiredComponents = [
+        'BiasAnalysis',
+        'FactChecker',
+        'TransparencyAnalysis',
+        'AuthorCard',
+        'ContextCard',
+        'ReadabilityCard',
+        'EmotionalToneCard',
+        'ComparisonCard'
+    ];
+    
+    requiredComponents.forEach(name => {
+        const exists = !!window[name];
+        console.log(`${name}: ${exists ? '✅' : '❌'}`);
+    });
+});
