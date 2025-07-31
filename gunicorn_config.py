@@ -1,7 +1,9 @@
 # gunicorn_config.py
 # Gunicorn configuration for Render deployment
 
+import os
 import multiprocessing
+import logging
 
 # Worker configuration
 workers = 2  # Start with 2 workers
@@ -41,10 +43,6 @@ preload_app = True
 # StatsD (optional, for monitoring)
 statsd_host = None
 statsd_prefix = 'news-analyzer'
-
-# Import logging and os at the top if not already imported
-import os
-import logging
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
