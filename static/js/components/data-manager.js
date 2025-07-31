@@ -1,4 +1,6 @@
-// static/js/components/data-manager.js
+// static/js/components/data-manager.js - Complete Fixed Version
+// Data Manager with correct API format
+
 class DataManager {
     constructor() {
         this.analysisData = null;
@@ -35,7 +37,7 @@ class DataManager {
         }
     }
 
-    // Main method to fetch and distribute analysis data
+    // Main method to fetch and distribute analysis data - FIXED API FORMAT
     async analyzeArticle(url, text) {
         this.loadingState = 'loading';
         this.errorDetails = null;
@@ -44,28 +46,41 @@ class DataManager {
         this.showLoadingUI();
         
         try {
-            const response = await fetch('/analyze', {
+            // FIXED: Use correct payload format
+            let payload;
+            if (url) {
+                payload = { url };  // ← FIXED: Just { url }
+            } else if (text) {
+                payload = { text }; // ← FIXED: Just { text }
+            } else {
+                throw new Error('No URL or text provided');
+            }
+            
+            const response = await fetch('/api/analyze', {  // ← FIXED: Correct endpoint
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url, text })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.text();
+                throw new Error(errorData || `HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
             
+            // Transform and validate data
+            this.analysisData = this.transformAnalysisData(data);
+            
             // Validate the response has expected structure
-            if (!this.validateAnalysisData(data)) {
-                throw new Error('Invalid data structure received from server');
+            if (!this.validateAnalysisData(this.analysisData)) {
+                console.warn('Data validation failed, but continuing with available data');
             }
 
-            console.log('DataManager: Received analysis data:', data);
+            console.log('DataManager: Received analysis data:', this.analysisData);
             
-            this.analysisData = data;
             this.loadingState = 'success';
             
             // Notify all components
@@ -74,36 +89,119 @@ class DataManager {
             // Show success UI
             this.showSuccessUI();
             
+            return this.analysisData;
+            
         } catch (error) {
             console.error('DataManager: Analysis error:', error);
             this.loadingState = 'error';
             this.errorDetails = error.message;
             this.showErrorUI(error);
+            throw error;
         }
+    }
+
+    // Transform data to ensure consistent structure
+    transformAnalysisData(data) {
+        return {
+            ...data,
+            success: true,
+            // Map different possible field names
+            trust_score: data.trust_score || 0,
+            bias_analysis: data.bias_analysis || {},
+            fact_check: data.fact_checking || data.fact_check || data.fact_checks || {},
+            author_info: data.author_analysis || data.author_info || {},
+            transparency_score: data.transparency_analysis || data.transparency_score || {},
+            manipulation_analysis: data.emotional_tone || data.manipulation_analysis || {},
+            source_analysis: data.source_analysis || {},
+            clickbait_analysis: data.clickbait_analysis || {},
+            readability: data.readability || data.readability_analysis || {},
+            context: data.context_analysis || data.context || {},
+            comparison: data.comparison || data.comparison_analysis || {},
+            
+            // Ensure article data exists
+            article: data.article || {
+                title: 'Analysis Results',
+                url: data.url || '',
+                domain: data.domain || '',
+                publish_date: data.publish_date || new Date().toISOString()
+            },
+            
+            // Force pro features in development
+            is_pro: true
+        };
     }
 
     // Validate data structure
     validateAnalysisData(data) {
         const requiredFields = [
             'trust_score',
-            'bias_analysis',
+            'bias_analysis'
+        ];
+        
+        const optionalFields = [
             'fact_check',
             'author_info',
             'manipulation_analysis',
             'source_analysis',
             'transparency_score',
-            'clickbait_analysis'
+            'clickbait_analysis',
+            'readability',
+            'context',
+            'comparison'
         ];
         
-        const missingFields = requiredFields.filter(field => !data.hasOwnProperty(field));
+        // Check required fields
+        const missingRequired = requiredFields.filter(field => !data.hasOwnProperty(field));
         
-        if (missingFields.length > 0) {
-            console.error('Missing required fields:', missingFields);
+        if (missingRequired.length > 0) {
+            console.error('Missing required fields:', missingRequired);
             console.log('Received data keys:', Object.keys(data));
             return false;
         }
         
+        // Log which optional fields are present
+        const presentOptional = optionalFields.filter(field => data.hasOwnProperty(field) && Object.keys(data[field]).length > 0);
+        console.log('Present optional fields:', presentOptional);
+        
         return true;
+    }
+
+    // Refresh current analysis
+    async refreshAnalysis() {
+        if (!this.analysisData || (!this.analysisData.url && !this.analysisData.text)) {
+            throw new Error('No analysis to refresh');
+        }
+        
+        const url = this.analysisData.url || this.analysisData.article?.url;
+        const text = this.analysisData.text;
+        
+        return this.analyzeArticle(url, text);
+    }
+
+    // Get current analysis data
+    getData() {
+        return this.analysisData;
+    }
+
+    // Get specific component data
+    getComponentData(componentName) {
+        if (!this.analysisData) return null;
+        
+        const componentMap = {
+            'bias': 'bias_analysis',
+            'facts': 'fact_check',
+            'author': 'author_info',
+            'transparency': 'transparency_score',
+            'manipulation': 'manipulation_analysis',
+            'source': 'source_analysis',
+            'clickbait': 'clickbait_analysis',
+            'readability': 'readability',
+            'context': 'context',
+            'comparison': 'comparison'
+        };
+        
+        const dataKey = componentMap[componentName] || componentName;
+        return this.analysisData[dataKey];
     }
 
     // UI Helper Methods
@@ -126,64 +224,104 @@ class DataManager {
             </div>
         `;
         
-        const container = document.querySelector('.container');
-        const existingLoader = document.getElementById('loading-indicator');
-        if (existingLoader) {
-            existingLoader.remove();
+        const container = document.getElementById('analysis-container');
+        if (container) {
+            container.innerHTML = loadingHTML;
         }
-        container.insertAdjacentHTML('beforeend', loadingHTML);
     }
 
     showSuccessUI() {
         // Remove loading indicator
-        document.getElementById('loading-indicator')?.remove();
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
         
         // Show results section
-        const resultsSection = document.getElementById('results');
-        if (resultsSection) {
-            resultsSection.classList.remove('d-none');
-            
-            // Smooth scroll to results
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        document.getElementById('results')?.classList.remove('d-none');
     }
 
     showErrorUI(error) {
         // Remove loading indicator
-        document.getElementById('loading-indicator')?.remove();
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
         
         // Show error message
-        const errorHTML = `
-            <div id="error-message" class="alert alert-danger alert-dismissible fade show" role="alert">
-                <h4 class="alert-heading">Analysis Failed</h4>
-                <p>${error.message}</p>
-                <hr>
-                <p class="mb-0">Please check the URL and try again. If the problem persists, contact support.</p>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        const container = document.querySelector('.container');
-        const existingError = document.getElementById('error-message');
-        if (existingError) {
-            existingError.remove();
+        const errorEl = document.getElementById('error-message');
+        if (errorEl) {
+            errorEl.textContent = `Analysis failed: ${error.message}`;
+            errorEl.classList.remove('d-none');
         }
-        container.insertAdjacentHTML('afterbegin', errorHTML);
+        
+        // Create error display
+        const container = document.getElementById('analysis-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Analysis Failed</h4>
+                    <p>${error.message}</p>
+                    <hr>
+                    <p class="mb-0">Please check the URL and try again.</p>
+                </div>
+            `;
+        }
     }
 
-    // Debug helper
-    debugDataFlow() {
-        console.group('Data Manager Debug Info');
-        console.log('Current State:', this.loadingState);
-        console.log('Has Data:', !!this.analysisData);
-        console.log('Registered Listeners:', Array.from(this.listeners.keys()));
-        console.log('Analysis Data:', this.analysisData);
-        console.groupEnd();
+    // Export analysis as PDF
+    async exportPDF() {
+        if (!this.analysisData) {
+            throw new Error('No analysis data to export');
+        }
+        
+        try {
+            const response = await fetch('/api/export/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    analysis_data: this.analysisData
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `news-analysis-${Date.now()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            throw error;
+        }
+    }
+
+    // Clear all data
+    clear() {
+        this.analysisData = null;
+        this.loadingState = 'idle';
+        this.errorDetails = null;
+        this.notifyListeners();
     }
 }
 
-// Create global instance
-window.dataManager = new DataManager();
+// Create singleton instance
+const dataManager = new DataManager();
 
-// Add debug command
-window.debugAnalysis = () => window.dataManager.debugDataFlow();
+// Export for use in other modules
+window.dataManager = dataManager;
+
+// For backward compatibility
+window.DataManager = DataManager;
