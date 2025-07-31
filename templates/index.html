@@ -5,7 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Analyzer - Facts & Fakes AI</title>
     
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
+        /* Professional Color Palette */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #111827;
+            --gray-900: #1f2937;
+            --gray-800: #374151;
+            --gray-700: #4b5563;
+            --gray-600: #6b7280;
+            --gray-500: #9ca3af;
+            --gray-400: #d1d5db;
+            --gray-300: #e5e7eb;
+            --gray-200: #f3f4f6;
+            --gray-100: #f9fafb;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
         /* Reset and Base Styles */
         * {
             margin: 0;
@@ -14,21 +44,26 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f3f4f6;
-            color: #1f2937;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, var(--gray-100) 0%, var(--gray-200) 100%);
+            color: var(--gray-900);
             line-height: 1.6;
             min-height: 100vh;
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Header Styles */
+        /* Professional Header */
         .header {
-            background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
             padding: 1rem 0;
             position: sticky;
             top: 0;
             z-index: 100;
+            border-bottom: 1px solid var(--gray-200);
         }
 
         .nav-container {
@@ -43,47 +78,58 @@
         .logo-section {
             display: flex;
             align-items: center;
-            gap: 30px;
+            gap: 40px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             text-decoration: none;
-            color: #1f2937;
+            color: var(--gray-900);
             font-size: 24px;
-            font-weight: 700;
-            transition: transform 0.2s;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .logo:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
+            color: var(--primary);
+        }
+
+        .logo span:first-child {
+            font-size: 28px;
         }
 
         .nav-pills {
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            background: var(--gray-100);
+            padding: 4px;
+            border-radius: 12px;
         }
 
         .nav-pill {
             padding: 8px 16px;
-            border-radius: 20px;
+            border-radius: 8px;
             text-decoration: none;
-            color: #6b7280;
+            color: var(--gray-600);
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .nav-pill:hover {
-            background: #f3f4f6;
-            color: #1f2937;
+            background: var(--white);
+            color: var(--gray-900);
+            box-shadow: var(--shadow-sm);
         }
 
         .nav-pill.active {
-            background: #3b82f6;
-            color: white;
+            background: var(--primary);
+            color: var(--white);
+            box-shadow: var(--shadow-sm);
         }
 
         /* Container */
@@ -93,294 +139,232 @@
             padding: 20px;
         }
 
-        /* Hero Section */
+        /* Professional Hero Section */
         .hero-section {
             text-align: center;
-            padding: 60px 20px 40px;
+            padding: 80px 20px 60px;
         }
 
         .hero-section h1 {
-            font-size: 48px;
-            font-weight: 800;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            font-size: 64px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            line-height: 1.1;
         }
 
         .hero-section p {
             font-size: 20px;
-            color: #6b7280;
-            max-width: 600px;
+            color: var(--gray-700);
+            max-width: 680px;
             margin: 0 auto;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            line-height: 1.6;
         }
 
-        /* Features Grid */
+        /* Enhanced Features Grid */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            max-width: 1000px;
-            margin: 40px auto;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 60px auto;
         }
 
         .feature-card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: var(--white);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray-200);
             text-align: center;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-        }
-
-        .feature-icon {
-            font-size: 36px;
-            margin-bottom: 12px;
-        }
-
-        .feature-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 8px;
-        }
-
-        .feature-desc {
-            font-size: 14px;
-            color: #6b7280;
-        }
-
-        /* Input Section */
-        .input-section {
-            max-width: 700px;
-            margin: 0 auto 40px;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 10px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        .url-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-
-        .url-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-
-        .url-input::placeholder {
-            color: #9ca3af;
-        }
-
-        .analyze-btn {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #3b82f6, #6366f1);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .analyze-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        .analyze-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Progress Bar */
-        .progress-container {
-            display: none;
-            width: 100%;
-            max-width: 600px;
-            margin: 30px auto;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 40px;
-            background: #f0f0f0;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #45a049);
-            width: 0%;
-            transition: width 0.4s ease;
-            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
 
-        .progress-fill::after {
+        .feature-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: linear-gradient(
-                45deg,
-                rgba(255, 255, 255, 0.2) 25%,
-                transparent 25%,
-                transparent 50%,
-                rgba(255, 255, 255, 0.2) 50%,
-                rgba(255, 255, 255, 0.2) 75%,
-                transparent 75%,
-                transparent
-            );
-            background-size: 30px 30px;
-            animation: progress-animation 1s linear infinite;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        @keyframes progress-animation {
-            0% { background-position: 0 0; }
-            100% { background-position: 30px 0; }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: transparent;
+        }
+
+        .feature-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        /* Professional Input Section */
+        .input-section {
+            max-width: 720px;
+            margin: 0 auto 60px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            background: var(--white);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray-200);
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid var(--gray-300);
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--gray-50);
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .url-input::placeholder {
+            color: var(--gray-500);
+            font-weight: 400;
+        }
+
+        .analyze-btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -1px rgba(37, 99, 235, 0.4);
+        }
+
+        .analyze-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Professional Progress Bar */
+        .progress-container {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            margin: 40px auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--gray-200);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 999px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-weight: bold;
+            text-align: center;
+            margin-top: 12px;
             font-size: 14px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-            z-index: 1;
+            font-weight: 500;
+            color: var(--gray-700);
+            letter-spacing: -0.01em;
         }
 
-        /* Error Alert */
+        /* Professional Error Alert */
         #errorAlert {
             display: none;
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            color: var(--danger);
+            padding: 16px 20px;
+            border-radius: 12px;
             margin: 20px auto;
             max-width: 600px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(204, 51, 51, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
+            border: 1px solid #fecaca;
+            font-weight: 500;
         }
 
         /* Results Section */
         #results-section {
             display: none;
+            animation: fadeIn 0.5s ease;
         }
 
-        /* Results Grid - FORCE 2 COLUMNS */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 20px;
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        /* Analysis Cards */
-        .analysis-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .analysis-card.expanded .card-content {
-            display: block !important;
-        }
-
-        .analysis-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            font-weight: 600;
-            user-select: none;
-            min-height: 60px;
-            cursor: pointer;
-        }
-
-        .card-header:hover {
-            background: #e9ecef;
-        }
-
-        .card-header h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #1f2937;
-        }
-
-        .expand-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6b7280;
-            transition: transform 0.3s ease;
-        }
-
-        .analysis-card.expanded .expand-btn {
-            transform: rotate(180deg);
-        }
-
-        /* Card content */
-        .card-content {
-            display: none;
-            padding: 20px;
-            animation: slideDown 0.3s ease;
-            flex: 1;
-            overflow-y: auto;
-            max-height: 600px;
-        }
-
-        @keyframes slideDown {
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -388,34 +372,262 @@
             }
         }
 
+        /* Professional Results Grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            padding: 20px 0;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Professional Analysis Cards */
+        .analysis-card {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analysis-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: transparent;
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
+            border-bottom: 1px solid var(--gray-200);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-header:hover {
+            background: linear-gradient(135deg, var(--gray-100), var(--gray-200));
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            letter-spacing: -0.01em;
+        }
+
+        .expand-btn {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-600);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .expand-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            color: var(--gray-900);
+        }
+
+        .analysis-card.expanded .expand-btn {
+            transform: rotate(180deg);
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        /* Professional Card Content */
+        .card-content {
+            display: none;
+            padding: 24px;
+            background: var(--white);
+            animation: slideDown 0.3s ease;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .analysis-card.expanded .card-content {
+            display: block !important;
+        }
+
+        /* Component Content Styling */
+        .card-content h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+        }
+
+        .card-content p {
+            color: var(--gray-700);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .card-content .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .card-content .metric-label {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .card-content .metric-value {
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .card-content .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .card-content .badge.success {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .card-content .badge.warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .card-content .badge.danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+
         /* Component fallback styles */
         .component-fallback {
-            padding: 15px;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: 8px;
         }
 
         .component-fallback p {
-            color: #666;
+            color: var(--gray-600);
             font-style: italic;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            font-size: 14px;
         }
 
         .component-fallback pre {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 5px;
+            background: var(--white);
+            padding: 16px;
+            border-radius: 8px;
             overflow-x: auto;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid var(--gray-200);
+            color: var(--gray-800);
+            font-family: 'Monaco', 'Courier New', monospace;
         }
 
         /* Loading placeholder */
         .loading-placeholder {
             text-align: center;
-            padding: 40px;
-            color: #9ca3af;
+            padding: 60px 20px;
+            color: var(--gray-500);
         }
 
-        /* Hide pro indicators in development */
+        .loading-placeholder::before {
+            content: '';
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Trust Score Display */
+        #trust-score-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 32px;
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-200);
+        }
+
+        #trust-score-section h2 {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        #trustScore {
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #trustScoreMeter {
+            height: 12px;
+            background: var(--gray-200);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 16px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-meter {
+            height: 100%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 999px;
+            position: relative;
+        }
+
+        .score-meter.high {
+            background: linear-gradient(90deg, var(--success), #059669);
+        }
+
+        .score-meter.medium {
+            background: linear-gradient(90deg, var(--warning), #d97706);
+        }
+
+        .score-meter.low {
+            background: linear-gradient(90deg, var(--danger), #dc2626);
+        }
+
+        /* Hide pro indicators */
         .pro-indicator,
         .pro-badge,
         .upgrade-prompt,
@@ -428,42 +640,10 @@
             display: none !important;
         }
 
-        /* Trust Score Display */
-        #trustScore {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1f2937;
-        }
-
-        #trustScoreMeter {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .score-meter {
-            height: 100%;
-            transition: width 0.5s ease;
-        }
-
-        .score-meter.high {
-            background: #10b981;
-        }
-
-        .score-meter.medium {
-            background: #f59e0b;
-        }
-
-        .score-meter.low {
-            background: #ef4444;
-        }
-
-        /* Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .hero-section h1 {
-                font-size: 36px;
+                font-size: 42px;
             }
             
             .hero-section p {
@@ -476,10 +656,16 @@
             
             .input-wrapper {
                 flex-direction: column;
+                gap: 16px;
             }
             
             .results-grid {
                 grid-template-columns: 1fr !important;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
             }
         }
     </style>
@@ -508,7 +694,7 @@
         <!-- Hero Section -->
         <div class="hero-section">
             <h1>News Article Analyzer</h1>
-            <p>AI-powered fact-checking and bias detection to help you identify trustworthy news sources</p>
+            <p>AI-powered fact-checking and bias detection to help you identify trustworthy news sources in real-time</p>
         </div>
 
         <!-- Features Grid -->
@@ -516,22 +702,22 @@
             <div class="feature-card">
                 <div class="feature-icon">🤖</div>
                 <div class="feature-title">AI Analysis</div>
-                <div class="feature-desc">OpenAI-powered content analysis</div>
+                <div class="feature-desc">OpenAI-powered content analysis for deep insights</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">✓</div>
                 <div class="feature-title">Fact Checking</div>
-                <div class="feature-desc">Google Fact Check API integration</div>
+                <div class="feature-desc">Google Fact Check API integration for verification</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📊</div>
                 <div class="feature-title">Bias Detection</div>
-                <div class="feature-desc">Political lean & manipulation tactics</div>
+                <div class="feature-desc">Political lean & manipulation tactics analysis</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🏢</div>
                 <div class="feature-title">Source Rating</div>
-                <div class="feature-desc">Credibility database of news sources</div>
+                <div class="feature-desc">Credibility database of 3000+ news sources</div>
             </div>
         </div>
 
@@ -541,13 +727,13 @@
                 <input 
                     type="url" 
                     id="url-input" 
-                    placeholder="https://example.com/news-article" 
+                    placeholder="Paste any news article URL here..." 
                     class="url-input"
                     value=""
                 >
                 <button id="analyze-btn" class="analyze-btn">
                     <span>🔍</span>
-                    <span>Analyze Article</span>
+                    <span>Analyze</span>
                 </button>
             </div>
         </div>
@@ -556,8 +742,8 @@
         <div class="progress-container">
             <div class="progress-bar">
                 <div class="progress-fill"></div>
-                <div class="progress-text">Starting analysis...</div>
             </div>
+            <div class="progress-text">Starting analysis...</div>
         </div>
 
         <!-- Error Alert -->
@@ -567,21 +753,15 @@
 
         <!-- Results Section -->
         <div id="results-section" class="results-section">
-            <!-- Trust Score Display (optional - add if needed) -->
-            <div id="trust-score-section" class="hidden" style="text-align: center; margin-bottom: 30px;">
+            <!-- Trust Score Display -->
+            <div id="trust-score-section" class="hidden">
                 <h2>Trust Score: <span id="trustScore">0</span>/100</h2>
-                <div id="trustScoreMeter" style="max-width: 300px; margin: 0 auto;">
+                <div id="trustScoreMeter">
                     <div class="score-meter"></div>
                 </div>
             </div>
             
-            <!-- Article Info (optional - add if needed) -->
-            <div id="article-info" class="hidden" style="text-align: center; margin-bottom: 30px;">
-                <h3 id="articleTitle"></h3>
-                <p><span id="articleSource"></span> • <span id="articleDate"></span></p>
-            </div>
-            
-            <!-- Results Grid - All 8 cards will be rendered here -->
+            <!-- Results Grid -->
             <div class="results-grid">
                 <!-- Cards will be dynamically inserted here by JavaScript -->
             </div>
@@ -598,18 +778,18 @@
     <script src="/static/js/components/emotional-tone-card.js"></script>
     <script src="/static/js/components/readability-card.js"></script>
 
-    <!-- Main JavaScript (use the fixed version) -->
+    <!-- Main JavaScript -->
     <script src="/static/js/main.js"></script>
 
-    <!-- Initialization and Debug -->
+    <!-- Enhanced Initialization -->
     <script>
-        // Wait for DOM and scripts to load
+        // Wait for everything to load
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded - initializing News Analyzer...');
+            console.log('🚀 News Analyzer Professional Edition Loading...');
             
-            // Give components time to register
+            // Enhanced component verification
             setTimeout(() => {
-                console.log('\n=== COMPONENT VERIFICATION ===');
+                console.log('\n=== SYSTEM STATUS CHECK ===');
                 
                 const components = [
                     'BiasAnalysis',
@@ -623,55 +803,69 @@
                 ];
                 
                 let loadedCount = 0;
+                let issues = [];
+                
                 components.forEach(name => {
                     if (window[name]) {
-                        console.log(`✅ ${name} loaded`);
-                        loadedCount++;
-                        
-                        // Verify it has a render method
                         try {
                             const instance = new window[name]();
                             if (typeof instance.render === 'function') {
-                                console.log(`   └─ render() method: ✓`);
+                                console.log(`✅ ${name} - OK`);
+                                loadedCount++;
                             } else {
-                                console.error(`   └─ render() method: ✗ MISSING`);
+                                console.error(`❌ ${name} - Missing render() method`);
+                                issues.push(`${name}: Missing render() method`);
                             }
                         } catch (e) {
-                            console.error(`   └─ Error creating instance: ${e.message}`);
+                            console.error(`❌ ${name} - Error: ${e.message}`);
+                            issues.push(`${name}: ${e.message}`);
                         }
                     } else {
-                        console.error(`❌ ${name} NOT loaded`);
+                        console.error(`❌ ${name} - Not loaded`);
+                        issues.push(`${name}: Component not found`);
                     }
                 });
                 
-                console.log(`\nTotal: ${loadedCount}/8 components loaded`);
+                console.log(`\n📊 Status: ${loadedCount}/8 components operational`);
                 
                 if (loadedCount === 8) {
-                    console.log('✅ All components ready!');
-                    console.log('\n📝 Usage: Enter a news article URL and click "Analyze Article"');
+                    console.log('✅ All systems operational!');
+                    console.log('🎯 Ready to analyze news articles');
                 } else {
-                    console.error('⚠️ Some components failed to load!');
-                    console.log('Check that all component files exist in /static/js/components/');
-                    console.log('Verify each component file exports a class with a render() method');
+                    console.error('⚠️ System issues detected:');
+                    issues.forEach(issue => console.error(`   - ${issue}`));
                 }
                 
-                // Test with example URL if provided in query string
-                const urlParams = new URLSearchParams(window.location.search);
-                const testUrl = urlParams.get('test');
-                if (testUrl) {
-                    console.log(`\n🧪 Test URL found: ${testUrl}`);
-                    document.getElementById('url-input').value = testUrl;
-                    console.log('Click "Analyze Article" to test');
+                // Show trust score section if everything loaded
+                if (loadedCount === 8) {
+                    const trustSection = document.getElementById('trust-score-section');
+                    if (trustSection) {
+                        trustSection.classList.remove('hidden');
+                    }
                 }
+                
+                console.log('===========================\n');
             }, 500);
         });
         
-        // Global error handler for debugging
+        // Enhanced error handling
         window.addEventListener('error', function(event) {
-            console.error('Global error:', event.error);
-            console.error('In file:', event.filename);
-            console.error('Line:', event.lineno);
+            console.error('⚠️ Runtime Error:', {
+                message: event.error?.message || event.message,
+                file: event.filename,
+                line: event.lineno,
+                col: event.colno
+            });
         });
+
+        // Add smooth scrolling to results
+        window.showResults = function() {
+            const resultsSection = document.getElementById('results-section');
+            if (resultsSection) {
+                resultsSection.style.display = 'block';
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
     </script>
 </body>
 </html>
