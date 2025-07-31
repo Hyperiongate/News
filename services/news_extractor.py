@@ -2,7 +2,7 @@
 FILE: services/news_extractor.py
 LOCATION: services/news_extractor.py
 PURPOSE: Complete universal news extractor with all methods and API support
-FIXED: Multiple author extraction and navigation element exclusion
+FIXED: Proper API integration and error handling
 """
 
 import logging
@@ -81,6 +81,12 @@ class NewsExtractor:
         self.scrapingbee_key = os.environ.get('SCRAPINGBEE_API_KEY')
         self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY')
         
+        # Log API key status
+        if self.scrapingbee_key:
+            logger.info("ScrapingBee API key found")
+        if self.scraperapi_key:
+            logger.info("ScraperAPI key found")
+        
         # User agents for rotation
         self.user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -135,7 +141,18 @@ class NewsExtractor:
         try:
             logger.info(f"🚀 ULTIMATE EXTRACTION STARTING for: {url}")
             
-            # Method 1: Try CloudScraper first (handles most anti-bot)
+            # PRIORITY 1: Try API services first if available (most reliable)
+            if self.scrapingbee_key or self.scraperapi_key:
+                try:
+                    logger.info("Trying API extraction first (most reliable)...")
+                    result = self._extract_with_api(url)
+                    if result and result.get('text') and len(result['text']) > 200:
+                        logger.info("✅ API extraction successful")
+                        return result
+                except Exception as e:
+                    logger.warning(f"API extraction failed: {e}")
+            
+            # Method 2: Try CloudScraper (handles most anti-bot)
             if self.scraper:
                 try:
                     result = self._extract_with_cloudscraper(url)
@@ -144,16 +161,6 @@ class NewsExtractor:
                         return result
                 except Exception as e:
                     logger.warning(f"CloudScraper failed: {e}")
-            
-            # Method 2: Try API services if available
-            if self.scrapingbee_key or self.scraperapi_key:
-                try:
-                    result = self._extract_with_api(url)
-                    if result and result.get('text') and len(result['text']) > 200:
-                        logger.info("✅ API extraction successful")
-                        return result
-                except Exception as e:
-                    logger.warning(f"API extraction failed: {e}")
             
             # Method 3: Try HTTPX with HTTP/2
             if self.httpx_client:
@@ -244,44 +251,64 @@ class NewsExtractor:
         }
     
     def _extract_with_api(self, url):
-        """Extract using scraping API services"""
-        # Try ScrapingBee
+        """Extract using scraping API services with improved error handling"""
+        # Try ScrapingBee first
         if self.scrapingbee_key:
             logger.info("Trying ScrapingBee API...")
             api_url = 'https://app.scrapingbee.com/api/v1'
             params = {
                 'api_key': self.scrapingbee_key,
                 'url': url,
-                'render_js': 'false',
+                'render_js': 'true',  # Changed to true for better extraction
                 'premium_proxy': 'true',
-                'country_code': 'us'
+                'country_code': 'us',
+                'wait': '1500',  # Wait for content to load
+                'block_ads': 'true'
             }
             
             try:
-                response = requests.get(api_url, params=params, timeout=30)
+                response = requests.get(api_url, params=params, timeout=45)
+                logger.info(f"ScrapingBee response status: {response.status_code}")
+                
                 if response.status_code == 200:
-                    return self._parse_response(response.content, url)
+                    result = self._parse_response(response.content, url)
+                    if result and result.get('text'):
+                        return result
+                elif response.status_code == 401:
+                    logger.error("ScrapingBee API key is invalid")
+                elif response.status_code == 402:
+                    logger.error("ScrapingBee API credits exhausted")
+                else:
+                    logger.warning(f"ScrapingBee returned status {response.status_code}")
+                    
             except Exception as e:
-                logger.warning(f"ScrapingBee failed: {e}")
+                logger.error(f"ScrapingBee error: {e}")
         
-        # Try ScraperAPI
+        # Try ScraperAPI as fallback
         if self.scraperapi_key:
             logger.info("Trying ScraperAPI...")
-            api_url = 'http://api.scraperapi.com'
-            params = {
-                'api_key': self.scraperapi_key,
-                'url': url,
-                'render': 'false'
-            }
+            # Use the correct ScraperAPI endpoint
+            scraperapi_url = f'http://api.scraperapi.com?api_key={self.scraperapi_key}&url={quote(url)}&render=true'
             
             try:
-                response = requests.get(api_url, params=params, timeout=30)
+                response = requests.get(scraperapi_url, timeout=45)
+                logger.info(f"ScraperAPI response status: {response.status_code}")
+                
                 if response.status_code == 200:
-                    return self._parse_response(response.content, url)
+                    result = self._parse_response(response.content, url)
+                    if result and result.get('text'):
+                        return result
+                elif response.status_code == 401:
+                    logger.error("ScraperAPI key is invalid")
+                elif response.status_code == 403:
+                    logger.error("ScraperAPI credits exhausted or plan limit reached")
+                else:
+                    logger.warning(f"ScraperAPI returned status {response.status_code}")
+                    
             except Exception as e:
-                logger.warning(f"ScraperAPI failed: {e}")
+                logger.error(f"ScraperAPI error: {e}")
         
-        raise ValueError("API extraction failed")
+        raise ValueError("API extraction failed - no valid API key or request failed")
     
     def _extract_with_httpx(self, url):
         """Extract using HTTPX with HTTP/2"""
