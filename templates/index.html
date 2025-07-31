@@ -294,10 +294,10 @@
             display: none;
         }
 
-        /* Results Grid */
+        /* Results Grid - FORCE 2 COLUMNS */
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(2, 1fr) !important;
             gap: 20px;
             padding: 20px;
             max-width: 1400px;
@@ -436,7 +436,7 @@
             }
             
             .results-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr !important;
             }
         }
     </style>
@@ -532,18 +532,15 @@
         </div>
     </div>
 
-    <!-- Component Scripts - Using YOUR actual file structure -->
-    <!-- Files that exist in components folder -->
+    <!-- ALL 8 Component Scripts - ALL IN COMPONENTS FOLDER -->
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
     <script src="/static/js/components/transparency-analysis.js"></script>
     <script src="/static/js/components/author-card.js"></script>
-    
-    <!-- Files that are currently in js folder (need to be moved to components) -->
-    <script src="/static/js/comparison-card.js"></script>
-    <script src="/static/js/context-card.js"></script>
-    <script src="/static/js/emotional-tone-card.js"></script>
-    <script src="/static/js/readability-card.js"></script>
+    <script src="/static/js/components/comparison-card.js"></script>
+    <script src="/static/js/components/context-card.js"></script>
+    <script src="/static/js/components/emotional-tone-card.js"></script>
+    <script src="/static/js/components/readability-card.js"></script>
 
     <!-- Main JavaScript -->
     <script src="/static/js/main.js"></script>
@@ -565,14 +562,25 @@
                 'ReadabilityCard': window.ReadabilityCard
             };
             
+            console.log('\n=== COMPONENT LOADING STATUS ===');
+            let loadedCount = 0;
             Object.entries(components).forEach(([name, component]) => {
                 if (component) {
                     console.log(`✓ ${name} loaded`);
+                    loadedCount++;
                 } else {
                     console.error(`✗ ${name} NOT loaded - check if file exists and exports correctly`);
                 }
             });
-        }, 100);
+            
+            console.log(`\nTotal: ${loadedCount}/8 components loaded`);
+            
+            if (loadedCount === 8) {
+                console.log('✅ All components loaded successfully!');
+            } else {
+                console.log('⚠️ Some components failed to load. Check the file paths and exports.');
+            }
+        }, 500);
     </script>
 </body>
 </html>
