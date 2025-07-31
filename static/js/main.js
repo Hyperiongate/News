@@ -1,605 +1,557 @@
-// static/js/main.js
-// Main application JavaScript
+// main.js - Complete News Analyzer Application
 
 // Global state
-let currentArticleData = null;
+let currentAnalysis = null;
 let analysisInProgress = false;
 
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('News Analyzer initialized');
-    
-    // Get DOM elements
-    const urlInput = document.getElementById('urlInput');
-    const textInput = document.getElementById('textInput');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const analyzeTextBtn = document.getElementById('analyzeTextBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const resetTextBtn = document.getElementById('resetTextBtn');
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    
-    // Tab switching
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            
-            // Update active states
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Show/hide appropriate input groups
-            const urlGroup = document.getElementById('urlInputGroup');
-            const textGroup = document.getElementById('textInputGroup');
-            
-            if (tab === 'url') {
-                urlGroup.classList.remove('hidden');
-                textGroup.classList.add('hidden');
-            } else {
-                urlGroup.classList.add('hidden');
-                textGroup.classList.remove('hidden');
-            }
-        });
-    });
-    
-    // Event listeners
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', analyzeURL);
-        // Enter key support
-        if (urlInput) {
-            urlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') analyzeURL();
-            });
-        }
-    }
-    
-    if (analyzeTextBtn) {
-        analyzeTextBtn.addEventListener('click', analyzeText);
-    }
-    
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetAnalysis);
-    }
-    
-    if (resetTextBtn) {
-        resetTextBtn.addEventListener('click', resetAnalysis);
-    }
-    
-    // Load history on startup
-    loadHistory();
+// Initialize application when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
 });
 
-// Show loading state with enhanced animation
-function showLoadingState() {
-    console.log('Showing loading state');
-    const progressContainer = document.getElementById('progressContainer');
+function initializeApp() {
+    // Add card styles
+    addCardStyles();
     
-    if (progressContainer) {
-        progressContainer.innerHTML = `
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <div class="progress-steps">
-                    <div class="progress-step active" data-step="extract">
-                        <span class="step-icon">📄</span>
-                        <span>Extracting Content</span>
-                    </div>
-                    <div class="progress-step" data-step="analyze">
-                        <span class="step-icon">🔍</span>
-                        <span>Analyzing Article</span>
-                    </div>
-                    <div class="progress-step" data-step="verify">
-                        <span class="step-icon">✓</span>
-                        <span>Verifying Facts</span>
-                    </div>
-                    <div class="progress-step" data-step="complete">
-                        <span class="step-icon">📊</span>
-                        <span>Generating Report</span>
-                    </div>
-                </div>
-                <div class="progress-status">Starting analysis...</div>
-            </div>
-        `;
-        
-        progressContainer.classList.remove('hidden');
-        
-        // Animate progress steps
-        let currentStep = 0;
-        const steps = ['extract', 'analyze', 'verify', 'complete'];
-        const messages = [
-            'Extracting article content...',
-            'Analyzing bias and credibility...',
-            'Checking facts and sources...',
-            'Generating comprehensive report...'
-        ];
-        
-        const interval = setInterval(() => {
-            if (currentStep < steps.length) {
-                // Update active step
-                progressContainer.querySelectorAll('.progress-step').forEach((step, index) => {
-                    if (index <= currentStep) {
-                        step.classList.add('active');
-                    }
-                });
-                
-                // Update progress bar
-                const progressFill = progressContainer.querySelector('.progress-fill');
-                if (progressFill) {
-                    progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
-                }
-                
-                // Update status message
-                const statusDiv = progressContainer.querySelector('.progress-status');
-                if (statusDiv && messages[currentStep]) {
-                    statusDiv.textContent = messages[currentStep];
-                }
-                
-                currentStep++;
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initialize with sample URL if in development
+    if (window.location.hostname === 'localhost') {
+        document.getElementById('url-input').value = 'https://www.example.com/article';
+    }
+}
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Analyze button
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const urlInput = document.getElementById('url-input');
+    
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', handleAnalyze);
+    }
+    
+    // Enter key in URL input
+    if (urlInput) {
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleAnalyze();
             }
-        }, 800);
-        
-        // Store interval for cleanup
-        progressContainer.dataset.interval = interval;
+        });
     }
     
-    // Also show the simple loading spinner as fallback
-    const loadingDiv = document.getElementById('loading');
-    if (loadingDiv) {
-        loadingDiv.classList.remove('hidden');
+    // Settings toggle
+    const settingsToggle = document.querySelector('.settings-toggle');
+    if (settingsToggle) {
+        settingsToggle.addEventListener('click', toggleSettings);
     }
 }
 
-// Hide loading state
-function hideLoadingState() {
-    console.log('Hiding loading state');
-    
-    const progressContainer = document.getElementById('progressContainer');
-    if (progressContainer) {
-        // Clear interval if exists
-        const interval = progressContainer.dataset.interval;
-        if (interval) {
-            clearInterval(interval);
-        }
-        progressContainer.innerHTML = '';
-        progressContainer.classList.add('hidden');
-    }
-    
-    const loadingDiv = document.getElementById('loading');
-    if (loadingDiv) {
-        loadingDiv.classList.add('hidden');
-    }
-}
-
-// Show error message
-function showError(message) {
-    console.error('Error:', message);
-    
-    // Hide loading states
-    hideLoadingState();
-    
-    // Show error in results area
-    const resultsDiv = document.getElementById('results');
-    if (resultsDiv) {
-        resultsDiv.innerHTML = `
-            <div class="error-card">
-                <div class="error-icon">❌</div>
-                <h3>Analysis Error</h3>
-                <p>${message}</p>
-                <button class="btn btn-secondary" onclick="resetAnalysis()">Try Again</button>
-            </div>
-        `;
-        resultsDiv.classList.remove('hidden');
-    }
-    
-    // Also use UI controller error if available
-    if (window.UI && window.UI.showError) {
-        window.UI.showError(message);
-    }
-}
-
-// Analyze URL function
-async function analyzeURL() {
-    const urlInput = document.getElementById('urlInput');
-    const url = urlInput ? urlInput.value.trim() : '';
+// Handle analyze button click
+async function handleAnalyze() {
+    const urlInput = document.getElementById('url-input');
+    const url = urlInput.value.trim();
     
     if (!url) {
+        showError('Please enter a URL to analyze');
+        return;
+    }
+    
+    if (!isValidUrl(url)) {
         showError('Please enter a valid URL');
         return;
     }
     
     if (analysisInProgress) {
-        showError('Analysis already in progress. Please wait...');
+        showError('Analysis already in progress');
         return;
     }
     
+    await analyzeArticle(url);
+}
+
+// Validate URL
+function isValidUrl(string) {
     try {
-        analysisInProgress = true;
-        showLoadingState();
-        
-        console.log('Starting URL analysis:', url);
-        
-        // Store current URL for refresh
-        if (window.UI) {
-            window.UI.currentURL = url;
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+// Main analysis function with progress animation
+async function analyzeArticle(url) {
+    analysisInProgress = true;
+    
+    const resultsSection = document.getElementById('results-section');
+    const progressBar = document.querySelector('.progress-bar');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    
+    // Hide previous results
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+    }
+    
+    // Disable analyze button
+    if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = 'Analyzing...';
+    }
+    
+    // Show and animate progress bar
+    if (progressBar) {
+        progressBar.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.textContent = 'Starting analysis...';
+    }
+    
+    let progress = 0;
+    const progressSteps = [
+        { percent: 10, text: 'Fetching article...' },
+        { percent: 25, text: 'Analyzing bias...' },
+        { percent: 40, text: 'Fact-checking claims...' },
+        { percent: 55, text: 'Evaluating transparency...' },
+        { percent: 70, text: 'Researching author...' },
+        { percent: 85, text: 'Analyzing context...' },
+        { percent: 95, text: 'Finalizing results...' }
+    ];
+    
+    let stepIndex = 0;
+    const progressInterval = setInterval(() => {
+        if (stepIndex < progressSteps.length) {
+            const step = progressSteps[stepIndex];
+            progress = step.percent;
+            if (progressFill) progressFill.style.width = `${progress}%`;
+            if (progressText) progressText.textContent = step.text;
+            stepIndex++;
         }
-        
-        // Call the API
+    }, 400);
+    
+    try {
+        // Make API call
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url: url })
+            body: JSON.stringify({ url })
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
-        console.log('Analysis complete:', result);
         
-        // Store the result
-        currentArticleData = result;
+        // Clear progress interval
+        clearInterval(progressInterval);
         
-        // Display results using enhanced UI controller
-        displayResults(result);
+        // Complete progress animation
+        if (progressFill) progressFill.style.width = '100%';
+        if (progressText) progressText.textContent = 'Analysis complete!';
         
-        // Save to history
-        saveToHistory(url, result);
+        // Transform and store results
+        currentAnalysis = transformApiData(result);
+        
+        // Wait briefly then show results
+        setTimeout(() => {
+            if (progressBar) progressBar.style.display = 'none';
+            displayResults(currentAnalysis);
+            if (resultsSection) resultsSection.style.display = 'block';
+        }, 500);
         
     } catch (error) {
+        clearInterval(progressInterval);
         console.error('Analysis error:', error);
-        showError(error.message || 'An error occurred during analysis');
+        showError('Failed to analyze article. Please try again.');
+        
+        if (progressBar) progressBar.style.display = 'none';
     } finally {
         analysisInProgress = false;
-        hideLoadingState();
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analyze Article';
+        }
     }
 }
 
-// Analyze text function
-async function analyzeText() {
-    const textInput = document.getElementById('textInput');
-    const text = textInput ? textInput.value.trim() : '';
-    
-    if (!text) {
-        showError('Please enter some text to analyze');
-        return;
-    }
-    
-    if (analysisInProgress) {
-        showError('Analysis already in progress. Please wait...');
-        return;
-    }
-    
-    try {
-        analysisInProgress = true;
-        showLoadingState();
-        
-        console.log('Starting text analysis...');
-        
-        // Store current text for refresh
-        if (window.UI) {
-            window.UI.currentText = text;
-        }
-        
-        // Call the API with text
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: text })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('Text analysis complete:', result);
-        
-        // Store the result
-        currentArticleData = result;
-        
-        // Display results using enhanced UI controller
-        displayResults(result);
-        
-    } catch (error) {
-        console.error('Analysis error:', error);
-        showError(error.message || 'An error occurred during analysis');
-    } finally {
-        analysisInProgress = false;
-        hideLoadingState();
-    }
-}
-
-// Transform API data to match UI component expectations
+// Transform API data to match UI expectations
 function transformApiData(result) {
     if (!result) return result;
     
-    // Fix fact_checks structure (should be an array for UI components)
+    // Fix fact_checks structure
     if (result.fact_checks && !Array.isArray(result.fact_checks)) {
         result.fact_checks = result.fact_checks.claims || [];
     }
     
-    // Transform author_analysis to author_info (what AuthorCard expects)
+    // Transform author_analysis to author_info
     if (result.author_analysis && !result.author_info) {
         result.author_info = result.author_analysis;
     }
     
-    // Ensure key_claims is an array
-    if (result.key_claims && !Array.isArray(result.key_claims)) {
-        result.key_claims = [];
-    }
+    // DEVELOPMENT MODE: Force all features to be unlocked
+    result.is_pro = true;
     
-    // Ensure success field exists
+    // Ensure all required fields exist
     result.success = true;
-    
-    // Add any missing expected fields with defaults
-    result.bias_score = result.bias_analysis?.bias_score || 0;
-    result.overall_bias = result.bias_analysis?.overall_bias || 'Unknown';
+    result.article = result.article || {};
+    result.bias_analysis = result.bias_analysis || {};
+    result.transparency_analysis = result.transparency_analysis || {};
+    result.context_analysis = result.context_analysis || {};
+    result.readability_analysis = result.readability_analysis || {};
+    result.emotional_tone_analysis = result.emotional_tone_analysis || {};
+    result.comparison_analysis = result.comparison_analysis || {};
     
     return result;
 }
 
-// Display analysis results using the enhanced UI controller
-function displayResults(result) {
-    console.log('=== DISPLAYING RESULTS ===');
-    console.log('Full result object:', result);
-    
-    // Transform data to match UI expectations
-    result = transformApiData(result);
-    
-    // Store globally for debugging
-    window.LAST_ANALYSIS_DATA = result;
-    
-    // Clear any existing results
-    if (window.UI && window.UI.clearResults) {
-        window.UI.clearResults();
+// Display all analysis results
+function displayResults(data) {
+    if (!data || !data.success) {
+        showError('No results to display');
+        return;
     }
     
-    // Use the enhanced UI controller to render results
-    if (window.UI && window.UI.renderResults) {
-        console.log('Using enhanced UI controller to render results');
-        window.UI.renderResults(result);
-    } else {
-        console.error('UI controller not available');
-        // Fallback to basic display
-        displayResultsFallback(result);
+    const container = document.querySelector('.results-grid');
+    if (!container) {
+        console.error('Results grid container not found');
+        return;
     }
     
-    // Ensure the enhanced analysis section is visible
-    const enhancedAnalysis = document.getElementById('enhancedAnalysis');
-    if (enhancedAnalysis && result) {
-        enhancedAnalysis.classList.remove('hidden');
-    }
-}
-
-// Fallback results display (in case UI controller fails)
-function displayResultsFallback(result) {
-    const resultsDiv = document.getElementById('results');
-    if (!resultsDiv) return;
+    // Clear previous results
+    container.innerHTML = '';
     
-    resultsDiv.innerHTML = `
-        <div class="results-fallback">
-            <h2>Analysis Complete</h2>
-            <div class="basic-results">
-                <p><strong>Trust Score:</strong> ${result.trust_score || 'N/A'}/100</p>
-                <p><strong>Source:</strong> ${result.article?.domain || 'Unknown'}</p>
-                <p><strong>Author:</strong> ${result.article?.author || 'Unknown'}</p>
-                <p><strong>Bias:</strong> ${result.bias_analysis?.overall_bias || 'Unknown'}</p>
-            </div>
-            <p class="upgrade-notice">
-                Enable JavaScript and refresh the page for full enhanced analysis.
-            </p>
-        </div>
-    `;
+    // Define all 8 cards that should be displayed
+    const cards = [
+        { component: window.BiasCard, name: 'BiasCard' },
+        { component: window.FactCheckCard, name: 'FactCheckCard' },
+        { component: window.TransparencyCard, name: 'TransparencyCard' },
+        { component: window.AuthorCard, name: 'AuthorCard' },
+        { component: window.ContextCard, name: 'ContextCard' },
+        { component: window.ReadabilityCard, name: 'ReadabilityCard' },
+        { component: window.EmotionalToneCard, name: 'EmotionalToneCard' },
+        { component: window.ComparisonCard, name: 'ComparisonCard' }
+    ];
     
-    resultsDiv.classList.remove('hidden');
-}
-
-// Reset analysis
-function resetAnalysis() {
-    // Clear inputs
-    const urlInput = document.getElementById('urlInput');
-    const textInput = document.getElementById('textInput');
-    
-    if (urlInput) urlInput.value = '';
-    if (textInput) textInput.value = '';
-    
-    // Hide results
-    const resultsDiv = document.getElementById('results');
-    if (resultsDiv) {
-        resultsDiv.innerHTML = '';
-        resultsDiv.classList.add('hidden');
-    }
-    
-    // Hide enhanced analysis
-    const enhancedAnalysis = document.getElementById('enhancedAnalysis');
-    if (enhancedAnalysis) {
-        enhancedAnalysis.classList.add('hidden');
-    }
-    
-    // Reset analyzer card
-    const analyzerCard = document.querySelector('.analyzer-card');
-    if (analyzerCard) {
-        analyzerCard.classList.remove('analyzer-card-minimized');
-    }
-    
-    // Clear stored data
-    currentArticleData = null;
-    analysisInProgress = false;
-    
-    // Clear UI controller state
-    if (window.UI) {
-        window.UI.clearResults();
-        window.UI.currentURL = null;
-        window.UI.currentText = null;
-    }
-    
-    console.log('Analysis reset');
-}
-
-// Save to history
-function saveToHistory(url, data) {
-    try {
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+    // Render all cards
+    cards.forEach(({ component, name }) => {
+        if (!component) {
+            console.warn(`${name} component not found`);
+            return;
+        }
         
-        history.unshift({
-            url: url,
-            title: data.article?.title || 'Unknown',
-            trustScore: data.trust_score || 0,
-            date: new Date().toISOString()
+        try {
+            const cardInstance = new component();
+            const element = cardInstance.render(data);
+            if (element) {
+                container.appendChild(element);
+            }
+        } catch (error) {
+            console.error(`Error rendering ${name}:`, error);
+        }
+    });
+    
+    // Initialize dropdowns after cards are rendered
+    setTimeout(initializeDropdowns, 100);
+}
+
+// Initialize dropdown functionality for all cards
+function initializeDropdowns() {
+    // Add click handlers to all analysis headers
+    document.querySelectorAll('.analysis-header').forEach(header => {
+        // Skip if already initialized
+        if (header.dataset.dropdownInit) return;
+        header.dataset.dropdownInit = 'true';
+        
+        header.style.cursor = 'pointer';
+        
+        // Add dropdown arrow if not present
+        if (!header.querySelector('.dropdown-arrow')) {
+            const arrow = document.createElement('span');
+            arrow.className = 'dropdown-arrow';
+            arrow.innerHTML = '▼';
+            arrow.style.marginLeft = 'auto';
+            arrow.style.transition = 'transform 0.3s';
+            header.appendChild(arrow);
+        }
+        
+        header.addEventListener('click', function(e) {
+            // Prevent event bubbling
+            e.stopPropagation();
+            
+            const card = this.closest('.analysis-card');
+            if (!card) return;
+            
+            // Find the content section (try multiple class names)
+            const contentSelectors = [
+                '.card-content',
+                '.bias-content',
+                '.fact-check-content',
+                '.transparency-content',
+                '.author-content',
+                '.context-content',
+                '.readability-content',
+                '.emotional-content',
+                '.comparison-content'
+            ];
+            
+            let content = null;
+            for (const selector of contentSelectors) {
+                content = card.querySelector(selector);
+                if (content) break;
+            }
+            
+            const arrow = this.querySelector('.dropdown-arrow');
+            
+            if (content) {
+                // Toggle expanded state
+                const isExpanded = content.style.display === 'block';
+                content.style.display = isExpanded ? 'none' : 'block';
+                if (arrow) {
+                    arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                }
+                
+                // Add/remove expanded class
+                card.classList.toggle('expanded', !isExpanded);
+            }
         });
         
-        // Keep only last 10 items
-        history.splice(10);
-        
-        localStorage.setItem('analysisHistory', JSON.stringify(history));
-    } catch (e) {
-        console.error('Error saving to history:', e);
+        // Start with first two cards expanded
+        const allHeaders = document.querySelectorAll('.analysis-header');
+        const index = Array.from(allHeaders).indexOf(header);
+        if (index < 2) {
+            header.click();
+        }
+    });
+}
+
+// Show error message
+function showError(message) {
+    // Create error element if it doesn't exist
+    let errorEl = document.getElementById('error-message');
+    if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.id = 'error-message';
+        errorEl.className = 'error-message';
+        document.querySelector('.container').insertBefore(errorEl, document.querySelector('.input-section'));
+    }
+    
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+    
+    // Hide after 5 seconds
+    setTimeout(() => {
+        errorEl.style.display = 'none';
+    }, 5000);
+}
+
+// Toggle settings panel
+function toggleSettings() {
+    const settingsPanel = document.querySelector('.settings-panel');
+    if (settingsPanel) {
+        settingsPanel.classList.toggle('open');
     }
 }
 
-// Load history
-function loadHistory() {
-    try {
-        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+// Add all necessary styles
+function addCardStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Ensure consistent card heights and grid layout */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
         
-        if (history.length === 0) return;
+        .analysis-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+        }
         
-        console.log('Loaded analysis history:', history.length, 'items');
+        .analysis-card.expanded {
+            min-height: 300px;
+        }
         
-        // Could display history in UI if needed
-    } catch (e) {
-        console.error('Error loading history:', e);
-    }
+        .analysis-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+            user-select: none;
+            min-height: 60px;
+        }
+        
+        .analysis-header:hover {
+            background: #e9ecef;
+        }
+        
+        .analysis-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+        
+        /* Hide content by default for dropdown functionality */
+        .card-content,
+        .bias-content,
+        .fact-check-content,
+        .transparency-content,
+        .author-content,
+        .context-content,
+        .readability-content,
+        .emotional-content,
+        .comparison-content {
+            display: none;
+            padding: 20px;
+            animation: slideDown 0.3s ease;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Progress bar styles */
+        .progress-bar {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 30px auto;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 30px 30px;
+            animation: progress-animation 1s linear infinite;
+        }
+        
+        @keyframes progress-animation {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 30px 0;
+            }
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+        
+        /* Error message styles */
+        .error-message {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(204, 51, 51, 0.2);
+        }
+        
+        /* Remove pro badges during development */
+        .pro-indicator,
+        .pro-badge,
+        .upgrade-prompt,
+        .lock-icon {
+            display: none !important;
+        }
+        
+        /* Dropdown arrow styles */
+        .dropdown-arrow {
+            font-size: 12px;
+            color: #6b7280;
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Make all cards same height when expanded */
+        .analysis-card.expanded {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Ensure content sections fill available space */
+        .analysis-card.expanded > div[style*="display: block"] {
+            flex: 1;
+            display: flex !important;
+            flex-direction: column;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
-// Export functions for debugging
-window.analyzeURL = analyzeURL;
-window.analyzeText = analyzeText;
-window.resetAnalysis = resetAnalysis;
-window.displayResults = displayResults;
-window.transformApiData = transformApiData;
-
-// Add CSS for progress bar
-const style = document.createElement('style');
-style.textContent = `
-    .progress-bar-wrapper {
-        margin: 20px 0;
-        padding: 20px;
-        background: #f9fafb;
-        border-radius: 12px;
-    }
-    
-    .progress-bar {
-        height: 8px;
-        background: #e5e7eb;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 20px;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(to right, #3b82f6, #6366f1);
-        border-radius: 4px;
-        width: 0%;
-        transition: width 0.8s ease-out;
-    }
-    
-    .progress-steps {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 15px;
-    }
-    
-    .progress-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        opacity: 0.4;
-        transition: opacity 0.3s;
-    }
-    
-    .progress-step.active {
-        opacity: 1;
-    }
-    
-    .step-icon {
-        font-size: 24px;
-    }
-    
-    .progress-step span:not(.step-icon) {
-        font-size: 12px;
-        color: #6b7280;
-        text-align: center;
-    }
-    
-    .progress-status {
-        text-align: center;
-        color: #374151;
-        font-weight: 500;
-    }
-    
-    .error-card {
-        background: white;
-        border: 2px solid #fee2e2;
-        border-radius: 12px;
-        padding: 30px;
-        text-align: center;
-        max-width: 500px;
-        margin: 40px auto;
-    }
-    
-    .error-icon {
-        font-size: 48px;
-        margin-bottom: 15px;
-    }
-    
-    .error-card h3 {
-        color: #991b1b;
-        margin-bottom: 10px;
-    }
-    
-    .error-card p {
-        color: #374151;
-        margin-bottom: 20px;
-    }
-    
-    .results-fallback {
-        background: white;
-        border-radius: 12px;
-        padding: 30px;
-        max-width: 600px;
-        margin: 40px auto;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .basic-results {
-        margin: 20px 0;
-        padding: 20px;
-        background: #f9fafb;
-        border-radius: 8px;
-    }
-    
-    .basic-results p {
-        margin: 10px 0;
-        font-size: 16px;
-    }
-    
-    .upgrade-notice {
-        color: #6b7280;
-        font-style: italic;
-        text-align: center;
-        margin-top: 20px;
-    }
-`;
-document.head.appendChild(style);
-
-console.log('Main.js loaded successfully');
+// Export for debugging
+window.debugAnalysis = {
+    getCurrentData: () => currentAnalysis,
+    rerunDisplay: () => displayResults(currentAnalysis),
+    testProgress: () => analyzeArticle('https://test.com')
+};
