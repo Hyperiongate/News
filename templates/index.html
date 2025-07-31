@@ -203,7 +203,7 @@
             gap: 8px;
         }
 
-        .analyze-btn:hover {
+        .analyze-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
@@ -215,15 +215,19 @@
         }
 
         /* Progress Bar */
-        .progress-bar {
+        .progress-container {
             display: none;
             width: 100%;
             max-width: 600px;
+            margin: 30px auto;
+        }
+
+        .progress-bar {
+            width: 100%;
             height: 40px;
             background: #f0f0f0;
             border-radius: 20px;
             overflow: hidden;
-            margin: 30px auto;
             position: relative;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -276,8 +280,8 @@
             z-index: 1;
         }
 
-        /* Error Message */
-        .error-message {
+        /* Error Alert */
+        #errorAlert {
             display: none;
             background: #fee;
             color: #c33;
@@ -290,7 +294,7 @@
         }
 
         /* Results Section */
-        .results-section {
+        #results-section {
             display: none;
         }
 
@@ -316,17 +320,18 @@
             flex-direction: column;
         }
 
-        .analysis-card.expanded {
-            min-height: 300px;
+        .analysis-card.expanded .card-content {
+            display: block !important;
         }
 
         .analysis-card:hover {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .analysis-header {
+        .card-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 15px 20px;
             background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
@@ -336,40 +341,40 @@
             cursor: pointer;
         }
 
-        .analysis-header:hover {
+        .card-header:hover {
             background: #e9ecef;
         }
 
-        .analysis-icon {
-            font-size: 24px;
-            margin-right: 12px;
+        .card-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #1f2937;
         }
 
-        .dropdown-arrow {
-            font-size: 12px;
+        .expand-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: #6b7280;
-            margin-left: auto;
             transition: transform 0.3s ease;
         }
 
-        /* Card content sections - updated to match ALL possible component content class names */
-        .card-content,
-        .bias-content,
-        .fact-check-content,
-        .transparency-content,
-        .author-content,
-        .context-content,
-        .readability-content,
-        .emotional-content,
-        .comparison-content,
-        .bias-analysis-content,
-        .fact-checker-content,
-        .transparency-analysis-content {
+        .analysis-card.expanded .expand-btn {
+            transform: rotate(180deg);
+        }
+
+        /* Card content */
+        .card-content {
             display: none;
             padding: 20px;
             animation: slideDown 0.3s ease;
             flex: 1;
             overflow-y: auto;
+            max-height: 600px;
         }
 
         @keyframes slideDown {
@@ -383,25 +388,31 @@
             }
         }
 
-        /* Loading Spinner */
-        .loading {
+        /* Component fallback styles */
+        .component-fallback {
+            padding: 15px;
+        }
+
+        .component-fallback p {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .component-fallback pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        /* Loading placeholder */
+        .loading-placeholder {
             text-align: center;
             padding: 40px;
-        }
-
-        .spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            color: #9ca3af;
         }
 
         /* Hide pro indicators in development */
@@ -415,6 +426,38 @@
         /* Utility classes */
         .hidden {
             display: none !important;
+        }
+
+        /* Trust Score Display */
+        #trustScore {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        #trustScoreMeter {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .score-meter {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .score-meter.high {
+            background: #10b981;
+        }
+
+        .score-meter.medium {
+            background: #f59e0b;
+        }
+
+        .score-meter.low {
+            background: #ef4444;
         }
 
         /* Responsive */
@@ -500,6 +543,7 @@
                     id="url-input" 
                     placeholder="https://example.com/news-article" 
                     class="url-input"
+                    value=""
                 >
                 <button id="analyze-btn" class="analyze-btn">
                     <span>🔍</span>
@@ -509,22 +553,34 @@
         </div>
 
         <!-- Progress Bar -->
-        <div class="progress-bar" style="display: none;">
-            <div class="progress-fill"></div>
-            <div class="progress-text">Starting analysis...</div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+                <div class="progress-text">Starting analysis...</div>
+            </div>
         </div>
 
-        <!-- Error Message -->
-        <div id="error-message" class="error-message"></div>
-
-        <!-- Loading State (fallback) -->
-        <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <p>Analyzing article...</p>
+        <!-- Error Alert -->
+        <div id="errorAlert">
+            <span id="errorMessage"></span>
         </div>
 
         <!-- Results Section -->
-        <div id="results-section" class="results-section" style="display: none;">
+        <div id="results-section" class="results-section">
+            <!-- Trust Score Display (optional - add if needed) -->
+            <div id="trust-score-section" class="hidden" style="text-align: center; margin-bottom: 30px;">
+                <h2>Trust Score: <span id="trustScore">0</span>/100</h2>
+                <div id="trustScoreMeter" style="max-width: 300px; margin: 0 auto;">
+                    <div class="score-meter"></div>
+                </div>
+            </div>
+            
+            <!-- Article Info (optional - add if needed) -->
+            <div id="article-info" class="hidden" style="text-align: center; margin-bottom: 30px;">
+                <h3 id="articleTitle"></h3>
+                <p><span id="articleSource"></span> • <span id="articleDate"></span></p>
+            </div>
+            
             <!-- Results Grid - All 8 cards will be rendered here -->
             <div class="results-grid">
                 <!-- Cards will be dynamically inserted here by JavaScript -->
@@ -532,7 +588,7 @@
         </div>
     </div>
 
-    <!-- ALL 8 Component Scripts - ALL IN COMPONENTS FOLDER -->
+    <!-- ALL 8 Component Scripts -->
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
     <script src="/static/js/components/transparency-analysis.js"></script>
@@ -542,45 +598,80 @@
     <script src="/static/js/components/emotional-tone-card.js"></script>
     <script src="/static/js/components/readability-card.js"></script>
 
-    <!-- Main JavaScript -->
+    <!-- Main JavaScript (use the fixed version) -->
     <script src="/static/js/main.js"></script>
 
-    <!-- Initialization with debug info -->
+    <!-- Initialization and Debug -->
     <script>
-        console.log('News Analyzer loaded - checking components...');
-        
-        // Debug: Check which components are loaded
-        setTimeout(() => {
-            const components = {
-                'BiasAnalysis': window.BiasAnalysis,
-                'FactChecker': window.FactChecker,
-                'TransparencyAnalysis': window.TransparencyAnalysis,
-                'AuthorCard': window.AuthorCard,
-                'ComparisonCard': window.ComparisonCard,
-                'ContextCard': window.ContextCard,
-                'EmotionalToneCard': window.EmotionalToneCard,
-                'ReadabilityCard': window.ReadabilityCard
-            };
+        // Wait for DOM and scripts to load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded - initializing News Analyzer...');
             
-            console.log('\n=== COMPONENT LOADING STATUS ===');
-            let loadedCount = 0;
-            Object.entries(components).forEach(([name, component]) => {
-                if (component) {
-                    console.log(`✓ ${name} loaded`);
-                    loadedCount++;
+            // Give components time to register
+            setTimeout(() => {
+                console.log('\n=== COMPONENT VERIFICATION ===');
+                
+                const components = [
+                    'BiasAnalysis',
+                    'FactChecker',
+                    'TransparencyAnalysis',
+                    'AuthorCard',
+                    'ComparisonCard',
+                    'ContextCard',
+                    'EmotionalToneCard',
+                    'ReadabilityCard'
+                ];
+                
+                let loadedCount = 0;
+                components.forEach(name => {
+                    if (window[name]) {
+                        console.log(`✅ ${name} loaded`);
+                        loadedCount++;
+                        
+                        // Verify it has a render method
+                        try {
+                            const instance = new window[name]();
+                            if (typeof instance.render === 'function') {
+                                console.log(`   └─ render() method: ✓`);
+                            } else {
+                                console.error(`   └─ render() method: ✗ MISSING`);
+                            }
+                        } catch (e) {
+                            console.error(`   └─ Error creating instance: ${e.message}`);
+                        }
+                    } else {
+                        console.error(`❌ ${name} NOT loaded`);
+                    }
+                });
+                
+                console.log(`\nTotal: ${loadedCount}/8 components loaded`);
+                
+                if (loadedCount === 8) {
+                    console.log('✅ All components ready!');
+                    console.log('\n📝 Usage: Enter a news article URL and click "Analyze Article"');
                 } else {
-                    console.error(`✗ ${name} NOT loaded - check if file exists and exports correctly`);
+                    console.error('⚠️ Some components failed to load!');
+                    console.log('Check that all component files exist in /static/js/components/');
+                    console.log('Verify each component file exports a class with a render() method');
                 }
-            });
-            
-            console.log(`\nTotal: ${loadedCount}/8 components loaded`);
-            
-            if (loadedCount === 8) {
-                console.log('✅ All components loaded successfully!');
-            } else {
-                console.log('⚠️ Some components failed to load. Check the file paths and exports.');
-            }
-        }, 500);
+                
+                // Test with example URL if provided in query string
+                const urlParams = new URLSearchParams(window.location.search);
+                const testUrl = urlParams.get('test');
+                if (testUrl) {
+                    console.log(`\n🧪 Test URL found: ${testUrl}`);
+                    document.getElementById('url-input').value = testUrl;
+                    console.log('Click "Analyze Article" to test');
+                }
+            }, 500);
+        });
+        
+        // Global error handler for debugging
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+            console.error('In file:', event.filename);
+            console.error('Line:', event.lineno);
+        });
     </script>
 </body>
 </html>
