@@ -145,38 +145,71 @@ async function analyzeArticle(url) {
         analysisInProgress = false;
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = '<span>🔍</span> Analyze Article';
+            analyzeBtn.innerHTML = '<span>🔍</span> Analyze';
         }
     }
 }
 
-// Transform API data to match UI expectations
+// Transform API data to match UI expectations - FIXED TO MATCH ACTUAL BACKEND FIELDS
 function transformApiData(result) {
     if (!result) return result;
     
-    // Fix fact_checks structure
-    if (result.fact_checks && !Array.isArray(result.fact_checks)) {
-        result.fact_checks = result.fact_checks.claims || [];
-    }
+    console.log('Transforming API data with correct mappings...');
     
-    // Transform author_analysis to author_info
-    if (result.author_analysis && !result.author_info) {
-        result.author_info = result.author_analysis;
-    }
-    
-    // DEVELOPMENT MODE: Force all features to be unlocked
-    result.is_pro = true;
-    
-    // Ensure all required fields exist
+    // Ensure success flag
     result.success = true;
-    result.article = result.article || {};
+    
+    // Ensure all required fields exist with correct mappings
+    // Backend returns these fields (from your debug output):
+    // - bias_analysis ✓
+    // - fact_checks ✓ 
+    // - transparency_analysis ✓
+    // - author_analysis ✓
+    // - emotion_analysis (NOT emotional_tone_analysis)
+    // - readability_analysis ✓
+    // - NO context_analysis
+    // - NO comparison_analysis
+    
+    // Keep existing fields as-is
     result.bias_analysis = result.bias_analysis || {};
     result.transparency_analysis = result.transparency_analysis || {};
-    result.context_analysis = result.context_analysis || {};
     result.readability_analysis = result.readability_analysis || {};
-    result.emotional_tone_analysis = result.emotional_tone_analysis || {};
-    result.comparison_analysis = result.comparison_analysis || {};
     
+    // Map fact_checks to fact_checking (components expect fact_checking)
+    result.fact_checking = result.fact_checks || {};
+    
+    // Map author_analysis to author_info (some components might expect author_info)
+    result.author_info = result.author_analysis || {};
+    
+    // Map emotion_analysis to emotional_tone_analysis (components expect emotional_tone_analysis)
+    result.emotional_tone_analysis = result.emotion_analysis || {};
+    result.emotional_tone = result.emotion_analysis || {};
+    
+    // Create context_analysis from network_analysis or content_analysis
+    result.context_analysis = result.network_analysis || result.content_analysis || {
+        related_articles: 0,
+        timeline_events: 0,
+        missing_perspectives: []
+    };
+    
+    // Create comparison_analysis from available data
+    result.comparison_analysis = {
+        source_credibility: result.source_credibility || {},
+        similar_coverage: result.network_analysis?.related_articles || 0,
+        consensus_score: result.trust_score || 50,
+        trust_level: result.trust_level || {}
+    };
+    
+    // Map readability
+    result.readability = result.readability_analysis || {};
+    
+    // Ensure article exists
+    result.article = result.article || {};
+    
+    // Force pro features
+    result.is_pro = true;
+    
+    console.log('Transformation complete');
     return result;
 }
 
@@ -199,7 +232,7 @@ function displayResults(data) {
     // Create cards for each analysis component
     const components = [
         { name: 'bias-analysis', data: data.bias_analysis, title: 'Bias Analysis' },
-        { name: 'fact-checker', data: data.fact_checks || data.fact_checking, title: 'Fact Checking' },
+        { name: 'fact-checker', data: data.fact_checking, title: 'Fact Checking' },
         { name: 'transparency-analysis', data: data.transparency_analysis, title: 'Transparency' },
         { name: 'author-card', data: data.author_info || data.author_analysis, title: 'Author Analysis' },
         { name: 'context-card', data: data.context_analysis, title: 'Context' },
@@ -221,6 +254,12 @@ function displayResults(data) {
     // Show article info
     if (data.article) {
         updateArticleInfo(data.article);
+    }
+    
+    // Show trust score section
+    const trustSection = document.getElementById('trust-score-section');
+    if (trustSection && data.trust_score) {
+        trustSection.classList.remove('hidden');
     }
 }
 
@@ -254,7 +293,7 @@ function createAnalysisCard(componentName, data, title) {
 // Load component dynamically - FIXED WITH CORRECT MAPPING
 async function loadComponent(componentName, data) {
     try {
-        console.log(`Loading component: ${componentName}`);
+        console.log(`Loading component: ${componentName} with data:`, data ? 'Has data' : 'No data');
         
         // Map kebab-case names to PascalCase class names
         const componentMap = {
@@ -315,15 +354,23 @@ ${JSON.stringify(data, null, 2)}
 // Show fallback data when component fails to load
 function showFallbackData(componentName, data) {
     const container = document.getElementById(`${componentName}-content`);
-    if (container && data) {
-        container.innerHTML = `
-            <div class="component-fallback" style="padding: 15px;">
-                <p style="color: #666; font-style: italic;">Component visualization unavailable. Showing raw data:</p>
-                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">
+    if (container) {
+        if (!data || Object.keys(data).length === 0) {
+            container.innerHTML = `
+                <div class="component-fallback" style="padding: 20px; text-align: center;">
+                    <p style="color: #666;">No data available for this analysis.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="component-fallback" style="padding: 15px;">
+                    <p style="color: #666; font-style: italic;">Component visualization unavailable. Showing raw data:</p>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">
 ${JSON.stringify(data, null, 2)}
-                </pre>
-            </div>
-        `;
+                    </pre>
+                </div>
+            `;
+        }
     }
 }
 
@@ -338,21 +385,25 @@ function toggleCard(componentName) {
 // Update trust score display
 function updateTrustScore(score) {
     const scoreElement = document.getElementById('trustScore');
-    const scoreMeter = document.getElementById('trustScoreMeter');
+    const scoreMeter = document.querySelector('#trustScoreMeter .score-meter');
     
     if (scoreElement && score !== undefined) {
         scoreElement.textContent = Math.round(score);
         
-        // Update meter color based on score
+        // Update meter width and color
         if (scoreMeter) {
             scoreMeter.style.width = `${score}%`;
             
+            // Remove all classes first
+            scoreMeter.classList.remove('high', 'medium', 'low');
+            
+            // Add appropriate class based on score
             if (score >= 80) {
-                scoreMeter.className = 'score-meter high';
+                scoreMeter.classList.add('high');
             } else if (score >= 60) {
-                scoreMeter.className = 'score-meter medium';
+                scoreMeter.classList.add('medium');
             } else {
-                scoreMeter.className = 'score-meter low';
+                scoreMeter.classList.add('low');
             }
         }
     }
