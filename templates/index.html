@@ -352,7 +352,7 @@
             transition: transform 0.3s ease;
         }
 
-        /* Card content sections */
+        /* Card content sections - updated to match ALL possible component content class names */
         .card-content,
         .bias-content,
         .fact-check-content,
@@ -361,7 +361,10 @@
         .context-content,
         .readability-content,
         .emotional-content,
-        .comparison-content {
+        .comparison-content,
+        .bias-analysis-content,
+        .fact-checker-content,
+        .transparency-analysis-content {
             display: none;
             padding: 20px;
             animation: slideDown 0.3s ease;
@@ -529,22 +532,47 @@
         </div>
     </div>
 
-    <!-- Component Scripts (in correct order) -->
-    <script src="/static/js/components/bias-card.js"></script>
-    <script src="/static/js/components/fact-check-card.js"></script>
-    <script src="/static/js/components/transparency-card.js"></script>
+    <!-- Component Scripts - Using YOUR actual file structure -->
+    <!-- Files that exist in components folder -->
+    <script src="/static/js/components/bias-analysis.js"></script>
+    <script src="/static/js/components/fact-checker.js"></script>
+    <script src="/static/js/components/transparency-analysis.js"></script>
     <script src="/static/js/components/author-card.js"></script>
-    <script src="/static/js/components/context-card.js"></script>
-    <script src="/static/js/components/readability-card.js"></script>
-    <script src="/static/js/components/emotional-tone-card.js"></script>
-    <script src="/static/js/components/comparison-card.js"></script>
+    
+    <!-- Files that are currently in js folder (need to be moved to components) -->
+    <script src="/static/js/comparison-card.js"></script>
+    <script src="/static/js/context-card.js"></script>
+    <script src="/static/js/emotional-tone-card.js"></script>
+    <script src="/static/js/readability-card.js"></script>
 
     <!-- Main JavaScript -->
     <script src="/static/js/main.js"></script>
 
-    <!-- Initialization -->
+    <!-- Initialization with debug info -->
     <script>
-        console.log('News Analyzer loaded - all components ready');
+        console.log('News Analyzer loaded - checking components...');
+        
+        // Debug: Check which components are loaded
+        setTimeout(() => {
+            const components = {
+                'BiasAnalysis': window.BiasAnalysis,
+                'FactChecker': window.FactChecker,
+                'TransparencyAnalysis': window.TransparencyAnalysis,
+                'AuthorCard': window.AuthorCard,
+                'ComparisonCard': window.ComparisonCard,
+                'ContextCard': window.ContextCard,
+                'EmotionalToneCard': window.EmotionalToneCard,
+                'ReadabilityCard': window.ReadabilityCard
+            };
+            
+            Object.entries(components).forEach(([name, component]) => {
+                if (component) {
+                    console.log(`✓ ${name} loaded`);
+                } else {
+                    console.error(`✗ ${name} NOT loaded - check if file exists and exports correctly`);
+                }
+            });
+        }, 100);
     </script>
 </body>
 </html>
