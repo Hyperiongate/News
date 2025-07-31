@@ -1,13 +1,15 @@
-# FILE: render.yaml
-# LOCATION: news/render.yaml
-# PURPOSE: Render deployment configuration with Python 3.11
-
 services:
   - type: web
     name: news-analyzer
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --config gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.8
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 5000
+    healthCheckPath: /health
+    region: oregon # You can change this to your preferred region
