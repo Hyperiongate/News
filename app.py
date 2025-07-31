@@ -29,9 +29,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Initialize Flask app with proper static configuration
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static',
+            template_folder='templates')
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configure caching
 cache_config = {
@@ -267,7 +270,7 @@ class PDFGenerator:
         return None
 
 class ReportGenerator:
-    def generate(self, analysis_results):
+    def generate(self, analysis_results, format_type='json'):
         """Generate report"""
         return {
             'summary': 'Analysis complete',
@@ -306,12 +309,28 @@ try:
 except Exception as e:
     logger.warning(f"PDF export disabled: {e}")
 
+# FIXED: Main route now renders HTML template instead of returning JSON
 @app.route('/')
 def index():
     """Render the main page"""
     return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
+# Add API info endpoint for the JSON response
+@app.route('/api')
+def api_info():
+    """API information endpoint"""
+    return jsonify({
+        'status': 'News Analyzer API is running',
+        'version': '2.0',
+        'endpoints': [
+            '/api/analyze',
+            '/api/health',
+            '/api/stats'
+        ]
+    })
+
+# FIXED: Changed route to include /api prefix for consistency
+@app.route('/api/analyze', methods=['POST'])
 @rate_limit(max_requests=30, window=60)  # 30 requests per minute
 def analyze():
     """Main analysis endpoint"""
@@ -322,34 +341,52 @@ def analyze():
             return jsonify({'error': 'No data provided'}), 400
             
         url = data.get('url', '').strip()
-        if not url:
-            return jsonify({'error': 'No URL provided'}), 400
+        text = data.get('text', '').strip()
         
-        # Validate URL
-        if not is_valid_url(url):
-            return jsonify({'error': 'Invalid URL format'}), 400
+        if not url and not text:
+            return jsonify({'error': 'No URL or text provided'}), 400
         
-        # Check cache first
-        cache_key = generate_cache_key(url)
-        cached_result = cache.get(cache_key)
-        if cached_result and not data.get('force_refresh'):
-            logger.info(f"Returning cached result for: {url}")
-            cached_result['from_cache'] = True
-            return jsonify(cached_result)
-        
-        logger.info(f"Starting analysis for URL: {url}")
-        
-        # Extract article content
-        article_data = article_extractor.extract(url)
-        
-        if not article_data or article_data.get('error'):
-            error_msg = article_data.get('error') if article_data else 'Failed to extract article'
-            logger.error(f"Article extraction failed: {error_msg}")
-            return jsonify({'error': f'Failed to extract article: {error_msg}'}), 400
+        if url:
+            # Validate URL
+            if not is_valid_url(url):
+                return jsonify({'error': 'Invalid URL format'}), 400
+            
+            # Check cache first
+            cache_key = generate_cache_key(url)
+            cached_result = cache.get(cache_key)
+            if cached_result and not data.get('force_refresh'):
+                logger.info(f"Returning cached result for: {url}")
+                cached_result['from_cache'] = True
+                return jsonify(cached_result)
+            
+            logger.info(f"Starting analysis for URL: {url}")
+            
+            # Extract article content
+            article_data = article_extractor.extract(url)
+            
+            if not article_data or article_data.get('error'):
+                error_msg = article_data.get('error') if article_data else 'Failed to extract article'
+                logger.error(f"Article extraction failed: {error_msg}")
+                return jsonify({'error': f'Failed to extract article: {error_msg}'}), 400
+        else:
+            # Handle text input
+            article_data = {
+                'title': 'Text Analysis',
+                'content': text,
+                'author': 'Unknown',
+                'url': 'text-input',
+                'word_count': len(text.split()),
+                'reading_time': max(1, len(text.split()) // 200),
+                'date': datetime.now().isoformat(),
+                'domain': 'text-input'
+            }
         
         # Get domain for various analyses
-        parsed_url = urlparse(url)
-        domain = parsed_url.netloc.replace('www.', '')
+        if url:
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc.replace('www.', '')
+        else:
+            domain = 'text-input'
         
         # Perform analyses
         author_info = author_analyzer.analyze_single_author(
@@ -383,8 +420,9 @@ def analyze():
         
         # Prepare response
         results = {
+            'success': True,
             'article': {
-                'url': url,
+                'url': article_data.get('url', 'text-input'),
                 'title': article_data.get('title', ''),
                 'author': article_data.get('author', 'Unknown'),
                 'date': article_data.get('date', ''),
@@ -392,27 +430,39 @@ def analyze():
                 'word_count': article_data.get('word_count', 0),
                 'reading_time': article_data.get('reading_time', 0)
             },
-            'author_info': author_info,
+            'author_analysis': author_info,
             'trust_score': trust_score_data['score'],
             'trust_score_breakdown': trust_score_data['breakdown'],
             'trust_level': trust_score_data['level'],
             'bias_analysis': analysis_results['bias'],
+            'clickbait_score': analysis_results['clickbait']['score'],
             'clickbait_analysis': analysis_results['clickbait'],
             'source_credibility': analysis_results['source'],
             'transparency_analysis': analysis_results['transparency'],
+            'fact_checks': analysis_results['facts'],
+            'content_analysis': analysis_results['content'],
+            'manipulation_analysis': analysis_results['manipulation'],
+            'readability_analysis': analysis_results['readability'],
+            'emotion_analysis': analysis_results['emotion'],
+            'key_claims': analysis_results['claims'].get('claims', []),
+            'network_analysis': analysis_results['network'],
             'analysis_timestamp': datetime.now().isoformat(),
             'from_cache': False
         }
         
-        # Cache the results
-        cache.set(cache_key, results)
+        # Cache the results if URL
+        if url:
+            cache.set(cache_key, results)
         
         logger.info(f"Analysis complete. Trust score: {trust_score_data['score']}")
         return jsonify(results)
         
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}", exc_info=True)
-        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+        return jsonify({
+            'success': False,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
 
 def calculate_trust_score(article_data, author_info, analysis_results):
     """Calculate simplified trust score"""
@@ -471,7 +521,7 @@ def generate_cache_key(url):
     """Generate cache key for URL"""
     return f"analysis:{hashlib.md5(url.encode()).hexdigest()}"
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
@@ -481,7 +531,7 @@ def health_check():
         'pdf_export_enabled': PDF_EXPORT_ENABLED
     })
 
-@app.route('/report/<report_type>', methods=['POST'])
+@app.route('/api/report/<report_type>', methods=['POST'])
 @rate_limit(max_requests=5, window=60)  # 5 reports per minute
 def generate_report(report_type):
     """Generate analysis report (PDF or other formats)"""
@@ -527,7 +577,7 @@ def generate_report(report_type):
         logger.error(f"Error generating report: {e}", exc_info=True)
         return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
 
-@app.route('/stats', methods=['GET'])
+@app.route('/api/stats', methods=['GET'])
 @cache.cached(timeout=300)  # Cache for 5 minutes
 def get_stats():
     """Get analysis statistics"""
@@ -536,6 +586,12 @@ def get_stats():
         'analyses_today': 50,    # Placeholder
         'average_trust_score': 65
     })
+
+# Serve static files in production
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, filename)
 
 @app.errorhandler(404)
 def not_found(error):
