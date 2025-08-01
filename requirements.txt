@@ -27,18 +27,47 @@ soupsieve==2.5
 reportlab==4.0.4
 Pillow==10.0.0
 
-# Optional dependencies (uncomment as needed)
-# For advanced NLP features:
-# nltk==3.8.1
-# spacy==3.6.1
+# XML parsing for API responses
+xmltodict==0.13.0
 
-# For database support (if needed):
-# SQLAlchemy==2.0.20
-# psycopg2-binary==2.9.7  # For PostgreSQL
+# OpenAI integration (if API key is available)
+openai==1.3.0
 
-# For caching with Redis (if needed):
-# redis==5.0.0
-# flask-redis==0.4.0
+# For enhanced NLP features
+nltk==3.8.1
+textstat==0.7.3
 
-# For OpenAI integration (if API key is available):
-# openai==1.3.0
+# For data analysis
+pandas==2.1.1
+scipy==1.11.3
+
+# Database support (if using caching with database)
+SQLAlchemy==2.0.20
+psycopg2-binary==2.9.7
+
+# Redis caching (optional but recommended for production)
+redis==5.0.0
+flask-redis==0.4.0
+
+# Rate limiting
+Flask-Limiter==3.5.0
+
+# Enhanced security
+python-jose==3.3.0
+cryptography==41.0.7
+
+# API clients for new integrations
+fredapi==0.5.1  # For FRED economic data
+newspaper3k==0.2.8  # Enhanced article extraction
+
+# Additional analysis tools
+textblob==0.17.1  # Sentiment analysis
+language-tool-python==2.7.1  # Grammar checking
+
+# Monitoring and logging
+sentry-sdk[flask]==1.38.0  # Error tracking (optional)
+
+# Testing (for development)
+pytest==7.4.3
+pytest-flask==1.3.0
+pytest-cov==4.1.0
