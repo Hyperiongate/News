@@ -290,7 +290,7 @@ function transformApiData(result) {
         title: result.article.title || '',
         author: result.article.author || 'Unknown',
         content: result.article.content || result.article.text || '',
-        domain: result.article.domain || new URL(result.article.url || url).hostname,
+        domain: result.article.domain || (result.article.url ? new URL(result.article.url).hostname : ''),
         publish_date: result.article.publish_date || result.article.date || null
     };
     
@@ -309,7 +309,7 @@ function transformApiData(result) {
     return result;
 }
 
-// Display all analysis results
+// Display all analysis results - THIS IS THE CRITICAL FIX
 function displayResults(data) {
     if (!data || !data.success) {
         showError('No results to display');
@@ -326,15 +326,16 @@ function displayResults(data) {
     container.innerHTML = '';
     
     // Create cards for each analysis component
+    // CRITICAL FIX: Pass the FULL 'data' object to ALL components, not slices!
     const components = [
         { name: 'bias-analysis', data: data, title: 'Bias Analysis' },
         { name: 'fact-checker', data: data, title: 'Fact Checking' },
         { name: 'transparency-analysis', data: data, title: 'Transparency' },
         { name: 'author-card', data: data, title: 'Author Analysis' },
-        { name: 'context-card', data: data.context_analysis, title: 'Context' },
-        { name: 'readability-card', data: data.readability_analysis || data.readability, title: 'Readability' },
-        { name: 'emotional-tone-card', data: data.emotional_tone_analysis || data.emotional_tone, title: 'Emotional Tone' },
-        { name: 'comparison-card', data: data.comparison_analysis || data.comparison, title: 'Source Comparison' }
+        { name: 'context-card', data: data, title: 'Context' },           // ← FIXED: Pass full data
+        { name: 'readability-card', data: data, title: 'Readability' },   // ← FIXED: Pass full data
+        { name: 'emotional-tone-card', data: data, title: 'Emotional Tone' }, // ← FIXED: Pass full data
+        { name: 'comparison-card', data: data, title: 'Source Comparison' }    // ← FIXED: Pass full data
     ];
     
     components.forEach(comp => {
