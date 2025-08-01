@@ -453,12 +453,25 @@
 
         /* Professional Card Content */
         .card-content {
-            display: none;
             padding: 24px;
             background: var(--white);
-            animation: slideDown 0.3s ease;
             overflow-y: auto;
             max-height: 600px;
+        }
+
+        /* Start with first 4 cards open */
+        .analysis-card:nth-child(1) .card-content,
+        .analysis-card:nth-child(2) .card-content,
+        .analysis-card:nth-child(3) .card-content,
+        .analysis-card:nth-child(4) .card-content {
+            display: block;
+        }
+
+        .analysis-card:nth-child(1),
+        .analysis-card:nth-child(2),
+        .analysis-card:nth-child(3),
+        .analysis-card:nth-child(4) {
+            /* Add expanded class to first 4 cards */
         }
 
         .analysis-card.expanded .card-content {
@@ -768,6 +781,7 @@
         </div>
     </div>
 
+    <!-- CRITICAL FIX: Load component scripts BEFORE main.js -->
     <!-- ALL 8 Component Scripts -->
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
@@ -778,18 +792,54 @@
     <script src="/static/js/components/emotional-tone-card.js"></script>
     <script src="/static/js/components/readability-card.js"></script>
 
-    <!-- Main JavaScript -->
+    <!-- Main JavaScript - MUST LOAD AFTER COMPONENTS -->
     <script src="/static/js/main.js"></script>
 
-    <!-- Enhanced Initialization -->
+    <!-- Enhanced Initialization with proper error handling -->
     <script>
-        // Wait for everything to load
-        window.addEventListener('DOMContentLoaded', function() {
+        // Initial component check on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 News Analyzer Professional Edition Loading...');
             
-            // Enhanced component verification
+            // Immediate component verification
+            const components = [
+                'BiasAnalysis',
+                'FactChecker',
+                'TransparencyAnalysis',
+                'AuthorCard',
+                'ComparisonCard',
+                'ContextCard',
+                'EmotionalToneCard',
+                'ReadabilityCard'
+            ];
+            
+            let loadedCount = 0;
+            components.forEach(name => {
+                if (window[name]) {
+                    console.log(`✅ ${name} loaded`);
+                    loadedCount++;
+                } else {
+                    console.error(`❌ ${name} NOT LOADED`);
+                }
+            });
+            
+            console.log(`Initial load: ${loadedCount}/8 components`);
+            
+            // Set initial expanded state for first 4 cards
             setTimeout(() => {
-                console.log('\n=== SYSTEM STATUS CHECK ===');
+                const cards = document.querySelectorAll('.analysis-card');
+                if (cards.length >= 4) {
+                    for (let i = 0; i < 4; i++) {
+                        cards[i].classList.add('expanded');
+                    }
+                }
+            }, 100);
+        });
+        
+        // Final verification after everything loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                console.log('\n=== FINAL SYSTEM STATUS CHECK ===');
                 
                 const components = [
                     'BiasAnalysis',
@@ -836,14 +886,6 @@
                     issues.forEach(issue => console.error(`   - ${issue}`));
                 }
                 
-                // Show trust score section if everything loaded
-                if (loadedCount === 8) {
-                    const trustSection = document.getElementById('trust-score-section');
-                    if (trustSection) {
-                        trustSection.classList.remove('hidden');
-                    }
-                }
-                
                 console.log('===========================\n');
             }, 500);
         });
@@ -854,7 +896,8 @@
                 message: event.error?.message || event.message,
                 file: event.filename,
                 line: event.lineno,
-                col: event.colno
+                col: event.colno,
+                stack: event.error?.stack
             });
         });
 
