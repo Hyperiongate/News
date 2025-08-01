@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Analyzer - Debug Test</title>
-    
+    <title>News Analyzer - Complete System Test</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
             padding: 20px;
-            background: #f3f4f6;
         }
         
         .test-container {
@@ -21,65 +21,30 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        h1 {
-            color: #1f2937;
-            margin-bottom: 30px;
+        h1, h2 {
+            color: #1a1a1a;
         }
         
-        .component-test {
-            margin: 10px 0;
-            padding: 15px;
-            background: #f9fafb;
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
             border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .component-name {
-            font-weight: bold;
-            color: #374151;
-        }
-        
-        .status {
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .status.loaded {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status.missing {
-            background: #fee2e2;
-            color: #991b1b;
         }
         
         .test-button {
-            margin-top: 30px;
-            padding: 12px 24px;
             background: #3b82f6;
             color: white;
             border: none;
-            border-radius: 8px;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 600;
+            margin: 10px 5px;
         }
         
         .test-button:hover {
             background: #2563eb;
-        }
-        
-        .results-area {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f9fafb;
-            border-radius: 8px;
-            display: none;
         }
         
         .results-grid {
@@ -89,191 +54,269 @@
             margin-top: 20px;
         }
         
-        .mini-card {
-            padding: 20px;
+        .analysis-card {
             background: white;
-            border-radius: 8px;
             border: 1px solid #e5e7eb;
-            text-align: center;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
-        .mini-card.missing {
-            background: #fef2f2;
-            border-color: #fecaca;
-        }
-        
-        .mini-card .icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        
-        .mini-card .title {
+        .card-header {
+            padding: 16px;
+            background: #f3f4f6;
             font-weight: 600;
-            color: #1f2937;
+        }
+        
+        .card-content {
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
     <div class="test-container">
-        <h1>🔍 News Analyzer Component Test</h1>
+        <h1>🔬 News Analyzer - Complete System Test</h1>
         
-        <h2>Component Loading Status:</h2>
-        <div id="component-list"></div>
+        <div class="test-section">
+            <h2>1. Component Loading Test</h2>
+            <button class="test-button" onclick="testComponentLoading()">Test Component Loading</button>
+            <div id="component-status"></div>
+        </div>
         
-        <button class="test-button" onclick="testComponents()">Run Component Test</button>
+        <div class="test-section">
+            <h2>2. API Response Simulation</h2>
+            <button class="test-button" onclick="testAPIResponse()">Test with Sample API Response</button>
+            <div id="api-status"></div>
+        </div>
         
-        <div class="results-area" id="results">
-            <h3>Test Results:</h3>
-            <div id="test-output"></div>
-            
-            <h3>Component Preview:</h3>
-            <div class="results-grid" id="preview-grid"></div>
+        <div class="test-section">
+            <h2>3. Component Render Test</h2>
+            <button class="test-button" onclick="testComponentRendering()">Test Component Rendering</button>
+            <div id="render-status"></div>
+            <div class="results-grid" id="test-results-grid"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. Full System Test</h2>
+            <button class="test-button" onclick="testFullSystem()">Run Full System Test</button>
+            <div id="full-test-status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Console Log</h2>
+            <div class="log" id="test-log"></div>
         </div>
     </div>
 
-    <!-- Load all your component scripts -->
+    <!-- Load all component scripts -->
     <script src="/static/js/components/bias-analysis.js"></script>
     <script src="/static/js/components/fact-checker.js"></script>
     <script src="/static/js/components/transparency-analysis.js"></script>
     <script src="/static/js/components/author-card.js"></script>
-    <script src="/static/js/comparison-card.js"></script>
-    <script src="/static/js/context-card.js"></script>
-    <script src="/static/js/emotional-tone-card.js"></script>
-    <script src="/static/js/readability-card.js"></script>
-    
+    <script src="/static/js/components/comparison-card.js"></script>
+    <script src="/static/js/components/context-card.js"></script>
+    <script src="/static/js/components/emotional-tone-card.js"></script>
+    <script src="/static/js/components/readability-card.js"></script>
+
+    <!-- Load main.js -->
+    <script src="/static/js/main.js"></script>
+
     <script>
-        // Component definitions
-        const componentDefs = [
-            { name: 'BiasAnalysis', file: 'bias-analysis.js', icon: '⚖️' },
-            { name: 'FactChecker', file: 'fact-checker.js', icon: '✓' },
-            { name: 'TransparencyAnalysis', file: 'transparency-analysis.js', icon: '🔍' },
-            { name: 'AuthorCard', file: 'author-card.js', icon: '👤' },
-            { name: 'ComparisonCard', file: 'comparison-card.js', icon: '📊' },
-            { name: 'ContextCard', file: 'context-card.js', icon: '🌐' },
-            { name: 'EmotionalToneCard', file: 'emotional-tone-card.js', icon: '😊' },
-            { name: 'ReadabilityCard', file: 'readability-card.js', icon: '📖' }
-        ];
-        
-        // Check components on load
-        window.addEventListener('load', () => {
-            checkComponents();
-        });
-        
-        function checkComponents() {
-            const listEl = document.getElementById('component-list');
-            listEl.innerHTML = '';
-            
-            componentDefs.forEach(comp => {
-                const div = document.createElement('div');
-                div.className = 'component-test';
-                
-                const isLoaded = window[comp.name] !== undefined;
-                
-                div.innerHTML = `
-                    <div>
-                        <span class="component-name">${comp.icon} ${comp.name}</span>
-                        <span style="color: #6b7280; font-size: 14px; margin-left: 10px;">${comp.file}</span>
-                    </div>
-                    <span class="status ${isLoaded ? 'loaded' : 'missing'}">
-                        ${isLoaded ? '✓ Loaded' : '✗ Missing'}
-                    </span>
-                `;
-                
-                listEl.appendChild(div);
-            });
+        // Logging utility
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#6b7280';
+            logEl.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(`[${type}] ${message}`);
         }
-        
-        function testComponents() {
-            const resultsEl = document.getElementById('results');
-            const outputEl = document.getElementById('test-output');
-            const previewEl = document.getElementById('preview-grid');
+
+        // Test 1: Component Loading
+        function testComponentLoading() {
+            const statusEl = document.getElementById('component-status');
+            statusEl.innerHTML = '';
             
-            resultsEl.style.display = 'block';
-            outputEl.innerHTML = '<p>Testing components...</p>';
-            previewEl.innerHTML = '';
+            const components = [
+                'BiasAnalysis', 'FactChecker', 'TransparencyAnalysis', 
+                'AuthorCard', 'ComparisonCard', 'ContextCard', 
+                'EmotionalToneCard', 'ReadabilityCard'
+            ];
             
-            // Test data
-            const testData = {
+            let loaded = 0;
+            components.forEach(name => {
+                if (window[name]) {
+                    loaded++;
+                    log(`✓ ${name} loaded`, 'success');
+                } else {
+                    log(`✗ ${name} not found`, 'error');
+                }
+            });
+            
+            statusEl.innerHTML = `<div class="status ${loaded === 8 ? 'success' : 'error'}">
+                Loaded ${loaded}/8 components
+            </div>`;
+        }
+
+        // Test 2: API Response
+        function testAPIResponse() {
+            const statusEl = document.getElementById('api-status');
+            
+            // Simulate real API response structure
+            const mockAPIResponse = {
                 success: true,
-                is_pro: true,
-                article: { title: 'Test Article' },
-                bias_analysis: { bias_score: 0.3, political_lean: 'Center' },
-                fact_checks: [{ claim: 'Test claim', rating: 'True' }],
-                transparency_analysis: { transparency_score: 75 },
-                author_info: { name: 'Test Author' },
-                context_analysis: { summary: 'Test context' },
-                readability_analysis: { readability_score: 65 },
-                emotional_tone_analysis: { dominant_emotion: 'Neutral' },
-                comparison_analysis: { similar_articles: [] }
+                article: {
+                    title: "Test Article: Understanding News Analysis",
+                    author: "Jane Smith",
+                    url: "https://example.com/test-article",
+                    domain: "example.com",
+                    publish_date: "2025-01-15",
+                    content: "This is test content...",
+                    word_count: 500,
+                    reading_time: 2
+                },
+                trust_score: 75,
+                bias_analysis: {
+                    political_lean: 0.2,
+                    overall_bias: "slightly_right",
+                    bias_score: 0.3,
+                    confidence: 85,
+                    bias_dimensions: {
+                        political: { score: 0.2, label: "Slightly Right" },
+                        sensational: { score: 0.1, label: "Low" }
+                    },
+                    loaded_phrases: ["strong claims", "experts say"],
+                    bias_indicators: ["Source selection", "Word choice"]
+                },
+                fact_checks: [
+                    { claim: "Economy grew 3%", rating: "True", source: "Google Fact Check" }
+                ],
+                transparency_analysis: {
+                    score: 80,
+                    transparency_score: 80,
+                    factors: ["Sources cited", "Author identified"],
+                    missing_elements: ["Funding disclosure"]
+                },
+                author_analysis: {
+                    name: "Jane Smith",
+                    found: true,
+                    credibility_score: 85,
+                    expertise: ["Technology", "Science"],
+                    bio: "Award-winning tech journalist..."
+                },
+                context_analysis: {
+                    summary: "This article discusses recent developments in AI technology..."
+                },
+                readability_analysis: {
+                    readability_score: 72,
+                    grade_level: 9
+                },
+                emotional_tone_analysis: {
+                    dominant_emotion: "Neutral",
+                    emotion_scores: { neutral: 0.7, positive: 0.2, negative: 0.1 }
+                }
             };
             
-            let loadedCount = 0;
-            let errorCount = 0;
-            const errors = [];
+            log("Testing the REAL problem: Passing sliced data vs full data");
             
-            componentDefs.forEach(comp => {
-                const miniCard = document.createElement('div');
-                miniCard.className = 'mini-card';
+            // Test 1: The WRONG way (what main.js is doing)
+            log("❌ WRONG: Passing sliced data to components");
+            const wrongWayCard = createTestCard('Context Card - Wrong Way', 'ContextCard', fullData.context_analysis);
+            gridEl.appendChild(wrongWayCard);
+            
+            // Test 2: The RIGHT way (passing full data)
+            log("✅ RIGHT: Passing full data to components");
+            const rightWayCard = createTestCard('Context Card - Right Way', 'ContextCard', fullData);
+            gridEl.appendChild(rightWayCard);
+            
+            // Test all components both ways
+            const components = [
+                { name: 'BiasAnalysis', slice: fullData.bias_analysis },
+                { name: 'AuthorCard', slice: fullData.author_analysis },
+                { name: 'TransparencyAnalysis', slice: fullData.transparency_analysis }
+            ];
+            
+            components.forEach(comp => {
+                log(`Testing ${comp.name}...`);
                 
-                if (window[comp.name]) {
-                    try {
-                        const instance = new window[comp.name]();
-                        const element = instance.render(testData);
-                        
-                        if (element) {
-                            loadedCount++;
-                            miniCard.innerHTML = `
-                                <div class="icon">${comp.icon}</div>
-                                <div class="title">${comp.name}</div>
-                                <div style="color: #10b981; font-size: 14px; margin-top: 5px;">✓ Renders OK</div>
-                            `;
-                        } else {
-                            throw new Error('No element returned');
-                        }
-                    } catch (error) {
-                        errorCount++;
-                        errors.push(`${comp.name}: ${error.message}`);
-                        miniCard.className = 'mini-card missing';
-                        miniCard.innerHTML = `
-                            <div class="icon">${comp.icon}</div>
-                            <div class="title">${comp.name}</div>
-                            <div style="color: #dc2626; font-size: 14px; margin-top: 5px;">✗ Render Error</div>
-                        `;
-                    }
-                } else {
-                    miniCard.className = 'mini-card missing';
-                    miniCard.innerHTML = `
-                        <div class="icon">${comp.icon}</div>
-                        <div class="title">${comp.name}</div>
-                        <div style="color: #dc2626; font-size: 14px; margin-top: 5px;">✗ Not Loaded</div>
-                    `;
-                }
+                // Wrong way
+                const wrongCard = createTestCard(`${comp.name} - Sliced Data`, comp.name, comp.slice);
+                gridEl.appendChild(wrongCard);
                 
-                previewEl.appendChild(miniCard);
+                // Right way
+                const rightCard = createTestCard(`${comp.name} - Full Data`, comp.name, fullData);
+                gridEl.appendChild(rightCard);
             });
             
-            // Summary
-            outputEl.innerHTML = `
-                <h4>Test Summary:</h4>
-                <p>✓ Successfully rendered: ${loadedCount}/8 components</p>
-                <p>✗ Failed to render: ${errorCount} components</p>
-                <p>✗ Not loaded: ${8 - loadedCount - errorCount} components</p>
-                
-                ${errors.length > 0 ? `
-                    <h4>Errors:</h4>
-                    <ul style="color: #dc2626;">
-                        ${errors.map(err => `<li>${err}</li>`).join('')}
-                    </ul>
-                ` : ''}
-                
-                <h4>Next Steps:</h4>
-                <ol>
-                    <li>For missing components: Check if files exist in the correct location</li>
-                    <li>For render errors: Check console for detailed error messages</li>
-                    <li>Ensure each component file ends with: <code>window.ComponentName = ComponentName;</code></li>
-                </ol>
-            `;
+            statusEl.innerHTML = `<div class="status success">
+                See below: Components need FULL data object, not just their slice!
+            </div>`;
         }
-    </script>
-</body>
-</html>
+        
+        function createTestCard(title, componentName, data) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            try {
+                const ComponentClass = window[componentName];
+                if (ComponentClass) {
+                    const instance = new ComponentClass();
+                    const content = instance.render(data);
+                    
+                    card.innerHTML = `
+                        <div class="card-header">${title}</div>
+                        <div class="card-content"></div>
+                    `;
+                    
+                    const contentDiv = card.querySelector('.card-content');
+                    if (content) {
+                        if (typeof content === 'string') {
+                            contentDiv.innerHTML = content;
+                        } else {
+                            contentDiv.appendChild(content);
+                        }
+                    } else {
+                        contentDiv.innerHTML = '<p style="color: red;">Component returned null/undefined</p>';
+                    }
+                } else {
+                    card.innerHTML = `<div class="card-header">${title} - Component Not Found</div>`;
+                }
+            } catch (error) {
+                card.innerHTML = `
+                    <div class="card-header">${title}</div>
+                    <div class="card-content">
+                        <p style="color: red;">Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+            
+            return card;
