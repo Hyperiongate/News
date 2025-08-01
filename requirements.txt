@@ -30,8 +30,9 @@ Pillow==10.0.0
 # XML parsing for API responses
 xmltodict==0.13.0
 
-# OpenAI integration (if API key is available)
-openai==1.3.0
+# OpenAI integration - Updated to latest stable version
+openai==1.35.0
+httpx==0.25.2  # Explicitly set httpx version for compatibility
 
 # For enhanced NLP features
 nltk==3.8.1
