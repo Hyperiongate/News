@@ -48,6 +48,7 @@ cache = Cache(app)
 GOOGLE_FACT_CHECK_API_KEY = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+SCRAPINGBEE_API_KEY = os.environ.get('SCRAPINGBEE_API_KEY')
 # New API Keys
 MEDIASTACK_API_KEY = os.environ.get('MEDIASTACK_API_KEY')
 FRED_API_KEY = os.environ.get('FRED_API_KEY')
@@ -91,7 +92,7 @@ def rate_limit(max_requests=10, window=60):
 try:
     # Import all services
     from services.news_analyzer import NewsAnalyzer
-    from services.article_extractor import ArticleExtractor
+    from services.news_extractor import NewsExtractor
     from services.author_analyzer import AuthorAnalyzer
     from services.bias_analyzer import BiasAnalyzer
     from services.clickbait_detector import ClickbaitDetector
@@ -108,52 +109,188 @@ try:
     from services.pdf_generator import PDFGenerator
     from services.report_generator import ReportGenerator
     
-    # Initialize core services
+    # Initialize core services with ScrapingBee support
+    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
     news_analyzer = NewsAnalyzer()
-    article_extractor = ArticleExtractor()
+    
+    # Override the article extractor in news_analyzer to use news_extractor
+    news_analyzer.article_extractor = news_extractor
     
     logger.info("All services imported successfully")
+    logger.info(f"ScrapingBee enabled: {bool(SCRAPINGBEE_API_KEY)}")
     PDF_EXPORT_ENABLED = True
     
 except ImportError as e:
     logger.warning(f"Some services could not be imported: {e}")
-    logger.warning("Using placeholder implementations for missing services")
+    logger.warning("Using enhanced fallback implementations")
     PDF_EXPORT_ENABLED = False
     
-    # Placeholder implementations for services that aren't available
-    class ArticleExtractor:
+    # Enhanced fallback NewsExtractor with better timeout and headers
+    class NewsExtractor:
+        def __init__(self, scrapingbee_key=None):
+            self.scrapingbee_key = scrapingbee_key
+            self.headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
         def extract(self, url):
-            """Extract article content from URL"""
+            """Extract article content from URL with ScrapingBee support"""
             try:
-                response = requests.get(url, timeout=10)
+                # Use ScrapingBee if available
+                if self.scrapingbee_key:
+                    logger.info(f"Using ScrapingBee to extract: {url}")
+                    response = requests.get(
+                        'https://app.scrapingbee.com/api/v1/',
+                        params={
+                            'api_key': self.scrapingbee_key,
+                            'url': url,
+                            'render_js': 'false',
+                            'premium_proxy': 'true',
+                            'country_code': 'us'
+                        },
+                        timeout=30
+                    )
+                else:
+                    logger.info(f"Using direct extraction for: {url}")
+                    response = requests.get(url, headers=self.headers, timeout=30)
+                
+                response.raise_for_status()
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Basic extraction
-                title = soup.find('title').text if soup.find('title') else 'Unknown Title'
+                # Extract title
+                title = ''
+                title_tag = soup.find('title')
+                if title_tag:
+                    title = title_tag.text.strip()
                 
-                # Try to find article content
+                # Try multiple selectors for article content
                 content = ''
-                for tag in ['article', 'main', 'div']:
-                    element = soup.find(tag)
+                content_selectors = [
+                    'article',
+                    '[role="main"]',
+                    '.article-content',
+                    '.story-body',
+                    '.entry-content',
+                    '.post-content',
+                    'main',
+                    '.content'
+                ]
+                
+                for selector in content_selectors:
+                    element = soup.select_one(selector)
                     if element:
-                        content = element.get_text(strip=True)
+                        # Remove script and style elements
+                        for script in element(['script', 'style']):
+                            script.decompose()
+                        content = element.get_text(separator=' ', strip=True)
+                        if len(content) > 100:  # Ensure we got meaningful content
+                            break
+                
+                # Fallback to body if no content found
+                if not content or len(content) < 100:
+                    body = soup.find('body')
+                    if body:
+                        for script in body(['script', 'style']):
+                            script.decompose()
+                        content = body.get_text(separator=' ', strip=True)
+                
+                # Extract author
+                author = 'Unknown'
+                author_selectors = [
+                    'meta[name="author"]',
+                    'meta[property="article:author"]',
+                    '.author-name',
+                    '.by-author',
+                    '.byline',
+                    '[rel="author"]'
+                ]
+                
+                for selector in author_selectors:
+                    element = soup.select_one(selector)
+                    if element:
+                        if element.name == 'meta':
+                            author = element.get('content', 'Unknown')
+                        else:
+                            author = element.get_text(strip=True)
+                        if author and author != 'Unknown':
+                            break
+                
+                # Extract date
+                date = datetime.now().isoformat()
+                date_selectors = [
+                    'meta[property="article:published_time"]',
+                    'meta[name="publish_date"]',
+                    'time[datetime]',
+                    '.published-date',
+                    '.article-date'
+                ]
+                
+                for selector in date_selectors:
+                    element = soup.select_one(selector)
+                    if element:
+                        if element.name == 'meta':
+                            date = element.get('content', date)
+                        elif element.name == 'time':
+                            date = element.get('datetime', date)
+                        else:
+                            date = element.get_text(strip=True)
                         break
                 
+                # Extract images
+                images = []
+                img_tags = soup.find_all('img', src=True)[:5]  # Limit to 5 images
+                for img in img_tags:
+                    img_url = img.get('src', '')
+                    if img_url:
+                        if img_url.startswith('//'):
+                            img_url = 'https:' + img_url
+                        elif img_url.startswith('/'):
+                            img_url = urlparse(url).scheme + '://' + urlparse(url).netloc + img_url
+                        images.append(img_url)
+                
                 return {
+                    'success': True,
                     'title': title,
-                    'content': content[:1000],  # Limit content
-                    'author': 'Unknown',
-                    'date': datetime.now().isoformat(),
+                    'content': content[:10000],  # Limit content size
+                    'text': content[:10000],
+                    'author': author,
+                    'date': date,
                     'url': url,
                     'domain': urlparse(url).netloc,
                     'word_count': len(content.split()),
                     'reading_time': max(1, len(content.split()) // 200),
-                    'text': content  # Add text field for compatibility
+                    'images': images,
+                    'extraction_method': 'scrapingbee' if self.scrapingbee_key else 'direct'
+                }
+                
+            except requests.exceptions.Timeout:
+                logger.error(f"Timeout extracting article from: {url}")
+                return {
+                    'success': False,
+                    'error': 'Request timed out. The website took too long to respond.',
+                    'url': url
+                }
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request error extracting article: {e}")
+                return {
+                    'success': False,
+                    'error': f'Failed to fetch the article: {str(e)}',
+                    'url': url
                 }
             except Exception as e:
                 logger.error(f"Error extracting article: {e}")
-                return {'error': str(e)}
+                return {
+                    'success': False,
+                    'error': f'Error extracting article: {str(e)}',
+                    'url': url
+                }
 
+    # Placeholder implementations for other services
     class AuthorAnalyzer:
         def analyze_single_author(self, author_name, domain):
             """Analyze author credibility"""
@@ -225,7 +362,7 @@ except ImportError as e:
         def check_source(self, domain):
             """Check source credibility"""
             # Simple domain check
-            known_credible = ['nytimes.com', 'bbc.com', 'reuters.com', 'apnews.com']
+            known_credible = ['nytimes.com', 'bbc.com', 'reuters.com', 'apnews.com', 'washingtonpost.com']
             
             return {
                 'domain': domain,
@@ -382,7 +519,7 @@ except ImportError as e:
     class NewsAnalyzer:
         """Main news analyzer orchestrator"""
         def __init__(self):
-            self.article_extractor = ArticleExtractor()
+            self.article_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
             self.author_analyzer = AuthorAnalyzer()
             self.bias_analyzer = BiasAnalyzer()
             self.clickbait_detector = ClickbaitDetector()
@@ -400,8 +537,11 @@ except ImportError as e:
             # Extract article
             if input_type == 'url':
                 article_data = self.article_extractor.extract(url_or_text)
-                if 'error' in article_data:
-                    return {'error': article_data['error'], 'success': False}
+                if not article_data.get('success', True):
+                    return {
+                        'error': article_data.get('error', 'Failed to extract article'),
+                        'success': False
+                    }
             else:
                 article_data = {
                     'title': 'Text Analysis',
@@ -499,7 +639,7 @@ except ImportError as e:
             return round(trust_score)
     
     # Initialize services
-    article_extractor = ArticleExtractor()
+    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
     news_analyzer = NewsAnalyzer()
 
 # Main route
@@ -526,6 +666,7 @@ def api_info():
             '/api/stats'
         ],
         'features': {
+            'scrapingbee_enabled': bool(SCRAPINGBEE_API_KEY),
             'media_coverage_analysis': bool(MEDIASTACK_API_KEY),
             'economic_fact_checking': bool(FRED_API_KEY),
             'plagiarism_detection': bool(COPYSCAPE_USERNAME and COPYSCAPE_API_KEY),
@@ -700,6 +841,7 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'version': '2.1',
         'pdf_export_enabled': PDF_EXPORT_ENABLED,
+        'scrapingbee_enabled': bool(SCRAPINGBEE_API_KEY),
         'enhanced_features': {
             'media_analysis': bool(MEDIASTACK_API_KEY),
             'economic_verification': bool(FRED_API_KEY),
@@ -766,6 +908,7 @@ def get_stats():
         'analyses_today': 50,    # Placeholder
         'average_trust_score': 65,
         'features_available': {
+            'scrapingbee': bool(SCRAPINGBEE_API_KEY),
             'media_analysis': bool(MEDIASTACK_API_KEY),
             'economic_verification': bool(FRED_API_KEY),
             'plagiarism_detection': bool(COPYSCAPE_USERNAME),
@@ -798,6 +941,7 @@ if __name__ == '__main__':
     
     logger.info(f"Starting News Analyzer API on port {port}")
     logger.info(f"Debug mode: {debug}")
+    logger.info(f"ScrapingBee enabled: {bool(SCRAPINGBEE_API_KEY)}")
     logger.info(f"Enhanced features - MediaStack: {bool(MEDIASTACK_API_KEY)}, FRED: {bool(FRED_API_KEY)}, Copyscape: {bool(COPYSCAPE_USERNAME)}, CopyLeaks: {bool(COPYLEAKS_EMAIL)}")
     
     app.run(
