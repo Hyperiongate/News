@@ -1,6 +1,6 @@
 """
-app.py - Flask app with fixed imports and minimal service dependencies
-This version uses placeholder services if the actual ones aren't available
+app.py - Flask app with enhanced API integrations
+Includes MediaStack, FRED, Copyscape, and CopyLeaks APIs
 """
 
 import os
@@ -48,6 +48,13 @@ cache = Cache(app)
 GOOGLE_FACT_CHECK_API_KEY = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# New API Keys
+MEDIASTACK_API_KEY = os.environ.get('MEDIASTACK_API_KEY')
+FRED_API_KEY = os.environ.get('FRED_API_KEY')
+COPYSCAPE_USERNAME = os.environ.get('COPYSCAPE_USERNAME')
+COPYSCAPE_API_KEY = os.environ.get('COPYSCAPE_API_KEY')
+COPYLEAKS_EMAIL = os.environ.get('COPYLEAKS_EMAIL')
+COPYLEAKS_API_KEY = os.environ.get('COPYLEAKS_API_KEY')
 
 # Rate limiting storage
 rate_limit_storage = defaultdict(list)
@@ -80,202 +87,321 @@ def rate_limit(max_requests=10, window=60):
         return decorated_function
     return decorator
 
-# Placeholder classes for services (will be replaced when services directory is properly set up)
-class ArticleExtractor:
-    def extract(self, url):
-        """Extract article content from URL"""
-        try:
-            response = requests.get(url, timeout=10)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Extract title
-            title = soup.find('title').text if soup.find('title') else 'Unknown Title'
-            
-            # Extract content (simplified)
-            paragraphs = soup.find_all('p')
-            content = ' '.join([p.text.strip() for p in paragraphs if p.text.strip()])
-            
-            # Extract author (basic)
-            author = 'Unknown'
-            author_meta = soup.find('meta', {'name': 'author'})
-            if author_meta:
-                author = author_meta.get('content', 'Unknown')
-            
+# Import services with fallback to placeholders
+try:
+    from services.article_extractor import ArticleExtractor
+    from services.author_analyzer import AuthorAnalyzer
+    from services.bias_analyzer import BiasAnalyzer
+    from services.clickbait_detector import ClickbaitDetector
+    from services.fact_checker import FactChecker
+    from services.source_credibility import SourceCredibilityAnalyzer
+    from services.transparency_analyzer import TransparencyAnalyzer
+    from services.content_analyzer import ContentAnalyzer
+    from services.manipulation_detector import ManipulationDetector
+    from services.readability_analyzer import ReadabilityAnalyzer
+    from services.emotion_analyzer import EmotionAnalyzer
+    from services.claim_extractor import ClaimExtractor
+    from services.image_analyzer import ImageAnalyzer
+    from services.network_analyzer import NetworkAnalyzer
+    from services.report_generator import ReportGenerator
+    # Import new services
+    from services.enhanced_context_analyzer import EnhancedContextAnalyzer
+    from services.economic_fact_checker import EconomicFactChecker
+    from services.originality_analyzer import OriginalityAnalyzer
+except ImportError as e:
+    logger.warning(f"Using placeholder services due to import error: {e}")
+    
+    # Placeholder classes for services
+    class ArticleExtractor:
+        def extract(self, url):
+            """Extract article content from URL"""
+            try:
+                response = requests.get(url, timeout=10)
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Extract title
+                title = soup.find('title').text if soup.find('title') else 'Unknown Title'
+                
+                # Extract content (simplified)
+                paragraphs = soup.find_all('p')
+                content = ' '.join([p.text.strip() for p in paragraphs if p.text.strip()])
+                
+                # Extract author (basic)
+                author = 'Unknown'
+                author_meta = soup.find('meta', {'name': 'author'})
+                if author_meta:
+                    author = author_meta.get('content', 'Unknown')
+                
+                return {
+                    'title': title,
+                    'content': content[:5000],  # Limit content
+                    'author': author,
+                    'url': url,
+                    'word_count': len(content.split()),
+                    'reading_time': max(1, len(content.split()) // 200),
+                    'date': datetime.now().isoformat(),
+                    'domain': urlparse(url).netloc,
+                    'text': content  # Add text field for compatibility
+                }
+            except Exception as e:
+                logger.error(f"Error extracting article: {e}")
+                return {'error': str(e)}
+
+    class AuthorAnalyzer:
+        def analyze_single_author(self, author_name, domain):
+            """Analyze author credibility"""
             return {
-                'title': title,
-                'content': content[:5000],  # Limit content
-                'author': author,
-                'url': url,
-                'word_count': len(content.split()),
-                'reading_time': max(1, len(content.split()) // 200),
-                'date': datetime.now().isoformat(),
-                'domain': urlparse(url).netloc
+                'found': bool(author_name and author_name != 'Unknown'),
+                'name': author_name,
+                'credibility_score': 70 if author_name != 'Unknown' else 40,
+                'verification_status': {
+                    'verified': False,
+                    'outlet_staff': False
+                },
+                'professional_info': {
+                    'years_experience': None
+                }
             }
-        except Exception as e:
-            logger.error(f"Error extracting article: {e}")
-            return {'error': str(e)}
 
-class AuthorAnalyzer:
-    def analyze_single_author(self, author_name, domain):
-        """Analyze author credibility"""
-        return {
-            'found': bool(author_name and author_name != 'Unknown'),
-            'name': author_name,
-            'credibility_score': 70 if author_name != 'Unknown' else 40,
-            'verification_status': {
-                'verified': False,
-                'outlet_staff': False
-            },
-            'professional_info': {
-                'years_experience': None
+    class BiasAnalyzer:
+        def analyze(self, article_data):
+            """Analyze article bias"""
+            return {
+                'bias_score': 0.1,
+                'confidence': 75,
+                'political_lean': 0,
+                'factors': [],
+                'overall_bias': 'center'
             }
-        }
 
-class BiasAnalyzer:
-    def analyze(self, article_data):
-        """Analyze article bias"""
-        return {
-            'bias_score': 0.1,
-            'confidence': 75,
-            'political_lean': 0,
-            'factors': []
-        }
-
-class ClickbaitDetector:
-    def analyze(self, article_data):
-        """Detect clickbait"""
-        title = article_data.get('title', '')
-        score = 0
-        
-        # Simple clickbait detection
-        if '!' in title:
-            score += 20
-        if '?' in title:
-            score += 15
-        if any(word in title.lower() for word in ['shocking', 'amazing', 'unbelievable']):
-            score += 30
+    class ClickbaitDetector:
+        def analyze(self, article_data):
+            """Detect clickbait"""
+            title = article_data.get('title', '')
+            score = 0
+            tactics = []
             
-        return {
-            'score': min(100, score),
-            'factors': []
-        }
-
-class FactChecker:
-    def check_article(self, article_data):
-        """Check facts in article"""
-        return {
-            'claims': [],
-            'summary': {
-                'total_claims': 0,
-                'verified': 0,
-                'unverified': 0
+            # Simple clickbait detection
+            if '!' in title:
+                score += 20
+                tactics.append('Exclamation marks')
+            if '?' in title:
+                score += 15
+                tactics.append('Question in headline')
+            if any(word in title.lower() for word in ['shocking', 'amazing', 'unbelievable']):
+                score += 30
+                tactics.append('Sensational language')
+                
+            return {
+                'score': min(100, score),
+                'factors': [],
+                'tactics': tactics
             }
-        }
 
-class SourceCredibilityAnalyzer:
-    def analyze_source(self, domain):
-        """Analyze source credibility"""
-        # Simple domain-based credibility
-        high_cred_domains = ['reuters.com', 'bbc.com', 'npr.org', 'apnews.com']
-        medium_cred_domains = ['cnn.com', 'foxnews.com', 'msnbc.com']
-        
-        if domain in high_cred_domains:
-            return {'credibility': 'high', 'factual_reporting': 'Very High'}
-        elif domain in medium_cred_domains:
-            return {'credibility': 'medium', 'factual_reporting': 'Mixed'}
-        else:
-            return {'credibility': 'unknown', 'factual_reporting': 'Unknown'}
+    class FactChecker:
+        def check_article(self, article_data):
+            """Check facts in article"""
+            return {
+                'claims': [],
+                'summary': {
+                    'total_claims': 0,
+                    'verified': 0,
+                    'unverified': 0
+                }
+            }
 
-class TransparencyAnalyzer:
-    def analyze(self, article_data):
-        """Analyze transparency"""
-        score = 0
-        factors = {}
-        
-        if article_data.get('author') and article_data['author'] != 'Unknown':
-            score += 25
-            factors['has_author'] = True
-        
-        if article_data.get('date'):
-            score += 25
-            factors['has_date'] = True
+    class SourceCredibilityAnalyzer:
+        def analyze_source(self, domain):
+            """Analyze source credibility"""
+            # Simple domain-based credibility
+            high_cred_domains = ['reuters.com', 'bbc.com', 'npr.org', 'apnews.com']
+            medium_cred_domains = ['cnn.com', 'foxnews.com', 'msnbc.com']
             
-        return {
-            'score': score,
-            'factors': factors
-        }
+            if domain in high_cred_domains:
+                return {'credibility': 'high', 'factual_reporting': 'Very High'}
+            elif domain in medium_cred_domains:
+                return {'credibility': 'medium', 'factual_reporting': 'Mixed'}
+            else:
+                return {'credibility': 'unknown', 'factual_reporting': 'Unknown'}
 
-class ContentAnalyzer:
-    def analyze(self, article_data):
-        """Analyze content quality"""
-        return {
-            'quality_score': 60,
-            'has_sources': False,
-            'uses_data': False
-        }
+    class TransparencyAnalyzer:
+        def analyze(self, article_data):
+            """Analyze transparency"""
+            score = 0
+            factors = {}
+            
+            if article_data.get('author') and article_data['author'] != 'Unknown':
+                score += 25
+                factors['has_author'] = True
+            
+            if article_data.get('date'):
+                score += 25
+                factors['has_date'] = True
+                
+            return {
+                'score': score,
+                'factors': factors
+            }
 
-class ManipulationDetector:
-    def analyze(self, article_data):
-        """Detect manipulation tactics"""
-        return {
-            'tactics': [],
-            'manipulation_score': 10
-        }
+    class ContentAnalyzer:
+        def analyze(self, article_data):
+            """Analyze content quality"""
+            return {
+                'quality_score': 60,
+                'has_sources': False,
+                'uses_data': False,
+                'word_count': article_data.get('word_count', 0),
+                'sentence_count': len(article_data.get('content', '').split('.')),
+                'paragraph_count': article_data.get('content', '').count('\n\n') + 1
+            }
 
-class ReadabilityAnalyzer:
-    def analyze(self, article_data):
-        """Analyze readability"""
-        return {
-            'score': 70,
-            'level': 'Medium',
-            'details': {}
-        }
+    class ManipulationDetector:
+        def analyze(self, article_data):
+            """Detect manipulation tactics"""
+            tactics = []
+            score = 0
+            
+            content = article_data.get('content', '').lower()
+            
+            # Simple detection
+            if 'you won\'t believe' in content:
+                tactics.append({'name': 'Curiosity gap', 'severity': 'high'})
+                score += 30
+            
+            if content.count('!') > 5:
+                tactics.append({'name': 'Excessive exclamation', 'severity': 'medium'})
+                score += 20
+                
+            return {
+                'tactics': tactics,
+                'manipulation_score': score,
+                'score': score
+            }
 
-class EmotionAnalyzer:
-    def analyze(self, article_data):
-        """Analyze emotional content"""
-        return {
-            'dominant_emotion': 'neutral',
-            'manipulation_score': 10,
-            'emotions': {}
-        }
+    class ReadabilityAnalyzer:
+        def analyze(self, article_data):
+            """Analyze readability"""
+            content = article_data.get('content', '')
+            words = content.split()
+            sentences = content.split('.')
+            
+            avg_words_per_sentence = len(words) / max(1, len(sentences))
+            
+            if avg_words_per_sentence < 15:
+                level = 'Easy'
+                score = 90
+            elif avg_words_per_sentence < 25:
+                level = 'Medium'
+                score = 70
+            else:
+                level = 'Difficult'
+                score = 50
+                
+            return {
+                'score': score,
+                'level': level,
+                'details': {
+                    'average_sentence_length': round(avg_words_per_sentence, 1)
+                }
+            }
 
-class ClaimExtractor:
-    def extract_claims(self, article_data):
-        """Extract claims from article"""
-        return {
-            'claims': []
-        }
+    class EmotionAnalyzer:
+        def analyze(self, article_data):
+            """Analyze emotional content"""
+            return {
+                'dominant_emotion': 'neutral',
+                'manipulation_score': 10,
+                'emotions': {
+                    'anger': 0.1,
+                    'fear': 0.1,
+                    'joy': 0.1,
+                    'sadness': 0.1,
+                    'neutral': 0.6
+                }
+            }
 
-class ImageAnalyzer:
-    def analyze_images(self, images):
-        """Analyze images"""
-        return {
-            'count': len(images) if images else 0,
-            'analysis': []
-        }
+    class ClaimExtractor:
+        def extract_claims(self, article_data):
+            """Extract claims from article"""
+            content = article_data.get('content', '')
+            claims = []
+            
+            # Simple claim extraction - look for sentences with numbers
+            sentences = content.split('.')
+            for sentence in sentences[:10]:  # First 10 sentences
+                if any(char.isdigit() for char in sentence):
+                    claims.append(sentence.strip())
+                    
+            return {
+                'claims': claims
+            }
 
-class NetworkAnalyzer:
-    def analyze(self, article_data):
-        """Analyze network connections"""
-        return {
-            'links': [],
-            'citations': []
-        }
+    class ImageAnalyzer:
+        def analyze_images(self, images):
+            """Analyze images"""
+            return {
+                'count': len(images) if images else 0,
+                'analysis': []
+            }
 
-class PDFGenerator:
-    def generate_report(self, analysis_results):
-        """Generate PDF report"""
-        # Placeholder - return a simple text file
-        return None
+    class NetworkAnalyzer:
+        def analyze(self, article_data):
+            """Analyze network connections"""
+            return {
+                'links': [],
+                'citations': [],
+                'related_articles': 0
+            }
 
-class ReportGenerator:
-    def generate(self, analysis_results, format_type='json'):
-        """Generate report"""
-        return {
-            'summary': 'Analysis complete',
-            'sections': []
-        }
+    class PDFGenerator:
+        def __init__(self):
+            self.available = False
+            
+        def generate_report(self, analysis_results):
+            """Generate PDF report"""
+            return None
+
+    class ReportGenerator:
+        def generate(self, analysis_results, format_type='json'):
+            """Generate report"""
+            return {
+                'summary': 'Analysis complete',
+                'sections': []
+            }
+    
+    # Placeholder new services if not available
+    class EnhancedContextAnalyzer:
+        def analyze(self, article_data):
+            """Enhanced context analysis placeholder"""
+            return {
+                'related_articles_count': 0,
+                'related_articles': [],
+                'coverage_analysis': {},
+                'media_consensus': {'consensus_level': 'unknown', 'agreement_score': 0},
+                'first_reported': None,
+                'breaking_news_verified': False,
+                'story_timeline': [],
+                'geographic_spread': {},
+                'source_diversity': {'unique_sources': 0}
+            }
+    
+    class EconomicFactChecker:
+        def verify_economic_claims(self, claims):
+            """Economic fact checking placeholder"""
+            return []
+    
+    class OriginalityAnalyzer:
+        def analyze_originality(self, article_data):
+            """Originality analysis placeholder"""
+            return {
+                'originality_score': 100,
+                'plagiarism_detected': False,
+                'ai_content_detected': False,
+                'duplicate_sources': [],
+                'ai_probability': 0,
+                'originality_issues': [],
+                'recommendations': []
+            }
 
 # Initialize analyzers
 article_extractor = ArticleExtractor()
@@ -294,6 +420,11 @@ image_analyzer = ImageAnalyzer()
 network_analyzer = NetworkAnalyzer()
 report_generator = ReportGenerator()
 
+# Initialize new analyzers
+enhanced_context_analyzer = EnhancedContextAnalyzer()
+economic_fact_checker = EconomicFactChecker()
+originality_analyzer = OriginalityAnalyzer()
+
 # PDF Generator with proper error handling
 PDF_EXPORT_ENABLED = False
 pdf_generator = None
@@ -308,32 +439,39 @@ try:
         logger.warning("PDFGenerator initialized but reportlab not available")
 except Exception as e:
     logger.warning(f"PDF export disabled: {e}")
+    pdf_generator = PDFGenerator()
 
-# FIXED: Main route now renders HTML template instead of returning JSON
+# Main route
 @app.route('/')
 def index():
     """Render the main page"""
     return render_template('index.html')
 
-# Add API info endpoint for the JSON response
+# API info endpoint
 @app.route('/api')
 def api_info():
     """API information endpoint"""
     return jsonify({
         'status': 'News Analyzer API is running',
-        'version': '2.0',
+        'version': '2.1',
         'endpoints': [
             '/api/analyze',
             '/api/health',
             '/api/stats'
-        ]
+        ],
+        'features': {
+            'media_coverage_analysis': bool(MEDIASTACK_API_KEY),
+            'economic_fact_checking': bool(FRED_API_KEY),
+            'plagiarism_detection': bool(COPYSCAPE_USERNAME and COPYSCAPE_API_KEY),
+            'ai_content_detection': bool(COPYLEAKS_EMAIL and COPYLEAKS_API_KEY)
+        }
     })
 
-# FIXED: Changed route to include /api prefix for consistency
+# Main analysis endpoint
 @app.route('/api/analyze', methods=['POST'])
 @rate_limit(max_requests=30, window=60)  # 30 requests per minute
 def analyze():
-    """Main analysis endpoint"""
+    """Main analysis endpoint with enhanced features"""
     try:
         # Get request data
         data = request.get_json()
@@ -373,6 +511,7 @@ def analyze():
             article_data = {
                 'title': 'Text Analysis',
                 'content': text,
+                'text': text,
                 'author': 'Unknown',
                 'url': 'text-input',
                 'word_count': len(text.split()),
@@ -388,7 +527,7 @@ def analyze():
         else:
             domain = 'text-input'
         
-        # Perform analyses
+        # Perform standard analyses
         author_info = author_analyzer.analyze_single_author(
             article_data.get('author', ''),
             domain
@@ -411,14 +550,46 @@ def analyze():
         if article_data.get('images'):
             analysis_results['images'] = image_analyzer.analyze_images(article_data['images'])
         
+        # NEW: Enhanced analyses with new APIs
+        
+        # Enhanced context analysis with MediaStack
+        if MEDIASTACK_API_KEY:
+            logger.info("Performing enhanced context analysis with MediaStack")
+            enhanced_context = enhanced_context_analyzer.analyze(article_data)
+        else:
+            enhanced_context = {
+                'related_articles_count': 0,
+                'media_consensus': {'consensus_level': 'unavailable'},
+                'api_available': False
+            }
+        
+        # Economic fact checking with FRED
+        economic_facts = []
+        if FRED_API_KEY and analysis_results['claims'].get('claims'):
+            logger.info("Performing economic fact checking with FRED")
+            economic_facts = economic_fact_checker.verify_economic_claims(
+                analysis_results['claims'].get('claims', [])
+            )
+        
+        # Originality analysis with Copyscape & CopyLeaks
+        if COPYSCAPE_USERNAME or COPYLEAKS_EMAIL:
+            logger.info("Performing originality analysis")
+            originality_results = originality_analyzer.analyze_originality(article_data)
+        else:
+            originality_results = {
+                'originality_score': 100,
+                'api_available': False
+            }
+        
         # Calculate trust score
         trust_score_data = calculate_trust_score(
             article_data, 
             author_info,
-            analysis_results
+            analysis_results,
+            originality_results
         )
         
-        # Prepare response
+        # Prepare response with enhanced data
         results = {
             'success': True,
             'article': {
@@ -428,7 +599,8 @@ def analyze():
                 'date': article_data.get('date', ''),
                 'domain': domain,
                 'word_count': article_data.get('word_count', 0),
-                'reading_time': article_data.get('reading_time', 0)
+                'reading_time': article_data.get('reading_time', 0),
+                'content': article_data.get('content', '')  # Include content for frontend
             },
             'author_analysis': author_info,
             'trust_score': trust_score_data['score'],
@@ -446,8 +618,20 @@ def analyze():
             'emotion_analysis': analysis_results['emotion'],
             'key_claims': analysis_results['claims'].get('claims', []),
             'network_analysis': analysis_results['network'],
+            # NEW: Enhanced analysis results
+            'enhanced_context': enhanced_context,
+            'economic_verification': economic_facts,
+            'originality_analysis': originality_results,
+            'media_coverage': enhanced_context.get('related_articles', [])[:10],  # Top 10
+            'coverage_consensus': enhanced_context.get('media_consensus', {}),
+            # Metadata
             'analysis_timestamp': datetime.now().isoformat(),
-            'from_cache': False
+            'from_cache': False,
+            'api_features': {
+                'media_analysis': bool(MEDIASTACK_API_KEY),
+                'economic_checking': bool(FRED_API_KEY),
+                'plagiarism_detection': bool(COPYSCAPE_USERNAME or COPYLEAKS_EMAIL)
+            }
         }
         
         # Cache the results if URL
@@ -464,8 +648,8 @@ def analyze():
             'error': f'Analysis failed: {str(e)}'
         }), 500
 
-def calculate_trust_score(article_data, author_info, analysis_results):
-    """Calculate simplified trust score"""
+def calculate_trust_score(article_data, author_info, analysis_results, originality_results):
+    """Calculate enhanced trust score including originality"""
     score = 50  # Base score
     
     # Author credibility
@@ -486,6 +670,17 @@ def calculate_trust_score(article_data, author_info, analysis_results):
     clickbait_score = analysis_results['clickbait'].get('score', 0)
     score -= int(clickbait_score / 5)
     
+    # NEW: Originality bonus/penalty
+    originality_score = originality_results.get('originality_score', 100)
+    if originality_score < 50:
+        score -= 20  # Heavy penalty for plagiarism
+    elif originality_score < 80:
+        score -= 10
+    
+    # AI content penalty
+    if originality_results.get('ai_content_detected'):
+        score -= 15
+    
     # Ensure score is between 0 and 100
     score = max(0, min(100, score))
     
@@ -505,7 +700,8 @@ def calculate_trust_score(article_data, author_info, analysis_results):
         'breakdown': {
             'author_credibility': {'score': author_info.get('credibility_score', 50)},
             'source_quality': {'score': 70 if analysis_results['source'].get('credibility') == 'high' else 50},
-            'content_integrity': {'score': max(0, 100 - int(bias_score * 100))}
+            'content_integrity': {'score': max(0, 100 - int(bias_score * 100))},
+            'originality': {'score': originality_score}
         }
     }
 
@@ -527,8 +723,14 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '2.0',
-        'pdf_export_enabled': PDF_EXPORT_ENABLED
+        'version': '2.1',
+        'pdf_export_enabled': PDF_EXPORT_ENABLED,
+        'enhanced_features': {
+            'media_analysis': bool(MEDIASTACK_API_KEY),
+            'economic_verification': bool(FRED_API_KEY),
+            'plagiarism_detection': bool(COPYSCAPE_USERNAME),
+            'ai_detection': bool(COPYLEAKS_EMAIL)
+        }
     })
 
 @app.route('/api/report/<report_type>', methods=['POST'])
@@ -584,7 +786,13 @@ def get_stats():
     return jsonify({
         'total_analyses': 1000,  # Placeholder
         'analyses_today': 50,    # Placeholder
-        'average_trust_score': 65
+        'average_trust_score': 65,
+        'features_available': {
+            'media_analysis': bool(MEDIASTACK_API_KEY),
+            'economic_verification': bool(FRED_API_KEY),
+            'plagiarism_detection': bool(COPYSCAPE_USERNAME),
+            'ai_detection': bool(COPYLEAKS_EMAIL)
+        }
     })
 
 # Serve static files in production
@@ -612,6 +820,7 @@ if __name__ == '__main__':
     
     logger.info(f"Starting News Analyzer API on port {port}")
     logger.info(f"Debug mode: {debug}")
+    logger.info(f"Enhanced features - MediaStack: {bool(MEDIASTACK_API_KEY)}, FRED: {bool(FRED_API_KEY)}, Copyscape: {bool(COPYSCAPE_USERNAME)}, CopyLeaks: {bool(COPYLEAKS_EMAIL)}")
     
     app.run(
         host='0.0.0.0',
