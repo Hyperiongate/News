@@ -14,7 +14,7 @@ import json
 from urllib.parse import urlparse, quote
 from datetime import datetime, timedelta
 import hashlib
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 
 import requests
 from bs4 import BeautifulSoup
