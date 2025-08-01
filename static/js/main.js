@@ -150,49 +150,111 @@ async function analyzeArticle(url) {
     }
 }
 
-// Transform API data to match UI expectations - FIXED TO MATCH ACTUAL BACKEND FIELDS
+// Transform API data to match UI expectations - COMPREHENSIVE MAPPING
 function transformApiData(result) {
     if (!result) return result;
     
-    console.log('Transforming API data with correct mappings...');
+    console.log('Transforming API data:', result);
     
     // Ensure success flag
     result.success = true;
     
-    // Ensure all required fields exist with correct mappings
-    // Backend returns these fields (from your debug output):
-    // - bias_analysis ✓
-    // - fact_checks ✓ 
-    // - transparency_analysis ✓
-    // - author_analysis ✓
-    // - emotion_analysis (NOT emotional_tone_analysis)
-    // - readability_analysis ✓
-    // - NO context_analysis
-    // - NO comparison_analysis
+    // Force pro features
+    result.is_pro = true;
     
-    // Keep existing fields as-is
-    result.bias_analysis = result.bias_analysis || {};
-    result.transparency_analysis = result.transparency_analysis || {};
-    result.readability_analysis = result.readability_analysis || {};
+    // Map all the fields that components expect
     
-    // Map fact_checks to fact_checking (components expect fact_checking)
-    result.fact_checking = result.fact_checks || {};
+    // 1. Map bias fields for BiasAnalysis component
+    if (result.bias_analysis) {
+        // The BiasAnalysis component looks for these at the root level
+        result.bias_score = result.bias_analysis.political_lean || result.bias_analysis.bias_score || 0;
+        result.bias_confidence = result.bias_analysis.confidence || result.bias_analysis.bias_confidence || 70;
+        
+        // Ensure bias_analysis has all expected fields
+        result.bias_analysis = {
+            ...result.bias_analysis,
+            overall_bias: result.bias_analysis.overall_bias || (
+                result.bias_analysis.political_lean > 0.3 ? 'right' :
+                result.bias_analysis.political_lean < -0.3 ? 'left' : 'center'
+            ),
+            political_lean: result.bias_analysis.political_lean || 0,
+            confidence: result.bias_analysis.confidence || 70,
+            bias_dimensions: result.bias_analysis.bias_dimensions || {},
+            loaded_phrases: result.bias_analysis.loaded_phrases || [],
+            manipulation_tactics: result.bias_analysis.manipulation_tactics || [],
+            bias_indicators: result.bias_analysis.bias_indicators || []
+        };
+    }
     
-    // Map author_analysis to author_info (some components might expect author_info)
-    result.author_info = result.author_analysis || {};
+    // 2. Map clickbait fields
+    if (result.clickbait_analysis) {
+        result.clickbait_score = result.clickbait_analysis.score || 0;
+        
+        // Ensure clickbait_analysis has expected structure
+        result.clickbait_analysis = {
+            ...result.clickbait_analysis,
+            score: result.clickbait_analysis.score || 0,
+            tactics: result.clickbait_analysis.tactics || [],
+            elements: result.clickbait_analysis.elements || []
+        };
+    }
     
-    // Map emotion_analysis to emotional_tone_analysis (components expect emotional_tone_analysis)
-    result.emotional_tone_analysis = result.emotion_analysis || {};
-    result.emotional_tone = result.emotion_analysis || {};
+    // 3. Map fact checking fields
+    if (result.fact_checks) {
+        // Ensure it's in the expected format
+        result.fact_checks = Array.isArray(result.fact_checks) ? 
+            result.fact_checks : (result.fact_checks.claims || []);
+    }
     
-    // Create context_analysis from network_analysis or content_analysis
+    // 4. Map author fields
+    if (result.author_analysis) {
+        result.author_info = result.author_analysis;
+        
+        // Ensure author has expected fields
+        result.author_analysis = {
+            ...result.author_analysis,
+            found: result.author_analysis.found !== undefined ? result.author_analysis.found : false,
+            credibility_score: result.author_analysis.credibility_score || 50,
+            name: result.author_analysis.name || result.article?.author || 'Unknown',
+            position: result.author_analysis.position || null,
+            organization: result.author_analysis.organization || null,
+            expertise: result.author_analysis.expertise || [],
+            social_media: result.author_analysis.social_media || {},
+            verification_status: result.author_analysis.verification_status || {}
+        };
+    }
+    
+    // 5. Map transparency fields
+    if (result.transparency_analysis) {
+        result.transparency_score = result.transparency_analysis.score || 0;
+        
+        result.transparency_analysis = {
+            ...result.transparency_analysis,
+            score: result.transparency_analysis.score || 0,
+            factors: result.transparency_analysis.factors || [],
+            missing_elements: result.transparency_analysis.missing_elements || []
+        };
+    }
+    
+    // 6. Map emotion/emotional tone fields
+    if (result.emotion_analysis) {
+        result.emotional_tone_analysis = result.emotion_analysis;
+        result.emotional_tone = result.emotion_analysis;
+    }
+    
+    // 7. Map readability fields
+    if (result.readability_analysis) {
+        result.readability = result.readability_analysis;
+    }
+    
+    // 8. Create missing analysis sections that components expect
     result.context_analysis = result.network_analysis || result.content_analysis || {
         related_articles: 0,
         timeline_events: 0,
-        missing_perspectives: []
+        missing_perspectives: [],
+        sources_cited: 0
     };
     
-    // Create comparison_analysis from available data
     result.comparison_analysis = {
         source_credibility: result.source_credibility || {},
         similar_coverage: result.network_analysis?.related_articles || 0,
@@ -200,16 +262,50 @@ function transformApiData(result) {
         trust_level: result.trust_level || {}
     };
     
-    // Map readability
-    result.readability = result.readability_analysis || {};
+    // 9. Map manipulation analysis
+    if (result.manipulation_analysis) {
+        result.manipulation_analysis = {
+            ...result.manipulation_analysis,
+            score: result.manipulation_analysis.score || 0,
+            tactics: result.manipulation_analysis.tactics || [],
+            techniques: result.manipulation_analysis.techniques || []
+        };
+    }
     
-    // Ensure article exists
+    // 10. Map source credibility
+    if (result.source_credibility) {
+        result.source_credibility = {
+            ...result.source_credibility,
+            credibility: result.source_credibility.credibility || 'Unknown',
+            bias: result.source_credibility.bias || 'Unknown',
+            factual_reporting: result.source_credibility.factual_reporting || 'Unknown'
+        };
+    }
+    
+    // 11. Ensure article exists with all fields
     result.article = result.article || {};
+    result.article = {
+        ...result.article,
+        url: result.article.url || url,
+        title: result.article.title || '',
+        author: result.article.author || 'Unknown',
+        content: result.article.content || result.article.text || '',
+        domain: result.article.domain || new URL(result.article.url || url).hostname,
+        publish_date: result.article.publish_date || result.article.date || null
+    };
     
-    // Force pro features
-    result.is_pro = true;
+    // 12. Map article metrics
+    result.article_metrics = result.content_analysis || {
+        readability: result.readability_analysis || {},
+        word_count: result.article.word_count || 0,
+        sentence_count: result.article.sentence_count || 0,
+        paragraph_count: result.article.paragraph_count || 0,
+        engagement: {
+            estimated_read_time: result.article.reading_time || '0 min'
+        }
+    };
     
-    console.log('Transformation complete');
+    console.log('Transformation complete:', result);
     return result;
 }
 
@@ -231,10 +327,10 @@ function displayResults(data) {
     
     // Create cards for each analysis component
     const components = [
-        { name: 'bias-analysis', data: data.bias_analysis, title: 'Bias Analysis' },
-        { name: 'fact-checker', data: data.fact_checking, title: 'Fact Checking' },
-        { name: 'transparency-analysis', data: data.transparency_analysis, title: 'Transparency' },
-        { name: 'author-card', data: data.author_info || data.author_analysis, title: 'Author Analysis' },
+        { name: 'bias-analysis', data: data, title: 'Bias Analysis' },
+        { name: 'fact-checker', data: data, title: 'Fact Checking' },
+        { name: 'transparency-analysis', data: data, title: 'Transparency' },
+        { name: 'author-card', data: data, title: 'Author Analysis' },
         { name: 'context-card', data: data.context_analysis, title: 'Context' },
         { name: 'readability-card', data: data.readability_analysis || data.readability, title: 'Readability' },
         { name: 'emotional-tone-card', data: data.emotional_tone_analysis || data.emotional_tone, title: 'Emotional Tone' },
@@ -453,16 +549,6 @@ function hideError() {
     if (errorAlert) {
         errorAlert.style.display = 'none';
     }
-}
-
-// Fixed toCamelCase function - NO LONGER NEEDED but kept for compatibility
-function toCamelCase(str) {
-    // This function is no longer used in loadComponent
-    // but kept here in case other code depends on it
-    return str.split('-').map((word, index) => {
-        if (index === 0) return word;
-        return word.charAt(0).toUpperCase() + word.slice(1);
-    }).join('');
 }
 
 // Setup example URLs
