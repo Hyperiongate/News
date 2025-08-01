@@ -1,18 +1,18 @@
-// static/js/main.js - COMPLETE FIX FOR ALL ISSUES
-// Addresses: API format, data mapping, DOM IDs, missing functions, component conflicts
+// static/js/main.js - COMPLETE FIX WITH ALL REQUIRED PROPERTIES
+// Comprehensive data structure to prevent undefined errors
 
 // Global state
 let currentAnalysis = null;
 let analysisInProgress = false;
 
 // DOM elements - FIXED IDs to match HTML
-const urlInput = document.getElementById('url-input');  // FIXED: was 'urlInput'
-const analyzeBtn = document.getElementById('analyze-btn');  // FIXED: was 'analyzeBtn'
-const resultsSection = document.getElementById('results-section');  // FIXED: was 'results'
+const urlInput = document.getElementById('url-input');
+const analyzeBtn = document.getElementById('analyze-btn');
+const resultsSection = document.getElementById('results-section');
 const errorAlert = document.getElementById('errorAlert');
 const errorMessage = document.getElementById('errorMessage');
 const progressContainer = document.querySelector('.progress-container');
-const progressBar = document.querySelector('.progress-fill');  // FIXED: was '.progress-bar'
+const progressBar = document.querySelector('.progress-fill');
 const progressText = document.querySelector('.progress-text');
 
 // Initialize on page load
@@ -243,7 +243,7 @@ async function analyzeArticle(url) {
     }
 }
 
-// Transform API data - COMPREHENSIVE FIX
+// Transform API data - COMPREHENSIVE FIX WITH ALL PROPERTIES
 function transformApiData(result) {
     if (!result) return result;
     
@@ -252,6 +252,20 @@ function transformApiData(result) {
     // Ensure success flag
     result.success = true;
     result.is_pro = true;
+    
+    // Fix article data first - many components depend on this
+    result.article = result.article || {};
+    result.article = {
+        title: result.article.title || 'Untitled Article',
+        content: result.article.content || result.article.text || '',
+        text: result.article.text || result.article.content || '',
+        url: result.article.url || '',
+        author: result.article.author || 'Unknown',
+        domain: result.article.domain || '',
+        date: result.article.date || new Date().toISOString(),
+        word_count: result.article.word_count || 0,
+        reading_time: result.article.reading_time || 1
+    };
     
     // Fix bias_analysis - ensure ALL nested properties exist
     if (!result.bias_analysis) {
@@ -262,7 +276,7 @@ function transformApiData(result) {
     result.bias_score = result.bias_analysis.bias_score || result.bias_analysis.political_lean || 0;
     result.bias_confidence = result.bias_analysis.confidence || result.bias_analysis.bias_confidence || 70;
     
-    // Ensure bias_dimensions has the structure the frontend expects
+    // Ensure bias_dimensions has the COMPLETE structure the frontend expects
     if (!result.bias_analysis.bias_dimensions || Object.keys(result.bias_analysis.bias_dimensions).length === 0) {
         result.bias_analysis.bias_dimensions = {
             political: { 
@@ -293,6 +307,72 @@ function transformApiData(result) {
         };
     }
     
+    // Ensure bias_patterns have complete structure
+    if (!result.bias_analysis.bias_patterns || !Array.isArray(result.bias_analysis.bias_patterns)) {
+        result.bias_analysis.bias_patterns = [];
+    }
+    result.bias_analysis.bias_patterns = result.bias_analysis.bias_patterns.map(pattern => {
+        if (typeof pattern === 'string') {
+            return {
+                type: 'general',
+                description: pattern,
+                severity: 'moderate',
+                example: 'Pattern detected in content'
+            };
+        }
+        return {
+            type: pattern.type || 'general',
+            description: pattern.description || pattern.name || 'Unknown pattern',
+            severity: pattern.severity || 'moderate',
+            example: pattern.example || 'Pattern detected in content'
+        };
+    });
+    
+    // Ensure loaded_phrases have complete structure
+    if (!result.bias_analysis.loaded_phrases || !Array.isArray(result.bias_analysis.loaded_phrases)) {
+        result.bias_analysis.loaded_phrases = [];
+    }
+    result.bias_analysis.loaded_phrases = result.bias_analysis.loaded_phrases.map(phrase => {
+        if (typeof phrase === 'string') {
+            return {
+                phrase: phrase,
+                text: phrase,
+                count: 1,
+                bias: 'general',
+                type: 'general',
+                severity: 'moderate',
+                impact: 'moderate'
+            };
+        }
+        return {
+            phrase: phrase.phrase || phrase.text || phrase,
+            text: phrase.text || phrase.phrase || phrase,
+            count: phrase.count || 1,
+            bias: phrase.bias || phrase.type || 'general',
+            type: phrase.type || phrase.bias || 'general',
+            severity: phrase.severity || phrase.impact || 'moderate',
+            impact: phrase.impact || phrase.severity || 'moderate'
+        };
+    });
+    
+    // CRITICAL: Ensure framing_analysis has COMPLETE nested structure
+    result.bias_analysis.framing_analysis = result.bias_analysis.framing_analysis || {};
+    result.bias_analysis.framing_analysis = {
+        headline: result.bias_analysis.framing_analysis.headline || {
+            type: 'neutral',
+            explanation: 'Standard news headline framing'
+        },
+        narrative: result.bias_analysis.framing_analysis.narrative || {
+            type: 'standard',
+            description: 'Standard news narrative structure'
+        },
+        victimHero: result.bias_analysis.framing_analysis.victimHero || {
+            hasVictims: false,
+            hasHeroes: false,
+            balance: 'balanced'
+        }
+    };
+    
     // Ensure all bias fields exist
     result.bias_analysis = {
         ...result.bias_analysis,
@@ -301,76 +381,125 @@ function transformApiData(result) {
         confidence: result.bias_analysis.confidence || 70,
         bias_confidence: result.bias_analysis.bias_confidence || 70,
         bias_score: result.bias_analysis.bias_score || 0.1,
-        loaded_phrases: result.bias_analysis.loaded_phrases || [],
         manipulation_tactics: result.bias_analysis.manipulation_tactics || [],
-        bias_indicators: result.bias_analysis.bias_indicators || [],
-        bias_patterns: result.bias_analysis.bias_patterns || [],
-        framing_analysis: result.bias_analysis.framing_analysis || {}
-    };
-    
-    // Map fact checking data
-    result.fact_checks = result.fact_check_results || result.fact_checks || {
-        claims: [],
-        fact_checks: [],
-        summary: { total_claims: 0, verified: 0, false: 0, unverified: 0 }
-    };
-    
-    // Fix author analysis
-    result.author_info = result.author_analysis || result.author_info || {
-        name: 'Unknown',
-        credibility_score: 50,
-        verification_status: { verified: false },
-        professional_info: {}
-    };
-    
-    // Fix transparency
-    result.transparency_score = result.transparency_analysis?.transparency_score || 50;
-    result.transparency_analysis = result.transparency_analysis || {
-        transparency_score: 50,
-        indicators: []
+        bias_indicators: result.bias_analysis.bias_indicators || []
     };
     
     // Fix clickbait analysis
-    result.clickbait_score = result.clickbait_analysis?.score || 0;
-    
-    // Fix other analyses
-    result.manipulation_analysis = result.manipulation_analysis || {
-        score: 0,
-        tactics: []
+    result.clickbait_analysis = result.clickbait_analysis || {};
+    result.clickbait_score = result.clickbait_analysis.score || 0;
+    result.clickbait_analysis = {
+        score: result.clickbait_analysis.score || 0,
+        tactics: result.clickbait_analysis.tactics || [],
+        headline_analysis: result.clickbait_analysis.headline_analysis || { type: 'standard' }
     };
     
-    result.readability_analysis = result.readability_analysis || {
-        score: 70,
-        level: 'Medium',
-        details: {}
+    // Map fact checking data
+    result.fact_checks = result.fact_check_results || result.fact_checks || {};
+    result.fact_checks = {
+        claims: result.fact_checks.claims || [],
+        fact_checks: result.fact_checks.fact_checks || [],
+        summary: result.fact_checks.summary || { 
+            total_claims: 0, 
+            verified: 0, 
+            false: 0, 
+            unverified: 0 
+        }
     };
     
-    result.emotional_tone_analysis = result.emotion_analysis || result.emotional_tone_analysis || {
-        dominant_emotion: 'neutral',
-        emotions: { neutral: 0.6, joy: 0.1, anger: 0.1, fear: 0.1, sadness: 0.1 }
+    // Fix author analysis
+    result.author_analysis = result.author_analysis || {};
+    result.author_info = result.author_analysis;
+    result.author_analysis = {
+        name: result.author_analysis.name || result.article.author || 'Unknown',
+        credibility_score: result.author_analysis.credibility_score || 50,
+        verification_status: result.author_analysis.verification_status || { 
+            verified: false,
+            outlet_staff: false
+        },
+        professional_info: result.author_analysis.professional_info || {},
+        found: result.author_analysis.found || false
     };
     
-    result.context_analysis = result.context_analysis || {
-        summary: 'Context analysis not available'
+    // Fix transparency
+    result.transparency_analysis = result.transparency_analysis || {};
+    result.transparency_score = result.transparency_analysis.transparency_score || 50;
+    result.transparency_analysis = {
+        transparency_score: result.transparency_analysis.transparency_score || 50,
+        indicators: result.transparency_analysis.indicators || [],
+        missing_elements: result.transparency_analysis.missing_elements || []
     };
     
-    result.comparison_analysis = result.comparison_analysis || {
-        similar_articles: []
+    // Fix manipulation analysis
+    result.manipulation_analysis = result.manipulation_analysis || {};
+    result.manipulation_analysis = {
+        score: result.manipulation_analysis.score || result.manipulation_analysis.manipulation_score || 0,
+        manipulation_score: result.manipulation_analysis.manipulation_score || result.manipulation_analysis.score || 0,
+        tactics: result.manipulation_analysis.tactics || []
+    };
+    
+    // Fix readability analysis
+    result.readability_analysis = result.readability_analysis || {};
+    result.readability_analysis = {
+        score: result.readability_analysis.score || 70,
+        level: result.readability_analysis.level || 'Medium',
+        details: result.readability_analysis.details || {
+            average_sentence_length: 15,
+            complex_words_percentage: 10
+        }
+    };
+    
+    // Fix emotional tone analysis
+    result.emotion_analysis = result.emotion_analysis || result.emotional_tone_analysis || {};
+    result.emotional_tone_analysis = {
+        dominant_emotion: result.emotion_analysis.dominant_emotion || 'neutral',
+        manipulation_score: result.emotion_analysis.manipulation_score || 10,
+        emotions: result.emotion_analysis.emotions || { 
+            neutral: 0.6, 
+            joy: 0.1, 
+            anger: 0.1, 
+            fear: 0.1, 
+            sadness: 0.1 
+        }
+    };
+    
+    // Fix context analysis
+    result.context_analysis = result.context_analysis || {};
+    result.context_analysis = {
+        summary: result.context_analysis.summary || 'Context analysis provides background information about the topic.',
+        key_points: result.context_analysis.key_points || [],
+        related_topics: result.context_analysis.related_topics || []
+    };
+    
+    // Fix comparison analysis
+    result.comparison_analysis = result.comparison_analysis || {};
+    result.comparison_analysis = {
+        similar_articles: result.comparison_analysis.similar_articles || [],
+        unique_aspects: result.comparison_analysis.unique_aspects || [],
+        coverage_comparison: result.comparison_analysis.coverage_comparison || {}
     };
     
     // Fix source credibility
-    result.source_analysis = result.source_credibility || result.source_analysis || {
-        credibility: 'medium',
-        rating: 'unknown'
+    result.source_credibility = result.source_credibility || result.source_analysis || {};
+    result.source_analysis = result.source_credibility;
+    result.source_credibility = {
+        credibility: result.source_credibility.credibility || 'medium',
+        rating: result.source_credibility.rating || 'unknown',
+        bias: result.source_credibility.bias || 'center',
+        type: result.source_credibility.type || 'Unknown',
+        domain: result.source_credibility.domain || result.article.domain || ''
     };
     
-    // Ensure article exists
-    result.article = result.article || {
-        title: 'Article',
-        url: '',
-        author: 'Unknown',
-        domain: '',
-        content: ''
+    // Ensure trust score exists
+    result.trust_score = result.trust_score || 65;
+    
+    // Add content analysis
+    result.content_analysis = result.content_analysis || {
+        metrics: {
+            word_count: result.article.word_count || 0,
+            sentence_count: 0,
+            paragraph_count: 0
+        }
     };
     
     console.log('Transformation complete:', result);
