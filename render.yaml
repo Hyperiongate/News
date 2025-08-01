@@ -11,5 +11,5 @@ services:
         value: production
       - key: PORT
         value: 5000
-    healthCheckPath: /health
+    healthCheckPath: /api/health
     region: oregon # You can change this to your preferred region
