@@ -233,4 +233,106 @@ class ReportGenerator:
         
         findings = []
         findings.append(f"- **Political Lean**: {bias_data.get('political_lean', 0)}")
-        findings.append(f"- **Objectivity Score**: {bias_data.get('objectivity_score',
+        findings.append(f"- **Objectivity Score**: {bias_data.get('objectivity_score', 'N/A')}")  # Fixed line!
+        findings.append(f"- **Confidence**: {bias_data.get('confidence', 0)}%")
+        
+        if bias_data.get('factors'):
+            findings.append("\n**Bias Factors Detected:**")
+            for factor in bias_data.get('factors', []):
+                findings.append(f"  - {factor}")
+        
+        return '\n'.join(findings)
+    
+    def _format_transparency_findings(self, transparency_data):
+        """Format transparency findings"""
+        if not transparency_data:
+            return "No transparency analysis available"
+        
+        findings = []
+        findings.append(f"Score: {transparency_data.get('score', 0)}%")
+        
+        indicators = transparency_data.get('indicators', [])
+        if indicators:
+            findings.append("\n**Transparency Indicators:**")
+            for indicator in indicators:
+                findings.append(f"- {indicator}")
+        
+        return '\n'.join(findings)
+    
+    def _format_recommendations(self, data):
+        """Format recommendations"""
+        recommendations = self._get_key_recommendations(data)
+        return '\n'.join([f"- {rec}" for rec in recommendations])
+    
+    def _format_bias_section(self, bias_data):
+        """Format detailed bias section"""
+        return {
+            'political_lean': bias_data.get('political_lean', 0),
+            'objectivity_score': bias_data.get('objectivity_score', 0),
+            'bias_factors': bias_data.get('factors', []),
+            'confidence': bias_data.get('confidence', 0)
+        }
+    
+    def _format_credibility_section(self, data):
+        """Format credibility section"""
+        return {
+            'trust_score': data.get('trust_score', 0),
+            'source_rating': data.get('source_credibility', {}).get('credibility', 'Unknown'),
+            'author_score': data.get('author_info', {}).get('credibility_score', 0),
+            'transparency': data.get('transparency_analysis', {}).get('score', 0)
+        }
+    
+    def _format_transparency_section(self, transparency_data):
+        """Format transparency section"""
+        return {
+            'score': transparency_data.get('score', 0),
+            'indicators_found': transparency_data.get('indicators', []),
+            'missing_elements': transparency_data.get('missing', [])
+        }
+    
+    def _clean_for_json(self, data):
+        """Clean data for JSON serialization"""
+        # Remove any non-serializable objects
+        import copy
+        clean_data = copy.deepcopy(data)
+        
+        # Remove any datetime objects or other non-serializable items
+        for key in list(clean_data.keys()):
+            if isinstance(clean_data[key], datetime):
+                clean_data[key] = clean_data[key].isoformat()
+        
+        return clean_data
+    
+    def generate_batch_report(self, analyses_list, format='summary'):
+        """
+        Generate report for multiple analyses
+        
+        Args:
+            analyses_list: List of analysis results
+            format: Report format
+            
+        Returns:
+            Batch report
+        """
+        return {
+            'report_type': f'batch_{format}',
+            'generated_at': datetime.now().isoformat(),
+            'total_articles': len(analyses_list),
+            'analyses': [self.generate(analysis, format) for analysis in analyses_list],
+            'aggregate_stats': self._calculate_aggregate_stats(analyses_list)
+        }
+    
+    def _calculate_aggregate_stats(self, analyses_list):
+        """Calculate aggregate statistics for batch report"""
+        if not analyses_list:
+            return {}
+        
+        trust_scores = [a.get('trust_score', 0) for a in analyses_list]
+        bias_scores = [abs(a.get('bias_score', 0)) for a in analyses_list]
+        
+        return {
+            'average_trust_score': sum(trust_scores) / len(trust_scores),
+            'average_bias_score': sum(bias_scores) / len(bias_scores),
+            'high_trust_count': len([s for s in trust_scores if s >= 70]),
+            'low_trust_count': len([s for s in trust_scores if s < 40])
+        }
