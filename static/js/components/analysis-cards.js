@@ -1,4 +1,4 @@
-// analysis-cards.js - Complete Analysis Cards Component with Full Data Display
+// analysis-cards.js - Complete Analysis Cards Component with Full Data Display - FIXED VERSION
 class AnalysisCards {
     constructor() {
         this.cardTypes = ['trust', 'bias', 'facts', 'author', 'clickbait', 'source', 'manipulation', 'metrics'];
@@ -79,7 +79,7 @@ class AnalysisCards {
         if (!data) return null;
         
         const trustScore = data.trust_score || 0;
-        const components = data.trust_components || [];
+        const components = data.trust_components || data.trust_score_breakdown || [];
         
         const card = document.createElement('div');
         card.className = 'analysis-card trust-card';
@@ -139,8 +139,10 @@ class AnalysisCards {
         if (!data || !data.bias_analysis) return null;
         
         const bias = data.bias_analysis;
-        const overallBias = bias.overall_bias || 0;
-        const politicalLean = bias.political_lean || 'Center';
+        const overallBias = bias.overall_bias || bias.bias_level || 'Unknown';
+        const politicalLean = bias.political_lean !== undefined ? 
+            (bias.political_lean > 0.3 ? 'Right' : 
+             bias.political_lean < -0.3 ? 'Left' : 'Center') : 'Unknown';
         const loadedPhrases = bias.loaded_phrases || [];
         const manipulationTactics = bias.manipulation_tactics || [];
         const biasDimensions = bias.bias_dimensions || {};
@@ -156,9 +158,9 @@ class AnalysisCards {
             
             <div class="bias-content">
                 <div class="bias-summary">
-                    <div class="bias-score">${overallBias}% Biased</div>
+                    <div class="bias-score">${overallBias}</div>
                     <div class="political-lean">Political Lean: <strong>${politicalLean}</strong></div>
-                    ${bias.bias_confidence ? `<div class="confidence">Confidence: ${bias.bias_confidence}%</div>` : ''}
+                    ${bias.confidence ? `<div class="confidence">Confidence: ${bias.confidence}%</div>` : ''}
                 </div>
 
                 ${loadedPhrases.length > 0 ? `
@@ -167,10 +169,10 @@ class AnalysisCards {
                         <div class="loaded-phrases-list">
                             ${loadedPhrases.map(phrase => `
                                 <div class="loaded-phrase-item">
-                                    <div class="phrase-text">"${phrase.text}"</div>
-                                    <div class="phrase-explanation">${phrase.explanation}</div>
+                                    <div class="phrase-text">"${phrase.text || phrase.phrase || phrase}"</div>
+                                    ${phrase.explanation ? `<div class="phrase-explanation">${phrase.explanation}</div>` : ''}
                                     ${phrase.context ? `<div class="phrase-context">Context: "${phrase.context}"</div>` : ''}
-                                    <div class="phrase-impact">Impact: <span class="impact-${phrase.impact}">${phrase.impact}</span></div>
+                                    ${phrase.impact ? `<div class="phrase-impact">Impact: <span class="impact-${phrase.impact}">${phrase.impact}</span></div>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -183,9 +185,9 @@ class AnalysisCards {
                         <div class="tactics-list">
                             ${manipulationTactics.map(tactic => `
                                 <div class="tactic-item">
-                                    <div class="tactic-name">${tactic.name}</div>
-                                    <div class="tactic-description">${tactic.description}</div>
-                                    <div class="tactic-severity">Severity: <span class="severity-${tactic.severity}">${tactic.severity}</span></div>
+                                    <div class="tactic-name">${tactic.name || tactic}</div>
+                                    ${tactic.description ? `<div class="tactic-description">${tactic.description}</div>` : ''}
+                                    ${tactic.severity ? `<div class="tactic-severity">Severity: <span class="severity-${tactic.severity}">${tactic.severity}</span></div>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -199,11 +201,13 @@ class AnalysisCards {
                             ${Object.entries(biasDimensions).map(([key, dim]) => `
                                 <div class="dimension-item">
                                     <div class="dimension-name">${key.charAt(0).toUpperCase() + key.slice(1)}</div>
-                                    <div class="dimension-score">${dim.label}</div>
-                                    <div class="dimension-bar">
-                                        <div class="dimension-fill" style="width: ${Math.abs(dim.score) * 100}%"></div>
-                                    </div>
-                                    <div class="dimension-confidence">Confidence: ${dim.confidence}%</div>
+                                    <div class="dimension-score">${dim.label || dim.score || dim}</div>
+                                    ${dim.score !== undefined ? `
+                                        <div class="dimension-bar">
+                                            <div class="dimension-fill" style="width: ${Math.abs(dim.score) * 100}%"></div>
+                                        </div>
+                                    ` : ''}
+                                    ${dim.confidence ? `<div class="dimension-confidence">Confidence: ${dim.confidence}%</div>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -228,52 +232,32 @@ class AnalysisCards {
         const card = document.createElement('div');
         card.className = 'analysis-card facts-card';
         
-        if (!isPro && !data.fact_checks) {
-            // Basic tier - show teaser
-            card.innerHTML = `
-                <div class="analysis-header">
-                    <span class="analysis-icon">✓</span>
-                    <span>Fact Checking</span>
-                    <span class="pro-badge">PRO</span>
-                </div>
-                
-                <div class="facts-content">
-                    <div class="upgrade-prompt">
-                        <p>🔒 Detailed fact-checking is available with Pro analysis</p>
-                        <ul class="feature-list">
-                            <li>✓ Verification of key claims</li>
-                            <li>✓ Cross-reference with fact-check databases</li>
-                            <li>✓ Source verification</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-        } else {
-            // Pro tier - show full fact checks
-            const factChecks = data.fact_checks || [];
-            const keyClaims = data.key_claims || [];
+        // Always show full fact checks if we have them
+        const factChecks = data.fact_checks || [];
+        const keyClaims = data.key_claims || [];
+        
+        card.innerHTML = `
+            <div class="analysis-header">
+                <span class="analysis-icon">✓</span>
+                <span>Fact Checking Results</span>
+            </div>
             
-            card.innerHTML = `
-                <div class="analysis-header">
-                    <span class="analysis-icon">✓</span>
-                    <span>Fact Checking Results</span>
+            <div class="facts-content">
+                <div class="facts-summary">
+                    <div class="total-claims">${factChecks.length || keyClaims.length} claims analyzed</div>
+                    ${this.getFactCheckSummary(factChecks)}
                 </div>
-                
-                <div class="facts-content">
-                    <div class="facts-summary">
-                        <div class="total-claims">${factChecks.length} claims analyzed</div>
-                        ${this.getFactCheckSummary(factChecks)}
-                    </div>
 
-                    ${factChecks.length > 0 ? `
-                        <div class="fact-checks-list">
-                            ${factChecks.map((check, index) => `
+                ${(factChecks.length > 0 || keyClaims.length > 0) ? `
+                    <div class="fact-checks-list">
+                        ${factChecks.length > 0 ? 
+                            factChecks.map((check, index) => `
                                 <div class="fact-check-item ${(check.verdict || check.rating || 'unknown').toLowerCase()}">
                                     <div class="fact-check-header">
                                         <span class="claim-number">#${index + 1}</span>
                                         <span class="verdict-badge">${check.verdict || check.rating || 'Not Verified'}</span>
                                     </div>
-                                    <div class="claim-text">"${check.claim || check.text || keyClaims[index] || 'Claim'}"</div>
+                                    <div class="claim-text">"${check.claim || check.text || 'Claim'}"</div>
                                     ${check.explanation ? `<div class="verdict-explanation">${check.explanation}</div>` : ''}
                                     ${check.evidence ? `
                                         <div class="evidence-section">
@@ -287,18 +271,28 @@ class AnalysisCards {
                                         </div>
                                     ` : ''}
                                 </div>
-                            `).join('')}
-                        </div>
-                    ` : '<p>No fact checks available</p>'}
-                </div>
-            `;
-        }
+                            `).join('') :
+                            keyClaims.map((claim, index) => `
+                                <div class="fact-check-item unverified">
+                                    <div class="fact-check-header">
+                                        <span class="claim-number">#${index + 1}</span>
+                                        <span class="verdict-badge">Key Claim</span>
+                                    </div>
+                                    <div class="claim-text">"${claim.text || claim}"</div>
+                                    <div class="verdict-explanation">This claim has not been independently verified.</div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                ` : '<p>No fact checks available</p>'}
+            </div>
+        `;
         
         return card;
     }
 
     createAuthorCard(data) {
-        const author = data.author_analysis || {};
+        const author = data.author_analysis || data.author_info || {};
         const article = data.article || {};
         const authorName = author.name || article.author || 'Unknown Author';
         const found = author.found !== undefined ? author.found : false;
@@ -327,6 +321,19 @@ class AnalysisCards {
                                 <span class="score-label">Credibility Score:</span>
                                 <span class="score-value" style="color: ${this.getCredibilityColor(credibilityScore)}">${credibilityScore}/100</span>
                             </div>
+                            
+                            ${author.position ? `
+                                <div class="author-position">
+                                    <strong>Position:</strong> ${author.position}
+                                    ${author.organization ? ` at ${author.organization}` : ''}
+                                </div>
+                            ` : ''}
+                            
+                            ${author.bio ? `
+                                <div class="author-bio">
+                                    <strong>Bio:</strong> ${author.bio}
+                                </div>
+                            ` : ''}
                             
                             ${credentials.length > 0 ? `
                                 <div class="credentials-section">
@@ -384,7 +391,7 @@ class AnalysisCards {
 
     createClickbaitCard(data, isPro) {
         const clickbait = data.clickbait_analysis || {};
-        const score = clickbait.score || 0;
+        const score = clickbait.score || data.clickbait_score || 0;
         const tactics = clickbait.tactics || [];
         const elements = clickbait.elements || [];
         
@@ -465,7 +472,7 @@ class AnalysisCards {
                     ${source.bias ? `
                         <div class="detail-item">
                             <span class="detail-label">Political Bias:</span>
-                            <span class="detail-value bias-${source.bias.toLowerCase()}">${source.bias}</span>
+                            <span class="detail-value bias-${source.bias.toLowerCase().replace(/\s+/g, '-')}">${source.bias}</span>
                         </div>
                     ` : ''}
                     
@@ -505,7 +512,7 @@ class AnalysisCards {
 
     createManipulationCard(data) {
         const manipulation = data.manipulation_analysis || {};
-        const score = manipulation.score || 0;
+        const score = manipulation.score || manipulation.manipulation_score || 0;
         const tactics = manipulation.tactics || [];
         const techniques = manipulation.techniques || [];
         
@@ -537,7 +544,7 @@ class AnalysisCards {
                                     <div class="tactic-content">
                                         <div class="tactic-name">${tactic.name || tactic}</div>
                                         ${tactic.description ? `<div class="tactic-description">${tactic.description}</div>` : ''}
-                                        ${tactic.examples ? `
+                                        ${tactic.examples && tactic.examples.length > 0 ? `
                                             <div class="tactic-examples">
                                                 <strong>Examples:</strong>
                                                 <ul>
@@ -567,8 +574,8 @@ class AnalysisCards {
     }
 
     createMetricsCard(data) {
-        const metrics = data.article_metrics || {};
-        const readability = metrics.readability || {};
+        const metrics = data.article_metrics || data.content_analysis || {};
+        const readability = data.readability_analysis || metrics.readability || {};
         const engagement = metrics.engagement || {};
         
         const card = document.createElement('div');
@@ -595,10 +602,10 @@ class AnalysisCards {
                     </div>
                 ` : ''}
                 
-                ${metrics.word_count ? `
+                ${data.article?.word_count || metrics.word_count ? `
                     <div class="metric-item">
                         <span class="metric-label">Word Count:</span>
-                        <span class="metric-value">${metrics.word_count}</span>
+                        <span class="metric-value">${data.article?.word_count || metrics.word_count}</span>
                     </div>
                 ` : ''}
                 
@@ -616,10 +623,10 @@ class AnalysisCards {
                     </div>
                 ` : ''}
                 
-                ${engagement.estimated_read_time ? `
+                ${data.article?.reading_time || engagement.estimated_read_time ? `
                     <div class="metric-item">
                         <span class="metric-label">Read Time:</span>
-                        <span class="metric-value">${engagement.estimated_read_time}</span>
+                        <span class="metric-value">${data.article?.reading_time || engagement.estimated_read_time}</span>
                     </div>
                 ` : ''}
             </div>
@@ -649,7 +656,7 @@ class AnalysisCards {
         return `
             <div class="verdict-summary">
                 ${Object.entries(counts).map(([verdict, count]) => `
-                    <span class="verdict-count ${verdict.toLowerCase()}">
+                    <span class="verdict-count ${verdict.toLowerCase().replace(/\s+/g, '-')}">
                         ${count} ${verdict}
                     </span>
                 `).join('')}
