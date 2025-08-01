@@ -708,13 +708,15 @@ except Exception as e:
             
             return round(trust_score)
     
-    # Initialize services with placeholders - ONLY IF IMPORTS FAILED
-    if news_extractor is None:
-        news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
-    if news_analyzer is None:
-        news_analyzer = NewsAnalyzer()
-    
     logger.warning("Using PLACEHOLDER implementations")
+
+# Initialize services with placeholders - ONLY IF IMPORTS FAILED
+if news_extractor is None:
+    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+    logger.warning("Created PLACEHOLDER NewsExtractor")
+if news_analyzer is None:
+    news_analyzer = NewsAnalyzer()
+    logger.warning("Created PLACEHOLDER NewsAnalyzer")
 
 # Main route
 @app.route('/')
