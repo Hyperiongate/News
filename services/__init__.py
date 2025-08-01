@@ -8,13 +8,13 @@ __service__ = "news-analyzer-enhanced"
 
 # Import all service classes for easy access
 __all__ = [
-    # Core services
+    # Core services - USE ACTUAL CLASS NAMES
     'ArticleExtractor',
     'AuthorAnalyzer',
     'BiasAnalyzer',
     'ClickbaitDetector',
     'FactChecker',
-    'SourceCredibilityAnalyzer',
+    'SourceCredibility',  # FIXED: Changed from SourceCredibilityAnalyzer
     'TransparencyAnalyzer',
     'ContentAnalyzer',
     'ManipulationDetector',
@@ -28,7 +28,10 @@ __all__ = [
     # Enhanced services
     'EnhancedContextAnalyzer',
     'EconomicFactChecker',
-    'OriginalityAnalyzer'
+    'OriginalityAnalyzer',
+    # Additional services
+    'NewsExtractor',  # Added
+    'NewsAnalyzer'    # Added
 ]
 
 # Try to import all services
@@ -58,7 +61,7 @@ except ImportError:
     pass
 
 try:
-    from .source_credibility import SourceCredibilityAnalyzer
+    from .source_credibility import SourceCredibility  # FIXED: Correct class name
 except ImportError:
     pass
 
@@ -109,6 +112,17 @@ except ImportError:
 
 try:
     from .report_generator import ReportGenerator
+except ImportError:
+    pass
+
+# Import additional services
+try:
+    from .news_extractor import NewsExtractor
+except ImportError:
+    pass
+
+try:
+    from .news_analyzer import NewsAnalyzer
 except ImportError:
     pass
 
