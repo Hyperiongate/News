@@ -508,6 +508,11 @@ def index():
     """Render the main page"""
     return render_template('index.html')
 
+@app.route('/health', methods=['GET'])
+def health():
+    """Simple health check endpoint for Render"""
+    return jsonify({'status': 'healthy'}), 200
+
 # API info endpoint
 @app.route('/api')
 def api_info():
