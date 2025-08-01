@@ -86,7 +86,7 @@ async function handleAnalyze() {
 }
 
 // Main analysis function
-async function analyzeArticle(url) {
+async function analyzeArticle(inputUrl) {
     if (analysisInProgress) return;
     
     analysisInProgress = true;
@@ -108,7 +108,7 @@ async function analyzeArticle(url) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url }) // Just { url }, not { input: url, input_type: 'url' }
+            body: JSON.stringify({ url: inputUrl }) // Just { url }, not { input: url, input_type: 'url' }
         });
         
         if (!response.ok) {
@@ -118,8 +118,13 @@ async function analyzeArticle(url) {
         
         const result = await response.json();
         
+        // Check if the server returned an error
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
         // Store and transform results
-        currentAnalysis = transformApiData(result);
+        currentAnalysis = transformApiData(result, inputUrl);
         
         // FIXED: Set window.currentAnalysis as the data, not a function
         window.currentAnalysis = currentAnalysis;
@@ -135,7 +140,18 @@ async function analyzeArticle(url) {
         
     } catch (error) {
         console.error('Analysis error:', error);
-        showError('Failed to analyze article. Please try again.');
+        let errorMsg = 'Failed to analyze article. ';
+        
+        // Provide more specific error messages
+        if (error.message.includes('timeout') || error.message.includes('timed out')) {
+            errorMsg += 'The website took too long to respond. Try a different article.';
+        } else if (error.message.includes('HTTPSConnectionPool')) {
+            errorMsg += 'Could not connect to the website. It may be blocking automated access.';
+        } else {
+            errorMsg += error.message || 'Please try again.';
+        }
+        
+        showError(errorMsg);
         hideProgress();
     } finally {
         analysisInProgress = false;
@@ -147,7 +163,7 @@ async function analyzeArticle(url) {
 }
 
 // Transform API data to match component expectations
-function transformApiData(result) {
+function transformApiData(result, originalUrl) {
     if (!result) return null;
     
     console.log('Transforming API data...');
@@ -172,13 +188,13 @@ function transformApiData(result) {
             consensus_score: result.trust_score || 50
         },
         
-        // Ensure article data exists
+        // Ensure article data exists - FIXED: use originalUrl parameter
         article: {
             ...result.article,
-            url: result.article?.url || url,
+            url: result.article?.url || originalUrl,
             title: result.article?.title || 'Untitled',
             author: result.article?.author || 'Unknown',
-            domain: result.article?.domain || (result.article?.url ? new URL(result.article.url).hostname : '')
+            domain: result.article?.domain || (result.article?.url ? new URL(result.article.url).hostname : (originalUrl ? new URL(originalUrl).hostname : 'unknown'))
         },
         
         // Scores
