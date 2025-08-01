@@ -129,8 +129,15 @@ try:
     PDF_EXPORT_ENABLED = True
     
 except ImportError as e:
+    import traceback
     logger.error(f"CRITICAL: Could not import services: {e}")
+    logger.error(f"Import error details: {traceback.format_exc()}")
     logger.error("FALLING BACK TO PLACEHOLDER IMPLEMENTATIONS")
+    PDF_EXPORT_ENABLED = False
+except Exception as e:
+    import traceback
+    logger.error(f"CRITICAL: Unexpected error during imports: {e}")
+    logger.error(f"Error details: {traceback.format_exc()}")
     PDF_EXPORT_ENABLED = False
     
     # Enhanced fallback NewsExtractor with better timeout and headers
