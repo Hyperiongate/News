@@ -88,7 +88,10 @@ def rate_limit(max_requests=10, window=60):
         return decorated_function
     return decorator
 
-# Initialize services
+# Initialize services - CRITICAL FIX
+news_extractor = None
+news_analyzer = None
+
 try:
     # Import all services with CORRECT names
     from services.news_analyzer import NewsAnalyzer
@@ -109,20 +112,25 @@ try:
     from services.pdf_generator import PDFGenerator
     from services.report_generator import ReportGenerator
     
-    # Initialize core services with ScrapingBee support
+    # Initialize core services with ScrapingBee support - MOVED HERE!
     news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
     news_analyzer = NewsAnalyzer()
     
-    # Override the article extractor in news_analyzer to use news_extractor
-    news_analyzer.article_extractor = news_extractor
+    # Override the extractor in news_analyzer to use ScrapingBee-enabled extractor
+    if hasattr(news_analyzer, 'extractor'):
+        news_analyzer.extractor = news_extractor
     
     logger.info("All services imported successfully")
+    logger.info(f"Using REAL NewsAnalyzer: {NewsAnalyzer}")
+    logger.info(f"NewsAnalyzer has bias_analyzer: {hasattr(news_analyzer, 'bias_analyzer')}")
+    if hasattr(news_analyzer, 'bias_analyzer'):
+        logger.info(f"bias_analyzer is: {news_analyzer.bias_analyzer}")
     logger.info(f"ScrapingBee enabled: {bool(SCRAPINGBEE_API_KEY)}")
     PDF_EXPORT_ENABLED = True
     
 except ImportError as e:
-    logger.warning(f"Some services could not be imported: {e}")
-    logger.warning("Using enhanced fallback implementations")
+    logger.error(f"CRITICAL: Could not import services: {e}")
+    logger.error("FALLING BACK TO PLACEHOLDER IMPLEMENTATIONS")
     PDF_EXPORT_ENABLED = False
     
     # Enhanced fallback NewsExtractor with better timeout and headers
@@ -138,7 +146,7 @@ except ImportError as e:
                 'Upgrade-Insecure-Requests': '1'
             }
             
-        def extract(self, url):
+        def extract_article(self, url):
             """Extract article content from URL with ScrapingBee support"""
             try:
                 # Use ScrapingBee if available
@@ -387,17 +395,39 @@ except ImportError as e:
                     'unverified': len(claims) if claims else 0
                 }
             }
+        
+        def extract_claims(self, article_data):
+            """Extract claims from article"""
+            content = article_data.get('content', '') or article_data.get('text', '')
+            claims = []
+            
+            # Simple claim extraction - look for sentences with numbers
+            sentences = content.split('.')
+            for sentence in sentences[:10]:  # First 10 sentences
+                if any(char.isdigit() for char in sentence):
+                    claims.append(sentence.strip())
+                    
+            return claims
 
     class SourceCredibility:
         def check_source(self, domain):
             """Check source credibility"""
             # Simple domain check
-            known_credible = ['nytimes.com', 'bbc.com', 'reuters.com', 'apnews.com', 'washingtonpost.com']
+            known_credible = ['nytimes.com', 'bbc.com', 'reuters.com', 'apnews.com', 'washingtonpost.com', 'politico.com']
+            
+            if any(cred in domain for cred in known_credible):
+                return {
+                    'domain': domain,
+                    'credibility': 'Medium',  # Match the real service output
+                    'rating': 'established',
+                    'bias': 'Center'
+                }
             
             return {
                 'domain': domain,
-                'credibility': 'high' if any(cred in domain for cred in known_credible) else 'medium',
-                'rating': 'established' if any(cred in domain for cred in known_credible) else 'unknown'
+                'credibility': 'Medium',
+                'rating': 'unknown',
+                'bias': 'Unknown'
             }
 
     class TransparencyAnalyzer:
@@ -422,7 +452,7 @@ except ImportError as e:
     class ContentAnalyzer:
         def analyze(self, article_data):
             """Analyze content"""
-            content = article_data.get('content', '')
+            content = article_data.get('content', '') or article_data.get('text', '')
             
             return {
                 'metrics': {
@@ -438,7 +468,7 @@ except ImportError as e:
             tactics = []
             score = 0
             
-            content = article_data.get('content', '').lower()
+            content = (article_data.get('content', '') or article_data.get('text', '')).lower()
             
             # Simple detection
             if 'you won\'t believe' in content:
@@ -458,7 +488,7 @@ except ImportError as e:
     class ReadabilityAnalyzer:
         def analyze(self, article_data):
             """Analyze readability"""
-            content = article_data.get('content', '')
+            content = article_data.get('content', '') or article_data.get('text', '')
             words = content.split()
             sentences = content.split('.')
             
@@ -500,7 +530,7 @@ except ImportError as e:
     class ClaimExtractor:
         def extract_claims(self, article_data):
             """Extract claims from article"""
-            content = article_data.get('content', '')
+            content = article_data.get('content', '') or article_data.get('text', '')
             claims = []
             
             # Simple claim extraction - look for sentences with numbers
@@ -549,7 +579,7 @@ except ImportError as e:
     class NewsAnalyzer:
         """Main news analyzer orchestrator"""
         def __init__(self):
-            self.article_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+            self.extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
             self.author_analyzer = AuthorAnalyzer()
             self.bias_analyzer = BiasAnalyzer()
             self.clickbait_detector = ClickbaitDetector()
@@ -561,12 +591,15 @@ except ImportError as e:
             self.readability_analyzer = ReadabilityAnalyzer()
             self.emotion_analyzer = EmotionAnalyzer()
             self.claim_extractor = ClaimExtractor()
+            logger.warning("Using PLACEHOLDER NewsAnalyzer")
             
         def analyze(self, url_or_text, input_type='url', is_pro=False):
             """Main analysis method"""
+            logger.warning(f"PLACEHOLDER analyze called with {input_type}")
+            
             # Extract article
             if input_type == 'url':
-                article_data = self.article_extractor.extract(url_or_text)
+                article_data = self.extractor.extract_article(url_or_text)
                 if not article_data.get('success', True):
                     return {
                         'error': article_data.get('error', 'Failed to extract article'),
@@ -651,7 +684,7 @@ except ImportError as e:
             # Convert to scores (0-100)
             bias_score = max(0, 100 - (abs(bias.get('bias_score', 0)) * 100))
             clickbait_score = max(0, 100 - clickbait.get('score', 0))
-            source_score = 80 if source.get('credibility') == 'high' else 50
+            source_score = 80 if source.get('credibility') == 'High' else 60 if source.get('credibility') == 'Medium' else 40
             transparency_score = transparency.get('transparency_score', 50)
             author_score = author.get('credibility_score', 50)
             manipulation_score = max(0, 100 - manipulation.get('score', 0))
@@ -668,9 +701,13 @@ except ImportError as e:
             
             return round(trust_score)
     
-    # Initialize services
-    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
-    news_analyzer = NewsAnalyzer()
+    # Initialize services with placeholders - ONLY IF IMPORTS FAILED
+    if news_extractor is None:
+        news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+    if news_analyzer is None:
+        news_analyzer = NewsAnalyzer()
+    
+    logger.warning("Using PLACEHOLDER implementations")
 
 # Main route
 @app.route('/')
