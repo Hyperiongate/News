@@ -1,5 +1,5 @@
 // static/js/components/bias-analysis.js
-// Enhanced Bias Analysis with Multi-dimensional Detection
+// Enhanced Bias Analysis with Multi-dimensional Detection - FIXED VERSION
 
 class BiasAnalysis {
     constructor() {
@@ -79,8 +79,27 @@ class BiasAnalysis {
     }
 
     extractPoliticalBias(data) {
-        const score = data.bias_score || 0;
-        const confidence = data.bias_confidence || 70;
+        // FIXED: Check multiple possible locations for the bias score
+        let score = 0;
+        let confidence = 70;
+        
+        // Try to get score from multiple possible locations
+        if (data.bias_score !== undefined) {
+            score = data.bias_score;
+        } else if (data.bias_analysis && data.bias_analysis.political_lean !== undefined) {
+            score = data.bias_analysis.political_lean;
+        } else if (data.bias_analysis && data.bias_analysis.bias_score !== undefined) {
+            score = data.bias_analysis.bias_score;
+        }
+        
+        // Try to get confidence from multiple possible locations
+        if (data.bias_confidence !== undefined) {
+            confidence = data.bias_confidence;
+        } else if (data.bias_analysis && data.bias_analysis.confidence !== undefined) {
+            confidence = data.bias_analysis.confidence;
+        } else if (data.bias_analysis && data.bias_analysis.bias_confidence !== undefined) {
+            confidence = data.bias_analysis.bias_confidence;
+        }
         
         // Analyze political indicators
         const indicators = [];
@@ -148,7 +167,7 @@ class BiasAnalysis {
     }
 
     extractSensationalBias(data) {
-        const clickbaitScore = data.clickbait_score || 0;
+        const clickbaitScore = data.clickbait_score || data.clickbait_analysis?.score || 0;
         const emotionalWords = this.countEmotionalWords(data.article?.content || '');
         
         const score = (clickbaitScore / 100) + (emotionalWords.intensity / 10);
@@ -230,7 +249,17 @@ class BiasAnalysis {
         const patterns = [];
         const content = data.article?.content || '';
         
-        // One-sided sourcing
+        // Use backend-provided bias patterns if available
+        if (data.bias_analysis?.bias_patterns) {
+            return data.bias_analysis.bias_patterns.map(pattern => ({
+                type: pattern.type || 'general',
+                description: pattern.description || pattern.name || pattern,
+                severity: pattern.severity || 'moderate',
+                example: pattern.example || 'Pattern detected'
+            }));
+        }
+        
+        // Otherwise, detect patterns
         const sources = this.extractSources(content);
         if (sources.length > 0 && sources.filter(s => s.perspective === 'single').length > sources.length * 0.7) {
             patterns.push({
@@ -266,6 +295,17 @@ class BiasAnalysis {
     }
 
     extractLoadedPhrases(data) {
+        // Use backend-provided loaded phrases if available
+        if (data.bias_analysis?.loaded_phrases && data.bias_analysis.loaded_phrases.length > 0) {
+            return data.bias_analysis.loaded_phrases.map(phrase => ({
+                phrase: phrase.text || phrase.phrase || phrase,
+                count: phrase.count || 1,
+                bias: phrase.bias || phrase.type || 'emotional',
+                severity: phrase.severity || phrase.impact || 'moderate'
+            }));
+        }
+        
+        // Otherwise, extract from content
         const content = data.article?.content || '';
         const loadedPhrases = [];
         
@@ -295,6 +335,11 @@ class BiasAnalysis {
     }
 
     extractFramingAnalysis(data) {
+        // Use backend-provided framing analysis if available
+        if (data.bias_analysis?.framing_analysis) {
+            return data.bias_analysis.framing_analysis;
+        }
+        
         const title = data.article?.title || '';
         const content = data.article?.content || '';
         
@@ -328,7 +373,6 @@ class BiasAnalysis {
     }
 
     analyzeNarrativeFraming(content) {
-        // Simplified narrative analysis
         if (/david.*goliath|underdog|against all odds/i.test(content)) {
             return { type: 'underdog', description: 'Frames as underdog story' };
         } else if (/conspiracy|cover-up|hidden agenda/i.test(content)) {
@@ -377,7 +421,6 @@ class BiasAnalysis {
     }
 
     extractSources(content) {
-        // Simplified source extraction
         const sourcePatterns = [
             /according to ([\w\s]+)/gi,
             /([\w\s]+) said/gi,
@@ -417,14 +460,12 @@ class BiasAnalysis {
     }
 
     extractSurroundingText(content, regex) {
-        // Simplified sentiment analysis around mentions
         let positive = 0;
         let negative = 0;
         
         const positiveWords = ['success', 'achievement', 'progress', 'leading', 'innovation'];
         const negativeWords = ['failure', 'threat', 'concern', 'problem', 'crisis'];
         
-        // This is simplified - in production would use proper NLP
         positiveWords.forEach(word => {
             if (content.includes(word)) positive++;
         });
@@ -872,7 +913,9 @@ class BiasAnalysis {
         const icons = {
             'sourcing': '📊',
             'language': '💬',
-            'selection': '🔍'
+            'selection': '🔍',
+            'framing': '🖼️',
+            'general': '📌'
         };
         return icons[type] || '📌';
     }
