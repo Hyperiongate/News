@@ -309,7 +309,7 @@ function transformApiData(result) {
     return result;
 }
 
-// Display all analysis results - THIS IS THE CRITICAL FIX
+// Display all analysis results
 function displayResults(data) {
     if (!data || !data.success) {
         showError('No results to display');
@@ -326,22 +326,27 @@ function displayResults(data) {
     container.innerHTML = '';
     
     // Create cards for each analysis component
-    // CRITICAL FIX: Pass the FULL 'data' object to ALL components, not slices!
     const components = [
         { name: 'bias-analysis', data: data, title: 'Bias Analysis' },
         { name: 'fact-checker', data: data, title: 'Fact Checking' },
         { name: 'transparency-analysis', data: data, title: 'Transparency' },
         { name: 'author-card', data: data, title: 'Author Analysis' },
-        { name: 'context-card', data: data, title: 'Context' },           // ← FIXED: Pass full data
-        { name: 'readability-card', data: data, title: 'Readability' },   // ← FIXED: Pass full data
-        { name: 'emotional-tone-card', data: data, title: 'Emotional Tone' }, // ← FIXED: Pass full data
-        { name: 'comparison-card', data: data, title: 'Source Comparison' }    // ← FIXED: Pass full data
+        { name: 'context-card', data: data, title: 'Context' },
+        { name: 'readability-card', data: data, title: 'Readability' },
+        { name: 'emotional-tone-card', data: data, title: 'Emotional Tone' },
+        { name: 'comparison-card', data: data, title: 'Source Comparison' }
     ];
     
-    components.forEach(comp => {
+    components.forEach((comp, index) => {
         const card = createAnalysisCard(comp.name, comp.data, comp.title);
         if (card) {
             container.appendChild(card);
+            // Auto-expand first 4 cards
+            if (index < 4) {
+                setTimeout(() => {
+                    card.classList.add('expanded');
+                }, 100 + (index * 50));
+            }
         }
     });
     
@@ -360,37 +365,50 @@ function displayResults(data) {
     }
 }
 
-// Create analysis card
+// Create analysis card - COMPLETELY REWRITTEN
 function createAnalysisCard(componentName, data, title) {
     const card = document.createElement('div');
     card.className = 'analysis-card';
     card.setAttribute('data-component', componentName);
     
-    // Basic card structure
-    card.innerHTML = `
-        <div class="card-header">
-            <h3>${title}</h3>
-            <button class="expand-btn" onclick="toggleCard('${componentName}')">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                </svg>
-            </button>
-        </div>
-        <div class="card-content" id="${componentName}-content">
-            <div class="loading-placeholder">Loading component...</div>
-        </div>
+    // Create card header
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `
+        <h3>${title}</h3>
+        <button class="expand-btn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+            </svg>
+        </button>
     `;
     
-    // Load component dynamically
-    loadComponent(componentName, data);
+    // Create card content container
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    content.id = `${componentName}-content`;
+    
+    // Add click handler to header
+    header.addEventListener('click', () => {
+        card.classList.toggle('expanded');
+    });
+    
+    // Assemble card
+    card.appendChild(header);
+    card.appendChild(content);
+    
+    // Load component content asynchronously
+    setTimeout(() => {
+        loadComponentContent(componentName, data, content);
+    }, 50);
     
     return card;
 }
 
-// Load component dynamically - FIXED WITH CORRECT MAPPING
-async function loadComponent(componentName, data) {
+// Load component content - COMPLETELY NEW APPROACH
+function loadComponentContent(componentName, data, container) {
     try {
-        console.log(`Loading component: ${componentName} with data:`, data ? 'Has data' : 'No data');
+        console.log(`Loading ${componentName} content...`);
         
         // Map kebab-case names to PascalCase class names
         const componentMap = {
@@ -404,70 +422,58 @@ async function loadComponent(componentName, data) {
             'comparison-card': 'ComparisonCard'
         };
         
-        // Get the correct class name
         const className = componentMap[componentName];
         const ComponentClass = window[className];
         
-        if (ComponentClass) {
-            console.log(`Found component class: ${className}`);
-            const instance = new ComponentClass();
+        if (!ComponentClass) {
+            console.error(`Component class ${className} not found`);
+            container.innerHTML = '<p style="color: #666; padding: 20px;">Component not available</p>';
+            return;
+        }
+        
+        // Create component instance
+        const component = new ComponentClass();
+        
+        // Render component
+        if (typeof component.render === 'function') {
+            const rendered = component.render(data);
             
-            // Check if render method exists
-            if (typeof instance.render === 'function') {
-                const content = await instance.render(data);
-                
-                const container = document.getElementById(`${componentName}-content`);
-                if (container) {
-                    container.innerHTML = '';
-                    if (typeof content === 'string') {
-                        container.innerHTML = content;
-                    } else if (content instanceof HTMLElement) {
-                        container.appendChild(content);
-                    } else {
-                        // Fallback: show raw data
-                        container.innerHTML = `
-                            <div class="component-data">
-                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">
-${JSON.stringify(data, null, 2)}
-                                </pre>
-                            </div>
-                        `;
-                    }
-                }
+            // Clear container
+            container.innerHTML = '';
+            
+            // Handle different return types
+            if (rendered instanceof HTMLElement) {
+                // It's an HTML element - append it
+                container.appendChild(rendered);
+            } else if (typeof rendered === 'string') {
+                // It's an HTML string - set innerHTML
+                container.innerHTML = rendered;
+            } else if (rendered && typeof rendered.outerHTML === 'string') {
+                // It has outerHTML - use that
+                container.innerHTML = rendered.outerHTML;
             } else {
-                console.error(`Component ${className} missing render method`);
-                showFallbackData(componentName, data);
+                console.error(`Unexpected render result from ${className}:`, rendered);
+                container.innerHTML = '<p style="color: #666; padding: 20px;">Error rendering component</p>';
+            }
+            
+            // Call post-render initialization if it exists
+            if (typeof component.initializeVisualizations === 'function') {
+                setTimeout(() => {
+                    try {
+                        component.initializeVisualizations();
+                    } catch (e) {
+                        console.error(`Error initializing visualizations for ${className}:`, e);
+                    }
+                }, 100);
             }
         } else {
-            console.warn(`Component class ${className} not found`);
-            showFallbackData(componentName, data);
+            console.error(`Component ${className} has no render method`);
+            container.innerHTML = '<p style="color: #666; padding: 20px;">Component render error</p>';
         }
+        
     } catch (error) {
-        console.error(`Error loading component ${componentName}:`, error);
-        showFallbackData(componentName, data);
-    }
-}
-
-// Show fallback data when component fails to load
-function showFallbackData(componentName, data) {
-    const container = document.getElementById(`${componentName}-content`);
-    if (container) {
-        if (!data || Object.keys(data).length === 0) {
-            container.innerHTML = `
-                <div class="component-fallback" style="padding: 20px; text-align: center;">
-                    <p style="color: #666;">No data available for this analysis.</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = `
-                <div class="component-fallback" style="padding: 15px;">
-                    <p style="color: #666; font-style: italic;">Component visualization unavailable. Showing raw data:</p>
-                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">
-${JSON.stringify(data, null, 2)}
-                    </pre>
-                </div>
-            `;
-        }
+        console.error(`Error loading ${componentName}:`, error);
+        container.innerHTML = '<p style="color: #dc2626; padding: 20px;">Error loading component</p>';
     }
 }
 
