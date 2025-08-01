@@ -1,12 +1,129 @@
 """
-FILE: services/__init__.py
-LOCATION: news/services/__init__.py
-PURPOSE: Makes the services directory a Python package
-DEPENDENCIES: None
+services/__init__.py
+Makes the services directory a Python package and handles imports
 """
 
-# This file makes the services directory a Python package
-# It can be empty, but we'll add a version marker
+__version__ = "2.1.0"
+__service__ = "news-analyzer-enhanced"
 
-__version__ = "1.0.0"
-__service__ = "news-analyzer"
+# Import all service classes for easy access
+__all__ = [
+    # Core services
+    'ArticleExtractor',
+    'AuthorAnalyzer',
+    'BiasAnalyzer',
+    'ClickbaitDetector',
+    'FactChecker',
+    'SourceCredibilityAnalyzer',
+    'TransparencyAnalyzer',
+    'ContentAnalyzer',
+    'ManipulationDetector',
+    'ReadabilityAnalyzer',
+    'EmotionAnalyzer',
+    'ClaimExtractor',
+    'ImageAnalyzer',
+    'NetworkAnalyzer',
+    'PDFGenerator',
+    'ReportGenerator',
+    # Enhanced services
+    'EnhancedContextAnalyzer',
+    'EconomicFactChecker',
+    'OriginalityAnalyzer'
+]
+
+# Try to import all services
+try:
+    from .article_extractor import ArticleExtractor
+except ImportError:
+    pass
+
+try:
+    from .author_analyzer import AuthorAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .bias_analyzer import BiasAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .clickbait_detector import ClickbaitDetector
+except ImportError:
+    pass
+
+try:
+    from .fact_checker import FactChecker
+except ImportError:
+    pass
+
+try:
+    from .source_credibility import SourceCredibilityAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .transparency_analyzer import TransparencyAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .content_analyzer import ContentAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .manipulation_detector import ManipulationDetector
+except ImportError:
+    pass
+
+try:
+    from .readability_analyzer import ReadabilityAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .emotion_analyzer import EmotionAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .claim_extractor import ClaimExtractor
+except ImportError:
+    pass
+
+try:
+    from .image_analyzer import ImageAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .network_analyzer import NetworkAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .pdf_generator import PDFGenerator
+except ImportError:
+    pass
+
+try:
+    from .report_generator import ReportGenerator
+except ImportError:
+    pass
+
+# Import new enhanced services
+try:
+    from .enhanced_context_analyzer import EnhancedContextAnalyzer
+except ImportError:
+    pass
+
+try:
+    from .economic_fact_checker import EconomicFactChecker
+except ImportError:
+    pass
+
+try:
+    from .originality_analyzer import OriginalityAnalyzer
+except ImportError:
+    pass
