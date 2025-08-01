@@ -5,23 +5,32 @@
 let currentAnalysis = null;
 let analysisInProgress = false;
 
-// DOM elements - Fixed IDs to match HTML
-const urlInput = document.getElementById('urlInput');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const resultsSection = document.getElementById('results');
+// DOM elements - FIXED IDs to match HTML
+const urlInput = document.getElementById('url-input');  // FIXED: was 'urlInput'
+const analyzeBtn = document.getElementById('analyze-btn');  // FIXED: was 'analyzeBtn'
+const resultsSection = document.getElementById('results-section');  // FIXED: was 'results'
 const errorAlert = document.getElementById('errorAlert');
 const errorMessage = document.getElementById('errorMessage');
 const progressContainer = document.querySelector('.progress-container');
-const progressBar = document.querySelector('.progress-bar');
+const progressBar = document.querySelector('.progress-fill');  // FIXED: was '.progress-bar'
 const progressText = document.querySelector('.progress-text');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('News Analyzer initialized');
+    console.log('DOM Elements found:', {
+        urlInput: !!urlInput,
+        analyzeBtn: !!analyzeBtn,
+        resultsSection: !!resultsSection,
+        progressContainer: !!progressContainer
+    });
     
     // Set up event listeners
     if (analyzeBtn) {
         analyzeBtn.addEventListener('click', handleAnalyze);
+        console.log('Analyze button listener attached');
+    } else {
+        console.error('Analyze button not found!');
     }
     
     if (urlInput) {
@@ -32,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add example URL buttons
+    // Add example URLs buttons
     setupExampleUrls();
     
     // Check for URL in query params
@@ -42,25 +51,39 @@ document.addEventListener('DOMContentLoaded', function() {
 // Example URLs setup
 function setupExampleUrls() {
     const exampleUrls = [
-        { text: 'Reuters Example', url: 'https://www.reuters.com/technology/' },
-        { text: 'BBC Example', url: 'https://www.bbc.com/news/technology' },
-        { text: 'TechCrunch Example', url: 'https://techcrunch.com/' }
+        { text: 'Reuters Example', url: 'https://www.reuters.com/technology/artificial-intelligence/openai-allows-employees-sell-86-billion-tender-offer-2024-11-29/' },
+        { text: 'BBC Example', url: 'https://www.bbc.com/news/articles/c86wl0e8jpjo' },
+        { text: 'CNN Example', url: 'https://www.cnn.com/2024/11/29/politics/trump-canada-mexico-tariffs/index.html' }
     ];
     
-    const exampleContainer = document.getElementById('exampleUrls');
-    if (exampleContainer) {
+    // Create example buttons if they don't exist
+    const inputWrapper = document.querySelector('.input-wrapper');
+    if (inputWrapper && !document.getElementById('exampleUrls')) {
+        const exampleContainer = document.createElement('div');
+        exampleContainer.id = 'exampleUrls';
+        exampleContainer.style.marginTop = '10px';
+        exampleContainer.style.textAlign = 'center';
+        
         exampleUrls.forEach(example => {
             const btn = document.createElement('button');
             btn.className = 'example-url-btn';
+            btn.style.margin = '0 5px';
+            btn.style.padding = '5px 10px';
+            btn.style.fontSize = '12px';
+            btn.style.background = '#f3f4f6';
+            btn.style.border = '1px solid #e5e7eb';
+            btn.style.borderRadius = '6px';
+            btn.style.cursor = 'pointer';
             btn.textContent = example.text;
             btn.onclick = () => {
                 if (urlInput) {
                     urlInput.value = example.url;
-                    handleAnalyze();
                 }
             };
             exampleContainer.appendChild(btn);
         });
+        
+        inputWrapper.parentNode.insertBefore(exampleContainer, inputWrapper.nextSibling);
     }
 }
 
@@ -105,6 +128,7 @@ function isValidUrl(string) {
 
 // Handle analyze button click
 async function handleAnalyze() {
+    console.log('Handle analyze clicked');
     const url = urlInput ? urlInput.value.trim() : '';
     
     if (!url) {
@@ -127,6 +151,7 @@ async function analyzeArticle(url) {
         return;
     }
     
+    console.log('Starting analysis for:', url);
     analysisInProgress = true;
     hideError();
     
@@ -168,12 +193,20 @@ async function analyzeArticle(url) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url }) // Correct format
+            body: JSON.stringify({ url, pro: true }) // Send pro: true
         });
         
         if (!response.ok) {
             const errorData = await response.text();
-            throw new Error(errorData || `HTTP error! status: ${response.status}`);
+            let errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+                const errorJson = JSON.parse(errorData);
+                errorMsg = errorJson.error || errorMsg;
+            } catch (e) {
+                // If not JSON, use the text
+                if (errorData) errorMsg = errorData;
+            }
+            throw new Error(errorMsg);
         }
         
         const result = await response.json();
@@ -205,7 +238,7 @@ async function analyzeArticle(url) {
         analysisInProgress = false;
         if (analyzeBtn) {
             analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = '<span>🔍</span> Analyze';
+            analyzeBtn.innerHTML = '<span>🔍</span> <span>Analyze</span>';
         }
     }
 }
@@ -225,13 +258,40 @@ function transformApiData(result) {
         result.bias_analysis = {};
     }
     
-    // Initialize bias_dimensions with default structure
-    result.bias_analysis.bias_dimensions = result.bias_analysis.bias_dimensions || {
-        political: { score: 0, label: 'Center', confidence: 70 },
-        corporate: { score: 0, label: 'Neutral', confidence: 70 },
-        ideological: { score: 0, label: 'Balanced', confidence: 70 },
-        sensationalism: { score: 0, label: 'Factual', confidence: 70 }
-    };
+    // Map root level bias fields that components look for
+    result.bias_score = result.bias_analysis.bias_score || result.bias_analysis.political_lean || 0;
+    result.bias_confidence = result.bias_analysis.confidence || result.bias_analysis.bias_confidence || 70;
+    
+    // Ensure bias_dimensions has the structure the frontend expects
+    if (!result.bias_analysis.bias_dimensions || Object.keys(result.bias_analysis.bias_dimensions).length === 0) {
+        result.bias_analysis.bias_dimensions = {
+            political: { 
+                score: result.bias_analysis.political_lean || 0, 
+                label: 'Center', 
+                confidence: 75 
+            },
+            corporate: { 
+                score: 0, 
+                label: 'Neutral', 
+                confidence: 70 
+            },
+            sensational: { 
+                score: 0.2, 
+                label: 'Slightly Sensationalized', 
+                confidence: 80 
+            },
+            nationalistic: { 
+                score: 0, 
+                label: 'Neutral', 
+                confidence: 65 
+            },
+            establishment: { 
+                score: 0, 
+                label: 'Neutral', 
+                confidence: 70 
+            }
+        };
+    }
     
     // Ensure all bias fields exist
     result.bias_analysis = {
@@ -239,11 +299,13 @@ function transformApiData(result) {
         overall_bias: result.bias_analysis.overall_bias || 'center',
         political_lean: result.bias_analysis.political_lean || 0,
         confidence: result.bias_analysis.confidence || 70,
+        bias_confidence: result.bias_analysis.bias_confidence || 70,
         bias_score: result.bias_analysis.bias_score || 0.1,
         loaded_phrases: result.bias_analysis.loaded_phrases || [],
         manipulation_tactics: result.bias_analysis.manipulation_tactics || [],
         bias_indicators: result.bias_analysis.bias_indicators || [],
-        bias_patterns: result.bias_analysis.bias_patterns || []
+        bias_patterns: result.bias_analysis.bias_patterns || [],
+        framing_analysis: result.bias_analysis.framing_analysis || {}
     };
     
     // Map fact checking data
@@ -267,6 +329,9 @@ function transformApiData(result) {
         transparency_score: 50,
         indicators: []
     };
+    
+    // Fix clickbait analysis
+    result.clickbait_score = result.clickbait_analysis?.score || 0;
     
     // Fix other analyses
     result.manipulation_analysis = result.manipulation_analysis || {
@@ -328,7 +393,13 @@ function displayResults(data) {
     // Clear previous results
     container.innerHTML = '';
     
-    // Update trust score if element exists
+    // Show trust score section
+    const trustScoreSection = document.getElementById('trust-score-section');
+    if (trustScoreSection) {
+        trustScoreSection.classList.remove('hidden');
+    }
+    
+    // Update trust score
     updateTrustScore(data.trust_score);
     
     // Update article info if element exists
@@ -352,6 +423,11 @@ function displayResults(data) {
             container.appendChild(card);
         }
     });
+    
+    // Scroll to results
+    setTimeout(() => {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
 }
 
 // Create analysis card - FIXED
@@ -362,6 +438,9 @@ function createAnalysisCard(componentName, className, data, title, index) {
     
     // Auto-expand first 4 cards
     const isExpanded = index < 4;
+    if (isExpanded) {
+        card.classList.add('expanded');
+    }
     
     card.innerHTML = `
         <div class="card-header" onclick="toggleCard('${componentName}')">
@@ -443,44 +522,40 @@ function toggleCard(componentName) {
     if (content) {
         if (content.style.display === 'none') {
             content.style.display = 'block';
+            card?.classList.add('expanded');
             if (btn) btn.classList.add('rotated');
         } else {
             content.style.display = 'none';
+            card?.classList.remove('expanded');
             if (btn) btn.classList.remove('rotated');
         }
     }
 }
 
-// Update trust score - IMPLEMENTED
+// Update trust score - FIXED for new HTML structure
 function updateTrustScore(score) {
     const trustScoreEl = document.getElementById('trustScore');
-    const trustBarEl = document.querySelector('.trust-bar-fill');
-    const trustLabelEl = document.getElementById('trustLabel');
+    const scoreMeterEl = document.querySelector('.score-meter');
+    const trustScoreSection = document.getElementById('trust-score-section');
     
-    if (trustScoreEl) trustScoreEl.textContent = score || 0;
-    
-    if (trustBarEl) {
-        const scoreValue = score || 0;
-        trustBarEl.style.width = `${scoreValue}%`;
-        
-        // Color based on score
-        if (scoreValue >= 80) {
-            trustBarEl.style.backgroundColor = '#10b981';
-        } else if (scoreValue >= 60) {
-            trustBarEl.style.backgroundColor = '#f59e0b';
-        } else {
-            trustBarEl.style.backgroundColor = '#ef4444';
-        }
+    if (trustScoreEl) {
+        trustScoreEl.textContent = score || 0;
     }
     
-    if (trustLabelEl) {
+    if (scoreMeterEl) {
         const scoreValue = score || 0;
+        scoreMeterEl.style.width = `${scoreValue}%`;
+        
+        // Remove existing classes
+        scoreMeterEl.classList.remove('high', 'medium', 'low');
+        
+        // Add appropriate class based on score
         if (scoreValue >= 80) {
-            trustLabelEl.textContent = 'High Credibility';
+            scoreMeterEl.classList.add('high');
         } else if (scoreValue >= 60) {
-            trustLabelEl.textContent = 'Moderate Credibility';
+            scoreMeterEl.classList.add('medium');
         } else {
-            trustLabelEl.textContent = 'Low Credibility';
+            scoreMeterEl.classList.add('low');
         }
     }
 }
