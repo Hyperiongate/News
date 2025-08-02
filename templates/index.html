@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Analyzer - Simple Results</title>
+    <title>News Article Analyzer</title>
     <style>
         * {
             margin: 0;
@@ -350,7 +350,7 @@
     </div>
 
     <script>
-        // Simple, straightforward JavaScript
+        // Fixed JavaScript that matches YOUR API structure
         async function analyzeArticle() {
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
@@ -379,9 +379,11 @@
                 }
 
                 const data = await response.json();
+                console.log('API Response:', data); // Debug
                 displayResults(data);
             } catch (error) {
                 showError('Failed to analyze article. Please try again.');
+                console.error('Error:', error);
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
@@ -391,62 +393,98 @@
             // Show results section
             document.getElementById('results').style.display = 'block';
 
-            // Trust Score
-            const trustScore = data.analysis?.trust_score || 0;
+            // Trust Score - YOUR API: data.trust_score (not data.analysis.trust_score)
+            const trustScore = data.trust_score || 0;
             const trustElement = document.getElementById('trustScore');
             trustElement.textContent = trustScore;
             trustElement.className = 'trust-score ' + getTrustClass(trustScore);
             document.getElementById('trustDescription').textContent = getTrustDescription(trustScore);
 
-            // Bias Analysis
-            const bias = data.analysis?.bias || {};
-            document.getElementById('biasScore').textContent = bias.score + '/100';
-            document.getElementById('politicalLean').textContent = bias.political_lean || 'Neutral';
-            document.getElementById('emotionalTone').textContent = bias.emotional_tone || 'Neutral';
-            document.getElementById('objectivity').textContent = bias.objectivity || 'Moderate';
+            // Bias Analysis - YOUR API: data.bias_analysis (not data.analysis.bias)
+            const bias = data.bias_analysis || {};
             
-            // Bias findings
+            // Calculate a bias score from dimensions if not provided
+            let biasScore = 0;
+            if (bias.dimensions) {
+                // Average the dimension scores
+                const dimensions = Object.values(bias.dimensions);
+                if (dimensions.length > 0) {
+                    biasScore = Math.round(dimensions.reduce((a, b) => a + b, 0) / dimensions.length);
+                }
+            }
+            
+            document.getElementById('biasScore').textContent = biasScore + '/100';
+            
+            // Try to extract political lean from patterns or analysis
+            let politicalLean = 'Unknown';
+            if (bias.analysis && bias.analysis.political_lean) {
+                politicalLean = bias.analysis.political_lean;
+            } else if (bias.patterns && bias.patterns.length > 0) {
+                // Look for political keywords in patterns
+                const leanPattern = bias.patterns.find(p => 
+                    p.toLowerCase().includes('left') || 
+                    p.toLowerCase().includes('right') || 
+                    p.toLowerCase().includes('center')
+                );
+                if (leanPattern) {
+                    politicalLean = leanPattern;
+                }
+            }
+            document.getElementById('politicalLean').textContent = politicalLean;
+            
+            // Get emotional tone from dimensions
+            document.getElementById('emotionalTone').textContent = 
+                bias.dimensions?.emotional_language || 'Neutral';
+            
+            document.getElementById('objectivity').textContent = 
+                bias.dimensions?.factual_reporting || 'Moderate';
+            
+            // Bias findings from patterns
             const biasFindings = document.getElementById('biasFindings');
             biasFindings.innerHTML = '';
-            if (bias.indicators && bias.indicators.length > 0) {
-                bias.indicators.forEach(indicator => {
+            if (bias.patterns && bias.patterns.length > 0) {
+                bias.patterns.forEach(pattern => {
                     biasFindings.innerHTML += `
                         <div class="finding-item">
                             <span class="finding-icon">📌</span>
-                            <span>${indicator}</span>
+                            <span>${pattern}</span>
                         </div>
                     `;
                 });
             }
 
-            // Fact Checking
-            const factCheck = data.analysis?.fact_check || {};
-            document.getElementById('factScore').textContent = factCheck.score + '/100';
-            document.getElementById('verifiedClaims').textContent = factCheck.verified || 0;
-            document.getElementById('disputedClaims').textContent = factCheck.disputed || 0;
-            document.getElementById('unverifiedClaims').textContent = factCheck.unverified || 0;
+            // Fact Checking - Create from content_analysis since fact_check might not exist
+            const contentAnalysis = data.content_analysis || {};
+            document.getElementById('factScore').textContent = 
+                (contentAnalysis.credibility_score || 0) + '/100';
+            
+            // These might not exist in your API, so just use defaults
+            document.getElementById('verifiedClaims').textContent = 0;
+            document.getElementById('disputedClaims').textContent = 0;
+            document.getElementById('unverifiedClaims').textContent = 
+                data.key_claims?.length || 0;
 
-            // Fact findings
+            // Add key claims if available
             const factFindings = document.getElementById('factFindings');
             factFindings.innerHTML = '';
-            if (factCheck.claims && factCheck.claims.length > 0) {
-                factCheck.claims.slice(0, 3).forEach(claim => {
-                    const icon = claim.verified ? '✅' : '❌';
+            if (data.key_claims && data.key_claims.length > 0) {
+                data.key_claims.slice(0, 3).forEach(claim => {
                     factFindings.innerHTML += `
                         <div class="finding-item">
-                            <span class="finding-icon">${icon}</span>
-                            <span>${claim.text}</span>
+                            <span class="finding-icon">❓</span>
+                            <span>${claim.claim || claim}</span>
                         </div>
                     `;
                 });
             }
 
-            // Source & Author
-            const source = data.analysis?.source_credibility || {};
+            // Source & Author - YOUR API: data.source_credibility and data.author_analysis
+            const source = data.source_credibility || {};
             const author = data.author_analysis || {};
-            document.getElementById('sourceScore').textContent = source.score + '/100';
-            document.getElementById('sourceName').textContent = data.domain || 'Unknown';
-            document.getElementById('authorName').textContent = author.name || 'Unknown';
+            
+            document.getElementById('sourceScore').textContent = (source.score || 0) + '/100';
+            document.getElementById('sourceName').textContent = data.article?.domain || 'Unknown';
+            document.getElementById('authorName').textContent = data.article?.author || 'Unknown';
             document.getElementById('credibility').textContent = source.rating || 'Unknown';
 
             // Source findings
@@ -461,19 +499,19 @@
                 `;
             }
 
-            // Manipulation Tactics
-            const manipulation = data.analysis?.manipulation_analysis || {};
+            // Manipulation Tactics - YOUR API: Look in bias_analysis.manipulation_tactics
+            const manipulationTactics = bias.manipulation_tactics || [];
             document.getElementById('manipulationScore').textContent = 
-                manipulation.tactics_found ? `${manipulation.tactics_found.length} found` : 'None found';
+                manipulationTactics.length > 0 ? `${manipulationTactics.length} found` : 'None found';
             
             const manipulationFindings = document.getElementById('manipulationFindings');
             manipulationFindings.innerHTML = '';
-            if (manipulation.tactics_found && manipulation.tactics_found.length > 0) {
-                manipulation.tactics_found.forEach(tactic => {
+            if (manipulationTactics.length > 0) {
+                manipulationTactics.forEach(tactic => {
                     manipulationFindings.innerHTML += `
                         <div class="finding-item">
                             <span class="finding-icon">⚠️</span>
-                            <span><strong>${tactic.type}:</strong> ${tactic.description}</span>
+                            <span>${tactic}</span>
                         </div>
                     `;
                 });
