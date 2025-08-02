@@ -62,7 +62,10 @@ async function handleAnalyze() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url: url })  // Correct format
+            body: JSON.stringify({ 
+                url: url,
+                pro: true  // Include pro parameter as backend expects it
+            })
         });
         
         if (!response.ok) {
@@ -168,53 +171,67 @@ function displayResults(data) {
         }
     }
     
-    // Create analysis cards
+    // Create analysis cards with error handling
     const cards = [
         {
             title: '📊 Bias Analysis',
             icon: '📊',
-            content: renderBiasAnalysis(data.bias_analysis || {})
+            renderer: () => renderBiasAnalysis(data.bias_analysis || {})
         },
         {
             title: '✓ Fact Checking',
             icon: '✓',
-            content: renderFactChecking(data.fact_check_results || {})
+            renderer: () => renderFactChecking(data.fact_check_results || {})
         },
         {
             title: '🔍 Transparency',
             icon: '🔍',
-            content: renderTransparency(data.transparency_analysis || {})
+            renderer: () => renderTransparency(data.transparency_analysis || {})
         },
         {
             title: '👤 Author Analysis',
             icon: '👤',
-            content: renderAuthor(data.author_analysis || {}, data.article || {})
+            renderer: () => renderAuthor(data.author_analysis || {}, data.article || {})
         },
         {
             title: '📝 Article Context',
             icon: '📝',
-            content: renderContext(data.article || {})
+            renderer: () => renderContext(data.article || {})
         },
         {
             title: '📖 Readability',
             icon: '📖',
-            content: renderReadability(data.readability_analysis || {})
+            renderer: () => renderReadability(data.readability_analysis || {})
         },
         {
             title: '💭 Emotional Tone',
             icon: '💭',
-            content: renderEmotionalTone(data.bias_analysis || {})
+            renderer: () => renderEmotionalTone(data.bias_analysis || {})
         },
         {
             title: '🏢 Source Credibility',
             icon: '🏢',
-            content: renderSourceCredibility(data.source_credibility || {})
+            renderer: () => renderSourceCredibility(data.source_credibility || {})
         }
     ];
     
     cards.forEach((card, index) => {
-        const cardEl = createCard(card.title, card.icon, card.content, index < 4);
-        container.appendChild(cardEl);
+        try {
+            const content = card.renderer();
+            const cardEl = createCard(card.title, card.icon, content, index < 4);
+            container.appendChild(cardEl);
+        } catch (error) {
+            console.error(`Error rendering ${card.title}:`, error);
+            // Create error card
+            const errorContent = `
+                <p style="color: #ef4444;">Error loading this section</p>
+                <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
+                    ${error.message || 'Unknown error occurred'}
+                </p>
+            `;
+            const cardEl = createCard(card.title, card.icon, errorContent, index < 4);
+            container.appendChild(cardEl);
+        }
     });
     
     // Show results section
@@ -230,11 +247,11 @@ function createCard(title, icon, content, expanded = false) {
     card.className = 'analysis-card' + (expanded ? ' expanded' : '');
     
     card.innerHTML = `
-        <div class="card-header" onclick="toggleCard(this.parentElement)">
+        <div class="card-header">
             <div>
                 <h4><span class="card-icon">${icon}</span> ${title}</h4>
             </div>
-            <button class="expand-btn">
+            <button class="expand-btn" onclick="toggleCard(this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 9l-7 7-7-7" />
                 </svg>
@@ -248,10 +265,16 @@ function createCard(title, icon, content, expanded = false) {
     return card;
 }
 
-// Toggle card expansion
-window.toggleCard = function(card) {
-    card.classList.toggle('expanded');
+// Toggle card expansion - global function
+function toggleCard(button) {
+    const card = button.closest('.analysis-card');
+    if (card) {
+        card.classList.toggle('expanded');
+    }
 }
+
+// Make toggleCard globally available
+window.toggleCard = toggleCard;
 
 // Render functions for each section
 function renderBiasAnalysis(bias) {
@@ -310,16 +333,28 @@ function renderFactChecking(factCheck) {
         
         ${claims.length > 0 ? `
             <h5>Claims Analyzed</h5>
-            ${claims.map(claim => `
-                <div class="fact-check-item">
-                    <div class="fact-check-claim">${claim.claim || claim}</div>
-                    ${claim.verdict ? `
+            ${claims.map(claim => {
+                // Handle both string claims and object claims
+                const claimText = typeof claim === 'string' ? claim : (claim.claim || 'Unknown claim');
+                const verdict = claim.verdict || '';
+                
+                // Safe verdict display - ensure it's a string before calling toLowerCase
+                let verdictBadge = '';
+                if (verdict && typeof verdict === 'string') {
+                    verdictBadge = `
                         <div class="fact-check-verdict">
-                            <span class="status-badge ${claim.verdict.toLowerCase()}">${claim.verdict}</span>
+                            <span class="status-badge ${verdict.toLowerCase()}">${verdict}</span>
                         </div>
-                    ` : ''}
-                </div>
-            `).join('')}
+                    `;
+                }
+                
+                return `
+                    <div class="fact-check-item">
+                        <div class="fact-check-claim">${claimText}</div>
+                        ${verdictBadge}
+                    </div>
+                `;
+            }).join('')}
         ` : '<p style="color: #6b7280;">No specific claims analyzed</p>'}
     `;
 }
@@ -339,7 +374,7 @@ function renderTransparency(transparency) {
             ${Object.entries(indicators).map(([key, value]) => `
                 <div class="metric-item">
                     <span class="metric-label">${formatLabel(key)}</span>
-                    <span class="metric-value">${value ? '✓' : '✗'}</span>
+                    <span class="metric-value">${value === true ? '✓' : value === false ? '✗' : value}</span>
                 </div>
             `).join('')}
         ` : ''}
@@ -360,13 +395,39 @@ function renderAuthor(author, article) {
     const credibilityScore = author.credibility_score || 0;
     const found = author.found || false;
     
+    // Safe charAt handling - ensure authorName is never empty
+    const avatarLetter = authorName && authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
+    
+    // Handle verification_status as an object (which it is from the backend)
+    const verificationStatus = author.verification_status || {};
+    const isVerified = verificationStatus.verified || false;
+    const isJournalistVerified = verificationStatus.journalist_verified || false;
+    const isOutletStaff = verificationStatus.outlet_staff || false;
+    
+    // Determine overall verification status
+    let verificationBadge = '';
+    if (isVerified || isJournalistVerified || isOutletStaff) {
+        const badges = [];
+        if (isVerified) badges.push('Verified');
+        if (isJournalistVerified) badges.push('Journalist');
+        if (isOutletStaff) badges.push('Staff');
+        
+        verificationBadge = `
+            <div class="metric-item">
+                <span class="metric-label">Verification</span>
+                <span class="status-badge verified">${badges.join(' • ')}</span>
+            </div>
+        `;
+    }
+    
     return `
         <div class="author-details">
-            <div class="author-avatar">${authorName.charAt(0).toUpperCase()}</div>
+            <div class="author-avatar">${avatarLetter}</div>
             <div class="author-info">
                 <div class="author-name">${authorName}</div>
                 <div class="author-bio">
-                    ${found ? 'Verified journalist' : 'Author not found in database'}
+                    ${found ? 'Found in journalist database' : 'Author not found in database'}
+                    ${author.bio && author.bio !== authorName ? `: ${author.bio}` : ''}
                 </div>
             </div>
         </div>
@@ -376,43 +437,65 @@ function renderAuthor(author, article) {
             <span class="metric-value">${credibilityScore}/100</span>
         </div>
         
-        ${author.verification_status ? `
+        ${verificationBadge}
+        
+        ${author.professional_info && author.professional_info.outlets && author.professional_info.outlets.length > 0 ? `
             <div class="metric-item">
-                <span class="metric-label">Verification Status</span>
-                <span class="status-badge ${author.verification_status.toLowerCase()}">${author.verification_status}</span>
+                <span class="metric-label">Outlets</span>
+                <span class="metric-value">${author.professional_info.outlets.join(', ')}</span>
+            </div>
+        ` : ''}
+        
+        ${author.credibility_explanation ? `
+            <div style="margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                <h5 style="margin: 0 0 10px 0; color: #4b5563;">Assessment</h5>
+                <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                    ${author.credibility_explanation.explanation || ''}
+                </p>
+                ${author.credibility_explanation.advice ? `
+                    <p style="margin: 10px 0 0 0; color: #4b5563; font-weight: 500; font-size: 14px;">
+                        💡 ${author.credibility_explanation.advice}
+                    </p>
+                ` : ''}
             </div>
         ` : ''}
     `;
 }
 
 function renderContext(article) {
+    const title = article.title || 'N/A';
+    const domain = article.domain || 'N/A';
+    const publishedDate = article.published_date || article.publish_date || null;
+    const wordCount = article.word_count || null;
+    const topics = article.topics || [];
+    
     return `
         <div class="metric-item">
             <span class="metric-label">Title</span>
-            <span class="metric-value" style="text-align: right; max-width: 60%;">${article.title || 'N/A'}</span>
+            <span class="metric-value" style="text-align: right; max-width: 60%;">${title}</span>
         </div>
         
         <div class="metric-item">
             <span class="metric-label">Domain</span>
-            <span class="metric-value">${article.domain || 'N/A'}</span>
+            <span class="metric-value">${domain}</span>
         </div>
         
         <div class="metric-item">
             <span class="metric-label">Published</span>
-            <span class="metric-value">${article.published_date ? new Date(article.published_date).toLocaleDateString() : 'N/A'}</span>
+            <span class="metric-value">${publishedDate ? new Date(publishedDate).toLocaleDateString() : 'N/A'}</span>
         </div>
         
-        ${article.word_count ? `
+        ${wordCount ? `
             <div class="metric-item">
                 <span class="metric-label">Word Count</span>
-                <span class="metric-value">${article.word_count}</span>
+                <span class="metric-value">${wordCount}</span>
             </div>
         ` : ''}
         
-        ${article.topics && article.topics.length > 0 ? `
+        ${topics.length > 0 ? `
             <h5 style="margin-top: 20px;">Topics</h5>
             <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                ${article.topics.map(topic => `
+                ${topics.map(topic => `
                     <span class="preview-badge medium">${topic}</span>
                 `).join('')}
             </div>
@@ -451,20 +534,27 @@ function renderEmotionalTone(bias) {
     const emotionalTone = bias.emotional_tone || {};
     const manipulationScore = bias.emotional_manipulation_score || 0;
     
+    // Check if we have any emotional tone data
+    const hasEmotionalData = Object.keys(emotionalTone).length > 0;
+    
     return `
-        ${Object.keys(emotionalTone).length > 0 ? `
+        ${hasEmotionalData ? `
             <h5>Detected Emotions</h5>
-            ${Object.entries(emotionalTone).map(([emotion, score]) => `
-                <div class="metric-item">
-                    <span class="metric-label">${formatLabel(emotion)}</span>
-                    <div style="flex: 1; margin: 0 10px;">
-                        <div class="progress-bar" style="height: 6px;">
-                            <div class="progress-fill ${getEmotionClass(score)}" style="width: ${score}%"></div>
+            ${Object.entries(emotionalTone).map(([emotion, score]) => {
+                // Ensure score is a number
+                const numScore = typeof score === 'number' ? score : 0;
+                return `
+                    <div class="metric-item">
+                        <span class="metric-label">${formatLabel(emotion)}</span>
+                        <div style="flex: 1; margin: 0 10px;">
+                            <div class="progress-bar" style="height: 6px;">
+                                <div class="progress-fill ${getEmotionClass(numScore)}" style="width: ${numScore}%"></div>
+                            </div>
                         </div>
+                        <span class="metric-value">${numScore}%</span>
                     </div>
-                    <span class="metric-value">${score}%</span>
-                </div>
-            `).join('')}
+                `;
+            }).join('')}
         ` : '<p style="color: #6b7280;">No emotional tone data available</p>'}
         
         ${manipulationScore > 0 ? `
