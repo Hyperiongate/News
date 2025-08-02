@@ -88,7 +88,7 @@ def rate_limit(max_requests=10, window=60):
         return decorated_function
     return decorator
 
-# Initialize services - CRITICAL FIX
+# Initialize services
 news_extractor = None
 news_analyzer = None
 
@@ -98,9 +98,11 @@ try:
     from services.news_extractor import NewsExtractor
     from services.author_analyzer import AuthorAnalyzer
     from services.bias_analyzer import BiasAnalyzer
-    from services.clickbait_detector import ClickbaitDetector
+    # FIXED: Import ClickbaitAnalyzer instead of ClickbaitDetector
+    from services.clickbait_analyzer import ClickbaitAnalyzer as ClickbaitDetector
     from services.fact_checker import FactChecker
-    from services.source_credibility import SourceCredibility  # FIXED: Not SourceCredibilityAnalyzer
+    # FIXED: Import SourceCredibility, not SourceCredibilityAnalyzer
+    from services.source_credibility import SourceCredibility
     from services.transparency_analyzer import TransparencyAnalyzer
     from services.content_analyzer import ContentAnalyzer
     from services.manipulation_detector import ManipulationDetector
@@ -112,13 +114,9 @@ try:
     from services.pdf_generator import PDFGenerator
     from services.report_generator import ReportGenerator
     
-    # Initialize core services with ScrapingBee support - MOVED HERE!
-    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+    # Initialize core services
+    news_extractor = NewsExtractor()
     news_analyzer = NewsAnalyzer()
-    
-    # Override the extractor in news_analyzer to use ScrapingBee-enabled extractor
-    if hasattr(news_analyzer, 'extractor'):
-        news_analyzer.extractor = news_extractor
     
     logger.info("All services imported successfully")
     logger.info(f"Using REAL NewsAnalyzer: {NewsAnalyzer}")
@@ -139,11 +137,13 @@ except Exception as e:
     logger.error(f"CRITICAL: Unexpected error during imports: {e}")
     logger.error(f"Error details: {traceback.format_exc()}")
     PDF_EXPORT_ENABLED = False
-    
-    # Enhanced fallback NewsExtractor with better timeout and headers
+
+# Only create placeholder classes if imports failed
+if news_extractor is None or news_analyzer is None:
+    # Enhanced fallback NewsExtractor
     class NewsExtractor:
-        def __init__(self, scrapingbee_key=None):
-            self.scrapingbee_key = scrapingbee_key
+        def __init__(self):
+            self.scrapingbee_key = SCRAPINGBEE_API_KEY
             self.headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -586,7 +586,7 @@ except Exception as e:
     class NewsAnalyzer:
         """Main news analyzer orchestrator"""
         def __init__(self):
-            self.extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+            self.extractor = NewsExtractor()
             self.author_analyzer = AuthorAnalyzer()
             self.bias_analyzer = BiasAnalyzer()
             self.clickbait_detector = ClickbaitDetector()
@@ -710,9 +710,9 @@ except Exception as e:
     
     logger.warning("Using PLACEHOLDER implementations")
 
-# Initialize services with placeholders - ONLY IF IMPORTS FAILED
+# Only initialize if needed
 if news_extractor is None:
-    news_extractor = NewsExtractor(SCRAPINGBEE_API_KEY)
+    news_extractor = NewsExtractor()
     logger.warning("Created PLACEHOLDER NewsExtractor")
 if news_analyzer is None:
     news_analyzer = NewsAnalyzer()
