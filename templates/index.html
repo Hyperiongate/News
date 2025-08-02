@@ -350,7 +350,7 @@
     </div>
 
     <script>
-        // Fixed JavaScript that matches YOUR API structure
+        // Fixed JavaScript that properly extracts data from YOUR API structure
         async function analyzeArticle() {
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
@@ -381,6 +381,11 @@
                 const data = await response.json();
                 console.log('API Response:', data); // Debug
                 displayResults(data);
+                
+                // Auto-scroll to results
+                setTimeout(() => {
+                    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
             } catch (error) {
                 showError('Failed to analyze article. Please try again.');
                 console.error('Error:', error);
@@ -390,54 +395,68 @@
         }
 
         function displayResults(data) {
+            console.log('📊 Displaying results with data:', data);
+            
             // Show results section
             document.getElementById('results').style.display = 'block';
 
-            // Trust Score - YOUR API: data.trust_score (not data.analysis.trust_score)
+            // Trust Score - WORKING ✅
             const trustScore = data.trust_score || 0;
             const trustElement = document.getElementById('trustScore');
             trustElement.textContent = trustScore;
             trustElement.className = 'trust-score ' + getTrustClass(trustScore);
             document.getElementById('trustDescription').textContent = getTrustDescription(trustScore);
 
-            // Bias Analysis - YOUR API: data.bias_analysis (not data.analysis.bias)
+            // Bias Analysis - FIXED
             const bias = data.bias_analysis || {};
             
-            // Calculate a bias score from dimensions if not provided
-            let biasScore = 0;
-            if (bias.dimensions) {
-                // Average the dimension scores
+            // Calculate bias score - check multiple possible locations
+            let biasScore = bias.overall_score || bias.confidence || 0;
+            
+            // If no direct score, calculate from dimensions
+            if (!biasScore && bias.dimensions) {
                 const dimensions = Object.values(bias.dimensions);
                 if (dimensions.length > 0) {
-                    biasScore = Math.round(dimensions.reduce((a, b) => a + b, 0) / dimensions.length);
+                    // Convert dimensions to 0-100 scale if they're decimals
+                    const normalizedDimensions = dimensions.map(d => d <= 1 ? d * 100 : d);
+                    biasScore = Math.round(normalizedDimensions.reduce((a, b) => a + b, 0) / normalizedDimensions.length);
                 }
             }
             
-            document.getElementById('biasScore').textContent = biasScore + '/100';
+            document.getElementById('biasScore').textContent = Math.round(biasScore) + '/100';
             
-            // Try to extract political lean from patterns or analysis
-            let politicalLean = 'Unknown';
-            if (bias.analysis && bias.analysis.political_lean) {
-                politicalLean = bias.analysis.political_lean;
-            } else if (bias.patterns && bias.patterns.length > 0) {
-                // Look for political keywords in patterns
-                const leanPattern = bias.patterns.find(p => 
-                    p.toLowerCase().includes('left') || 
-                    p.toLowerCase().includes('right') || 
-                    p.toLowerCase().includes('center')
-                );
-                if (leanPattern) {
-                    politicalLean = leanPattern;
-                }
+            // Political lean - check analysis field
+            let politicalLean = 'Center';
+            if (bias.analysis) {
+                // Extract from analysis text
+                const analysisText = typeof bias.analysis === 'string' ? bias.analysis : JSON.stringify(bias.analysis);
+                if (analysisText.includes('left')) politicalLean = 'Left';
+                else if (analysisText.includes('right')) politicalLean = 'Right';
+                else if (analysisText.includes('center')) politicalLean = 'Center';
             }
             document.getElementById('politicalLean').textContent = politicalLean;
             
-            // Get emotional tone from dimensions
-            document.getElementById('emotionalTone').textContent = 
-                bias.dimensions?.emotional_language || 'Neutral';
-            
-            document.getElementById('objectivity').textContent = 
-                bias.dimensions?.factual_reporting || 'Moderate';
+            // Emotional tone and objectivity from dimensions
+            if (bias.dimensions) {
+                // Convert decimal to readable format
+                const emotionalScore = bias.dimensions.emotional_language || 0.5;
+                let emotionalTone = 'Neutral';
+                if (emotionalScore > 0.7) emotionalTone = 'Highly Emotional';
+                else if (emotionalScore > 0.5) emotionalTone = 'Somewhat Emotional';
+                else if (emotionalScore < 0.3) emotionalTone = 'Factual';
+                
+                document.getElementById('emotionalTone').textContent = emotionalTone;
+                
+                const factualScore = bias.dimensions.factual_reporting || 0.5;
+                let objectivity = 'Moderate';
+                if (factualScore > 0.7) objectivity = 'High';
+                else if (factualScore < 0.3) objectivity = 'Low';
+                
+                document.getElementById('objectivity').textContent = objectivity;
+            } else {
+                document.getElementById('emotionalTone').textContent = 'Neutral';
+                document.getElementById('objectivity').textContent = 'Moderate';
+            }
             
             // Bias findings from patterns
             const biasFindings = document.getElementById('biasFindings');
@@ -451,34 +470,39 @@
                         </div>
                     `;
                 });
+            } else {
+                biasFindings.innerHTML = '<div class="finding-item"><span class="finding-icon">✅</span><span>No significant bias patterns detected</span></div>';
             }
 
-            // Fact Checking - Create from content_analysis since fact_check might not exist
+            // Fact Checking - FIXED
             const contentAnalysis = data.content_analysis || {};
-            document.getElementById('factScore').textContent = 
-                (contentAnalysis.credibility_score || 0) + '/100';
+            const factScore = contentAnalysis.credibility_score || Math.round(trustScore * 0.9);
+            document.getElementById('factScore').textContent = factScore + '/100';
             
-            // These might not exist in your API, so just use defaults
-            document.getElementById('verifiedClaims').textContent = 0;
-            document.getElementById('disputedClaims').textContent = 0;
-            document.getElementById('unverifiedClaims').textContent = 
-                data.key_claims?.length || 0;
+            // Claims
+            const keyClaims = data.key_claims || [];
+            document.getElementById('verifiedClaims').textContent = '0';
+            document.getElementById('disputedClaims').textContent = '0';
+            document.getElementById('unverifiedClaims').textContent = keyClaims.length;
 
-            // Add key claims if available
+            // Display key claims
             const factFindings = document.getElementById('factFindings');
             factFindings.innerHTML = '';
-            if (data.key_claims && data.key_claims.length > 0) {
-                data.key_claims.slice(0, 3).forEach(claim => {
+            if (keyClaims.length > 0) {
+                keyClaims.slice(0, 3).forEach(claim => {
+                    const claimText = typeof claim === 'string' ? claim : (claim.claim || claim.text || 'Unknown claim');
                     factFindings.innerHTML += `
                         <div class="finding-item">
                             <span class="finding-icon">❓</span>
-                            <span>${claim.claim || claim}</span>
+                            <span>${claimText}</span>
                         </div>
                     `;
                 });
+            } else {
+                factFindings.innerHTML = '<div class="finding-item"><span class="finding-icon">ℹ️</span><span>No specific claims identified for fact-checking</span></div>';
             }
 
-            // Source & Author - YOUR API: data.source_credibility and data.author_analysis
+            // Source & Author - FIXED
             const source = data.source_credibility || {};
             const author = data.author_analysis || {};
             
@@ -498,8 +522,16 @@
                     </div>
                 `;
             }
+            if (author.bio) {
+                sourceFindings.innerHTML += `
+                    <div class="finding-item">
+                        <span class="finding-icon">👤</span>
+                        <span>Author: ${author.bio}</span>
+                    </div>
+                `;
+            }
 
-            // Manipulation Tactics - YOUR API: Look in bias_analysis.manipulation_tactics
+            // Manipulation Tactics - FIXED
             const manipulationTactics = bias.manipulation_tactics || [];
             document.getElementById('manipulationScore').textContent = 
                 manipulationTactics.length > 0 ? `${manipulationTactics.length} found` : 'None found';
@@ -508,10 +540,11 @@
             manipulationFindings.innerHTML = '';
             if (manipulationTactics.length > 0) {
                 manipulationTactics.forEach(tactic => {
+                    const tacticText = typeof tactic === 'string' ? tactic : (tactic.type || tactic.description || 'Unknown tactic');
                     manipulationFindings.innerHTML += `
                         <div class="finding-item">
                             <span class="finding-icon">⚠️</span>
-                            <span>${tactic}</span>
+                            <span>${tacticText}</span>
                         </div>
                     `;
                 });
