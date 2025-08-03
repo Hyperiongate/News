@@ -6,10 +6,5 @@ services:
     startCommand: gunicorn app:app --config gunicorn_config.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.8
-      - key: FLASK_ENV
-        value: production
-      - key: PORT
-        value: 5000
-    healthCheckPath: /api/health
-    region: oregon # You can change this to your preferred region
+        value: 3.11.0
+    staticPublishPath: ./static
