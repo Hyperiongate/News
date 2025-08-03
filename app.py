@@ -65,38 +65,61 @@ def serve_static(filename):
 def analyze():
     """
     Main analysis endpoint - simplified and focused
-    Accepts: { "url": "https://..." }
+    Accepts: { "url": "https://..." } or { "text": "article text..." }
     Returns: Comprehensive analysis with trust score
     """
     try:
         # Get request data
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
+            return jsonify({'error': 'No data provided', 'success': False}), 400
         
+        # Determine input type
         url = data.get('url')
-        if not url:
-            return jsonify({'error': 'URL is required'}), 400
+        text = data.get('text')
+        is_pro = data.get('is_pro', False)
         
-        logger.info(f"Analyzing URL: {url}")
+        if not url and not text:
+            return jsonify({'error': 'Either URL or text is required', 'success': False}), 400
+        
+        # Log the analysis request
+        if url:
+            logger.info(f"Analyzing URL: {url}")
+        else:
+            logger.info(f"Analyzing text content ({len(text)} characters)")
         
         # Perform analysis
         if news_analyzer:
-            # Use the full analyzer
-            result = news_analyzer.analyze(url, content_type='url')
-            
-            # Ensure we have a trust score
-            if 'trust_score' not in result:
-                result['trust_score'] = calculate_trust_score(result)
-            
-            # Add metadata
-            result['analysis_timestamp'] = datetime.now().isoformat()
-            result['api_version'] = '2.0'
-            
-            return jsonify(result)
+            try:
+                # Use the appropriate content type
+                if url:
+                    result = news_analyzer.analyze(url, content_type='url', is_pro=is_pro)
+                else:
+                    result = news_analyzer.analyze(text, content_type='text', is_pro=is_pro)
+                
+                # Check if analysis was successful
+                if not result.get('success', False):
+                    # If analysis failed, return a user-friendly error with placeholder data
+                    logger.warning(f"Analysis failed: {result.get('error', 'Unknown error')}")
+                    return jsonify(create_error_response(url or 'Text Article', result.get('error', 'Analysis failed')))
+                
+                # Ensure we have a trust score
+                if 'trust_score' not in result:
+                    result['trust_score'] = calculate_trust_score(result)
+                
+                # Add metadata
+                result['analysis_timestamp'] = datetime.now().isoformat()
+                result['api_version'] = '2.0'
+                
+                return jsonify(result)
+                
+            except Exception as e:
+                logger.error(f"Analysis processing error: {e}", exc_info=True)
+                # Return placeholder data on error
+                return jsonify(create_error_response(url or 'Text Article', str(e)))
         else:
-            # Fallback to basic analysis
-            return jsonify(create_placeholder_analysis(url))
+            # Services not available - return placeholder
+            return jsonify(create_placeholder_analysis(url or 'Text Article'))
             
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
@@ -127,13 +150,13 @@ def calculate_trust_score(analysis: Dict[str, Any]) -> int:
     weights = []
     
     # Bias score (inverted - less bias = higher score)
-    if 'bias_analysis' in analysis:
+    if 'bias_analysis' in analysis and analysis['bias_analysis']:
         bias_score = analysis['bias_analysis'].get('bias_score', 0)
         scores.append(100 - abs(bias_score * 100))
         weights.append(0.2)
     
     # Source credibility
-    if 'source_credibility' in analysis:
+    if 'source_credibility' in analysis and analysis['source_credibility']:
         rating = analysis['source_credibility'].get('rating', 'Unknown')
         source_scores = {
             'High': 90,
@@ -146,7 +169,7 @@ def calculate_trust_score(analysis: Dict[str, Any]) -> int:
         weights.append(0.3)
     
     # Author credibility
-    if 'author_analysis' in analysis:
+    if 'author_analysis' in analysis and analysis['author_analysis']:
         author_score = analysis['author_analysis'].get('credibility_score', 50)
         scores.append(author_score)
         weights.append(0.2)
@@ -173,7 +196,52 @@ def calculate_trust_score(analysis: Dict[str, Any]) -> int:
     
     return 50  # Default middle score
 
-def create_placeholder_analysis(url: str) -> Dict[str, Any]:
+def create_error_response(identifier: str, error_message: str) -> Dict[str, Any]:
+    """
+    Create an error response that still displays in the UI
+    """
+    return {
+        'success': True,  # Set to true so UI displays it
+        'error_occurred': True,
+        'error_message': error_message,
+        'article': {
+            'url': identifier if identifier.startswith('http') else '',
+            'title': 'Article Could Not Be Analyzed',
+            'domain': identifier.split('/')[2] if '/' in identifier and identifier.startswith('http') else 'unknown',
+            'author': 'Unknown Author',
+            'publish_date': datetime.now().isoformat(),
+            'summary': f'We encountered an error while analyzing this article: {error_message}. This could be due to the website blocking automated access, network issues, or the article being behind a paywall.'
+        },
+        'trust_score': 0,  # 0 indicates error
+        'bias_analysis': {
+            'overall_bias': 'Cannot Determine',
+            'bias_score': 0,
+            'political_lean': 0,
+            'confidence': 0
+        },
+        'source_credibility': {
+            'domain': identifier.split('/')[2] if '/' in identifier and identifier.startswith('http') else 'unknown',
+            'rating': 'Cannot Determine',
+            'credibility': 'Analysis failed'
+        },
+        'author_analysis': {
+            'found': False,
+            'name': 'Unknown Author',
+            'credibility_score': 0
+        },
+        'fact_checks': [],
+        'clickbait_score': 0,
+        'transparency_analysis': {
+            'transparency_score': 0,
+            'has_author': False,
+            'has_date': False,
+            'has_sources': False
+        },
+        'analysis_timestamp': datetime.now().isoformat(),
+        'is_error': True
+    }
+
+def create_placeholder_analysis(identifier: str) -> Dict[str, Any]:
     """
     Create a placeholder analysis for when services are unavailable
     This ensures the frontend always gets usable data
@@ -181,12 +249,12 @@ def create_placeholder_analysis(url: str) -> Dict[str, Any]:
     return {
         'success': True,
         'article': {
-            'url': url,
-            'title': 'Article Analysis in Progress',
-            'domain': url.split('/')[2] if '/' in url else 'unknown',
+            'url': identifier if identifier.startswith('http') else '',
+            'title': 'Analysis Service Temporarily Unavailable',
+            'domain': identifier.split('/')[2] if '/' in identifier and identifier.startswith('http') else 'unknown',
             'author': 'Unknown Author',
             'publish_date': datetime.now().isoformat(),
-            'summary': 'This article is being analyzed. Full analysis requires all services to be running.'
+            'summary': 'The analysis service is temporarily unavailable. Please try again in a few moments.'
         },
         'trust_score': 50,
         'bias_analysis': {
@@ -196,7 +264,7 @@ def create_placeholder_analysis(url: str) -> Dict[str, Any]:
             'confidence': 0.5
         },
         'source_credibility': {
-            'domain': url.split('/')[2] if '/' in url else 'unknown',
+            'domain': identifier.split('/')[2] if '/' in identifier and identifier.startswith('http') else 'unknown',
             'rating': 'Unknown',
             'credibility': 'Being evaluated'
         },
