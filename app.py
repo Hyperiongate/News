@@ -10,8 +10,8 @@ from flask_cors import CORS
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-# Import only the essential services
-from services.news_extractor import NewsExtractor
+# Import only the essential services - FIXED: Using ArticleExtractor instead of NewsExtractor
+from services.article_extractor import ArticleExtractor
 from services.news_analyzer import NewsAnalyzer
 
 # Configure logging
@@ -25,12 +25,12 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
 # Initialize services
 try:
-    news_extractor = NewsExtractor()
+    article_extractor = ArticleExtractor()  # Changed from news_extractor
     news_analyzer = NewsAnalyzer()
     logger.info("Services initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing services: {e}")
-    news_extractor = None
+    article_extractor = None
     news_analyzer = None
 
 @app.route('/')
@@ -89,7 +89,7 @@ def health():
     return jsonify({
         'status': 'healthy',
         'services': {
-            'news_extractor': news_extractor is not None,
+            'article_extractor': article_extractor is not None,  # Changed from news_extractor
             'news_analyzer': news_analyzer is not None
         },
         'timestamp': datetime.now().isoformat()
