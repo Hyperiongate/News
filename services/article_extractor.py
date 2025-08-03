@@ -83,9 +83,13 @@ class ArticleExtractor:
         # Try methods in order of speed/reliability
         methods = [
             ("standard requests", self._extract_with_requests),
-            ("cloudscraper", self._extract_with_cloudscraper),
-            ("curl-cffi", self._extract_with_curl_cffi),
         ]
+        
+        # Only add advanced methods if available
+        if CLOUDSCRAPER_AVAILABLE:
+            methods.append(("cloudscraper", self._extract_with_cloudscraper))
+        if CURL_CFFI_AVAILABLE:
+            methods.append(("curl-cffi", self._extract_with_curl_cffi))
         
         last_error = None
         for method_name, method_func in methods:
