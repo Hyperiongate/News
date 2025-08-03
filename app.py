@@ -5,12 +5,12 @@ Clean, maintainable, and focused on what works
 
 import os
 import logging
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-# Import only the essential services - FIXED: Using ArticleExtractor instead of NewsExtractor
+# Import only the essential services
 from services.article_extractor import ArticleExtractor
 from services.news_analyzer import NewsAnalyzer
 
@@ -18,14 +18,16 @@ from services.news_analyzer import NewsAnalyzer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with explicit static folder configuration
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static')
 CORS(app)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
 # Initialize services
 try:
-    article_extractor = ArticleExtractor()  # Changed from news_extractor
+    article_extractor = ArticleExtractor()
     news_analyzer = NewsAnalyzer()
     logger.info("Services initialized successfully")
 except Exception as e:
@@ -37,6 +39,27 @@ except Exception as e:
 def index():
     """Serve the main page"""
     return render_template('index.html')
+
+# Add explicit static file routing to handle the CSS file name mismatch
+@app.route('/static/css/styles.css')
+def serve_styles_css():
+    """Serve style.css as styles.css for backward compatibility"""
+    try:
+        return send_from_directory('static/css', 'style.css', mimetype='text/css')
+    except Exception as e:
+        logger.error(f"Error serving styles.css: {e}")
+        # Return empty CSS to prevent broken styling
+        return '', 404
+
+# Additional route to serve all static files properly
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files with proper error handling"""
+    try:
+        return send_from_directory('static', filename)
+    except Exception as e:
+        logger.error(f"Error serving static file {filename}: {e}")
+        return '', 404
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -89,7 +112,7 @@ def health():
     return jsonify({
         'status': 'healthy',
         'services': {
-            'article_extractor': article_extractor is not None,  # Changed from news_extractor
+            'article_extractor': article_extractor is not None,
             'news_analyzer': news_analyzer is not None
         },
         'timestamp': datetime.now().isoformat()
