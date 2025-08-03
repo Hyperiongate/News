@@ -1,4 +1,3 @@
-
 """
 services/news_analyzer.py - Main orchestrator with FIXED imports and author analysis
 Complete version with fact checking integration and ENHANCED BIAS ANALYSIS
@@ -12,8 +11,8 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-# Import only the services that actually exist
-from services.news_extractor import NewsExtractor
+# Import only the services that actually exist - FIXED: Using ArticleExtractor
+from services.article_extractor import ArticleExtractor
 from services.fact_checker import FactChecker
 from services.source_credibility import SourceCredibility
 from services.author_analyzer import AuthorAnalyzer
@@ -69,8 +68,8 @@ class NewsAnalyzer:
     
     def __init__(self):
         """Initialize all analysis components"""
-        # Core services (always available)
-        self.extractor = NewsExtractor()
+        # Core services (always available) - FIXED: Using ArticleExtractor
+        self.extractor = ArticleExtractor()
         self.fact_checker = FactChecker()
         self.source_credibility = SourceCredibility()
         self.author_analyzer = AuthorAnalyzer()
@@ -123,11 +122,12 @@ class NewsAnalyzer:
             # Step 1: Extract article content
             if content_type == 'url':
                 logger.info(f"Extracting article from URL: {content}")
-                article_data = self.extractor.extract_article(content)
-                if not article_data:
+                # FIXED: Using ArticleExtractor's extract method
+                article_data = self.extractor.extract(content)
+                if not article_data or article_data.get('error'):
                     return {
                         'success': False,
-                        'error': 'Could not extract article content'
+                        'error': article_data.get('error', 'Could not extract article content')
                     }
             else:
                 # For text input, create article data structure
@@ -485,7 +485,7 @@ class NewsAnalyzer:
                 'article': {
                     'title': article_data.get('title', 'Untitled'),
                     'author': article_data.get('author', 'Unknown Author'),
-                    'publish_date': article_data.get('publish_date'),
+                    'publish_date': article_data.get('publish_date') or article_data.get('date'),
                     'url': article_data.get('url'),
                     'domain': article_data.get('domain', 'unknown'),
                     'text_preview': article_data['text'][:500] + '...' if len(article_data['text']) > 500 else article_data['text']
