@@ -96,12 +96,14 @@ class TruthLensApp {
                 })
             });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Analysis failed');
+            const data = await response.json();
+            
+            // Check if the response indicates an error
+            if (!response.ok || data.error) {
+                throw new Error(data.error || data.details || 'Analysis failed');
             }
 
-            const data = await response.json();
+            // Store the analysis data
             this.currentAnalysis = data;
             
             // Hide progress
@@ -115,8 +117,13 @@ class TruthLensApp {
             
         } catch (error) {
             console.error('Analysis error:', error);
-            this.showError(error.message || 'An error occurred during analysis');
+            this.showError(error.message || 'An error occurred during analysis. Please try a different article.');
             this.hideProgress();
+            
+            // Show placeholder results if we have partial data
+            if (this.currentAnalysis && this.currentAnalysis.success) {
+                this.displayResults(this.currentAnalysis);
+            }
         } finally {
             // Re-enable buttons
             analyzeBtns.forEach(btn => {
@@ -133,6 +140,17 @@ class TruthLensApp {
         // Reset progress
         const stages = ['extract', 'author', 'bias', 'facts', 'score'];
         let currentStage = 0;
+        
+        // Clear any existing interval
+        if (this.progressInterval) {
+            clearInterval(this.progressInterval);
+        }
+        
+        // Reset all stages
+        document.querySelectorAll('.stage').forEach(stage => {
+            stage.classList.remove('active', 'complete');
+        });
+        document.getElementById('progressFill').style.width = '0%';
         
         // Animate stages
         this.progressInterval = setInterval(() => {
@@ -152,6 +170,10 @@ class TruthLensApp {
                 document.getElementById('progressFill').style.width = `${progress}%`;
                 
                 currentStage++;
+            } else {
+                // Clear interval when complete
+                clearInterval(this.progressInterval);
+                this.progressInterval = null;
             }
         }, 800);
     }
@@ -170,6 +192,7 @@ class TruthLensApp {
         document.querySelectorAll('.stage').forEach(stage => {
             stage.classList.remove('active', 'complete');
         });
+        document.getElementById('progressFill').style.width = '0%';
     }
 
     displayResults(data) {
@@ -184,6 +207,13 @@ class TruthLensApp {
             });
         }, 100);
 
+        // Check if this is an error response
+        if (data.is_error || data.error_occurred) {
+            // Special handling for error responses
+            this.displayErrorResults(data);
+            return;
+        }
+
         // Display trust score with animation
         const trustScore = data.trust_score || 50;
         this.animateTrustScore(trustScore);
@@ -196,12 +226,18 @@ class TruthLensApp {
         document.getElementById('publishDate').textContent = this.formatDate(article.publish_date);
         
         // Display summary
-        const summary = data.article_summary || article.text_preview || 'No summary available';
+        const summary = data.article_summary || article.summary || article.text_preview || 'No summary available';
         document.getElementById('articleSummary').textContent = summary;
         
         // Display trust breakdown
-        document.getElementById('trustBreakdown').innerHTML = 
-            analysisComponents.createTrustBreakdown(data);
+        if (analysisComponents && analysisComponents.createTrustBreakdown) {
+            document.getElementById('trustBreakdown').innerHTML = 
+                analysisComponents.createTrustBreakdown(data);
+        } else {
+            // Fallback if components not loaded
+            document.getElementById('trustBreakdown').innerHTML = 
+                '<p>Trust score breakdown is loading...</p>';
+        }
         
         // Add trust factor styles
         this.addTrustFactorStyles();
@@ -212,16 +248,58 @@ class TruthLensApp {
         }
     }
 
+    displayErrorResults(data) {
+        // Display error-specific UI
+        const trustScore = 0;
+        this.animateTrustScore(trustScore);
+        
+        // Update trust label for error
+        const label = document.getElementById('trustLabel');
+        const description = document.getElementById('trustDescription');
+        
+        label.textContent = 'Analysis Failed';
+        description.textContent = data.error_message || 'We were unable to analyze this article. This could be due to website restrictions, network issues, or the content being behind a paywall.';
+        
+        // Display article info (what we have)
+        const article = data.article || {};
+        document.getElementById('articleTitle').textContent = article.title || 'Article Could Not Be Analyzed';
+        document.getElementById('sourceName').textContent = article.domain || 'Unknown Source';
+        document.getElementById('authorName').textContent = 'Unknown';
+        document.getElementById('publishDate').textContent = 'Unknown';
+        
+        // Display error message as summary
+        document.getElementById('articleSummary').textContent = article.summary || 
+            'The article could not be retrieved or analyzed. Please try a different article or check if the URL is accessible.';
+        
+        // Show error in trust breakdown
+        document.getElementById('trustBreakdown').innerHTML = `
+            <div class="error-info">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Unable to calculate trust score due to analysis error.</p>
+                <p class="error-details">${data.error_message || 'Unknown error occurred'}</p>
+            </div>
+        `;
+    }
+
     animateTrustScore(score) {
+        // Ensure score is valid
+        score = Math.max(0, Math.min(100, score || 0));
+        
         // Create gauge chart
-        analysisComponents.createTrustScoreGauge('trustScoreGauge', score);
+        if (analysisComponents && analysisComponents.createTrustScoreGauge) {
+            analysisComponents.createTrustScoreGauge('trustScoreGauge', score);
+        }
         
         // Set label and description
         const label = document.getElementById('trustLabel');
         const description = document.getElementById('trustDescription');
         
         let labelText, descText;
-        if (score >= 80) {
+        if (score === 0) {
+            // Error case
+            labelText = 'Analysis Error';
+            descText = 'Unable to determine credibility score. Please try a different article.';
+        } else if (score >= 80) {
             labelText = 'Highly Credible';
             descText = 'This article demonstrates strong credibility with verified information and reliable sourcing.';
         } else if (score >= 60) {
@@ -289,6 +367,23 @@ class TruthLensApp {
                     border-radius: 4px;
                     transition: width 1s ease-out;
                     animation: fillBar 1s ease-out;
+                }
+                
+                .error-info {
+                    text-align: center;
+                    padding: 2rem;
+                    color: var(--danger);
+                }
+                
+                .error-info i {
+                    font-size: 3rem;
+                    margin-bottom: 1rem;
+                }
+                
+                .error-details {
+                    margin-top: 0.5rem;
+                    font-size: 0.9rem;
+                    color: var(--gray);
                 }
                 
                 @keyframes slideIn {
@@ -380,7 +475,7 @@ class TruthLensApp {
                 grid.innerHTML += cardHtml;
                 
                 // Special handling for bias visualization
-                if (index === 1 && data.bias_analysis) {
+                if (index === 1 && data.bias_analysis && analysisComponents.createBiasVisualization) {
                     setTimeout(() => {
                         analysisComponents.createBiasVisualization(data.bias_analysis);
                     }, 100);
@@ -482,6 +577,7 @@ class TruthLensApp {
         if (!dateStr) return 'Unknown';
         try {
             const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 'Unknown';
             return date.toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'long', 
@@ -509,13 +605,23 @@ class TruthLensApp {
     }
 }
 
-// Add shake animation
+// Add shake animation and error styles
 const shakeStyle = document.createElement('style');
 shakeStyle.innerHTML = `
     @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-10px); }
         75% { transform: translateX(10px); }
+    }
+    
+    .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        display: none;
+        border: 1px solid #fcc;
     }
 `;
 document.head.appendChild(shakeStyle);
