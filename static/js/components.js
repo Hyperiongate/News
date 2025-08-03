@@ -5,10 +5,14 @@ class AnalysisComponents {
         this.charts = {};
     }
 
-    // Trust Score Gauge (Free Tier)
+    // Trust Score Gauge (Free Tier) - FIXED SIZING
     createTrustScoreGauge(canvasId, score) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
+        
+        // Set proper canvas size
+        canvas.width = 300;
+        canvas.height = 200;
         
         const ctx = canvas.getContext('2d');
         
@@ -27,7 +31,7 @@ class AnalysisComponents {
         else if (score >= 40) color = '#f59e0b';
         else color = '#ef4444';
 
-        // Create semi-circular gauge
+        // Create semi-circular gauge with proper sizing
         this.charts[canvasId] = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -45,8 +49,11 @@ class AnalysisComponents {
                     tooltip: { enabled: false }
                 },
                 cutout: '75%',
-                responsive: true,
-                maintainAspectRatio: true,
+                responsive: false,  // Disable responsive to control size
+                maintainAspectRatio: false,
+                layout: {
+                    padding: 20
+                },
                 animation: {
                     animateRotate: true,
                     animateScale: false
@@ -60,17 +67,18 @@ class AnalysisComponents {
                     
                     ctx.save();
                     
-                    // Draw the score number
+                    // Draw the score number - properly positioned
                     ctx.font = 'bold 48px -apple-system, sans-serif';
                     ctx.fillStyle = color;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(score, width / 2, height / 2 + 10);
+                    // Position text in the center of the semi-circle
+                    ctx.fillText(score, width / 2, height - 50);
                     
                     // Draw the "/100" text
                     ctx.font = 'normal 20px -apple-system, sans-serif';
                     ctx.fillStyle = '#6b7280';
-                    ctx.fillText('/100', width / 2 + 40, height / 2 + 20);
+                    ctx.fillText('/100', width / 2 + 40, height - 40);
                     
                     ctx.restore();
                 }
@@ -466,10 +474,14 @@ class AnalysisComponents {
         return dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
-    // Bias Visualization
+    // Bias Visualization - properly sized
     createBiasVisualization(biasData) {
         const canvas = document.getElementById('biasChart');
         if (!canvas || !biasData.bias_dimensions) return;
+        
+        // Set proper canvas size
+        canvas.width = 300;
+        canvas.height = 200;
         
         const ctx = canvas.getContext('2d');
         
@@ -498,6 +510,8 @@ class AnalysisComponents {
                 }]
             },
             options: {
+                responsive: false,
+                maintainAspectRatio: false,
                 elements: {
                     line: {
                         borderWidth: 3
