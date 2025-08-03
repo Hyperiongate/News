@@ -1,428 +1,217 @@
-# services/article_extractor.py
 """
-Article Extractor Service
-Extracts and processes article content from URLs
+Simplified News Analyzer API
+Clean, maintainable, and focused on what works
 """
 
-import re
+import os
 import logging
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
+# Import only the essential services - FIXED: Using ArticleExtractor instead of NewsExtractor
+from services.article_extractor import ArticleExtractor
+from services.news_analyzer import NewsAnalyzer
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class ArticleExtractor:
+# Initialize Flask app with explicit static folder configuration
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static')
+CORS(app)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+
+# Initialize services
+try:
+    article_extractor = ArticleExtractor()  # Changed from news_extractor
+    news_analyzer = NewsAnalyzer()
+    logger.info("Services initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing services: {e}")
+    article_extractor = None
+    news_analyzer = None
+
+@app.route('/')
+def index():
+    """Serve the main page"""
+    return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    """Return empty favicon to prevent 404"""
+    return '', 204
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
     """
-    Extract article content from URLs
-    This is a wrapper around NewsExtractor for backward compatibility
-    but can also work standalone
+    Main analysis endpoint - simplified and focused
+    Accepts: { "url": "https://..." }
+    Returns: Comprehensive analysis with trust score
     """
-    
-    def __init__(self):
-        """Initialize the article extractor"""
-        self.timeout = 10
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+    try:
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
         
-        # Try to import NewsExtractor if available
-        self.news_extractor = None
-        try:
-            from .news_extractor import NewsExtractor
-            self.news_extractor = NewsExtractor()
-        except ImportError:
-            logger.warning("NewsExtractor not available, using basic extraction")
-    
-    def extract(self, url: str) -> Dict[str, Any]:
-        """
-        Extract article content from URL
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'URL is required'}), 400
         
-        Args:
-            url: URL of the article to extract
-            
-        Returns:
-            Dictionary containing article data or error
-        """
-        # Use NewsExtractor if available
-        if self.news_extractor:
-            result = self.news_extractor.extract_article(url)
-            # Ensure all expected fields exist
-            return self._normalize_result(result)
+        logger.info(f"Analyzing URL: {url}")
         
-        # Otherwise use basic extraction
-        try:
-            # Validate URL
-            if not url or not self._is_valid_url(url):
-                return {'error': 'Invalid URL provided'}
+        # Perform analysis
+        if news_analyzer:
+            # Use the full analyzer
+            result = news_analyzer.analyze(url, content_type='url')
             
-            # Fetch the page
-            response = requests.get(url, headers=self.headers, timeout=self.timeout)
-            response.raise_for_status()
+            # Ensure we have a trust score
+            if 'trust_score' not in result:
+                result['trust_score'] = calculate_trust_score(result)
             
-            # Parse HTML
-            soup = BeautifulSoup(response.content, 'html.parser')
+            # Add metadata
+            result['analysis_timestamp'] = datetime.now().isoformat()
+            result['api_version'] = '2.0'
             
-            # Extract article data
-            article_data = {
-                'url': url,
-                'title': self._extract_title(soup),
-                'author': self._extract_author(soup),
-                'date': self._extract_date(soup),
-                'content': self._extract_content(soup),
-                'excerpt': '',
-                'images': self._extract_images(soup, url),
-                'domain': urlparse(url).netloc.replace('www.', ''),
-                'html': str(soup),
-                'success': True
+            return jsonify(result)
+        else:
+            # Fallback to basic analysis
+            return jsonify(create_placeholder_analysis(url))
+            
+    except Exception as e:
+        logger.error(f"Analysis error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Analysis failed',
+            'details': str(e),
+            'success': False
+        }), 500
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    import os
+    return jsonify({
+        'status': 'healthy',
+        'services': {
+            'article_extractor': article_extractor is not None,  # Changed from news_extractor
+            'news_analyzer': news_analyzer is not None
+        },
+        'timestamp': datetime.now().isoformat(),
+        'debug': {
+            'cwd': os.getcwd(),
+            'static_folder': app.static_folder,
+            'static_files_exist': {
+                'css': os.path.exists(os.path.join(app.static_folder, 'css', 'styles.css')) if app.static_folder else False,
+                'js_app': os.path.exists(os.path.join(app.static_folder, 'js', 'app.js')) if app.static_folder else False,
+                'js_components': os.path.exists(os.path.join(app.static_folder, 'js', 'components.js')) if app.static_folder else False
             }
-            
-            # Process content
-            if article_data['content']:
-                article_data['text'] = article_data['content']  # Alias for compatibility
-                article_data['word_count'] = len(article_data['content'].split())
-                article_data['reading_time'] = max(1, article_data['word_count'] // 200)
-                article_data['excerpt'] = self._create_excerpt(article_data['content'])
-                article_data['language'] = self._detect_language(article_data['content'])
-            else:
-                article_data['word_count'] = 0
-                article_data['reading_time'] = 0
-                article_data['language'] = 'en'
-            
-            # Extract additional metadata
-            article_data['keywords'] = self._extract_keywords(soup)
-            article_data['categories'] = self._extract_categories(soup)
-            article_data['tags'] = self._extract_tags(soup)
-            article_data['links'] = self._extract_links(soup, url)
-            
-            return article_data
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Network error extracting article: {e}")
-            return {'error': f'Network error: {str(e)}'}
-        except Exception as e:
-            logger.error(f"Error extracting article: {e}")
-            return {'error': f'Extraction failed: {str(e)}'}
-    
-    def _normalize_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize result to ensure all expected fields exist"""
-        if result.get('error'):
-            return result
-        
-        # Ensure all fields exist
-        normalized = {
-            'url': result.get('url', ''),
-            'title': result.get('title', 'Unknown Title'),
-            'author': result.get('author', 'Unknown'),
-            'date': result.get('date') or result.get('publish_date'),
-            'domain': result.get('domain', ''),
-            'content': result.get('content') or result.get('text', ''),
-            'text': result.get('text') or result.get('content', ''),
-            'excerpt': result.get('excerpt', ''),
-            'images': result.get('images', []),
-            'word_count': result.get('word_count', 0),
-            'reading_time': result.get('reading_time', 0),
-            'language': result.get('language', 'en'),
-            'keywords': result.get('keywords', []),
-            'categories': result.get('categories', []),
-            'tags': result.get('tags', []),
-            'links': result.get('links', []),
-            'html': result.get('html', ''),
-            'success': True
         }
-        
-        # Create excerpt if missing
-        if not normalized['excerpt'] and normalized['content']:
-            normalized['excerpt'] = self._create_excerpt(normalized['content'])
-        
-        # Calculate word count and reading time if missing
-        if normalized['content'] and not normalized['word_count']:
-            normalized['word_count'] = len(normalized['content'].split())
-            normalized['reading_time'] = max(1, normalized['word_count'] // 200)
-        
-        # Extract domain if missing
-        if not normalized['domain'] and normalized['url']:
-            normalized['domain'] = urlparse(normalized['url']).netloc.replace('www.', '')
-        
-        return normalized
+    })
+
+def calculate_trust_score(analysis: Dict[str, Any]) -> int:
+    """
+    Calculate overall trust score from various components
+    Returns: Score from 0-100
+    """
+    scores = []
+    weights = []
     
-    def _is_valid_url(self, url: str) -> bool:
-        """Check if URL is valid"""
-        try:
-            result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except:
-            return False
+    # Bias score (inverted - less bias = higher score)
+    if 'bias_analysis' in analysis:
+        bias_score = analysis['bias_analysis'].get('bias_score', 0)
+        scores.append(100 - abs(bias_score * 100))
+        weights.append(0.2)
     
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract article title"""
-        # Try multiple selectors
-        selectors = [
-            'h1',
-            'title',
-            'meta[property="og:title"]',
-            'meta[name="twitter:title"]',
-            '.article-title',
-            '.entry-title',
-            '#article-title'
-        ]
-        
-        for selector in selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    return element.get('content', '').strip()
-                else:
-                    return element.get_text().strip()
-        
-        return 'Unknown Title'
+    # Source credibility
+    if 'source_credibility' in analysis:
+        rating = analysis['source_credibility'].get('rating', 'Unknown')
+        source_scores = {
+            'High': 90,
+            'Medium': 65,
+            'Low': 35,
+            'Very Low': 15,
+            'Unknown': 50
+        }
+        scores.append(source_scores.get(rating, 50))
+        weights.append(0.3)
     
-    def _extract_author(self, soup: BeautifulSoup) -> str:
-        """Extract article author"""
-        # Try multiple selectors
-        selectors = [
-            'meta[name="author"]',
-            'meta[property="article:author"]',
-            'meta[name="byl"]',
-            '.author-name',
-            '.by-author',
-            '.article-author',
-            'span[itemprop="author"]',
-            'div[itemprop="author"]',
-            '.byline'
-        ]
-        
-        for selector in selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    author = element.get('content', '').strip()
-                else:
-                    author = element.get_text().strip()
-                
-                # Clean up author name
-                author = re.sub(r'^\s*by\s+', '', author, flags=re.IGNORECASE)
-                author = author.strip()
-                
-                if author and len(author) > 2:
-                    return author
-        
-        return 'Unknown'
+    # Author credibility
+    if 'author_analysis' in analysis:
+        author_score = analysis['author_analysis'].get('credibility_score', 50)
+        scores.append(author_score)
+        weights.append(0.2)
     
-    def _extract_date(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract publication date"""
-        # Try multiple selectors
-        selectors = [
-            'meta[property="article:published_time"]',
-            'meta[name="publish_date"]',
-            'time[datetime]',
-            'time[pubdate]',
-            '.publish-date',
-            '.article-date',
-            '.entry-date'
-        ]
-        
-        for selector in selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    date_str = element.get('content', '')
-                elif element.name == 'time':
-                    date_str = element.get('datetime', element.get_text())
-                else:
-                    date_str = element.get_text()
-                
-                # Try to parse date
-                try:
-                    # Simple date parsing - in production use dateutil
-                    return date_str.strip()
-                except:
-                    continue
-        
-        return None
+    # Fact checking
+    if 'fact_checks' in analysis and analysis['fact_checks']:
+        fact_checks = analysis['fact_checks']
+        verified = sum(1 for fc in fact_checks if 'true' in str(fc.get('verdict', '')).lower())
+        fact_score = (verified / len(fact_checks)) * 100 if fact_checks else 50
+        scores.append(fact_score)
+        weights.append(0.15)
     
-    def _extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract main article content"""
-        # Remove script and style elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-            element.decompose()
-        
-        # Try to find article body
-        content_selectors = [
-            'article',
-            '[role="main"]',
-            '.article-body',
-            '.article-content',
-            '.entry-content',
-            '.post-content',
-            '#article-body',
-            '.story-body'
-        ]
-        
-        for selector in content_selectors:
-            element = soup.select_one(selector)
-            if element:
-                # Extract paragraphs
-                paragraphs = element.find_all('p')
-                if paragraphs:
-                    content = ' '.join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
-                    if len(content) > 100:
-                        return content
-        
-        # Fallback: get all paragraphs
-        paragraphs = soup.find_all('p')
-        content = ' '.join([p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 50])
-        
-        return content
+    # Clickbait/Manipulation
+    if 'clickbait_score' in analysis:
+        clickbait_score = analysis.get('clickbait_score', 0)
+        scores.append(100 - clickbait_score)
+        weights.append(0.15)
     
-    def _extract_images(self, soup: BeautifulSoup, base_url: str) -> List[str]:
-        """Extract article images"""
-        images = []
-        
-        # Try to find main image
-        main_image_selectors = [
-            'meta[property="og:image"]',
-            'meta[name="twitter:image"]',
-            '.article-image img',
-            '.featured-image img',
-            'article img'
-        ]
-        
-        for selector in main_image_selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    img_url = element.get('content', '')
-                else:
-                    img_url = element.get('src', '')
-                
-                if img_url:
-                    # Make URL absolute
-                    if img_url.startswith('//'):
-                        img_url = 'https:' + img_url
-                    elif img_url.startswith('/'):
-                        parsed = urlparse(base_url)
-                        img_url = f"{parsed.scheme}://{parsed.netloc}{img_url}"
-                    
-                    if img_url not in images:
-                        images.append(img_url)
-        
-        return images
+    # Calculate weighted average
+    if scores and weights:
+        total_weight = sum(weights)
+        weighted_sum = sum(s * w for s, w in zip(scores, weights))
+        return round(weighted_sum / total_weight)
     
-    def _create_excerpt(self, content: str, length: int = 200) -> str:
-        """Create excerpt from content"""
-        if not content:
-            return ''
-        
-        # Clean content
-        excerpt = ' '.join(content.split())
-        
-        # Truncate to length
-        if len(excerpt) > length:
-            excerpt = excerpt[:length]
-            # Try to end at word boundary
-            last_space = excerpt.rfind(' ')
-            if last_space > length * 0.8:
-                excerpt = excerpt[:last_space]
-            excerpt += '...'
-        
-        return excerpt
-    
-    def _detect_language(self, content: str) -> str:
-        """Simple language detection"""
-        # Very basic - in production use langdetect or similar
-        if not content:
-            return 'en'
-        
-        # Check for common non-English characters
-        if re.search(r'[à-ÿ]', content):
-            if re.search(r'[àâäæçèéêëîïôùûüÿœ]', content):
-                return 'fr'
-            elif re.search(r'[áéíóúñ¿¡]', content):
-                return 'es'
-            elif re.search(r'[äöüß]', content):
-                return 'de'
-        
-        return 'en'
-    
-    def _extract_keywords(self, soup: BeautifulSoup) -> List[str]:
-        """Extract keywords from meta tags"""
-        keywords = []
-        
-        # Try meta keywords
-        meta_keywords = soup.select_one('meta[name="keywords"]')
-        if meta_keywords:
-            content = meta_keywords.get('content', '')
-            keywords = [k.strip() for k in content.split(',') if k.strip()]
-        
-        # Try article tags
-        tag_selectors = ['.tags a', '.article-tags a', '.post-tags a']
-        for selector in tag_selectors:
-            tags = soup.select(selector)
-            if tags:
-                keywords.extend([tag.get_text().strip() for tag in tags])
-                break
-        
-        # Remove duplicates and limit
-        seen = set()
-        unique_keywords = []
-        for kw in keywords:
-            if kw.lower() not in seen:
-                seen.add(kw.lower())
-                unique_keywords.append(kw)
-        
-        return unique_keywords[:10]
-    
-    def _extract_categories(self, soup: BeautifulSoup) -> List[str]:
-        """Extract article categories"""
-        categories = []
-        
-        # Try different category selectors
-        selectors = [
-            '.category a',
-            '.article-category a',
-            '.post-category a',
-            'nav.breadcrumb a'
-        ]
-        
-        for selector in selectors:
-            elements = soup.select(selector)
-            if elements:
-                categories = [elem.get_text().strip() for elem in elements if elem.get_text().strip()]
-                break
-        
-        return categories[:5]
-    
-    def _extract_tags(self, soup: BeautifulSoup) -> List[str]:
-        """Extract article tags"""
-        # This might overlap with keywords, but kept separate for compatibility
-        return self._extract_keywords(soup)
-    
-    def _extract_links(self, soup: BeautifulSoup, base_url: str) -> List[str]:
-        """Extract external links from article"""
-        links = []
-        parsed_base = urlparse(base_url)
-        
-        # Find all links in article content
-        article = soup.select_one('article') or soup
-        
-        for link in article.find_all('a', href=True):
-            href = link['href']
-            
-            # Make absolute URL
-            if href.startswith('//'):
-                href = 'https:' + href
-            elif href.startswith('/'):
-                href = f"{parsed_base.scheme}://{parsed_base.netloc}{href}"
-            elif not href.startswith(('http://', 'https://')):
-                continue
-            
-            # Check if external
-            parsed_link = urlparse(href)
-            if parsed_link.netloc and parsed_link.netloc != parsed_base.netloc:
-                if href not in links:
-                    links.append(href)
-        
-        return links[:20]  # Limit to 20 links
+    return 50  # Default middle score
+
+def create_placeholder_analysis(url: str) -> Dict[str, Any]:
+    """
+    Create a placeholder analysis for when services are unavailable
+    This ensures the frontend always gets usable data
+    """
+    return {
+        'success': True,
+        'article': {
+            'url': url,
+            'title': 'Article Analysis in Progress',
+            'domain': url.split('/')[2] if '/' in url else 'unknown',
+            'author': 'Unknown Author',
+            'publish_date': datetime.now().isoformat(),
+            'summary': 'This article is being analyzed. Full analysis requires all services to be running.'
+        },
+        'trust_score': 50,
+        'bias_analysis': {
+            'overall_bias': 'Unknown',
+            'bias_score': 0,
+            'political_lean': 0,
+            'confidence': 0.5
+        },
+        'source_credibility': {
+            'domain': url.split('/')[2] if '/' in url else 'unknown',
+            'rating': 'Unknown',
+            'credibility': 'Being evaluated'
+        },
+        'author_analysis': {
+            'found': False,
+            'name': 'Unknown Author',
+            'credibility_score': 50
+        },
+        'fact_checks': [],
+        'clickbait_score': 0,
+        'transparency_analysis': {
+            'transparency_score': 50,
+            'has_author': False,
+            'has_date': False,
+            'has_sources': False
+        },
+        'analysis_timestamp': datetime.now().isoformat(),
+        'is_placeholder': True
+    }
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)
