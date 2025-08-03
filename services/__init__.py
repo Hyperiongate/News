@@ -30,8 +30,7 @@ __all__ = [
     'EconomicFactChecker',
     'OriginalityAnalyzer',
     # Additional services
-    'NewsExtractor',  # Added
-    'NewsAnalyzer'    # Added
+    'NewsAnalyzer'    # Removed NewsExtractor since it doesn't exist
 ]
 
 # Try to import all services
@@ -116,11 +115,6 @@ except ImportError:
     pass
 
 # Import additional services
-try:
-    from .news_extractor import NewsExtractor
-except ImportError:
-    pass
-
 try:
     from .news_analyzer import NewsAnalyzer
 except ImportError:
