@@ -1,4 +1,5 @@
 /* static/css/styles.css - Professional News Analyzer Styles */
+/* ROBUST VERSION - Content visible by default, enhanced with JavaScript */
 
 /* CSS Variables */
 :root {
@@ -197,6 +198,15 @@ body {
     border-color: var(--primary);
 }
 
+/* Tab Content - ROBUST: Use classes instead of inline styles */
+.tab-content {
+    display: block;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
 /* Input Fields */
 .input-group {
     display: flex;
@@ -280,7 +290,15 @@ body {
     margin-top: 1rem;
 }
 
-/* Progress Section */
+/* Progress Section - ROBUST: Hidden by default, shown with class */
+.progress-section {
+    display: none;
+}
+
+.progress-section.active {
+    display: block;
+}
+
 .progress-card {
     background: white;
     border-radius: var(--radius);
@@ -352,9 +370,14 @@ body {
     100% { transform: translateX(100px); }
 }
 
-/* Results Section - REDESIGNED FOR COMPACT LAYOUT */
+/* Results Section - ROBUST: Hidden by default, shown with class */
 .results-section {
     margin-top: 2rem;
+    display: none;
+}
+
+.results-section.active {
+    display: block;
 }
 
 .summary-section {
@@ -650,6 +673,15 @@ body {
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
+/* Premium Analysis Section - ROBUST: Hidden by default */
+.premium-analysis {
+    display: none;
+}
+
+.premium-analysis.active {
+    display: block;
+}
+
 /* Analysis Grid */
 .analysis-header {
     display: flex;
@@ -686,7 +718,7 @@ body {
     gap: 1.5rem;
 }
 
-/* Analysis Cards */
+/* Analysis Cards - ROBUST: Always visible when rendered */
 .analysis-card {
     background: white;
     border-radius: var(--radius);
@@ -739,11 +771,13 @@ body {
 .score-low { color: var(--warning); }
 .score-very-low { color: var(--danger); }
 
+/* Card Content - CRITICAL: Always visible */
 .card-content {
     padding: 1.25rem;
+    /* NO display: none! Content is always visible */
 }
 
-/* Error Message */
+/* Error Message - ROBUST: Use class to show */
 .error-message {
     display: none;
     background: rgba(239, 68, 68, 0.1);
@@ -754,7 +788,11 @@ body {
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Loading Overlay */
+.error-message.active {
+    display: block;
+}
+
+/* Loading Overlay - ROBUST: Use class to show */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -762,10 +800,14 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+}
+
+.loading-overlay.active {
+    display: flex;
 }
 
 .spinner {
@@ -781,7 +823,7 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* Capabilities Section */
+/* Capabilities Section - ROBUST: Use class to show */
 .capabilities-section {
     position: fixed;
     top: 0;
@@ -790,11 +832,15 @@ body {
     bottom: 0;
     background: rgba(0, 0, 0, 0.8);
     z-index: 1000;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 2rem;
     overflow-y: auto;
+}
+
+.capabilities-section.active {
+    display: flex;
 }
 
 .capabilities-card {
@@ -1153,6 +1199,93 @@ body {
 .stat-item i {
     color: var(--primary);
     font-size: 1.1rem;
+}
+
+/* Additional Premium Analysis Card Styles */
+.author-profile {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.author-avatar {
+    font-size: 3rem;
+    color: var(--primary);
+}
+
+.author-info h4 {
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+.author-bio {
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.verification-badges {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge.verified {
+    background: var(--secondary);
+    color: white;
+}
+
+.badge.journalist {
+    background: var(--primary);
+    color: white;
+}
+
+.badge.staff {
+    background: var(--info);
+    color: white;
+}
+
+/* Fact Check Items */
+.fact-check-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--light-gray);
+}
+
+.fact-check-item.verified {
+    background: rgba(16, 185, 129, 0.05);
+    border-color: var(--secondary);
+}
+
+.fact-check-item.false {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: var(--danger);
+}
+
+.fact-check-item.mixed {
+    background: rgba(245, 158, 11, 0.05);
+    border-color: var(--warning);
+}
+
+.fact-check-item.unverified {
+    background: rgba(107, 114, 128, 0.05);
+    border-color: var(--gray);
+}
+
+/* Utility Classes for JavaScript */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
 }
 
 /* Responsive */
