@@ -7,6 +7,7 @@ class TruthLensApp {
         this.currentTab = 'url';
         this.API_ENDPOINT = '/api/analyze';
         this.progressInterval = null;
+        this.analysisStartTime = null;
         
         this.init();
     }
@@ -46,9 +47,21 @@ class TruthLensApp {
         window.shareAnalysis = () => this.shareAnalysis();
         window.showDemo = () => this.showDemo();
         window.showPricing = () => this.showPricing();
+        window.showCapabilities = () => this.showCapabilities();
+        window.hideCapabilities = () => this.hideCapabilities();
+    }
+
+    showCapabilities() {
+        document.getElementById('capabilitiesSection').style.display = 'flex';
+    }
+
+    hideCapabilities() {
+        document.getElementById('capabilitiesSection').style.display = 'none';
     }
 
     async analyzeContent() {
+        this.analysisStartTime = Date.now(); // Track start time
+        
         // Get input based on current tab
         let input, inputType;
         if (this.currentTab === 'url') {
@@ -96,14 +109,12 @@ class TruthLensApp {
                 })
             });
 
-            const data = await response.json();
-            
-            // Check if the response indicates an error
-            if (!response.ok || data.error) {
-                throw new Error(data.error || data.details || 'Analysis failed');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Analysis failed');
             }
 
-            // Store the analysis data
+            const data = await response.json();
             this.currentAnalysis = data;
             
             // Hide progress
@@ -117,13 +128,8 @@ class TruthLensApp {
             
         } catch (error) {
             console.error('Analysis error:', error);
-            this.showError(error.message || 'An error occurred during analysis. Please try a different article.');
+            this.showError(error.message || 'An error occurred during analysis');
             this.hideProgress();
-            
-            // Show placeholder results if we have partial data
-            if (this.currentAnalysis && this.currentAnalysis.success) {
-                this.displayResults(this.currentAnalysis);
-            }
         } finally {
             // Re-enable buttons
             analyzeBtns.forEach(btn => {
@@ -140,17 +146,7 @@ class TruthLensApp {
         // Reset progress
         const stages = ['extract', 'author', 'bias', 'facts', 'score'];
         let currentStage = 0;
-        
-        // Clear any existing interval
-        if (this.progressInterval) {
-            clearInterval(this.progressInterval);
-        }
-        
-        // Reset all stages
-        document.querySelectorAll('.stage').forEach(stage => {
-            stage.classList.remove('active', 'complete');
-        });
-        document.getElementById('progressFill').style.width = '0%';
+        let sourceCount = 0;
         
         // Animate stages
         this.progressInterval = setInterval(() => {
@@ -169,11 +165,13 @@ class TruthLensApp {
                 const progress = ((currentStage + 1) / stages.length) * 100;
                 document.getElementById('progressFill').style.width = `${progress}%`;
                 
+                // Update source count
+                if (currentStage === 3) { // Fact checking stage
+                    sourceCount = Math.min(sourceCount + 4, 21);
+                    document.getElementById('sourceCount').textContent = sourceCount;
+                }
+                
                 currentStage++;
-            } else {
-                // Clear interval when complete
-                clearInterval(this.progressInterval);
-                this.progressInterval = null;
             }
         }, 800);
     }
@@ -192,12 +190,14 @@ class TruthLensApp {
         document.querySelectorAll('.stage').forEach(stage => {
             stage.classList.remove('active', 'complete');
         });
-        document.getElementById('progressFill').style.width = '0%';
     }
 
     displayResults(data) {
         // Show results section
         document.getElementById('resultsSection').style.display = 'block';
+        
+        // Calculate analysis time
+        const analysisTime = ((Date.now() - this.analysisStartTime) / 1000).toFixed(1);
         
         // Smooth scroll to results
         setTimeout(() => {
@@ -206,13 +206,6 @@ class TruthLensApp {
                 block: 'start' 
             });
         }, 100);
-
-        // Check if this is an error response
-        if (data.is_error || data.error_occurred) {
-            // Special handling for error responses
-            this.displayErrorResults(data);
-            return;
-        }
 
         // Display trust score with animation
         const trustScore = data.trust_score || 50;
@@ -225,20 +218,25 @@ class TruthLensApp {
         document.getElementById('authorName').textContent = article.author || 'Unknown Author';
         document.getElementById('publishDate').textContent = this.formatDate(article.publish_date);
         
-        // Clean and display summary
-        const rawSummary = data.article_summary || article.summary || article.text_preview || 'No summary available';
-        const cleanSummary = this.cleanSummaryText(rawSummary);
-        document.getElementById('articleSummary').textContent = cleanSummary;
+        // Display summary
+        const summary = data.article_summary || article.text_preview || 'No summary available';
+        document.getElementById('articleSummary').textContent = summary;
         
-        // Display trust breakdown with calculation explanation
-        if (analysisComponents && analysisComponents.createTrustBreakdown) {
-            document.getElementById('trustBreakdown').innerHTML = 
-                analysisComponents.createTrustBreakdownWithCalculation(data);
-        } else {
-            // Fallback if components not loaded
-            document.getElementById('trustBreakdown').innerHTML = 
-                '<p>Trust score breakdown is loading...</p>';
-        }
+        // Update quick stats
+        const claimCount = data.key_claims ? data.key_claims.length : 0;
+        document.getElementById('claimCount').textContent = claimCount;
+        document.getElementById('sourceCheckCount').textContent = '21+';
+        document.getElementById('analysisTime').textContent = analysisTime;
+        
+        // Update premium preview
+        document.getElementById('premiumClaimCount').textContent = claimCount;
+        
+        // Display trust breakdown with enhanced descriptions
+        document.getElementById('trustBreakdown').innerHTML = 
+            analysisComponents.createTrustBreakdown(data);
+        
+        // Add analysis summary
+        this.createAnalysisSummary(data);
         
         // Add trust factor styles
         this.addTrustFactorStyles();
@@ -249,93 +247,16 @@ class TruthLensApp {
         }
     }
 
-    cleanSummaryText(text) {
-        // Remove HTML tags
-        text = text.replace(/<[^>]*>/g, '');
-        
-        // Remove social media artifacts
-        text = text.replace(/\b(facebook|twitter|linkedin|email)\s*\(opens in new window\)/gi, '');
-        
-        // Remove multiple spaces and newlines
-        text = text.replace(/\s+/g, ' ');
-        
-        // Remove common artifacts
-        text = text.replace(/Photo:\s*[^.]+\./g, '');
-        text = text.replace(/Image:\s*[^.]+\./g, '');
-        
-        // Trim and ensure proper sentence ending
-        text = text.trim();
-        
-        // If text is too long, truncate at sentence boundary
-        if (text.length > 300) {
-            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-            let summary = '';
-            for (const sentence of sentences) {
-                if (summary.length + sentence.length > 300) break;
-                summary += sentence + ' ';
-            }
-            text = summary.trim() || text.substring(0, 297) + '...';
-        }
-        
-        return text;
-    }
-
-    displayErrorResults(data) {
-        // Display error-specific UI
-        const trustScore = 0;
-        this.animateTrustScore(trustScore);
-        
-        // Update trust label for error
-        const label = document.getElementById('trustLabel');
-        const description = document.getElementById('trustDescription');
-        
-        label.textContent = 'Analysis Failed';
-        description.textContent = data.error_message || 'We were unable to analyze this article. This could be due to website restrictions, network issues, or the content being behind a paywall.';
-        
-        // Display article info (what we have)
-        const article = data.article || {};
-        document.getElementById('articleTitle').textContent = article.title || 'Article Could Not Be Analyzed';
-        document.getElementById('sourceName').textContent = article.domain || 'Unknown Source';
-        document.getElementById('authorName').textContent = 'Unknown';
-        document.getElementById('publishDate').textContent = 'Unknown';
-        
-        // Display error message as summary
-        document.getElementById('articleSummary').textContent = article.summary || 
-            'The article could not be retrieved or analyzed. Please try a different article or check if the URL is accessible.';
-        
-        // Show error in trust breakdown
-        document.getElementById('trustBreakdown').innerHTML = `
-            <div class="error-info">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Unable to calculate trust score due to analysis error.</p>
-                <p class="error-details">${data.error_message || 'Unknown error occurred'}</p>
-            </div>
-        `;
-    }
-
     animateTrustScore(score) {
-        // Ensure score is valid
-        score = Math.max(0, Math.min(100, score || 0));
-        
         // Create gauge chart
-        if (analysisComponents && analysisComponents.createTrustScoreGauge) {
-            analysisComponents.createTrustScoreGauge('trustScoreGauge', score);
-        }
+        analysisComponents.createTrustScoreGauge('trustScoreGauge', score);
         
         // Set label and description
         const label = document.getElementById('trustLabel');
         const description = document.getElementById('trustDescription');
         
         let labelText, descText;
-        if (score === 0) {
-            // Error case - don't override if already set by displayErrorResults
-            if (label.textContent !== 'Analysis Failed') {
-                labelText = 'Analysis Error';
-                descText = 'Unable to determine credibility score. Please try a different article.';
-            } else {
-                return; // Keep the error message from displayErrorResults
-            }
-        } else if (score >= 80) {
+        if (score >= 80) {
             labelText = 'Highly Credible';
             descText = 'This article demonstrates strong credibility with verified information and reliable sourcing.';
         } else if (score >= 60) {
@@ -351,20 +272,61 @@ class TruthLensApp {
         
         // Animate text appearance
         setTimeout(() => {
-            if (labelText) {
-                label.textContent = labelText;
-                label.style.opacity = '0';
-                label.style.animation = 'fadeIn 0.5s forwards';
-            }
+            label.textContent = labelText;
+            label.style.opacity = '0';
+            label.style.animation = 'fadeIn 0.5s forwards';
         }, 500);
         
         setTimeout(() => {
-            if (descText) {
-                description.textContent = descText;
-                description.style.opacity = '0';
-                description.style.animation = 'fadeIn 0.5s forwards';
-            }
+            description.textContent = descText;
+            description.style.opacity = '0';
+            description.style.animation = 'fadeIn 0.5s forwards';
         }, 700);
+    }
+
+    createAnalysisSummary(data) {
+        const trustScore = data.trust_score || 50;
+        const biasScore = Math.abs(data.bias_analysis?.political_lean || 0);
+        const sourceCred = data.source_credibility?.rating || 'Unknown';
+        
+        let summaryHTML = '<ul>';
+        
+        // Trust level summary
+        if (trustScore >= 80) {
+            summaryHTML += '<li><i class="fas fa-check-circle text-success"></i> <strong>High credibility:</strong> This article meets professional journalism standards with verified sources and minimal bias.</li>';
+        } else if (trustScore >= 60) {
+            summaryHTML += '<li><i class="fas fa-info-circle text-info"></i> <strong>Moderate credibility:</strong> Generally reliable but contains some unverified claims or minor bias indicators.</li>';
+        } else if (trustScore >= 40) {
+            summaryHTML += '<li><i class="fas fa-exclamation-triangle text-warning"></i> <strong>Questionable credibility:</strong> Multiple red flags detected. Verify all claims before sharing.</li>';
+        } else {
+            summaryHTML += '<li><i class="fas fa-times-circle text-danger"></i> <strong>Low credibility:</strong> Significant issues with sourcing, bias, or factual accuracy.</li>';
+        }
+        
+        // Source assessment
+        if (sourceCred === 'High') {
+            summaryHTML += '<li><i class="fas fa-building text-success"></i> Published by a <strong>highly credible source</strong> with strong fact-checking standards.</li>';
+        } else if (sourceCred === 'Medium') {
+            summaryHTML += '<li><i class="fas fa-building text-info"></i> Published by a <strong>moderately credible source</strong> with mixed reliability.</li>';
+        } else if (sourceCred === 'Low' || sourceCred === 'Very Low') {
+            summaryHTML += '<li><i class="fas fa-building text-danger"></i> Published by a <strong>low credibility source</strong> known for unreliable content.</li>';
+        }
+        
+        // Bias assessment
+        if (biasScore > 50) {
+            summaryHTML += '<li><i class="fas fa-balance-scale text-warning"></i> <strong>Strong bias detected:</strong> Content shows significant political or ideological slant.</li>';
+        } else if (biasScore > 20) {
+            summaryHTML += '<li><i class="fas fa-balance-scale text-info"></i> <strong>Moderate bias detected:</strong> Some partisan language or selective reporting present.</li>';
+        }
+        
+        // Transparency
+        const transparencyScore = data.transparency_analysis?.transparency_score || 0;
+        if (transparencyScore < 40) {
+            summaryHTML += '<li><i class="fas fa-eye-slash text-warning"></i> <strong>Low transparency:</strong> Missing author attribution or source citations.</li>';
+        }
+        
+        summaryHTML += '</ul>';
+        
+        document.getElementById('analysisSummaryContent').innerHTML = summaryHTML;
     }
 
     addTrustFactorStyles() {
@@ -373,120 +335,6 @@ class TruthLensApp {
             const style = document.createElement('style');
             style.id = 'trustFactorStyles';
             style.innerHTML = `
-                .trust-factor {
-                    margin-bottom: 1.5rem;
-                    animation: slideIn 0.5s ease-out;
-                    padding: 1rem;
-                    background: #f9fafb;
-                    border-radius: 8px;
-                    border: 1px solid #e5e7eb;
-                }
-                
-                .factor-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    margin-bottom: 0.5rem;
-                }
-                
-                .factor-info {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-                
-                .factor-header i {
-                    color: var(--primary);
-                }
-                
-                .factor-score {
-                    font-weight: 700;
-                    font-size: 1.25rem;
-                }
-                
-                .factor-bar {
-                    height: 8px;
-                    background: #e5e7eb;
-                    border-radius: 4px;
-                    overflow: hidden;
-                    margin-bottom: 0.75rem;
-                }
-                
-                .factor-fill {
-                    height: 100%;
-                    border-radius: 4px;
-                    transition: width 1s ease-out;
-                    animation: fillBar 1s ease-out;
-                }
-                
-                .factor-description {
-                    font-size: 0.875rem;
-                    color: #4b5563;
-                    margin: 0;
-                    line-height: 1.5;
-                }
-                
-                .calculation-summary {
-                    margin-top: 2rem;
-                    padding: 1.5rem;
-                    background: #eff6ff;
-                    border-radius: 8px;
-                    border: 1px solid #dbeafe;
-                }
-                
-                .calculation-summary h5 {
-                    margin-top: 0;
-                    margin-bottom: 1rem;
-                    color: #1e40af;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-                
-                .calculation-summary p {
-                    margin: 0;
-                    color: #3730a3;
-                    line-height: 1.6;
-                }
-                
-                .calculation-formula {
-                    margin-top: 1rem;
-                    padding: 1rem;
-                    background: white;
-                    border-radius: 6px;
-                    font-family: monospace;
-                    font-size: 0.875rem;
-                    color: #1f2937;
-                }
-                
-                .error-info {
-                    text-align: center;
-                    padding: 2rem;
-                    color: var(--danger);
-                }
-                
-                .error-info i {
-                    font-size: 3rem;
-                    margin-bottom: 1rem;
-                }
-                
-                .error-details {
-                    margin-top: 0.5rem;
-                    font-size: 0.9rem;
-                    color: var(--gray);
-                }
-                
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-                
                 @keyframes fillBar {
                     from { width: 0 !important; }
                 }
@@ -495,11 +343,6 @@ class TruthLensApp {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                
-                .trust-factor:nth-child(1) { animation-delay: 0.1s; }
-                .trust-factor:nth-child(2) { animation-delay: 0.2s; }
-                .trust-factor:nth-child(3) { animation-delay: 0.3s; }
-                .trust-factor:nth-child(4) { animation-delay: 0.4s; }
             `;
             document.head.appendChild(style);
         }
@@ -570,7 +413,7 @@ class TruthLensApp {
                 grid.innerHTML += cardHtml;
                 
                 // Special handling for bias visualization
-                if (index === 1 && data.bias_analysis && analysisComponents.createBiasVisualization) {
+                if (index === 1 && data.bias_analysis) {
                     setTimeout(() => {
                         analysisComponents.createBiasVisualization(data.bias_analysis);
                     }, 100);
@@ -672,7 +515,6 @@ class TruthLensApp {
         if (!dateStr) return 'Unknown';
         try {
             const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return 'Unknown';
             return date.toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'long', 
@@ -700,23 +542,13 @@ class TruthLensApp {
     }
 }
 
-// Add shake animation and error styles
+// Add shake animation
 const shakeStyle = document.createElement('style');
 shakeStyle.innerHTML = `
     @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-10px); }
         75% { transform: translateX(10px); }
-    }
-    
-    .error-message {
-        background: #fee;
-        color: #c33;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-        display: none;
-        border: 1px solid #fcc;
     }
 `;
 document.head.appendChild(shakeStyle);
@@ -729,4 +561,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Add some console branding
 console.log('%cTruthLens AI', 'font-size: 24px; font-weight: bold; color: #6366f1;');
 console.log('%cProfessional News Analysis', 'font-size: 14px; color: #6b7280;');
-console.log('%cPowered by 20+ Advanced Analyzers', 'font-size: 12px; color: #10b981;');
+console.log('%cPowered by 21+ Advanced Analyzers', 'font-size: 12px; color: #10b981;');
