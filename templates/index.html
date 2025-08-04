@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TruthLens AI - Advanced News Analysis & Fact Checking</title>
     
-    <!-- Main Stylesheet - FIXED: Using style.css without 's' -->
-    <link rel="stylesheet" href="/static/css/style.css">
-    
-    <!-- Animations Stylesheet -->
-    <link rel="stylesheet" href="/static/css/animations.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/static/css/styles.css">
     
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -89,23 +86,23 @@
                     <div class="progress-stages">
                         <div class="stage" data-stage="extract">
                             <i class="fas fa-file-alt"></i>
-                            <span>Extracting Content</span>
+                            <span>Extracting</span>
                         </div>
                         <div class="stage" data-stage="author">
                             <i class="fas fa-user-check"></i>
-                            <span>Verifying Author</span>
+                            <span>Author Check</span>
                         </div>
                         <div class="stage" data-stage="bias">
                             <i class="fas fa-balance-scale"></i>
-                            <span>Detecting Bias</span>
+                            <span>Bias Detection</span>
                         </div>
                         <div class="stage" data-stage="facts">
                             <i class="fas fa-fact-check"></i>
-                            <span>Checking Facts</span>
+                            <span>Fact Check</span>
                         </div>
                         <div class="stage" data-stage="score">
                             <i class="fas fa-chart-line"></i>
-                            <span>Calculating Score</span>
+                            <span>Final Score</span>
                         </div>
                     </div>
                     <div class="progress-bar">
@@ -116,45 +113,53 @@
 
             <!-- Results Section -->
             <section id="resultsSection" class="results-section" style="display: none;">
-                <!-- Free Tier Summary -->
+                <!-- Free Tier Summary - Compact Layout -->
                 <div class="summary-section">
+                    <!-- Trust Score with Better Gauge -->
                     <div class="trust-score-card">
-                        <canvas id="trustScoreGauge" width="300" height="200"></canvas>
+                        <div class="gauge-container">
+                            <canvas id="trustScoreGauge" width="200" height="120"></canvas>
+                        </div>
                         <h2 id="trustLabel">Calculating...</h2>
                         <p id="trustDescription"></p>
                     </div>
                     
-                    <div class="article-info-card">
-                        <h3><i class="fas fa-newspaper"></i> Article Information</h3>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <label>Title</label>
-                                <p id="articleTitle">-</p>
+                    <!-- Combined Article Info & Summary -->
+                    <div class="article-summary-card">
+                        <h3><i class="fas fa-newspaper"></i> Article Analysis</h3>
+                        <div class="article-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-heading"></i>
+                                <span id="articleTitle">Loading...</span>
                             </div>
-                            <div class="info-item">
-                                <label>Source</label>
-                                <p id="sourceName">-</p>
+                            <div class="meta-item">
+                                <i class="fas fa-globe"></i>
+                                <span id="sourceName">Loading...</span>
                             </div>
-                            <div class="info-item">
-                                <label>Author</label>
-                                <p id="authorName">-</p>
+                            <div class="meta-item">
+                                <i class="fas fa-user-edit"></i>
+                                <span id="authorName">Loading...</span>
                             </div>
-                            <div class="info-item">
-                                <label>Published</label>
-                                <p id="publishDate">-</p>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span id="publishDate">Loading...</span>
                             </div>
                         </div>
+                        <div class="article-summary">
+                            <strong>Summary:</strong>
+                            <p id="articleSummary">Loading article summary...</p>
+                        </div>
                     </div>
-                    
-                    <div class="summary-card">
-                        <h3><i class="fas fa-file-lines"></i> Article Summary</h3>
-                        <p id="articleSummary"></p>
-                    </div>
-                    
-                    <div class="key-findings-card">
-                        <h3><i class="fas fa-magnifying-glass-chart"></i> How We Calculated Your Trust Score</h3>
-                        <div id="trustBreakdown"></div>
-                    </div>
+                </div>
+                
+                <!-- Enhanced Trust Breakdown -->
+                <div class="key-findings-card">
+                    <h3><i class="fas fa-magnifying-glass-chart"></i> How We Calculated Your Trust Score</h3>
+                    <p class="findings-intro">
+                        We analyze multiple dimensions of credibility to give you a comprehensive trust score. 
+                        Think of it as a health check-up for news articles. Here's what we found:
+                    </p>
+                    <div id="trustBreakdown" class="trust-factors-grid"></div>
                 </div>
 
                 <!-- Premium CTA -->
