@@ -296,9 +296,13 @@ class TruthLensApp {
         
         let labelText, descText;
         if (score === 0) {
-            // Error case
-            labelText = 'Analysis Error';
-            descText = 'Unable to determine credibility score. Please try a different article.';
+            // Error case - don't override if already set by displayErrorResults
+            if (label.textContent !== 'Analysis Failed') {
+                labelText = 'Analysis Error';
+                descText = 'Unable to determine credibility score. Please try a different article.';
+            } else {
+                return; // Keep the error message from displayErrorResults
+            }
         } else if (score >= 80) {
             labelText = 'Highly Credible';
             descText = 'This article demonstrates strong credibility with verified information and reliable sourcing.';
@@ -315,15 +319,19 @@ class TruthLensApp {
         
         // Animate text appearance
         setTimeout(() => {
-            label.textContent = labelText;
-            label.style.opacity = '0';
-            label.style.animation = 'fadeIn 0.5s forwards';
+            if (labelText) {
+                label.textContent = labelText;
+                label.style.opacity = '0';
+                label.style.animation = 'fadeIn 0.5s forwards';
+            }
         }, 500);
         
         setTimeout(() => {
-            description.textContent = descText;
-            description.style.opacity = '0';
-            description.style.animation = 'fadeIn 0.5s forwards';
+            if (descText) {
+                description.textContent = descText;
+                description.style.opacity = '0';
+                description.style.animation = 'fadeIn 0.5s forwards';
+            }
         }, 700);
     }
 
@@ -405,6 +413,11 @@ class TruthLensApp {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
+                
+                .trust-factor:nth-child(1) { animation-delay: 0.1s; }
+                .trust-factor:nth-child(2) { animation-delay: 0.2s; }
+                .trust-factor:nth-child(3) { animation-delay: 0.3s; }
+                .trust-factor:nth-child(4) { animation-delay: 0.4s; }
             `;
             document.head.appendChild(style);
         }
