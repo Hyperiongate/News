@@ -225,14 +225,15 @@ class TruthLensApp {
         document.getElementById('authorName').textContent = article.author || 'Unknown Author';
         document.getElementById('publishDate').textContent = this.formatDate(article.publish_date);
         
-        // Display summary
-        const summary = data.article_summary || article.summary || article.text_preview || 'No summary available';
-        document.getElementById('articleSummary').textContent = summary;
+        // Clean and display summary
+        const rawSummary = data.article_summary || article.summary || article.text_preview || 'No summary available';
+        const cleanSummary = this.cleanSummaryText(rawSummary);
+        document.getElementById('articleSummary').textContent = cleanSummary;
         
-        // Display trust breakdown
+        // Display trust breakdown with calculation explanation
         if (analysisComponents && analysisComponents.createTrustBreakdown) {
             document.getElementById('trustBreakdown').innerHTML = 
-                analysisComponents.createTrustBreakdown(data);
+                analysisComponents.createTrustBreakdownWithCalculation(data);
         } else {
             // Fallback if components not loaded
             document.getElementById('trustBreakdown').innerHTML = 
@@ -246,6 +247,37 @@ class TruthLensApp {
         if (this.isPremium && data.is_pro) {
             this.displayPremiumAnalysis(data);
         }
+    }
+
+    cleanSummaryText(text) {
+        // Remove HTML tags
+        text = text.replace(/<[^>]*>/g, '');
+        
+        // Remove social media artifacts
+        text = text.replace(/\b(facebook|twitter|linkedin|email)\s*\(opens in new window\)/gi, '');
+        
+        // Remove multiple spaces and newlines
+        text = text.replace(/\s+/g, ' ');
+        
+        // Remove common artifacts
+        text = text.replace(/Photo:\s*[^.]+\./g, '');
+        text = text.replace(/Image:\s*[^.]+\./g, '');
+        
+        // Trim and ensure proper sentence ending
+        text = text.trim();
+        
+        // If text is too long, truncate at sentence boundary
+        if (text.length > 300) {
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+            let summary = '';
+            for (const sentence of sentences) {
+                if (summary.length + sentence.length > 300) break;
+                summary += sentence + ' ';
+            }
+            text = summary.trim() || text.substring(0, 297) + '...';
+        }
+        
+        return text;
     }
 
     displayErrorResults(data) {
@@ -344,6 +376,10 @@ class TruthLensApp {
                 .trust-factor {
                     margin-bottom: 1.5rem;
                     animation: slideIn 0.5s ease-out;
+                    padding: 1rem;
+                    background: #f9fafb;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
                 }
                 
                 .factor-header {
@@ -353,21 +389,27 @@ class TruthLensApp {
                     margin-bottom: 0.5rem;
                 }
                 
+                .factor-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
                 .factor-header i {
-                    margin-right: 0.5rem;
                     color: var(--primary);
                 }
                 
                 .factor-score {
                     font-weight: 700;
-                    font-size: 1.125rem;
+                    font-size: 1.25rem;
                 }
                 
                 .factor-bar {
                     height: 8px;
-                    background: var(--light-gray);
+                    background: #e5e7eb;
                     border-radius: 4px;
                     overflow: hidden;
+                    margin-bottom: 0.75rem;
                 }
                 
                 .factor-fill {
@@ -375,6 +417,46 @@ class TruthLensApp {
                     border-radius: 4px;
                     transition: width 1s ease-out;
                     animation: fillBar 1s ease-out;
+                }
+                
+                .factor-description {
+                    font-size: 0.875rem;
+                    color: #4b5563;
+                    margin: 0;
+                    line-height: 1.5;
+                }
+                
+                .calculation-summary {
+                    margin-top: 2rem;
+                    padding: 1.5rem;
+                    background: #eff6ff;
+                    border-radius: 8px;
+                    border: 1px solid #dbeafe;
+                }
+                
+                .calculation-summary h5 {
+                    margin-top: 0;
+                    margin-bottom: 1rem;
+                    color: #1e40af;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .calculation-summary p {
+                    margin: 0;
+                    color: #3730a3;
+                    line-height: 1.6;
+                }
+                
+                .calculation-formula {
+                    margin-top: 1rem;
+                    padding: 1rem;
+                    background: white;
+                    border-radius: 6px;
+                    font-family: monospace;
+                    font-size: 0.875rem;
+                    color: #1f2937;
                 }
                 
                 .error-info {
