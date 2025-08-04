@@ -5,14 +5,10 @@ class AnalysisComponents {
         this.charts = {};
     }
 
-    // Trust Score Gauge (Free Tier) - FIXED SIZING
+    // Trust Score Gauge (Free Tier) - COMPLETELY REDESIGNED
     createTrustScoreGauge(canvasId, score) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
-        
-        // Set proper canvas size
-        canvas.width = 300;
-        canvas.height = 200;
         
         const ctx = canvas.getContext('2d');
         
@@ -24,61 +20,63 @@ class AnalysisComponents {
         // Ensure score is valid
         score = Math.max(0, Math.min(100, score || 0));
 
-        // Determine color based on score
-        let color;
-        if (score >= 80) color = '#10b981';
-        else if (score >= 60) color = '#3b82f6';
-        else if (score >= 40) color = '#f59e0b';
-        else color = '#ef4444';
+        // Create gradient based on score
+        const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+        if (score >= 80) {
+            gradient.addColorStop(0, '#059669');
+            gradient.addColorStop(1, '#10b981');
+        } else if (score >= 60) {
+            gradient.addColorStop(0, '#2563eb');
+            gradient.addColorStop(1, '#3b82f6');
+        } else if (score >= 40) {
+            gradient.addColorStop(0, '#d97706');
+            gradient.addColorStop(1, '#f59e0b');
+        } else {
+            gradient.addColorStop(0, '#dc2626');
+            gradient.addColorStop(1, '#ef4444');
+        }
 
-        // Create semi-circular gauge with proper sizing
+        // Create semi-circular gauge
         this.charts[canvasId] = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 datasets: [{
                     data: [score, 100 - score],
-                    backgroundColor: [color, '#e5e7eb'],
-                    borderWidth: 0
+                    backgroundColor: [gradient, '#f3f4f6'],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270,
                 }]
             },
             options: {
-                rotation: -90,
-                circumference: 180,
+                responsive: false,
+                maintainAspectRatio: false,
+                cutout: '80%',
                 plugins: {
                     legend: { display: false },
                     tooltip: { enabled: false }
-                },
-                cutout: '75%',
-                responsive: false,  // Disable responsive to control size
-                maintainAspectRatio: false,
-                layout: {
-                    padding: 20
-                },
-                animation: {
-                    animateRotate: true,
-                    animateScale: false
                 }
             },
             plugins: [{
+                id: 'text',
                 afterDraw: function(chart) {
                     const ctx = chart.ctx;
-                    const width = chart.width;
-                    const height = chart.height;
+                    const centerX = chart.width / 2;
+                    const centerY = chart.height - 20;
                     
                     ctx.save();
                     
-                    // Draw the score number - properly positioned
-                    ctx.font = 'bold 48px -apple-system, sans-serif';
-                    ctx.fillStyle = color;
+                    // Draw score number
+                    ctx.font = 'bold 36px -apple-system, sans-serif';
+                    ctx.fillStyle = gradient;
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    // Position text in the center of the semi-circle
-                    ctx.fillText(score, width / 2, height - 50);
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(score, centerX, centerY);
                     
-                    // Draw the "/100" text
-                    ctx.font = 'normal 20px -apple-system, sans-serif';
+                    // Draw /100
+                    ctx.font = 'normal 16px -apple-system, sans-serif';
                     ctx.fillStyle = '#6b7280';
-                    ctx.fillText('/100', width / 2 + 40, height - 40);
+                    ctx.fillText('/100', centerX + 35, centerY);
                     
                     ctx.restore();
                 }
@@ -86,45 +84,105 @@ class AnalysisComponents {
         });
     }
 
-    // Trust Score Breakdown (Free Tier)
+    // Trust Score Breakdown (Free Tier) - ENHANCED WITH DESCRIPTIONS
     createTrustBreakdown(data) {
         const factors = [
             { 
                 name: 'Source Credibility', 
                 score: this.getSourceScore(data.source_credibility?.rating),
-                icon: 'fa-building'
+                icon: 'fa-building',
+                description: this.getSourceDescription(data.source_credibility?.rating)
             },
             { 
                 name: 'Author Credibility', 
                 score: data.author_analysis?.credibility_score || 50,
-                icon: 'fa-user'
+                icon: 'fa-user',
+                description: this.getAuthorDescription(data.author_analysis)
             },
             { 
                 name: 'Transparency', 
                 score: data.transparency_analysis?.transparency_score || 50,
-                icon: 'fa-eye'
+                icon: 'fa-eye',
+                description: this.getTransparencyDescription(data.transparency_analysis)
             },
             { 
                 name: 'Objectivity', 
-                score: data.bias_analysis ? (100 - Math.abs(data.bias_analysis.bias_score || 0) * 100) : 50,
-                icon: 'fa-balance-scale'
+                score: data.bias_analysis?.objectivity_score || 50,
+                icon: 'fa-balance-scale',
+                description: this.getObjectivityDescription(data.bias_analysis)
             }
         ];
 
         return factors.map(factor => `
             <div class="trust-factor">
                 <div class="factor-header">
-                    <div>
+                    <div class="factor-info">
                         <i class="fas ${factor.icon}"></i>
                         <span>${factor.name}</span>
                     </div>
-                    <span class="factor-score">${factor.score}/100</span>
+                    <span class="factor-score" style="color: ${this.getScoreColor(factor.score)}">
+                        ${factor.score}
+                    </span>
                 </div>
                 <div class="factor-bar">
                     <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
                 </div>
+                <p class="factor-description">${factor.description}</p>
             </div>
         `).join('');
+    }
+
+    // Helper methods for conversational descriptions
+    getSourceDescription(rating) {
+        const descriptions = {
+            'High': 'This source has an excellent track record for accurate reporting and fact-checking.',
+            'Medium': 'Generally reliable, but may occasionally have minor factual errors or bias.',
+            'Low': 'This source has credibility issues. Double-check any important claims.',
+            'Very Low': 'Known for spreading misinformation. Approach with extreme caution.',
+            'Unknown': 'We couldn\'t verify this source. Be careful with unfamiliar websites.'
+        };
+        return descriptions[rating] || descriptions['Unknown'];
+    }
+
+    getAuthorDescription(authorData) {
+        if (!authorData) return 'No author information available, which reduces accountability.';
+        
+        const score = authorData.credibility_score || 0;
+        if (score >= 80) {
+            return 'Verified journalist with strong credentials and professional track record.';
+        } else if (score >= 60) {
+            return 'Author has some verifiable credentials. Appears to be a legitimate journalist.';
+        } else if (score >= 40) {
+            return 'Limited information available about this author. Credentials unclear.';
+        } else {
+            return 'Could not verify author credentials. This impacts overall credibility.';
+        }
+    }
+
+    getTransparencyDescription(transparencyData) {
+        const score = transparencyData?.transparency_score || 0;
+        if (score >= 80) {
+            return 'Excellent transparency with clear sources, dates, and author attribution.';
+        } else if (score >= 60) {
+            return 'Good transparency, though some attribution could be clearer.';
+        } else if (score >= 40) {
+            return 'Limited transparency. Missing some key information like sources or dates.';
+        } else {
+            return 'Poor transparency. Lacks proper sourcing and attribution.';
+        }
+    }
+
+    getObjectivityDescription(biasData) {
+        const score = biasData?.objectivity_score || 50;
+        if (score >= 80) {
+            return 'Highly objective reporting with minimal bias detected.';
+        } else if (score >= 60) {
+            return 'Reasonably objective, though some bias language was detected.';
+        } else if (score >= 40) {
+            return 'Moderate bias detected. Be aware of the article\'s perspective.';
+        } else {
+            return 'Strong bias detected. This is more opinion than objective reporting.';
+        }
     }
 
     // Author Analysis Card (Premium)
@@ -135,25 +193,28 @@ class AnalysisComponents {
         return `
             <div class="analysis-card" data-analyzer="author">
                 <div class="card-header">
-                    <h3><i class="fas fa-user-check"></i> Author Analysis</h3>
-                    <span class="card-score ${this.getScoreClass(score)}">${score}/100</span>
+                    <h3><i class="fas fa-user-shield"></i> Author Intelligence</h3>
+                    <span class="card-score ${this.getScoreClass(score)}">${score}</span>
                 </div>
                 <div class="card-content">
-                    <div class="author-details">
-                        <h4>${author.name || 'Unknown Author'}</h4>
-                        ${author.position ? `<p class="author-role">${author.position}</p>` : ''}
-                        ${author.bio ? `<p class="author-bio">${author.bio}</p>` : '<p class="no-info">No biographical information available</p>'}
+                    <div class="author-profile">
+                        <div class="author-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="author-info">
+                            <h4>${author.name || 'Unknown Author'}</h4>
+                            <p class="author-bio">${author.bio || 'No biographical information available'}</p>
+                        </div>
                     </div>
                     
-                    ${author.expertise?.length ? `
-                        <div class="expertise-tags">
-                            ${author.expertise.map(exp => `<span class="tag">${exp}</span>`).join('')}
-                        </div>
-                    ` : ''}
+                    ${author.professional_info ? this.createProfessionalInfo(author.professional_info) : ''}
+                    ${author.verification_status ? this.createVerificationStatus(author.verification_status) : ''}
+                    ${author.online_presence ? this.createOnlinePresence(author.online_presence) : ''}
                     
                     <div class="credibility-explanation">
                         <h5>Credibility Assessment</h5>
-                        <p>${author.credibility_explanation || 'Limited information available for assessment'}</p>
+                        <p>${author.credibility_explanation?.explanation || 'Unable to verify author credentials'}</p>
+                        <p class="advice"><i class="fas fa-lightbulb"></i> ${author.credibility_explanation?.advice || 'Cross-reference claims with other sources'}</p>
                     </div>
                 </div>
             </div>
@@ -163,44 +224,33 @@ class AnalysisComponents {
     // Bias Analysis Card (Premium)
     createBiasCard(data) {
         const bias = data.bias_analysis || {};
-        const biasScore = Math.abs(bias.bias_score || 0) * 100;
+        const dimensions = bias.bias_dimensions || {};
         
         return `
             <div class="analysis-card" data-analyzer="bias">
                 <div class="card-header">
-                    <h3><i class="fas fa-balance-scale"></i> Bias Analysis</h3>
-                    <span class="card-badge ${this.getBiasClass(bias.overall_bias)}">${bias.overall_bias || 'Unknown'}</span>
+                    <h3><i class="fas fa-balance-scale-left"></i> Advanced Bias Detection</h3>
+                    <span class="card-score ${this.getScoreClass(bias.objectivity_score || 50)}">${bias.objectivity_score || 50}</span>
                 </div>
                 <div class="card-content">
-                    <div class="bias-meter">
-                        <div class="bias-scale">
-                            <span class="scale-label left">Far Left</span>
-                            <div class="scale-bar">
-                                <div class="scale-marker" style="left: ${50 + (bias.political_lean || 0) * 2}%"></div>
-                            </div>
-                            <span class="scale-label right">Far Right</span>
-                        </div>
+                    <div class="bias-summary">
+                        <h5>Overall Assessment</h5>
+                        <p class="bias-label">${bias.overall_bias || 'Unknown'}</p>
                     </div>
                     
-                    <div class="bias-details">
-                        <div class="metric">
-                            <label>Political Lean</label>
-                            <span>${this.getPoliticalLeanText(bias.political_lean || 0)}</span>
-                        </div>
-                        <div class="metric">
-                            <label>Bias Intensity</label>
-                            <span>${biasScore.toFixed(0)}%</span>
-                        </div>
-                        <div class="metric">
-                            <label>Confidence</label>
-                            <span>${((bias.confidence || 0) * 100).toFixed(0)}%</span>
-                        </div>
+                    ${dimensions ? this.createBiasDimensions(dimensions) : ''}
+                    
+                    <div class="bias-visualization">
+                        <canvas id="biasChart" width="300" height="200"></canvas>
                     </div>
                     
-                    ${bias.bias_dimensions ? `
-                        <div class="bias-dimensions">
-                            <h5>Multi-dimensional Analysis</h5>
-                            <canvas id="biasChart" width="300" height="200"></canvas>
+                    ${bias.manipulation_tactics?.length ? this.createManipulationTactics(bias.manipulation_tactics) : ''}
+                    ${bias.loaded_phrases?.length ? this.createLoadedPhrases(bias.loaded_phrases) : ''}
+                    
+                    ${bias.ai_summary ? `
+                        <div class="ai-insight">
+                            <h5><i class="fas fa-robot"></i> AI Insight</h5>
+                            <p>${bias.ai_summary}</p>
                         </div>
                     ` : ''}
                 </div>
@@ -208,51 +258,34 @@ class AnalysisComponents {
         `;
     }
 
-    // Fact Check Card (Premium)
+    // Fact Checking Card (Premium)
     createFactCheckCard(data) {
         const factChecks = data.fact_checks || [];
-        const claims = data.key_claims || [];
-        
-        const verified = factChecks.filter(fc => fc.verdict?.toLowerCase().includes('true')).length;
-        const false_claims = factChecks.filter(fc => fc.verdict?.toLowerCase().includes('false')).length;
-        const mixed = factChecks.filter(fc => fc.verdict?.toLowerCase().includes('mixed')).length;
-        const unverified = claims.length - factChecks.length;
+        const summary = data.fact_check_summary || '';
         
         return `
             <div class="analysis-card" data-analyzer="facts">
                 <div class="card-header">
-                    <h3><i class="fas fa-fact-check"></i> Fact Checking</h3>
-                    <span class="card-info">${claims.length} claims analyzed</span>
+                    <h3><i class="fas fa-fact-check"></i> 21-Source Fact Verification</h3>
+                    <span class="card-score">${factChecks.length} claims</span>
                 </div>
                 <div class="card-content">
-                    <div class="fact-stats">
-                        <div class="stat verified">
-                            <i class="fas fa-check-circle"></i>
-                            <span class="stat-number">${verified}</span>
-                            <span class="stat-label">Verified</span>
-                        </div>
-                        <div class="stat false">
-                            <i class="fas fa-times-circle"></i>
-                            <span class="stat-number">${false_claims}</span>
-                            <span class="stat-label">False</span>
-                        </div>
-                        <div class="stat mixed">
-                            <i class="fas fa-adjust"></i>
-                            <span class="stat-number">${mixed}</span>
-                            <span class="stat-label">Mixed</span>
-                        </div>
-                        <div class="stat unverified">
-                            <i class="fas fa-question-circle"></i>
-                            <span class="stat-number">${unverified}</span>
-                            <span class="stat-label">Unverified</span>
-                        </div>
+                    ${summary ? `<div class="fact-summary">${summary}</div>` : ''}
+                    
+                    <div class="fact-checks">
+                        ${factChecks.slice(0, 5).map(check => this.createFactCheck(check)).join('')}
                     </div>
                     
-                    ${factChecks.length > 0 ? `
-                        <div class="fact-checks">
-                            ${factChecks.slice(0, 5).map(check => this.createFactCheck(check)).join('')}
+                    ${factChecks.length > 5 ? `
+                        <p class="more-facts">... and ${factChecks.length - 5} more claims verified</p>
+                    ` : ''}
+                    
+                    <div class="fact-sources">
+                        <h5>Verification Sources</h5>
+                        <div class="source-badges">
+                            ${this.createSourceBadges(factChecks)}
                         </div>
-                    ` : '<p class="no-info">No fact checks available</p>'}
+                    </div>
                 </div>
             </div>
         `;
@@ -301,7 +334,7 @@ class AnalysisComponents {
             <div class="analysis-card" data-analyzer="transparency">
                 <div class="card-header">
                     <h3><i class="fas fa-eye"></i> Transparency Analysis</h3>
-                    <span class="card-score ${this.getScoreClass(trans.transparency_score || 0)}">${trans.transparency_score || 0}/100</span>
+                    <span class="card-score ${this.getScoreClass(trans.transparency_score || 0)}">${trans.transparency_score || 0}</span>
                 </div>
                 <div class="card-content">
                     <div class="transparency-indicators">
@@ -310,9 +343,9 @@ class AnalysisComponents {
                     
                     ${trans.indicators?.length ? `
                         <div class="found-indicators">
-                            <h5>Found Indicators</h5>
+                            <h5>Found</h5>
                             <ul>
-                                ${trans.indicators.map(ind => `<li>${ind}</li>`).join('')}
+                                ${trans.indicators.map(ind => `<li><i class="fas fa-check"></i> ${ind}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
@@ -324,26 +357,35 @@ class AnalysisComponents {
     // Manipulation Detection Card (Premium)
     createManipulationCard(data) {
         const manip = data.persuasion_analysis || {};
-        const score = manip.persuasion_score || 0;
         
         return `
             <div class="analysis-card" data-analyzer="manipulation">
                 <div class="card-header">
                     <h3><i class="fas fa-masks-theater"></i> Manipulation Detection</h3>
-                    <span class="card-score ${score > 70 ? 'high' : score > 40 ? 'medium' : 'low'}">${score}/100</span>
+                    <span class="card-score ${this.getScoreClass(100 - (manip.persuasion_score || 0))}">${manip.persuasion_score || 0}%</span>
                 </div>
                 <div class="card-content">
-                    ${manip.techniques?.length ? `
-                        <div class="manipulation-techniques">
-                            <h5>Detected Techniques</h5>
-                            ${manip.techniques.map(tech => `
-                                <div class="technique-item">
-                                    <span class="technique-name">${tech.name}</span>
-                                    <span class="technique-severity ${tech.severity}">${tech.severity}</span>
+                    <div class="manipulation-level">
+                        <h5>Manipulation Level</h5>
+                        <p class="level-${(manip.manipulation_level || 'unknown').toLowerCase()}">${manip.manipulation_level || 'Unknown'}</p>
+                    </div>
+                    
+                    ${manip.tactics_found?.length ? `
+                        <div class="tactics-list">
+                            <h5>Detected Tactics</h5>
+                            ${manip.tactics_found.map(tactic => `
+                                <div class="tactic-item severity-${tactic.severity}">
+                                    <strong>${tactic.name}</strong>
+                                    <p>${tactic.description}</p>
+                                    ${tactic.keywords?.length ? `
+                                        <div class="keywords">
+                                            ${tactic.keywords.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `).join('')}
                         </div>
-                    ` : '<p class="no-info">No manipulation techniques detected</p>'}
+                    ` : '<p>No manipulation tactics detected</p>'}
                 </div>
             </div>
         `;
@@ -357,38 +399,213 @@ class AnalysisComponents {
             <div class="analysis-card" data-analyzer="content">
                 <div class="card-header">
                     <h3><i class="fas fa-file-alt"></i> Content Analysis</h3>
-                    <span class="card-info">${content.word_count || 0} words</span>
+                    <span class="card-score">${content.reading_time || 0} min</span>
                 </div>
                 <div class="card-content">
                     <div class="content-metrics">
                         <div class="metric">
-                            <label>Reading Level</label>
-                            <span>${content.reading_level || 'Unknown'}</span>
+                            <span class="metric-value">${content.word_count || 0}</span>
+                            <span class="metric-label">Words</span>
                         </div>
                         <div class="metric">
-                            <label>Sentiment</label>
-                            <span>${content.sentiment || 'Neutral'}</span>
+                            <span class="metric-value">${content.sentence_count || 0}</span>
+                            <span class="metric-label">Sentences</span>
                         </div>
                         <div class="metric">
-                            <label>Complexity</label>
-                            <span>${content.complexity || 'Medium'}</span>
+                            <span class="metric-value">${content.paragraph_count || 0}</span>
+                            <span class="metric-label">Paragraphs</span>
                         </div>
                     </div>
                     
-                    ${content.key_topics?.length ? `
-                        <div class="key-topics">
-                            <h5>Key Topics</h5>
-                            <div class="topic-tags">
-                                ${content.key_topics.map(topic => `<span class="tag">${topic}</span>`).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
+                    ${content.readability ? this.createReadabilitySection(content.readability) : ''}
+                    ${content.quality_indicators ? this.createQualityIndicators(content.quality_indicators) : ''}
                 </div>
             </div>
         `;
     }
 
     // Helper Methods
+    createProfessionalInfo(info) {
+        return `
+            <div class="professional-info">
+                <h5>Professional Background</h5>
+                ${info.current_position ? `<p><strong>Position:</strong> ${info.current_position}</p>` : ''}
+                ${info.outlets?.length ? `<p><strong>Outlets:</strong> ${info.outlets.join(', ')}</p>` : ''}
+                ${info.years_experience ? `<p><strong>Experience:</strong> ${info.years_experience} years</p>` : ''}
+                ${info.expertise_areas?.length ? `
+                    <div class="expertise-tags">
+                        ${info.expertise_areas.map(area => `<span class="tag">${area}</span>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    createVerificationStatus(status) {
+        return `
+            <div class="verification-status">
+                <h5>Verification</h5>
+                <div class="verification-badges">
+                    ${status.verified ? '<span class="badge verified"><i class="fas fa-check-circle"></i> Verified</span>' : ''}
+                    ${status.journalist_verified ? '<span class="badge journalist"><i class="fas fa-newspaper"></i> Journalist</span>' : ''}
+                    ${status.outlet_staff ? '<span class="badge staff"><i class="fas fa-id-badge"></i> Staff Writer</span>' : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    createOnlinePresence(presence) {
+        const platforms = Object.entries(presence);
+        if (!platforms.length) return '';
+        
+        return `
+            <div class="online-presence">
+                <h5>Online Presence</h5>
+                <div class="social-links">
+                    ${platforms.map(([platform, url]) => `
+                        <a href="${url}" target="_blank" class="social-link">
+                            <i class="fab fa-${platform}"></i>
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createBiasDimensions(dimensions) {
+        return `
+            <div class="bias-dimensions">
+                <h5>Multi-Dimensional Analysis</h5>
+                ${Object.entries(dimensions).map(([dim, data]) => `
+                    <div class="dimension">
+                        <label>${this.formatDimensionName(dim)}</label>
+                        <div class="dimension-bar">
+                            <div class="dimension-fill" style="width: ${Math.abs(data.score) * 50 + 50}%; 
+                                 margin-left: ${data.score < 0 ? (50 + data.score * 50) + '%' : '50%'};
+                                 background: ${this.getDimensionColor(dim)}"></div>
+                        </div>
+                        <span class="dimension-label">${data.label}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    createManipulationTactics(tactics) {
+        return `
+            <div class="manipulation-section">
+                <h5>Manipulation Tactics</h5>
+                <div class="tactics-grid">
+                    ${tactics.slice(0, 4).map(tactic => `
+                        <div class="tactic-chip">
+                            <span class="tactic-name">${tactic.name || tactic}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createLoadedPhrases(phrases) {
+        return `
+            <div class="loaded-phrases">
+                <h5>Loaded Language</h5>
+                ${phrases.slice(0, 3).map(phrase => `
+                    <div class="phrase-item">
+                        <span class="phrase-text">"${phrase.text}"</span>
+                        <span class="phrase-type">${phrase.type}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    createFactCheck(check) {
+        const verdictClass = this.getVerdictClass(check.verdict);
+        
+        return `
+            <div class="fact-check-item ${verdictClass}">
+                <div class="fact-claim">"${this.truncate(check.claim, 150)}"</div>
+                <div class="fact-verdict">
+                    <span class="verdict-label">${check.verdict || 'Unverified'}</span>
+                    ${check.confidence ? `<span class="confidence">${check.confidence}% confident</span>` : ''}
+                </div>
+                ${check.explanation ? `<div class="fact-explanation">${check.explanation}</div>` : ''}
+                ${check.sources_checked?.length ? `
+                    <div class="fact-sources-checked">
+                        <small>Sources: ${check.sources_checked.join(', ')}</small>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    createSourceBadges(factChecks) {
+        const sources = new Set();
+        factChecks.forEach(check => {
+            if (check.sources_checked) {
+                check.sources_checked.forEach(source => sources.add(source));
+            }
+        });
+        
+        return Array.from(sources).slice(0, 8).map(source => 
+            `<span class="source-badge">${source}</span>`
+        ).join('');
+    }
+
+    createTransparencyIndicators(trans) {
+        const indicators = [
+            { key: 'has_author', label: 'Author Attribution', icon: 'fa-user' },
+            { key: 'has_date', label: 'Publication Date', icon: 'fa-calendar' },
+            { key: 'has_sources', label: 'Sources Cited', icon: 'fa-quote-right' },
+            { key: 'has_disclosure', label: 'Disclosures', icon: 'fa-hand-holding-heart' }
+        ];
+        
+        return indicators.map(ind => `
+            <div class="indicator ${trans[ind.key] ? 'found' : 'missing'}">
+                <i class="fas ${ind.icon}"></i>
+                <span>${ind.label}</span>
+                <i class="fas ${trans[ind.key] ? 'fa-check' : 'fa-times'}"></i>
+            </div>
+        `).join('');
+    }
+
+    createReadabilitySection(readability) {
+        return `
+            <div class="readability-section">
+                <h5>Readability</h5>
+                <div class="readability-score">
+                    <span class="score-value">${readability.score || 0}</span>
+                    <span class="score-label">${readability.level || 'Unknown'}</span>
+                </div>
+                <p class="target-audience">${readability.target_audience || 'General audience'}</p>
+            </div>
+        `;
+    }
+
+    createQualityIndicators(indicators) {
+        return `
+            <div class="quality-indicators">
+                <h5>Content Quality</h5>
+                <div class="indicators-grid">
+                    ${Object.entries(indicators).map(([key, value]) => `
+                        <div class="indicator-item">
+                            <span class="indicator-label">${this.formatIndicatorName(key)}</span>
+                            <span class="indicator-value">${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Utility Methods
+    getScoreClass(score) {
+        if (score >= 70) return 'score-high';
+        if (score >= 40) return 'score-medium';
+        return 'score-low';
+    }
+
     getSourceScore(rating) {
         const scores = {
             'High': 90,
@@ -400,13 +617,6 @@ class AnalysisComponents {
         return scores[rating] || 50;
     }
 
-    getScoreClass(score) {
-        if (score >= 80) return 'high';
-        if (score >= 60) return 'medium';
-        if (score >= 40) return 'low';
-        return 'very-low';
-    }
-
     getScoreColor(score) {
         if (score >= 80) return '#10b981';
         if (score >= 60) return '#3b82f6';
@@ -414,84 +624,54 @@ class AnalysisComponents {
         return '#ef4444';
     }
 
-    getBiasClass(bias) {
-        const biasLower = (bias || '').toLowerCase();
-        if (biasLower.includes('left')) return 'bias-left';
-        if (biasLower.includes('right')) return 'bias-right';
-        if (biasLower.includes('center')) return 'bias-center';
-        return 'bias-unknown';
+    getVerdictClass(verdict) {
+        if (!verdict) return 'unverified';
+        const v = verdict.toLowerCase();
+        if (v.includes('true') || v.includes('correct')) return 'verified';
+        if (v.includes('false') || v.includes('incorrect')) return 'false';
+        if (v.includes('partial') || v.includes('mixed')) return 'mixed';
+        return 'unverified';
     }
 
-    getPoliticalLeanText(lean) {
-        if (lean < -40) return 'Far Left';
-        if (lean < -20) return 'Left';
-        if (lean < -5) return 'Lean Left';
-        if (lean > 40) return 'Far Right';
-        if (lean > 20) return 'Right';
-        if (lean > 5) return 'Lean Right';
-        return 'Center';
+    formatDimensionName(dim) {
+        return dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
-    createFactCheck(check) {
-        const verdict = check.verdict || 'Unverified';
-        const verdictClass = verdict.toLowerCase().includes('true') ? 'verified' : 
-                           verdict.toLowerCase().includes('false') ? 'false' : 'mixed';
-        
-        return `
-            <div class="fact-check-item">
-                <div class="fact-claim">${check.claim || 'No claim text'}</div>
-                <div class="fact-verdict ${verdictClass}">
-                    <i class="fas ${verdictClass === 'verified' ? 'fa-check' : verdictClass === 'false' ? 'fa-times' : 'fa-adjust'}"></i>
-                    ${verdict}
-                </div>
-                ${check.source ? `<div class="fact-source">Source: ${check.source}</div>` : ''}
-            </div>
-        `;
+    getDimensionColor(dim) {
+        const colors = {
+            political: '#6366f1',
+            corporate: '#10b981',
+            sensational: '#f59e0b',
+            nationalistic: '#ef4444',
+            establishment: '#8b5cf6'
+        };
+        return colors[dim] || '#6b7280';
     }
 
-    createTransparencyIndicators(trans) {
-        const indicators = [
-            { name: 'Author Attribution', found: trans.has_author },
-            { name: 'Publication Date', found: trans.has_date },
-            { name: 'Source Citations', found: trans.has_sources },
-            { name: 'Disclosure Statements', found: trans.has_disclosure }
-        ];
-        
-        return indicators.map(ind => `
-            <div class="indicator ${ind.found ? 'found' : 'missing'}">
-                <i class="fas ${ind.found ? 'fa-check' : 'fa-times'}"></i>
-                <span>${ind.name}</span>
-            </div>
-        `).join('');
+    formatIndicatorName(key) {
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
-    createSourceBadges(factChecks) {
-        const sources = [...new Set(factChecks.map(fc => fc.source).filter(Boolean))];
-        return sources.slice(0, 4).map(source => `<span class="source-badge">${source}</span>`).join('');
+    truncate(text, length) {
+        if (!text || text.length <= length) return text;
+        return text.substring(0, length) + '...';
     }
 
-    formatDimensionName(dimension) {
-        return dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    // Bias Visualization - properly sized
+    // Create Political Bias Visualization
     createBiasVisualization(biasData) {
         const canvas = document.getElementById('biasChart');
-        if (!canvas || !biasData.bias_dimensions) return;
-        
-        // Set proper canvas size
-        canvas.width = 300;
-        canvas.height = 200;
+        if (!canvas) return;
         
         const ctx = canvas.getContext('2d');
         
+        // Clear previous chart
         if (this.charts.biasChart) {
             this.charts.biasChart.destroy();
         }
-        
+
         const dimensions = biasData.bias_dimensions || {};
         const labels = Object.keys(dimensions).map(d => this.formatDimensionName(d));
-        const scores = Object.values(dimensions).map(d => Math.abs(d.score || 0) * 100);
+        const scores = Object.values(dimensions).map(d => Math.abs(d.score) * 100);
         
         this.charts.biasChart = new Chart(ctx, {
             type: 'radar',
@@ -510,30 +690,28 @@ class AnalysisComponents {
                 }]
             },
             options: {
-                responsive: false,
-                maintainAspectRatio: false,
                 elements: {
                     line: {
                         borderWidth: 3
                     }
                 },
                 scales: {
-                    r: {
-                        angleLines: {
-                            display: false
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 100
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
+                   r: {
+                       angleLines: {
+                           display: false
+                       },
+                       suggestedMin: 0,
+                       suggestedMax: 100
+                   }
+               },
+               plugins: {
+                   legend: {
+                       display: false
+                   }
+               }
+           }
+       });
+   }
 }
 
 // Initialize components
