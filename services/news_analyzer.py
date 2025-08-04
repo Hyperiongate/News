@@ -1,7 +1,7 @@
 """
-services/news_analyzer.py - Main orchestrator with FIXED imports and OpenAI initialization
+services/news_analyzer.py - Main orchestrator with FIXED imports and method calls
 Complete version with fact checking integration and ENHANCED BIAS ANALYSIS
-Updated to handle OpenAI client initialization properly
+Fixed to use correct ArticleExtractor methods
 """
 
 import os
@@ -139,26 +139,47 @@ class NewsAnalyzer:
             # Step 1: Extract article content
             if content_type == 'url':
                 logger.info(f"Extracting article from URL: {content}")
-                article_data = self.extractor.extract_from_url(content)
+                # Use the correct method name: extract()
+                article_data = self.extractor.extract(content)
+                
+                # Check if extraction failed
+                if article_data.get('error'):
+                    logger.error(f"Article extraction failed: {article_data['error']}")
+                    return {
+                        'success': False,
+                        'error': f'Article extraction failed: {article_data["error"]}'
+                    }
             else:
+                # For text input, create article data structure
                 logger.info("Processing text content")
-                article_data = self.extractor.extract_from_text(content)
-            
-            # Check if extraction was successful
-            if not article_data.get('success', False):
-                error_msg = article_data.get('error', 'Unknown extraction error')
-                logger.error(f"Article extraction failed: {error_msg}")
-                return {
-                    'success': False,
-                    'error': f'Article extraction failed: {error_msg}'
+                article_data = {
+                    'title': self._extract_title_from_text(content),
+                    'text': content,
+                    'content': content,
+                    'author': None,
+                    'publish_date': None,
+                    'url': None,
+                    'domain': 'user_input',
+                    'success': True
                 }
             
             # Ensure we have text content
-            if not article_data.get('text'):
+            if not article_data.get('text') and not article_data.get('content'):
                 return {
                     'success': False,
                     'error': 'No article content could be extracted'
                 }
+            
+            # Ensure both 'text' and 'content' fields exist
+            if not article_data.get('text'):
+                article_data['text'] = article_data.get('content', '')
+            if not article_data.get('content'):
+                article_data['content'] = article_data.get('text', '')
+            
+            # Log extraction results
+            logger.info(f"Extracted - Title: {article_data.get('title', 'No title')}")
+            logger.info(f"Extracted - Author: {article_data.get('author', 'No author')}")
+            logger.info(f"Extracted - Text length: {len(article_data.get('text', ''))}")
             
             # Step 2: Run all analyzers
             analysis_results = {}
@@ -171,35 +192,57 @@ class NewsAnalyzer:
             if self.source_credibility:
                 try:
                     domain = article_data.get('domain', '')
-                    analysis_results['source_credibility'] = self.source_credibility.check_source(domain)
+                    # Use the correct method name: check_credibility()
+                    analysis_results['source_credibility'] = self.source_credibility.check_credibility(domain)
                 except Exception as e:
                     logger.error(f"Source credibility check failed: {e}")
-                    analysis_results['source_credibility'] = {'rating': 'Unknown', 'credibility': 'Unknown'}
+                    analysis_results['source_credibility'] = {
+                        'rating': 'Unknown',
+                        'credibility': 'Unknown',
+                        'bias': 'Unknown',
+                        'type': 'Unknown'
+                    }
+            else:
+                analysis_results['source_credibility'] = {
+                    'rating': 'Unknown',
+                    'credibility': 'Unknown',
+                    'bias': 'Unknown',
+                    'type': 'Unknown'
+                }
             
             # Author analysis
             if self.author_analyzer and article_data.get('author'):
                 try:
-                    author_result = self.author_analyzer.analyze_authors(
+                    # Use the correct method name: analyze_single_author()
+                    author_result = self.author_analyzer.analyze_single_author(
                         article_data['author'],
                         article_data.get('domain', '')
                     )
-                    analysis_results['author_analysis'] = author_result[0] if author_result else {
-                        'found': False,
-                        'name': article_data.get('author', 'Unknown'),
-                        'credibility_score': 50
-                    }
+                    analysis_results['author_analysis'] = author_result
                 except Exception as e:
                     logger.error(f"Author analysis failed: {e}")
                     analysis_results['author_analysis'] = {
                         'found': False,
                         'name': article_data.get('author', 'Unknown'),
-                        'credibility_score': 50
+                        'credibility_score': 50,
+                        'bio': 'Author information unavailable',
+                        'verification_status': {
+                            'verified': False,
+                            'journalist_verified': False,
+                            'outlet_staff': False
+                        }
                     }
             else:
                 analysis_results['author_analysis'] = {
                     'found': False,
                     'name': article_data.get('author', 'Unknown'),
-                    'credibility_score': 50
+                    'credibility_score': 40,
+                    'bio': 'No author information provided',
+                    'verification_status': {
+                        'verified': False,
+                        'journalist_verified': False,
+                        'outlet_staff': False
+                    }
                 }
             
             # Transparency analysis
@@ -207,61 +250,99 @@ class NewsAnalyzer:
                 try:
                     analysis_results['transparency_analysis'] = self.transparency_analyzer.analyze(
                         article_data['text'],
-                        article_data
+                        article_data.get('author')
                     )
                 except Exception as e:
                     logger.error(f"Transparency analysis failed: {e}")
                     analysis_results['transparency_analysis'] = {'transparency_score': 50}
+            else:
+                analysis_results['transparency_analysis'] = {'transparency_score': 50}
             
-            # Only run advanced analyzers for pro users or basic demo
-            if is_pro:
-                # Bias analysis
-                if self.bias_analyzer:
-                    try:
-                        # Check if comprehensive analysis is available
-                        if hasattr(self.bias_analyzer, 'analyze_comprehensive_bias'):
-                            bias_result = self.bias_analyzer.analyze_comprehensive_bias(
-                                article_data['text'],
-                                article_data.get('title', '')
-                            )
-                        else:
-                            bias_result = self.bias_analyzer.analyze(article_data['text'])
-                        
-                        analysis_results['bias_analysis'] = bias_result
-                    except Exception as e:
-                        logger.error(f"Bias analysis failed: {e}")
-                        analysis_results['bias_analysis'] = {
-                            'overall_bias': 'Unknown',
-                            'political_lean': 0,
-                            'bias_score': 0,
-                            'confidence': 0
+            # Bias analysis (always run for basic score)
+            if self.bias_analyzer:
+                try:
+                    # Get basic political bias for all users
+                    bias_score = self.bias_analyzer.detect_political_bias(article_data['text'])
+                    
+                    if is_pro and hasattr(self.bias_analyzer, 'analyze_comprehensive_bias'):
+                        # Pro users get comprehensive analysis
+                        bias_result = self.bias_analyzer.analyze_comprehensive_bias(
+                            text=article_data['text'],
+                            basic_bias_score=bias_score,
+                            domain=article_data.get('domain')
+                        )
+                    else:
+                        # Basic users get simple analysis
+                        bias_result = {
+                            'overall_bias': 'Center' if abs(bias_score) < 0.2 else ('Left' if bias_score < 0 else 'Right'),
+                            'political_lean': bias_score * 100,
+                            'bias_score': bias_score,
+                            'objectivity_score': max(0, 100 - abs(bias_score * 100)),
+                            'confidence': 70
                         }
-                
+                    
+                    analysis_results['bias_analysis'] = bias_result
+                except Exception as e:
+                    logger.error(f"Bias analysis failed: {e}")
+                    analysis_results['bias_analysis'] = {
+                        'overall_bias': 'Unknown',
+                        'political_lean': 0,
+                        'bias_score': 0,
+                        'objectivity_score': 50,
+                        'confidence': 0
+                    }
+            else:
+                analysis_results['bias_analysis'] = {
+                    'overall_bias': 'Unknown',
+                    'political_lean': 0,
+                    'bias_score': 0,
+                    'objectivity_score': 50,
+                    'confidence': 0
+                }
+            
+            # Clickbait detection (basic score for all users)
+            if self.clickbait_analyzer:
+                try:
+                    analysis_results['clickbait_score'] = self.clickbait_analyzer.analyze_headline(
+                        article_data.get('title', ''),
+                        article_data['text']
+                    )
+                except Exception as e:
+                    logger.error(f"Clickbait analysis failed: {e}")
+                    analysis_results['clickbait_score'] = 0
+            else:
+                # Simple fallback clickbait detection
+                title = article_data.get('title', '').lower()
+                clickbait_score = 0
+                if any(word in title for word in ['shocking', 'you won\'t believe', 'this one trick']):
+                    clickbait_score += 30
+                if title.endswith('?'):
+                    clickbait_score += 20
+                if any(char in title for char in ['!', '...']):
+                    clickbait_score += 15
+                analysis_results['clickbait_score'] = min(clickbait_score, 100)
+            
+            # Pro features
+            if is_pro:
                 # Fact checking
                 if self.fact_checker and key_claims:
                     try:
-                        fact_checks = []
-                        for claim in key_claims[:5]:  # Limit to 5 claims for performance
-                            check_result = self.fact_checker.check_claim(claim)
-                            if check_result:
-                                fact_checks.append(check_result)
+                        claim_texts = [claim if isinstance(claim, str) else claim.get('text', str(claim)) 
+                                      for claim in key_claims[:5]]
+                        
+                        fact_checks = self.fact_checker.check_claims(
+                            claims=claim_texts,
+                            article_url=article_data.get('url'),
+                            article_date=article_data.get('publish_date')
+                        )
                         analysis_results['fact_checks'] = fact_checks
+                        
+                        # Generate summary
+                        if fact_checks:
+                            analysis_results['fact_check_summary'] = self._generate_fact_check_summary(fact_checks)
                     except Exception as e:
                         logger.error(f"Fact checking failed: {e}")
                         analysis_results['fact_checks'] = []
-                
-                # Clickbait detection
-                if self.clickbait_analyzer:
-                    try:
-                        clickbait_result = self.clickbait_analyzer.analyze(
-                            article_data.get('title', ''),
-                            article_data['text']
-                        )
-                        analysis_results['clickbait_score'] = clickbait_result.get('clickbait_score', 0)
-                        analysis_results['clickbait_analysis'] = clickbait_result
-                    except Exception as e:
-                        logger.error(f"Clickbait analysis failed: {e}")
-                        analysis_results['clickbait_score'] = 0
                 
                 # Content analysis
                 if self.content_analyzer:
@@ -286,16 +367,6 @@ class NewsAnalyzer:
                         analysis_results['article_summary'] = self._generate_ai_summary(article_data['text'])
                     except Exception as e:
                         logger.error(f"AI summary generation failed: {e}")
-            else:
-                # Basic analysis for free tier
-                analysis_results['bias_analysis'] = {
-                    'overall_bias': 'Upgrade to Pro for detailed bias analysis',
-                    'political_lean': 0,
-                    'bias_score': 0,
-                    'confidence': 0
-                }
-                analysis_results['fact_checks'] = []
-                analysis_results['clickbait_score'] = 0
             
             # Step 3: Calculate overall trust score
             trust_score = self._calculate_trust_score(analysis_results, article_data)
@@ -306,7 +377,7 @@ class NewsAnalyzer:
                 'article': {
                     'title': article_data.get('title', 'Untitled'),
                     'author': article_data.get('author', 'Unknown Author'),
-                    'publish_date': article_data.get('publish_date'),
+                    'publish_date': article_data.get('publish_date') or article_data.get('date'),
                     'url': article_data.get('url'),
                     'domain': article_data.get('domain', 'unknown'),
                     'text_preview': article_data['text'][:500] + '...' if len(article_data['text']) > 500 else article_data['text']
@@ -328,6 +399,18 @@ class NewsAnalyzer:
                 'success': False,
                 'error': f'Analysis failed: {str(e)}'
             }
+    
+    def _extract_title_from_text(self, text: str) -> str:
+        """Extract title from pasted text (first line or first sentence)"""
+        lines = text.strip().split('\n')
+        if lines:
+            for line in lines:
+                if line.strip():
+                    title = line.strip()
+                    if len(title) > 200:
+                        title = title[:197] + '...'
+                    return title
+        return 'Untitled Article'
     
     def _extract_key_claims(self, text: str) -> List[str]:
         """Extract key factual claims from article text"""
@@ -369,6 +452,53 @@ class NewsAnalyzer:
             logger.error(f"Claim extraction failed: {e}")
             return []
     
+    def _generate_fact_check_summary(self, fact_checks: List[Dict[str, Any]]) -> str:
+        """Generate a summary of fact check results"""
+        if not fact_checks:
+            return "No fact checks performed."
+        
+        # Count verdicts
+        verdict_counts = {
+            'true': 0,
+            'false': 0,
+            'partially_true': 0,
+            'unverified': 0
+        }
+        
+        for fc in fact_checks:
+            verdict = fc.get('verdict', 'unverified').lower()
+            if 'true' in verdict and 'false' not in verdict:
+                verdict_counts['true'] += 1
+            elif 'false' in verdict:
+                verdict_counts['false'] += 1
+            elif 'partial' in verdict:
+                verdict_counts['partially_true'] += 1
+            else:
+                verdict_counts['unverified'] += 1
+        
+        total = len(fact_checks)
+        summary = f"Checked {total} claims: "
+        summary_parts = []
+        
+        if verdict_counts['true'] > 0:
+            summary_parts.append(f"{verdict_counts['true']} true")
+        if verdict_counts['false'] > 0:
+            summary_parts.append(f"{verdict_counts['false']} false")
+        if verdict_counts['partially_true'] > 0:
+            summary_parts.append(f"{verdict_counts['partially_true']} partially true")
+        if verdict_counts['unverified'] > 0:
+            summary_parts.append(f"{verdict_counts['unverified']} unverified")
+        
+        summary += ", ".join(summary_parts)
+        
+        # Add overall assessment
+        if verdict_counts['false'] > total * 0.3:
+            summary += ". ⚠️ Significant factual issues detected."
+        elif verdict_counts['true'] > total * 0.7:
+            summary += ". ✓ Mostly factually accurate."
+        
+        return summary
+    
     def _calculate_trust_score(self, analysis_results: Dict[str, Any], 
                               article_data: Dict[str, Any]) -> int:
         """Calculate overall trust score based on multiple factors"""
@@ -396,8 +526,12 @@ class NewsAnalyzer:
         
         # Bias impact (15% weight)
         bias_data = analysis_results.get('bias_analysis', {})
-        bias_score = abs(bias_data.get('bias_score', 0))
-        bias_trust = 100 - (bias_score * 100)  # Convert to trust score
+        # Handle both percentage and decimal bias scores
+        political_lean = abs(bias_data.get('political_lean', 0))
+        if political_lean > 1:  # It's a percentage
+            bias_trust = 100 - political_lean
+        else:  # It's a decimal
+            bias_trust = 100 - (political_lean * 100)
         score_components.append(max(0, bias_trust))
         weights.append(0.15)
         
