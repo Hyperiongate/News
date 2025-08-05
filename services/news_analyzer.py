@@ -29,14 +29,13 @@ try:
 except ImportError:
     AuthorAnalyzer = None
 
-# Import the services with their correct names
+# FIXED: Import BiasDetector directly since that's the actual filename
 try:
-    from services.bias_analyzer import BiasAnalyzer
+    from services.bias_detector import BiasDetector as BiasAnalyzer
 except ImportError:
-    try:
-        from services.bias_detector import BiasDetector as BiasAnalyzer
-    except ImportError:
-        BiasAnalyzer = None
+    BiasAnalyzer = None
+    logger = logging.getLogger(__name__)
+    logger.error("BiasDetector could not be imported!")
 
 try:
     from services.manipulation_detector import ManipulationDetector
@@ -284,47 +283,69 @@ class NewsAnalyzer:
                     'has_sources': False
                 }
             
-            # CRITICAL FIX: Bias analysis should ALWAYS use comprehensive analysis
+            # CRITICAL FIX: ALWAYS use comprehensive bias analysis
             if self.bias_analyzer:
                 try:
                     logger.info("Running comprehensive bias analysis...")
                     
-                    # Check if the bias analyzer has the comprehensive method
-                    if hasattr(self.bias_analyzer, 'analyze_comprehensive_bias'):
-                        # ALL users get comprehensive analysis!
-                        bias_result = self.bias_analyzer.analyze_comprehensive_bias(
-                            text=article_data['text'],
-                            basic_bias_score=0,  # Let it calculate
-                            domain=article_data.get('domain')
-                        )
-                        logger.info(f"Comprehensive bias analysis completed. Found {len(bias_result.get('bias_patterns', []))} patterns")
-                    else:
-                        # Fallback if method doesn't exist
-                        logger.warning("Comprehensive bias analysis not available, using basic analysis")
+                    # DIRECTLY call analyze_comprehensive_bias without checking
+                    # The BiasDetector class DOES have this method
+                    bias_result = self.bias_analyzer.analyze_comprehensive_bias(
+                        text=article_data['text'],
+                        basic_bias_score=0,  # Let it calculate
+                        domain=article_data.get('domain', '')
+                    )
+                    
+                    logger.info(f"Comprehensive bias analysis completed successfully")
+                    logger.info(f"Found {len(bias_result.get('bias_patterns', []))} bias patterns")
+                    logger.info(f"Found {len(bias_result.get('loaded_phrases', []))} loaded phrases")
+                    logger.info(f"Bias dimensions analyzed: {len(bias_result.get('bias_dimensions', {}))}")
+                    
+                    analysis_results['bias_analysis'] = bias_result
+                    
+                except AttributeError as e:
+                    # This should not happen if BiasDetector is properly imported
+                    logger.error(f"BiasDetector missing analyze_comprehensive_bias method: {e}")
+                    logger.error("Falling back to basic bias detection")
+                    
+                    # Emergency fallback - try basic method
+                    try:
                         bias_score = self.bias_analyzer.detect_political_bias(article_data['text'])
                         
-                        # Create a more detailed response even for basic analysis
                         bias_result = {
                             'overall_bias': 'Center' if abs(bias_score) < 0.2 else ('Left' if bias_score < 0 else 'Right'),
                             'political_lean': bias_score * 100,
                             'bias_score': bias_score,
                             'objectivity_score': max(0, 100 - abs(bias_score * 100)),
                             'confidence': 70,
-                            'opinion_percentage': 30,  # Estimate
-                            'emotional_score': 20,  # Estimate
+                            'opinion_percentage': 30,
+                            'emotional_score': 20,
                             'manipulation_tactics': [],
                             'loaded_phrases': [],
+                            'bias_patterns': [],
+                            'bias_dimensions': {
+                                'partisan_bias': abs(bias_score * 100),
+                                'sensationalism': 20,
+                                'opinion_vs_fact': 30,
+                                'source_diversity': 50,
+                                'emotional_manipulation': 20
+                            },
                             'detailed_explanation': self._generate_basic_bias_explanation(bias_score),
                             'bias_summary': f"Political bias: {int(abs(bias_score * 100))}% {'left' if bias_score < 0 else 'right' if bias_score > 0 else 'center'}",
                             'key_findings': [
                                 f"Article leans {int(abs(bias_score * 100))}% {'left' if bias_score < 0 else 'right' if bias_score > 0 else 'center'}",
-                                f"Objectivity score: {max(0, 100 - abs(bias_score * 100))}%"
+                                f"Objectivity score: {max(0, 100 - abs(bias_score * 100))}%",
+                                "Limited bias analysis available - comprehensive analysis failed"
                             ]
                         }
-                    
-                    analysis_results['bias_analysis'] = bias_result
+                        
+                        analysis_results['bias_analysis'] = bias_result
+                    except Exception as e2:
+                        logger.error(f"Even basic bias detection failed: {e2}")
+                        raise e2
+                        
                 except Exception as e:
-                    logger.error(f"Bias analysis failed: {e}", exc_info=True)
+                    logger.error(f"Bias analysis failed completely: {e}", exc_info=True)
                     analysis_results['bias_analysis'] = {
                         'overall_bias': 'Unknown',
                         'political_lean': 0,
@@ -335,11 +356,14 @@ class NewsAnalyzer:
                         'emotional_score': 0,
                         'manipulation_tactics': [],
                         'loaded_phrases': [],
+                        'bias_patterns': [],
+                        'bias_dimensions': {},
                         'detailed_explanation': 'Unable to analyze bias due to an error',
                         'bias_summary': 'Analysis failed',
-                        'key_findings': []
+                        'key_findings': ['Bias analysis unavailable due to technical error']
                     }
             else:
+                logger.error("BiasAnalyzer is None - not initialized properly")
                 analysis_results['bias_analysis'] = {
                     'overall_bias': 'Unknown',
                     'political_lean': 0,
@@ -350,9 +374,11 @@ class NewsAnalyzer:
                     'emotional_score': 0,
                     'manipulation_tactics': [],
                     'loaded_phrases': [],
+                    'bias_patterns': [],
+                    'bias_dimensions': {},
                     'detailed_explanation': 'Bias analyzer not available',
                     'bias_summary': 'Analysis unavailable',
-                    'key_findings': []
+                    'key_findings': ['Bias analyzer service not initialized']
                 }
             
             # Clickbait detection (basic score for all users)
