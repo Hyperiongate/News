@@ -1,16 +1,15 @@
 """
 FILE: services/article_extractor.py
-Enhanced article extractor with advanced scraping capabilities
-Handles paywalls, CloudFlare, and JavaScript-rendered sites
-COMPLETE VERSION with timeout protection and circuit breaker
+Universal article extractor that works with ANY site of ANY size
+Uses intelligent content detection instead of brittle selectors
 """
 
 import os
 import logging
 import requests
-from bs4 import BeautifulSoup
-from typing import Dict, Any, Optional, Set
-from datetime import datetime, timedelta
+from bs4 import BeautifulSoup, NavigableString, Comment
+from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime
 import json
 from urllib.parse import urlparse
 import time
@@ -56,12 +55,11 @@ class CircuitBreaker:
     """Circuit breaker to prevent repeated attempts to problematic domains"""
     def __init__(self):
         self.failed_domains = defaultdict(lambda: {'count': 0, 'last_attempt': None, 'last_error': None})
-        self.threshold = 3  # failures before opening circuit
-        self.timeout_duration = 300  # 5 minutes before retry
+        self.threshold = 3
+        self.timeout_duration = 300
         self._lock = threading.Lock()
     
     def is_open(self, domain: str) -> bool:
-        """Check if circuit is open for domain"""
         with self._lock:
             if domain not in self.failed_domains:
                 return False
@@ -73,41 +71,423 @@ class CircuitBreaker:
                     if time_since_failure < self.timeout_duration:
                         return True
                     else:
-                        # Reset after timeout
                         self.failed_domains[domain] = {'count': 0, 'last_attempt': None, 'last_error': None}
             return False
     
     def record_failure(self, domain: str, error: str = None):
-        """Record a failure for domain"""
         with self._lock:
             self.failed_domains[domain]['count'] += 1
             self.failed_domains[domain]['last_attempt'] = datetime.now()
             self.failed_domains[domain]['last_error'] = error
     
     def record_success(self, domain: str):
-        """Record success and reset counter"""
         with self._lock:
             if domain in self.failed_domains:
                 del self.failed_domains[domain]
     
     def get_last_error(self, domain: str) -> Optional[str]:
-        """Get last error for domain"""
         with self._lock:
             if domain in self.failed_domains:
                 return self.failed_domains[domain].get('last_error')
         return None
 
+class ContentExtractor:
+    """Intelligent content extraction using text density and pattern analysis"""
+    
+    def __init__(self):
+        # Common non-content indicators
+        self.non_content_patterns = [
+            r'sign\s*in', r'log\s*in', r'subscribe', r'newsletter', r'cookie', 
+            r'privacy\s*policy', r'terms\s*of\s*service', r'advertisement',
+            r'please\s*enable\s*javascript', r'your\s*browser', r'supported\s*browser',
+            r'©\s*\d{4}', r'all\s*rights\s*reserved', r'follow\s*us', r'share\s*this'
+        ]
+        
+        # Paywall indicators
+        self.paywall_patterns = [
+            r'subscribe\s*to\s*read', r'continue\s*reading', r'already\s*a\s*subscriber',
+            r'unlimited\s*access', r'free\s*trial', r'paywall', r'premium\s*content',
+            r'members?\s*only', r'exclusive\s*content', r'sign\s*up\s*to\s*read'
+        ]
+        
+        # Minimum thresholds
+        self.min_paragraphs = 2  # At least 2 paragraphs for an article
+        self.min_words_per_paragraph = 10  # At least 10 words per paragraph
+        self.min_total_words = 50  # At least 50 words total (handles very short articles)
+    
+    def extract_content(self, soup: BeautifulSoup) -> Tuple[Optional[str], Dict[str, Any]]:
+        """
+        Extract article content using multiple strategies
+        Returns: (content_text, metadata_dict)
+        """
+        # Clean the soup first
+        self._clean_soup(soup)
+        
+        # Try multiple extraction strategies in order of reliability
+        strategies = [
+            ("structured_data", self._extract_from_structured_data),
+            ("article_tag", self._extract_from_article_tag),
+            ("main_tag", self._extract_from_main_tag),
+            ("text_density", self._extract_by_text_density),
+            ("paragraph_clustering", self._extract_by_paragraph_clustering),
+            ("heuristic", self._extract_by_heuristics)
+        ]
+        
+        best_content = None
+        best_score = 0
+        best_method = None
+        metadata = {}
+        
+        for method_name, method_func in strategies:
+            try:
+                content, score = method_func(soup)
+                if content and score > best_score:
+                    # Validate it's not paywall/error content
+                    if not self._is_paywall_content(content) and self._is_valid_article_content(content):
+                        best_content = content
+                        best_score = score
+                        best_method = method_name
+                        logger.info(f"Found content with {method_name}: score={score}, length={len(content)}")
+            except Exception as e:
+                logger.debug(f"Strategy {method_name} failed: {e}")
+                continue
+        
+        if best_content:
+            metadata['extraction_method'] = best_method
+            metadata['confidence_score'] = best_score
+            return best_content, metadata
+        
+        return None, {"error": "No article content found"}
+    
+    def _clean_soup(self, soup: BeautifulSoup):
+        """Remove non-content elements from soup"""
+        # Remove script, style, and other non-content tags
+        for tag in soup(['script', 'style', 'noscript', 'iframe', 'svg', 'canvas']):
+            tag.decompose()
+        
+        # Remove comments
+        for comment in soup.find_all(text=lambda text: isinstance(text, Comment)):
+            comment.extract()
+        
+        # Remove hidden elements
+        for hidden in soup.find_all(style=re.compile(r'display:\s*none', re.I)):
+            hidden.decompose()
+        
+        for hidden in soup.find_all(class_=re.compile(r'hidden|invisible', re.I)):
+            if not any(term in str(hidden.get('class', [])) for term in ['article', 'content', 'body']):
+                hidden.decompose()
+    
+    def _extract_from_structured_data(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Extract from JSON-LD or microdata"""
+        # Try JSON-LD
+        for script in soup.find_all('script', type='application/ld+json'):
+            try:
+                data = json.loads(script.string)
+                content = self._get_content_from_structured_data(data)
+                if content and len(content) > self.min_total_words:
+                    return content, 0.95  # High confidence
+            except:
+                continue
+        
+        # Try microdata
+        article_body = soup.find(attrs={'itemprop': 'articleBody'})
+        if article_body:
+            content = article_body.get_text(separator=' ', strip=True)
+            if len(content.split()) >= self.min_total_words:
+                return content, 0.90
+        
+        return None, 0
+    
+    def _get_content_from_structured_data(self, data: Any) -> Optional[str]:
+        """Recursively extract article content from structured data"""
+        if isinstance(data, dict):
+            # Direct article body
+            if 'articleBody' in data:
+                return data['articleBody']
+            # NewsArticle schema
+            if data.get('@type') in ['NewsArticle', 'Article', 'BlogPosting']:
+                return data.get('articleBody') or data.get('text')
+            # Recursively check nested structures
+            for value in data.values():
+                content = self._get_content_from_structured_data(value)
+                if content:
+                    return content
+        elif isinstance(data, list):
+            for item in data:
+                content = self._get_content_from_structured_data(item)
+                if content:
+                    return content
+        return None
+    
+    def _extract_from_article_tag(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Extract from <article> tag with quality scoring"""
+        articles = soup.find_all('article')
+        
+        best_content = None
+        best_score = 0
+        
+        for article in articles:
+            paragraphs = article.find_all('p')
+            if len(paragraphs) >= self.min_paragraphs:
+                content = ' '.join([p.get_text(strip=True) for p in paragraphs 
+                                  if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph])
+                
+                # Score based on content quality
+                score = self._score_content(content, len(paragraphs))
+                if score > best_score:
+                    best_content = content
+                    best_score = score
+        
+        return best_content, best_score
+    
+    def _extract_from_main_tag(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Extract from <main> tag"""
+        main = soup.find('main')
+        if main:
+            paragraphs = main.find_all('p')
+            if len(paragraphs) >= self.min_paragraphs:
+                content = ' '.join([p.get_text(strip=True) for p in paragraphs 
+                                  if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph])
+                score = self._score_content(content, len(paragraphs))
+                return content, score
+        return None, 0
+    
+    def _extract_by_text_density(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Extract content based on text density analysis"""
+        # Find all potential content containers
+        containers = soup.find_all(['div', 'section', 'article', 'main'], recursive=True)
+        
+        best_content = None
+        best_density = 0
+        best_score = 0
+        
+        for container in containers:
+            # Skip if container has too many links (likely navigation)
+            links = container.find_all('a')
+            total_text = container.get_text(strip=True)
+            if links and len(links) > 20 and len(total_text) / (len(links) + 1) < 50:
+                continue
+            
+            # Calculate text density
+            text_length = len(total_text)
+            html_length = len(str(container))
+            density = text_length / (html_length + 1)
+            
+            # Extract paragraphs
+            paragraphs = container.find_all('p')
+            if len(paragraphs) >= self.min_paragraphs:
+                content = ' '.join([p.get_text(strip=True) for p in paragraphs 
+                                  if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph])
+                
+                # Score based on density and content quality
+                if density > best_density and len(content.split()) >= self.min_total_words:
+                    score = self._score_content(content, len(paragraphs)) * density
+                    if score > best_score:
+                        best_content = content
+                        best_density = density
+                        best_score = score
+        
+        # Normalize score
+        return best_content, min(best_score, 0.85)
+    
+    def _extract_by_paragraph_clustering(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Extract content by finding clusters of paragraphs"""
+        all_paragraphs = soup.find_all('p')
+        
+        if len(all_paragraphs) < self.min_paragraphs:
+            return None, 0
+        
+        # Group consecutive paragraphs
+        clusters = []
+        current_cluster = []
+        
+        for i, p in enumerate(all_paragraphs):
+            text = p.get_text(strip=True)
+            word_count = len(text.split())
+            
+            # Skip short paragraphs
+            if word_count < self.min_words_per_paragraph:
+                if current_cluster:
+                    clusters.append(current_cluster)
+                    current_cluster = []
+                continue
+            
+            # Check if paragraph is likely content
+            if not self._is_likely_navigation_text(text):
+                current_cluster.append(text)
+            else:
+                if current_cluster:
+                    clusters.append(current_cluster)
+                    current_cluster = []
+        
+        if current_cluster:
+            clusters.append(current_cluster)
+        
+        # Find the best cluster
+        best_cluster = None
+        best_score = 0
+        
+        for cluster in clusters:
+            if len(cluster) >= self.min_paragraphs:
+                content = ' '.join(cluster)
+                score = self._score_content(content, len(cluster))
+                if score > best_score:
+                    best_cluster = content
+                    best_score = score
+        
+        return best_cluster, best_score * 0.8  # Slightly lower confidence
+    
+    def _extract_by_heuristics(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
+        """Last resort: use heuristics to find content"""
+        # Look for divs with high paragraph density
+        potential_containers = []
+        
+        for elem in soup.find_all(['div', 'section'], recursive=True):
+            paragraphs = elem.find_all('p', recursive=False)  # Direct children only
+            if len(paragraphs) >= self.min_paragraphs:
+                # Check paragraph quality
+                good_paragraphs = [p for p in paragraphs 
+                                 if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph]
+                
+                if len(good_paragraphs) >= self.min_paragraphs:
+                    content = ' '.join([p.get_text(strip=True) for p in good_paragraphs])
+                    score = self._score_content(content, len(good_paragraphs))
+                    potential_containers.append((content, score * 0.7))  # Lower confidence
+        
+        if potential_containers:
+            # Return the best one
+            potential_containers.sort(key=lambda x: x[1], reverse=True)
+            return potential_containers[0]
+        
+        # Absolute last resort: get all good paragraphs
+        all_paragraphs = []
+        for p in soup.find_all('p'):
+            text = p.get_text(strip=True)
+            if (len(text.split()) >= self.min_words_per_paragraph and 
+                not self._is_likely_navigation_text(text)):
+                all_paragraphs.append(text)
+        
+        if len(all_paragraphs) >= self.min_paragraphs:
+            content = ' '.join(all_paragraphs)
+            return content, 0.5  # Low confidence
+        
+        return None, 0
+    
+    def _score_content(self, content: str, paragraph_count: int) -> float:
+        """Score content quality (0-1)"""
+        if not content:
+            return 0
+        
+        words = content.split()
+        word_count = len(words)
+        
+        # Base score on word count
+        if word_count < self.min_total_words:
+            return 0
+        
+        score = min(word_count / 500, 1.0)  # Max out at 500 words
+        
+        # Bonus for paragraph count
+        score += min(paragraph_count / 10, 0.3)  # Max 0.3 bonus
+        
+        # Penalty for too many short sentences (might be navigation)
+        sentences = re.split(r'[.!?]+', content)
+        short_sentences = sum(1 for s in sentences if len(s.split()) < 5)
+        if short_sentences > len(sentences) * 0.5:
+            score *= 0.7
+        
+        # Penalty for repetitive content
+        unique_words = len(set(words))
+        if unique_words < word_count * 0.3:  # Less than 30% unique words
+            score *= 0.5
+        
+        return min(score, 1.0)
+    
+    def _is_likely_navigation_text(self, text: str) -> bool:
+        """Check if text is likely navigation/menu/footer content"""
+        text_lower = text.lower()
+        
+        # Check length
+        if len(text.split()) < 5:
+            return True
+        
+        # Check for common navigation patterns
+        nav_patterns = [
+            r'^(home|about|contact|privacy|terms|search|menu|subscribe|follow)',
+            r'^\d+$',  # Just numbers
+            r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$',  # Email
+            r'©|®|™',  # Copyright symbols
+            r'all rights reserved',
+            r'^\s*$'  # Empty or whitespace
+        ]
+        
+        for pattern in nav_patterns:
+            if re.search(pattern, text_lower):
+                return True
+        
+        return False
+    
+    def _is_paywall_content(self, content: str) -> bool:
+        """Check if content is likely a paywall message"""
+        if not content or len(content) < 100:
+            return False
+        
+        content_lower = content.lower()
+        
+        # Check for paywall indicators
+        for pattern in self.paywall_patterns:
+            if re.search(pattern, content_lower):
+                return True
+        
+        # Check for suspiciously short content with subscribe message
+        if len(content.split()) < 100 and 'subscribe' in content_lower:
+            return True
+        
+        return False
+    
+    def _is_valid_article_content(self, content: str) -> bool:
+        """Validate that extracted content is actually an article"""
+        if not content:
+            return False
+        
+        words = content.split()
+        word_count = len(words)
+        
+        # Check minimum length
+        if word_count < self.min_total_words:
+            return False
+        
+        # Check for too many non-content indicators
+        content_lower = content.lower()
+        non_content_count = sum(1 for pattern in self.non_content_patterns 
+                               if re.search(pattern, content_lower))
+        
+        if non_content_count > 3:
+            return False
+        
+        # Check for reasonable sentence structure
+        sentences = re.split(r'[.!?]+', content)
+        valid_sentences = [s for s in sentences if 5 <= len(s.split()) <= 50]
+        
+        if len(valid_sentences) < 2:
+            return False
+        
+        return True
+
 class ArticleExtractor:
-    """Enhanced article extractor with multiple fallback methods and timeout protection"""
+    """Universal article extractor that works with any site"""
     
     def __init__(self):
         # Timeout configuration
-        self.quick_timeout = 10  # For fast methods
-        self.browser_timeout = 20  # For browser methods
-        self.total_timeout = 60  # Total time for all attempts
+        self.quick_timeout = 10
+        self.browser_timeout = 20
+        self.total_timeout = 60
         self.delay_range = (0.5, 2)
         self.ua = UserAgent()
         self.circuit_breaker = CircuitBreaker()
+        
+        # Initialize content extractor
+        self.content_extractor = ContentExtractor()
         
         # Thread pool for timeout control
         self.executor = ThreadPoolExecutor(max_workers=2)
@@ -144,7 +524,7 @@ class ArticleExtractor:
         """Get randomized headers that look like a real browser"""
         headers = {
             'User-Agent': self.ua.chrome,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
@@ -154,9 +534,6 @@ class ArticleExtractor:
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
-            'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Windows"',
             'Cache-Control': 'max-age=0'
         }
         
@@ -189,7 +566,7 @@ class ArticleExtractor:
         start_time = time.time()
         logger.info(f"Extracting article from: {url}")
         
-        # Parse domain for special handling
+        # Parse domain for circuit breaker
         domain = urlparse(url).netloc.lower().replace('www.', '')
         
         # Check circuit breaker
@@ -202,7 +579,7 @@ class ArticleExtractor:
                 'url': url
             }
         
-        # Determine extraction methods based on previous failures
+        # Determine extraction methods
         methods = []
         
         # Always try enhanced requests first (fastest)
@@ -235,7 +612,7 @@ class ArticleExtractor:
                 self.circuit_breaker.record_failure(domain, "Total timeout exceeded")
                 return {
                     'success': False,
-                    'error': f'Extraction timeout after {elapsed:.1f}s - tried {method_name}',
+                    'error': f'Extraction timeout after {elapsed:.1f}s',
                     'url': url
                 }
             
@@ -247,23 +624,34 @@ class ArticleExtractor:
                 logger.info(f"Trying {method_name}... (timeout: {actual_timeout:.1f}s)")
                 
                 # Execute with timeout protection
-                content = self._execute_with_timeout(method_func, url, actual_timeout)
+                html_content = self._execute_with_timeout(method_func, url, actual_timeout)
                 
-                if content and len(content) > 1000:
-                    logger.info(f"Success with {method_name}")
-                    self.circuit_breaker.record_success(domain)
-                    return self._parse_article(content, url)
+                if html_content:
+                    logger.info(f"Got HTML with {method_name} ({len(html_content)} chars)")
                     
+                    # Parse and extract content using intelligent extraction
+                    parsed_result = self._parse_article(html_content, url)
+                    
+                    # Check if we successfully extracted content
+                    if parsed_result.get('success') and parsed_result.get('text'):
+                        logger.info(f"Successfully extracted article: {parsed_result.get('word_count', 0)} words")
+                        self.circuit_breaker.record_success(domain)
+                        return parsed_result
+                    else:
+                        logger.warning(f"Content extraction failed: {parsed_result.get('error', 'Unknown error')}")
+                        last_error = parsed_result.get('error', 'Content extraction failed')
+                        # Continue trying other methods
+                        continue
+                        
             except TimeoutError as e:
                 logger.warning(f"{method_name} timed out: {str(e)}")
                 last_error = f"Timeout: {str(e)}"
                 continue
             except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 403:
+                if e.response and e.response.status_code == 403:
                     logger.warning(f"{method_name} got 403 Forbidden")
                     last_error = "403 Forbidden - Site blocking automated access"
-                    # Don't record 403 as circuit breaker failure for first few methods
-                    # as browser methods might work
+                    # Don't give up on 403s until we try browser methods
                     if methods.index((method_name, method_func, method_timeout)) > 3:
                         self.circuit_breaker.record_failure(domain, last_error)
                 else:
@@ -311,11 +699,7 @@ class ArticleExtractor:
         )
         response.raise_for_status()
         
-        content = response.text
-        if len(content) < 1000 or "blocked" in content.lower()[:500] or "captcha" in content.lower()[:500]:
-            raise Exception("Likely blocked or captcha page")
-            
-        return content
+        return response.text
     
     def _extract_with_cloudscraper(self, url: str) -> Optional[str]:
         """CloudScraper method with enhanced options"""
@@ -327,11 +711,7 @@ class ArticleExtractor:
         response = self.cloudscraper_session.get(url, timeout=self.quick_timeout)
         response.raise_for_status()
         
-        content = response.text
-        if len(content) < 1000:
-            raise Exception("Response too short, likely blocked")
-            
-        return content
+        return response.text
     
     def _extract_with_curl_cffi(self, url: str) -> Optional[str]:
         """Curl-CFFI with multiple browser impersonations"""
@@ -353,7 +733,7 @@ class ArticleExtractor:
                     allow_redirects=True
                 )
                 
-                if response.status_code == 200 and len(response.text) > 1000:
+                if response.status_code == 200:
                     return response.text
                 elif response.status_code == 403:
                     raise requests.exceptions.HTTPError("403 Client Error: Forbidden", response=response)
@@ -368,7 +748,7 @@ class ArticleExtractor:
         """Try with cookie manipulation"""
         self._delay()
         
-        # Create session with specific cookies that might help
+        # Create session with specific cookies
         session = requests.Session()
         
         # Common cookies that might help bypass
@@ -376,24 +756,16 @@ class ArticleExtractor:
             'CONSENT': 'YES+',
             'euConsent': 'true',
             'cookieConsent': 'true',
-            '__cf_bm': str(int(time.time())),
-            'sessionid': str(random.randint(1000000, 9999999))
         }
         
         for name, value in cookies.items():
             session.cookies.set(name, value)
         
         headers = self._get_headers()
-        headers.update({
-            'Cookie': '; '.join([f'{k}={v}' for k, v in cookies.items()])
-        })
         
         response = session.get(url, headers=headers, timeout=self.quick_timeout)
         response.raise_for_status()
         
-        if len(response.text) < 1000:
-            raise Exception("Response too short")
-            
         return response.text
     
     def _extract_with_selenium(self, url: str) -> Optional[str]:
@@ -429,16 +801,16 @@ class ArticleExtractor:
             # Wait for content to load
             try:
                 WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "article"))
+                    lambda d: d.execute_script('return document.readyState') == 'complete'
                 )
             except:
-                # Try alternative wait
-                time.sleep(3)
+                pass
             
             # Scroll to trigger lazy loading
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(1)
             
+            # Get the rendered HTML
             return driver.page_source
             
         finally:
@@ -476,10 +848,7 @@ class ArticleExtractor:
             page.goto(url, wait_until='domcontentloaded')
             
             # Wait for content
-            try:
-                page.wait_for_selector('article', timeout=5000)
-            except:
-                pass
+            page.wait_for_load_state('networkidle')
             
             # Scroll to load lazy content
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -498,8 +867,7 @@ class ArticleExtractor:
         headers = self._get_headers()
         headers.update({
             'X-Forwarded-For': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
-            'X-Real-IP': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
-            'X-Originating-IP': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
+            'X-Real-IP': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
         })
         
         response = requests.get(url, headers=headers, timeout=self.quick_timeout)
@@ -508,31 +876,28 @@ class ArticleExtractor:
         return response.text
     
     def _parse_article(self, html_content: str, url: str) -> Dict[str, Any]:
-        """Parse article content from HTML"""
+        """Parse article content from HTML using intelligent extraction"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Extract metadata
+            # Initialize result
             article_data = {
                 'url': url,
                 'domain': urlparse(url).netloc,
                 'extracted_at': datetime.now().isoformat(),
-                'success': True
+                'success': False
             }
             
-            # Title extraction (multiple strategies)
+            # Extract metadata first
+            # Title extraction
             title = None
-            # Try meta property first
-            if not title:
-                meta_title = soup.find('meta', property='og:title')
-                if meta_title:
-                    title = meta_title.get('content', '').strip()
-            # Try regular title tag
+            meta_title = soup.find('meta', property='og:title')
+            if meta_title:
+                title = meta_title.get('content', '').strip()
             if not title:
                 title_tag = soup.find('title')
                 if title_tag:
                     title = title_tag.get_text().strip()
-            # Try h1
             if not title:
                 h1 = soup.find('h1')
                 if h1:
@@ -548,12 +913,7 @@ class ArticleExtractor:
             publish_date = self._extract_date(soup)
             article_data['publish_date'] = publish_date
             
-            # Content extraction with domain-specific selectors
-            content = self._extract_content_smart(soup, url)
-            article_data['text'] = content
-            article_data['word_count'] = len(content.split()) if content else 0
-            
-            # Description/Summary
+            # Description
             description = None
             meta_desc = soup.find('meta', {'name': 'description'}) or soup.find('meta', property='og:description')
             if meta_desc:
@@ -574,6 +934,20 @@ class ArticleExtractor:
                 keywords = [k.strip() for k in meta_keywords.get('content', '').split(',')]
             article_data['keywords'] = keywords
             
+            # Now extract the actual content using intelligent extraction
+            content, extraction_metadata = self.content_extractor.extract_content(soup)
+            
+            if content:
+                article_data['text'] = content
+                article_data['word_count'] = len(content.split())
+                article_data['success'] = True
+                article_data['extraction_metadata'] = extraction_metadata
+                logger.info(f"Content extracted using {extraction_metadata.get('extraction_method', 'unknown')} method")
+            else:
+                article_data['error'] = extraction_metadata.get('error', 'Failed to extract article content')
+                article_data['text'] = None
+                article_data['word_count'] = 0
+            
             return article_data
             
         except Exception as e:
@@ -586,227 +960,96 @@ class ArticleExtractor:
     
     def _extract_author(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author with multiple strategies"""
-        author = None
-        
         # Try JSON-LD first
         scripts = soup.find_all('script', type='application/ld+json')
         for script in scripts:
             try:
                 data = json.loads(script.string)
-                if isinstance(data, dict):
-                    if 'author' in data:
-                        if isinstance(data['author'], dict):
-                            author = data['author'].get('name')
-                        elif isinstance(data['author'], str):
-                            author = data['author']
-                elif isinstance(data, list):
-                    for item in data:
-                        if isinstance(item, dict) and 'author' in item:
-                            if isinstance(item['author'], dict):
-                                author = item['author'].get('name')
-                            elif isinstance(item['author'], str):
-                                author = item['author']
+                author = self._get_author_from_structured_data(data)
                 if author:
-                    break
+                    return author
             except:
                 continue
         
         # Try meta tags
-        if not author:
-            meta_author = soup.find('meta', {'name': 'author'}) or soup.find('meta', property='article:author')
-            if meta_author:
-                author = meta_author.get('content')
+        meta_author = soup.find('meta', {'name': 'author'}) or soup.find('meta', property='article:author')
+        if meta_author:
+            return meta_author.get('content')
         
-        # Try byline patterns
-        if not author:
-            byline_patterns = [
-                {'class': ['byline', 'by-line', 'author', 'writer', 'journalist', 'author-name', 'by']},
-                {'itemprop': 'author'},
-                {'rel': 'author'},
-                {'data-testid': 'author-name'},
-                {'class': re.compile(r'author|byline', re.I)}
-            ]
-            
-            for pattern in byline_patterns:
-                element = soup.find(['span', 'div', 'p', 'a'], pattern)
-                if element:
-                    text = element.get_text().strip()
-                    # Clean common prefixes
-                    for prefix in ['By', 'by', 'BY', 'Written by', 'Author:', 'By:']:
-                        if text.startswith(prefix):
-                            text = text[len(prefix):].strip()
-                    if text and len(text) < 100:  # Sanity check
-                        author = text
-                        break
+        # Try common author patterns
+        author_selectors = [
+            {'class': re.compile(r'author|byline|writer|by\b', re.I)},
+            {'itemprop': 'author'},
+            {'rel': 'author'},
+            {'data-testid': re.compile(r'author', re.I)}
+        ]
         
-        return author
+        for selector in author_selectors:
+            element = soup.find(['span', 'div', 'p', 'a', 'address'], selector)
+            if element:
+                text = element.get_text().strip()
+                # Clean common prefixes
+                for prefix in ['By', 'by', 'BY', 'Written by', 'Author:', 'By:']:
+                    if text.startswith(prefix):
+                        text = text[len(prefix):].strip()
+                
+                # Validate it looks like a name
+                if text and 2 <= len(text.split()) <= 5 and len(text) < 100:
+                    return text
+        
+        return None
+    
+    def _get_author_from_structured_data(self, data: Any) -> Optional[str]:
+        """Extract author from structured data"""
+        if isinstance(data, dict):
+            if 'author' in data:
+                if isinstance(data['author'], dict):
+                    return data['author'].get('name')
+                elif isinstance(data['author'], str):
+                    return data['author']
+            # Check nested structures
+            for value in data.values():
+                author = self._get_author_from_structured_data(value)
+                if author:
+                    return author
+        elif isinstance(data, list):
+            for item in data:
+                author = self._get_author_from_structured_data(item)
+                if author:
+                    return author
+        return None
     
     def _extract_date(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract publish date"""
-        date_str = None
-        
         # Try meta tags first
         date_meta_names = [
-            'article:published_time',
-            'datePublished',
-            'pubdate',
-            'publishdate',
-            'date',
-            'DC.date.issued',
-            'publish_date',
-            'publication_date',
-            'article:published',
-            'article:modified_time'
+            'article:published_time', 'datePublished', 'pubdate',
+            'publishdate', 'date', 'DC.date.issued', 'publish_date'
         ]
         
         for name in date_meta_names:
             meta = soup.find('meta', {'property': name}) or soup.find('meta', {'name': name})
             if meta and meta.get('content'):
-                date_str = meta.get('content')
-                break
+                return meta.get('content')
         
         # Try time tag
-        if not date_str:
-            time_tag = soup.find('time')
-            if time_tag:
-                date_str = time_tag.get('datetime') or time_tag.get_text()
+        time_tag = soup.find('time')
+        if time_tag:
+            return time_tag.get('datetime') or time_tag.get_text()
         
-        # Try common date patterns in text
-        if not date_str:
-            date_patterns = [
-                {'class': re.compile(r'date|time|published', re.I)},
-                {'itemprop': 'datePublished'},
-                {'datetime': True}
-            ]
-            
-            for pattern in date_patterns:
-                element = soup.find(['time', 'span', 'div'], pattern)
-                if element:
-                    date_str = element.get('datetime') or element.get_text().strip()
-                    break
-        
-        return date_str
-    
-    def _extract_content_smart(self, soup: BeautifulSoup, url: str) -> str:
-        """Extract content with domain-specific selectors"""
-        # Remove script and style elements
-        for script in soup(["script", "style", "noscript", "iframe"]):
-            script.decompose()
-        
-        # Domain-specific selectors
-        domain = urlparse(url).netloc.lower()
-        domain_selectors = {
-            'sfchronicle.com': [
-                {'class': 'article-content'},
-                {'class': 'body-content'},
-                {'class': 'paywall-content'},
-                {'data-element': 'story-body'}
-            ],
-            'washingtonpost.com': [
-                {'class': 'article-body'},
-                {'class': 'story-body'},
-                {'data-qa': 'article-body'}
-            ],
-            'nytimes.com': [
-                {'class': 'story-body'},
-                {'class': 'story-content'},
-                {'name': 'articleBody'}
-            ],
-            'thehill.com': [
-                {'class': 'article__text'},
-                {'class': 'content-wrp'},
-                {'id': 'article-text'}
-            ],
-            'axios.com': [
-                {'class': 'story-body'},
-                {'class': 'content-body'}
-            ],
-            'reuters.com': [
-                {'class': 'article-body'},
-                {'data-testid': 'article-body'}
-            ],
-            'wsj.com': [
-                {'class': 'article-content'},
-                {'class': 'story-body'},
-                {'class': 'snippet__body'}
-            ],
-            'ft.com': [
-                {'class': 'article__content'},
-                {'class': 'body-content'}
-            ],
-            'bloomberg.com': [
-                {'class': 'body-content'},
-                {'class': 'article-content'},
-                {'data-component': 'article-body'}
-            ]
-        }
-        
-        # Try domain-specific selectors first
-        for domain_key, selectors in domain_selectors.items():
-            if domain_key in domain:
-                for selector in selectors:
-                    content = soup.find(['div', 'section', 'article'], selector)
-                    if content:
-                        # Get paragraphs within content
-                        paragraphs = content.find_all('p')
-                        if paragraphs:
-                            text = ' '.join([p.get_text(strip=True) for p in paragraphs 
-                                           if len(p.get_text(strip=True)) > 20])
-                            if len(text) > 500:
-                                return text
-                        else:
-                            text = content.get_text(separator=' ', strip=True)
-                            if len(text) > 500:
-                                return text
-        
-        # Fall back to general extraction
-        return self._extract_content(soup)
-    
-    def _extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract main article content - general approach"""
-        # Try to find article body
-        content_candidates = [
-            soup.find('div', {'class': 'article-body'}),
-            soup.find('div', {'class': 'article-content'}),
-            soup.find('div', {'class': 'entry-content'}),
-            soup.find('div', {'class': 'post-content'}),
-            soup.find('article'),
-            soup.find('main'),
-            soup.find('div', {'id': 'article-body'}),
-            soup.find('div', {'class': 'story-body'}),
-            soup.find('div', {'class': 'content'}),
-            soup.find('div', {'itemprop': 'articleBody'}),
-            soup.find('div', {'class': re.compile(r'article|content|body|text|story', re.I)})
+        # Try common date patterns
+        date_selectors = [
+            {'class': re.compile(r'date|time|published', re.I)},
+            {'itemprop': 'datePublished'},
+            {'datetime': True}
         ]
         
-        # Find the best content container
-        best_content = None
-        max_length = 0
+        for selector in date_selectors:
+            element = soup.find(['time', 'span', 'div'], selector)
+            if element:
+                return element.get('datetime') or element.get_text().strip()
         
-        for candidate in content_candidates:
-            if candidate:
-                # Try to get paragraphs first
-                paragraphs = candidate.find_all('p')
-                if paragraphs:
-                    text = ' '.join([p.get_text(strip=True) for p in paragraphs 
-                                   if len(p.get_text(strip=True)) > 30])
-                else:
-                    text = candidate.get_text(separator=' ', strip=True)
-                
-                if len(text) > max_length:
-                    max_length = len(text)
-                    best_content = text
-        
-        # Fallback: get all paragraphs
-        if not best_content or max_length < 500:
-            paragraphs = soup.find_all('p')
-            if paragraphs:
-                all_text = ' '.join([p.get_text(strip=True) for p in paragraphs 
-                                   if len(p.get_text(strip=True)) > 50])
-                if len(all_text) > max_length:
-                    best_content = all_text
-        
-        return best_content or "Could not extract article content"
+        return None
     
     def extract_from_text(self, text: str) -> Dict[str, Any]:
         """Extract data from raw text (for API compatibility)"""
