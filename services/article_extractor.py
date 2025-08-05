@@ -140,6 +140,7 @@ class ContentExtractor:
         
         for method_name, method_func in strategies:
             try:
+                logger.debug(f"Trying extraction method: {method_name}")
                 content, score = method_func(soup)
                 if content and score > best_score:
                     # Validate it's not paywall/error content
@@ -148,6 +149,8 @@ class ContentExtractor:
                         best_score = score
                         best_method = method_name
                         logger.info(f"Found content with {method_name}: score={score}, length={len(content)}")
+                    else:
+                        logger.debug(f"{method_name} content failed validation")
             except Exception as e:
                 logger.debug(f"Strategy {method_name} failed: {e}")
                 continue
@@ -157,6 +160,8 @@ class ContentExtractor:
             metadata['confidence_score'] = best_score
             return best_content, metadata
         
+        # If we get here, no content was found
+        logger.warning("No content found after trying all extraction methods")
         return None, {"error": "No article content found"}
     
     def _clean_soup(self, soup: BeautifulSoup):
@@ -182,11 +187,16 @@ class ContentExtractor:
         # Try JSON-LD
         for script in soup.find_all('script', type='application/ld+json'):
             try:
-                data = json.loads(script.string)
-                content = self._get_content_from_structured_data(data)
-                if content and len(content) > self.min_total_words:
-                    return content, 0.95  # High confidence
-            except:
+                if script.string:
+                    data = json.loads(script.string)
+                    content = self._get_content_from_structured_data(data)
+                    if content and len(content.split()) > self.min_total_words:
+                        return content, 0.95  # High confidence
+            except json.JSONDecodeError:
+                logger.debug("Invalid JSON-LD found, skipping")
+                continue
+            except Exception as e:
+                logger.debug(f"Error parsing structured data: {e}")
                 continue
         
         # Try microdata
@@ -200,23 +210,30 @@ class ContentExtractor:
     
     def _get_content_from_structured_data(self, data: Any) -> Optional[str]:
         """Recursively extract article content from structured data"""
+        if data is None:
+            return None
+            
         if isinstance(data, dict):
             # Direct article body
-            if 'articleBody' in data:
+            if 'articleBody' in data and data['articleBody']:
                 return data['articleBody']
             # NewsArticle schema
             if data.get('@type') in ['NewsArticle', 'Article', 'BlogPosting']:
-                return data.get('articleBody') or data.get('text')
+                body = data.get('articleBody') or data.get('text')
+                if body:
+                    return body
             # Recursively check nested structures
-            for value in data.values():
-                content = self._get_content_from_structured_data(value)
-                if content:
-                    return content
+            for key, value in data.items():
+                if value is not None:
+                    content = self._get_content_from_structured_data(value)
+                    if content:
+                        return content
         elif isinstance(data, list):
             for item in data:
-                content = self._get_content_from_structured_data(item)
-                if content:
-                    return content
+                if item is not None:
+                    content = self._get_content_from_structured_data(item)
+                    if content:
+                        return content
         return None
     
     def _extract_from_article_tag(self, soup: BeautifulSoup) -> Tuple[Optional[str], float]:
@@ -262,30 +279,51 @@ class ContentExtractor:
         best_score = 0
         
         for container in containers:
-            # Skip if container has too many links (likely navigation)
-            links = container.find_all('a')
-            total_text = container.get_text(strip=True)
-            if links and len(links) > 20 and len(total_text) / (len(links) + 1) < 50:
-                continue
-            
-            # Calculate text density
-            text_length = len(total_text)
-            html_length = len(str(container))
-            density = text_length / (html_length + 1)
-            
-            # Extract paragraphs
-            paragraphs = container.find_all('p')
-            if len(paragraphs) >= self.min_paragraphs:
-                content = ' '.join([p.get_text(strip=True) for p in paragraphs 
-                                  if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph])
+            try:
+                # Skip very small containers
+                if not container.get_text(strip=True):
+                    continue
+                    
+                # Skip if container has too many links (likely navigation)
+                links = container.find_all('a')
+                total_text = container.get_text(strip=True)
                 
-                # Score based on density and content quality
-                if density > best_density and len(content.split()) >= self.min_total_words:
-                    score = self._score_content(content, len(paragraphs)) * density
-                    if score > best_score:
-                        best_content = content
-                        best_density = density
-                        best_score = score
+                # More lenient link ratio check
+                if links and len(links) > 30 and len(total_text) / (len(links) + 1) < 30:
+                    continue
+                
+                # Calculate text density
+                text_length = len(total_text)
+                html_length = len(str(container))
+                
+                if html_length == 0:
+                    continue
+                    
+                density = text_length / html_length
+                
+                # Extract paragraphs
+                paragraphs = container.find_all('p')
+                if len(paragraphs) >= self.min_paragraphs:
+                    # Get good paragraphs
+                    good_paragraphs = []
+                    for p in paragraphs:
+                        p_text = p.get_text(strip=True)
+                        if len(p_text.split()) >= self.min_words_per_paragraph:
+                            good_paragraphs.append(p_text)
+                    
+                    if len(good_paragraphs) >= self.min_paragraphs:
+                        content = ' '.join(good_paragraphs)
+                        
+                        # Score based on density and content quality
+                        if density > 0.1 and len(content.split()) >= self.min_total_words:
+                            score = self._score_content(content, len(good_paragraphs)) * min(density * 5, 1.0)
+                            if score > best_score:
+                                best_content = content
+                                best_density = density
+                                best_score = score
+            except Exception as e:
+                logger.debug(f"Error processing container in text_density: {e}")
+                continue
         
         # Normalize score
         return best_content, min(best_score, 0.85)
@@ -342,17 +380,26 @@ class ContentExtractor:
         # Look for divs with high paragraph density
         potential_containers = []
         
-        for elem in soup.find_all(['div', 'section'], recursive=True):
-            paragraphs = elem.find_all('p', recursive=False)  # Direct children only
-            if len(paragraphs) >= self.min_paragraphs:
-                # Check paragraph quality
-                good_paragraphs = [p for p in paragraphs 
-                                 if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph]
-                
-                if len(good_paragraphs) >= self.min_paragraphs:
-                    content = ' '.join([p.get_text(strip=True) for p in good_paragraphs])
-                    score = self._score_content(content, len(good_paragraphs))
-                    potential_containers.append((content, score * 0.7))  # Lower confidence
+        # Try more flexible selectors
+        for elem in soup.find_all(['div', 'section', 'article', 'main', 'aside'], recursive=True):
+            try:
+                # Get direct paragraph children
+                paragraphs = elem.find_all('p', recursive=True)  # Changed to recursive=True
+                if len(paragraphs) >= self.min_paragraphs:
+                    # Check paragraph quality
+                    good_paragraphs = []
+                    for p in paragraphs:
+                        p_text = p.get_text(strip=True)
+                        if len(p_text.split()) >= self.min_words_per_paragraph:
+                            good_paragraphs.append(p_text)
+                    
+                    if len(good_paragraphs) >= self.min_paragraphs:
+                        content = ' '.join(good_paragraphs)
+                        score = self._score_content(content, len(good_paragraphs))
+                        potential_containers.append((content, score * 0.7))  # Lower confidence
+            except Exception as e:
+                logger.debug(f"Error in heuristics container processing: {e}")
+                continue
         
         if potential_containers:
             # Return the best one
@@ -360,17 +407,23 @@ class ContentExtractor:
             return potential_containers[0]
         
         # Absolute last resort: get all good paragraphs
+        logger.debug("Falling back to collecting all paragraphs")
         all_paragraphs = []
         for p in soup.find_all('p'):
-            text = p.get_text(strip=True)
-            if (len(text.split()) >= self.min_words_per_paragraph and 
-                not self._is_likely_navigation_text(text)):
-                all_paragraphs.append(text)
+            try:
+                text = p.get_text(strip=True)
+                if (len(text.split()) >= self.min_words_per_paragraph and 
+                    not self._is_likely_navigation_text(text)):
+                    all_paragraphs.append(text)
+            except Exception as e:
+                logger.debug(f"Error processing paragraph: {e}")
+                continue
         
         if len(all_paragraphs) >= self.min_paragraphs:
             content = ' '.join(all_paragraphs)
             return content, 0.5  # Low confidence
         
+        logger.debug(f"Heuristics found {len(all_paragraphs)} paragraphs, needed {self.min_paragraphs}")
         return None, 0
     
     def _score_content(self, content: str, paragraph_count: int) -> float:
@@ -892,7 +945,7 @@ class ArticleExtractor:
             # Title extraction
             title = None
             meta_title = soup.find('meta', property='og:title')
-            if meta_title:
+            if meta_title and meta_title.get('content'):
                 title = meta_title.get('content', '').strip()
             if not title:
                 title_tag = soup.find('title')
@@ -916,21 +969,21 @@ class ArticleExtractor:
             # Description
             description = None
             meta_desc = soup.find('meta', {'name': 'description'}) or soup.find('meta', property='og:description')
-            if meta_desc:
+            if meta_desc and meta_desc.get('content'):
                 description = meta_desc.get('content', '').strip()
             article_data['description'] = description
             
             # Image
             image = None
             meta_image = soup.find('meta', property='og:image')
-            if meta_image:
+            if meta_image and meta_image.get('content'):
                 image = meta_image.get('content')
             article_data['image'] = image
             
             # Keywords
             keywords = []
             meta_keywords = soup.find('meta', {'name': 'keywords'})
-            if meta_keywords:
+            if meta_keywords and meta_keywords.get('content'):
                 keywords = [k.strip() for k in meta_keywords.get('content', '').split(',')]
             article_data['keywords'] = keywords
             
@@ -960,15 +1013,20 @@ class ArticleExtractor:
     
     def _extract_author(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author with multiple strategies"""
-        # Try JSON-LD first
+        # Try JSON-LD first with error handling
         scripts = soup.find_all('script', type='application/ld+json')
         for script in scripts:
             try:
-                data = json.loads(script.string)
-                author = self._get_author_from_structured_data(data)
-                if author:
-                    return author
-            except:
+                if script and script.string:
+                    data = json.loads(script.string)
+                    author = self._get_author_from_structured_data(data)
+                    if author:
+                        return author
+            except (json.JSONDecodeError, AttributeError, TypeError) as e:
+                logger.debug(f"Error parsing JSON-LD for author: {e}")
+                continue
+            except Exception as e:
+                logger.debug(f"Unexpected error parsing structured data for author: {e}")
                 continue
         
         # Try meta tags
@@ -1003,20 +1061,25 @@ class ArticleExtractor:
         """Extract author from structured data"""
         if isinstance(data, dict):
             if 'author' in data:
-                if isinstance(data['author'], dict):
-                    return data['author'].get('name')
-                elif isinstance(data['author'], str):
-                    return data['author']
+                author_data = data['author']
+                if author_data is None:
+                    return None
+                if isinstance(author_data, dict):
+                    return author_data.get('name')
+                elif isinstance(author_data, str):
+                    return author_data
             # Check nested structures
             for value in data.values():
-                author = self._get_author_from_structured_data(value)
-                if author:
-                    return author
+                if value is not None:
+                    author = self._get_author_from_structured_data(value)
+                    if author:
+                        return author
         elif isinstance(data, list):
             for item in data:
-                author = self._get_author_from_structured_data(item)
-                if author:
-                    return author
+                if item is not None:
+                    author = self._get_author_from_structured_data(item)
+                    if author:
+                        return author
         return None
     
     def _extract_date(self, soup: BeautifulSoup) -> Optional[str]:
