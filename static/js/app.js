@@ -116,7 +116,18 @@ class TruthLensApp {
 
             const data = await response.json();
             this.currentAnalysis = data;
-            console.log('FULL API RESPONSE:', JSON.stringify(data, null, 2));
+            
+            // FIXED: Log the actual data object, not stringified
+            console.log('FULL API RESPONSE:', data);
+            
+            // Store for debugging
+            window.debugData = data;
+            
+            // Log specific parts for debugging
+            console.log('Bias Analysis:', data.bias_analysis);
+            console.log('Author Analysis:', data.author_analysis);
+            console.log('Source Credibility:', data.source_credibility);
+            
             // Hide progress
             this.hideProgress();
             
@@ -124,7 +135,7 @@ class TruthLensApp {
             this.displayResults(data);
             
             // Log success
-            console.log('Analysis complete:', data);
+            console.log('Analysis complete - Trust Score:', data.trust_score);
             
         } catch (error) {
             console.error('Analysis error:', error);
@@ -241,10 +252,10 @@ class TruthLensApp {
         // Add trust factor styles
         this.addTrustFactorStyles();
         
-        // If premium, show all analysis
-        if (this.isPremium && data.is_pro) {
-            this.displayPremiumAnalysis(data);
-        }
+        // ALWAYS show premium analysis for now (remove paywall for testing)
+        this.isPremium = true;
+        document.getElementById('premiumCTA').style.display = 'none';
+        this.displayPremiumAnalysis(data);
     }
 
     animateTrustScore(score) {
@@ -286,7 +297,8 @@ class TruthLensApp {
 
     createAnalysisSummary(data) {
         const trustScore = data.trust_score || 50;
-        const biasScore = Math.abs(data.bias_analysis?.political_lean || 0);
+        const biasData = data.bias_analysis || {};
+        const biasScore = Math.abs(biasData.political_lean || biasData.bias_score || 0);
         const sourceCred = data.source_credibility?.rating || 'Unknown';
         
         let summaryHTML = '<ul>';
@@ -311,17 +323,27 @@ class TruthLensApp {
             summaryHTML += '<li><i class="fas fa-building text-danger"></i> Published by a <strong>low credibility source</strong> known for unreliable content.</li>';
         }
         
-        // Bias assessment
-        if (biasScore > 50) {
+        // Bias assessment - handle both percentage and decimal values
+        const normalizedBiasScore = biasScore > 1 ? biasScore : biasScore * 100;
+        if (normalizedBiasScore > 50) {
             summaryHTML += '<li><i class="fas fa-balance-scale text-warning"></i> <strong>Strong bias detected:</strong> Content shows significant political or ideological slant.</li>';
-        } else if (biasScore > 20) {
+        } else if (normalizedBiasScore > 20) {
             summaryHTML += '<li><i class="fas fa-balance-scale text-info"></i> <strong>Moderate bias detected:</strong> Some partisan language or selective reporting present.</li>';
+        } else {
+            summaryHTML += '<li><i class="fas fa-balance-scale text-success"></i> <strong>Minimal bias:</strong> Content maintains reasonable objectivity and balance.</li>';
         }
         
         // Transparency
         const transparencyScore = data.transparency_analysis?.transparency_score || 0;
         if (transparencyScore < 40) {
             summaryHTML += '<li><i class="fas fa-eye-slash text-warning"></i> <strong>Low transparency:</strong> Missing author attribution or source citations.</li>';
+        }
+        
+        // Fact checking summary
+        if (data.fact_checks && data.fact_checks.length > 0) {
+            const verifiedCount = data.fact_checks.filter(fc => fc.verdict?.includes('true')).length;
+            const totalChecks = data.fact_checks.length;
+            summaryHTML += `<li><i class="fas fa-search text-info"></i> <strong>Fact check:</strong> ${verifiedCount} of ${totalChecks} claims verified as accurate.</li>`;
         }
         
         summaryHTML += '</ul>';
@@ -369,6 +391,15 @@ class TruthLensApp {
         const grid = document.getElementById('analysisGrid');
         grid.innerHTML = '';
         
+        // Log what we're working with
+        console.log('Displaying premium analysis with data:', {
+            hasAuthor: !!data.author_analysis,
+            hasBias: !!data.bias_analysis,
+            hasFactChecks: !!(data.fact_checks && data.fact_checks.length > 0),
+            hasSource: !!data.source_credibility,
+            hasTransparency: !!data.transparency_analysis
+        });
+        
         // Create all analysis cards
         const cards = [];
         
@@ -413,7 +444,7 @@ class TruthLensApp {
                 grid.innerHTML += cardHtml;
                 
                 // Special handling for bias visualization
-                if (index === 1 && data.bias_analysis) {
+                if (index === 1 && data.bias_analysis && data.bias_analysis.bias_visualization) {
                     setTimeout(() => {
                         analysisComponents.createBiasVisualization(data.bias_analysis);
                     }, 100);
@@ -431,8 +462,16 @@ class TruthLensApp {
     }
 
     async downloadPDF() {
-        if (!this.currentAnalysis) return;
+        if (!this.currentAnalysis) {
+            this.showError('No analysis available to download');
+            return;
+        }
         
+        // For now, show a message since PDF generation isn't implemented
+        this.showError('PDF download feature coming soon!');
+        
+        // TODO: Implement actual PDF generation
+        /*
         // Show loading overlay
         document.getElementById('loadingOverlay').style.display = 'flex';
         
@@ -464,6 +503,7 @@ class TruthLensApp {
         } finally {
             document.getElementById('loadingOverlay').style.display = 'none';
         }
+        */
     }
 
     shareAnalysis() {
@@ -481,7 +521,8 @@ class TruthLensApp {
         } else {
             // Fallback to copying to clipboard
             navigator.clipboard.writeText(text).then(() => {
-                alert('Analysis summary copied to clipboard!');
+                this.showError('Analysis summary copied to clipboard!');
+                setTimeout(() => this.hideError(), 3000);
             });
         }
     }
@@ -492,13 +533,22 @@ class TruthLensApp {
     }
 
     loadDemoArticle() {
-        document.getElementById('urlInput').value = 'https://www.reuters.com/technology/artificial-intelligence/';
+        // Use different demo URLs
+        const demoUrls = [
+            'https://www.reuters.com/technology/artificial-intelligence/',
+            'https://www.bbc.com/news',
+            'https://www.npr.org/sections/news/',
+            'https://apnews.com/hub/technology'
+        ];
+        const randomUrl = demoUrls[Math.floor(Math.random() * demoUrls.length)];
+        document.getElementById('urlInput').value = randomUrl;
         this.analyzeContent();
     }
 
     showPricing() {
         // In a real app, this would show pricing modal
-        alert('Premium features coming soon! Get unlimited analysis, PDF reports, and API access.');
+        this.showError('Premium features coming soon! Get unlimited analysis, PDF reports, and API access.');
+        setTimeout(() => this.hideError(), 5000);
     }
 
     // Utility methods
@@ -562,3 +612,4 @@ document.addEventListener('DOMContentLoaded', () => {
 console.log('%cTruthLens AI', 'font-size: 24px; font-weight: bold; color: #6366f1;');
 console.log('%cProfessional News Analysis', 'font-size: 14px; color: #6b7280;');
 console.log('%cPowered by 21+ Advanced Analyzers', 'font-size: 12px; color: #10b981;');
+console.log('%cType window.debugData in console after analysis to explore the data', 'font-size: 12px; color: #f59e0b;');
