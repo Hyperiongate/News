@@ -193,6 +193,12 @@ class BiasDetector:
             domain
         )
         
+        # CRITICAL: Generate detailed explanation
+        detailed_explanation = self._generate_detailed_explanation(
+            bias_dimensions, bias_patterns, loaded_phrases, manipulation_tactics, 
+            objectivity_score, opinion_percentage
+        )
+        
         return {
             'overall_bias': overall_bias,
             'political_lean': political_lean,
@@ -210,8 +216,113 @@ class BiasDetector:
             'source_bias_analysis': source_bias,
             'bias_visualization': bias_visualization,
             'bias_impact': bias_impact,
-            'comparative_context': comparative_context
+            'comparative_context': comparative_context,
+            
+            # NEW: Rich explanations
+            'detailed_explanation': detailed_explanation,
+            'bias_summary': self._generate_bias_summary(bias_dimensions, objectivity_score),
+            'key_findings': self._generate_key_findings(bias_patterns, loaded_phrases, manipulation_tactics)
         }
+    
+    def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
+                                     loaded_phrases: List, manipulation_tactics: List,
+                                     objectivity_score: int, opinion_percentage: int) -> str:
+        """Generate human-readable explanation of bias analysis"""
+        
+        explanations = []
+        
+        # Political bias explanation
+        political = bias_dimensions['political']
+        if abs(political['score']) < 0.2:
+            explanations.append(
+                "This article maintains political neutrality by presenting information without "
+                "partisan language or favoring any political ideology. The reporting appears balanced "
+                "and focuses on facts rather than political opinion."
+            )
+        elif political['score'] > 0.5:
+            explanations.append(
+                f"This article shows a {political['label'].lower()} bias through its use of "
+                f"conservative terminology and framing. The language tends to favor right-leaning "
+                f"perspectives and may present issues from a conservative viewpoint."
+            )
+        elif political['score'] < -0.5:
+            explanations.append(
+                f"This article shows a {political['label'].lower()} bias through its use of "
+                f"progressive terminology and framing. The language tends to favor left-leaning "
+                f"perspectives and may present issues from a liberal viewpoint."
+            )
+        
+        # Objectivity explanation
+        if objectivity_score >= 80:
+            explanations.append(
+                "The writing demonstrates high objectivity with minimal emotional language, "
+                "balanced sourcing, and factual presentation. This is characteristic of "
+                "professional journalism standards."
+            )
+        elif objectivity_score >= 60:
+            explanations.append(
+                "The article shows reasonable objectivity but includes some subjective elements "
+                "such as interpretive language or selective emphasis that may influence reader perception."
+            )
+        elif objectivity_score < 40:
+            explanations.append(
+                "The article lacks objectivity, mixing opinion with fact and using emotionally "
+                "charged language. Readers should be aware of the strong subjective elements "
+                "throughout the piece."
+            )
+        
+        # Manipulation tactics explanation
+        if manipulation_tactics:
+            tactic_names = [t['name'] for t in manipulation_tactics[:3]]
+            explanations.append(
+                f"Several persuasion techniques were detected including: {', '.join(tactic_names)}. "
+                f"These tactics may be used to influence reader emotions or opinions beyond "
+                f"straightforward factual reporting."
+            )
+        
+        # Opinion vs fact ratio
+        if opinion_percentage > 50:
+            explanations.append(
+                f"Approximately {opinion_percentage}% of sentences contain opinion markers, "
+                f"indicating this is more of an opinion piece than straight news reporting."
+            )
+        
+        return " ".join(explanations)
+    
+    def _generate_bias_summary(self, bias_dimensions: Dict, objectivity_score: int) -> str:
+        """Generate concise bias summary"""
+        
+        # Find strongest biases
+        strong_biases = []
+        for dim_name, dim_data in bias_dimensions.items():
+            if abs(dim_data['score']) > 0.5 or (dim_name == 'sensational' and dim_data['score'] > 0.5):
+                strong_biases.append(f"{dim_data['label']} ({dim_name})")
+        
+        if not strong_biases:
+            return f"Relatively unbiased reporting with {objectivity_score}% objectivity score"
+        else:
+            return f"Detected: {', '.join(strong_biases)} - Objectivity: {objectivity_score}%"
+    
+    def _generate_key_findings(self, bias_patterns: List, loaded_phrases: List, 
+                              manipulation_tactics: List) -> List[str]:
+        """Generate key findings list"""
+        findings = []
+        
+        # Add pattern findings
+        for pattern in bias_patterns[:2]:
+            findings.append(f"{pattern['type'].replace('_', ' ').title()}: {pattern['description']}")
+        
+        # Add loaded phrase findings
+        if loaded_phrases:
+            high_impact = [p for p in loaded_phrases if p['severity'] == 'high']
+            if high_impact:
+                findings.append(f"Found {len(high_impact)} high-impact loaded phrases that may polarize readers")
+        
+        # Add manipulation findings
+        if manipulation_tactics:
+            findings.append(f"Detected {len(manipulation_tactics)} manipulation tactics affecting credibility")
+        
+        return findings[:5]  # Limit to 5 key findings
     
     def analyze_bias_dimensions(self, text: str) -> Dict[str, Dict[str, Any]]:
         """Analyze multiple dimensions of bias"""
@@ -224,20 +335,38 @@ class BiasDetector:
         }
     
     def _analyze_political_dimension(self, text: str) -> Dict[str, Any]:
-        """Analyze political bias dimension"""
+        """Analyze political bias dimension with detailed explanation"""
         text_lower = text.lower()
         
-        left_score = sum(weight for term, weight in self.left_indicators.items() 
-                        if term in text_lower)
-        right_score = sum(weight for term, weight in self.right_indicators.items() 
-                         if term in text_lower)
+        # Find which indicators are present
+        left_found = []
+        right_found = []
+        
+        for term, weight in self.left_indicators.items():
+            if term in text_lower:
+                left_found.append(term)
+        
+        for term, weight in self.right_indicators.items():
+            if term in text_lower:
+                right_found.append(term)
+        
+        left_score = sum(self.left_indicators[term] for term in left_found)
+        right_score = sum(self.right_indicators[term] for term in right_found)
         
         total_score = left_score + right_score
         if total_score == 0:
             score = 0
+            explanation = "No significant political indicators detected"
         else:
             score = (right_score - left_score) / max(total_score, 20)
             score = max(-1, min(1, score))
+            
+            if left_found and right_found:
+                explanation = f"Mixed political language with both progressive terms ({', '.join(left_found[:3])}) and conservative terms ({', '.join(right_found[:3])})"
+            elif left_found:
+                explanation = f"Uses progressive/left-leaning language including: {', '.join(left_found[:5])}"
+            else:
+                explanation = f"Uses conservative/right-leaning language including: {', '.join(right_found[:5])}"
         
         # Determine label
         if score < -0.6:
@@ -254,24 +383,36 @@ class BiasDetector:
         return {
             'score': score,
             'label': label,
-            'confidence': min(100, int(abs(score) * 100 * 1.2))
+            'confidence': min(100, int(abs(score) * 100 * 1.2)),
+            'explanation': explanation,
+            'indicators_found': {
+                'left': left_found[:5],
+                'right': right_found[:5]
+            }
         }
     
     def _analyze_corporate_dimension(self, text: str) -> Dict[str, Any]:
         """Analyze corporate bias dimension"""
         text_lower = text.lower()
         
-        pro_score = sum(weight for term, weight in self.pro_corporate.items() 
-                       if term in text_lower)
-        anti_score = sum(weight for term, weight in self.anti_corporate.items() 
-                        if term in text_lower)
+        pro_found = [term for term in self.pro_corporate.keys() if term in text_lower]
+        anti_found = [term for term in self.anti_corporate.keys() if term in text_lower]
+        
+        pro_score = sum(self.pro_corporate[term] for term in pro_found)
+        anti_score = sum(self.anti_corporate[term] for term in anti_found)
         
         total_score = pro_score + anti_score
         if total_score == 0:
             score = 0
+            explanation = "Neutral stance on corporate/business issues"
         else:
             score = (pro_score - anti_score) / max(total_score, 15)
             score = max(-1, min(1, score))
+            
+            if pro_found:
+                explanation = f"Favorable to business/corporate interests, using terms like: {', '.join(pro_found[:3])}"
+            else:
+                explanation = f"Critical of corporate power, using terms like: {', '.join(anti_found[:3])}"
         
         # Determine label
         if score > 0.6:
@@ -288,7 +429,8 @@ class BiasDetector:
         return {
             'score': score,
             'label': label,
-            'confidence': min(100, int(abs(score) * 100 * 1.2))
+            'confidence': min(100, int(abs(score) * 100 * 1.2)),
+            'explanation': explanation
         }
     
     def _analyze_sensational_dimension(self, text: str) -> Dict[str, Any]:
@@ -296,13 +438,22 @@ class BiasDetector:
         text_lower = text.lower()
         
         # Check for sensational words
-        sensational_score = sum(weight for term, weight in self.sensational_indicators.items() 
-                               if term in text_lower)
+        sensational_found = [term for term in self.sensational_indicators.keys() if term in text_lower]
+        sensational_score = sum(self.sensational_indicators[term] for term in sensational_found)
         
         # Check for excessive punctuation
         exclamation_count = text.count('!')
         question_count = text.count('?')
         caps_words = len(re.findall(r'\b[A-Z]{4,}\b', text))
+        
+        # Build explanation
+        issues = []
+        if sensational_found:
+            issues.append(f"sensational language ({', '.join(sensational_found[:3])})")
+        if exclamation_count > 2:
+            issues.append(f"{exclamation_count} exclamation marks")
+        if caps_words > 3:
+            issues.append(f"{caps_words} ALL CAPS words")
         
         # Add punctuation and formatting scores
         sensational_score += min(exclamation_count * 2, 10)
@@ -311,6 +462,11 @@ class BiasDetector:
         
         # Normalize to 0-1 scale
         score = min(1, sensational_score / 30)
+        
+        if issues:
+            explanation = f"Sensational elements detected: {', '.join(issues)}"
+        else:
+            explanation = "Measured, professional tone without sensationalism"
         
         # Determine label
         if score > 0.7:
@@ -325,24 +481,32 @@ class BiasDetector:
         return {
             'score': score,
             'label': label,
-            'confidence': min(100, int(score * 100 * 1.2))
+            'confidence': min(100, int(score * 100 * 1.2)),
+            'explanation': explanation
         }
     
     def _analyze_nationalistic_dimension(self, text: str) -> Dict[str, Any]:
         """Analyze nationalistic vs internationalist bias"""
         text_lower = text.lower()
         
-        nat_score = sum(weight for term, weight in self.nationalistic_indicators.items() 
-                       if term in text_lower)
-        int_score = sum(weight for term, weight in self.internationalist_indicators.items() 
-                       if term in text_lower)
+        nat_found = [term for term in self.nationalistic_indicators.keys() if term in text_lower]
+        int_found = [term for term in self.internationalist_indicators.keys() if term in text_lower]
+        
+        nat_score = sum(self.nationalistic_indicators[term] for term in nat_found)
+        int_score = sum(self.internationalist_indicators[term] for term in int_found)
         
         total_score = nat_score + int_score
         if total_score == 0:
             score = 0
+            explanation = "Balanced perspective on national vs international interests"
         else:
             score = (nat_score - int_score) / max(total_score, 15)
             score = max(-1, min(1, score))
+            
+            if nat_found:
+                explanation = f"Nationalistic perspective emphasizing: {', '.join(nat_found[:3])}"
+            else:
+                explanation = f"Internationalist perspective emphasizing: {', '.join(int_found[:3])}"
         
         # Determine label
         if abs(score) > 0.6:
@@ -355,24 +519,32 @@ class BiasDetector:
         return {
             'score': score,
             'label': label,
-            'confidence': min(100, int(abs(score) * 100 * 1.2))
+            'confidence': min(100, int(abs(score) * 100 * 1.2)),
+            'explanation': explanation
         }
     
     def _analyze_establishment_dimension(self, text: str) -> Dict[str, Any]:
         """Analyze establishment vs anti-establishment bias"""
         text_lower = text.lower()
         
-        pro_score = sum(weight for term, weight in self.pro_establishment.items() 
-                       if term in text_lower)
-        anti_score = sum(weight for term, weight in self.anti_establishment.items() 
-                        if term in text_lower)
+        pro_found = [term for term in self.pro_establishment.keys() if term in text_lower]
+        anti_found = [term for term in self.anti_establishment.keys() if term in text_lower]
+        
+        pro_score = sum(self.pro_establishment[term] for term in pro_found)
+        anti_score = sum(self.anti_establishment[term] for term in anti_found)
         
         total_score = pro_score + anti_score
         if total_score == 0:
             score = 0
+            explanation = "Neutral stance toward institutions and authority"
         else:
             score = (pro_score - anti_score) / max(total_score, 15)
             score = max(-1, min(1, score))
+            
+            if pro_found:
+                explanation = f"Trusts institutional authority, referencing: {', '.join(pro_found[:3])}"
+            else:
+                explanation = f"Skeptical of establishment, using language like: {', '.join(anti_found[:3])}"
         
         # Determine label
         if score > 0.6:
@@ -389,7 +561,8 @@ class BiasDetector:
         return {
             'score': score,
             'label': label,
-            'confidence': min(100, int(abs(score) * 100 * 1.2))
+            'confidence': min(100, int(abs(score) * 100 * 1.2)),
+            'explanation': explanation
         }
     
     def detect_bias_patterns(self, text: str) -> List[Dict[str, str]]:
@@ -404,7 +577,8 @@ class BiasDetector:
                 patterns.append({
                     'type': 'cherry_picking',
                     'description': 'Cites studies without mentioning limitations or opposing research',
-                    'severity': 'medium'
+                    'severity': 'medium',
+                    'example': 'The article references research findings but doesn\'t discuss study limitations or contradicting studies'
                 })
         
         # False balance detection
@@ -413,7 +587,8 @@ class BiasDetector:
             patterns.append({
                 'type': 'false_balance',
                 'description': 'Presents unequal viewpoints as equally valid',
-                'severity': 'low'
+                'severity': 'low',
+                'example': 'Gives equal weight to expert consensus and fringe opinions'
             })
         
         # Loaded questions in headlines
@@ -422,7 +597,8 @@ class BiasDetector:
             patterns.append({
                 'type': 'loaded_question',
                 'description': 'Uses questions that imply a specific answer',
-                'severity': 'medium'
+                'severity': 'medium',
+                'example': 'Headlines with questions like "Is X really...?" that suggest doubt'
             })
         
         # Anecdotal evidence
@@ -431,7 +607,8 @@ class BiasDetector:
             patterns.append({
                 'type': 'anecdotal_evidence',
                 'description': 'Relies on personal stories rather than data',
-                'severity': 'low'
+                'severity': 'low',
+                'example': 'Uses individual experiences to support broad claims'
             })
         
         # Strawman arguments
@@ -440,7 +617,8 @@ class BiasDetector:
             patterns.append({
                 'type': 'strawman',
                 'description': 'Misrepresents opposing viewpoints to make them easier to attack',
-                'severity': 'high'
+                'severity': 'high',
+                'example': 'Characterizes opposing views in extreme terms before dismissing them'
             })
         
         return patterns
@@ -506,10 +684,18 @@ class BiasDetector:
         # Calculate framing bias score
         active_frames = sum(1 for f in framing_indicators.values() if f['detected'])
         
+        # Generate explanation
+        if active_frames > 0:
+            detected_frames = [name.replace('_', ' ') for name, data in framing_indicators.items() if data['detected']]
+            explanation = f"Article uses {', '.join(detected_frames)} to shape reader perception"
+        else:
+            explanation = "Neutral framing without obvious narrative shaping"
+        
         return {
             'frames_detected': active_frames,
             'framing_patterns': framing_indicators,
-            'framing_bias_level': 'high' if active_frames >= 3 else 'medium' if active_frames >= 2 else 'low'
+            'framing_bias_level': 'high' if active_frames >= 3 else 'medium' if active_frames >= 2 else 'low',
+            'explanation': explanation
         }
     
     def analyze_source_selection_bias(self, text: str) -> Dict[str, Any]:
@@ -553,12 +739,21 @@ class BiasDetector:
                         'assessment': f'Over-reliance on {source_type.replace("_", " ")}'
                     })
         
+        # Generate explanation
+        if bias_indicators:
+            explanation = f"Heavy reliance on {bias_indicators[0]['type'].replace('_', ' ')} ({bias_indicators[0]['percentage']:.0f}% of sources)"
+        elif source_diversity >= 3:
+            explanation = "Good source diversity with multiple viewpoints represented"
+        else:
+            explanation = "Limited source diversity may indicate bias"
+        
         return {
             'source_types': source_types,
             'total_sources': total_sources,
             'source_diversity': source_diversity,
             'diversity_score': min(100, source_diversity * 20),
-            'bias_indicators': bias_indicators
+            'bias_indicators': bias_indicators,
+            'explanation': explanation
         }
     
     def extract_loaded_phrases(self, text: str) -> List[Dict[str, str]]:
@@ -691,30 +886,56 @@ class BiasDetector:
         if not text:
             return 0
         
-        opinion_words = ['believe', 'think', 'feel', 'opinion', 'seems', 'appears', 
-                        'probably', 'maybe', 'perhaps']
-        text_lower = text.lower()
+        opinion_indicators = [
+            'believe', 'think', 'feel', 'opinion', 'seems', 'appears', 
+            'probably', 'maybe', 'perhaps', 'suggest', 'argue', 'contend',
+            'in my view', 'in my opinion', 'I think', 'I believe'
+        ]
         
         sentences = text.split('.')
-        opinion_sentences = sum(1 for s in sentences 
-                              if any(word in s.lower() for word in opinion_words))
+        opinion_sentences = 0
         
-        return min(100, int((opinion_sentences / max(len(sentences), 1)) * 100))
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+            # Check for opinion indicators
+            if any(indicator in sentence_lower for indicator in opinion_indicators):
+                opinion_sentences += 1
+            # Check for subjective adjectives
+            elif re.search(r'\b(good|bad|better|worse|right|wrong|should|shouldn\'t)\b', sentence_lower):
+                opinion_sentences += 1
+        
+        percentage = min(100, int((opinion_sentences / max(len(sentences), 1)) * 100))
+        
+        return percentage
     
     def calculate_emotional_score(self, text: str) -> int:
         """Calculate emotional language score"""
         if not text:
             return 0
         
-        emotional_words = ['shocking', 'outrageous', 'disgusting', 'amazing', 'terrible', 
-                          'horrible', 'fantastic', 'disaster', 'crisis', 'scandal', 
-                          'explosive', 'bombshell']
-        text_lower = text.lower()
+        emotional_words = [
+            'shocking', 'outrageous', 'disgusting', 'amazing', 'terrible', 
+            'horrible', 'fantastic', 'disaster', 'crisis', 'scandal', 
+            'explosive', 'bombshell', 'devastating', 'tragic', 'heartbreaking',
+            'infuriating', 'delightful', 'horrifying', 'wonderful', 'awful'
+        ]
         
-        emotional_count = sum(1 for word in emotional_words if word in text_lower)
+        text_lower = text.lower()
         word_count = len(text.split())
         
-        return min(100, int((emotional_count / max(word_count, 1)) * 1000))
+        # Count emotional words and their intensity
+        emotional_count = 0
+        for word in emotional_words:
+            count = text_lower.count(word)
+            emotional_count += count
+            # Extra weight for very strong emotional words
+            if word in ['devastating', 'horrifying', 'explosive', 'bombshell']:
+                emotional_count += count  # Double count these
+        
+        # Calculate score (scaled to be meaningful)
+        score = min(100, int((emotional_count / max(word_count, 1)) * 1000))
+        
+        return score
     
     def detect_manipulation_tactics(self, text: str, bias_patterns: List[Dict]) -> List[Dict]:
         """Enhanced manipulation tactics detection"""
@@ -905,7 +1126,10 @@ class BiasDetector:
             'source_bias_analysis': {},
             'bias_visualization': {},
             'bias_impact': {},
-            'comparative_context': {}
+            'comparative_context': {},
+            'detailed_explanation': 'Unable to analyze bias due to insufficient content',
+            'bias_summary': 'Analysis unavailable',
+            'key_findings': []
         }
     
     # Simple interface methods for backward compatibility
