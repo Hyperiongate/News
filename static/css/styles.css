@@ -1279,6 +1279,663 @@ body {
     border-color: var(--gray);
 }
 
+/* ========================================
+   ENHANCED COMPONENT STYLES
+   Missing styles for the enhanced components
+   ======================================== */
+
+/* Author Card Enhancements */
+.professional-info {
+    background: rgba(99, 102, 241, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.professional-info h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.professional-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--gray);
+}
+
+.professional-info strong {
+    color: var(--dark);
+}
+
+.expertise-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.expertise-tags .tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 15px;
+    font-size: 0.8rem;
+}
+
+.verification-status {
+    margin-bottom: 1rem;
+}
+
+.verification-status h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.online-presence {
+    margin-top: 1rem;
+}
+
+.online-presence h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.social-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.social-link {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    background: var(--light-gray);
+    border-radius: 50%;
+    color: var(--primary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.social-link:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.credibility-explanation {
+    background: var(--light-gray);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.credibility-explanation h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.credibility-explanation p {
+    font-size: 0.9rem;
+    color: var(--gray);
+    margin: 0.5rem 0;
+}
+
+.credibility-explanation .advice {
+    font-style: italic;
+    color: var(--primary);
+}
+
+/* Bias Analysis Enhancements */
+.bias-summary {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.bias-summary h5 {
+    font-size: 0.95rem;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+}
+
+.bias-label {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.bias-dimensions {
+    margin-bottom: 1.5rem;
+}
+
+.bias-dimensions h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1rem;
+}
+
+.dimension {
+    margin-bottom: 1rem;
+}
+
+.dimension label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+}
+
+.dimension-bar {
+    position: relative;
+    height: 12px;
+    background: var(--light-gray);
+    border-radius: 6px;
+    overflow: visible;
+}
+
+.dimension-fill {
+    position: absolute;
+    height: 100%;
+    border-radius: 6px;
+    transition: all 0.5s ease;
+}
+
+.dimension-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--gray);
+    margin-top: 0.25rem;
+}
+
+.bias-visualization {
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+.bias-visualization canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.manipulation-section {
+    margin-top: 1.5rem;
+}
+
+.manipulation-section h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.tactics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+
+.tactic-chip {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    text-align: center;
+}
+
+.tactic-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--danger);
+}
+
+.loaded-phrases {
+    margin-top: 1.5rem;
+}
+
+.loaded-phrases h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.phrase-item {
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.phrase-text {
+    font-style: italic;
+    color: var(--dark);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.phrase-type {
+    font-size: 0.8rem;
+    color: var(--warning);
+    font-weight: 500;
+}
+
+.ai-insight {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(129, 140, 248, 0.05) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.ai-insight h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.ai-insight p {
+    font-size: 0.9rem;
+    color: var(--gray);
+    margin: 0;
+}
+
+/* Fact Checking Enhancements */
+.fact-summary {
+    background: var(--light-gray);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    color: var(--dark);
+}
+
+.fact-checks {
+    margin-bottom: 1.5rem;
+}
+
+.fact-claim {
+    font-style: italic;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.fact-verdict {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.verdict-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.confidence {
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.fact-explanation {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-top: 0.5rem;
+}
+
+.fact-sources-checked {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.fact-sources-checked small {
+    color: var(--gray);
+    font-size: 0.75rem;
+}
+
+.more-facts {
+    text-align: center;
+    color: var(--gray);
+    font-style: italic;
+    margin: 1rem 0;
+}
+
+.fact-sources {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.fact-sources h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.source-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.source-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--light-gray);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--dark);
+}
+
+/* Source Credibility Card */
+.source-info {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.source-info h4 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    color: var(--dark);
+}
+
+.source-type {
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.credibility-details {
+    display: grid;
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.detail-item span,
+.detail-item p {
+    color: var(--dark);
+    font-size: 0.9rem;
+    text-align: right;
+    max-width: 60%;
+}
+
+/* Transparency Indicators */
+.transparency-indicators {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.transparency-indicators .indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--light-gray);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.transparency-indicators .indicator.found {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--secondary);
+}
+
+.transparency-indicators .indicator.missing {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.found-indicators {
+    margin-top: 1rem;
+}
+
+.found-indicators h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.found-indicators ul {
+    list-style: none;
+    padding: 0;
+}
+
+.found-indicators li {
+    padding: 0.5rem 0;
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.found-indicators li i {
+    color: var(--secondary);
+    margin-right: 0.5rem;
+}
+
+/* Manipulation Detection Card */
+.manipulation-level {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.manipulation-level h5 {
+    font-size: 0.95rem;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+}
+
+.manipulation-level p {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.level-minimal { color: var(--secondary); }
+.level-low { color: var(--info); }
+.level-moderate { color: var(--warning); }
+.level-high { color: var(--danger); }
+.level-unknown { color: var(--gray); }
+
+.tactics-list {
+    margin-top: 1rem;
+}
+
+.tactics-list h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.tactic-item {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--light-gray);
+}
+
+.tactic-item.severity-high {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.tactic-item.severity-medium {
+    background: rgba(245, 158, 11, 0.05);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.tactic-item.severity-low {
+    background: rgba(107, 114, 128, 0.05);
+    border-color: rgba(107, 114, 128, 0.2);
+}
+
+.tactic-item strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--dark);
+}
+
+.tactic-item p {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin: 0;
+}
+
+.keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.keyword {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+    font-size: 0.75rem;
+    color: var(--dark);
+}
+
+/* Content Analysis Card */
+.content-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.metric {
+    padding: 1rem;
+    background: var(--light-gray);
+    border-radius: 8px;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.readability-section {
+    margin-bottom: 1.5rem;
+}
+
+.readability-section h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.readability-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.score-label {
+    font-size: 1rem;
+    color: var(--gray);
+}
+
+.target-audience {
+    font-size: 0.9rem;
+    color: var(--gray);
+    font-style: italic;
+}
+
+.quality-indicators {
+    margin-top: 1.5rem;
+}
+
+.quality-indicators h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.indicators-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.indicator-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.indicator-label {
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.indicator-value {
+    font-weight: 600;
+    color: var(--dark);
+}
+
 /* Utility Classes for JavaScript */
 .hidden {
     display: none !important;
@@ -1352,5 +2009,30 @@ body {
     
     .source-stats {
         grid-template-columns: 1fr;
+    }
+    
+    .expertise-tags {
+        justify-content: center;
+    }
+    
+    .transparency-indicators {
+        grid-template-columns: 1fr;
+    }
+    
+    .content-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .indicators-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dimension-bar {
+        margin-bottom: 0.5rem;
+    }
+    
+    .bias-visualization canvas {
+        max-width: 100%;
+        height: 200px;
     }
 }
