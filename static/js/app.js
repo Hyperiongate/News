@@ -116,7 +116,7 @@ class TruthLensApp {
 
             const data = await response.json();
             this.currentAnalysis = data;
-            
+            console.log('FULL API RESPONSE:', JSON.stringify(data, null, 2));
             // Hide progress
             this.hideProgress();
             
