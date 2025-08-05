@@ -1,7 +1,7 @@
 """
 FILE: services/bias_detector.py
 LOCATION: news/services/bias_detector.py
-PURPOSE: Advanced bias detection and analysis
+PURPOSE: Advanced bias detection and analysis with rich explanations
 DEPENDENCIES: re, logging
 SERVICE: Bias detection - Multi-dimensional bias analysis
 """
@@ -170,17 +170,8 @@ class BiasDetector:
         # Format manipulation tactics with enhanced detection
         manipulation_tactics = self.detect_manipulation_tactics(text, bias_patterns)
         
-        # Create bias visualization data
-        bias_visualization = {
-            'spectrum_position': basic_bias_score if basic_bias_score else bias_dimensions['political']['score'],
-            'confidence_bands': {
-                'lower': max(-1, (basic_bias_score if basic_bias_score else bias_dimensions['political']['score']) - (1 - bias_confidence/100) * 0.3),
-                'upper': min(1, (basic_bias_score if basic_bias_score else bias_dimensions['political']['score']) + (1 - bias_confidence/100) * 0.3)
-            },
-            'contributing_factors': self.get_bias_contributing_factors(
-                bias_dimensions, framing_analysis, source_bias
-            )
-        }
+        # ENHANCED: Create detailed bias visualization data
+        bias_visualization = self._create_bias_visualization(bias_dimensions)
         
         # Bias impact assessment
         bias_impact = self.assess_bias_impact(
@@ -198,6 +189,9 @@ class BiasDetector:
             bias_dimensions, bias_patterns, loaded_phrases, manipulation_tactics, 
             objectivity_score, opinion_percentage
         )
+        
+        # ENHANCED: Generate dimension explanations
+        dimension_explanations = self._generate_dimension_explanations(bias_dimensions)
         
         return {
             'overall_bias': overall_bias,
@@ -221,8 +215,193 @@ class BiasDetector:
             # NEW: Rich explanations
             'detailed_explanation': detailed_explanation,
             'bias_summary': self._generate_bias_summary(bias_dimensions, objectivity_score),
-            'key_findings': self._generate_key_findings(bias_patterns, loaded_phrases, manipulation_tactics)
+            'key_findings': self._generate_key_findings(bias_patterns, loaded_phrases, manipulation_tactics),
+            'dimension_explanations': dimension_explanations
         }
+    
+    def _create_bias_visualization(self, bias_dimensions: Dict) -> Dict[str, Any]:
+        """Create visualization data for bias radar chart"""
+        
+        # Prepare data for radar chart
+        dimensions = []
+        for dim_name, dim_data in bias_dimensions.items():
+            dimensions.append({
+                'axis': self._get_dimension_display_name(dim_name),
+                'value': abs(dim_data['score']) * 100,  # Convert to 0-100 scale
+                'rawScore': dim_data['score'],  # Keep original -1 to 1 scale
+                'label': dim_data['label'],
+                'color': self._get_dimension_color(dim_name),
+                'description': dim_data.get('explanation', ''),
+                'meaning': self._get_dimension_meaning(dim_name)
+            })
+        
+        return {
+            'type': 'radar',
+            'dimensions': dimensions,
+            'summary': self._generate_visualization_summary(bias_dimensions),
+            'interpretation': self._generate_visualization_interpretation(bias_dimensions)
+        }
+    
+    def _get_dimension_display_name(self, dimension: str) -> str:
+        """Get display name for dimension"""
+        names = {
+            'political': 'Political Bias',
+            'corporate': 'Corporate Stance',
+            'sensational': 'Sensationalism',
+            'nationalistic': 'National Focus',
+            'establishment': 'Authority Trust'
+        }
+        return names.get(dimension, dimension.title())
+    
+    def _get_dimension_meaning(self, dimension: str) -> str:
+        """Get what each dimension means"""
+        meanings = {
+            'political': 'Measures partisan language and ideological framing from far-left to far-right',
+            'corporate': 'Analyzes stance toward business, from anti-corporate criticism to pro-business advocacy',
+            'sensational': 'Detects emotionally charged language and attention-grabbing tactics',
+            'nationalistic': 'Evaluates focus from global/international perspective to national-first viewpoint',
+            'establishment': 'Assesses trust in institutions from anti-establishment skepticism to institutional deference'
+        }
+        return meanings.get(dimension, '')
+    
+    def _get_dimension_color(self, dimension: str) -> str:
+        """Get color for dimension visualization"""
+        colors = {
+            'political': '#6366f1',  # Indigo
+            'corporate': '#10b981',  # Emerald
+            'sensational': '#f59e0b',  # Amber
+            'nationalistic': '#ef4444',  # Red
+            'establishment': '#8b5cf6'  # Purple
+        }
+        return colors.get(dimension, '#6b7280')
+    
+    def _generate_visualization_summary(self, bias_dimensions: Dict) -> str:
+        """Generate summary for visualization"""
+        high_bias_dims = []
+        for dim_name, dim_data in bias_dimensions.items():
+            if abs(dim_data['score']) > 0.5 or (dim_name == 'sensational' and dim_data['score'] > 0.5):
+                high_bias_dims.append(self._get_dimension_display_name(dim_name))
+        
+        if not high_bias_dims:
+            return "This article shows balanced reporting across all dimensions"
+        else:
+            return f"Significant bias detected in: {', '.join(high_bias_dims)}"
+    
+    def _generate_visualization_interpretation(self, bias_dimensions: Dict) -> str:
+        """Generate interpretation of the visualization"""
+        interpretations = []
+        
+        # Political dimension
+        pol_score = bias_dimensions['political']['score']
+        if abs(pol_score) > 0.5:
+            direction = "left" if pol_score < 0 else "right"
+            interpretations.append(f"Strong {direction}-wing political perspective shapes the narrative")
+        
+        # Sensational dimension
+        if bias_dimensions['sensational']['score'] > 0.5:
+            interpretations.append("High emotional language may be manipulating reader reactions")
+        
+        # Corporate dimension
+        corp_score = bias_dimensions['corporate']['score']
+        if abs(corp_score) > 0.5:
+            stance = "critical of" if corp_score < 0 else "favorable to"
+            interpretations.append(f"Notably {stance} business and corporate interests")
+        
+        return " • ".join(interpretations) if interpretations else "No significant bias patterns detected"
+    
+    def _generate_dimension_explanations(self, bias_dimensions: Dict) -> Dict[str, Dict[str, str]]:
+        """Generate detailed explanations for each dimension"""
+        explanations = {}
+        
+        for dim_name, dim_data in bias_dimensions.items():
+            explanations[dim_name] = {
+                'what_we_looked_for': self._get_what_we_looked_for(dim_name),
+                'why_it_matters': self._get_why_it_matters(dim_name),
+                'what_we_found': dim_data.get('explanation', 'No significant indicators found'),
+                'what_this_means': self._get_what_this_means(dim_name, dim_data),
+                'score': dim_data['score'],
+                'label': dim_data['label'],
+                'confidence': dim_data['confidence']
+            }
+        
+        return explanations
+    
+    def _get_what_we_looked_for(self, dimension: str) -> str:
+        """Explain what we analyzed for each dimension"""
+        explanations = {
+            'political': "We analyzed political language, party references, ideological terms, and policy positions to detect partisan bias",
+            'corporate': "We examined how businesses, corporations, and economic systems are portrayed - whether favorably or critically",
+            'sensational': "We checked for exaggerated claims, emotional manipulation, ALL CAPS, excessive punctuation, and clickbait language",
+            'nationalistic': "We looked for language prioritizing national interests versus international cooperation and global perspectives",
+            'establishment': "We analyzed trust or skepticism toward institutions, authorities, experts, and traditional sources of information"
+        }
+        return explanations.get(dimension, '')
+    
+    def _get_why_it_matters(self, dimension: str) -> str:
+        """Explain why each dimension matters"""
+        explanations = {
+            'political': "Political bias can shape how facts are presented and which viewpoints are emphasized or dismissed",
+            'corporate': "Corporate bias affects coverage of business practices, economic policies, and wealth distribution",
+            'sensational': "Sensational language manipulates emotions and can distort the importance or urgency of issues",
+            'nationalistic': "National focus bias can limit global perspective and affect coverage of international issues",
+            'establishment': "Trust in authority affects how official sources are questioned or accepted without scrutiny"
+        }
+        return explanations.get(dimension, '')
+    
+    def _get_what_this_means(self, dimension: str, dim_data: Dict) -> str:
+        """Explain what the score means for readers"""
+        score = dim_data['score']
+        label = dim_data['label']
+        
+        if dimension == 'political':
+            if abs(score) < 0.2:
+                return "The article maintains political neutrality, allowing readers to form their own opinions"
+            elif score > 0.5:
+                return "Strong conservative framing may influence how readers interpret the facts presented"
+            elif score < -0.5:
+                return "Strong progressive framing may influence how readers interpret the facts presented"
+            else:
+                return f"Moderate {label.lower()} perspective is present but doesn't dominate the reporting"
+        
+        elif dimension == 'corporate':
+            if abs(score) < 0.2:
+                return "Business topics are covered objectively without clear pro or anti-corporate bias"
+            elif score > 0.5:
+                return "Pro-business perspective may downplay corporate criticism or emphasize benefits"
+            elif score < -0.5:
+                return "Anti-corporate perspective may emphasize business failures over successes"
+            else:
+                return f"{label} stance influences but doesn't dominate business coverage"
+        
+        elif dimension == 'sensational':
+            if score < 0.2:
+                return "Professional, measured tone allows facts to speak for themselves"
+            elif score > 0.7:
+                return "Extreme sensationalism may be distorting the actual importance of events"
+            else:
+                return "Some emotional language is used to engage readers but facts remain central"
+        
+        elif dimension == 'nationalistic':
+            if abs(score) < 0.2:
+                return "Balanced coverage of both national and international perspectives"
+            elif score > 0.5:
+                return "Strong national focus may limit international context and global perspectives"
+            elif score < -0.5:
+                return "International focus may downplay legitimate national interests or concerns"
+            else:
+                return f"{label} perspective provides some bias in coverage of global issues"
+        
+        elif dimension == 'establishment':
+            if abs(score) < 0.2:
+                return "Balanced approach to institutional sources with appropriate skepticism"
+            elif score > 0.5:
+                return "High trust in official sources may lead to uncritical acceptance of claims"
+            elif score < -0.5:
+                return "Deep skepticism of institutions may lead to dismissal of credible information"
+            else:
+                return f"{label} stance affects how institutional sources are presented"
+        
+        return "Score indicates moderate bias in this dimension"
     
     def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
                                      loaded_phrases: List, manipulation_tactics: List,
@@ -231,60 +410,65 @@ class BiasDetector:
         
         explanations = []
         
-        # Political bias explanation
+        # Start with overall assessment
+        strong_biases = sum(1 for d in bias_dimensions.values() if abs(d['score']) > 0.5)
+        if strong_biases == 0:
+            explanations.append(
+                "This article demonstrates relatively balanced reporting without strong bias in any dimension. "
+                "While no reporting is perfectly neutral, this piece maintains professional standards."
+            )
+        elif strong_biases == 1:
+            explanations.append(
+                "This article shows significant bias in one key dimension that colors the overall reporting. "
+                "Readers should be aware of this perspective when evaluating the information presented."
+            )
+        else:
+            explanations.append(
+                f"This article exhibits strong bias across {strong_biases} dimensions, significantly affecting "
+                f"how information is presented. Multiple biases compound to create a particular narrative."
+            )
+        
+        # Political bias explanation with specifics
         political = bias_dimensions['political']
-        if abs(political['score']) < 0.2:
+        if abs(political['score']) > 0.2:
+            direction = "conservative/right-wing" if political['score'] > 0 else "progressive/left-wing"
             explanations.append(
-                "This article maintains political neutrality by presenting information without "
-                "partisan language or favoring any political ideology. The reporting appears balanced "
-                "and focuses on facts rather than political opinion."
-            )
-        elif political['score'] > 0.5:
-            explanations.append(
-                f"This article shows a {political['label'].lower()} bias through its use of "
-                f"conservative terminology and framing. The language tends to favor right-leaning "
-                f"perspectives and may present issues from a conservative viewpoint."
-            )
-        elif political['score'] < -0.5:
-            explanations.append(
-                f"This article shows a {political['label'].lower()} bias through its use of "
-                f"progressive terminology and framing. The language tends to favor left-leaning "
-                f"perspectives and may present issues from a liberal viewpoint."
+                f"The {direction} political bias ({abs(political['score']*100):.0f}%) is evident through "
+                f"specific language choices and framing. {political.get('explanation', '')}"
             )
         
         # Objectivity explanation
         if objectivity_score >= 80:
             explanations.append(
-                "The writing demonstrates high objectivity with minimal emotional language, "
-                "balanced sourcing, and factual presentation. This is characteristic of "
-                "professional journalism standards."
+                "Despite any ideological leanings, the article maintains high objectivity with "
+                "factual reporting, proper sourcing, and minimal emotional manipulation."
             )
         elif objectivity_score >= 60:
             explanations.append(
-                "The article shows reasonable objectivity but includes some subjective elements "
-                "such as interpretive language or selective emphasis that may influence reader perception."
+                f"The article shows reasonable objectivity ({objectivity_score}%) but includes "
+                f"subjective elements that may influence interpretation."
             )
         elif objectivity_score < 40:
             explanations.append(
-                "The article lacks objectivity, mixing opinion with fact and using emotionally "
-                "charged language. Readers should be aware of the strong subjective elements "
-                "throughout the piece."
+                f"Low objectivity score ({objectivity_score}%) indicates heavy use of opinion, "
+                f"emotional language, and subjective interpretation mixed with factual claims."
             )
         
-        # Manipulation tactics explanation
+        # Manipulation tactics
         if manipulation_tactics:
             tactic_names = [t['name'] for t in manipulation_tactics[:3]]
             explanations.append(
-                f"Several persuasion techniques were detected including: {', '.join(tactic_names)}. "
-                f"These tactics may be used to influence reader emotions or opinions beyond "
+                f"Several persuasion techniques detected: {', '.join(tactic_names)}. "
+                f"These tactics are designed to influence reader emotions and opinions beyond "
                 f"straightforward factual reporting."
             )
         
         # Opinion vs fact ratio
         if opinion_percentage > 50:
             explanations.append(
-                f"Approximately {opinion_percentage}% of sentences contain opinion markers, "
-                f"indicating this is more of an opinion piece than straight news reporting."
+                f"High opinion content ({opinion_percentage}% of sentences) indicates this is "
+                f"more commentary than news reporting. Readers should recognize this as analysis "
+                f"rather than straight news."
             )
         
         return " ".join(explanations)
@@ -296,7 +480,7 @@ class BiasDetector:
         strong_biases = []
         for dim_name, dim_data in bias_dimensions.items():
             if abs(dim_data['score']) > 0.5 or (dim_name == 'sensational' and dim_data['score'] > 0.5):
-                strong_biases.append(f"{dim_data['label']} ({dim_name})")
+                strong_biases.append(f"{dim_data['label']} ({self._get_dimension_display_name(dim_name)})")
         
         if not strong_biases:
             return f"Relatively unbiased reporting with {objectivity_score}% objectivity score"
@@ -308,7 +492,7 @@ class BiasDetector:
         """Generate key findings list"""
         findings = []
         
-        # Add pattern findings
+        # Add pattern findings with explanations
         for pattern in bias_patterns[:2]:
             findings.append(f"{pattern['type'].replace('_', ' ').title()}: {pattern['description']}")
         
@@ -316,11 +500,17 @@ class BiasDetector:
         if loaded_phrases:
             high_impact = [p for p in loaded_phrases if p['severity'] == 'high']
             if high_impact:
-                findings.append(f"Found {len(high_impact)} high-impact loaded phrases that may polarize readers")
+                examples = [f'"{p["text"]}"' for p in high_impact[:2]]
+                findings.append(f"Found {len(high_impact)} high-impact loaded phrases including {', '.join(examples)}")
         
         # Add manipulation findings
         if manipulation_tactics:
             findings.append(f"Detected {len(manipulation_tactics)} manipulation tactics affecting credibility")
+        
+        # Add positive findings if relatively unbiased
+        if not findings:
+            findings.append("No significant bias patterns or manipulation tactics detected")
+            findings.append("Article maintains professional journalistic standards")
         
         return findings[:5]  # Limit to 5 key findings
     
@@ -356,7 +546,7 @@ class BiasDetector:
         total_score = left_score + right_score
         if total_score == 0:
             score = 0
-            explanation = "No significant political indicators detected"
+            explanation = "No significant political indicators detected. The article avoids partisan language."
         else:
             score = (right_score - left_score) / max(total_score, 20)
             score = max(-1, min(1, score))
@@ -404,12 +594,14 @@ class BiasDetector:
         total_score = pro_score + anti_score
         if total_score == 0:
             score = 0
-            explanation = "Neutral stance on corporate/business issues"
+            explanation = "Neutral stance on corporate/business issues. No clear pro or anti-business bias detected."
         else:
             score = (pro_score - anti_score) / max(total_score, 15)
             score = max(-1, min(1, score))
             
-            if pro_found:
+            if pro_found and anti_found:
+                explanation = f"Mixed coverage with both pro-business ({', '.join(pro_found[:2])}) and critical ({', '.join(anti_found[:2])}) language"
+            elif pro_found:
                 explanation = f"Favorable to business/corporate interests, using terms like: {', '.join(pro_found[:3])}"
             else:
                 explanation = f"Critical of corporate power, using terms like: {', '.join(anti_found[:3])}"
@@ -503,7 +695,9 @@ class BiasDetector:
             score = (nat_score - int_score) / max(total_score, 15)
             score = max(-1, min(1, score))
             
-            if nat_found:
+            if nat_found and int_found:
+                explanation = f"Mixed perspective with both nationalistic ({', '.join(nat_found[:2])}) and internationalist ({', '.join(int_found[:2])}) themes"
+            elif nat_found:
                 explanation = f"Nationalistic perspective emphasizing: {', '.join(nat_found[:3])}"
             else:
                 explanation = f"Internationalist perspective emphasizing: {', '.join(int_found[:3])}"
@@ -541,7 +735,9 @@ class BiasDetector:
             score = (pro_score - anti_score) / max(total_score, 15)
             score = max(-1, min(1, score))
             
-            if pro_found:
+            if pro_found and anti_found:
+                explanation = f"Mixed stance with both trust ({', '.join(pro_found[:2])}) and skepticism ({', '.join(anti_found[:2])}) of institutions"
+            elif pro_found:
                 explanation = f"Trusts institutional authority, referencing: {', '.join(pro_found[:3])}"
             else:
                 explanation = f"Skeptical of establishment, using language like: {', '.join(anti_found[:3])}"
@@ -1129,7 +1325,8 @@ class BiasDetector:
             'comparative_context': {},
             'detailed_explanation': 'Unable to analyze bias due to insufficient content',
             'bias_summary': 'Analysis unavailable',
-            'key_findings': []
+            'key_findings': [],
+            'dimension_explanations': {}
         }
     
     # Simple interface methods for backward compatibility
