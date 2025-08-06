@@ -90,6 +90,7 @@ class AnalysisComponents {
                 name: 'Source Credibility', 
                 score: this.getSourceScore(data.source_credibility?.rating),
                 icon: 'fa-building',
+                color: '#6366f1',
                 whatWeDid: 'Analyzed the publication\'s track record, editorial standards, and fact-checking history across multiple media monitoring databases.',
                 whatWeFound: this.getSourceFindings(data.source_credibility),
                 whatThisMeans: this.getSourceMeaning(data.source_credibility)
@@ -98,6 +99,7 @@ class AnalysisComponents {
                 name: 'Author Credibility', 
                 score: data.author_analysis?.credibility_score || 50,
                 icon: 'fa-user',
+                color: '#10b981',
                 whatWeDid: 'Searched for the author\'s professional history, verified their identity, and reviewed their publication record.',
                 whatWeFound: this.getAuthorFindings(data.author_analysis),
                 whatThisMeans: this.getAuthorMeaning(data.author_analysis)
@@ -106,6 +108,7 @@ class AnalysisComponents {
                 name: 'Transparency', 
                 score: data.transparency_analysis?.transparency_score || 50,
                 icon: 'fa-eye',
+                color: '#f59e0b',
                 whatWeDid: 'Checked for proper source citations, author attribution, publication dates, and disclosure of conflicts of interest.',
                 whatWeFound: this.getTransparencyFindings(data.transparency_analysis),
                 whatThisMeans: this.getTransparencyMeaning(data.transparency_analysis)
@@ -114,38 +117,55 @@ class AnalysisComponents {
                 name: 'Objectivity', 
                 score: data.bias_analysis?.objectivity_score || 50,
                 icon: 'fa-balance-scale',
+                color: '#ef4444',
                 whatWeDid: 'Analyzed language patterns, emotional tone, and presentation balance to detect potential bias or manipulation.',
                 whatWeFound: this.getObjectivityFindings(data.bias_analysis),
                 whatThisMeans: this.getObjectivityMeaning(data.bias_analysis)
             }
         ];
 
-        return factors.map(factor => `
-            <div class="trust-factor enhanced">
-                <div class="factor-header">
-                    <div class="factor-info">
-                        <i class="fas ${factor.icon}"></i>
-                        <span>${factor.name}</span>
+        return factors.map((factor, index) => `
+            <div class="trust-factor-detailed" style="animation-delay: ${index * 0.1}s">
+                <!-- Main Score Section -->
+                <div class="factor-main">
+                    <div class="factor-header">
+                        <div class="factor-info">
+                            <i class="fas ${factor.icon}" style="color: ${factor.color}"></i>
+                            <span class="factor-name">${factor.name}</span>
+                        </div>
+                        <div class="factor-score-display">
+                            <span class="factor-score-number ${this.getScoreClass(factor.score)}">${factor.score}</span>
+                            <span class="factor-score-label">/ 100</span>
+                        </div>
                     </div>
-                    <span class="factor-score ${this.getScoreClass(factor.score)}" style="color: ${this.getScoreColor(factor.score)}">
-                        ${factor.score}
-                    </span>
-                </div>
-                <div class="factor-bar">
-                    <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
+                    <div class="factor-bar">
+                        <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
+                    </div>
                 </div>
                 
-                <div class="factor-analysis-details">
-                    <div class="analysis-section">
-                        <h5><i class="fas fa-search"></i> What we did:</h5>
+                <!-- Detailed Analysis Section - ALWAYS VISIBLE -->
+                <div class="factor-analysis-grid">
+                    <div class="analysis-box what-we-did">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-search"></i>
+                            <h5>What We Analyzed</h5>
+                        </div>
                         <p>${factor.whatWeDid}</p>
                     </div>
-                    <div class="analysis-section">
-                        <h5><i class="fas fa-clipboard-check"></i> What we found:</h5>
+                    
+                    <div class="analysis-box what-we-found">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h5>Key Findings</h5>
+                        </div>
                         <p>${factor.whatWeFound}</p>
                     </div>
-                    <div class="analysis-section">
-                        <h5><i class="fas fa-lightbulb"></i> What this means:</h5>
+                    
+                    <div class="analysis-box what-this-means">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <h5>What This Means</h5>
+                        </div>
                         <p>${factor.whatThisMeans}</p>
                     </div>
                 </div>
