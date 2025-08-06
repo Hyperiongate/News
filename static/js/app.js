@@ -109,38 +109,93 @@ class TruthLensApp {
                 })
             });
 
+            // CRITICAL FIX 1: Check HTTP response status first
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Analysis failed');
+                let errorMessage = 'Analysis failed';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                throw new Error(errorMessage);
             }
 
-            const data = await response.json();
-            this.currentAnalysis = data;
+            // Parse response
+            const responseData = await response.json();
             
-            // FIXED: Log the actual data object, not stringified
-            console.log('FULL API RESPONSE:', data);
+            // CRITICAL FIX 2: Log the EXACT response structure
+            console.log('RAW API RESPONSE:', responseData);
+            console.log('Response type:', typeof responseData);
+            console.log('Response keys:', Object.keys(responseData));
+            
+            // CRITICAL FIX 3: Check for success field in response
+            if (responseData.success === false) {
+                throw new Error(responseData.error || 'Analysis failed on server');
+            }
+            
+            // CRITICAL FIX 4: Extract the actual data
+            // The backend might be wrapping the data in different ways
+            let analysisData = responseData;
+            
+            // Check if data is nested in a 'data' field
+            if (responseData.data && typeof responseData.data === 'object') {
+                console.log('Data is nested in .data field');
+                analysisData = responseData.data;
+            }
+            
+            // Check if we have the expected fields
+            if (!analysisData.trust_score && analysisData.trust_score !== 0) {
+                console.error('Missing trust_score in response:', analysisData);
+                // Try to find trust_score in different locations
+                if (responseData.result && responseData.result.trust_score !== undefined) {
+                    analysisData = responseData.result;
+                } else if (responseData.analysis && responseData.analysis.trust_score !== undefined) {
+                    analysisData = responseData.analysis;
+                }
+            }
+            
+            // CRITICAL FIX 5: Validate we have minimum required data
+            if (!analysisData.trust_score && analysisData.trust_score !== 0) {
+                console.error('No trust_score found anywhere in response');
+                throw new Error('Invalid response format: missing trust_score');
+            }
+            
+            // Store the analysis data
+            this.currentAnalysis = analysisData;
+            
+            // Enhanced debugging
+            console.log('PROCESSED ANALYSIS DATA:', analysisData);
+            console.log('Trust Score:', analysisData.trust_score);
+            console.log('Has article?', !!analysisData.article);
+            console.log('Has bias_analysis?', !!analysisData.bias_analysis);
+            console.log('Has author_analysis?', !!analysisData.author_analysis);
+            console.log('Has source_credibility?', !!analysisData.source_credibility);
             
             // Store for debugging
-            window.debugData = data;
-            
-            // Log specific parts for debugging
-            console.log('Bias Analysis:', data.bias_analysis);
-            console.log('Author Analysis:', data.author_analysis);
-            console.log('Source Credibility:', data.source_credibility);
+            window.debugData = analysisData;
+            window.rawResponse = responseData;
             
             // Hide progress
             this.hideProgress();
             
-            // Display results
-            this.displayResults(data);
+            // Display results with the correct data
+            this.displayResults(analysisData);
             
             // Log success
-            console.log('Analysis complete - Trust Score:', data.trust_score);
+            console.log('Analysis complete - Trust Score:', analysisData.trust_score);
             
         } catch (error) {
             console.error('Analysis error:', error);
+            console.error('Error stack:', error.stack);
             this.showError(error.message || 'An error occurred during analysis');
             this.hideProgress();
+            
+            // Additional error debugging
+            console.log('Last known state:');
+            console.log('- API endpoint:', this.API_ENDPOINT);
+            console.log('- Input type:', inputType);
+            console.log('- Input value:', input);
         } finally {
             // Re-enable buttons
             analyzeBtns.forEach(btn => {
@@ -204,6 +259,18 @@ class TruthLensApp {
     }
 
     displayResults(data) {
+        console.log('=== DISPLAY RESULTS CALLED ===');
+        console.log('Data received:', data);
+        console.log('Data type:', typeof data);
+        console.log('Data keys:', data ? Object.keys(data) : 'data is null/undefined');
+        
+        // CRITICAL FIX: Validate data exists
+        if (!data) {
+            console.error('No data provided to displayResults');
+            this.showError('No analysis data received');
+            return;
+        }
+        
         // Show results section
         document.getElementById('resultsSection').style.display = 'block';
         
@@ -220,31 +287,49 @@ class TruthLensApp {
 
         // Display trust score with animation
         const trustScore = data.trust_score || 50;
+        console.log('Animating trust score:', trustScore);
         this.animateTrustScore(trustScore);
         
         // Display article info
         const article = data.article || {};
-        document.getElementById('articleTitle').textContent = article.title || 'Untitled Article';
-        document.getElementById('sourceName').textContent = article.domain || 'Unknown Source';
-        document.getElementById('authorName').textContent = article.author || 'Unknown Author';
-        document.getElementById('publishDate').textContent = this.formatDate(article.publish_date);
+        console.log('Article data:', article);
+        
+        // Update elements with null checks
+        const updateElement = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value || 'Unknown';
+            } else {
+                console.error(`Element not found: ${id}`);
+            }
+        };
+        
+        updateElement('articleTitle', article.title || 'Untitled Article');
+        updateElement('sourceName', article.domain || article.source || 'Unknown Source');
+        updateElement('authorName', article.author || 'Unknown Author');
+        updateElement('publishDate', this.formatDate(article.publish_date));
         
         // Display summary
-        const summary = data.article_summary || article.text_preview || 'No summary available';
-        document.getElementById('articleSummary').textContent = summary;
+        const summary = data.article_summary || article.text_preview || article.content?.substring(0, 200) || 'No summary available';
+        updateElement('articleSummary', summary);
         
         // Update quick stats
-        const claimCount = data.key_claims ? data.key_claims.length : 0;
-        document.getElementById('claimCount').textContent = claimCount;
-        document.getElementById('sourceCheckCount').textContent = '21+';
-        document.getElementById('analysisTime').textContent = analysisTime;
+        const claimCount = data.key_claims?.length || data.fact_checks?.length || 0;
+        updateElement('claimCount', claimCount);
+        updateElement('sourceCheckCount', '21+');
+        updateElement('analysisTime', analysisTime);
         
         // Update premium preview
-        document.getElementById('premiumClaimCount').textContent = claimCount;
+        updateElement('premiumClaimCount', claimCount);
         
         // Display trust breakdown with enhanced descriptions
-        document.getElementById('trustBreakdown').innerHTML = 
-            analysisComponents.createTrustBreakdown(data);
+        const trustBreakdownElement = document.getElementById('trustBreakdown');
+        if (trustBreakdownElement) {
+            console.log('Creating trust breakdown...');
+            trustBreakdownElement.innerHTML = analysisComponents.createTrustBreakdown(data);
+        } else {
+            console.error('trustBreakdown element not found');
+        }
         
         // Add analysis summary
         this.createAnalysisSummary(data);
@@ -259,12 +344,19 @@ class TruthLensApp {
     }
 
     animateTrustScore(score) {
+        console.log('Animating trust score gauge with score:', score);
+        
         // Create gauge chart
         analysisComponents.createTrustScoreGauge('trustScoreGauge', score);
         
         // Set label and description
         const label = document.getElementById('trustLabel');
         const description = document.getElementById('trustDescription');
+        
+        if (!label || !description) {
+            console.error('Trust label or description elements not found');
+            return;
+        }
         
         let labelText, descText;
         if (score >= 80) {
@@ -296,6 +388,12 @@ class TruthLensApp {
     }
 
     createAnalysisSummary(data) {
+        const summaryContent = document.getElementById('analysisSummaryContent');
+        if (!summaryContent) {
+            console.error('analysisSummaryContent element not found');
+            return;
+        }
+        
         const trustScore = data.trust_score || 50;
         const biasData = data.bias_analysis || {};
         const biasScore = Math.abs(biasData.political_lean || biasData.bias_score || 0);
@@ -341,14 +439,14 @@ class TruthLensApp {
         
         // Fact checking summary
         if (data.fact_checks && data.fact_checks.length > 0) {
-            const verifiedCount = data.fact_checks.filter(fc => fc.verdict?.includes('true')).length;
+            const verifiedCount = data.fact_checks.filter(fc => fc.verdict?.toLowerCase().includes('true')).length;
             const totalChecks = data.fact_checks.length;
             summaryHTML += `<li><i class="fas fa-search text-info"></i> <strong>Fact check:</strong> ${verifiedCount} of ${totalChecks} claims verified as accurate.</li>`;
         }
         
         summaryHTML += '</ul>';
         
-        document.getElementById('analysisSummaryContent').innerHTML = summaryHTML;
+        summaryContent.innerHTML = summaryHTML;
     }
 
     addTrustFactorStyles() {
@@ -384,11 +482,24 @@ class TruthLensApp {
     }
 
     displayPremiumAnalysis(data) {
+        console.log('=== DISPLAY PREMIUM ANALYSIS ===');
+        console.log('Premium data:', data);
+        
         const premiumSection = document.getElementById('premiumAnalysis');
+        if (!premiumSection) {
+            console.error('premiumAnalysis element not found');
+            return;
+        }
+        
         premiumSection.style.display = 'block';
         
         // Clear previous content
         const grid = document.getElementById('analysisGrid');
+        if (!grid) {
+            console.error('analysisGrid element not found');
+            return;
+        }
+        
         grid.innerHTML = '';
         
         // Log what we're working with
@@ -397,7 +508,9 @@ class TruthLensApp {
             hasBias: !!data.bias_analysis,
             hasFactChecks: !!(data.fact_checks && data.fact_checks.length > 0),
             hasSource: !!data.source_credibility,
-            hasTransparency: !!data.transparency_analysis
+            hasTransparency: !!data.transparency_analysis,
+            hasPersuasion: !!data.persuasion_analysis,
+            hasContent: !!data.content_analysis
         });
         
         // Create all analysis cards
@@ -405,38 +518,47 @@ class TruthLensApp {
         
         // Author Analysis (Priority 1)
         if (data.author_analysis) {
+            console.log('Creating author card...');
             cards.push(analysisComponents.createAuthorCard(data));
         }
         
         // Bias Analysis (Priority 2)
         if (data.bias_analysis) {
+            console.log('Creating bias card...');
             cards.push(analysisComponents.createBiasCard(data));
         }
         
         // Fact Checking
         if (data.fact_checks && data.fact_checks.length > 0) {
+            console.log('Creating fact check card...');
             cards.push(analysisComponents.createFactCheckCard(data));
         }
         
         // Source Credibility
         if (data.source_credibility) {
+            console.log('Creating source card...');
             cards.push(analysisComponents.createSourceCard(data));
         }
         
         // Transparency
         if (data.transparency_analysis) {
+            console.log('Creating transparency card...');
             cards.push(analysisComponents.createTransparencyCard(data));
         }
         
         // Manipulation Detection
         if (data.persuasion_analysis) {
+            console.log('Creating manipulation card...');
             cards.push(analysisComponents.createManipulationCard(data));
         }
         
         // Content Analysis
         if (data.content_analysis) {
+            console.log('Creating content card...');
             cards.push(analysisComponents.createContentCard(data));
         }
+        
+        console.log(`Total cards to display: ${cards.length}`);
         
         // Add all cards with staggered animation
         cards.forEach((cardHtml, index) => {
@@ -612,4 +734,5 @@ document.addEventListener('DOMContentLoaded', () => {
 console.log('%cTruthLens AI', 'font-size: 24px; font-weight: bold; color: #6366f1;');
 console.log('%cProfessional News Analysis', 'font-size: 14px; color: #6b7280;');
 console.log('%cPowered by 21+ Advanced Analyzers', 'font-size: 12px; color: #10b981;');
-console.log('%cType window.debugData in console after analysis to explore the data', 'font-size: 12px; color: #f59e0b;');
+console.log('%cType window.debugData in console after analysis to explore the data', 'font-size: 12px; color: #f59e0b');
+console.log('%cType window.rawResponse to see the raw API response', 'font-size: 12px; color: #f59e0b');
