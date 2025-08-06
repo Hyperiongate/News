@@ -3,6 +3,7 @@ FILE: services/article_extractor.py
 Universal article extractor that works with ANY site of ANY size
 Uses intelligent content detection instead of brittle selectors
 FIXED: All NoneType errors with proper null checking
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
 
 import os
@@ -20,6 +21,9 @@ from fake_useragent import UserAgent
 from collections import defaultdict
 import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+
+# Import BaseAnalyzer
+from services.base_analyzer import BaseAnalyzer
 
 # Try to import advanced scraping libraries
 try:
@@ -51,6 +55,9 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+
+# ============= LEGACY CLASSES AND FUNCTIONS =============
 
 class CircuitBreaker:
     """Circuit breaker to prevent repeated attempts to problematic domains"""
@@ -91,6 +98,7 @@ class CircuitBreaker:
             if domain in self.failed_domains:
                 return self.failed_domains[domain].get('last_error')
         return None
+
 
 class ContentExtractor:
     """Intelligent content extraction using text density and pattern analysis"""
@@ -528,7 +536,8 @@ class ContentExtractor:
         
         return True
 
-class ArticleExtractor:
+
+class LegacyArticleExtractor:
     """Universal article extractor that works with any site"""
     
     def __init__(self):
@@ -1164,3 +1173,114 @@ class ArticleExtractor:
             self.executor.shutdown(wait=False)
         except:
             pass
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class ArticleExtractor(BaseAnalyzer):
+    """Article extraction service that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('article_extractor')
+        try:
+            self._legacy = LegacyArticleExtractor()
+            logger.info("Legacy ArticleExtractor initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy ArticleExtractor: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract article content using the standardized interface
+        
+        Expected input:
+            - url: URL to extract article from
+            OR
+            - text: Raw text to analyze
+            
+        Returns:
+            Standardized response with article data
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        # Check what type of extraction is needed
+        if 'url' in data and data['url']:
+            return self._extract_from_url(data['url'])
+        elif 'text' in data and data['text']:
+            return self._extract_from_text(data['text'])
+        else:
+            return self.get_error_result("Missing required field: 'url' or 'text'")
+    
+    def _extract_from_url(self, url: str) -> Dict[str, Any]:
+        """Extract article from URL"""
+        try:
+            # Use legacy method
+            result = self._legacy.extract_from_url(url)
+            
+            # Transform to standardized format
+            if result.get('success'):
+                return {
+                    'service': self.service_name,
+                    'success': True,
+                    'data': {
+                        'title': result.get('title', 'Untitled'),
+                        'text': result.get('text', ''),
+                        'author': result.get('author'),
+                        'publish_date': result.get('publish_date'),
+                        'url': result.get('url', url),
+                        'domain': result.get('domain'),
+                        'description': result.get('description'),
+                        'image': result.get('image'),
+                        'keywords': result.get('keywords', []),
+                        'word_count': result.get('word_count', 0),
+                        'extraction_metadata': result.get('extraction_metadata', {})
+                    },
+                    'metadata': {
+                        'extracted_at': result.get('extracted_at'),
+                        'extraction_method': result.get('extraction_metadata', {}).get('extraction_method', 'unknown')
+                    }
+                }
+            else:
+                return self.get_error_result(result.get('error', 'Extraction failed'))
+                
+        except Exception as e:
+            logger.error(f"Article extraction from URL failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def _extract_from_text(self, text: str) -> Dict[str, Any]:
+        """Extract/analyze raw text"""
+        try:
+            # Use legacy method
+            result = self._legacy.extract_from_text(text)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'title': result.get('title', 'Text Analysis'),
+                    'text': result.get('text', text),
+                    'author': result.get('author'),
+                    'publish_date': result.get('publish_date'),
+                    'url': None,
+                    'domain': result.get('domain', 'text-input'),
+                    'word_count': result.get('word_count', len(text.split()))
+                },
+                'metadata': {
+                    'source': 'text_input'
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Article extraction from text failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def extract_article(self, url: str) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'url': url})
