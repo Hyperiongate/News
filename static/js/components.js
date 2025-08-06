@@ -1,55 +1,54 @@
-// static/js/components.js - Enhanced UI Components with FIXED data handling
-
+// static/js/components.js - Enhanced Analysis Components
 class AnalysisComponents {
     constructor() {
         this.charts = {};
     }
 
-    // Trust Score Gauge - Enhanced with better visual presentation
-    createTrustScoreGauge(canvasId, score) {
-        const canvas = document.getElementById(canvasId);
+    // Trust Score Gauge with gradient
+    createTrustScoreGauge(elementId, score) {
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
+        
+        // Destroy existing chart
+        if (this.charts[elementId]) {
+            this.charts[elementId].destroy();
+        }
         
         const ctx = canvas.getContext('2d');
         
-        // Clear previous chart if exists
-        if (this.charts[canvasId]) {
-            this.charts[canvasId].destroy();
-        }
-
-        // Ensure score is valid
-        score = Math.max(0, Math.min(100, score || 0));
-
-        // Create gradient based on score
-        const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
         if (score >= 80) {
-            gradient.addColorStop(0, '#059669');
-            gradient.addColorStop(1, '#10b981');
+            gradient.addColorStop(0, '#10b981');
+            gradient.addColorStop(1, '#059669');
         } else if (score >= 60) {
-            gradient.addColorStop(0, '#2563eb');
-            gradient.addColorStop(1, '#3b82f6');
+            gradient.addColorStop(0, '#3b82f6');
+            gradient.addColorStop(1, '#2563eb');
         } else if (score >= 40) {
-            gradient.addColorStop(0, '#d97706');
-            gradient.addColorStop(1, '#f59e0b');
+            gradient.addColorStop(0, '#f59e0b');
+            gradient.addColorStop(1, '#d97706');
         } else {
-            gradient.addColorStop(0, '#dc2626');
-            gradient.addColorStop(1, '#ef4444');
+            gradient.addColorStop(0, '#ef4444');
+            gradient.addColorStop(1, '#dc2626');
         }
-
-        // Create semi-circular gauge with enhanced styling
-        this.charts[canvasId] = new Chart(ctx, {
+        
+        // Gauge data
+        const data = {
+            datasets: [{
+                data: [score, 100 - score],
+                backgroundColor: [gradient, '#e5e7eb'],
+                borderWidth: 0
+            }]
+        };
+        
+        // Create gauge
+        this.charts[elementId] = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [score, 100 - score],
-                    backgroundColor: [gradient, '#f3f4f6'],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                }]
-            },
+            data: data,
             options: {
-                responsive: false,
+                rotation: -90,
+                circumference: 180,
+                responsive: true,
                 maintainAspectRatio: false,
                 cutout: '80%',
                 plugins: {
@@ -84,36 +83,40 @@ class AnalysisComponents {
         });
     }
 
-    // Enhanced Trust Score Breakdown with actionable insights
+    // Enhanced Trust Score Breakdown with full analysis details
     createTrustBreakdown(data) {
         const factors = [
             { 
                 name: 'Source Credibility', 
                 score: this.getSourceScore(data.source_credibility?.rating),
                 icon: 'fa-building',
-                description: this.getSourceDescription(data.source_credibility?.rating),
-                insights: this.getSourceInsights(data.source_credibility)
+                whatWeDid: 'Analyzed the publication\'s track record, editorial standards, and fact-checking history across multiple media monitoring databases.',
+                whatWeFound: this.getSourceFindings(data.source_credibility),
+                whatThisMeans: this.getSourceMeaning(data.source_credibility)
             },
             { 
                 name: 'Author Credibility', 
                 score: data.author_analysis?.credibility_score || 50,
                 icon: 'fa-user',
-                description: this.getAuthorDescription(data.author_analysis),
-                insights: this.getAuthorInsights(data.author_analysis)
+                whatWeDid: 'Searched for the author\'s professional history, verified their identity, and reviewed their publication record.',
+                whatWeFound: this.getAuthorFindings(data.author_analysis),
+                whatThisMeans: this.getAuthorMeaning(data.author_analysis)
             },
             { 
                 name: 'Transparency', 
                 score: data.transparency_analysis?.transparency_score || 50,
                 icon: 'fa-eye',
-                description: this.getTransparencyDescription(data.transparency_analysis),
-                insights: this.getTransparencyInsights(data.transparency_analysis)
+                whatWeDid: 'Checked for proper source citations, author attribution, publication dates, and disclosure of conflicts of interest.',
+                whatWeFound: this.getTransparencyFindings(data.transparency_analysis),
+                whatThisMeans: this.getTransparencyMeaning(data.transparency_analysis)
             },
             { 
                 name: 'Objectivity', 
                 score: data.bias_analysis?.objectivity_score || 50,
                 icon: 'fa-balance-scale',
-                description: this.getObjectivityDescription(data.bias_analysis),
-                insights: this.getObjectivityInsights(data.bias_analysis)
+                whatWeDid: 'Analyzed language patterns, emotional tone, and presentation balance to detect potential bias or manipulation.',
+                whatWeFound: this.getObjectivityFindings(data.bias_analysis),
+                whatThisMeans: this.getObjectivityMeaning(data.bias_analysis)
             }
         ];
 
@@ -131,10 +134,249 @@ class AnalysisComponents {
                 <div class="factor-bar">
                     <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
                 </div>
-                <p class="factor-description">${factor.description}</p>
-                ${factor.insights ? `<div class="factor-insights">${factor.insights}</div>` : ''}
+                
+                <div class="factor-analysis-details">
+                    <div class="analysis-section">
+                        <h5><i class="fas fa-search"></i> What we did:</h5>
+                        <p>${factor.whatWeDid}</p>
+                    </div>
+                    <div class="analysis-section">
+                        <h5><i class="fas fa-clipboard-check"></i> What we found:</h5>
+                        <p>${factor.whatWeFound}</p>
+                    </div>
+                    <div class="analysis-section">
+                        <h5><i class="fas fa-lightbulb"></i> What this means:</h5>
+                        <p>${factor.whatThisMeans}</p>
+                    </div>
+                </div>
             </div>
         `).join('');
+    }
+
+    // Detailed findings methods
+    getSourceFindings(sourceData) {
+        if (!sourceData) return 'Unable to verify source information.';
+        
+        const rating = sourceData.rating || 'Unknown';
+        const type = sourceData.type || 'Unknown';
+        const bias = sourceData.bias || 'Not assessed';
+        
+        let findings = `This is a ${type.toLowerCase()} with a "${rating}" credibility rating.`;
+        
+        if (bias && bias !== 'Unknown' && bias !== 'Not assessed') {
+            findings += ` The source has been identified as having a ${bias.toLowerCase()} bias.`;
+        }
+        
+        if (sourceData.factual_reporting) {
+            findings += ` Factual reporting is rated as ${sourceData.factual_reporting}.`;
+        }
+        
+        return findings;
+    }
+
+    getAuthorFindings(authorData) {
+        if (!authorData) return 'No author information was found, making verification impossible.';
+        
+        let findings = [];
+        
+        if (authorData.verification_status?.verified) {
+            findings.push('Author identity has been verified');
+        } else {
+            findings.push('Author identity could not be verified');
+        }
+        
+        if (authorData.professional_info?.outlets?.length) {
+            findings.push(`has published with ${authorData.professional_info.outlets.length} news outlets`);
+        }
+        
+        if (authorData.professional_info?.years_experience) {
+            findings.push(`has ${authorData.professional_info.years_experience}+ years of experience`);
+        }
+        
+        if (authorData.professional_info?.current_position) {
+            findings.push(`currently works as ${authorData.professional_info.current_position}`);
+        }
+        
+        return findings.length > 0 ? 
+            `The author ${findings.join(', ')}.` : 
+            'Limited professional information available about this author.';
+    }
+
+    getTransparencyFindings(transparencyData) {
+        if (!transparencyData) return 'Transparency indicators could not be assessed.';
+        
+        const found = [];
+        const missing = [];
+        
+        if (transparencyData.has_author !== false) found.push('author attribution');
+        else missing.push('author attribution');
+        
+        if (transparencyData.has_date !== false) found.push('publication date');
+        else missing.push('publication date');
+        
+        if (transparencyData.has_sources !== false) found.push('source citations');
+        else missing.push('source citations');
+        
+        if (transparencyData.indicators?.includes('Contains direct quotes')) {
+            found.push('direct quotes from sources');
+        }
+        
+        let findings = '';
+        if (found.length > 0) {
+            findings += `The article includes: ${found.join(', ')}.`;
+        }
+        if (missing.length > 0) {
+            findings += ` Missing: ${missing.join(', ')}.`;
+        }
+        
+        return findings || 'Basic transparency requirements are met.';
+    }
+
+    getObjectivityFindings(biasData) {
+        if (!biasData) return 'Bias analysis could not be completed.';
+        
+        let findings = [];
+        
+        if (biasData.political_lean !== undefined && biasData.political_lean !== 0) {
+            const direction = biasData.political_lean > 0 ? 'right' : 'left';
+            const strength = Math.abs(biasData.political_lean) > 50 ? 'strong' : 'slight';
+            findings.push(`${strength} ${direction}-leaning political bias`);
+        }
+        
+        if (biasData.manipulation_tactics?.length > 0) {
+            findings.push(`${biasData.manipulation_tactics.length} manipulation tactics detected`);
+        }
+        
+        if (biasData.loaded_phrases?.length > 0) {
+            findings.push(`${biasData.loaded_phrases.length} instances of loaded language`);
+        }
+        
+        if (findings.length === 0) {
+            return 'The article maintains good objectivity with minimal bias indicators.';
+        }
+        
+        return `Analysis revealed: ${findings.join(', ')}.`;
+    }
+
+    // Meaning interpretation methods
+    getSourceMeaning(sourceData) {
+        const rating = sourceData?.rating || 'Unknown';
+        
+        const meanings = {
+            'High': 'You can generally trust information from this source. They have strong editorial standards and rarely publish false information.',
+            'Medium': 'This source is reasonably reliable but may occasionally have accuracy issues. Cross-check important claims.',
+            'Low': 'Be cautious with this source. They have a history of inaccuracies or strong bias. Verify all claims independently.',
+            'Very Low': 'This source frequently publishes false or misleading information. Do not rely on it for factual reporting.',
+            'Unknown': 'We couldn\'t verify this source\'s credibility. Treat with caution and verify claims through other sources.'
+        };
+        
+        return meanings[rating] || meanings['Unknown'];
+    }
+
+    getAuthorMeaning(authorData) {
+        const score = authorData?.credibility_score || 0;
+        
+        if (score >= 80) {
+            return 'This is a well-established journalist with verified credentials. Their work is generally trustworthy.';
+        } else if (score >= 60) {
+            return 'The author has some verifiable background in journalism. Their work appears legitimate but may benefit from additional verification.';
+        } else if (score >= 40) {
+            return 'Limited information about this author raises some concerns. Be more cautious and verify key claims.';
+        } else {
+            return 'The lack of author information significantly reduces accountability. Treat claims with extra skepticism.';
+        }
+    }
+
+    getTransparencyMeaning(transparencyData) {
+        const score = transparencyData?.transparency_score || 0;
+        
+        if (score >= 80) {
+            return 'Excellent transparency makes this article more trustworthy. You can trace claims back to their sources.';
+        } else if (score >= 60) {
+            return 'Good transparency overall, though some aspects could be clearer. Most claims can be verified.';
+        } else if (score >= 40) {
+            return 'Limited transparency makes verification difficult. You may need to research claims independently.';
+        } else {
+            return 'Poor transparency is a red flag. Without proper sourcing, claims should be treated skeptically.';
+        }
+    }
+
+    getObjectivityMeaning(biasData) {
+        const score = biasData?.objectivity_score || 50;
+        
+        if (score >= 80) {
+            return 'This article presents information objectively. You\'re getting facts with minimal spin.';
+        } else if (score >= 60) {
+            return 'Mostly objective reporting with some bias. Be aware of the perspective but the facts appear sound.';
+        } else if (score >= 40) {
+            return 'Significant bias detected. Read critically and consider what perspective is being promoted.';
+        } else {
+            return 'Heavy bias or manipulation detected. This is more opinion/advocacy than news reporting.';
+        }
+    }
+
+    // Helper methods for scores and descriptions
+    getSourceScore(rating) {
+        const scores = {
+            'High': 90,
+            'Medium': 65,
+            'Low': 35,
+            'Very Low': 15,
+            'Unknown': 50
+        };
+        return scores[rating] || 50;
+    }
+
+    getSourceDescription(rating) {
+        const descriptions = {
+            'High': 'This source has an excellent track record for accurate reporting and fact-checking.',
+            'Medium': 'Generally reliable, but may occasionally have minor factual errors or bias.',
+            'Low': 'This source has credibility issues. Double-check any important claims.',
+            'Very Low': 'Known for spreading misinformation. Approach with extreme caution.',
+            'Unknown': 'We couldn\'t verify this source. Be careful with unfamiliar websites.'
+        };
+        return descriptions[rating] || descriptions['Unknown'];
+    }
+
+    getAuthorDescription(authorData) {
+        if (!authorData) return 'No author information available, which reduces accountability.';
+        
+        const score = authorData.credibility_score || 0;
+        if (score >= 80) {
+            return 'Verified journalist with strong credentials and professional track record.';
+        } else if (score >= 60) {
+            return 'Author has some verifiable credentials. Appears to be a legitimate journalist.';
+        } else if (score >= 40) {
+            return 'Limited information available about this author. Credentials unclear.';
+        } else {
+            return 'Could not verify author credentials. This impacts overall credibility.';
+        }
+    }
+
+    getTransparencyDescription(transparencyData) {
+        const score = transparencyData?.transparency_score || 0;
+        if (score >= 80) {
+            return 'Excellent transparency with clear sources, dates, and author attribution.';
+        } else if (score >= 60) {
+            return 'Good transparency, though some attribution could be clearer.';
+        } else if (score >= 40) {
+            return 'Limited transparency. Missing some key information like sources or dates.';
+        } else {
+            return 'Poor transparency. Lacks proper sourcing and attribution.';
+        }
+    }
+
+    getObjectivityDescription(biasData) {
+        const score = biasData?.objectivity_score || 50;
+        if (score >= 80) {
+            return 'Highly objective reporting with minimal bias detected.';
+        } else if (score >= 60) {
+            return 'Reasonably objective, though some bias language was detected.';
+        } else if (score >= 40) {
+            return 'Moderate bias detected. Be aware of the article\'s perspective.';
+        } else {
+            return 'Strong bias detected. This is more opinion than objective reporting.';
+        }
     }
 
     // New insight methods for better presentation
@@ -194,21 +436,60 @@ class AnalysisComponents {
         return insights.length ? `<div class="insights-row">${insights.join('')}</div>` : '';
     }
 
-    // Enhanced Author Analysis Card with better data presentation
+    // Keep remaining card creation methods...
+    createSourceCard(data) {
+        const source = data.source_credibility || {};
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="source">
+                <div class="card-header">
+                    <h3><i class="fas fa-building"></i> Source Credibility Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score ${this.getScoreClass(this.getSourceScore(source.rating))}">${source.rating || 'Unknown'}</span>
+                        <span class="score-label">Credibility Rating</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="source-info enhanced">
+                        <h4>${source.name || source.domain || 'Unknown Source'}</h4>
+                        <div class="source-badges">
+                            ${source.type ? `<span class="badge type">${source.type}</span>` : ''}
+                            ${source.bias ? `<span class="badge bias bias-${source.bias.toLowerCase()}">${source.bias} bias</span>` : ''}
+                            ${source.factual_reporting ? `<span class="badge factual">${source.factual_reporting} factual reporting</span>` : ''}
+                        </div>
+                        ${source.description ? `<p class="source-description">${source.description}</p>` : ''}
+                    </div>
+                    
+                    <div class="credibility-details">
+                        ${source.credibility_factors ? this.createCredibilityFactors(source.credibility_factors) : ''}
+                        ${source.recent_issues ? `
+                            <div class="recent-issues">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Recent Issues</h5>
+                                <ul>
+                                    ${source.recent_issues.slice(0, 3).map(issue => `<li>${issue}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="source-recommendation">
+                        <i class="fas fa-info-circle"></i>
+                        <p>${this.getSourceRecommendation(source.rating)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     createAuthorCard(data) {
         const author = data.author_analysis || {};
-        const score = author.credibility_score || 0;
-        
-        // Extract actual explanation and advice from the data
-        const explanation = author.credibility_explanation?.explanation || 'Unable to verify author credentials';
-        const advice = author.credibility_explanation?.advice || 'Cross-reference claims with other sources';
         
         return `
             <div class="analysis-card enhanced-card" data-analyzer="author">
                 <div class="card-header">
-                    <h3><i class="fas fa-user-shield"></i> Author Intelligence Report</h3>
+                    <h3><i class="fas fa-user-edit"></i> Author Credibility Analysis</h3>
                     <div class="card-score-wrapper">
-                        <span class="card-score ${this.getScoreClass(score)}">${score}</span>
+                        <span class="card-score">${author.credibility_score || 0}</span>
                         <span class="score-label">Credibility Score</span>
                     </div>
                 </div>
@@ -219,53 +500,295 @@ class AnalysisComponents {
                         </div>
                         <div class="author-info">
                             <h4>${author.name || 'Unknown Author'}</h4>
-                            <p class="author-bio">${author.bio || 'No biographical information available'}</p>
-                            ${this.createAuthorVerificationBadges(author)}
+                            ${author.professional_info?.current_position ? 
+                                `<p class="author-title">${author.professional_info.current_position}</p>` : ''}
+                            ${author.bio ? `<p class="author-bio">${author.bio}</p>` : ''}
+                            ${this.createVerificationBadges(author)}
                         </div>
                     </div>
                     
                     ${author.professional_info ? this.createEnhancedProfessionalInfo(author.professional_info) : ''}
+                    ${this.createCredibilityFactors(author)}
                     
-                    <div class="credibility-breakdown">
-                        <h5>Credibility Assessment</h5>
-                        ${this.createCredibilityFactors(author)}
-                    </div>
-                    
-                    ${author.online_presence && Object.keys(author.online_presence).length > 0 ? 
-                        this.createEnhancedOnlinePresence(author.online_presence) : ''}
-                    
-                    <div class="credibility-explanation enhanced">
-                        <div class="explanation-header">
-                            <i class="fas fa-info-circle"></i>
-                            <h5>Analysis Summary</h5>
-                        </div>
-                        <p>${explanation}</p>
-                        <div class="advice-box">
-                            <i class="fas fa-lightbulb"></i>
-                            <p><strong>Recommendation:</strong> ${advice}</p>
-                        </div>
+                    <div class="author-assessment">
+                        <h5>Overall Assessment</h5>
+                        <p>${this.getAuthorAssessment(author)}</p>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    createAuthorVerificationBadges(author) {
+    createTransparencyCard(data) {
+        const transparency = data.transparency_analysis || {};
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="transparency">
+                <div class="card-header">
+                    <h3><i class="fas fa-eye"></i> Transparency Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${transparency.transparency_score || 0}%</span>
+                        <span class="score-label">Transparency Score</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="transparency-indicators">
+                        ${this.createTransparencyIndicator('Author Attribution', transparency.has_author)}
+                        ${this.createTransparencyIndicator('Publication Date', transparency.has_date)}
+                        ${this.createTransparencyIndicator('Source Citations', transparency.has_sources)}
+                        ${this.createTransparencyIndicator('Conflict Disclosure', transparency.has_disclosure)}
+                    </div>
+                    
+                    ${transparency.indicators?.length ? `
+                        <div class="found-indicators">
+                            <h5><i class="fas fa-check-circle"></i> Transparency Strengths</h5>
+                            <ul>
+                                ${transparency.indicators.map(ind => `<li><i class="fas fa-check"></i> ${ind}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="transparency-impact">
+                        <h5>What This Means</h5>
+                        <p>${this.getTransparencyImpact(transparency.transparency_score)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    createBiasCard(data) {
+        const bias = data.bias_analysis || {};
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="bias">
+                <div class="card-header">
+                    <h3><i class="fas fa-balance-scale"></i> Bias & Objectivity Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${bias.objectivity_score || 50}</span>
+                        <span class="score-label">Objectivity Score</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    ${bias.political_lean !== undefined ? `
+                        <div class="bias-meter">
+                            <h5>Political Lean</h5>
+                            <div class="meter-container">
+                                <div class="meter-labels">
+                                    <span>Far Left</span>
+                                    <span>Center</span>
+                                    <span>Far Right</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-indicator" style="left: ${50 + (bias.political_lean / 2)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${bias.manipulation_tactics?.length ? this.createEnhancedManipulationTactics(bias.manipulation_tactics) : ''}
+                    ${bias.loaded_phrases?.length ? this.createEnhancedLoadedPhrases(bias.loaded_phrases) : ''}
+                    
+                    <div class="bias-impact">
+                        <h5>Impact on Credibility</h5>
+                        <p>${this.getBiasImpactDescription(bias)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Enhanced Fact Checking Card with source breakdown
+    createFactCheckCard(data) {
+        const factChecks = data.fact_checks || [];
+        const summary = data.fact_check_summary || '';
+        
+        // Calculate statistics
+        const stats = this.calculateFactCheckStats(factChecks);
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="facts">
+                <div class="card-header">
+                    <h3><i class="fas fa-microscope"></i> 21-Source Fact Verification</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${factChecks.length}</span>
+                        <span class="score-label">Claims Checked</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    ${summary ? `
+                        <div class="fact-check-summary enhanced">
+                            <p>${summary}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${this.createSourceBreakdown(data)}
+                    
+                    ${factChecks.length > 0 ? `
+                        <div class="fact-checks-list enhanced">
+                            <h5>Key Claims Analyzed</h5>
+                            ${factChecks.slice(0, 5).map(check => this.createEnhancedFactCheckItem(check)).join('')}
+                        </div>
+                    ` : '<p class="no-facts">No specific factual claims identified for verification.</p>'}
+                    
+                    ${stats.totalChecks > 0 ? `
+                        <div class="fact-check-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-search"></i>
+                                <span><strong>${stats.totalChecks}</strong> total source checks performed</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-database"></i>
+                                <span><strong>${stats.uniqueSources}</strong> unique sources consulted</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // Helper methods for enhanced cards
+    createSourceBreakdown(data) {
+        const sourceCategories = {
+            'Fact-checking sites': ['Snopes', 'FactCheck.org', 'PolitiFact', 'Lead Stories'],
+            'Academic databases': ['Google Scholar', 'PubMed', 'JSTOR', 'ArXiv'],
+            'Government sources': ['CDC', 'WHO', 'Census Bureau', 'Official statistics'],
+            'News archives': ['Reuters', 'AP', 'BBC', 'Major newspapers'],
+            'Expert networks': ['Scientific journals', 'Think tanks', 'Research institutions']
+        };
+
+        return `
+            <div class="source-category-badges">
+                <h6>Sources Consulted:</h6>
+                <div class="badges">
+                    ${Object.entries(sourceCategories).map(([category, sources]) => `
+                        <div class="source-badge" title="${sources.join(', ')}">
+                            <i class="fas fa-check-circle"></i> ${category}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEnhancedFactCheckItem(check) {
+        return `
+            <div class="fact-check-item enhanced ${this.getVerdictClass(check.verdict)}">
+                <div class="claim-text">
+                    <i class="fas fa-quote-left"></i>
+                    <p>${this.truncate(check.claim, 150)}</p>
+                </div>
+                <div class="verdict-badge ${this.getVerdictClass(check.verdict)}">
+                    ${this.getVerdictIcon(check.verdict)} ${check.verdict || 'Unverified'}
+                </div>
+                ${check.evidence ? `
+                    <div class="evidence-summary">
+                        <p>${check.evidence}</p>
+                    </div>
+                ` : ''}
+                ${check.sources_checked?.length ? `
+                    <div class="sources-checked">
+                        <span class="sources-label">Checked:</span>
+                        ${check.sources_checked.map(source => 
+                            `<span class="source-tag">${source}</span>`
+                        ).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    createEnhancedManipulationTactics(tactics) {
+        return `
+            <div class="manipulation-tactics enhanced">
+                <h5><i class="fas fa-exclamation-triangle"></i> Manipulation Tactics Detected</h5>
+                <div class="tactics-list">
+                    ${tactics.map(tactic => `
+                        <div class="tactic-item">
+                            <div class="tactic-name">${tactic.name}</div>
+                            <div class="tactic-description">${tactic.description}</div>
+                            ${tactic.keywords?.length ? `
+                                <div class="tactic-examples">
+                                    <span class="examples-label">Examples found:</span>
+                                    ${tactic.keywords.slice(0, 3).map(kw => `<span class="keyword">"${kw}"</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEnhancedLoadedPhrases(phrases) {
+        return `
+            <div class="loaded-phrases enhanced">
+                <h5><i class="fas fa-comment-dots"></i> Loaded Language Analysis</h5>
+                <div class="phrases-grid">
+                    ${phrases.slice(0, 6).map(phrase => `
+                        <div class="phrase-card impact-${phrase.impact || 'medium'}">
+                            <div class="phrase-quote">"${phrase.text}"</div>
+                            <div class="phrase-analysis">
+                                <span class="phrase-type">${phrase.type}</span>
+                                <span class="phrase-impact">${phrase.impact || 'medium'} impact</span>
+                            </div>
+                            ${phrase.explanation ? `<p class="phrase-explanation">${phrase.explanation}</p>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    createEnhancedProfessionalInfo(info) {
+        return `
+            <div class="professional-info enhanced">
+                <h5>Professional Background</h5>
+                <div class="info-grid">
+                    ${info.current_position ? `
+                        <div class="info-item">
+                            <i class="fas fa-briefcase"></i>
+                            <span><strong>Current Role:</strong> ${info.current_position}</span>
+                        </div>
+                    ` : ''}
+                    ${info.years_experience ? `
+                        <div class="info-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span><strong>Experience:</strong> ${info.years_experience}+ years</span>
+                        </div>
+                    ` : ''}
+                    ${info.outlets?.length ? `
+                        <div class="info-item">
+                            <i class="fas fa-newspaper"></i>
+                            <span><strong>Published in:</strong> ${info.outlets.slice(0, 3).join(', ')}${info.outlets.length > 3 ? ' and more' : ''}</span>
+                        </div>
+                    ` : ''}
+                    ${info.expertise?.length ? `
+                        <div class="info-item expertise">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span><strong>Expertise:</strong></span>
+                            <div class="expertise-tags">
+                                ${info.expertise.map(exp => `<span class="tag">${exp}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    createVerificationBadges(author) {
         const badges = [];
-        const status = author.verification_status || {};
         
-        if (status.verified) {
-            badges.push('<span class="badge verified"><i class="fas fa-check-circle"></i> Verified Identity</span>');
+        if (author.verification_status?.verified) {
+            badges.push('<span class="badge verified"><i class="fas fa-check"></i> Verified</span>');
         }
-        if (status.journalist_verified) {
-            badges.push('<span class="badge journalist"><i class="fas fa-newspaper"></i> Professional Journalist</span>');
+        if (author.professional_info?.journalist) {
+            badges.push('<span class="badge journalist"><i class="fas fa-pen"></i> Journalist</span>');
         }
-        if (status.outlet_staff) {
+        if (author.professional_info?.staff_writer) {
             badges.push('<span class="badge staff"><i class="fas fa-id-badge"></i> Staff Writer</span>');
-        }
-        
-        if (badges.length === 0 && author.found === false) {
-            badges.push('<span class="badge unverified"><i class="fas fa-question-circle"></i> Unverified</span>');
         }
         
         return badges.length ? `<div class="verification-badges">${badges.join('')}</div>` : '';
@@ -310,67 +833,92 @@ class AnalysisComponents {
         `;
     }
 
-    // Enhanced Bias Analysis Card with FIXED data handling
-    createBiasCard(data) {
-        const bias = data.bias_analysis || {};
-        const visualization = bias.bias_visualization || {};
-        const dimensions = visualization.dimensions || [];
+    createTransparencyIndicator(name, hasIt) {
+        const icon = hasIt ? 'fa-check-circle' : 'fa-times-circle';
+        const className = hasIt ? 'found' : 'missing';
         
         return `
-            <div class="analysis-card enhanced-card" data-analyzer="bias">
+            <div class="indicator ${className}">
+                <i class="fas ${icon}"></i>
+                <span>${name}</span>
+            </div>
+        `;
+    }
+
+    // Clickbait Analysis Card
+    createClickbaitCard(data) {
+        const clickbait = data.clickbait_analysis || {};
+        const score = clickbait.score || 0;
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="clickbait">
                 <div class="card-header">
-                    <h3><i class="fas fa-balance-scale-left"></i> Multi-Dimensional Bias Analysis</h3>
+                    <h3><i class="fas fa-mouse-pointer"></i> Clickbait Analysis</h3>
                     <div class="card-score-wrapper">
-                        <span class="card-score ${this.getScoreClass(bias.objectivity_score || 50)}">${bias.objectivity_score || 50}</span>
-                        <span class="score-label">Objectivity Score</span>
+                        <span class="card-score">${score}%</span>
+                        <span class="score-label">Clickbait Score</span>
                     </div>
                 </div>
                 <div class="card-content">
-                    <div class="bias-summary enhanced">
-                        <div class="bias-label-wrapper">
-                            <h5>Overall Assessment</h5>
-                            <p class="bias-summary-text">${bias.bias_summary || 'No bias analysis available'}</p>
-                        </div>
-                        ${bias.bias_confidence ? `
-                            <div class="bias-confidence">
-                                <span class="confidence-label">Analysis Confidence</span>
-                                <div class="confidence-bar">
-                                    <div class="confidence-fill" style="width: ${bias.bias_confidence}%"></div>
-                                </div>
-                                <span class="confidence-value">${bias.bias_confidence}%</span>
-                            </div>
-                        ` : ''}
+                    <div class="clickbait-assessment ${this.getClickbaitClass(score)}">
+                        <i class="fas ${this.getClickbaitIcon(score)}"></i>
+                        <p>${this.getClickbaitAssessment(score)}</p>
                     </div>
                     
-                    ${dimensions.length > 0 ? this.createEnhancedBiasDimensions(dimensions) : ''}
-                    
-                    <div class="bias-visualization">
-                        <canvas id="biasChart" width="300" height="200"></canvas>
-                    </div>
-                    
-                    ${bias.key_findings?.length ? `
-                        <div class="key-findings enhanced">
-                            <h5><i class="fas fa-flag"></i> Key Findings</h5>
+                    ${clickbait.tactics_found?.length ? `
+                        <div class="clickbait-tactics">
+                            <h5>Tactics Detected</h5>
                             <ul>
-                                ${bias.key_findings.map(finding => `<li>${finding}</li>`).join('')}
+                                ${clickbait.tactics_found.map(tactic => `<li><i class="fas fa-angle-right"></i> ${tactic}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
                     
-                    ${bias.loaded_phrases?.length ? this.createEnhancedLoadedPhrases(bias.loaded_phrases) : ''}
+                    <div class="headline-quality">
+                        <h5>Headline Quality Assessment</h5>
+                        <p>${clickbait.headline_analysis || 'The headline appears to be straightforward and informative.'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Reading Level Card
+    createReadingLevelCard(data) {
+        const readingLevel = data.reading_level || {};
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="reading">
+                <div class="card-header">
+                    <h3><i class="fas fa-book-reader"></i> Reading Level Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${readingLevel.grade || 'N/A'}</span>
+                        <span class="score-label">Grade Level</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="reading-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Complexity</span>
+                            <span class="metric-value">${readingLevel.complexity || 'Moderate'}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Accessibility</span>
+                            <span class="metric-value">${readingLevel.accessibility || 'Good'}</span>
+                        </div>
+                    </div>
                     
-                    ${bias.bias_impact ? `
-                        <div class="bias-impact-analysis enhanced">
-                            <h5>Impact on Reading</h5>
-                            <div class="impact-severity ${bias.bias_impact.severity}">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span>Severity: ${bias.bias_impact.severity.toUpperCase()}</span>
-                            </div>
-                            <p>${bias.bias_impact.factual_accuracy}</p>
-                            <div class="recommendation-box">
-                                <i class="fas fa-shield-alt"></i>
-                                <p><strong>Recommendation:</strong> ${bias.bias_impact.recommendation}</p>
-                            </div>
+                    <div class="audience-info">
+                        <h5>Target Audience</h5>
+                        <p>${readingLevel.target_audience || 'General adult readership'}</p>
+                    </div>
+                    
+                    ${readingLevel.suggestions?.length ? `
+                        <div class="readability-suggestions">
+                            <h5>Readability Notes</h5>
+                            <ul>
+                                ${readingLevel.suggestions.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
                         </div>
                     ` : ''}
                 </div>
@@ -378,308 +926,82 @@ class AnalysisComponents {
         `;
     }
 
-    createEnhancedBiasDimensions(dimensions) {
+    // Sentiment Analysis Card
+    createSentimentCard(data) {
+        const sentiment = data.sentiment_analysis || {};
+        
         return `
-            <div class="bias-dimensions enhanced">
-                <h5>Bias Dimensions Analyzed</h5>
-                <div class="dimensions-grid">
-                    ${dimensions.map(dim => `
-                        <div class="dimension-card">
-                            <div class="dimension-header">
-                                <i class="fas ${this.getDimensionIcon(dim.axis)}"></i>
-                                <span class="dimension-name">${dim.axis}</span>
-                            </div>
-                            <div class="dimension-visual">
-                                <div class="dimension-scale">
-                                    <div class="dimension-marker" style="left: ${Math.min(100, Math.max(0, dim.value))}%"></div>
+            <div class="analysis-card enhanced-card" data-analyzer="sentiment">
+                <div class="card-header">
+                    <h3><i class="fas fa-theater-masks"></i> Sentiment Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${sentiment.primary_sentiment || 'Neutral'}</span>
+                        <span class="score-label">Primary Tone</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    ${sentiment.sentiment_breakdown ? `
+                        <div class="sentiment-breakdown">
+                            ${Object.entries(sentiment.sentiment_breakdown).map(([emotion, percentage]) => `
+                                <div class="emotion-bar">
+                                    <div class="emotion-label">
+                                        <span>${this.formatEmotionName(emotion)}</span>
+                                        <span>${percentage}%</span>
+                                    </div>
+                                    <div class="emotion-fill" style="width: ${percentage}%; background: ${this.getEmotionColor(emotion)}"></div>
                                 </div>
-                                <div class="dimension-labels">
-                                    <span>Low</span>
-                                    <span>Medium</span>
-                                    <span>High</span>
-                                </div>
-                            </div>
-                            <p class="dimension-label">${dim.label}</p>
-                            <p class="dimension-description">${dim.description}</p>
+                            `).join('')}
                         </div>
-                    `).join('')}
+                    ` : ''}
+                    
+                    <div class="sentiment-impact">
+                        <h5>Emotional Impact</h5>
+                        <p>${sentiment.impact_description || 'The article maintains a balanced emotional tone throughout.'}</p>
+                    </div>
                 </div>
             </div>
         `;
     }
 
-    createEnhancedLoadedPhrases(phrases) {
-        // Handle both simple string arrays and object arrays
-        const processedPhrases = phrases.map(phrase => {
-            if (typeof phrase === 'string') {
-                return { text: phrase, type: 'loaded', impact: 'medium' };
-            }
-            return phrase;
-        });
+    // Content Quality Card
+    createContentQualityCard(data) {
+        const quality = data.content_quality || {};
         
         return `
-            <div class="loaded-phrases enhanced">
-                <h5><i class="fas fa-comment-dots"></i> Loaded Language Detected</h5>
-                <div class="phrases-grid">
-                    ${processedPhrases.slice(0, 6).map(phrase => `
-                        <div class="phrase-card impact-${phrase.impact || 'medium'}">
-                            <div class="phrase-quote">"${phrase.text || phrase}"</div>
-                            ${phrase.type ? `
-                                <div class="phrase-analysis">
-                                    <span class="phrase-type">${phrase.type}</span>
-                                    <span class="phrase-impact">${phrase.impact || 'medium'} impact</span>
+            <div class="analysis-card enhanced-card" data-analyzer="quality">
+                <div class="card-header">
+                    <h3><i class="fas fa-award"></i> Content Quality Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${quality.overall_score || 0}/100</span>
+                        <span class="score-label">Quality Score</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="quality-metrics">
+                        ${this.createQualityMetric('Depth of Coverage', quality.depth_score)}
+                        ${this.createQualityMetric('Source Diversity', quality.source_diversity_score)}
+                        ${this.createQualityMetric('Factual Density', quality.factual_density_score)}
+                        ${this.createQualityMetric('Clarity', quality.clarity_score)}
+                    </div>
+                    
+                    ${quality.strengths?.length || quality.weaknesses?.length ? `
+                        <div class="quality-assessment">
+                            ${quality.strengths?.length ? `
+                                <div class="strengths">
+                                    <h5><i class="fas fa-thumbs-up"></i> Strengths</h5>
+                                    <ul>
+                                        ${quality.strengths.map(s => `<li>${s}</li>`).join('')}
+                                    </ul>
                                 </div>
                             ` : ''}
-                            ${phrase.explanation ? `<p class="phrase-explanation">${phrase.explanation}</p>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                ${phrases.length > 6 ? `
-                    <p class="more-phrases">...and ${phrases.length - 6} more loaded phrases detected</p>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    // Enhanced Source Credibility Card
-    createSourceCard(data) {
-        const source = data.source_credibility || {};
-        const rating = source.rating || 'Unknown';
-        const score = this.getSourceScore(rating);
-        
-        return `
-            <div class="analysis-card enhanced-card" data-analyzer="source">
-                <div class="card-header">
-                    <h3><i class="fas fa-building"></i> Source Credibility Analysis</h3>
-                    <div class="card-score-wrapper">
-                        <span class="card-score ${this.getScoreClass(score)}">${rating}</span>
-                        <span class="score-label">Credibility Rating</span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="source-info enhanced">
-                        <h4>${data.article?.domain || source.name || 'Unknown Source'}</h4>
-                        <div class="source-badges">
-                            ${source.type ? `<span class="badge type">${source.type}</span>` : ''}
-                            ${source.bias && source.bias !== 'Unknown' ? 
-                                `<span class="badge bias-${source.bias.toLowerCase()}">${source.bias} bias</span>` : ''}
-                            ${source.credibility ? 
-                                `<span class="badge credibility-${source.credibility.toLowerCase()}">${source.credibility}</span>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="credibility-details enhanced">
-                        <h5>Credibility Assessment</h5>
-                        <div class="assessment-grid">
-                            <div class="assessment-item">
-                                <i class="fas fa-check-double"></i>
-                                <span class="label">Overall Rating</span>
-                                <span class="value ${rating.toLowerCase()}">${rating}</span>
-                            </div>
-                            <div class="assessment-item">
-                                <i class="fas fa-balance-scale"></i>
-                                <span class="label">Political Bias</span>
-                                <span class="value">${source.bias || 'Not Available'}</span>
-                            </div>
-                            <div class="assessment-item">
-                                <i class="fas fa-chart-line"></i>
-                                <span class="label">Reliability</span>
-                                <span class="value">${source.credibility || 'Not Assessed'}</span>
-                            </div>
-                        </div>
-                        
-                        ${source.description ? `
-                            <div class="source-description">
-                                <i class="fas fa-info-circle"></i>
-                                <p>${source.description}</p>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div class="source-recommendation enhanced">
-                        <h5>What This Means</h5>
-                        <p>${this.getSourceDescription(rating)}</p>
-                        <div class="recommendation-box">
-                            <i class="fas fa-shield-alt"></i>
-                            <p><strong>Recommendation:</strong> ${this.getSourceRecommendation(rating)}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Enhanced Transparency Card
-    createTransparencyCard(data) {
-        const trans = data.transparency_analysis || {};
-        const score = trans.transparency_score || 0;
-        
-        return `
-            <div class="analysis-card enhanced-card" data-analyzer="transparency">
-                <div class="card-header">
-                    <h3><i class="fas fa-eye"></i> Transparency Analysis</h3>
-                    <div class="card-score-wrapper">
-                        <span class="card-score ${this.getScoreClass(score)}">${score}</span>
-                        <span class="score-label">Transparency Score</span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="transparency-indicators enhanced">
-                        ${this.createEnhancedTransparencyIndicators(trans)}
-                    </div>
-                    
-                    ${trans.indicators?.length ? `
-                        <div class="transparency-details">
-                            <h5>Positive Transparency Factors</h5>
-                            <div class="indicator-list positive">
-                                ${trans.indicators.map(ind => `
-                                    <div class="indicator-item">
-                                        <i class="fas fa-check-circle"></i>
-                                        <span>${ind}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="transparency-impact enhanced">
-                        <h5>Impact on Credibility</h5>
-                        <p>${this.getTransparencyDescription(trans)}</p>
-                        <div class="transparency-advice">
-                            <i class="fas fa-info-circle"></i>
-                            <p><strong>Why it matters:</strong> ${this.getTransparencyImpact(score)}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    createEnhancedTransparencyIndicators(trans) {
-        const indicators = [
-            { 
-                key: 'has_author', 
-                label: 'Author Attribution', 
-                icon: 'fa-user', 
-                description: 'Named author increases accountability',
-                value: trans.has_author !== undefined ? trans.has_author : null
-            },
-            { 
-                key: 'has_date', 
-                label: 'Publication Date', 
-                icon: 'fa-calendar', 
-                description: 'Date helps assess relevance',
-                value: trans.has_date !== undefined ? trans.has_date : null
-            },
-            { 
-                key: 'has_sources', 
-                label: 'Sources Cited', 
-                icon: 'fa-quote-right', 
-                description: 'Citations enable verification',
-                value: trans.has_sources !== undefined ? trans.has_sources : null
-            },
-            { 
-                key: 'has_disclosure', 
-                label: 'Disclosures', 
-                icon: 'fa-hand-holding-heart', 
-                description: 'Conflicts of interest disclosed',
-                value: trans.has_disclosure !== undefined ? trans.has_disclosure : null
-            }
-        ];
-        
-        return `
-            <div class="indicators-grid enhanced">
-                ${indicators.map(ind => `
-                    <div class="indicator-card ${ind.value === true ? 'found' : ind.value === false ? 'missing' : 'unknown'}">
-                        <div class="indicator-icon">
-                            <i class="fas ${ind.icon}"></i>
-                        </div>
-                        <div class="indicator-content">
-                            <span class="indicator-label">${ind.label}</span>
-                            <span class="indicator-status">${
-                                ind.value === true ? 'Present' : 
-                                ind.value === false ? 'Missing' : 
-                                'Not Checked'
-                            }</span>
-                        </div>
-                        <div class="indicator-tooltip">${ind.description}</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // Keep existing fact check card and other methods...
-    createFactCheckCard(data) {
-        const factChecks = data.fact_checks || [];
-        const summary = data.fact_check_summary || '';
-        
-        if (factChecks.length === 0) {
-            return `
-                <div class="analysis-card enhanced-card" data-analyzer="facts">
-                    <div class="card-header">
-                        <h3><i class="fas fa-microscope"></i> Fact Verification</h3>
-                    </div>
-                    <div class="card-content">
-                        <div class="no-facts-message">
-                            <i class="fas fa-info-circle"></i>
-                            <p>No fact checks performed. This is a premium feature.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Calculate statistics
-        const stats = this.calculateFactCheckStats(factChecks);
-        
-        return `
-            <div class="analysis-card enhanced-card" data-analyzer="facts">
-                <div class="card-header">
-                    <h3><i class="fas fa-microscope"></i> 21-Source Fact Verification</h3>
-                    <div class="card-score-wrapper">
-                        <span class="card-score">${factChecks.length}</span>
-                        <span class="score-label">Claims Checked</span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    ${summary ? `<div class="fact-summary enhanced">${summary}</div>` : ''}
-                    
-                    <div class="fact-check-stats">
-                        <div class="stat-item">
-                            <div class="stat-circle true">
-                                <span class="stat-number">${stats.verified}</span>
-                            </div>
-                            <span class="stat-label">Verified True</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-circle false">
-                                <span class="stat-number">${stats.false}</span>
-                            </div>
-                            <span class="stat-label">False</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-circle mixed">
-                                <span class="stat-number">${stats.mixed}</span>
-                            </div>
-                            <span class="stat-label">Mixed/Partial</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-circle unverified">
-                                <span class="stat-number">${stats.unverified}</span>
-                            </div>
-                            <span class="stat-label">Unverified</span>
-                        </div>
-                    </div>
-                    
-                    <div class="fact-checks enhanced">
-                        ${factChecks.slice(0, 5).map((check, index) => this.createEnhancedFactCheck(check, index)).join('')}
-                    </div>
-                    
-                    ${factChecks.length > 5 ? `
-                        <div class="more-facts-notice">
-                            <i class="fas fa-info-circle"></i>
-                            <span>${factChecks.length - 5} additional claims verified</span>
+                            ${quality.weaknesses?.length ? `
+                                <div class="weaknesses">
+                                    <h5><i class="fas fa-thumbs-down"></i> Areas for Improvement</h5>
+                                    <ul>
+                                        ${quality.weaknesses.map(w => `<li>${w}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
                         </div>
                     ` : ''}
                 </div>
@@ -687,122 +1009,78 @@ class AnalysisComponents {
         `;
     }
 
-    createManipulationCard(data) {
-        const manip = data.persuasion_analysis || {};
-        const score = manip.persuasion_score || 0;
+    createQualityMetric(name, score) {
+        if (score === undefined || score === null) return '';
         
         return `
-            <div class="analysis-card enhanced-card" data-analyzer="manipulation">
-                <div class="card-header">
-                    <h3><i class="fas fa-masks-theater"></i> Manipulation Detection</h3>
-                    <div class="card-score-wrapper">
-                        <span class="card-score ${this.getScoreClass(100 - score)}">${score}%</span>
-                        <span class="score-label">Manipulation Score</span>
-                    </div>
+            <div class="quality-metric">
+                <div class="metric-header">
+                    <span>${name}</span>
+                    <span>${score}/100</span>
                 </div>
-                <div class="card-content">
-                    <p class="no-manipulation">Manipulation detection is a premium feature.</p>
+                <div class="metric-bar">
+                    <div class="metric-fill" style="width: ${score}%; background: ${this.getScoreColor(score)}"></div>
                 </div>
             </div>
         `;
     }
 
-    createContentCard(data) {
-        const content = data.content_analysis || {};
-        
-        return `
-            <div class="analysis-card enhanced-card" data-analyzer="content">
-                <div class="card-header">
-                    <h3><i class="fas fa-file-alt"></i> Content Analysis</h3>
-                </div>
-                <div class="card-content">
-                    <div class="content-metrics enhanced">
-                        <div class="metric-card">
-                            <i class="fas fa-font"></i>
-                            <span class="metric-value">${data.article?.word_count || content.word_count || 0}</span>
-                            <span class="metric-label">Words</span>
-                        </div>
-                        <div class="metric-card">
-                            <i class="fas fa-clock"></i>
-                            <span class="metric-value">${content.reading_time || Math.ceil((data.article?.word_count || 200) / 200)}</span>
-                            <span class="metric-label">Min Read</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Enhanced Bias Visualization
+    // Bias Visualization with enhanced radar chart
     createBiasVisualization(biasData) {
-        const canvas = document.getElementById('biasChart');
+        if (!biasData || !biasData.bias_visualization) return;
+        
+        const viz = biasData.bias_visualization;
+        if (viz.type === 'radar' && viz.dimensions) {
+            this.createRadarChart('biasChart', viz.dimensions);
+        }
+    }
+
+    createRadarChart(elementId, dimensions) {
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
+        
+        // Destroy existing chart
+        if (this.charts[elementId]) {
+            this.charts[elementId].destroy();
+        }
         
         const ctx = canvas.getContext('2d');
         
-        // Clear previous chart
-        if (this.charts.biasChart) {
-            this.charts.biasChart.destroy();
-        }
-
-        // Use visualization data if available
-        const vizData = biasData.bias_visualization || biasData;
-        const dimensions = vizData.dimensions || [];
+        const data = {
+            labels: dimensions.map(d => d.axis),
+            datasets: [{
+                label: 'Bias Profile',
+                data: dimensions.map(d => d.value),
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: dimensions.map(d => d.color || '#6366f1'),
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            }]
+        };
         
-        if (dimensions.length === 0) {
-            // No data to visualize
-            ctx.font = '14px -apple-system, sans-serif';
-            ctx.fillStyle = '#6b7280';
-            ctx.textAlign = 'center';
-            ctx.fillText('No bias dimension data available', canvas.width / 2, canvas.height / 2);
-            return;
-        }
-        
-        const labels = dimensions.map(d => d.axis);
-        const scores = dimensions.map(d => d.value);
-        
-        this.charts.biasChart = new Chart(ctx, {
+        this.charts[elementId] = new Chart(ctx, {
             type: 'radar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Bias Intensity',
-                    data: scores,
-                    fill: true,
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                    borderColor: 'rgb(99, 102, 241)',
-                    pointBackgroundColor: 'rgb(99, 102, 241)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(99, 102, 241)',
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
+            data: data,
             options: {
-                elements: {
-                    line: {
-                        borderWidth: 3
-                    }
-                },
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     r: {
-                        angleLines: {
-                            display: true,
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 100,
+                        beginAtZero: true,
+                        max: 100,
                         ticks: {
                             stepSize: 20,
-                            font: {
-                                size: 10
-                            }
+                            display: false
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
                         },
                         pointLabels: {
                             font: {
-                                size: 12,
-                                weight: 'bold'
+                                size: 11
                             }
                         }
                     }
@@ -814,7 +1092,8 @@ class AnalysisComponents {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return context.label + ': ' + context.parsed.r + '%';
+                                const dimension = dimensions[context.dataIndex];
+                                return `${dimension.label}: ${context.parsed.r}% - ${dimension.description}`;
                             }
                         }
                     }
@@ -823,149 +1102,35 @@ class AnalysisComponents {
         });
     }
 
-    // Utility methods remain the same...
+    // Utility Methods
     calculateFactCheckStats(factChecks) {
-        const stats = {
-            verified: 0,
-            false: 0,
-            mixed: 0,
-            unverified: 0
+        return {
+            totalChecks: this.countTotalChecks(factChecks),
+            uniqueSources: this.countUniqueSources(factChecks)
         };
-        
+    }
+
+    countUniqueSources(factChecks) {
+        const sources = new Set();
         factChecks.forEach(check => {
-            const verdict = (check.verdict || '').toLowerCase();
-            if (verdict.includes('true') || verdict.includes('correct')) {
-                stats.verified++;
-            } else if (verdict.includes('false') || verdict.includes('incorrect')) {
-                stats.false++;
-            } else if (verdict.includes('partial') || verdict.includes('mixed')) {
-                stats.mixed++;
-            } else {
-                stats.unverified++;
+            if (check.sources_checked) {
+                check.sources_checked.forEach(source => sources.add(source));
             }
         });
-        
-        return stats;
+        return sources.size;
     }
 
-    createEnhancedFactCheck(check, index) {
-        const claim = typeof check === 'string' ? check : (check.claim || check.text || '');
-        const verdictClass = this.getVerdictClass(check.verdict);
-        
-        return `
-            <div class="fact-check-item enhanced ${verdictClass}">
-                <div class="fact-number">#${index + 1}</div>
-                <div class="fact-content">
-                    <div class="fact-claim">"${this.truncate(claim, 150)}"</div>
-                    ${check.verdict ? `
-                        <div class="fact-verdict-row">
-                            <span class="verdict-label ${verdictClass}">${check.verdict}</span>
-                        </div>
-                    ` : ''}
-                    ${check.explanation ? `<div class="fact-explanation">${check.explanation}</div>` : ''}
-                </div>
-            </div>
-        `;
+    countTotalChecks(factChecks) {
+        return factChecks.reduce((total, check) => {
+            return total + (check.sources_checked?.length || 0);
+        }, 0);
     }
 
-    createEnhancedProfessionalInfo(info) {
-        if (!info || Object.keys(info).length === 0) {
-            return '<div class="professional-info empty"><p>No professional information available</p></div>';
-        }
-        
-        return `
-            <div class="professional-info enhanced">
-                <h5>Professional Background</h5>
-                <div class="info-grid">
-                    ${info.current_position ? `
-                        <div class="info-item">
-                            <i class="fas fa-briefcase"></i>
-                            <div>
-                                <label>Current Position</label>
-                                <p>${info.current_position}</p>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${info.outlets?.length ? `
-                        <div class="info-item">
-                            <i class="fas fa-newspaper"></i>
-                            <div>
-                                <label>Publications</label>
-                                <p>${info.outlets.slice(0, 3).join(', ')}${info.outlets.length > 3 ? ` +${info.outlets.length - 3} more` : ''}</p>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${info.years_experience ? `
-                        <div class="info-item">
-                            <i class="fas fa-calendar-alt"></i>
-                            <div>
-                                <label>Experience</label>
-                                <p>${info.years_experience} years</p>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${info.expertise_areas?.length ? `
-                        <div class="info-item full-width">
-                            <i class="fas fa-tags"></i>
-                            <div>
-                                <label>Expertise Areas</label>
-                                <div class="expertise-tags">
-                                    ${info.expertise_areas.map(area => `<span class="tag">${area}</span>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    createEnhancedOnlinePresence(presence) {
-        const platforms = Object.entries(presence);
-        if (!platforms.length) return '';
-        
-        return `
-            <div class="online-presence enhanced">
-                <h5>Verified Online Presence</h5>
-                <div class="social-links enhanced">
-                    ${platforms.map(([platform, url]) => `
-                        <a href="${url}" target="_blank" class="social-link ${platform.toLowerCase()}" title="${platform}">
-                            <i class="fab fa-${platform.toLowerCase()}"></i>
-                            <span>${platform}</span>
-                        </a>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    // Helper methods
-    getDimensionIcon(dim) {
-        const icons = {
-            'Political Bias': 'fa-landmark',
-            'Corporate Stance': 'fa-building',
-            'Sensationalism': 'fa-fire',
-            'National Focus': 'fa-flag',
-            'Authority Trust': 'fa-university'
-        };
-        return icons[dim] || 'fa-chart-bar';
-    }
-
+    // Keep existing utility methods
     getScoreClass(score) {
         if (score >= 70) return 'score-high';
         if (score >= 40) return 'score-medium';
         return 'score-low';
-    }
-
-    getSourceScore(rating) {
-        const scores = {
-            'High': 90,
-            'Medium': 65,
-            'Low': 35,
-            'Very Low': 15,
-            'Unknown': 50
-        };
-        return scores[rating] || 50;
     }
 
     getScoreColor(score) {
@@ -984,103 +1149,140 @@ class AnalysisComponents {
         return 'unverified';
     }
 
+    getVerdictIcon(verdict) {
+        const className = this.getVerdictClass(verdict);
+        const icons = {
+            'verified': '<i class="fas fa-check-circle"></i>',
+            'false': '<i class="fas fa-times-circle"></i>',
+            'mixed': '<i class="fas fa-exclamation-circle"></i>',
+            'unverified': '<i class="fas fa-question-circle"></i>'
+        };
+        return icons[className] || icons['unverified'];
+    }
+
+    getSourceRecommendation(rating) {
+        const recommendations = {
+            'High': 'This source is highly reliable. You can generally trust their reporting.',
+            'Medium': 'Exercise normal caution. Cross-reference important claims with other sources.',
+            'Low': 'Be very cautious. Always verify claims from this source independently.',
+            'Very Low': 'Not recommended as a reliable source. Find alternative sources for any claims.',
+            'Unknown': 'Unable to verify this source. Treat with caution and verify all claims.'
+        };
+        return recommendations[rating] || recommendations['Unknown'];
+    }
+
+    getAuthorAssessment(author) {
+        const score = author.credibility_score || 0;
+        if (score >= 80) {
+            return 'This author has strong credentials and a verified professional background. Their reporting is generally trustworthy.';
+        } else if (score >= 60) {
+            return 'The author has some verifiable credentials. While they appear legitimate, additional verification of claims is recommended.';
+        } else if (score >= 40) {
+            return 'Limited information is available about this author. Exercise caution and verify claims independently.';
+        } else {
+            return 'Unable to verify author credentials. This significantly impacts the article\'s credibility.';
+        }
+    }
+
+    getTransparencyImpact(score) {
+        if (score >= 80) {
+            return 'Excellent transparency enhances credibility. All key information is properly attributed and sourced.';
+        } else if (score >= 60) {
+            return 'Good transparency overall. Most claims can be traced to their sources.';
+        } else if (score >= 40) {
+            return 'Limited transparency makes verification challenging. Some key information is missing.';
+        } else {
+            return 'Poor transparency is a significant concern. Unable to verify most claims due to lack of attribution.';
+        }
+    }
+
+    getBiasImpactDescription(bias) {
+        const objectivity = bias.objectivity_score || 50;
+        const tactics = bias.manipulation_tactics?.length || 0;
+        
+        if (objectivity >= 80 && tactics === 0) {
+            return 'This article demonstrates high objectivity with minimal bias. The reporting appears balanced and factual.';
+        } else if (objectivity >= 60) {
+            return 'Moderate bias detected. While the article contains some subjective language, the core facts appear intact.';
+        } else if (objectivity >= 40) {
+            return 'Significant bias present. Reader should be aware of the strong perspective and verify key claims.';
+        } else {
+            return 'Heavy bias and manipulation detected. This appears to be opinion/advocacy rather than objective reporting.';
+        }
+    }
+
+    getClickbaitClass(score) {
+        if (score < 30) return 'low';
+        if (score < 60) return 'moderate';
+        return 'high';
+    }
+
+    getClickbaitIcon(score) {
+        if (score < 30) return 'fa-check-circle';
+        if (score < 60) return 'fa-exclamation-circle';
+        return 'fa-times-circle';
+    }
+
+    getClickbaitAssessment(score) {
+        if (score < 30) {
+            return 'The headline appears genuine and informative.';
+        } else if (score < 60) {
+            return 'The headline shows some sensational elements.';
+        } else {
+            return 'The headline uses significant clickbait tactics.';
+        }
+    }
+
+    formatEmotionName(emotion) {
+        return emotion.charAt(0).toUpperCase() + emotion.slice(1);
+    }
+
+    getEmotionColor(emotion) {
+        const colors = {
+            'positive': '#10b981',
+            'negative': '#ef4444',
+            'neutral': '#6b7280',
+            'anger': '#dc2626',
+            'fear': '#7c3aed',
+            'joy': '#fbbf24',
+            'sadness': '#3b82f6'
+        };
+        return colors[emotion.toLowerCase()] || '#6b7280';
+    }
+
+    getDimensionIcon(dim) {
+        const icons = {
+            political: 'fa-landmark',
+            corporate: 'fa-building',
+            sensational: 'fa-fire',
+            nationalistic: 'fa-flag',
+            establishment: 'fa-university'
+        };
+        return icons[dim] || 'fa-chart-bar';
+    }
+
     formatDimensionName(dim) {
         return dim.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    getDimensionColor(dim) {
+        const colors = {
+            political: '#6366f1',
+            corporate: '#10b981',
+            sensational: '#f59e0b',
+            nationalistic: '#ef4444',
+            establishment: '#8b5cf6'
+        };
+        return colors[dim] || '#6b7280';
+    }
+
+    formatIndicatorName(key) {
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
     truncate(text, length) {
         if (!text || text.length <= length) return text;
         return text.substring(0, length) + '...';
-    }
-
-    // Keep existing description methods
-    getSourceDescription(rating) {
-        const descriptions = {
-            'High': 'This source has an excellent track record for accurate reporting and fact-checking.',
-            'Medium': 'Generally reliable, but may occasionally have minor factual errors or bias.',
-            'Low': 'This source has credibility issues. Double-check any important claims.',
-            'Very Low': 'Known for spreading misinformation. Approach with extreme caution.',
-            'Unknown': 'We couldn\'t verify this source. Be careful with unfamiliar websites.'
-        };
-        return descriptions[rating] || descriptions['Unknown'];
-    }
-
-    getAuthorDescription(authorData) {
-        if (!authorData) return 'No author information available, which reduces accountability.';
-        
-        const score = authorData.credibility_score || 0;
-        if (score >= 80) {
-            return 'Verified journalist with strong credentials and professional track record.';
-        } else if (score >= 60) {
-            return 'Author has some verifiable credentials. Appears to be a legitimate journalist.';
-        } else if (score >= 40) {
-            return 'Limited information available about this author. Credentials unclear.';
-        } else {
-            return 'Could not verify author credentials. This impacts overall credibility.';
-        }
-    }
-
-    getTransparencyDescription(transparencyData) {
-        const score = transparencyData?.transparency_score || 0;
-        if (score >= 80) {
-            return 'Excellent transparency with clear sources, dates, and author attribution.';
-        } else if (score >= 60) {
-            return 'Good transparency, though some attribution could be clearer.';
-        } else if (score >= 40) {
-            return 'Limited transparency. Missing some key information like sources or dates.';
-        } else {
-            return 'Poor transparency. Lacks proper sourcing and attribution.';
-        }
-    }
-
-    getObjectivityDescription(biasData) {
-        const score = biasData?.objectivity_score || 50;
-        if (score >= 80) {
-            return 'Highly objective reporting with minimal bias detected.';
-        } else if (score >= 60) {
-            return 'Reasonably objective, though some bias language was detected.';
-        } else if (score >= 40) {
-            return 'Moderate bias detected. Be aware of the article\'s perspective.';
-        } else {
-            return 'Strong bias detected. This is more opinion than objective reporting.';
-        }
-    }
-
-    getSourceRecommendation(rating) {
-        const recommendations = {
-            'High': 'This is a trusted source. You can generally rely on their reporting, though always verify extraordinary claims.',
-            'Medium': 'Exercise normal caution. Cross-check important facts with other reputable sources.',
-            'Low': 'Be very careful with this source. Verify all claims through multiple independent sources.',
-            'Very Low': 'This source is unreliable. Do not trust claims without extensive verification from reputable sources.',
-            'Unknown': 'Unknown sources require extra scrutiny. Verify all information through established news outlets.'
-        };
-        return recommendations[rating] || recommendations['Unknown'];
-    }
-
-    getTransparencyImpact(score) {
-        if (score >= 80) {
-            return 'Full transparency allows readers to verify claims and assess credibility independently.';
-        } else if (score >= 60) {
-            return 'Good transparency helps build trust, though some gaps make verification harder.';
-        } else if (score >= 40) {
-            return 'Limited transparency makes it difficult to verify the information presented.';
-        } else {
-            return 'Lack of transparency is a major red flag. Cannot verify claims or assess reliability.';
-        }
-    }
-
-    countUniqueSources(factChecks) {
-        const sources = new Set();
-        factChecks.forEach(check => {
-            if (check.sources_checked) {
-                check.sources_checked.forEach(source => sources.add(source));
-            }
-        });
-        return sources.size || 21; // Default to 21 if no specific sources
-    }
-
-    formatIndicatorName(key) {
-        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 }
 
