@@ -668,6 +668,167 @@ class AnalysisComponents {
         `;
     }
 
+    // MISSING METHOD - Adding createManipulationCard
+    createManipulationCard(data) {
+        const persuasion = data.persuasion_analysis || {};
+        const score = persuasion.manipulation_score || 0;
+        const level = this.getManipulationLevel(score);
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="manipulation">
+                <div class="card-header">
+                    <h3><i class="fas fa-brain"></i> Persuasion & Manipulation Detection</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score ${this.getScoreClass(100 - score)}">${100 - score}</span>
+                        <span class="score-label">Integrity Score</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="manipulation-level">
+                        <h5>Manipulation Level</h5>
+                        <p class="level-${level.toLowerCase()}">${level}</p>
+                    </div>
+                    
+                    ${persuasion.tactics_found?.length ? `
+                        <div class="persuasion-tactics">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Persuasion Tactics Detected</h5>
+                            <div class="tactics-grid">
+                                ${persuasion.tactics_found.map(tactic => `
+                                    <div class="tactic-card">
+                                        <div class="tactic-header">
+                                            <i class="fas ${this.getTacticIcon(tactic.type)}"></i>
+                                            <span class="tactic-name">${tactic.name}</span>
+                                        </div>
+                                        <p class="tactic-description">${tactic.description}</p>
+                                        ${tactic.severity ? `<span class="severity severity-${tactic.severity}">${tactic.severity} impact</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${persuasion.emotional_triggers?.length ? `
+                        <div class="emotional-triggers">
+                            <h5><i class="fas fa-heart"></i> Emotional Triggers</h5>
+                            <div class="triggers-list">
+                                ${persuasion.emotional_triggers.map(trigger => `
+                                    <div class="trigger-item">
+                                        <span class="trigger-emotion">${trigger.emotion}</span>
+                                        <span class="trigger-intensity">Intensity: ${trigger.intensity}/10</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="manipulation-assessment">
+                        <h5>What This Means</h5>
+                        <p>${this.getManipulationAssessment(score, persuasion)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // MISSING METHOD - Adding createContentCard
+    createContentCard(data) {
+        const content = data.content_analysis || {};
+        
+        return `
+            <div class="analysis-card enhanced-card" data-analyzer="content">
+                <div class="card-header">
+                    <h3><i class="fas fa-file-alt"></i> Content Analysis</h3>
+                    <div class="card-score-wrapper">
+                        <span class="card-score">${content.quality_score || 0}</span>
+                        <span class="score-label">Content Score</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="content-metrics">
+                        <div class="metric-row">
+                            <span class="metric-label">Article Length</span>
+                            <span class="metric-value">${content.word_count || 0} words</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Reading Time</span>
+                            <span class="metric-value">${content.reading_time || '< 1'} min</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Content Type</span>
+                            <span class="metric-value">${content.content_type || 'Article'}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Complexity</span>
+                            <span class="metric-value">${content.complexity_level || 'Moderate'}</span>
+                        </div>
+                    </div>
+                    
+                    ${content.key_topics?.length ? `
+                        <div class="key-topics">
+                            <h5><i class="fas fa-tags"></i> Key Topics</h5>
+                            <div class="topics-cloud">
+                                ${content.key_topics.map(topic => `
+                                    <span class="topic-tag">${topic}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${content.content_warnings?.length ? `
+                        <div class="content-warnings">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Content Warnings</h5>
+                            <ul>
+                                ${content.content_warnings.map(warning => `
+                                    <li><i class="fas fa-warning"></i> ${warning}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="content-summary">
+                        <h5>Content Assessment</h5>
+                        <p>${content.assessment || 'This article appears to be standard news content with typical structure and presentation.'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Helper methods for manipulation card
+    getManipulationLevel(score) {
+        if (score < 20) return 'Minimal';
+        if (score < 40) return 'Low';
+        if (score < 60) return 'Moderate';
+        if (score < 80) return 'High';
+        return 'Severe';
+    }
+
+    getTacticIcon(type) {
+        const icons = {
+            'emotional': 'fa-heart',
+            'logical': 'fa-brain',
+            'authority': 'fa-crown',
+            'social': 'fa-users',
+            'fear': 'fa-exclamation-triangle',
+            'urgency': 'fa-clock'
+        };
+        return icons[type] || 'fa-info-circle';
+    }
+
+    getManipulationAssessment(score, persuasion) {
+        if (score < 20) {
+            return 'This article uses standard journalistic techniques with minimal persuasive elements. The content appears straightforward and factual.';
+        } else if (score < 40) {
+            return 'Some persuasive techniques are present but within normal bounds for opinion or analysis pieces. Be aware of the perspective being presented.';
+        } else if (score < 60) {
+            return 'Moderate use of persuasion tactics detected. The article is trying to influence your opinion. Read critically and consider alternative viewpoints.';
+        } else if (score < 80) {
+            return 'High levels of manipulation detected. This content is designed to strongly influence emotions and opinions. Approach with significant skepticism.';
+        } else {
+            return 'Severe manipulation tactics present. This appears to be propaganda or heavily biased content designed to manipulate rather than inform.';
+        }
+    }
+
     // Helper methods for enhanced cards
     createSourceBreakdown(data) {
         const sourceCategories = {
