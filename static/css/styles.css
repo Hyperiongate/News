@@ -2036,3 +2036,118 @@ body {
         height: 200px;
     }
 }
+* Enhanced Trust Factor Styles */
+.trust-factor.enhanced {
+    background: var(--light-gray);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.trust-factor.enhanced:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary);
+}
+
+/* Factor Analysis Details */
+.factor-analysis-details {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.analysis-section {
+    margin-bottom: 1rem;
+}
+
+.analysis-section:last-child {
+    margin-bottom: 0;
+}
+
+.analysis-section h5 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-section h5 i {
+    font-size: 0.85rem;
+}
+
+.analysis-section p {
+    font-size: 0.85rem;
+    color: var(--gray);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Factor Insights Row */
+.factor-insights {
+    margin-top: 0.75rem;
+}
+
+.insights-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.insight-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.insight-badge.verified {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--secondary);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.insight-badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.insight-badge.bias-left {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.insight-badge.bias-right {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .trust-factors-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .trust-factor.enhanced {
+        padding: 1.25rem;
+    }
+    
+    .analysis-section h5 {
+        font-size: 0.85rem;
+    }
+    
+    .analysis-section p {
+        font-size: 0.8rem;
+    }
+}
