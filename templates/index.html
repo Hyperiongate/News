@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TruthLens AI - Advanced News Analysis & Fact Checking</title>
     
-    <!-- Main Stylesheet -->
+    <!-- Main Stylesheet - FIXED: Changed style.css to styles.css -->
     <link rel="stylesheet" href="/static/css/styles.css">
     
     <!-- Chart.js for visualizations -->
@@ -51,66 +51,71 @@
                     
                     <div class="sources-grid">
                         <div class="source-category">
-                            <h3><i class="fas fa-check-double"></i> Fact-Checking Organizations</h3>
+                            <h3><i class="fas fa-university"></i> Government Databases</h3>
                             <ul>
-                                <li>Snopes.com</li>
-                                <li>FactCheck.org</li>
-                                <li>PolitiFact</li>
-                                <li>Lead Stories</li>
-                                <li>AFP Fact Check</li>
+                                <li><strong>FRED</strong> - Federal Reserve Economic Data</li>
+                                <li><strong>CDC</strong> - Centers for Disease Control</li>
+                                <li><strong>SEC EDGAR</strong> - Company Financial Filings</li>
+                                <li><strong>FEC</strong> - Federal Election Commission</li>
+                                <li><strong>FBI Crime Data</strong> - Official Crime Statistics</li>
+                                <li><strong>NOAA</strong> - Climate & Weather Data</li>
                             </ul>
                         </div>
                         
                         <div class="source-category">
-                            <h3><i class="fas fa-university"></i> Academic Databases</h3>
+                            <h3><i class="fas fa-graduation-cap"></i> Academic Sources</h3>
                             <ul>
-                                <li>Google Scholar</li>
-                                <li>PubMed/MEDLINE</li>
-                                <li>JSTOR</li>
-                                <li>arXiv</li>
-                                <li>CORE</li>
+                                <li><strong>PubMed</strong> - Medical Research Database</li>
+                                <li><strong>Semantic Scholar</strong> - AI-Powered Research</li>
+                                <li><strong>CrossRef</strong> - Scholarly Publications</li>
+                                <li><strong>JSTOR</strong> - Academic Journals</li>
+                                <li><strong>arXiv</strong> - Scientific Papers</li>
                             </ul>
                         </div>
                         
                         <div class="source-category">
-                            <h3><i class="fas fa-landmark"></i> Government Sources</h3>
+                            <h3><i class="fas fa-globe"></i> International Organizations</h3>
                             <ul>
-                                <li>CDC Health Data</li>
-                                <li>WHO Statistics</li>
-                                <li>US Census Bureau</li>
-                                <li>Bureau of Labor Statistics</li>
-                                <li>Official Government APIs</li>
+                                <li><strong>World Bank</strong> - Global Economic Data</li>
+                                <li><strong>WHO</strong> - World Health Organization</li>
+                                <li><strong>UN Statistics</strong> - International Data</li>
+                                <li><strong>OECD</strong> - Economic Cooperation Data</li>
                             </ul>
                         </div>
                         
                         <div class="source-category">
-                            <h3><i class="fas fa-newspaper"></i> News Archives</h3>
+                            <h3><i class="fas fa-check-circle"></i> Fact-Checking Networks</h3>
                             <ul>
-                                <li>Reuters Archive</li>
-                                <li>Associated Press</li>
-                                <li>BBC News Database</li>
-                                <li>Major Newspaper Archives</li>
-                                <li>Media Monitoring Services</li>
+                                <li><strong>Google Fact Check</strong> - Global Fact Network</li>
+                                <li><strong>Snopes</strong> - Urban Legends Database</li>
+                                <li><strong>PolitiFact</strong> - Political Claims</li>
+                                <li><strong>FactCheck.org</strong> - Policy Analysis</li>
+                                <li><strong>Reuters Fact Check</strong> - News Verification</li>
                             </ul>
                         </div>
                     </div>
                     
-                    <div class="verification-process">
+                    <div class="methodology-section">
                         <h3>Our Verification Process</h3>
                         <div class="process-steps">
-                            <div class="step">
-                                <div class="step-number">1</div>
+                            <div class="process-step">
+                                <span class="step-number">1</span>
                                 <h4>Extract Claims</h4>
-                                <p>AI identifies all verifiable claims in the article</p>
+                                <p>AI identifies up to 15 key factual claims using advanced pattern recognition</p>
                             </div>
-                            <div class="step">
-                                <div class="step-number">2</div>
+                            <div class="process-step">
+                                <span class="step-number">2</span>
                                 <h4>Cross-Reference</h4>
-                                <p>Each claim is checked against multiple authoritative sources</p>
+                                <p>Each claim is checked against relevant databases based on claim type</p>
                             </div>
-                            <div class="step">
-                                <div class="step-number">3</div>
-                                <h4>Analyze Context</h4>
+                            <div class="process-step">
+                                <span class="step-number">3</span>
+                                <h4>Confidence Scoring</h4>
+                                <p>Multi-source verification creates confidence scores from 0-95%</p>
+                            </div>
+                            <div class="process-step">
+                                <span class="step-number">4</span>
+                                <h4>Context Analysis</h4>
                                 <p>Claims are evaluated within article context and compared to related news</p>
                             </div>
                         </div>
@@ -279,7 +284,7 @@
                     <h3><i class="fas fa-magnifying-glass-chart"></i> Detailed Trust Score Breakdown</h3>
                     <p class="findings-intro">
                         Our AI analyzed your article across multiple dimensions using 21+ authoritative sources. 
-                        Each factor below contributed to your overall trust score with detailed explanations of our findings.
+                        Each factor below contributed to your overall trust score. Click any factor to see the detailed analysis.
                     </p>
                     <div id="trustBreakdown" class="trust-factors-grid"></div>
                     
@@ -383,62 +388,10 @@
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
-        <p>Analyzing article across 21+ sources...</p>
     </div>
 
     <!-- Scripts -->
     <script src="/static/js/components.js"></script>
     <script src="/static/js/app.js"></script>
-    <script>
-        // Initialize the app
-        const analyzer = new TruthLensApp();
-        
-        // Tab switching
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-            document.getElementById(`${tab}-tab`).style.display = 'block';
-        }
-        
-        // Analyze content
-        function analyzeContent() {
-            analyzer.analyzeContent();
-        }
-        
-        // Show/hide capabilities
-        function showCapabilities() {
-            document.getElementById('capabilitiesSection').style.display = 'block';
-        }
-        
-        function hideCapabilities() {
-            document.getElementById('capabilitiesSection').style.display = 'none';
-        }
-        
-        // Show pricing (placeholder)
-        function showPricing() {
-            analyzer.showPricing();
-        }
-        
-        // Unlock premium
-        function unlockPremium() {
-            analyzer.unlockPremium();
-        }
-        
-        // Download PDF
-        function downloadPDF() {
-            analyzer.downloadPDF();
-        }
-        
-        // Share analysis
-        function shareAnalysis() {
-            analyzer.shareAnalysis();
-        }
-    </script>
 </body>
 </html>
