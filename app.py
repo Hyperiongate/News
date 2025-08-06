@@ -1,199 +1,361 @@
 """
-Simplified News Analyzer API
-Clean, maintainable, and focused on what works
+News Analyzer API (Refactored)
+Clean architecture with standardized responses and proper error handling
 """
 import os
+import time
 import logging
-from flask import Flask, request, jsonify, render_template, send_from_directory
+import uuid
+from functools import wraps
+from flask import Flask, request, render_template, g
 from flask_cors import CORS
-from datetime import datetime
-from typing import Dict, Any, Optional
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-# Import only the essential services
-from services.article_extractor import ArticleExtractor
+from config import Config
 from services.news_analyzer import NewsAnalyzer
+from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
+from services.service_registry import service_registry
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=Config.LOGGING['level'],
+    format=Config.LOGGING['format'],
+    filename=Config.LOGGING['file']
+)
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app with explicit static folder configuration
+# Initialize Flask app
 app = Flask(__name__, 
             static_folder='static',
             static_url_path='/static')
-CORS(app)
 
-# Fix the incomplete line - use environment variable with fallback
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
+# Configuration
+app.config['SECRET_KEY'] = Config.SECRET_KEY
+app.config['JSON_SORT_KEYS'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = Config.DEBUG
+
+# CORS configuration
+CORS(app, origins=['*'])
+
+# Rate limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[f"{Config.RATE_LIMITS['requests_per_minute']} per minute"]
+)
 
 # Initialize services
 try:
-    article_extractor = ArticleExtractor()
     news_analyzer = NewsAnalyzer()
-    logger.info("Services initialized successfully")
+    logger.info("NewsAnalyzer initialized successfully")
 except Exception as e:
-    logger.error(f"Error initializing services: {e}")
-    article_extractor = None
+    logger.error(f"Failed to initialize NewsAnalyzer: {e}")
     news_analyzer = None
 
+# Validate configuration on startup
+config_status = Config.validate()
+if not config_status['valid']:
+    logger.error(f"Configuration errors: {config_status['errors']}")
+if config_status['warnings']:
+    logger.warning(f"Configuration warnings: {config_status['warnings']}")
+
+
+# Middleware
+@app.before_request
+def before_request():
+    """Set up request context"""
+    g.start_time = time.time()
+    g.request_id = str(uuid.uuid4())
+    
+    # Set for ResponseBuilder
+    ResponseBuilder._start_time = g.start_time
+    ResponseBuilder._request_id = g.request_id
+    
+    # Log request
+    logger.info(f"Request {g.request_id}: {request.method} {request.path}")
+
+
+@app.after_request
+def after_request(response):
+    """Log response and add headers"""
+    if hasattr(g, 'start_time'):
+        elapsed = time.time() - g.start_time
+        response.headers['X-Response-Time'] = f"{elapsed:.3f}"
+        
+    if hasattr(g, 'request_id'):
+        response.headers['X-Request-ID'] = g.request_id
+        
+    # Security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Log response
+    logger.info(f"Response {getattr(g, 'request_id', 'unknown')}: "
+               f"{response.status_code} ({elapsed:.3f}s)")
+    
+    return response
+
+
+def require_analyzer(f):
+    """Decorator to ensure analyzer is available"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not news_analyzer:
+            return ResponseBuilder.error(
+                "Analysis service is temporarily unavailable",
+                status_code=503,
+                error_code="SERVICE_UNAVAILABLE"
+            )
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Routes
 @app.route('/')
 def index():
     """Serve the main page"""
     return render_template('index.html')
 
+
 @app.route('/api/health')
 def health():
-    """Health check endpoint for monitoring"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'services': {
-            'article_extractor': article_extractor is not None,
-            'news_analyzer': news_analyzer is not None
-        }
-    })
+    """Health check endpoint"""
+    health_data = {
+        'status': 'healthy' if news_analyzer else 'degraded',
+        'version': '2.0',
+        'environment': Config.ENV,
+        'services': service_registry.get_service_status()['summary'] if news_analyzer else {}
+    }
+    
+    status_code = 200 if news_analyzer else 503
+    return ResponseBuilder.success(health_data, status_code=status_code)
+
 
 @app.route('/api/analyze', methods=['POST'])
+@require_analyzer
+@limiter.limit(f"{Config.RATE_LIMITS['requests_per_hour']} per hour")
 def analyze():
     """
     Main analysis endpoint
     Accepts: { "url": "https://..." } or { "text": "article content..." }
-    Returns: Comprehensive analysis with trust score
+    Returns: Standardized analysis response
     """
     try:
-        # Get request data
+        # Parse request
         data = request.get_json()
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided'
-            }), 400
+            return ResponseBuilder.error(
+                "No data provided",
+                status_code=400,
+                error_code="MISSING_DATA"
+            )
         
-        # Determine content type and content
+        # Validate input
         url = data.get('url')
         text = data.get('text')
         
+        if not url and not text:
+            return ResponseBuilder.error(
+                "Either 'url' or 'text' is required",
+                status_code=400,
+                error_code="MISSING_INPUT"
+            )
+        
+        if url and text:
+            return ResponseBuilder.error(
+                "Provide either 'url' or 'text', not both",
+                status_code=400,
+                error_code="INVALID_INPUT"
+            )
+        
+        # Determine content and type
         if url:
             content = url
             content_type = 'url'
-            logger.info(f"Analyzing URL: {url}")
-        elif text:
+            
+            # Basic URL validation
+            if not url.startswith(('http://', 'https://')):
+                return ResponseBuilder.error(
+                    "Invalid URL format. URL must start with http:// or https://",
+                    status_code=400,
+                    error_code="INVALID_URL"
+                )
+        else:
             content = text
             content_type = 'text'
-            logger.info("Analyzing text content")
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Either URL or text is required'
-            }), 400
+            
+            # Basic text validation
+            if len(text.strip()) < 100:
+                return ResponseBuilder.error(
+                    "Text too short. Please provide at least 100 characters",
+                    status_code=400,
+                    error_code="TEXT_TOO_SHORT"
+                )
+            
+            if len(text) > 50000:
+                return ResponseBuilder.error(
+                    "Text too long. Maximum 50,000 characters",
+                    status_code=400,
+                    error_code="TEXT_TOO_LONG"
+                )
         
-        # Check if services are available
-        if not news_analyzer:
-            return jsonify({
-                'success': False,
-                'error': 'Analysis service is temporarily unavailable'
-            }), 503
-        
-        # Determine if user is pro (for now, default to basic)
+        # Check pro status
         is_pro = data.get('is_pro', False)
         
+        # Log analysis start
+        logger.info(f"Starting analysis: type={content_type}, pro={is_pro}, "
+                   f"content_length={len(content)}")
+        
         # Perform analysis
-        result = news_analyzer.analyze(content, content_type=content_type, is_pro=is_pro)
+        start_time = time.time()
+        results = news_analyzer.analyze(content, content_type, is_pro)
+        processing_time = time.time() - start_time
         
-        # Check if analysis was successful
-        if not result.get('success', False):
-            error_msg = result.get('error', 'Analysis failed')
-            logger.error(f"Analysis failed: {error_msg}")
-            return jsonify({
-                'success': False,
-                'error': error_msg
-            }), 400
+        # Check if analysis succeeded
+        if not results.get('success'):
+            return ResponseBuilder.error(
+                results.get('error', 'Analysis failed'),
+                status_code=400,
+                error_code="ANALYSIS_FAILED",
+                details=results.get('errors')
+            )
         
-        logger.info(f"Analysis completed successfully. Trust score: {result.get('trust_score', 'N/A')}")
-        return jsonify(result)
+        # Build response
+        article_data = results.get('article', {})
+        services_used = list(results.get('pipeline_metadata', {}).get('services_succeeded', []))
+        
+        return AnalysisResponseBuilder.build_analysis_response(
+            analysis_results=results,
+            article_data=article_data,
+            processing_time=processing_time,
+            services_used=services_used
+        )
         
     except Exception as e:
-        logger.error(f"Analysis error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Analysis failed: {str(e)}'
-        }), 500
+        logger.error(f"Analysis endpoint error: {str(e)}", exc_info=True)
+        return ResponseBuilder.error(
+            e,
+            status_code=500,
+            error_code="INTERNAL_ERROR"
+        )
 
-@app.route('/api/extract', methods=['POST'])
-def extract():
-    """
-    Article extraction endpoint
-    Accepts: { "url": "https://..." }
-    Returns: Extracted article content
-    """
+
+@app.route('/api/services/status')
+def services_status():
+    """Get status of all analysis services"""
     try:
-        data = request.get_json()
-        if not data or not data.get('url'):
-            return jsonify({
-                'success': False,
-                'error': 'URL is required'
-            }), 400
+        if not news_analyzer:
+            return ResponseBuilder.error(
+                "Service registry not available",
+                status_code=503,
+                error_code="SERVICE_UNAVAILABLE"
+            )
         
-        url = data.get('url')
-        logger.info(f"Extracting article from: {url}")
-        
-        if not article_extractor:
-            return jsonify({
-                'success': False,
-                'error': 'Extraction service is temporarily unavailable'
-            }), 503
-        
-        # Extract article
-        result = article_extractor.extract_from_url(url)
-        
-        if not result.get('success', False):
-            error_msg = result.get('error', 'Extraction failed')
-            logger.error(f"Extraction failed: {error_msg}")
-            return jsonify({
-                'success': False,
-                'error': error_msg
-            }), 400
-        
-        return jsonify(result)
+        status = news_analyzer.get_service_status()
+        return ResponseBuilder.success(
+            status,
+            message="Service status retrieved successfully"
+        )
         
     except Exception as e:
-        logger.error(f"Extraction error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Extraction failed: {str(e)}'
-        }), 500
+        logger.error(f"Service status error: {str(e)}", exc_info=True)
+        return ResponseBuilder.error(e, status_code=500)
 
-# Serve static files explicitly (helps with some deployment environments)
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Serve static files"""
-    return send_from_directory(app.static_folder, filename)
+
+@app.route('/api/services/reload', methods=['POST'])
+@require_analyzer
+def reload_services():
+    """Reload failed services"""
+    try:
+        # Optional: Add authentication check here
+        auth_token = request.headers.get('Authorization')
+        if auth_token != f"Bearer {Config.SECRET_KEY}":
+            return ResponseBuilder.error(
+                "Unauthorized",
+                status_code=401,
+                error_code="UNAUTHORIZED"
+            )
+        
+        result = news_analyzer.reload_services()
+        
+        return ResponseBuilder.success(
+            result,
+            message=f"Reloaded {len(result['reloaded'])} services"
+        )
+        
+    except Exception as e:
+        logger.error(f"Service reload error: {str(e)}", exc_info=True)
+        return ResponseBuilder.error(e, status_code=500)
+
+
+@app.route('/api/config/validate')
+def validate_config():
+    """Validate current configuration"""
+    try:
+        validation = Config.validate()
+        
+        if validation['valid']:
+            return ResponseBuilder.success(
+                validation,
+                message="Configuration is valid"
+            )
+        else:
+            return ResponseBuilder.partial_success(
+                {'warnings': validation['warnings']},
+                validation['errors'],
+                message="Configuration has errors"
+            )
+            
+    except Exception as e:
+        logger.error(f"Config validation error: {str(e)}", exc_info=True)
+        return ResponseBuilder.error(e, status_code=500)
+
 
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
-    return jsonify({
-        'success': False,
-        'error': 'Endpoint not found'
-    }), 404
+    return ResponseBuilder.error(
+        "Endpoint not found",
+        status_code=404,
+        error_code="NOT_FOUND"
+    )
+
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors"""
-    logger.error(f"Internal server error: {error}")
-    return jsonify({
-        'success': False,
-        'error': 'Internal server error'
-    }), 500
+    return ResponseBuilder.error(
+        "Internal server error",
+        status_code=500,
+        error_code="INTERNAL_ERROR"
+    )
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    """Handle rate limit errors"""
+    return ResponseBuilder.error(
+        "Rate limit exceeded. Please try again later",
+        status_code=429,
+        error_code="RATE_LIMIT_EXCEEDED"
+    )
+
 
 if __name__ == '__main__':
-    # Get port from environment variable (for deployment)
+    # Get port from environment
     port = int(os.environ.get('PORT', 5000))
     
-    # Run the app
+    # Start message
+    logger.info(f"Starting News Analyzer API on port {port}")
+    logger.info(f"Environment: {Config.ENV}")
+    logger.info(f"Services available: {config_status['enabled_services']}")
+    
+    # Run app
     app.run(
         host='0.0.0.0',
         port=port,
-        debug=os.environ.get('FLASK_ENV') == 'development'
+        debug=Config.DEBUG
     )
