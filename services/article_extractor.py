@@ -327,8 +327,13 @@ class LegacyArticleExtractor:
         # Thread pool for timeout control
         self.executor = ThreadPoolExecutor(max_workers=2)
         
-        # Browser-like session configuration
+        # Browser-like session configuration with default headers
         self.session = requests.Session()
+        
+        # Set default headers for the session
+        self.session.headers.update(self._get_headers())
+        
+        # Configure retries and connection pooling
         adapter = requests.adapters.HTTPAdapter(
             pool_connections=10,
             pool_maxsize=10,
@@ -351,6 +356,8 @@ class LegacyArticleExtractor:
                         'desktop': True
                     }
                 )
+                # Set default headers for cloudscraper too
+                self.cloudscraper_session.headers.update(self._get_headers())
             except:
                 self.cloudscraper_session = None
         else:
@@ -362,16 +369,19 @@ class LegacyArticleExtractor:
     
     def _get_headers(self, referer=None):
         """Get randomized headers that look like a real browser"""
-        # Static user agents as fallback
+        # More diverse and recent user agents
         static_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         ]
         
         if self.ua:
             try:
-                user_agent = self.ua.chrome
+                user_agent = self.ua.random
             except:
                 user_agent = random.choice(static_agents)
         else:
@@ -379,7 +389,7 @@ class LegacyArticleExtractor:
         
         headers = {
             'User-Agent': user_agent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
@@ -390,6 +400,9 @@ class LegacyArticleExtractor:
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
             'Cache-Control': 'max-age=0',
+            'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
         }
         
         if referer:
@@ -483,7 +496,34 @@ class LegacyArticleExtractor:
     def _quick_extract(self, url: str) -> Dict[str, Any]:
         """Quick extraction using requests and BeautifulSoup"""
         try:
-            response = self.session.get(url, headers=self._get_headers(), timeout=self.quick_timeout)
+            # Create a new session for this request with fresh headers
+            headers = self._get_headers(referer=url)
+            
+            # Add additional headers that might help with 403 errors
+            headers.update({
+                'Pragma': 'no-cache',
+                'Sec-Ch-Ua-Platform-Version': '"10.0.0"',
+                'Sec-Ch-Ua-Full-Version': '"121.0.6167.85"',
+                'Sec-Ch-Ua-Arch': '"x86"',
+                'Sec-Ch-Ua-Bitness': '"64"',
+                'Sec-Ch-Ua-Model': '""',
+                'Sec-Ch-Ua-Full-Version-List': '"Not A(Brand";v="99.0.0.0", "Google Chrome";v="121.0.6167.85", "Chromium";v="121.0.6167.85"'
+            })
+            
+            # Make request with all headers
+            response = self.session.get(
+                url, 
+                headers=headers, 
+                timeout=self.quick_timeout,
+                allow_redirects=True,
+                verify=True
+            )
+            
+            # Check for specific error codes
+            if response.status_code == 403:
+                logger.error(f"Quick extract got 403 for {url}, will try other methods")
+                return {'success': False, 'error': f'403 Forbidden'}
+            
             response.raise_for_status()
             
             # Check content type
@@ -494,6 +534,12 @@ class LegacyArticleExtractor:
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._parse_content(soup, url)
             
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403:
+                logger.error(f"Quick extract failed with 403 for {url}")
+                return {'success': False, 'error': '403 Forbidden'}
+            logger.error(f"Quick extract HTTP error for {url}: {e}")
+            return {'success': False, 'error': str(e)}
         except requests.RequestException as e:
             logger.error(f"Quick extract failed for {url}: {e}")
             return {'success': False, 'error': str(e)}
@@ -504,7 +550,22 @@ class LegacyArticleExtractor:
             return {'success': False, 'error': 'CloudScraper not available'}
         
         try:
-            response = self.cloudscraper_session.get(url, timeout=self.quick_timeout)
+            # Update headers for this specific request
+            headers = self._get_headers(referer=url)
+            
+            # Make request with headers
+            response = self.cloudscraper_session.get(
+                url, 
+                headers=headers,
+                timeout=self.quick_timeout,
+                allow_redirects=True
+            )
+            
+            # Check for specific error codes
+            if response.status_code == 403:
+                logger.error(f"CloudScraper extract got 403 for {url}")
+                return {'success': False, 'error': '403 Forbidden'}
+            
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -517,11 +578,25 @@ class LegacyArticleExtractor:
     def _curl_extract(self, url: str) -> Dict[str, Any]:
         """Extract using curl-cffi for better compatibility"""
         try:
+            # curl-cffi with Chrome impersonation often bypasses 403 errors
             response = curl_requests.get(
                 url,
                 impersonate="chrome110",
-                timeout=self.quick_timeout
+                timeout=self.quick_timeout,
+                allow_redirects=True,
+                verify=True
             )
+            
+            if response.status_code == 403:
+                # Try with different impersonation
+                response = curl_requests.get(
+                    url,
+                    impersonate="safari15_5",
+                    timeout=self.quick_timeout,
+                    allow_redirects=True,
+                    verify=True
+                )
+            
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -536,13 +611,29 @@ class LegacyArticleExtractor:
         driver = None
         try:
             options = ChromeOptions()
-            options.add_argument('--headless')
+            options.add_argument('--headless=new')  # Use new headless mode
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
-            options.add_argument(f'user-agent={self._get_headers()["User-Agent"]}')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            
+            # Set user agent
+            user_agent = self._get_headers()["User-Agent"]
+            options.add_argument(f'user-agent={user_agent}')
             
             driver = webdriver.Chrome(options=options)
+            
+            # Execute CDP commands to mask automation
+            driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
+                'source': '''
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    })
+                '''
+            })
+            
             driver.set_page_load_timeout(self.browser_timeout)
             
             driver.get(url)
@@ -551,6 +642,9 @@ class LegacyArticleExtractor:
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.TAG_NAME, "p"))
             )
+            
+            # Additional wait for dynamic content
+            time.sleep(2)
             
             # Get page source
             soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -570,16 +664,37 @@ class LegacyArticleExtractor:
         """Extract using Playwright for modern JavaScript sites"""
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent=self._get_headers()['User-Agent']
+                # Launch with more realistic settings
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--disable-blink-features=AutomationControlled']
                 )
+                
+                # Create context with realistic viewport and user agent
+                context = browser.new_context(
+                    user_agent=self._get_headers()['User-Agent'],
+                    viewport={'width': 1920, 'height': 1080},
+                    locale='en-US',
+                    timezone_id='America/Los_Angeles'
+                )
+                
+                # Add scripts to avoid detection
+                context.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    })
+                """)
+                
                 page = context.new_page()
                 
+                # Navigate with realistic behavior
                 page.goto(url, wait_until='domcontentloaded', timeout=self.browser_timeout * 1000)
                 
                 # Wait for content
                 page.wait_for_selector('p', timeout=10000)
+                
+                # Additional wait for dynamic content
+                page.wait_for_timeout(2000)
                 
                 content = page.content()
                 browser.close()
@@ -902,10 +1017,30 @@ class ArticleExtractor(BaseAnalyzer):
     def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
         """Basic URL extraction fallback"""
         try:
-            # Basic extraction using only requests and BeautifulSoup
-            response = requests.get(url, timeout=10, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
+            # More robust headers for basic extraction
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0',
+            }
+            
+            response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
+            
+            if response.status_code == 403:
+                return {
+                    'success': False,
+                    'error': '403 Forbidden - Access denied by website'
+                }
+            
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
