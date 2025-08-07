@@ -4,16 +4,18 @@ LOCATION: news/services/bias_detector.py
 PURPOSE: Advanced bias detection and analysis with rich explanations
 DEPENDENCIES: re, logging
 SERVICE: Bias detection - Multi-dimensional bias analysis
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
 
 import re
 import logging
 from typing import Dict, List, Any, Tuple
+from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
 
-class BiasDetector:
+class LegacyBiasDetector:
     """Advanced multi-dimensional bias detection and analysis"""
     
     def __init__(self):
@@ -402,8 +404,7 @@ class BiasDetector:
                 return f"{label} stance affects how institutional sources are presented"
         
         return "Score indicates moderate bias in this dimension"
-    
-    def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
+def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
                                      loaded_phrases: List, manipulation_tactics: List,
                                      objectivity_score: int, opinion_percentage: int) -> str:
         """Generate human-readable explanation of bias analysis"""
@@ -760,8 +761,7 @@ class BiasDetector:
             'confidence': min(100, int(abs(score) * 100 * 1.2)),
             'explanation': explanation
         }
-    
-    def detect_bias_patterns(self, text: str) -> List[Dict[str, str]]:
+        def detect_bias_patterns(self, text: str) -> List[Dict[str, str]]:
         """Detect specific bias patterns in the text"""
         patterns = []
         
@@ -1191,8 +1191,7 @@ class BiasDetector:
                 unique_tactics.append(tactic)
         
         return unique_tactics[:8]
-    
-    def get_bias_contributing_factors(self, bias_dimensions: Dict, framing_analysis: Dict, 
+        def get_bias_contributing_factors(self, bias_dimensions: Dict, framing_analysis: Dict, 
                                      source_bias: Dict) -> List[Dict]:
         """Determine main factors contributing to bias"""
         factors = []
@@ -1340,3 +1339,128 @@ class BiasDetector:
         patterns = self.detect_bias_patterns(text)
         tactics = self.detect_manipulation_tactics(text, patterns)
         return [t['name'] for t in tactics]
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class BiasDetector(BaseAnalyzer):
+    """Bias detection service that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('bias_detector')
+        try:
+            self._legacy = LegacyBiasDetector()
+            logger.info("Legacy BiasDetector initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy BiasDetector: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze bias using the standardized interface
+        
+        Expected input:
+            - text: Article text to analyze
+            - domain: (optional) Source domain for context
+            - basic_bias_score: (optional) Simple bias score for compatibility
+            
+        Returns:
+            Standardized response with comprehensive bias analysis
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        text = data.get('text')
+        if not text:
+            return self.get_error_result("Missing required field: 'text'")
+        
+        # Get optional parameters
+        domain = data.get('domain')
+        basic_bias_score = data.get('basic_bias_score', 0)
+        
+        return self._analyze_bias(text, basic_bias_score, domain)
+    
+    def _analyze_bias(self, text: str, basic_bias_score: float = 0, domain: str = None) -> Dict[str, Any]:
+        """Perform comprehensive bias analysis"""
+        try:
+            # Use legacy method
+            result = self._legacy.analyze_comprehensive_bias(text, basic_bias_score, domain)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    # Core bias metrics
+                    'overall_bias': result.get('overall_bias', 'Unknown'),
+                    'political_lean': result.get('political_lean', 0),
+                    'objectivity_score': result.get('objectivity_score', 50),
+                    'opinion_percentage': result.get('opinion_percentage', 0),
+                    'emotional_score': result.get('emotional_score', 0),
+                    
+                    # Detailed analysis
+                    'manipulation_tactics': result.get('manipulation_tactics', []),
+                    'loaded_phrases': result.get('loaded_phrases', []),
+                    'bias_dimensions': result.get('bias_dimensions', {}),
+                    'bias_patterns': result.get('bias_patterns', []),
+                    
+                    # Enhanced reporting
+                    'bias_confidence': result.get('bias_confidence', 0),
+                    'framing_analysis': result.get('framing_analysis', {}),
+                    'source_bias_analysis': result.get('source_bias_analysis', {}),
+                    'bias_visualization': result.get('bias_visualization', {}),
+                    'bias_impact': result.get('bias_impact', {}),
+                    'comparative_context': result.get('comparative_context', {}),
+                    
+                    # Explanations
+                    'detailed_explanation': result.get('detailed_explanation', ''),
+                    'bias_summary': result.get('bias_summary', ''),
+                    'key_findings': result.get('key_findings', []),
+                    'dimension_explanations': result.get('dimension_explanations', {})
+                },
+                'metadata': {
+                    'analysis_version': 'comprehensive_v2',
+                    'domain_context': domain
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Bias analysis failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def detect_political_bias(self, text: str) -> float:
+        """Legacy compatibility method for simple political bias detection"""
+        if not self.is_available:
+            return 0.0
+        
+        try:
+            return self._legacy.detect_political_bias(text)
+        except Exception as e:
+            logger.error(f"Failed to detect political bias: {e}")
+            return 0.0
+    
+    def analyze_comprehensive_bias(self, text: str, basic_bias_score: float = 0, domain: str = None) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({
+            'text': text,
+            'basic_bias_score': basic_bias_score,
+            'domain': domain
+        })
+    
+    def detect_manipulation(self, text: str) -> List[str]:
+        """Legacy compatibility method for manipulation detection"""
+        if not self.is_available:
+            return []
+        
+        try:
+            return self._legacy.detect_manipulation(text)
+        except Exception as e:
+            logger.error(f"Failed to detect manipulation: {e}")
+            return []
+
+
