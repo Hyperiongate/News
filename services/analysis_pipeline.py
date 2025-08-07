@@ -318,8 +318,21 @@ class AnalysisPipeline:
     def _prepare_service_data(self, stage: PipelineStage, context: PipelineContext) -> Dict[str, Any]:
         """Prepare data for services based on stage"""
         if stage.name == 'extraction':
-            # Extraction stage uses raw input
-            return context.input_data
+            # Transform input data for extraction services
+            # ArticleExtractor expects 'url' or 'text' keys
+            content = context.input_data.get('content')
+            content_type = context.input_data.get('content_type')
+            
+            if content_type == 'url':
+                return {'url': content}
+            elif content_type == 'text':
+                return {'text': content}
+            else:
+                # Fallback - try to guess based on content
+                if content and (content.startswith('http://') or content.startswith('https://')):
+                    return {'url': content}
+                else:
+                    return {'text': content}
         else:
             # Other stages use extraction results plus any previous results
             data = {}
@@ -328,7 +341,14 @@ class AnalysisPipeline:
             if 'article_extractor' in context.results:
                 extraction = context.results['article_extractor']
                 if extraction and not extraction.get('error'):
-                    data.update(extraction)
+                    # Extract the article data from the standardized response
+                    if 'data' in extraction:
+                        # The extractor returns data in a 'data' field
+                        article_data = extraction['data']
+                        data.update(article_data)
+                    else:
+                        # Fallback for older format
+                        data.update(extraction)
             
             # Add relevant previous results
             data['previous_results'] = {
@@ -375,7 +395,11 @@ class AnalysisPipeline:
             if result and not result.get('error'):
                 # Map service results to expected fields
                 if service_name == 'article_extractor':
-                    final_results['article'] = result
+                    # Extract the article data from the standardized response
+                    if 'data' in result:
+                        final_results['article'] = result['data']
+                    else:
+                        final_results['article'] = result
                 elif service_name == 'source_credibility':
                     final_results['source_credibility'] = result
                 elif service_name == 'author_analyzer':
