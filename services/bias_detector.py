@@ -404,9 +404,10 @@ class LegacyBiasDetector:
                 return f"{label} stance affects how institutional sources are presented"
         
         return "Score indicates moderate bias in this dimension"
-def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
-                                     loaded_phrases: List, manipulation_tactics: List,
-                                     objectivity_score: int, opinion_percentage: int) -> str:
+    
+    def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: List,
+                                      loaded_phrases: List, manipulation_tactics: List,
+                                      objectivity_score: int, opinion_percentage: int) -> str:
         """Generate human-readable explanation of bias analysis"""
         
         explanations = []
@@ -761,7 +762,8 @@ def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: L
             'confidence': min(100, int(abs(score) * 100 * 1.2)),
             'explanation': explanation
         }
-        def detect_bias_patterns(self, text: str) -> List[Dict[str, str]]:
+    
+    def detect_bias_patterns(self, text: str) -> List[Dict[str, str]]:
         """Detect specific bias patterns in the text"""
         patterns = []
         
@@ -1191,7 +1193,8 @@ def _generate_detailed_explanation(self, bias_dimensions: Dict, bias_patterns: L
                 unique_tactics.append(tactic)
         
         return unique_tactics[:8]
-        def get_bias_contributing_factors(self, bias_dimensions: Dict, framing_analysis: Dict, 
+    
+    def get_bias_contributing_factors(self, bias_dimensions: Dict, framing_analysis: Dict, 
                                      source_bias: Dict) -> List[Dict]:
         """Determine main factors contributing to bias"""
         factors = []
@@ -1462,5 +1465,3 @@ class BiasDetector(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Failed to detect manipulation: {e}")
             return []
-
-
