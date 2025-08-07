@@ -1,11 +1,18 @@
 """
-services/transparency_analyzer.py - Transparency analysis service
+FILE: services/transparency_analyzer.py
+PURPOSE: Transparency analysis service
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
 
 import re
+import logging
 from typing import Dict, Any, Optional
+from services.base_analyzer import BaseAnalyzer
 
-class TransparencyAnalyzer:
+logger = logging.getLogger(__name__)
+
+
+class LegacyTransparencyAnalyzer:
     """Analyze transparency in news articles"""
     
     def analyze(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
@@ -92,3 +99,83 @@ class TransparencyAnalyzer:
             return 'Moderate'
         else:
             return 'Low'
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class TransparencyAnalyzer(BaseAnalyzer):
+    """Transparency analysis service that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('transparency_analyzer')
+        try:
+            self._legacy = LegacyTransparencyAnalyzer()
+            logger.info("Legacy TransparencyAnalyzer initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy TransparencyAnalyzer: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze transparency using the standardized interface
+        
+        Expected input:
+            - text: Article text to analyze
+            - author: (optional) Author name for attribution check
+            
+        Returns:
+            Standardized response with transparency analysis
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        text = data.get('text')
+        if not text:
+            return self.get_error_result("Missing required field: 'text'")
+        
+        # Get optional author
+        author = data.get('author')
+        
+        return self._analyze_transparency(text, author)
+    
+    def _analyze_transparency(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
+        """Analyze transparency indicators"""
+        try:
+            # Use legacy method
+            result = self._legacy.analyze(text, author)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'transparency_score': result.get('transparency_score', 50),
+                    'transparency_level': result.get('transparency_level', 'Unknown'),
+                    'indicators': result.get('indicators', []),
+                    'sources_cited': result.get('sources_cited', 0),
+                    'has_author': result.get('has_author', False),
+                    'has_quotes': result.get('has_quotes', False),
+                    'analysis_details': {
+                        'author_provided': bool(author),
+                        'author_name': author if author else 'Not provided',
+                        'citation_count': result.get('sources_cited', 0),
+                        'has_disclosure': any('disclosure' in ind.lower() for ind in result.get('indicators', []))
+                    }
+                },
+                'metadata': {
+                    'indicators_found': len(result.get('indicators', []))
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Transparency analysis failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def analyze_transparency(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'text': text, 'author': author})
