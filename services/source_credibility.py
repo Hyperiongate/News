@@ -4,7 +4,14 @@ LOCATION: news/services/source_credibility.py
 PURPOSE: Database of known news source credibility ratings
 DEPENDENCIES: None
 SERVICE: Source credibility database
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
+
+import logging
+from typing import Dict, Any
+from services.base_analyzer import BaseAnalyzer
+
+logger = logging.getLogger(__name__)
 
 # Known source credibility database
 SOURCE_CREDIBILITY = {
@@ -110,7 +117,7 @@ SOURCE_CREDIBILITY = {
 }
 
 
-class SourceCredibility:
+class LegacySourceCredibility:
     """Source credibility checker class"""
     
     def __init__(self):
@@ -287,3 +294,98 @@ def get_sources_by_bias(bias_type):
         for domain, info in SOURCE_CREDIBILITY.items() 
         if info['bias'] == bias_type
     }
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class SourceCredibility(BaseAnalyzer):
+    """Source credibility checker that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('source_credibility')
+        try:
+            self._legacy = LegacySourceCredibility()
+            logger.info("Legacy SourceCredibility initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy SourceCredibility: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Check source credibility using the standardized interface
+        
+        Expected input:
+            - domain: Domain to check (e.g., 'cnn.com')
+            OR
+            - url: Full URL to extract domain from
+            
+        Returns:
+            Standardized response with credibility data
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        # Extract domain from input
+        domain = data.get('domain')
+        if not domain and 'url' in data:
+            # Extract domain from URL
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(data['url'])
+                domain = parsed.netloc.lower().replace('www.', '')
+            except Exception as e:
+                logger.error(f"Failed to parse URL: {e}")
+                return self.get_error_result("Invalid URL provided")
+        
+        if not domain:
+            return self.get_error_result("Missing required field: 'domain' or 'url'")
+        
+        return self._check_credibility(domain)
+    
+    def _check_credibility(self, domain: str) -> Dict[str, Any]:
+        """Check credibility for a domain"""
+        try:
+            # Use legacy method
+            result = self._legacy.check_credibility(domain)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'domain': domain,
+                    'credibility_rating': result.get('rating', 'Unknown'),
+                    'bias': result.get('bias', 'Unknown'),
+                    'source_type': result.get('type', 'Unknown'),
+                    'source_name': result.get('name', domain),
+                    'description': result.get('description', ''),
+                    'is_known_source': result.get('rating') != 'Unknown'
+                },
+                'metadata': {
+                    'total_sources_in_database': len(self._legacy.sources) if self._legacy else 0
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Source credibility check failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def check_credibility(self, domain: str) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'domain': domain})
+    
+    def get_source_info(self, domain: str) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        if not self.is_available:
+            return {'credibility': 'Unknown', 'bias': 'Unknown', 'type': 'Unknown'}
+        
+        try:
+            return self._legacy.get_source_info(domain)
+        except Exception as e:
+            logger.error(f"Failed to get source info: {e}")
+            return {'credibility': 'Unknown', 'bias': 'Unknown', 'type': 'Unknown'}
