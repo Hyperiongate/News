@@ -81,7 +81,7 @@ class ServiceRegistry:
                 logger.error(f"Class {class_name} not found in {module_name}: {e}")
                 self.failed_services[service_name] = f"Class not found: {str(e)}"
             except Exception as e:
-                logger.error(f"Failed to initialize {service_name}: {e}")
+                logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
                 self.failed_services[service_name] = f"Initialization error: {str(e)}"
         
         logger.info(f"Service registry initialized: {len(self.services)} sync services, "
@@ -293,5 +293,27 @@ class ServiceRegistry:
         return False
 
 
-# Global service registry instance
-service_registry = ServiceRegistry()
+# Global service registry instance - with error handling
+try:
+    service_registry = ServiceRegistry()
+    logger.info("Global service registry created successfully")
+except Exception as e:
+    logger.error(f"Failed to create global service registry: {e}", exc_info=True)
+    # Create a dummy registry that will fail gracefully
+    class DummyRegistry:
+        def get_service(self, name):
+            return None
+        def get_service_status(self):
+            return {
+                'summary': {
+                    'total_configured': 0,
+                    'total_registered': 0,
+                    'total_available': 0,
+                    'total_failed': 0
+                },
+                'services': {}
+            }
+        def analyze_with_service(self, name, data):
+            return {'error': 'Service registry not initialized', 'service': name}
+    
+    service_registry = DummyRegistry()
