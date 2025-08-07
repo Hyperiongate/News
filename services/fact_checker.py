@@ -4,6 +4,7 @@ LOCATION: news/services/fact_checker.py
 PURPOSE: Enhanced fact checking with 21 sources including academic, government, and specialized databases
 DEPENDENCIES: requests, Google Fact Check API, News API, Pattern Analysis, Multiple Free APIs
 SERVICE: Advanced fact checker with multi-source verification and confidence scoring
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
 
 import os
@@ -18,10 +19,12 @@ from typing import List, Dict, Optional, Tuple, Any
 
 import requests
 from bs4 import BeautifulSoup
+from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
-class FactChecker:
+
+class LegacyFactChecker:
     """Enhanced fact checking with 21 verification sources"""
     
     def __init__(self):
@@ -1087,3 +1090,174 @@ class FactChecker:
         relevance = (title_overlap * 0.7) + (desc_overlap * 0.3)
         
         return relevance
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class FactChecker(BaseAnalyzer):
+    """Fact checking service that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('fact_checker')
+        try:
+            self._legacy = LegacyFactChecker()
+            logger.info("Legacy FactChecker initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy FactChecker: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Check facts using the standardized interface
+        
+        Expected input:
+            - claims: List of claims to check
+            OR
+            - text: Text to extract claims from (if claims not provided)
+            - article_url: (optional) Original article URL for context
+            - article_date: (optional) Publication date for temporal context
+            
+        Returns:
+            Standardized response with fact check results
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        # Get claims
+        claims = data.get('claims', [])
+        
+        # If no claims provided, try to extract from text
+        if not claims and 'text' in data:
+            claims = self._extract_claims_from_text(data['text'])
+        
+        if not claims:
+            return self.get_error_result("No claims provided or found in text")
+        
+        # Get optional context
+        article_url = data.get('article_url')
+        article_date = data.get('article_date')
+        
+        return self._check_claims(claims, article_url, article_date)
+    
+    def _check_claims(self, claims: List[str], article_url: Optional[str] = None, 
+                     article_date: Optional[str] = None) -> Dict[str, Any]:
+        """Check multiple claims"""
+        try:
+            # Use legacy method
+            results = self._legacy.check_claims(claims, article_url, article_date)
+            
+            # Calculate aggregate statistics
+            total_claims = len(results)
+            verified_claims = sum(1 for r in results if r.get('verdict') not in ['unverified', None])
+            true_claims = sum(1 for r in results if r.get('verdict') in ['true', 'likely_true'])
+            false_claims = sum(1 for r in results if r.get('verdict') in ['false', 'likely_false'])
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'fact_check_results': results,
+                    'statistics': {
+                        'total_claims': total_claims,
+                        'verified_claims': verified_claims,
+                        'true_claims': true_claims,
+                        'false_claims': false_claims,
+                        'partially_true_claims': sum(1 for r in results if r.get('verdict') == 'partially_true'),
+                        'unverified_claims': sum(1 for r in results if r.get('verdict') == 'unverified'),
+                        'average_confidence': sum(r.get('confidence', 0) for r in results) / max(total_claims, 1)
+                    },
+                    'source_statistics': self._get_source_statistics()
+                },
+                'metadata': {
+                    'article_url': article_url,
+                    'article_date': article_date,
+                    'sources_available': self._get_available_sources()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Fact checking failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def _extract_claims_from_text(self, text: str) -> List[str]:
+        """Extract checkable claims from text"""
+        # Simple extraction - look for sentences with specific patterns
+        import re
+        
+        claims = []
+        sentences = text.split('.')
+        
+        claim_patterns = [
+            r'\b\d+\s*(?:percent|%)',  # Percentages
+            r'\b(?:study|research|report|survey)\s+(?:shows|finds|indicates)',  # Studies
+            r'\b(?:million|billion|thousand)\b',  # Large numbers
+            r'\b(?:increased|decreased|rose|fell)\s+(?:by|to)\s+\d+',  # Changes
+            r'\b(?:according to|data from|statistics show)',  # Data references
+        ]
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if len(sentence) > 20:  # Skip very short sentences
+                for pattern in claim_patterns:
+                    if re.search(pattern, sentence, re.IGNORECASE):
+                        claims.append(sentence)
+                        break
+        
+        return claims[:10]  # Limit to 10 claims
+    
+    def _get_source_statistics(self) -> Dict[str, Any]:
+        """Get statistics about fact-checking sources"""
+        if not self._legacy:
+            return {}
+        
+        try:
+            return self._legacy.get_source_statistics()
+        except Exception as e:
+            logger.error(f"Failed to get source statistics: {e}")
+            return {}
+    
+    def _get_available_sources(self) -> List[str]:
+        """Get list of available fact-checking sources"""
+        if not self._legacy:
+            return []
+        
+        try:
+            stats = self._legacy.get_source_statistics()
+            sources = []
+            for category in stats.get('active_sources', {}).values():
+                if isinstance(category, list):
+                    sources.extend(category)
+            return sources
+        except Exception as e:
+            logger.error(f"Failed to get available sources: {e}")
+            return []
+    
+    def check_claims(self, claims: List[str], article_url: str = None, article_date: str = None) -> List[Dict]:
+        """Legacy compatibility method"""
+        result = self.analyze({
+            'claims': claims,
+            'article_url': article_url,
+            'article_date': article_date
+        })
+        
+        # Return just the fact check results for compatibility
+        if result.get('success') and 'data' in result:
+            return result['data'].get('fact_check_results', [])
+        return []
+    
+    def get_related_articles(self, query: str, max_articles: int = 5) -> List[Dict]:
+        """Legacy compatibility method for getting related articles"""
+        if not self.is_available:
+            return []
+        
+        try:
+            return self._legacy.get_related_articles(query, max_articles)
+        except Exception as e:
+            logger.error(f"Failed to get related articles: {e}")
+            return []
