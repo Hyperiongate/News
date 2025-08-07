@@ -2,6 +2,7 @@
 FILE: services/author_analyzer.py
 LOCATION: services/author_analyzer.py
 PURPOSE: Enhanced author credibility analysis with built-in journalist database
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
 
 import logging
@@ -10,10 +11,12 @@ import json
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import random
+from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
-class AuthorAnalyzer:
+
+class LegacyAuthorAnalyzer:
     """Analyzes author credibility with comprehensive built-in database"""
     
     def __init__(self):
@@ -533,3 +536,109 @@ class AuthorAnalyzer:
         """Clear the author cache"""
         self._author_cache.clear()
         logger.info("Author cache cleared")
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class AuthorAnalyzer(BaseAnalyzer):
+    """Author credibility analyzer that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('author_analyzer')
+        try:
+            self._legacy = LegacyAuthorAnalyzer()
+            logger.info("Legacy AuthorAnalyzer initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy AuthorAnalyzer: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze author credibility using the standardized interface
+        
+        Expected input:
+            - author: Author name to analyze
+            - domain: (optional) Domain/publication for context
+            
+        Returns:
+            Standardized response with author credibility data
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        # Get author name
+        author_name = data.get('author')
+        if not author_name:
+            return self.get_error_result("Missing required field: 'author'")
+        
+        # Get optional domain
+        domain = data.get('domain')
+        
+        return self._analyze_author(author_name, domain)
+    
+    def _analyze_author(self, author_name: str, domain: Optional[str] = None) -> Dict[str, Any]:
+        """Analyze a single author"""
+        try:
+            # Use legacy method
+            result = self._legacy.analyze_single_author(author_name, domain)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'author_name': result.get('name', author_name),
+                    'found': result.get('found', False),
+                    'credibility_score': result.get('credibility_score', 30),
+                    'bio': result.get('bio'),
+                    'verification_status': result.get('verification_status', {}),
+                    'professional_info': result.get('professional_info', {}),
+                    'online_presence': result.get('online_presence', {}),
+                    'credibility_explanation': result.get('credibility_explanation', {}),
+                    'is_anonymous': result.get('anonymous', False),
+                    'data_source': result.get('data_source', 'unknown')
+                },
+                'metadata': {
+                    'domain_context': domain,
+                    'has_error': 'error' in result
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Author analysis failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def analyze_single_author(self, author_name: str, domain: Optional[str] = None) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'author': author_name, 'domain': domain})
+    
+    def get_author_summary(self, author_analysis: Dict[str, Any]) -> str:
+        """Legacy compatibility method to get author summary"""
+        if not self.is_available:
+            return "Author analysis unavailable"
+        
+        try:
+            # If it's our standardized format, extract the legacy format
+            if 'data' in author_analysis:
+                legacy_format = author_analysis['data']
+            else:
+                legacy_format = author_analysis
+            
+            return self._legacy.get_author_summary(legacy_format)
+        except Exception as e:
+            logger.error(f"Failed to get author summary: {e}")
+            return "Unable to generate author summary"
+    
+    def clear_cache(self):
+        """Clear the author cache"""
+        if self._legacy:
+            try:
+                self._legacy.clear_cache()
+                logger.info("Author cache cleared")
+            except Exception as e:
+                logger.error(f"Failed to clear cache: {e}")
