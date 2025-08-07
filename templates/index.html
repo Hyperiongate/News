@@ -720,24 +720,58 @@
                     body: JSON.stringify({ url })
                 });
                 
+                // CRITICAL FIX: Properly handle error responses
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Analysis failed (${response.status})`);
+                    let errorMessage = `Analysis failed (${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        // FIXED: Handle error object properly
+                        if (errorData.error) {
+                            // Check if error is an object with a message property
+                            if (typeof errorData.error === 'object' && errorData.error.message) {
+                                errorMessage = errorData.error.message;
+                            } else if (typeof errorData.error === 'string') {
+                                errorMessage = errorData.error;
+                            } else {
+                                // Convert object to string if needed
+                                errorMessage = JSON.stringify(errorData.error);
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error('Failed to parse error response:', parseError);
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
                 
-                // Handle the response based on the structure defined in passdown
+                // Debug logging
+                console.log('API Response:', data);
+                
+                // Handle the response based on the structure
                 if (data.success && data.data) {
                     currentAnalysis = data.data;
                     displayResults(currentAnalysis);
+                } else if (data.success === false) {
+                    // Handle explicit failure response
+                    let errorMsg = 'Analysis failed';
+                    if (data.error) {
+                        if (typeof data.error === 'object' && data.error.message) {
+                            errorMsg = data.error.message;
+                        } else if (typeof data.error === 'string') {
+                            errorMsg = data.error;
+                        }
+                    }
+                    throw new Error(errorMsg);
                 } else {
-                    throw new Error(data.error || 'Invalid response format');
+                    throw new Error('Invalid response format');
                 }
                 
             } catch (error) {
                 console.error('Analysis error:', error);
-                showError(error.message || 'Failed to analyze article. Please try again.');
+                // FIXED: Ensure error message is always a string
+                const errorMessage = error.message || error.toString() || 'Failed to analyze article. Please try again.';
+                showError(errorMessage);
                 hideResults();
             } finally {
                 isAnalyzing = false;
@@ -861,17 +895,32 @@
             if (!analysis || !analysis.key_findings) return;
             
             const summaryEl = document.getElementById('analysisSummary');
-            summaryEl.innerHTML = `
-                <h3 class="summary-title">Key Findings</h3>
-                <ul class="key-findings">
-                    ${analysis.key_findings.map(finding => `
-                        <li>
-                            <i class="fas fa-check-circle"></i>
-                            <span>${escapeHtml(finding)}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
+            
+            // Handle different formats of key_findings
+            let findings = [];
+            if (Array.isArray(analysis.key_findings)) {
+                // If it's already an array of strings
+                findings = analysis.key_findings.filter(f => typeof f === 'string');
+            } else if (typeof analysis.key_findings === 'object') {
+                // If it's an object, extract string values
+                findings = Object.values(analysis.key_findings)
+                    .filter(f => typeof f === 'string' || (typeof f === 'object' && f.finding))
+                    .map(f => typeof f === 'string' ? f : f.finding);
+            }
+            
+            if (findings.length > 0) {
+                summaryEl.innerHTML = `
+                    <h3 class="summary-title">Key Findings</h3>
+                    <ul class="key-findings">
+                        ${findings.map(finding => `
+                            <li>
+                                <i class="fas fa-check-circle"></i>
+                                <span>${escapeHtml(finding)}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            }
         }
 
         // Display analysis cards
