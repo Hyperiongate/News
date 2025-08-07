@@ -1,330 +1,319 @@
 """
-News Analyzer API (Refactored)
-Clean architecture with standardized responses and proper error handling
+Service Registry
+Central management for all analysis services
 """
-import os
-import sys
-import time
 import logging
-import uuid
-from functools import wraps
-from flask import Flask, request, render_template, g
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from typing import Dict, Any, Optional, List, Type
+import importlib
+import inspect
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
-# Configure logging BEFORE imports to capture initialization errors
-logging.basicConfig(
-    level=logging.DEBUG,  # Set to DEBUG to see all initialization messages
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout  # Output to stdout for Render logs
-)
+from config import Config
+from services.base_analyzer import BaseAnalyzer, AsyncBaseAnalyzer
+
 logger = logging.getLogger(__name__)
 
-logger.info("Starting News Analyzer API initialization...")
 
-# Import config first
-try:
-    from config import Config
-    logger.info("Config imported successfully")
-except Exception as e:
-    logger.error(f"Failed to import Config: {e}")
-    raise
-
-# Import services with error handling
-try:
-    logger.info("Service registry imported successfully")
+class ServiceRegistry:
+    """Registry for managing all analysis services"""
     
-    # Log the service status
-    status = service_registry.get_service_status()
-    logger.info(f"Service status: {status['summary']}")
-    
-    # Log details about each service
-    for service_name, service_info in status['services'].items():
-        if service_info.get('registered'):
-            logger.info(f"Service {service_name}: registered={service_info['registered']}, available={service_info['available']}")
-        else:
-            logger.warning(f"Service {service_name}: FAILED - {service_info.get('error', service_info.get('reason', 'Unknown'))}")
-            
-except Exception as e:
-    logger.error(f"Failed to import service_registry: {e}")
-    raise
-
-try:
-    from services.news_analyzer import NewsAnalyzer
-    logger.info("NewsAnalyzer imported successfully")
-except Exception as e:
-    logger.error(f"Failed to import NewsAnalyzer: {e}")
-    raise
-
-try:
-    from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
-    logger.info("Response builders imported successfully")
-except Exception as e:
-    logger.error(f"Failed to import response builders: {e}")
-    raise
-
-# Initialize Flask app
-app = Flask(__name__, 
-            static_folder='static',
-            static_url_path='/static')
-
-# Configuration
-app.config['SECRET_KEY'] = Config.SECRET_KEY
-app.config['JSON_SORT_KEYS'] = False
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = Config.DEBUG
-
-# CORS configuration
-CORS(app, origins=['*'])
-
-# Rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=[f"{Config.RATE_LIMITS['requests_per_minute']} per minute"]
-)
-
-# Initialize services
-try:
-    logger.info("Initializing NewsAnalyzer...")
-    news_analyzer = NewsAnalyzer()
-    logger.info("NewsAnalyzer initialized successfully")
-    logger.info(f"Available services: {news_analyzer.service_status['summary']['total_available']}")
-except Exception as e:
-    logger.error(f"Failed to initialize NewsAnalyzer: {e}")
-    import traceback
-    logger.error(f"Traceback: {traceback.format_exc()}")
-    news_analyzer = None
-
-# Validate configuration on startup
-config_status = Config.validate()
-if not config_status['valid']:
-    logger.error(f"Configuration errors: {config_status['errors']}")
-if config_status['warnings']:
-    logger.warning(f"Configuration warnings: {config_status['warnings']}")
-
-# Log final initialization status
-logger.info(f"News Analyzer API initialized. Services available: {news_analyzer is not None}")
-
-# Middleware
-@app.before_request
-def before_request():
-    """Set up request context"""
-    g.start_time = time.time()
-    g.request_id = str(uuid.uuid4())
-    
-    # Set for ResponseBuilder
-    ResponseBuilder._start_time = g.start_time
-    ResponseBuilder._request_id = g.request_id
-    
-    # Log request
-    logger.info(f"Request {g.request_id}: {request.method} {request.path}")
-
-
-@app.after_request
-def after_request(response):
-    """Log response and add headers"""
-    if hasattr(g, 'start_time'):
-        elapsed = time.time() - g.start_time
-        response.headers['X-Response-Time'] = f"{elapsed:.3f}"
-        
-    if hasattr(g, 'request_id'):
-        response.headers['X-Request-ID'] = g.request_id
-        
-    # Security headers
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    
-    # Log response
-    logger.info(f"Response {getattr(g, 'request_id', 'unknown')}: "
-               f"{response.status_code} ({elapsed:.3f}s)")
-    
-    return response
-
-
-def require_analyzer(f):
-    """Decorator to ensure analyzer is available"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not news_analyzer:
-            return ResponseBuilder.error(
-                "Analysis service is temporarily unavailable",
-                status_code=503,
-                error_code="SERVICE_UNAVAILABLE"
-            )
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-# Routes
-@app.route('/')
-def index():
-    """Serve the main page"""
-    return render_template('index.html')
-
-
-@app.route('/api/health')
-def health():
-    """Health check endpoint"""
-    health_data = {
-        'status': 'healthy' if news_analyzer else 'degraded',
-        'version': '2.0',
-        'environment': Config.ENV,
-        'services': service_registry.get_service_status()['summary'] if news_analyzer else {}
+    # Service mapping - maps service names to their module and class names
+    SERVICE_MAPPING = {
+        'article_extractor': ('services.article_extractor', 'ArticleExtractor'),
+        'source_credibility': ('services.source_credibility', 'SourceCredibility'),
+        'author_analyzer': ('services.author_analyzer', 'AuthorAnalyzer'),
+        'bias_detector': ('services.bias_detector', 'BiasDetector'),
+        'fact_checker': ('services.fact_checker', 'FactChecker'),
+        'transparency_analyzer': ('services.transparency_analyzer', 'TransparencyAnalyzer'),
+        'manipulation_detector': ('services.manipulation_detector', 'ManipulationDetector'),
+        'content_analyzer': ('services.content_analyzer', 'ContentAnalyzer'),
     }
     
-    status_code = 200 if news_analyzer else 503
-    return ResponseBuilder.success(health_data, status_code=status_code)
-
-
-@app.route('/api/analyze', methods=['POST'])
-@require_analyzer
-@limiter.limit(f"{Config.RATE_LIMITS['requests_per_hour']} per hour")
-def analyze():
-    """
-    Main analysis endpoint
-    Accepts: { "url": "https://..." } or { "text": "article content..." }
-    Returns: Standardized analysis response
-    """
-    try:
-        # Parse request
-        data = request.get_json()
-        if not data:
-            return ResponseBuilder.error(
-                "No data provided",
-                status_code=400,
-                error_code="MISSING_DATA"
-            )
+    def __init__(self):
+        self.services: Dict[str, BaseAnalyzer] = {}
+        self.async_services: Dict[str, AsyncBaseAnalyzer] = {}
+        self.failed_services: Dict[str, str] = {}
+        self._initialize_services()
         
-        # Validate input
-        url = data.get('url')
-        text = data.get('text')
+    def _initialize_services(self):
+        """Initialize all configured services"""
+        logger.info("Initializing service registry...")
         
-        if not url and not text:
-            return ResponseBuilder.error(
-                "Either 'url' or 'text' is required",
-                status_code=400,
-                error_code="MISSING_INPUT"
-            )
+        for service_name, (module_name, class_name) in self.SERVICE_MAPPING.items():
+            # Check if service is enabled in config
+            if not Config.is_service_enabled(service_name):
+                logger.info(f"Service {service_name} is disabled in configuration")
+                continue
+                
+            try:
+                # Dynamic import
+                module = importlib.import_module(module_name)
+                service_class = getattr(module, class_name)
+                
+                # Instantiate service
+                service_instance = service_class()
+                
+                # Check if it's properly inherited from BaseAnalyzer
+                if not isinstance(service_instance, (BaseAnalyzer, AsyncBaseAnalyzer)):
+                    logger.error(f"Service {service_name} does not inherit from BaseAnalyzer")
+                    self.failed_services[service_name] = "Invalid service class"
+                    continue
+                
+                # Check if service is available
+                if not service_instance.is_available:
+                    logger.warning(f"Service {service_name} initialized but not available")
+                    self.failed_services[service_name] = "Service not available"
+                    # Still register it so we can check availability later
+                
+                # Register based on type
+                if isinstance(service_instance, AsyncBaseAnalyzer):
+                    self.async_services[service_name] = service_instance
+                    logger.info(f"Registered async service: {service_name}")
+                else:
+                    self.services[service_name] = service_instance
+                    logger.info(f"Registered service: {service_name}")
+                    
+            except ImportError as e:
+                logger.error(f"Failed to import {service_name}: {e}")
+                self.failed_services[service_name] = f"Import error: {str(e)}"
+            except AttributeError as e:
+                logger.error(f"Class {class_name} not found in {module_name}: {e}")
+                self.failed_services[service_name] = f"Class not found: {str(e)}"
+            except Exception as e:
+                logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
+                self.failed_services[service_name] = f"Initialization error: {str(e)}"
         
-        if url and text:
-            return ResponseBuilder.error(
-                "Provide either 'url' or 'text', not both",
-                status_code=400,
-                error_code="INVALID_INPUT"
-            )
+        logger.info(f"Service registry initialized: {len(self.services)} sync services, "
+                   f"{len(self.async_services)} async services, {len(self.failed_services)} failed")
+    
+    def get_service(self, service_name: str) -> Optional[BaseAnalyzer]:
+        """Get a service by name"""
+        return self.services.get(service_name) or self.async_services.get(service_name)
+    
+    def get_all_services(self) -> Dict[str, BaseAnalyzer]:
+        """Get all registered services"""
+        all_services = {}
+        all_services.update(self.services)
+        all_services.update(self.async_services)
+        return all_services
+    
+    def get_available_services(self) -> Dict[str, BaseAnalyzer]:
+        """Get only available services"""
+        return {
+            name: service 
+            for name, service in self.get_all_services().items() 
+            if service.is_available
+        }
+    
+    def get_service_status(self) -> Dict[str, Any]:
+        """Get status of all services"""
+        status = {
+            'summary': {
+                'total_configured': len(self.SERVICE_MAPPING),
+                'total_registered': len(self.services) + len(self.async_services),
+                'total_available': len(self.get_available_services()),
+                'total_failed': len(self.failed_services)
+            },
+            'services': {}
+        }
         
-        # Determine content and type
-        if url:
-            content = url
-            content_type = 'url'
+        # Add status for each configured service
+        for service_name in self.SERVICE_MAPPING:
+            service = self.get_service(service_name)
+            if service:
+                status['services'][service_name] = {
+                    'registered': True,
+                    'available': service.is_available,
+                    'type': 'async' if service_name in self.async_services else 'sync',
+                    'info': service.get_service_info()
+                }
+            elif service_name in self.failed_services:
+                status['services'][service_name] = {
+                    'registered': False,
+                    'available': False,
+                    'error': self.failed_services[service_name]
+                }
+            else:
+                status['services'][service_name] = {
+                    'registered': False,
+                    'available': False,
+                    'error': 'Service disabled or not configured'
+                }
+        
+        return status
+    
+    async def analyze_with_service_async(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run analysis with async service"""
+        service = self.async_services.get(service_name)
+        if not service:
+            return {
+                'service': service_name,
+                'error': 'Service not found or not async',
+                'available': False
+            }
+        
+        if not service.is_available:
+            return service.get_default_result()
+        
+        try:
+            return await service.analyze_with_timeout(data)
+        except Exception as e:
+            logger.error(f"Async service {service_name} failed: {e}")
+            return service.get_error_result(str(e))
+    
+    def analyze_with_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run analysis with sync service"""
+        service = self.services.get(service_name)
+        if not service:
+            # Check if it's an async service
+            if service_name in self.async_services:
+                # Run async service in sync context
+                return asyncio.run(self.analyze_with_service_async(service_name, data))
             
-            # Basic URL validation
-            if not url.startswith(('http://', 'https://')):
-                return ResponseBuilder.error(
-                    "Invalid URL format. URL must start with http:// or https://",
-                    status_code=400,
-                    error_code="INVALID_URL"
-                )
-        else:
-            content = text
-            content_type = 'text'
+            return {
+                'service': service_name,
+                'error': 'Service not found',
+                'available': False
+            }
+        
+        if not service.is_available:
+            return service.get_default_result()
+        
+        try:
+            return service.analyze(data)
+        except Exception as e:
+            logger.error(f"Service {service_name} failed: {e}")
+            return service.get_error_result(str(e))
+    
+    def analyze_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Run multiple services in parallel
+        
+        Args:
+            services: List of service names to run
+            data: Data to analyze
             
-            # Basic text validation
-            if len(text.strip()) < 100:
-                return ResponseBuilder.error(
-                    "Text too short. Please provide at least 100 characters",
-                    status_code=400,
-                    error_code="TEXT_TOO_SHORT"
-                )
+        Returns:
+            Dictionary mapping service names to their results
+        """
+        results = {}
+        
+        # Separate sync and async services
+        sync_services = [s for s in services if s in self.services]
+        async_services = [s for s in services if s in self.async_services]
+        
+        # Run sync services in thread pool
+        if sync_services:
+            with ThreadPoolExecutor(max_workers=len(sync_services)) as executor:
+                futures = {
+                    executor.submit(self.analyze_with_service, service, data): service
+                    for service in sync_services
+                }
+                
+                for future in futures:
+                    service_name = futures[future]
+                    try:
+                        results[service_name] = future.result(timeout=30)
+                    except Exception as e:
+                        logger.error(f"Parallel analysis failed for {service_name}: {e}")
+                        service = self.services.get(service_name)
+                        results[service_name] = service.get_error_result(str(e)) if service else {
+                            'error': str(e),
+                            'service': service_name
+                        }
+        
+        # Run async services
+        if async_services:
+            async def run_async_services():
+                tasks = [
+                    self.analyze_with_service_async(service, data)
+                    for service in async_services
+                ]
+                return await asyncio.gather(*tasks, return_exceptions=True)
             
-            if len(text) > 50000:
-                return ResponseBuilder.error(
-                    "Text too long. Maximum 50,000 characters",
-                    status_code=400,
-                    error_code="TEXT_TOO_LONG"
-                )
+            async_results = asyncio.run(run_async_services())
+            
+            for service, result in zip(async_services, async_results):
+                if isinstance(result, Exception):
+                    logger.error(f"Async parallel analysis failed for {service}: {result}")
+                    service_obj = self.async_services.get(service)
+                    results[service] = service_obj.get_error_result(str(result)) if service_obj else {
+                        'error': str(result),
+                        'service': service
+                    }
+                else:
+                    results[service] = result
         
-        # Check pro status
-        is_pro = data.get('is_pro', False)
+        return results
+    
+    def reload_service(self, service_name: str) -> bool:
+        """
+        Reload a specific service
         
-        # Log analysis start
-        logger.info(f"Starting analysis: type={content_type}, pro={is_pro}, "
-                   f"content_length={len(content)}")
-        
-        # Perform analysis
-        start_time = time.time()
-        results = news_analyzer.analyze(content, content_type, is_pro)
-        processing_time = time.time() - start_time
-        
-        # Check if analysis succeeded
-        if not results.get('success'):
-            return ResponseBuilder.error(
-                results.get('error', 'Analysis failed'),
-                status_code=400,
-                error_code="ANALYSIS_FAILED",
-                details=results.get('errors')
-            )
-        
-        # Build response
-        article_data = results.get('article', {})
-        services_used = list(results.get('pipeline_metadata', {}).get('services_succeeded', []))
-        
-        return AnalysisResponseBuilder.build_analysis_response(
-            analysis_results=results,
-            article_data=article_data,
-            processing_time=processing_time,
-            services_used=services_used
-        )
-        
-    except Exception as e:
-        logger.error(f"Analysis endpoint error: {str(e)}", exc_info=True)
-        return ResponseBuilder.error(
-            "An unexpected error occurred",
-            status_code=500,
-            error_code="INTERNAL_ERROR"
-        )
+        Args:
+            service_name: Name of service to reload
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Remove existing service
+            if service_name in self.services:
+                del self.services[service_name]
+            if service_name in self.async_services:
+                del self.async_services[service_name]
+            if service_name in self.failed_services:
+                del self.failed_services[service_name]
+            
+            # Re-initialize the service
+            if service_name in self.SERVICE_MAPPING:
+                module_name, class_name = self.SERVICE_MAPPING[service_name]
+                
+                # Reload module
+                module = importlib.import_module(module_name)
+                importlib.reload(module)
+                
+                # Re-instantiate
+                service_class = getattr(module, class_name)
+                service_instance = service_class()
+                
+                if isinstance(service_instance, AsyncBaseAnalyzer):
+                    self.async_services[service_name] = service_instance
+                else:
+                    self.services[service_name] = service_instance
+                
+                logger.info(f"Successfully reloaded service: {service_name}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to reload service {service_name}: {e}")
+            self.failed_services[service_name] = f"Reload failed: {str(e)}"
+            
+        return False
 
 
-@app.route('/api/services')
-def services():
-    """Get service status"""
-    return ResponseBuilder.success(service_registry.get_service_status())
-
-
-@app.errorhandler(404)
-def not_found(e):
-    """Handle 404 errors"""
-    return ResponseBuilder.error(
-        "Endpoint not found",
-        status_code=404,
-        error_code="NOT_FOUND"
-    )
-
-
-@app.errorhandler(429)
-def rate_limit_exceeded(e):
-    """Handle rate limit errors"""
-    return ResponseBuilder.error(
-        "Rate limit exceeded. Please try again later.",
-        status_code=429,
-        error_code="RATE_LIMIT_EXCEEDED"
-    )
-
-
-@app.errorhandler(500)
-def internal_error(e):
-    """Handle internal errors"""
-    logger.error(f"Internal error: {str(e)}", exc_info=True)
-    return ResponseBuilder.error(
-        "Internal server error",
-        status_code=500,
-        error_code="INTERNAL_ERROR"
-    )
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    logger.info(f"Starting Flask app on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
+# Global service registry instance - with error handling
+try:
+    service_registry = ServiceRegistry()
+    logger.info("Global service registry created successfully")
+except Exception as e:
+    logger.error(f"Failed to create global service registry: {e}", exc_info=True)
+    # Create a dummy registry that will fail gracefully
+    class DummyRegistry:
+        def get_service(self, name):
+            return None
+        def get_service_status(self):
+            return {
+                'summary': {
+                    'total_configured': 0,
+                    'total_registered': 0,
+                    'total_available': 0,
+                    'total_failed': 0
+                },
+                'services': {}
+            }
+        def analyze_with_service(self, name, data):
+            return {'error': 'Service registry not initialized', 'service': name}
+    
+    service_registry = DummyRegistry()
