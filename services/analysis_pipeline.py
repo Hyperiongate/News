@@ -61,6 +61,11 @@ class PipelineContext:
         successful = sum(1 for r in self.results.values() 
                         if r and not r.get('error'))
         return successful >= min_required
+    
+    def get_successful_services(self) -> List[str]:
+        """Get list of services that succeeded"""
+        return [name for name, result in self.results.items()
+                if result and not result.get('error')]
 
 
 class AnalysisPipeline:
@@ -101,6 +106,26 @@ class AnalysisPipeline:
         self.stages = stages or self.DEFAULT_STAGES
         self.config = Config.PIPELINE
         
+    def _calculate_dynamic_min_required(self) -> int:
+        """
+        Calculate minimum required services dynamically based on what's available
+        """
+        # Get service availability
+        service_status = service_registry.get_service_status()
+        total_available = service_status['summary']['total_available']
+        
+        # Dynamic calculation:
+        # - If only article extractor is available (1 service), require 1
+        # - If 2-3 services available, require 2 (extraction + 1 analysis)
+        # - If 4+ services available, require 3 minimum
+        if total_available <= 1:
+            return 1
+        elif total_available <= 3:
+            return 2
+        else:
+            # Use configured value or default to 3
+            return min(self.config.get('min_required_services', 3), total_available)
+    
     async def run_async(self, 
                        content: str, 
                        content_type: str = 'url',
@@ -128,6 +153,14 @@ class AnalysisPipeline:
         # Track metadata
         context.metadata['pipeline_start'] = time.time()
         context.metadata['stages_planned'] = [stage.name for stage in self.stages]
+        
+        # Calculate dynamic minimum required services
+        min_required = self._calculate_dynamic_min_required()
+        context.metadata['min_required_services'] = min_required
+        context.metadata['total_available_services'] = service_registry.get_service_status()['summary']['total_available']
+        
+        logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
+                   f"requiring minimum {min_required} successful results")
         
         # Run stages
         completed_stages = set()
@@ -160,8 +193,8 @@ class AnalysisPipeline:
                 if stage.required:
                     break
         
-        # Finalize results
-        return self._finalize_results(context)
+        # Finalize results with dynamic minimum
+        return self._finalize_results(context, min_required)
     
     def run(self, 
             content: str, 
@@ -190,6 +223,14 @@ class AnalysisPipeline:
         # Track metadata
         context.metadata['pipeline_start'] = time.time()
         context.metadata['stages_planned'] = [stage.name for stage in self.stages]
+        
+        # Calculate dynamic minimum required services
+        min_required = self._calculate_dynamic_min_required()
+        context.metadata['min_required_services'] = min_required
+        context.metadata['total_available_services'] = service_registry.get_service_status()['summary']['total_available']
+        
+        logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
+                   f"requiring minimum {min_required} successful results")
         
         # Run stages
         completed_stages = set()
@@ -222,8 +263,8 @@ class AnalysisPipeline:
                 if stage.required:
                     break
         
-        # Finalize results
-        return self._finalize_results(context)
+        # Finalize results with dynamic minimum
+        return self._finalize_results(context, min_required)
     
     async def _run_stage_async(self, stage: PipelineStage, context: PipelineContext):
         """Run a pipeline stage asynchronously"""
@@ -242,38 +283,38 @@ class AnalysisPipeline:
                 raise Exception(f"Required stage {stage.name} has no available services")
             return
         
+        logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
+        
         # Prepare data for services
         service_data = self._prepare_service_data(stage, context)
         
-        # Run services asynchronously
-        tasks = []
-        for service_name in available_services:
-            task = asyncio.create_task(
-                self._run_service_async(service_name, service_data)
-            )
-            tasks.append((service_name, task))
-        
-        # Wait for all tasks to complete
-        for service_name, task in tasks:
-            try:
-                result = await task
-                context.add_result(service_name, result)
-            except Exception as e:
-                context.add_error(service_name, str(e), stage.name)
+        # Run services
+        if stage.parallel and len(available_services) > 1:
+            # Run in parallel
+            tasks = []
+            for service_name in available_services:
+                task = service_registry.analyze_with_service_async(service_name, service_data)
+                tasks.append(task)
+            
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for service_name, result in zip(available_services, results):
+                if isinstance(result, Exception):
+                    context.add_error(service_name, str(result), stage.name)
+                else:
+                    context.add_result(service_name, result)
+        else:
+            # Run sequentially
+            for service_name in available_services:
+                try:
+                    result = await service_registry.analyze_with_service_async(service_name, service_data)
+                    context.add_result(service_name, result)
+                except Exception as e:
+                    context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
         context.metadata[f'stage_{stage.name}_duration'] = time.time() - stage_start
         context.metadata[f'stage_{stage.name}_services'] = available_services
-    
-    async def _run_service_async(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run a service asynchronously"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            service_registry.analyze_with_service,
-            service_name,
-            data
-        )
     
     def _run_stage_sync(self, stage: PipelineStage, context: PipelineContext):
         """Run a pipeline stage synchronously"""
@@ -291,6 +332,8 @@ class AnalysisPipeline:
             if stage.required:
                 raise Exception(f"Required stage {stage.name} has no available services")
             return
+        
+        logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
         
         # Prepare data for services
         service_data = self._prepare_service_data(stage, context)
@@ -320,15 +363,8 @@ class AnalysisPipeline:
     def _prepare_service_data(self, stage: PipelineStage, context: PipelineContext) -> Dict[str, Any]:
         """Prepare data for services based on stage"""
         if stage.name == 'extraction':
-            # CRITICAL FIX: Transform the data format for extraction stage
-            # The context has 'content' and 'content_type', but ArticleExtractor expects 'url' or 'text'
-            content = context.input_data.get('content')
-            content_type = context.input_data.get('content_type', 'url')
-            
-            if content_type == 'url':
-                return {'url': content}
-            else:
-                return {'text': content}
+            # Extraction stage uses raw input
+            return context.input_data
         else:
             # Other stages use extraction results plus any previous results
             data = {}
@@ -337,24 +373,7 @@ class AnalysisPipeline:
             if 'article_extractor' in context.results:
                 extraction = context.results['article_extractor']
                 if extraction and not extraction.get('error'):
-                    # Add the extracted data
-                    if 'data' in extraction:
-                        # If extraction result has nested 'data' field
-                        article_data = extraction['data']
-                        data['text'] = article_data.get('text', '')
-                        data['title'] = article_data.get('title', '')
-                        data['author'] = article_data.get('author')
-                        data['publish_date'] = article_data.get('publish_date')
-                        data['url'] = article_data.get('url')
-                        data['domain'] = article_data.get('domain')
-                    else:
-                        # Legacy format compatibility
-                        data['text'] = extraction.get('text', '')
-                        data['title'] = extraction.get('title', '')
-                        data['author'] = extraction.get('author')
-                        data['publish_date'] = extraction.get('publish_date')
-                        data['url'] = extraction.get('url')
-                        data['domain'] = extraction.get('domain')
+                    data.update(extraction)
             
             # Add relevant previous results
             data['previous_results'] = {
@@ -362,7 +381,7 @@ class AnalysisPipeline:
                 if not v.get('error')
             }
             
-            # Add original input data for reference
+            # Add original input data
             data['input'] = context.input_data
             
             return data
@@ -376,20 +395,31 @@ class AnalysisPipeline:
                     return False  # At least one service succeeded
         return True  # All services failed or no results
     
-    def _finalize_results(self, context: PipelineContext) -> Dict[str, Any]:
+    def _finalize_results(self, context: PipelineContext, min_required: int) -> Dict[str, Any]:
         """Finalize pipeline results"""
+        # Get successful services
+        successful_services = context.get_successful_services()
+        
         # Calculate trust score if we have enough results
         trust_score = self._calculate_trust_score(context.results)
         
         # Build final metadata
         context.metadata['pipeline_end'] = time.time()
         context.metadata['total_duration'] = context.metadata['pipeline_end'] - context.metadata['pipeline_start']
-        context.metadata['services_succeeded'] = len([r for r in context.results.values() if not r.get('error')])
+        context.metadata['services_succeeded'] = len(successful_services)
         context.metadata['services_failed'] = len(context.errors)
+        context.metadata['successful_services'] = successful_services
+        
+        # Check if pipeline succeeded based on dynamic minimum
+        pipeline_success = context.has_minimum_results(min_required)
+        
+        # Log the decision
+        logger.info(f"Pipeline completed: {len(successful_services)} services succeeded "
+                   f"(required: {min_required}), success: {pipeline_success}")
         
         # Structure final results
         final_results = {
-            'success': context.has_minimum_results(self.config.get('min_required_services', 3)),
+            'success': pipeline_success,
             'trust_score': trust_score,
             'trust_level': self._get_trust_level(trust_score),
             'pipeline_metadata': context.metadata,
@@ -413,61 +443,67 @@ class AnalysisPipeline:
                 elif service_name == 'transparency_analyzer':
                     final_results['transparency'] = result
                 elif service_name == 'manipulation_detector':
-                    final_results['manipulation_detection'] = result
+                    final_results['manipulation_analysis'] = result
                 elif service_name == 'content_analyzer':
                     final_results['content_analysis'] = result
+                else:
+                    # Add any other service results
+                    final_results[service_name] = result
         
         return final_results
     
     def _calculate_trust_score(self, results: Dict[str, Any]) -> int:
-        """Calculate overall trust score from service results"""
-        scores = []
-        weights = {
-            'source_credibility': 2.0,
-            'author_analyzer': 1.5,
-            'bias_detector': 1.2,
-            'fact_checker': 2.0,
-            'transparency_analyzer': 1.3,
-            'manipulation_detector': 1.5,
-            'content_analyzer': 1.0
+        """
+        Calculate overall trust score from service results
+        Enhanced to handle missing services gracefully
+        """
+        score_components = []
+        weights_used = []
+        
+        # Get weight configuration
+        weights = Config.TRUST_SCORE_WEIGHTS
+        
+        # Process each potential score component
+        service_mapping = {
+            'source_credibility': ('source_credibility', lambda r: r.get('credibility_score', 50)),
+            'author_analyzer': ('author_credibility', lambda r: r.get('author_score', 50)),
+            'bias_detector': ('bias_impact', lambda r: 100 - r.get('bias_score', 50)),
+            'transparency_analyzer': ('transparency', lambda r: r.get('transparency_score', 50)),
+            'fact_checker': ('fact_checking', lambda r: r.get('verification_score', 50)),
+            'manipulation_detector': ('manipulation', lambda r: 100 - r.get('manipulation_score', 50))
         }
         
-        for service_name, result in results.items():
-            if result and not result.get('error'):
-                # Extract score from result
-                score = None
-                if 'trust_score' in result:
-                    score = result['trust_score']
-                elif 'credibility_score' in result:
-                    score = result['credibility_score']
-                elif 'score' in result:
-                    score = result['score']
-                elif 'rating' in result:
-                    # Convert rating to percentage
-                    rating = result['rating']
-                    if isinstance(rating, (int, float)):
-                        score = rating * 20 if rating <= 5 else rating
-                
-                if score is not None:
-                    weight = weights.get(service_name, 1.0)
-                    scores.append((score, weight))
+        for service_name, (weight_key, score_extractor) in service_mapping.items():
+            if service_name in results and not results[service_name].get('error'):
+                try:
+                    score = score_extractor(results[service_name])
+                    weight = weights.get(weight_key, 0)
+                    if weight > 0:
+                        score_components.append(score * weight)
+                        weights_used.append(weight)
+                except Exception as e:
+                    logger.warning(f"Failed to extract score from {service_name}: {e}")
         
-        if not scores:
-            return 50  # Default neutral score
+        # Calculate weighted average only for available services
+        if score_components and weights_used:
+            total_weight = sum(weights_used)
+            if total_weight > 0:
+                # Normalize weights to sum to 1.0 for available services
+                normalized_score = sum(score_components) / total_weight
+                return int(round(normalized_score))
         
-        # Calculate weighted average
-        total_weight = sum(weight for _, weight in scores)
-        weighted_sum = sum(score * weight for score, weight in scores)
-        
-        return int(weighted_sum / total_weight)
+        # Default score if no services provided scores
+        return 50
     
     def _get_trust_level(self, score: int) -> str:
-        """Get trust level from score"""
+        """Convert numeric trust score to trust level"""
         if score >= 80:
-            return 'high'
-        elif score >= 60:
-            return 'medium'
-        elif score >= 40:
-            return 'low'
+            return 'Very High'
+        elif score >= 70:
+            return 'High'
+        elif score >= 50:
+            return 'Medium'
+        elif score >= 30:
+            return 'Low'
         else:
-            return 'very_low'
+            return 'Very Low'
