@@ -1,11 +1,19 @@
 """
-services/manipulation_detector.py - Manipulation detection service
+FILE: services/manipulation_detector.py 
+PURPOSE: Manipulation detection service
 FIXED: More nuanced scoring that doesn't easily hit 100%
+REFACTORED: Now inherits from BaseAnalyzer for new architecture
 """
-import re
-from typing import Dict, List, Any
 
-class ManipulationDetector:
+import re
+import logging
+from typing import Dict, List, Any
+from services.base_analyzer import BaseAnalyzer
+
+logger = logging.getLogger(__name__)
+
+
+class LegacyManipulationDetector:
     """Detect manipulation tactics in articles"""
     
     def __init__(self):
@@ -216,3 +224,117 @@ class ManipulationDetector:
             return 'Low'
         else:
             return 'Minimal'
+
+
+# ============= NEW REFACTORED CLASS =============
+
+class ManipulationDetector(BaseAnalyzer):
+    """Manipulation detection service that inherits from BaseAnalyzer"""
+    
+    def __init__(self):
+        super().__init__('manipulation_detector')
+        try:
+            self._legacy = LegacyManipulationDetector()
+            logger.info("Legacy ManipulationDetector initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize legacy ManipulationDetector: {e}")
+            self._legacy = None
+    
+    def _check_availability(self) -> bool:
+        """Check if the service is available"""
+        return self._legacy is not None
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Detect manipulation tactics using the standardized interface
+        
+        Expected input:
+            - text: Article text to analyze
+            - title: (optional) Article title for additional context
+            
+        Returns:
+            Standardized response with manipulation analysis
+        """
+        # Validate input
+        if not self.is_available:
+            return self.get_default_result()
+        
+        text = data.get('text')
+        if not text:
+            return self.get_error_result("Missing required field: 'text'")
+        
+        # Get optional title
+        title = data.get('title', '')
+        
+        return self._analyze_manipulation(text, title)
+    
+    def _analyze_manipulation(self, text: str, title: str = '') -> Dict[str, Any]:
+        """Analyze manipulation tactics"""
+        try:
+            # Use legacy method
+            result = self._legacy.analyze_persuasion(text, title)
+            
+            # Transform to standardized format
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'persuasion_score': result.get('persuasion_score', 0),
+                    'manipulation_level': result.get('manipulation_level', 'Unknown'),
+                    'tactics_found': result.get('tactics_found', []),
+                    'tactic_count': result.get('tactic_count', 0),
+                    'analysis_details': {
+                        'word_count': result.get('word_count', 0),
+                        'has_title': bool(title),
+                        'most_severe_tactic': self._get_most_severe_tactic(result.get('tactics_found', []))
+                    },
+                    'summary': self._generate_summary(result)
+                },
+                'metadata': {
+                    'analyzed_with_title': bool(title),
+                    'text_length': len(text)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Manipulation analysis failed: {e}")
+            return self.get_error_result(str(e))
+    
+    def _get_most_severe_tactic(self, tactics: list) -> Dict[str, Any]:
+        """Get the most severe manipulation tactic found"""
+        if not tactics:
+            return {'name': 'None', 'severity': 'none'}
+        
+        # Sort by severity (high > medium > low)
+        severity_order = {'high': 0, 'medium': 1, 'low': 2}
+        sorted_tactics = sorted(tactics, key=lambda x: severity_order.get(x.get('severity', 'low'), 3))
+        
+        if sorted_tactics:
+            return {
+                'name': sorted_tactics[0].get('name', 'Unknown'),
+                'severity': sorted_tactics[0].get('severity', 'unknown'),
+                'type': sorted_tactics[0].get('type', 'unknown')
+            }
+        
+        return {'name': 'None', 'severity': 'none'}
+    
+    def _generate_summary(self, result: Dict[str, Any]) -> str:
+        """Generate a summary of manipulation findings"""
+        score = result.get('persuasion_score', 0)
+        level = result.get('manipulation_level', 'Unknown')
+        tactics = result.get('tactics_found', [])
+        
+        if score < 20:
+            return f"Minimal manipulation detected (score: {score}%). Article uses straightforward language."
+        elif score < 40:
+            tactic_names = [t.get('name', 'Unknown') for t in tactics[:2]]
+            return f"Low manipulation level (score: {score}%). Found: {', '.join(tactic_names)}."
+        elif score < 70:
+            tactic_names = [t.get('name', 'Unknown') for t in tactics[:3]]
+            return f"Moderate manipulation (score: {score}%). Multiple tactics: {', '.join(tactic_names)}."
+        else:
+            return f"High manipulation level (score: {score}%). {len(tactics)} manipulation tactics detected. Reader caution advised."
+    
+    def analyze_persuasion(self, text: str, title: str = '') -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'text': text, 'title': title})
