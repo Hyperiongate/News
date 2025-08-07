@@ -926,6 +926,10 @@ class ArticleExtractor(BaseAnalyzer):
         """
         Extract article content using the standardized interface
         
+        CRITICAL: This method returns data in the format that other services expect,
+        NOT wrapped in service/success fields. The pipeline expects extracted data
+        directly at the top level.
+        
         Expected input:
             - url: URL to extract article from
             OR
@@ -935,7 +939,7 @@ class ArticleExtractor(BaseAnalyzer):
             - content_type: 'url' or 'text' (for backward compatibility)
             
         Returns:
-            Flattened response that other services can use directly
+            Direct article data (not wrapped) OR error result with proper format
         """
         # Handle different input formats for compatibility
         url = data.get('url')
@@ -956,7 +960,12 @@ class ArticleExtractor(BaseAnalyzer):
         elif text:
             return self._extract_from_text(text)
         else:
-            return self.get_error_result("Missing required field: 'url' or 'text'")
+            # Return error in the format expected by BaseAnalyzer
+            return {
+                'service': self.service_name,
+                'success': False,
+                'error': "Missing required field: 'url' or 'text'"
+            }
     
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL"""
@@ -968,10 +977,10 @@ class ArticleExtractor(BaseAnalyzer):
                 # Fallback to basic extraction
                 result = self._basic_url_extraction(url)
             
-            # Return flattened format that other services expect
+            # CRITICAL: Check if extraction succeeded
             if result.get('success'):
                 # Return the extracted data directly (not wrapped)
-                # Don't include service-specific fields that other services don't need
+                # This is what other services in the pipeline expect
                 return {
                     'title': result.get('title', 'Untitled'),
                     'text': result.get('text', ''),
@@ -987,11 +996,20 @@ class ArticleExtractor(BaseAnalyzer):
                     'extracted_at': result.get('extracted_at')
                 }
             else:
-                return self.get_error_result(result.get('error', 'Extraction failed'))
+                # Return error in BaseAnalyzer format
+                return {
+                    'service': self.service_name,
+                    'success': False,
+                    'error': result.get('error', 'Extraction failed')
+                }
                 
         except Exception as e:
             logger.error(f"Article extraction from URL failed: {e}")
-            return self.get_error_result(str(e))
+            return {
+                'service': self.service_name,
+                'success': False,
+                'error': str(e)
+            }
     
     def _extract_from_text(self, text: str) -> Dict[str, Any]:
         """Extract/analyze raw text"""
@@ -1003,8 +1021,8 @@ class ArticleExtractor(BaseAnalyzer):
                 # Fallback to basic text analysis
                 result = self._basic_text_extraction(text)
             
-            # Return flattened format that other services expect
-            # Don't include service-specific fields that other services don't need
+            # Return the data directly (not wrapped)
+            # This is what other services in the pipeline expect
             return {
                 'title': result.get('title', 'Text Analysis'),
                 'text': result.get('text', text),
@@ -1018,7 +1036,11 @@ class ArticleExtractor(BaseAnalyzer):
             
         except Exception as e:
             logger.error(f"Article extraction from text failed: {e}")
-            return self.get_error_result(str(e))
+            return {
+                'service': self.service_name,
+                'success': False,
+                'error': str(e)
+            }
     
     def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
         """Basic URL extraction fallback"""
