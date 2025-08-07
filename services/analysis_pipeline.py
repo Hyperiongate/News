@@ -1,5 +1,5 @@
 """
-Analysis Pipeline
+Analysis Pipeline with Diagnostic Logging
 Orchestrates the flow of data through analysis services
 """
 import time
@@ -278,14 +278,35 @@ class AnalysisPipeline:
         logger.info(f"Running stage: {stage.name}")
         stage_start = time.time()
         
+        # DIAGNOSTIC: Log what services we're looking for
+        logger.info(f"Stage {stage.name} requires services: {stage.services}")
+        
+        # DIAGNOSTIC: Check each service individually
+        for service_name in stage.services:
+            service = service_registry.get_service(service_name)
+            logger.info(f"Checking service '{service_name}':")
+            logger.info(f"  - Found in registry: {service is not None}")
+            if service:
+                logger.info(f"  - Is available: {service.is_available}")
+                logger.info(f"  - Service info: {service.get_service_info()}")
+            else:
+                logger.info(f"  - Service '{service_name}' NOT FOUND in registry")
+        
         # Get available services for this stage
         available_services = [
             s for s in stage.services 
             if service_registry.get_service(s) and service_registry.get_service(s).is_available
         ]
         
+        logger.info(f"Available services for stage {stage.name}: {available_services}")
+        
         if not available_services:
             logger.warning(f"No available services for stage {stage.name}")
+            
+            # DIAGNOSTIC: Log the service registry status
+            status = service_registry.get_service_status()
+            logger.error(f"Service Registry Status: {status}")
+            
             if stage.required:
                 raise Exception(f"Required stage {stage.name} has no available services")
             return
@@ -293,12 +314,17 @@ class AnalysisPipeline:
         # Prepare data for services
         service_data = self._prepare_service_data(stage, context)
         
+        # DIAGNOSTIC: Log the prepared data
+        logger.info(f"Prepared data for {stage.name}: {service_data}")
+        
         # Run services
         if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
             # Run in parallel using ThreadPoolExecutor
             results = service_registry.analyze_parallel(available_services, service_data)
             for service_name, result in results.items():
+                logger.info(f"Service {service_name} result: success={not result.get('error')}")
                 if result.get('error'):
+                    logger.error(f"Service {service_name} error: {result['error']}")
                     context.add_error(service_name, result['error'], stage.name)
                 else:
                     context.add_result(service_name, result)
@@ -306,9 +332,12 @@ class AnalysisPipeline:
             # Run sequentially
             for service_name in available_services:
                 try:
+                    logger.info(f"Running service {service_name} with data: {service_data}")
                     result = service_registry.analyze_with_service(service_name, service_data)
+                    logger.info(f"Service {service_name} result: {result}")
                     context.add_result(service_name, result)
                 except Exception as e:
+                    logger.error(f"Service {service_name} exception: {e}", exc_info=True)
                     context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
@@ -322,6 +351,8 @@ class AnalysisPipeline:
             # ArticleExtractor expects 'url' or 'text' keys
             content = context.input_data.get('content')
             content_type = context.input_data.get('content_type')
+            
+            logger.info(f"Preparing extraction data: content_type={content_type}, content={content[:100] if content else None}")
             
             if content_type == 'url':
                 return {'url': content}
