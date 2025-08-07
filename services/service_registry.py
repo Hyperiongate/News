@@ -33,7 +33,6 @@ except Exception as e:
 
 # Import services with error handling
 try:
-    from services.service_registry import service_registry
     logger.info("Service registry imported successfully")
     
     # Log the service status
