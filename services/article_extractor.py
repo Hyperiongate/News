@@ -930,15 +930,31 @@ class ArticleExtractor(BaseAnalyzer):
             - url: URL to extract article from
             OR
             - text: Raw text to analyze
+            OR
+            - content: URL or text (for backward compatibility)
+            - content_type: 'url' or 'text' (for backward compatibility)
             
         Returns:
-            Standardized response with article data
+            Flattened response that other services can use directly
         """
+        # Handle different input formats for compatibility
+        url = data.get('url')
+        text = data.get('text')
+        
+        # Support legacy format from pipeline
+        if not url and not text:
+            content = data.get('content')
+            content_type = data.get('content_type', 'url')
+            if content_type == 'url':
+                url = content
+            else:
+                text = content
+        
         # Check what type of extraction is needed
-        if 'url' in data and data['url']:
-            return self._extract_from_url(data['url'])
-        elif 'text' in data and data['text']:
-            return self._extract_from_text(data['text'])
+        if url:
+            return self._extract_from_url(url)
+        elif text:
+            return self._extract_from_text(text)
         else:
             return self.get_error_result("Missing required field: 'url' or 'text'")
     
@@ -952,28 +968,23 @@ class ArticleExtractor(BaseAnalyzer):
                 # Fallback to basic extraction
                 result = self._basic_url_extraction(url)
             
-            # Transform to standardized format
+            # Return flattened format that other services expect
             if result.get('success'):
+                # Return the extracted data directly (not wrapped)
+                # Don't include service-specific fields that other services don't need
                 return {
-                    'service': self.service_name,
-                    'success': True,
-                    'data': {
-                        'title': result.get('title', 'Untitled'),
-                        'text': result.get('text', ''),
-                        'author': result.get('author'),
-                        'publish_date': result.get('publish_date'),
-                        'url': result.get('url', url),
-                        'domain': result.get('domain'),
-                        'description': result.get('description'),
-                        'image': result.get('image'),
-                        'keywords': result.get('keywords', []),
-                        'word_count': result.get('word_count', 0),
-                        'extraction_metadata': result.get('extraction_metadata', {})
-                    },
-                    'metadata': {
-                        'extracted_at': result.get('extracted_at'),
-                        'extraction_method': result.get('extraction_metadata', {}).get('extraction_method', 'unknown')
-                    }
+                    'title': result.get('title', 'Untitled'),
+                    'text': result.get('text', ''),
+                    'author': result.get('author'),
+                    'publish_date': result.get('publish_date'),
+                    'url': result.get('url', url),
+                    'domain': result.get('domain'),
+                    'description': result.get('description'),
+                    'image': result.get('image'),
+                    'keywords': result.get('keywords', []),
+                    'word_count': result.get('word_count', 0),
+                    'extraction_metadata': result.get('extraction_metadata', {}),
+                    'extracted_at': result.get('extracted_at')
                 }
             else:
                 return self.get_error_result(result.get('error', 'Extraction failed'))
@@ -992,22 +1003,17 @@ class ArticleExtractor(BaseAnalyzer):
                 # Fallback to basic text analysis
                 result = self._basic_text_extraction(text)
             
-            # Transform to standardized format
+            # Return flattened format that other services expect
+            # Don't include service-specific fields that other services don't need
             return {
-                'service': self.service_name,
-                'success': True,
-                'data': {
-                    'title': result.get('title', 'Text Analysis'),
-                    'text': result.get('text', text),
-                    'author': result.get('author'),
-                    'publish_date': result.get('publish_date'),
-                    'url': None,
-                    'domain': result.get('domain', 'text-input'),
-                    'word_count': result.get('word_count', len(text.split()))
-                },
-                'metadata': {
-                    'source': 'text_input'
-                }
+                'title': result.get('title', 'Text Analysis'),
+                'text': result.get('text', text),
+                'author': result.get('author'),
+                'publish_date': result.get('publish_date'),
+                'url': None,
+                'domain': result.get('domain', 'text-input'),
+                'word_count': result.get('word_count', len(text.split())),
+                'source': 'text_input'
             }
             
         except Exception as e:
