@@ -919,7 +919,14 @@ class ArticleExtractor(BaseAnalyzer):
     """Article extraction service that inherits from BaseAnalyzer"""
     
     def __init__(self):
+        logger.info("=" * 60)
+        logger.info("ArticleExtractor.__init__() STARTING")
+        logger.info("=" * 60)
+        
         super().__init__('article_extractor')
+        
+        logger.info(f"ArticleExtractor after super().__init__: is_available={self.is_available}")
+        
         try:
             self._legacy = LegacyArticleExtractor()
             logger.info("ArticleExtractor initialized successfully with legacy extractor")
@@ -927,6 +934,9 @@ class ArticleExtractor(BaseAnalyzer):
             logger.error(f"Failed to initialize LegacyArticleExtractor: {e}")
             self._legacy = None
             logger.warning("ArticleExtractor will use basic extraction fallback")
+        
+        logger.info(f"ArticleExtractor initialization complete: is_available={self.is_available}")
+        logger.info("=" * 60)
     
     def _check_availability(self) -> bool:
         """Check if the service is available"""
@@ -969,9 +979,14 @@ class ArticleExtractor(BaseAnalyzer):
         Returns:
             Standardized service response with article data in 'data' field
         """
+        logger.info("=" * 60)
+        logger.info("ArticleExtractor.analyze() CALLED")
+        logger.info("=" * 60)
+        
         try:
             # Log the incoming data for debugging
             logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys())}")
+            logger.info(f"Full data received: {data}")
             
             # Handle different input formats for compatibility
             url = data.get('url')
@@ -981,6 +996,7 @@ class ArticleExtractor(BaseAnalyzer):
             if not url and not text:
                 content = data.get('content')
                 content_type = data.get('content_type', 'url')
+                logger.info(f"Using legacy format - content: {content}, content_type: {content_type}")
                 if content_type == 'url':
                     url = content
                 else:
@@ -996,17 +1012,25 @@ class ArticleExtractor(BaseAnalyzer):
             
             # Check what type of extraction is needed
             if url:
-                return self._extract_from_url(url)
+                result = self._extract_from_url(url)
+                logger.info(f"Extraction result: success={result.get('success')}, has_error={bool(result.get('error'))}")
+                return result
             elif text:
-                return self._extract_from_text(text)
+                result = self._extract_from_text(text)
+                logger.info(f"Text extraction result: success={result.get('success')}")
+                return result
             else:
                 error_msg = "Missing required field: 'url' or 'text'"
                 logger.error(error_msg)
-                return self.get_error_result(error_msg)
+                result = self.get_error_result(error_msg)
+                logger.info(f"Returning error result: {result}")
+                return result
                 
         except Exception as e:
             logger.error(f"ArticleExtractor.analyze failed with unexpected error: {e}", exc_info=True)
-            return self.get_error_result(f"Unexpected error: {str(e)}")
+            result = self.get_error_result(f"Unexpected error: {str(e)}")
+            logger.info(f"Returning exception result: {result}")
+            return result
     
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL and return standardized response"""
