@@ -325,7 +325,7 @@
             transform: translateY(-1px);
         }
 
-        /* UPDATED: Enhanced Article Summary Card */
+        /* UPDATED: Enhanced Article Summary */
         .article-summary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
@@ -634,7 +634,7 @@
             color: #991b1b;
         }
 
-        /* NEW: Author Info Section */
+        /* ENHANCED: Author Info Section */
         .author-info-section {
             padding: var(--space-md);
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.02) 100%);
@@ -650,31 +650,56 @@
         }
 
         .author-avatar {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             background: var(--primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.5rem;
+            font-size: 2rem;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .author-details h5 {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             margin-bottom: 0.25rem;
+            color: var(--dark);
         }
 
         .author-details p {
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             color: var(--neutral);
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .author-position {
+            font-size: 0.875rem;
+            color: var(--neutral);
+            margin-top: 0.25rem;
         }
 
         .author-bio {
-            margin: var(--space-sm) 0;
+            margin: var(--space-md) 0;
             line-height: 1.6;
+            color: var(--dark);
+            font-size: 0.95rem;
+            padding: var(--space-md);
+            background: white;
+            border-radius: calc(var(--radius) / 2);
+            border-left: 3px solid var(--primary);
         }
 
         .author-link {
@@ -683,12 +708,43 @@
             gap: var(--space-xs);
             color: var(--primary);
             text-decoration: none;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             margin-top: var(--space-sm);
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         .author-link:hover {
             text-decoration: underline;
+            color: var(--primary-light);
+        }
+
+        .author-outlets {
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .author-outlets h6 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+            color: var(--dark);
+        }
+
+        .outlet-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-xs);
+        }
+
+        .outlet-badge {
+            padding: 0.25rem 0.75rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            color: var(--neutral);
         }
 
         /* NEW: Mini Chart Container */
@@ -714,7 +770,7 @@
         }
 
         .stat-value {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary);
             display: block;
@@ -723,6 +779,8 @@
         .stat-label {
             font-size: 0.75rem;
             color: var(--neutral);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         /* Loading States */
@@ -822,6 +880,17 @@
 
             .stat-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .author-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .author-avatar {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
             }
         }
 
@@ -1336,19 +1405,13 @@
             });
         }
 
-        // UPDATED: Create Author Analysis Card with enhanced details
+        // ENHANCED: Create Author Analysis Card with all available information
         function createAuthorAnalysisCard(authorData) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
             console.log('=== AUTHOR ANALYSIS DATA ===');
             console.log('Raw authorData:', authorData);
-            console.log('Type:', typeof authorData);
-            console.log('Keys:', authorData ? Object.keys(authorData) : 'null');
-            if (authorData && authorData.data) {
-                console.log('authorData.data:', authorData.data);
-                console.log('authorData.data keys:', Object.keys(authorData.data));
-            }
             
             // Extract data - handle both direct data and nested data.data structure
             const data = authorData.data || authorData;
@@ -1363,61 +1426,69 @@
             const content = document.createElement('div');
             content.className = 'card-content';
             
-            // Debug: Log all available fields
-            console.log('=== EXTRACTED AUTHOR FIELDS ===');
-            console.log('author_name:', data.author_name);
-            console.log('name:', data.name);
-            console.log('author:', data.author);
-            console.log('credibility_score:', data.credibility_score);
-            console.log('author_score:', data.author_score);
-            console.log('score:', data.score);
-            console.log('All data keys:', Object.keys(data));
-            
-            // Extract author information with multiple fallbacks
+            // Extract all author information with comprehensive fallbacks
             const authorName = data.author_name || data.name || data.author || 'Unknown Author';
             const authorScore = data.credibility_score || data.author_score || data.score || 50;
             const authorBio = data.bio || data.description || '';
+            const authorPosition = data.position || data.current_position || '';
             const authorWebsite = data.website || data.url || '';
+            const authorPhoto = data.photo || data.image || data.avatar || '';
             const isVerified = data.is_verified || data.verified || false;
-            const articlesCount = data.articles_count || data.article_count || data.total_articles || 'N/A';
-            const yearsExperience = data.years_experience || data.experience_years || 'N/A';
+            const articlesCount = data.articles_count || data.article_count || data.total_articles || 0;
+            const yearsExperience = data.years_experience || data.experience_years || 0;
             const expertiseAreas = data.expertise_areas || data.expertise || [];
-            
-            // Get verification status and publication context if available
-            const verificationStatus = data.verification_status || {};
-            const publicationContext = data.publication_context || {};
+            const outlets = data.outlets || [];
+            const awards = data.awards || [];
+            const socialMedia = data.social_media || data.twitter || '';
             
             // Check for author_info nested structure
-            if (data.author_info) {
-                console.log('Found author_info:', data.author_info);
-                const info = data.author_info;
-                // Override with nested data if available
-                if (info.bio) authorBio = info.bio;
-                if (info.verified !== undefined) isVerified = info.verified;
-                if (info.experience_years) yearsExperience = info.experience_years;
-                if (info.expertise_areas && info.expertise_areas.length) expertiseAreas = info.expertise_areas;
-            }
+            const authorInfo = data.author_info || {};
+            if (authorInfo.bio) authorBio = authorInfo.bio;
+            if (authorInfo.position) authorPosition = authorInfo.position;
+            if (authorInfo.verified !== undefined) isVerified = authorInfo.verified;
+            if (authorInfo.experience_years) yearsExperience = authorInfo.experience_years;
+            if (authorInfo.expertise_areas) expertiseAreas = authorInfo.expertise_areas;
+            if (authorInfo.outlets) outlets = authorInfo.outlets;
+            if (authorInfo.awards) awards = authorInfo.awards;
             
             let contentHtml = '<div class="card-content-inner">';
             
-            // Author Info Section with Avatar
+            // Enhanced Author Info Section with Avatar/Photo
             contentHtml += `
                 <div class="author-info-section">
                     <div class="author-header">
                         <div class="author-avatar">
-                            <i class="fas fa-user"></i>
+                            ${authorPhoto ? 
+                                `<img src="${escapeHtml(authorPhoto)}" alt="${escapeHtml(authorName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-user\"></i>';">` : 
+                                '<i class="fas fa-user"></i>'
+                            }
                         </div>
                         <div class="author-details">
                             <h5>${escapeHtml(authorName)}</h5>
-                            <p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : 'Unverified Author'}</p>
+                            <p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>
+                            ${authorPosition ? `<p class="author-position">${escapeHtml(authorPosition)}</p>` : ''}
                         </div>
                     </div>
                     ${authorBio ? `<div class="author-bio">${escapeHtml(authorBio)}</div>` : ''}
                     ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
-                </div>
-            `;
+                    ${socialMedia && socialMedia.includes('@') ? `<a href="https://twitter.com/${socialMedia.replace('@', '')}" target="_blank" class="author-link"><i class="fab fa-twitter"></i> ${escapeHtml(socialMedia)}</a>` : ''}
+                `;
             
-            // Visual credibility meter
+            // Add outlets if available
+            if (outlets.length > 0) {
+                contentHtml += `
+                    <div class="author-outlets">
+                        <h6>Published In:</h6>
+                        <div class="outlet-list">
+                            ${outlets.map(outlet => `<span class="outlet-badge">${escapeHtml(outlet)}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            contentHtml += '</div>';
+            
+            // Enhanced credibility metrics
             contentHtml += `
                 <div class="visual-element">
                     <div class="stat-grid">
@@ -1426,33 +1497,24 @@
                             <span class="stat-label">Credibility Score</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-value">${articlesCount}</span>
+                            <span class="stat-value">${articlesCount || 'N/A'}</span>
                             <span class="stat-label">Articles Published</span>
                         </div>
-                    </div>
-                `;
-            
-            // Add experience and expertise if available
-            if (yearsExperience !== 'N/A' || expertiseAreas.length > 0) {
-                contentHtml += `
-                    <div class="stat-grid" style="margin-top: var(--space-sm);">
-                        ${yearsExperience !== 'N/A' ? `
+                        ${yearsExperience ? `
                             <div class="stat-item">
-                                <span class="stat-value">${yearsExperience}</span>
+                                <span class="stat-value">${yearsExperience}+</span>
                                 <span class="stat-label">Years Experience</span>
                             </div>
                         ` : ''}
-                        ${expertiseAreas.length > 0 ? `
+                        ${awards.length > 0 ? `
                             <div class="stat-item">
-                                <span class="stat-value">${expertiseAreas.length}</span>
-                                <span class="stat-label">Expertise Areas</span>
+                                <span class="stat-value">${awards.length}</span>
+                                <span class="stat-label">Awards Won</span>
                             </div>
                         ` : ''}
                     </div>
-                `;
-            }
-            
-            contentHtml += `</div>`;
+                </div>
+            `;
             
             // Expertise areas if available
             if (expertiseAreas.length > 0) {
@@ -1462,6 +1524,18 @@
                         <div style="margin-top: 0.5rem;">
                             ${expertiseAreas.map(area => `<span class="score-badge medium" style="margin: 0.25rem;">${escapeHtml(area)}</span>`).join('')}
                         </div>
+                    </div>
+                `;
+            }
+            
+            // Awards if available
+            if (awards.length > 0) {
+                contentHtml += `
+                    <div class="visual-element">
+                        <strong>Awards & Recognition:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                            ${awards.map(award => `<li>${escapeHtml(award)}</li>`).join('')}
+                        </ul>
                     </div>
                 `;
             }
@@ -1495,7 +1569,7 @@
                             What We Found
                         </div>
                         <div class="section-content">
-                            ${generateAuthorFindings(data, authorScore, isVerified, articlesCount, yearsExperience)}
+                            ${generateAuthorFindings(data, authorScore, isVerified, articlesCount, yearsExperience, authorPosition, outlets)}
                         </div>
                     </div>
                     
@@ -1520,28 +1594,50 @@
             return card;
         }
         
-        // New helper function to generate author findings
-        function generateAuthorFindings(data, score, isVerified, articlesCount, yearsExperience) {
+        // Enhanced helper function to generate author findings
+        function generateAuthorFindings(data, score, isVerified, articlesCount, yearsExperience, position, outlets) {
             let findings = [];
             
-            // Add credibility score finding
-            findings.push(`Author credibility score: ${score}/100`);
-            
-            // Add verification status
-            if (isVerified) {
-                findings.push('This is a verified journalist with established credentials.');
+            // Add credibility score finding with context
+            if (score >= 80) {
+                findings.push(`Author has an excellent credibility score of ${score}/100.`);
+            } else if (score >= 60) {
+                findings.push(`Author has a good credibility score of ${score}/100.`);
+            } else if (score >= 40) {
+                findings.push(`Author has a moderate credibility score of ${score}/100.`);
             } else {
-                findings.push('We could not verify this author\'s journalist credentials.');
+                findings.push(`Author has a low credibility score of ${score}/100.`);
+            }
+            
+            // Add verification status with detail
+            if (isVerified) {
+                findings.push('This is a verified journalist with established credentials in professional journalism.');
+            } else {
+                findings.push('We could not verify this author\'s professional journalist credentials through established databases.');
+            }
+            
+            // Add position if available
+            if (position) {
+                findings.push(`Currently holds the position: ${position}.`);
             }
             
             // Add article count if available
-            if (articlesCount !== 'N/A') {
-                findings.push(`Found ${articlesCount} articles by this author.`);
+            if (articlesCount && articlesCount !== 'N/A') {
+                findings.push(`Has published ${articlesCount} articles that we could verify.`);
             }
             
             // Add experience if available
-            if (yearsExperience !== 'N/A') {
-                findings.push(`${yearsExperience} years of journalism experience.`);
+            if (yearsExperience && yearsExperience !== 'N/A') {
+                findings.push(`Brings ${yearsExperience}+ years of journalism experience.`);
+            }
+            
+            // Add outlet information
+            if (outlets && outlets.length > 0) {
+                if (outlets.length === 1) {
+                    findings.push(`Published work appears in ${outlets[0]}.`);
+                } else {
+                    findings.push(`Published work appears in ${outlets.length} outlets including ${outlets.slice(0, 2).join(' and ')}.`);
+                }
             }
             
             // Add any custom findings from the data
@@ -1879,7 +1975,7 @@
             
             const header = createCardHeader(
                 'Fact Checking Results',
-                'fa-fact-check',
+                'fa-check-double',
                 'Verification of claims and statements'
             );
             header.onclick = () => toggleCard(card);
@@ -2141,34 +2237,14 @@
         // Generate meaning text for author analysis
         function generateAuthorMeaning(score, isVerified) {
             if (score >= 80 && isVerified) {
-                return "This author has strong credentials and a proven track record. Their work is generally reliable and well-researched.";
+                return "This author has strong credentials and a proven track record. Their work is generally reliable and well-researched. The high credibility score combined with verified status indicates a professional journalist who adheres to industry standards.";
             } else if (score >= 60) {
-                return "This author has moderate credibility. While they have some established work, additional verification of claims may be beneficial.";
+                return "This author has moderate credibility. While they have some established work, additional verification of claims may be beneficial. Consider cross-referencing important facts with other reliable sources.";
             } else if (score >= 40) {
-                return "Limited information is available about this author. Exercise caution and verify important claims through additional sources.";
+                return "Limited information is available about this author. Exercise caution and verify important claims through additional sources. The lack of verifiable credentials doesn't necessarily mean the content is unreliable, but extra scrutiny is warranted.";
             } else {
-                return "This author has low credibility or insufficient verification. Be especially careful to verify claims through independent sources.";
+                return "This author has low credibility or insufficient verification. Be especially careful to verify claims through independent sources. Consider seeking out reporting from more established journalists on this topic.";
             }
-        }
-
-        // Generate findings for bias analysis
-        function generateBiasFindings(biasScore, politicalLean) {
-            const direction = biasScore > 50 ? 'right' : biasScore < 50 ? 'left' : 'center';
-            const strength = Math.abs(50 - biasScore);
-            
-            let finding = `The article shows a ${direction}-leaning bias `;
-            
-            if (strength < 10) {
-                finding += "that is minimal and within normal journalistic variation.";
-            } else if (strength < 25) {
-                finding += "with moderate partisan language and framing.";
-            } else if (strength < 40) {
-                finding += "with significant partisan indicators throughout the text.";
-            } else {
-                finding += "with strong partisan language and one-sided presentation.";
-            }
-            
-            return finding;
         }
 
         // Generate meaning for bias analysis
