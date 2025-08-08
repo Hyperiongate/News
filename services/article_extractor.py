@@ -146,6 +146,7 @@ class ContentExtractor:
                 content = strategy_func(soup)
                 if content and self._validate_content(content):
                     metadata['extraction_method'] = strategy_name
+                    logger.info(f"Content extracted successfully using {strategy_name}")
                     return content, metadata
             except Exception as e:
                 logger.debug(f"Strategy {strategy_name} failed: {e}")
@@ -155,7 +156,9 @@ class ContentExtractor:
         if self._detect_paywall(soup):
             metadata['issues'].append('paywall_detected')
             metadata['paywall'] = True
+            logger.warning("Paywall detected")
         
+        logger.warning("All content extraction strategies failed")
         return None, metadata
     
     def _extract_by_article_tag(self, soup: BeautifulSoup) -> Optional[str]:
@@ -414,6 +417,7 @@ class LegacyArticleExtractor:
     def extract_from_url(self, url: str) -> Dict[str, Any]:
         """Main extraction method that tries multiple approaches"""
         start_time = time.time()
+        logger.info(f"Starting extraction for URL: {url}")
         
         # Parse domain for circuit breaker
         domain = urlparse(url).netloc
@@ -464,7 +468,11 @@ class LegacyArticleExtractor:
                             'attempts': methods.index((method_name, method_func)) + 1
                         }
                         self.circuit_breaker.record_success(domain)
+                        logger.info(f"Successfully extracted content using {method_name}")
                         return result
+                    else:
+                        logger.warning(f"{method_name} failed: {result.get('error', 'Unknown error')}")
+                        last_error = result.get('error', f"{method_name} failed")
                     
                 except FutureTimeoutError:
                     logger.warning(f"{method_name} timed out for {url}")
@@ -472,7 +480,7 @@ class LegacyArticleExtractor:
                     continue
                     
             except Exception as e:
-                logger.error(f"{method_name} failed for {url}: {str(e)}")
+                logger.error(f"{method_name} failed for {url}: {str(e)}", exc_info=True)
                 last_error = str(e)
                 continue
             
@@ -483,6 +491,7 @@ class LegacyArticleExtractor:
         # Record failure
         self.circuit_breaker.record_failure(domain, last_error)
         
+        logger.error(f"All extraction methods failed for {url}. Last error: {last_error}")
         return {
             'success': False,
             'error': f'All extraction methods failed. Last error: {last_error}',
@@ -721,6 +730,7 @@ class LegacyArticleExtractor:
             content, extraction_metadata = self.content_extractor.extract_content(soup)
             
             if not content:
+                logger.warning(f"Could not extract article content from {url}")
                 return {
                     'success': False,
                     'error': 'Could not extract article content',
@@ -730,6 +740,8 @@ class LegacyArticleExtractor:
             # Clean and validate content
             content = self._clean_content(content)
             word_count = len(content.split())
+            
+            logger.info(f"Successfully parsed content from {url}: {word_count} words")
             
             return {
                 'success': True,
@@ -748,7 +760,7 @@ class LegacyArticleExtractor:
             }
             
         except Exception as e:
-            logger.error(f"Content parsing failed: {e}")
+            logger.error(f"Content parsing failed: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Content parsing error: {str(e)}'
@@ -936,41 +948,67 @@ class ArticleExtractor(BaseAnalyzer):
         Returns:
             Standardized service response with article data in 'data' field
         """
-        # Handle different input formats for compatibility
-        url = data.get('url')
-        text = data.get('text')
-        
-        # Support legacy format from pipeline
-        if not url and not text:
-            content = data.get('content')
-            content_type = data.get('content_type', 'url')
-            if content_type == 'url':
-                url = content
+        try:
+            # Log the incoming data for debugging
+            logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys())}")
+            
+            # Handle different input formats for compatibility
+            url = data.get('url')
+            text = data.get('text')
+            
+            # Support legacy format from pipeline
+            if not url and not text:
+                content = data.get('content')
+                content_type = data.get('content_type', 'url')
+                if content_type == 'url':
+                    url = content
+                else:
+                    text = content
+            
+            # Log what we're extracting
+            if url:
+                logger.info(f"Extracting from URL: {url}")
+            elif text:
+                logger.info(f"Extracting from text input: {len(text)} characters")
             else:
-                text = content
-        
-        # Check what type of extraction is needed
-        if url:
-            return self._extract_from_url(url)
-        elif text:
-            return self._extract_from_text(text)
-        else:
-            return self.get_error_result("Missing required field: 'url' or 'text'")
+                logger.error("No URL or text provided for extraction")
+            
+            # Check what type of extraction is needed
+            if url:
+                return self._extract_from_url(url)
+            elif text:
+                return self._extract_from_text(text)
+            else:
+                error_msg = "Missing required field: 'url' or 'text'"
+                logger.error(error_msg)
+                return self.get_error_result(error_msg)
+                
+        except Exception as e:
+            logger.error(f"ArticleExtractor.analyze failed with unexpected error: {e}", exc_info=True)
+            return self.get_error_result(f"Unexpected error: {str(e)}")
     
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL and return standardized response"""
         try:
+            logger.info(f"Starting URL extraction for: {url}")
+            
             if self._legacy:
                 # Use legacy method if available
                 result = self._legacy.extract_from_url(url)
             else:
                 # Fallback to basic extraction
+                logger.warning("Using basic extraction fallback (legacy extractor not available)")
                 result = self._basic_url_extraction(url)
+            
+            # Log the extraction result
+            logger.info(f"Extraction result - success: {result.get('success')}, "
+                       f"error: {result.get('error', 'None')}, "
+                       f"word_count: {result.get('word_count', 0)}")
             
             # Check if extraction succeeded
             if result.get('success'):
                 # Return standardized service response with data wrapped
-                return {
+                response = {
                     'service': self.service_name,
                     'success': True,
                     'data': {
@@ -992,9 +1030,13 @@ class ArticleExtractor(BaseAnalyzer):
                         'duration': result.get('extraction_metadata', {}).get('duration', 0)
                     }
                 }
+                logger.info(f"Returning successful extraction response for {url}")
+                return response
             else:
                 # Return error in standard format
-                return self.get_error_result(result.get('error', 'Extraction failed'))
+                error_msg = result.get('error', 'Extraction failed')
+                logger.error(f"Extraction failed for {url}: {error_msg}")
+                return self.get_error_result(error_msg)
                 
         except Exception as e:
             logger.error(f"Article extraction from URL failed: {e}", exc_info=True)
@@ -1003,6 +1045,8 @@ class ArticleExtractor(BaseAnalyzer):
     def _extract_from_text(self, text: str) -> Dict[str, Any]:
         """Extract/analyze raw text and return standardized response"""
         try:
+            logger.info("Starting text extraction")
+            
             if self._legacy:
                 # Use legacy method if available
                 result = self._legacy.extract_from_text(text)
@@ -1011,7 +1055,7 @@ class ArticleExtractor(BaseAnalyzer):
                 result = self._basic_text_extraction(text)
             
             # Return standardized service response with data wrapped
-            return {
+            response = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
@@ -1029,6 +1073,9 @@ class ArticleExtractor(BaseAnalyzer):
                 }
             }
             
+            logger.info("Text extraction completed successfully")
+            return response
+            
         except Exception as e:
             logger.error(f"Article extraction from text failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
@@ -1036,6 +1083,8 @@ class ArticleExtractor(BaseAnalyzer):
     def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
         """Basic URL extraction fallback"""
         try:
+            logger.info(f"Attempting basic URL extraction for {url}")
+            
             # More robust headers for basic extraction
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -1055,6 +1104,7 @@ class ArticleExtractor(BaseAnalyzer):
             response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
             
             if response.status_code == 403:
+                logger.error(f"Got 403 Forbidden for {url}")
                 return {
                     'success': False,
                     'error': '403 Forbidden - Access denied by website'
@@ -1083,19 +1133,23 @@ class ArticleExtractor(BaseAnalyzer):
                 paragraphs = soup.find_all('p')
                 content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs[:20])  # Limit to 20 paragraphs
             
+            word_count = len(content.split()) if content else 0
+            logger.info(f"Basic extraction completed: {word_count} words extracted")
+            
             return {
                 'success': True,
                 'title': title,
                 'text': content or 'Content extraction failed',
                 'url': url,
                 'domain': urlparse(url).netloc,
-                'word_count': len(content.split()) if content else 0,
+                'word_count': word_count,
                 'extraction_metadata': {
                     'method': 'basic_fallback'
                 }
             }
             
         except Exception as e:
+            logger.error(f"Basic extraction failed: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Basic extraction failed: {str(e)}'
