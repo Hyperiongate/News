@@ -922,15 +922,15 @@ class ArticleExtractor(BaseAnalyzer):
         super().__init__('article_extractor')
         try:
             self._legacy = LegacyArticleExtractor()
-            self._available = True
-            logger.info("ArticleExtractor initialized successfully")
+            logger.info("ArticleExtractor initialized successfully with legacy extractor")
         except Exception as e:
             logger.error(f"Failed to initialize LegacyArticleExtractor: {e}")
             self._legacy = None
-            self._available = True  # Still mark as available for basic functionality
+            logger.warning("ArticleExtractor will use basic extraction fallback")
     
     def _check_availability(self) -> bool:
         """Check if the service is available"""
+        # Article extraction is always available (has fallback methods)
         return True
     
     def get_error_result(self, error_message: str) -> Dict[str, Any]:
