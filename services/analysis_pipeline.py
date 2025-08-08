@@ -268,9 +268,14 @@ class AnalysisPipeline:
                 self._run_stage_sync(stage, context)
                 completed_stages.add(stage.name)
                 
+                # DEBUG: Log context results after stage
+                logger.info(f"DEBUG: After stage {stage.name}, context.results = {list(context.results.keys())}")
+                
                 # Check if we should continue after required stage failure
                 if stage.required and self._stage_failed(stage, context):
                     logger.error(f"Required stage {stage.name} failed, stopping pipeline")
+                    # DEBUG: Log why it failed
+                    logger.error(f"DEBUG: Stage {stage.name} failed check - results in context: {context.results}")
                     break
                     
             except Exception as e:
@@ -359,14 +364,29 @@ class AnalysisPipeline:
             # Run in parallel using ThreadPoolExecutor
             results = service_registry.analyze_parallel(available_services, service_data)
             for service_name, result in results.items():
+                # DEBUG LOGGING
+                logger.info(f"DEBUG: Service {service_name} returned result")
+                logger.info(f"DEBUG: Result keys: {list(result.keys()) if result else 'None'}")
+                logger.info(f"DEBUG: Success field: {result.get('success') if result else 'N/A'}")
+                logger.info(f"DEBUG: Error field: {result.get('error') if result else 'None'}")
+                if result and 'success' not in result:
+                    logger.error(f"ERROR: Service {service_name} result missing 'success' field!")
                 context.add_result(service_name, result)
         else:
             # Run sequentially
             for service_name in available_services:
                 try:
                     result = service_registry.analyze_with_service(service_name, service_data)
+                    # DEBUG LOGGING
+                    logger.info(f"DEBUG: Service {service_name} returned result")
+                    logger.info(f"DEBUG: Result keys: {list(result.keys()) if result else 'None'}")
+                    logger.info(f"DEBUG: Success field: {result.get('success') if result else 'N/A'}")
+                    logger.info(f"DEBUG: Error field: {result.get('error') if result else 'None'}")
+                    if result and 'success' not in result:
+                        logger.error(f"ERROR: Service {service_name} result missing 'success' field!")
                     context.add_result(service_name, result)
                 except Exception as e:
+                    logger.error(f"ERROR: Service {service_name} threw exception: {e}", exc_info=True)
                     context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
@@ -417,13 +437,25 @@ class AnalysisPipeline:
     
     def _stage_failed(self, stage: PipelineStage, context: PipelineContext) -> bool:
         """Check if a stage failed"""
+        # DEBUG LOGGING
+        logger.info(f"DEBUG: Checking if stage {stage.name} failed")
+        logger.info(f"DEBUG: Stage services: {stage.services}")
+        logger.info(f"DEBUG: Context results keys: {list(context.results.keys())}")
+        
         # FIXED: Check success field instead of error field
         for service in stage.services:
             if service in context.results:
                 result = context.results[service]
+                logger.info(f"DEBUG: Checking service {service} - result exists: {result is not None}")
+                if result:
+                    logger.info(f"DEBUG: Service {service} - success field: {result.get('success', 'MISSING')}")
+                    logger.info(f"DEBUG: Service {service} - error field: {result.get('error', 'None')}")
                 # A stage succeeds if at least one service succeeded
                 if result and result.get('success', False):
+                    logger.info(f"DEBUG: Stage {stage.name} succeeded because {service} succeeded")
                     return False  # At least one service succeeded
+        
+        logger.info(f"DEBUG: Stage {stage.name} failed - no successful services")
         return True  # All services failed or no results
     
     def _finalize_results(self, context: PipelineContext, min_required: int) -> Dict[str, Any]:
