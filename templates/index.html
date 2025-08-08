@@ -1848,3 +1848,356 @@
                         ${data.interpretation || data.meaning || 'Articles free from manipulation tactics allow readers to form their own opinions based on facts rather than being emotionally or psychologically influenced.'}
                     </div>
                 </div>
+            `;
+            
+            contentHtml += '</div></div>';
+            content.innerHTML = contentHtml;
+            
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        // Create Content Analysis Card
+        function createContentAnalysisCard(contentData) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const data = contentData.data || contentData;
+            
+            const header = createCardHeader(
+                'Content Analysis',
+                'fa-file-alt',
+                'Assessment of article quality and structure'
+            );
+            header.onclick = () => toggleCard(card);
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
+            
+            // All 4 required sections
+            contentHtml += `
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-search"></i>
+                        What This Analysis Covers
+                    </div>
+                    <div class="section-content">
+                        We analyze article structure, writing quality, readability, topic coverage depth, and overall content quality to assess professional journalism standards.
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-microscope"></i>
+                        How We Analyze
+                    </div>
+                    <div class="section-content">
+                        We evaluate readability scores, sentence structure, vocabulary usage, content organization, and compare against professional journalism benchmarks.
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-clipboard-check"></i>
+                        What We Found
+                    </div>
+                    <div class="section-content">
+                        ${data.findings || data.analysis || 'Content analysis complete. The article meets standard quality metrics for professional journalism.'}
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means
+                    </div>
+                    <div class="section-content">
+                        ${data.interpretation || data.meaning || 'Well-structured content with clear writing and appropriate depth indicates professional journalism standards and helps readers better understand complex topics.'}
+                    </div>
+                </div>
+            `;
+            
+            contentHtml += '</div></div>';
+            content.innerHTML = contentHtml;
+            
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        // Helper function to create card header
+        function createCardHeader(title, iconClass, subtitle) {
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            
+            header.innerHTML = `
+                <div class="card-icon">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="card-header-content">
+                    <h3 class="card-title">${title}</h3>
+                    ${subtitle ? `<p class="card-subtitle">${subtitle}</p>` : ''}
+                </div>
+                <i class="fas fa-chevron-down expand-icon"></i>
+            `;
+            
+            return header;
+        }
+
+        // Helper function to toggle card expansion
+        function toggleCard(card) {
+            card.classList.toggle('expanded');
+        }
+
+        // Helper function to create score badge
+        function createScoreBadge(score, level) {
+            const levelClass = level ? level.toLowerCase().replace(/\s+/g, '-') : 
+                              (score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low');
+            return `<span class="score-badge ${levelClass}">${score}/100</span>`;
+        }
+
+        // Generate meaning text for author analysis
+        function generateAuthorMeaning(score, isVerified) {
+            if (score >= 80 && isVerified) {
+                return "This author has strong credentials and a proven track record. Their work is generally reliable and well-researched.";
+            } else if (score >= 60) {
+                return "This author has moderate credibility. While they have some established work, additional verification of claims may be beneficial.";
+            } else if (score >= 40) {
+                return "Limited information is available about this author. Exercise caution and verify important claims through additional sources.";
+            } else {
+                return "This author has low credibility or insufficient verification. Be especially careful to verify claims through independent sources.";
+            }
+        }
+
+        // Generate findings for bias analysis
+        function generateBiasFindings(biasScore, politicalLean) {
+            const direction = biasScore > 50 ? 'right' : biasScore < 50 ? 'left' : 'center';
+            const strength = Math.abs(50 - biasScore);
+            
+            let finding = `The article shows a ${direction}-leaning bias `;
+            
+            if (strength < 10) {
+                finding += "that is minimal and within normal journalistic variation.";
+            } else if (strength < 25) {
+                finding += "with moderate partisan language and framing.";
+            } else if (strength < 40) {
+                finding += "with significant partisan indicators throughout the text.";
+            } else {
+                finding += "with strong partisan language and one-sided presentation.";
+            }
+            
+            return finding;
+        }
+
+        // Generate meaning for bias analysis
+        function generateBiasMeaning(biasScore) {
+            const strength = Math.abs(50 - biasScore);
+            
+            if (strength < 10) {
+                return "This article maintains good political balance. Any slight lean detected is within normal journalistic variation and doesn't significantly impact objectivity.";
+            } else if (strength < 25) {
+                return "Moderate bias detected. While the facts may be accurate, the framing and language choices show a political preference. Consider seeking alternative perspectives.";
+            } else if (strength < 40) {
+                return "Significant bias detected. The article presents information through a partisan lens. Seek out sources from different political perspectives for a complete picture.";
+            } else {
+                return "Strong bias detected. This appears to be opinion or advocacy rather than neutral reporting. Treat as a partisan perspective and verify facts independently.";
+            }
+        }
+
+        // Generate meaning for source credibility
+        function generateSourceMeaning(score, rating) {
+            if (rating === 'Very High' || score >= 80) {
+                return "This is a highly credible source with strong editorial standards, fact-checking processes, and a track record of accuracy. Information is generally reliable.";
+            } else if (rating === 'High' || score >= 60) {
+                return "This source has good credibility with generally reliable reporting. Minor issues may exist, but overall maintains professional standards.";
+            } else if (rating === 'Medium' || score >= 40) {
+                return "This source has mixed credibility. While it may contain accurate information, verify important claims through additional sources.";
+            } else {
+                return "This source has low credibility with a history of inaccuracies, bias, or poor editorial standards. Verify all claims through independent, reliable sources.";
+            }
+        }
+
+        // Generate meaning for fact checks
+        function generateFactCheckMeaning(factChecks) {
+            if (!Array.isArray(factChecks) || factChecks.length === 0) {
+                return "No specific factual claims were identified for verification. This may indicate opinion-based content or general reporting without specific verifiable statements.";
+            }
+            
+            const verified = factChecks.filter(f => f.verified).length;
+            const total = factChecks.length;
+            const percentage = Math.round((verified / total) * 100);
+            
+            if (percentage >= 90) {
+                return `Excellent factual accuracy with ${percentage}% of claims verified. The article demonstrates strong commitment to factual reporting.`;
+            } else if (percentage >= 70) {
+                return `Good factual accuracy with ${percentage}% of claims verified. Most information is accurate, though some claims couldn't be fully verified.`;
+            } else if (percentage >= 50) {
+                return `Mixed factual accuracy with ${percentage}% of claims verified. Several claims are questionable or unverifiable. Cross-reference important information.`;
+            } else {
+                return `Poor factual accuracy with only ${percentage}% of claims verified. Many statements are false or unverifiable. Treat this content with significant skepticism.`;
+            }
+        }
+
+        // Create mini radar chart for source credibility
+        function createMiniRadarChart(canvas, data) {
+            const ctx = canvas.getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Accuracy', 'Transparency', 'Standards', 'Corrections'],
+                    datasets: [{
+                        data: [
+                            data.accuracy || 0,
+                            data.transparency || 0,
+                            data.standards || 0,
+                            data.corrections || 0
+                        ],
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { display: false },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            pointLabels: {
+                                font: { size: 10 },
+                                color: '#64748b'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Progress bar functions
+        function showProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressStage = document.getElementById('progressStage');
+            
+            progressBar.classList.add('active');
+            let currentStageIndex = 0;
+            
+            // Simulate progress through stages
+            const progressInterval = setInterval(() => {
+                if (currentStageIndex < progressStages.length) {
+                    const stage = progressStages[currentStageIndex];
+                    progressFill.style.width = stage.progress + '%';
+                    progressStage.textContent = stage.name;
+                    currentStageIndex++;
+                } else {
+                    clearInterval(progressInterval);
+                }
+            }, 800);
+            
+            // Store interval ID for cleanup
+            progressBar.dataset.intervalId = progressInterval;
+        }
+
+        function hideProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const intervalId = progressBar.dataset.intervalId;
+            
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            
+            setTimeout(() => {
+                progressBar.classList.remove('active');
+                document.getElementById('progressFill').style.width = '0%';
+            }, 500);
+        }
+
+        // Utility functions
+        function isValidUrl(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            } catch (_) {
+                return dateString;
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        // Download PDF function
+        function downloadPDF() {
+            if (!currentAnalysis) {
+                showError('No analysis available to download');
+                return;
+            }
+            
+            // Show message that PDF download is coming soon
+            showError('PDF download feature coming soon! The feature will allow you to save a complete analysis report.');
+            
+            // In a real implementation, this would:
+            // 1. Call a backend API to generate the PDF
+            // 2. Download the generated PDF file
+            // For now, we'll just log the data
+            console.log('PDF Download requested for:', currentAnalysis);
+        }
+
+        // Debug helper
+        window.debugTruthLens = () => {
+            console.log('Current Analysis:', currentAnalysis);
+            console.log('Is Analyzing:', isAnalyzing);
+            return currentAnalysis;
+        };
+    </script>
+</body>
+</html>
