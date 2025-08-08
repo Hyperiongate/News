@@ -232,7 +232,13 @@ class ManipulationDetector(BaseAnalyzer):
     """Manipulation detection service that inherits from BaseAnalyzer"""
     
     def __init__(self):
+        # Initialize _legacy BEFORE calling super().__init__
+        self._legacy = None
+        
+        # Now call parent init
         super().__init__('manipulation_detector')
+        
+        # Try to initialize legacy detector
         try:
             self._legacy = LegacyManipulationDetector()
             logger.info("Legacy ManipulationDetector initialized successfully")
