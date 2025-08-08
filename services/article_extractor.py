@@ -985,8 +985,17 @@ class ArticleExtractor(BaseAnalyzer):
         
         try:
             # Log the incoming data for debugging
-            logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys())}")
-            logger.info(f"Full data received: {data}")
+            logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys()) if data else 'None'}")
+            if data:
+                # Log content and content_type specifically if they exist
+                if 'content' in data:
+                    logger.info(f"  content: {data['content'][:100] if isinstance(data['content'], str) else data['content']}")
+                if 'content_type' in data:
+                    logger.info(f"  content_type: {data['content_type']}")
+                if 'url' in data:
+                    logger.info(f"  url: {data['url']}")
+                if 'text' in data:
+                    logger.info(f"  text: {data['text'][:100] if data['text'] else 'None'}...")
             
             # Handle different input formats for compatibility
             url = data.get('url')
@@ -1013,24 +1022,58 @@ class ArticleExtractor(BaseAnalyzer):
             # Check what type of extraction is needed
             if url:
                 result = self._extract_from_url(url)
-                logger.info(f"Extraction result: success={result.get('success')}, has_error={bool(result.get('error'))}")
+                logger.info(f"URL extraction completed - success={result.get('success')}, has_error={bool(result.get('error'))}")
+                
+                # CRITICAL FIX: Ensure we NEVER have both 'success': True and 'error' field
+                if result.get('success') and 'error' in result:
+                    logger.warning("Removing 'error' field from successful result")
+                    del result['error']
+                
+                # CRITICAL FIX: Ensure 'success' field is always present
+                if 'success' not in result:
+                    result['success'] = not bool(result.get('error'))
+                    
                 return result
+                
             elif text:
                 result = self._extract_from_text(text)
-                logger.info(f"Text extraction result: success={result.get('success')}")
+                logger.info(f"Text extraction completed - success={result.get('success')}")
+                
+                # CRITICAL FIX: Ensure we NEVER have both 'success': True and 'error' field
+                if result.get('success') and 'error' in result:
+                    logger.warning("Removing 'error' field from successful result")
+                    del result['error']
+                    
+                # CRITICAL FIX: Ensure 'success' field is always present
+                if 'success' not in result:
+                    result['success'] = not bool(result.get('error'))
+                    
                 return result
+                
             else:
                 error_msg = "Missing required field: 'url' or 'text'"
                 logger.error(error_msg)
-                result = self.get_error_result(error_msg)
-                logger.info(f"Returning error result: {result}")
-                return result
+                # Return properly formatted error with NO ambiguity
+                return {
+                    'service': self.service_name,
+                    'success': False,
+                    'available': self.is_available,
+                    'error': error_msg,
+                    'timestamp': time.time()
+                }
                 
         except Exception as e:
+            # CRITICAL: This is the most important part - if ANYTHING goes wrong,
+            # we must return a proper error response with 'success': False
             logger.error(f"ArticleExtractor.analyze failed with unexpected error: {e}", exc_info=True)
-            result = self.get_error_result(f"Unexpected error: {str(e)}")
-            logger.info(f"Returning exception result: {result}")
-            return result
+            # Return properly formatted error with NO ambiguity
+            return {
+                'service': self.service_name,
+                'success': False,
+                'available': self.is_available,
+                'error': f"Unexpected error during extraction: {str(e)}",
+                'timestamp': time.time()
+            }
     
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL and return standardized response"""
