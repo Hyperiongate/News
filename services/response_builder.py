@@ -143,9 +143,12 @@ class ResponseBuilder:
     def _build_metadata(custom_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Build metadata for response"""
         metadata = {
-            'response_time_ms': ResponseBuilder._get_response_time(),
-            'api_version': Config.API_VERSION
+            'response_time_ms': ResponseBuilder._get_response_time()
         }
+        
+        # Add API version if it exists
+        if hasattr(Config, 'API_VERSION'):
+            metadata['api_version'] = Config.API_VERSION
         
         if custom_metadata:
             metadata.update(custom_metadata)
