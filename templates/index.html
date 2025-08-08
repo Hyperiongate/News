@@ -263,23 +263,30 @@
             to { opacity: 1; }
         }
 
-        /* Trust Score Section */
+        /* Compact Trust Score Section */
         .trust-score-section {
             background: white;
             border-radius: var(--radius);
-            padding: var(--space-xl);
+            padding: var(--space-md);
             box-shadow: var(--shadow);
             margin-bottom: var(--space-lg);
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
         }
 
         .trust-gauge-container {
-            max-width: 300px;
-            margin: 0 auto var(--space-lg);
+            width: 120px;
+            height: 120px;
+            flex-shrink: 0;
+        }
+
+        .trust-score-details {
+            flex: 1;
         }
 
         .trust-level {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: var(--space-xs);
         }
@@ -288,7 +295,33 @@
         .trust-level.medium { color: var(--warning); }
         .trust-level.low { color: var(--danger); }
 
-        /* Article Summary Card */
+        .trust-summary {
+            color: var(--neutral);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .pdf-download-btn {
+            padding: var(--space-xs) var(--space-md);
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            font-size: 0.875rem;
+        }
+
+        .pdf-download-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+
+        /* Enhanced Article Summary Card */
         .article-summary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
@@ -305,19 +338,39 @@
         }
 
         .article-meta {
-            display: flex;
-            gap: var(--space-lg);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
             opacity: 0.9;
-            flex-wrap: wrap;
         }
 
         .article-meta span {
             display: flex;
             align-items: center;
             gap: var(--space-xs);
+            font-size: 0.9rem;
         }
 
-        /* Analysis Summary */
+        .article-about {
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .article-about h4 {
+            font-size: 1rem;
+            margin-bottom: var(--space-xs);
+            opacity: 0.9;
+        }
+
+        .article-about p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            opacity: 0.85;
+        }
+
+        /* Enhanced Analysis Summary */
         .analysis-summary {
             background: white;
             border-radius: var(--radius);
@@ -326,14 +379,21 @@
             margin-bottom: var(--space-lg);
         }
 
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+
         .summary-title {
             font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: var(--space-md);
         }
 
         .key-findings {
             list-style: none;
+            margin-bottom: var(--space-md);
         }
 
         .key-findings li {
@@ -352,6 +412,26 @@
             margin-top: 0.125rem;
         }
 
+        .score-explanation {
+            padding: var(--space-md);
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: var(--radius);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            margin-top: var(--space-md);
+        }
+
+        .score-explanation h4 {
+            font-size: 1rem;
+            margin-bottom: var(--space-xs);
+            color: var(--primary);
+        }
+
+        .score-explanation p {
+            font-size: 0.9rem;
+            color: var(--neutral);
+            line-height: 1.6;
+        }
+
         /* Analysis Cards Grid */
         .analysis-grid {
             display: grid;
@@ -360,16 +440,16 @@
             margin-bottom: var(--space-xl);
         }
 
-        /* Analysis Card */
+        /* Enhanced Analysis Card with Expand/Collapse */
         .analysis-card {
             background: white;
             border-radius: var(--radius);
-            padding: var(--space-lg);
             box-shadow: var(--shadow);
             transition: all 0.3s ease;
             opacity: 0;
             transform: translateY(20px);
             animation: cardSlideIn 0.5s ease forwards;
+            overflow: hidden;
         }
 
         .analysis-card:hover {
@@ -388,27 +468,68 @@
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            margin-bottom: var(--space-md);
+            padding: var(--space-md);
+            background: var(--light);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: #e5e7eb;
         }
 
         .card-icon {
             width: 40px;
             height: 40px;
-            background: var(--light);
+            background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .card-title-section {
+            flex: 1;
         }
 
         .card-title {
             font-size: 1.125rem;
             font-weight: 600;
+            margin-bottom: 0.125rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: var(--neutral);
+        }
+
+        .expand-icon {
+            color: var(--neutral);
+            transition: transform 0.3s ease;
+        }
+
+        .analysis-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Card Content - Properly Visible */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 var(--space-md);
+        }
+
+        .analysis-card.expanded .card-content {
+            max-height: 1000px;
+            padding: var(--space-md);
         }
 
         .card-sections {
-            margin-top: var(--space-md);
+            margin-top: var(--space-sm);
         }
 
         .card-section {
@@ -515,49 +636,6 @@
             margin-bottom: var(--space-sm);
         }
 
-        /* Premium Overlay */
-        .premium-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(4px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius);
-            display: none;
-        }
-
-        .premium-icon {
-            font-size: 3rem;
-            color: var(--accent);
-            margin-bottom: var(--space-sm);
-        }
-
-        .premium-text {
-            font-weight: 600;
-            margin-bottom: var(--space-sm);
-        }
-
-        .premium-btn {
-            padding: var(--space-xs) var(--space-md);
-            background: var(--accent);
-            color: var(--dark);
-            border: none;
-            border-radius: var(--radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .premium-btn:hover {
-            transform: scale(1.05);
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
             .container {
@@ -573,9 +651,13 @@
                 justify-content: center;
             }
 
-            .article-meta {
+            .trust-score-section {
                 flex-direction: column;
-                gap: var(--space-xs);
+                text-align: center;
+            }
+
+            .article-meta {
+                grid-template-columns: 1fr;
             }
 
             .analysis-grid {
@@ -638,19 +720,25 @@
 
         <!-- Results Section -->
         <section id="resultsSection" class="results-section">
-            <!-- Trust Score -->
+            <!-- Compact Trust Score with Download Button -->
             <div class="trust-score-section">
                 <div class="trust-gauge-container">
                     <canvas id="trustGauge"></canvas>
                 </div>
-                <div id="trustLevel" class="trust-level"></div>
-                <p id="trustSummary"></p>
+                <div class="trust-score-details">
+                    <div id="trustLevel" class="trust-level"></div>
+                    <p id="trustSummary" class="trust-summary"></p>
+                </div>
+                <button id="downloadPdfBtn" class="pdf-download-btn" onclick="downloadPDF()">
+                    <i class="fas fa-file-pdf"></i>
+                    Download Report
+                </button>
             </div>
 
-            <!-- Article Summary -->
+            <!-- Enhanced Article Summary -->
             <div id="articleSummary" class="article-summary"></div>
 
-            <!-- Analysis Summary -->
+            <!-- Enhanced Analysis Summary -->
             <div id="analysisSummary" class="analysis-summary"></div>
 
             <!-- Analysis Cards Grid -->
@@ -720,20 +808,16 @@
                     body: JSON.stringify({ url })
                 });
                 
-                // CRITICAL FIX: Properly handle error responses
                 if (!response.ok) {
                     let errorMessage = `Analysis failed (${response.status})`;
                     try {
                         const errorData = await response.json();
-                        // FIXED: Handle error object properly
                         if (errorData.error) {
-                            // Check if error is an object with a message property
                             if (typeof errorData.error === 'object' && errorData.error.message) {
                                 errorMessage = errorData.error.message;
                             } else if (typeof errorData.error === 'string') {
                                 errorMessage = errorData.error;
                             } else {
-                                // Convert object to string if needed
                                 errorMessage = JSON.stringify(errorData.error);
                             }
                         }
@@ -753,7 +837,6 @@
                     currentAnalysis = data.data;
                     displayResults(currentAnalysis);
                 } else if (data.success === false) {
-                    // Handle explicit failure response
                     let errorMsg = 'Analysis failed';
                     if (data.error) {
                         if (typeof data.error === 'object' && data.error.message) {
@@ -769,7 +852,6 @@
                 
             } catch (error) {
                 console.error('Analysis error:', error);
-                // FIXED: Ensure error message is always a string
                 const errorMessage = error.message || error.toString() || 'Failed to analyze article. Please try again.';
                 showError(errorMessage);
                 hideResults();
@@ -791,11 +873,11 @@
             // Display trust score and gauge
             displayTrustScore(data.analysis);
             
-            // Display article summary
-            displayArticleSummary(data.article);
+            // Display enhanced article summary
+            displayArticleSummary(data.article, data.analysis);
             
-            // Display analysis summary
-            displayAnalysisSummary(data.analysis);
+            // Display enhanced analysis summary
+            displayAnalysisSummary(data.analysis, data.article);
             
             // Display detailed analysis cards
             displayAnalysisCards(data.detailed_analysis);
@@ -804,7 +886,7 @@
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Display trust score with animated gauge
+        // Display compact trust score with animated gauge
         function displayTrustScore(analysis) {
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
@@ -814,7 +896,7 @@
             trustLevelEl.textContent = `${level} Credibility`;
             trustLevelEl.className = `trust-level ${level.toLowerCase()}`;
             
-            document.getElementById('trustSummary').textContent = analysis.summary || '';
+            document.getElementById('trustSummary').textContent = analysis.summary || 'Analysis complete. Review the detailed findings below.';
             
             // Create or update gauge chart
             const ctx = document.getElementById('trustGauge').getContext('2d');
@@ -859,15 +941,15 @@
                         const centerX = chart.width / 2;
                         const centerY = chart.height / 2;
                         
-                        ctx.font = 'bold 48px Inter';
+                        ctx.font = 'bold 32px Inter';
                         ctx.fillStyle = color;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText(score, centerX, centerY - 10);
+                        ctx.fillText(score, centerX, centerY - 5);
                         
-                        ctx.font = '16px Inter';
+                        ctx.font = '12px Inter';
                         ctx.fillStyle = '#64748b';
-                        ctx.fillText('out of 100', centerX, centerY + 25);
+                        ctx.fillText('out of 100', centerX, centerY + 15);
                         
                         ctx.restore();
                     }
@@ -875,152 +957,232 @@
             });
         }
 
-        // Display article summary
-        function displayArticleSummary(article) {
+        // Display enhanced article summary
+        function displayArticleSummary(article, analysis) {
             if (!article) return;
             
             const summaryEl = document.getElementById('articleSummary');
             summaryEl.innerHTML = `
                 <h2 class="article-title">${escapeHtml(article.title || 'Untitled Article')}</h2>
                 <div class="article-meta">
-                    ${article.author ? `<span><i class="fas fa-user"></i> ${escapeHtml(article.author)}</span>` : ''}
-                    ${article.source ? `<span><i class="fas fa-newspaper"></i> ${escapeHtml(article.source)}</span>` : ''}
-                    ${article.publish_date ? `<span><i class="fas fa-calendar"></i> ${formatDate(article.publish_date)}</span>` : ''}
+                    ${article.author ? `<span><i class="fas fa-user"></i> ${escapeHtml(article.author)}</span>` : '<span><i class="fas fa-user"></i> Unknown Author</span>'}
+                    ${article.domain ? `<span><i class="fas fa-newspaper"></i> ${escapeHtml(article.domain)}</span>` : ''}
+                    ${article.publish_date ? `<span><i class="fas fa-calendar"></i> ${formatDate(article.publish_date)}</span>` : '<span><i class="fas fa-calendar"></i> No date available</span>'}
+                    ${article.word_count ? `<span><i class="fas fa-file-word"></i> ${article.word_count} words</span>` : ''}
+                </div>
+                ${article.excerpt ? `
+                    <div class="article-about">
+                        <h4>What It's About</h4>
+                        <p>${escapeHtml(article.excerpt)}</p>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        // Display enhanced analysis summary with score explanation
+        function displayAnalysisSummary(analysis, article) {
+            if (!analysis) return;
+            
+            const summaryEl = document.getElementById('analysisSummary');
+            
+            // Extract key findings
+            let findingsHtml = '';
+            
+            // Check if key_findings exists and has data
+            if (analysis.key_findings) {
+                let findings = [];
+                
+                // Handle different formats of key_findings
+                if (Array.isArray(analysis.key_findings)) {
+                    findings = analysis.key_findings;
+                } else if (typeof analysis.key_findings === 'object') {
+                    // Convert object values to array
+                    findings = Object.values(analysis.key_findings).map(f => {
+                        if (typeof f === 'string') return { finding: f };
+                        return f;
+                    });
+                }
+                
+                if (findings.length > 0) {
+                    findingsHtml = `
+                        <ul class="key-findings">
+                            ${findings.map(finding => {
+                                const text = typeof finding === 'string' ? finding : (finding.finding || finding.title || '');
+                                const impact = finding.impact || 'medium';
+                                const icon = impact === 'high' ? 'fa-exclamation-circle' : 'fa-check-circle';
+                                return `
+                                    <li>
+                                        <i class="fas ${icon}"></i>
+                                        <span>${escapeHtml(text)}</span>
+                                    </li>
+                                `;
+                            }).join('')}
+                        </ul>
+                    `;
+                }
+            }
+            
+            // Generate conversational score explanation
+            const scoreExplanation = generateScoreExplanation(analysis.trust_score, analysis);
+            
+            summaryEl.innerHTML = `
+                <div class="summary-header">
+                    <h3 class="summary-title">Analysis Summary</h3>
+                </div>
+                ${findingsHtml || '<p class="text-muted">Processing key findings...</p>'}
+                <div class="score-explanation">
+                    <h4>How We Calculated Your Score</h4>
+                    <p>${scoreExplanation}</p>
                 </div>
             `;
         }
 
-        // Display analysis summary
-        function displayAnalysisSummary(analysis) {
-            if (!analysis || !analysis.key_findings) return;
+        // Generate conversational score explanation
+        function generateScoreExplanation(score, analysis) {
+            let explanation = `We analyzed multiple factors to arrive at a credibility score of ${score}/100. `;
             
-            const summaryEl = document.getElementById('analysisSummary');
-            
-            // Handle different formats of key_findings
-            let findings = [];
-            if (Array.isArray(analysis.key_findings)) {
-                // If it's already an array of strings
-                findings = analysis.key_findings.filter(f => typeof f === 'string');
-            } else if (typeof analysis.key_findings === 'object') {
-                // If it's an object, extract string values
-                findings = Object.values(analysis.key_findings)
-                    .filter(f => typeof f === 'string' || (typeof f === 'object' && f.finding))
-                    .map(f => typeof f === 'string' ? f : f.finding);
+            if (score >= 70) {
+                explanation += "This article demonstrates strong credibility through verified sources, balanced reporting, and factual accuracy. ";
+            } else if (score >= 40) {
+                explanation += "This article shows moderate credibility with some concerns that warrant careful reading. ";
+            } else {
+                explanation += "This article raises significant credibility concerns that require critical evaluation. ";
             }
             
-            if (findings.length > 0) {
-                summaryEl.innerHTML = `
-                    <h3 class="summary-title">Key Findings</h3>
-                    <ul class="key-findings">
-                        ${findings.map(finding => `
-                            <li>
-                                <i class="fas fa-check-circle"></i>
-                                <span>${escapeHtml(finding)}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                `;
+            // Add specific factors
+            const factors = [];
+            if (analysis.trust_level) factors.push(`overall trust level is ${analysis.trust_level.toLowerCase()}`);
+            
+            if (factors.length > 0) {
+                explanation += `Key factors include: ${factors.join(', ')}.`;
             }
+            
+            return explanation;
         }
 
-        // Display analysis cards
+        // Display analysis cards with expand/collapse functionality
         function displayAnalysisCards(detailedAnalysis) {
             if (!detailedAnalysis) return;
             
             const gridEl = document.getElementById('analysisGrid');
             gridEl.innerHTML = '';
             
+            const cards = [];
+            
             // Priority 1 Cards
             if (detailedAnalysis.author_analysis) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Author Analysis',
                     'fa-user-check',
                     detailedAnalysis.author_analysis,
-                    'author'
+                    'author',
+                    'Verification of author credentials and expertise'
                 ));
             }
             
             if (detailedAnalysis.bias_analysis) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Political Bias',
                     'fa-balance-scale',
                     detailedAnalysis.bias_analysis,
-                    'bias'
+                    'bias',
+                    'Detection of political leaning and partisan language'
                 ));
             }
             
             // Priority 2 Cards
             if (detailedAnalysis.source_credibility) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Source Credibility',
                     'fa-shield-alt',
                     detailedAnalysis.source_credibility,
-                    'source'
+                    'source',
+                    'Evaluation of publication trustworthiness'
                 ));
             }
             
             if (detailedAnalysis.transparency_analysis) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Transparency',
                     'fa-eye',
                     detailedAnalysis.transparency_analysis,
-                    'transparency'
+                    'transparency',
+                    'Assessment of disclosure and sourcing practices'
                 ));
             }
             
             if (detailedAnalysis.fact_checks) {
-                gridEl.appendChild(createFactCheckCard(detailedAnalysis.fact_checks));
+                cards.push(createFactCheckCard(detailedAnalysis.fact_checks));
             }
             
             if (detailedAnalysis.manipulation_analysis) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Manipulation Detection',
                     'fa-mask',
                     detailedAnalysis.manipulation_analysis,
-                    'manipulation'
+                    'manipulation',
+                    'Identification of persuasion tactics'
                 ));
             }
             
             if (detailedAnalysis.content_analysis) {
-                gridEl.appendChild(createAnalysisCard(
+                cards.push(createAnalysisCard(
                     'Content Quality',
                     'fa-file-alt',
                     detailedAnalysis.content_analysis,
-                    'content'
+                    'content',
+                    'Analysis of writing quality and structure'
                 ));
             }
             
-            // Animate cards in
-            const cards = gridEl.querySelectorAll('.analysis-card');
+            // Add cards to grid
             cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.1}s`;
+                gridEl.appendChild(card);
+                // Auto-expand first 3 cards
+                if (index < 3) {
+                    setTimeout(() => {
+                        card.classList.add('expanded');
+                    }, (index + 1) * 100);
+                }
             });
         }
 
-        // Create analysis card
-        function createAnalysisCard(title, icon, data, type) {
+        // Create expandable analysis card
+        function createAnalysisCard(title, icon, data, type, subtitle) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
+            card.style.animationDelay = `${Math.random() * 0.2}s`;
             
-            let content = `
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas ${icon}"></i>
-                    </div>
-                    <h3 class="card-title">${title}</h3>
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            
+            header.innerHTML = `
+                <div class="card-icon">
+                    <i class="fas ${icon}"></i>
                 </div>
+                <div class="card-title-section">
+                    <h3 class="card-title">${title}</h3>
+                    ${subtitle ? `<p class="card-subtitle">${subtitle}</p>` : ''}
+                </div>
+                <i class="fas fa-chevron-down expand-icon"></i>
             `;
+            
+            // Create content
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            let contentHtml = '<div class="card-sections">';
             
             // Add visual elements based on type
             if (type === 'bias' && data.bias_score !== undefined) {
-                content += createBiasMeter(data.bias_score);
+                contentHtml += createBiasMeter(data.bias_score);
             }
-            
-            content += '<div class="card-sections">';
             
             // What We Did
             if (data.methodology || data.what_we_did) {
-                content += `
+                contentHtml += `
                     <div class="card-section">
                         <div class="section-label">What We Did</div>
                         <div class="section-content">${escapeHtml(data.methodology || data.what_we_did)}</div>
@@ -1030,7 +1192,7 @@
             
             // What We Found
             if (data.findings || data.what_we_found || data.score !== undefined) {
-                content += `
+                contentHtml += `
                     <div class="card-section">
                         <div class="section-label">What We Found</div>
                         <div class="section-content">
@@ -1043,7 +1205,7 @@
             
             // What It Means
             if (data.interpretation || data.what_it_means) {
-                content += `
+                contentHtml += `
                     <div class="card-section">
                         <div class="section-label">What It Means</div>
                         <div class="section-content">${escapeHtml(data.interpretation || data.what_it_means)}</div>
@@ -1051,8 +1213,33 @@
                 `;
             }
             
-            content += '</div>';
-            card.innerHTML = content;
+            // Add raw data display for debugging
+            if (Object.keys(data).length > 0) {
+                const displayData = Object.entries(data)
+                    .filter(([key, value]) => !['methodology', 'what_we_did', 'findings', 'what_we_found', 'interpretation', 'what_it_means', 'score', 'level'].includes(key))
+                    .filter(([key, value]) => value !== null && value !== undefined);
+                    
+                if (displayData.length > 0) {
+                    contentHtml += `
+                        <div class="card-section">
+                            <div class="section-label">Additional Details</div>
+                            <div class="section-content">
+                                ${displayData.map(([key, value]) => {
+                                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                                    return `<div><strong>${label}:</strong> ${escapeHtml(String(displayValue))}</div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            contentHtml += '</div>';
+            content.innerHTML = contentHtml;
+            
+            card.appendChild(header);
+            card.appendChild(content);
             
             return card;
         }
@@ -1061,23 +1248,34 @@
         function createFactCheckCard(factChecks) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
+            card.style.animationDelay = `${Math.random() * 0.2}s`;
             
-            let content = `
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="fas fa-fact-check"></i>
-                    </div>
-                    <h3 class="card-title">Fact Checking Results</h3>
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            
+            header.innerHTML = `
+                <div class="card-icon">
+                    <i class="fas fa-fact-check"></i>
                 </div>
-                <div class="card-sections">
+                <div class="card-title-section">
+                    <h3 class="card-title">Fact Checking Results</h3>
+                    <p class="card-subtitle">Verification of claims and statements</p>
+                </div>
+                <i class="fas fa-chevron-down expand-icon"></i>
             `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            let contentHtml = '<div class="card-sections">';
             
             if (Array.isArray(factChecks) && factChecks.length > 0) {
                 factChecks.forEach(check => {
                     const statusIcon = check.verified ? 'fa-check-circle' : 'fa-times-circle';
                     const statusColor = check.verified ? 'success' : 'danger';
                     
-                    content += `
+                    contentHtml += `
                         <div class="card-section">
                             <div class="section-label">
                                 <i class="fas ${statusIcon}" style="color: var(--${statusColor})"></i>
@@ -1091,17 +1289,25 @@
                     `;
                 });
             } else {
-                content += `
+                contentHtml += `
                     <div class="card-section">
                         <div class="section-content">No specific claims were fact-checked.</div>
                     </div>
                 `;
             }
             
-            content += '</div>';
-            card.innerHTML = content;
+            contentHtml += '</div>';
+            content.innerHTML = contentHtml;
+            
+            card.appendChild(header);
+            card.appendChild(content);
             
             return card;
+        }
+
+        // Toggle card expansion
+        function toggleCard(card) {
+            card.classList.toggle('expanded');
         }
 
         // Create bias meter visualization
@@ -1164,6 +1370,55 @@
                 progressBar.classList.remove('active');
                 document.getElementById('progressFill').style.width = '0%';
             }, 500);
+        }
+
+        // PDF Download function
+        async function downloadPDF() {
+            if (!currentAnalysis) {
+                showError('No analysis available to download');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const btn = document.getElementById('downloadPdfBtn');
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                btn.disabled = true;
+                
+                // Make API call to generate PDF
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentAnalysis)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate PDF');
+                }
+                
+                // Download the PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `news-analysis-${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showError('PDF export is coming soon. The analysis data is ready for export.');
+            } finally {
+                // Reset button
+                const btn = document.getElementById('downloadPdfBtn');
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download Report';
+                btn.disabled = false;
+            }
         }
 
         // Utility functions
