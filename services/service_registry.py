@@ -163,27 +163,44 @@ class ServiceRegistry:
             return service.get_error_result(str(e))
     
     def analyze_with_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run analysis with sync service"""
+        """Run analysis with sync service - WITH DEBUG LOGGING"""
+        logger.info(f"=== analyze_with_service called for '{service_name}' ===")
+        logger.info(f"Data keys: {list(data.keys()) if data else 'None'}")
+        
         service = self.services.get(service_name)
+        logger.info(f"Service lookup result: {service}")
+        
         if not service:
+            logger.warning(f"Service '{service_name}' not found in sync services")
             # Check if it's an async service
             if service_name in self.async_services:
+                logger.info(f"Found '{service_name}' in async services, running in sync context")
                 # Run async service in sync context
                 return asyncio.run(self.analyze_with_service_async(service_name, data))
             
+            logger.error(f"Service '{service_name}' not found at all")
             return {
                 'service': service_name,
                 'error': 'Service not found',
                 'available': False
             }
         
+        logger.info(f"Service '{service_name}' found, checking availability...")
+        logger.info(f"Service is_available: {service.is_available}")
+        
         if not service.is_available:
+            logger.warning(f"Service '{service_name}' is not available, returning default result")
             return service.get_default_result()
         
+        logger.info(f"Service '{service_name}' is available, calling analyze method...")
+        
         try:
-            return service.analyze(data)
+            logger.info(f"About to call {service_name}.analyze()")
+            result = service.analyze(data)
+            logger.info(f"Service '{service_name}' returned result: success={result.get('success')}, has_error={bool(result.get('error'))}")
+            return result
         except Exception as e:
-            logger.error(f"Service {service_name} failed: {e}")
+            logger.error(f"Service {service_name} failed: {e}", exc_info=True)
             return service.get_error_result(str(e))
     
     def analyze_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -214,13 +231,13 @@ class ServiceRegistry:
                 for future in futures:
                     service_name = futures[future]
                     try:
-                        results[service_name] = future.result(timeout=30)
+                        results[service_name] = future.result()
                     except Exception as e:
-                        logger.error(f"Parallel analysis failed for {service_name}: {e}")
-                        service = self.services.get(service_name)
-                        results[service_name] = service.get_error_result(str(e)) if service else {
+                        logger.error(f"Service {service_name} failed in parallel execution: {e}")
+                        results[service_name] = {
+                            'service': service_name,
                             'error': str(e),
-                            'service': service_name
+                            'available': False
                         }
         
         # Run async services
@@ -234,16 +251,15 @@ class ServiceRegistry:
             
             async_results = asyncio.run(run_async_services())
             
-            for service, result in zip(async_services, async_results):
+            for service_name, result in zip(async_services, async_results):
                 if isinstance(result, Exception):
-                    logger.error(f"Async parallel analysis failed for {service}: {result}")
-                    service_obj = self.async_services.get(service)
-                    results[service] = service_obj.get_error_result(str(result)) if service_obj else {
+                    results[service_name] = {
+                        'service': service_name,
                         'error': str(result),
-                        'service': service
+                        'available': False
                     }
                 else:
-                    results[service] = result
+                    results[service_name] = result
         
         return results
     
@@ -252,13 +268,13 @@ class ServiceRegistry:
         Reload a specific service
         
         Args:
-            service_name: Name of service to reload
+            service_name: Name of the service to reload
             
         Returns:
-            True if successful, False otherwise
+            True if reload successful, False otherwise
         """
         try:
-            # Remove existing service
+            # Remove from current registries
             if service_name in self.services:
                 del self.services[service_name]
             if service_name in self.async_services:
