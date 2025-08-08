@@ -1,384 +1,140 @@
+# services/article_extractor.py
 """
-Article Extraction Service (Complete Fixed Version)
-Multi-method article extraction with correct response format
+Enhanced Article Extraction Service
+Extracts article content from URLs or raw text with support for live news pages
 """
-import logging
-import time
-import random
+
 import re
-from typing import Dict, Any, Optional, Tuple, List
-from datetime import datetime
-from urllib.parse import urlparse, urljoin
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-import threading
+import time
+import logging
 import requests
 from bs4 import BeautifulSoup
+from typing import Dict, List, Optional, Tuple, Any
+from urllib.parse import urlparse, urljoin
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import random
 
 from services.base_analyzer import BaseAnalyzer
 
-# Optional imports with availability checks
+# Optional imports
 try:
     from fake_useragent import UserAgent
-    USER_AGENT_AVAILABLE = True
+    FAKE_UA_AVAILABLE = True
 except ImportError:
-    USER_AGENT_AVAILABLE = False
-    logging.warning("fake_useragent not available, using static user agents")
+    FAKE_UA_AVAILABLE = False
 
 try:
     import cloudscraper
     CLOUDSCRAPER_AVAILABLE = True
 except ImportError:
     CLOUDSCRAPER_AVAILABLE = False
-    logging.info("CloudScraper not available")
 
 try:
     from curl_cffi import requests as curl_requests
     CURL_CFFI_AVAILABLE = True
 except ImportError:
     CURL_CFFI_AVAILABLE = False
-    logging.info("curl-cffi not available")
 
 try:
     from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options as ChromeOptions
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
-    logging.info("Selenium not available")
 
 try:
     from playwright.sync_api import sync_playwright
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
-    logging.info("Playwright not available")
 
 logger = logging.getLogger(__name__)
 
-
 class CircuitBreaker:
-    """Circuit breaker for handling failed domains"""
+    """Simple circuit breaker for domain-specific failures"""
     
-    def __init__(self, failure_threshold=3, timeout_duration=300):
+    def __init__(self, failure_threshold=3, timeout=300):
         self.failure_threshold = failure_threshold
-        self.timeout_duration = timeout_duration
-        self.failed_domains = {}
-        self._lock = threading.Lock()
+        self.timeout = timeout
+        self.failures = {}
+        self.last_failure_time = {}
+        self.blocked_until = {}
+        self.last_error = {}
     
-    def is_blocked(self, domain: str) -> bool:
-        with self._lock:
-            if domain in self.failed_domains:
-                failure_data = self.failed_domains[domain]
-                if failure_data['count'] >= self.failure_threshold:
-                    time_since_failure = (datetime.now() - failure_data['last_attempt']).total_seconds()
-                    if time_since_failure < self.timeout_duration:
-                        return True
-                    else:
-                        self.failed_domains[domain] = {'count': 0, 'last_attempt': None, 'last_error': None}
-            return False
-    
-    def record_failure(self, domain: str, error: str = None):
-        with self._lock:
-            if domain not in self.failed_domains:
-                self.failed_domains[domain] = {'count': 0, 'last_attempt': None, 'last_error': None}
-            self.failed_domains[domain]['count'] += 1
-            self.failed_domains[domain]['last_attempt'] = datetime.now()
-            self.failed_domains[domain]['last_error'] = error
+    def record_failure(self, domain: str, error: str):
+        """Record a failure for a domain"""
+        current_time = time.time()
+        
+        if domain not in self.failures:
+            self.failures[domain] = 0
+            
+        self.failures[domain] += 1
+        self.last_failure_time[domain] = current_time
+        self.last_error[domain] = error
+        
+        if self.failures[domain] >= self.failure_threshold:
+            self.blocked_until[domain] = current_time + self.timeout
+            logger.warning(f"Circuit breaker activated for {domain}, blocked until {self.blocked_until[domain]}")
     
     def record_success(self, domain: str):
-        with self._lock:
-            if domain in self.failed_domains:
-                del self.failed_domains[domain]
+        """Record a success for a domain"""
+        if domain in self.failures:
+            self.failures[domain] = 0
+            if domain in self.blocked_until:
+                del self.blocked_until[domain]
     
-    def get_last_error(self, domain: str) -> Optional[str]:
-        with self._lock:
-            if domain in self.failed_domains:
-                return self.failed_domains[domain].get('last_error')
-        return None
-
-
-class ContentExtractor:
-    """Intelligent content extraction using text density and pattern analysis"""
-    
-    def __init__(self):
-        # Common non-content indicators
-        self.non_content_patterns = [
-            r'sign\s*in', r'log\s*in', r'subscribe', r'newsletter', r'cookie', 
-            r'privacy\s*policy', r'terms\s*of\s*service', r'advertisement',
-            r'please\s*enable\s*javascript', r'your\s*browser', r'supported\s*browser',
-            r'©\s*\d{4}', r'all\s*rights\s*reserved', r'follow\s*us', r'share\s*this'
-        ]
-        
-        # Paywall indicators
-        self.paywall_patterns = [
-            r'subscribe\s*to\s*read', r'continue\s*reading', r'already\s*a\s*subscriber',
-            r'unlimited\s*access', r'free\s*trial', r'paywall', r'premium\s*content',
-            r'members?\s*only', r'exclusive\s*content', r'sign\s*up\s*to\s*read'
-        ]
-        
-        # Minimum thresholds
-        self.min_paragraphs = 2
-        self.min_words_per_paragraph = 10
-        self.min_total_words = 50
-    
-    def extract_content(self, soup: BeautifulSoup) -> Tuple[Optional[str], Dict[str, Any]]:
-        """Extract article content from BeautifulSoup object"""
-        metadata = {
-            'extraction_method': 'unknown',
-            'content_indicators': [],
-            'issues': []
-        }
-        
-        # Try multiple extraction strategies
-        strategies = [
-            ('article_tag', self._extract_by_article_tag),
-            ('schema_org', self._extract_by_schema),
-            ('main_content', self._extract_by_main_content),
-            ('density_analysis', self._extract_by_density),
-            ('paragraph_clustering', self._extract_by_paragraph_clustering)
-        ]
-        
-        for strategy_name, strategy_func in strategies:
-            try:
-                content = strategy_func(soup)
-                if content and self._validate_content(content):
-                    metadata['extraction_method'] = strategy_name
-                    logger.info(f"Content extracted successfully using {strategy_name}")
-                    return content, metadata
-            except Exception as e:
-                logger.debug(f"Strategy {strategy_name} failed: {e}")
-                metadata['issues'].append(f"{strategy_name}: {str(e)}")
-        
-        # Check for paywall
-        if self._detect_paywall(soup):
-            metadata['issues'].append('paywall_detected')
-            metadata['paywall'] = True
-            logger.warning("Paywall detected")
-        
-        logger.warning("All content extraction strategies failed")
-        return None, metadata
-    
-    def _extract_by_article_tag(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract content from article tags"""
-        article = soup.find('article')
-        if article:
-            # Remove non-content elements
-            for element in article.find_all(['script', 'style', 'aside', 'nav']):
-                element.decompose()
-            
-            paragraphs = article.find_all('p')
-            if len(paragraphs) >= self.min_paragraphs:
-                return '\n\n'.join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph)
-        
-        return None
-    
-    def _extract_by_schema(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract content from schema.org structured data"""
-        scripts = soup.find_all('script', type='application/ld+json')
-        for script in scripts:
-            try:
-                import json
-                data = json.loads(script.string)
-                if isinstance(data, dict):
-                    if data.get('@type') in ['NewsArticle', 'Article', 'BlogPosting']:
-                        if 'articleBody' in data:
-                            return data['articleBody']
-                elif isinstance(data, list):
-                    for item in data:
-                        if item.get('@type') in ['NewsArticle', 'Article', 'BlogPosting']:
-                            if 'articleBody' in item:
-                                return item['articleBody']
-            except:
-                continue
-        return None
-    
-    def _extract_by_main_content(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract from common main content containers"""
-        main_selectors = [
-            'main',
-            '[role="main"]',
-            '.main-content',
-            '#main-content',
-            '.article-content',
-            '.post-content',
-            '.entry-content',
-            '.content-body'
-        ]
-        
-        for selector in main_selectors:
-            container = soup.select_one(selector)
-            if container:
-                paragraphs = container.find_all('p')
-                if len(paragraphs) >= self.min_paragraphs:
-                    text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph)
-                    if text:
-                        return text
-        
-        return None
-    
-    def _extract_by_density(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract content based on text density analysis"""
-        # Calculate text density for all div elements
-        densities = []
-        for div in soup.find_all('div'):
-            text = div.get_text(strip=True)
-            if len(text) < 100:
-                continue
-            
-            # Calculate link density
-            links_text = sum(len(a.get_text(strip=True)) for a in div.find_all('a'))
-            link_density = links_text / len(text) if text else 1
-            
-            if link_density < 0.3:  # Low link density indicates content
-                densities.append((len(text), text, div))
-        
-        # Get the longest low-link-density text
-        if densities:
-            densities.sort(reverse=True)
-            return densities[0][1]
-        
-        return None
-    
-    def _extract_by_paragraph_clustering(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract content by finding clusters of paragraphs"""
-        all_paragraphs = soup.find_all('p')
-        
-        # Filter and cluster paragraphs
-        clusters = []
-        current_cluster = []
-        
-        for p in all_paragraphs:
-            text = p.get_text(strip=True)
-            word_count = len(text.split())
-            
-            if word_count >= self.min_words_per_paragraph:
-                current_cluster.append(text)
-            elif current_cluster and len(current_cluster) >= self.min_paragraphs:
-                clusters.append('\n\n'.join(current_cluster))
-                current_cluster = []
-        
-        # Add final cluster
-        if current_cluster and len(current_cluster) >= self.min_paragraphs:
-            clusters.append('\n\n'.join(current_cluster))
-        
-        # Return longest cluster
-        if clusters:
-            return max(clusters, key=len)
-        
-        return None
-    
-    def _detect_paywall(self, soup: BeautifulSoup) -> bool:
-        """Detect if content is behind a paywall"""
-        page_text = soup.get_text().lower()
-        for pattern in self.paywall_patterns:
-            if re.search(pattern, page_text, re.IGNORECASE):
-                return True
-        return False
-    
-    def _validate_content(self, content: str) -> bool:
-        """Validate extracted content"""
-        if not content:
+    def is_blocked(self, domain: str) -> bool:
+        """Check if a domain is currently blocked"""
+        if domain not in self.blocked_until:
             return False
-        
-        # Check minimum length
-        word_count = len(content.split())
-        if word_count < self.min_total_words:
+            
+        current_time = time.time()
+        if current_time >= self.blocked_until[domain]:
+            # Reset the block
+            del self.blocked_until[domain]
+            self.failures[domain] = 0
             return False
-        
-        # Check for non-content patterns
-        content_lower = content.lower()
-        non_content_count = sum(1 for pattern in self.non_content_patterns if re.search(pattern, content_lower))
-        if non_content_count > 3:
-            return False
-        
-        # Check structure
-        sentences = re.split(r'[.!?]+', content)
-        valid_sentences = [s for s in sentences if 5 <= len(s.split()) <= 50]
-        if len(valid_sentences) < 2:
-            return False
-        
+            
         return True
+    
+    def get_last_error(self, domain: str) -> str:
+        """Get the last error for a domain"""
+        return self.last_error.get(domain, "Unknown error")
 
 
 class LegacyArticleExtractor:
-    """Universal article extractor that works with any site"""
+    """Legacy article extraction implementation with enhanced live news support"""
     
     def __init__(self):
-        # Timeout configuration
-        self.quick_timeout = 10
-        self.browser_timeout = 20
-        self.total_timeout = 60
-        self.delay_range = (0.5, 2)
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
         
-        # User agent handling
-        if USER_AGENT_AVAILABLE:
-            try:
-                self.ua = UserAgent()
-            except:
-                self.ua = None
-        else:
-            self.ua = None
+        # Initialize optional components
+        self.ua = UserAgent() if FAKE_UA_AVAILABLE else None
+        self.cloudscraper_session = cloudscraper.create_scraper() if CLOUDSCRAPER_AVAILABLE else None
         
+        # Circuit breaker for problematic domains
         self.circuit_breaker = CircuitBreaker()
         
-        # Initialize content extractor
-        self.content_extractor = ContentExtractor()
+        # Thread pool for parallel extraction attempts
+        self.executor = ThreadPoolExecutor(max_workers=3)
         
-        # Thread pool for timeout control
-        self.executor = ThreadPoolExecutor(max_workers=2)
-        
-        # Browser-like session configuration with default headers
-        self.session = requests.Session()
-        
-        # Set default headers for the session
-        self.session.headers.update(self._get_headers())
-        
-        # Configure retries and connection pooling
-        adapter = requests.adapters.HTTPAdapter(
-            pool_connections=10,
-            pool_maxsize=10,
-            max_retries=requests.adapters.Retry(
-                total=2,
-                backoff_factor=0.3,
-                status_forcelist=[500, 502, 503, 504]
-            )
-        )
-        self.session.mount('http://', adapter)
-        self.session.mount('https://', adapter)
-        
-        # Initialize cloudscraper if available
-        if CLOUDSCRAPER_AVAILABLE:
-            try:
-                self.cloudscraper_session = cloudscraper.create_scraper(
-                    browser={
-                        'browser': 'chrome',
-                        'platform': 'windows',
-                        'desktop': True
-                    }
-                )
-                # Set default headers for cloudscraper too
-                self.cloudscraper_session.headers.update(self._get_headers())
-            except:
-                self.cloudscraper_session = None
-        else:
-            self.cloudscraper_session = None
-            
-        logger.info(f"ArticleExtractor initialized (CloudScraper: {CLOUDSCRAPER_AVAILABLE}, "
-                   f"Curl-CFFI: {CURL_CFFI_AVAILABLE}, Selenium: {SELENIUM_AVAILABLE}, "
-                   f"Playwright: {PLAYWRIGHT_AVAILABLE})")
+        # Configuration
+        self.timeout = 15
+        self.min_content_length = 100
+        self.min_paragraphs = 3
+        self.min_words_per_paragraph = 10
     
-    def _get_headers(self, referer=None):
-        """Get randomized headers that look like a real browser"""
-        # More diverse and recent user agents
+    def _get_headers(self, referer: Optional[str] = None) -> Dict[str, str]:
+        """Get randomized headers"""
         static_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         ]
         
@@ -392,7 +148,7 @@ class LegacyArticleExtractor:
         
         headers = {
             'User-Agent': user_agent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
@@ -403,9 +159,6 @@ class LegacyArticleExtractor:
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
             'Cache-Control': 'max-age=0',
-            'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Windows"',
         }
         
         if referer:
@@ -439,9 +192,6 @@ class LegacyArticleExtractor:
         methods = [
             ('quick_extract', self._quick_extract),
             ('cloudscraper_extract', self._cloudscraper_extract) if self.cloudscraper_session else None,
-            ('curl_extract', self._curl_extract) if CURL_CFFI_AVAILABLE else None,
-            ('selenium_extract', self._selenium_extract) if SELENIUM_AVAILABLE else None,
-            ('playwright_extract', self._playwright_extract) if PLAYWRIGHT_AVAILABLE else None
         ]
         
         # Filter out None methods
@@ -449,299 +199,176 @@ class LegacyArticleExtractor:
         
         last_error = None
         for method_name, method_func in methods:
-            if time.time() - start_time > self.total_timeout:
-                logger.warning(f"Total timeout reached for {url}")
-                break
-            
             try:
                 logger.info(f"Trying {method_name} for {url}")
+                result = method_func(url)
                 
-                # Use thread pool for timeout control
-                future = self.executor.submit(method_func, url)
-                try:
-                    result = future.result(timeout=self.browser_timeout if 'browser' in method_name else self.quick_timeout)
+                if result.get('success'):
+                    # Record success
+                    self.circuit_breaker.record_success(domain)
                     
-                    if result and result.get('success'):
-                        result['extraction_metadata'] = {
-                            'method': method_name,
-                            'duration': time.time() - start_time,
-                            'attempts': methods.index((method_name, method_func)) + 1
-                        }
-                        self.circuit_breaker.record_success(domain)
-                        logger.info(f"Successfully extracted content using {method_name}")
-                        return result
-                    else:
-                        logger.warning(f"{method_name} failed: {result.get('error', 'Unknown error')}")
-                        last_error = result.get('error', f"{method_name} failed")
+                    # Add timing info
+                    result['extraction_metadata'] = result.get('extraction_metadata', {})
+                    result['extraction_metadata']['duration'] = time.time() - start_time
+                    result['extraction_metadata']['method'] = method_name
                     
-                except FutureTimeoutError:
-                    logger.warning(f"{method_name} timed out for {url}")
-                    last_error = f"{method_name} timeout"
-                    continue
+                    logger.info(f"Successfully extracted {result.get('word_count', 0)} words using {method_name}")
+                    return result
+                else:
+                    last_error = result.get('error', 'Unknown error')
+                    logger.warning(f"{method_name} failed: {last_error}")
                     
             except Exception as e:
-                logger.error(f"{method_name} failed for {url}: {str(e)}", exc_info=True)
                 last_error = str(e)
-                continue
-            
-            # Small delay between attempts
-            if method_func != methods[-1][1]:
-                time.sleep(random.uniform(*self.delay_range))
+                logger.warning(f"{method_name} exception: {last_error}")
         
-        # Record failure
+        # All methods failed
         self.circuit_breaker.record_failure(domain, last_error)
         
-        logger.error(f"All extraction methods failed for {url}. Last error: {last_error}")
+        # Try emergency fallback
+        logger.info("All extraction methods failed, trying emergency fallback")
+        emergency_result = self._emergency_fallback_extraction(url)
+        if emergency_result.get('success'):
+            return emergency_result
+        
+        error_msg = f"All extraction methods failed. Last error: {last_error}"
+        logger.error(f"{error_msg} for {url}")
+        
         return {
             'success': False,
-            'error': f'All extraction methods failed. Last error: {last_error}',
+            'error': error_msg,
+            'url': url,
+            'domain': domain,
             'extraction_metadata': {
-                'duration': time.time() - start_time,
-                'methods_tried': len(methods),
-                'domain': domain
+                'all_methods_failed': True,
+                'duration': time.time() - start_time
             }
         }
     
     def _quick_extract(self, url: str) -> Dict[str, Any]:
-        """Quick extraction using requests and BeautifulSoup"""
+        """Quick extraction using requests"""
         try:
-            # Create a new session for this request with fresh headers
-            headers = self._get_headers(referer=url)
-            
-            # Add additional headers that might help with 403 errors
-            headers.update({
-                'Pragma': 'no-cache',
-                'Sec-Ch-Ua-Platform-Version': '"10.0.0"',
-                'Sec-Ch-Ua-Full-Version': '"121.0.6167.85"',
-                'Sec-Ch-Ua-Arch': '"x86"',
-                'Sec-Ch-Ua-Bitness': '"64"',
-                'Sec-Ch-Ua-Model': '""',
-                'Sec-Ch-Ua-Full-Version-List': '"Not A(Brand";v="99.0.0.0", "Google Chrome";v="121.0.6167.85", "Chromium";v="121.0.6167.85"'
-            })
-            
-            # Make request with all headers
-            response = self.session.get(
-                url, 
-                headers=headers, 
-                timeout=self.quick_timeout,
-                allow_redirects=True,
-                verify=True
-            )
-            
-            # Check for specific error codes
-            if response.status_code == 403:
-                logger.error(f"Quick extract got 403 for {url}, will try other methods")
-                return {'success': False, 'error': f'403 Forbidden'}
-            
+            headers = self._get_headers()
+            response = self.session.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             
-            # Check content type
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' not in content_type:
-                return {'success': False, 'error': f'Non-HTML content type: {content_type}'}
+            return self._parse_content(response.text, url)
             
-            soup = BeautifulSoup(response.text, 'html.parser')
-            return self._parse_content(soup, url)
-            
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 403:
-                logger.error(f"Quick extract failed with 403 for {url}")
-                return {'success': False, 'error': '403 Forbidden'}
-            logger.error(f"Quick extract HTTP error for {url}: {e}")
-            return {'success': False, 'error': str(e)}
-        except requests.RequestException as e:
-            logger.error(f"Quick extract failed for {url}: {e}")
+        except Exception as e:
+            logger.error(f"Quick extract failed: {e}")
             return {'success': False, 'error': str(e)}
     
     def _cloudscraper_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using cloudscraper for Cloudflare protection"""
-        if not self.cloudscraper_session:
-            return {'success': False, 'error': 'CloudScraper not available'}
-        
+        """Extract using cloudscraper for cloudflare protection"""
         try:
-            # Update headers for this specific request
-            headers = self._get_headers(referer=url)
-            
-            # Make request with headers
-            response = self.cloudscraper_session.get(
-                url, 
-                headers=headers,
-                timeout=self.quick_timeout,
-                allow_redirects=True
-            )
-            
-            # Check for specific error codes
-            if response.status_code == 403:
-                logger.error(f"CloudScraper extract got 403 for {url}")
-                return {'success': False, 'error': '403 Forbidden'}
-            
+            response = self.cloudscraper_session.get(url, timeout=self.timeout)
             response.raise_for_status()
             
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            logger.error(f"Cloudscraper extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _emergency_fallback_extraction(self, url: str) -> Dict[str, Any]:
+        """Emergency fallback using minimal extraction"""
+        try:
+            headers = self._get_headers()
+            response = self.session.get(url, headers=headers, timeout=5)
             soup = BeautifulSoup(response.text, 'html.parser')
-            return self._parse_content(soup, url)
+            
+            # Extract basic metadata
+            title = None
+            for selector in ['meta[property="og:title"]', 'meta[name="twitter:title"]', 'title']:
+                elem = soup.select_one(selector)
+                if elem:
+                    title = elem.get('content', elem.get_text(strip=True))
+                    if title:
+                        break
+            
+            description = None
+            for selector in ['meta[property="og:description"]', 'meta[name="description"]']:
+                elem = soup.select_one(selector)
+                if elem and elem.get('content'):
+                    description = elem['content']
+                    break
+            
+            author = None
+            for selector in ['meta[name="author"]', 'meta[property="article:author"]']:
+                elem = soup.select_one(selector)
+                if elem and elem.get('content'):
+                    author = elem['content']
+                    break
+            
+            # Create minimal content
+            content = description or "Content extraction failed - using metadata only"
+            if title and title not in content:
+                content = f"{title}\n\n{content}"
+            
+            return {
+                'success': True,
+                'title': title or 'Unknown Title',
+                'text': content,
+                'author': author,
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'word_count': len(content.split()),
+                'extraction_metadata': {
+                    'method': 'emergency_fallback',
+                    'used_metadata_only': True
+                }
+            }
             
         except Exception as e:
-            logger.error(f"CloudScraper extract failed for {url}: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Emergency fallback failed: {e}")
+            return {'success': False, 'error': f'Emergency fallback failed: {str(e)}'}
     
-    def _curl_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using curl-cffi for better compatibility"""
+    def _parse_content(self, html: str, url: str = None) -> Dict[str, Any]:
+        """Parse HTML and extract article data"""
         try:
-            # curl-cffi with Chrome impersonation often bypasses 403 errors
-            response = curl_requests.get(
-                url,
-                impersonate="chrome110",
-                timeout=self.quick_timeout,
-                allow_redirects=True,
-                verify=True
-            )
+            soup = BeautifulSoup(html, 'html.parser')
             
-            if response.status_code == 403:
-                # Try with different impersonation
-                response = curl_requests.get(
-                    url,
-                    impersonate="safari15_5",
-                    timeout=self.quick_timeout,
-                    allow_redirects=True,
-                    verify=True
-                )
+            # Check if this is a live news page
+            is_live_page = url and any(indicator in url.lower() for indicator in ['/live-news/', '/live/', '/updates/'])
             
-            response.raise_for_status()
+            # Extract content using appropriate method
+            content, extraction_metadata = self.extract_article_content(soup, url)
             
-            soup = BeautifulSoup(response.text, 'html.parser')
-            return self._parse_content(soup, url)
+            if not content:
+                # If it's a live page, try to get any summary/description as fallback
+                if is_live_page:
+                    live_metadata = self._extract_metadata_from_live_page(soup, url)
+                    if live_metadata.get('summary'):
+                        content = live_metadata['summary']
+                        extraction_metadata['used_summary_fallback'] = True
+                    else:
+                        return {
+                            'success': False,
+                            'error': 'Could not extract content from live news page'
+                        }
+                else:
+                    return {
+                        'success': False,
+                        'error': 'Could not extract article content'
+                    }
             
-        except Exception as e:
-            logger.error(f"Curl extract failed for {url}: {e}")
-            return {'success': False, 'error': str(e)}
-    
-    def _selenium_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using Selenium for JavaScript-heavy sites"""
-        driver = None
-        try:
-            options = ChromeOptions()
-            options.add_argument('--headless=new')  # Use new headless mode
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
-            
-            # Set user agent
-            user_agent = self._get_headers()["User-Agent"]
-            options.add_argument(f'user-agent={user_agent}')
-            
-            driver = webdriver.Chrome(options=options)
-            
-            # Execute CDP commands to mask automation
-            driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
-                'source': '''
-                    Object.defineProperty(navigator, 'webdriver', {
-                        get: () => undefined
-                    })
-                '''
-            })
-            
-            driver.set_page_load_timeout(self.browser_timeout)
-            
-            driver.get(url)
-            
-            # Wait for content to load
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "p"))
-            )
-            
-            # Additional wait for dynamic content
-            time.sleep(2)
-            
-            # Get page source
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            return self._parse_content(soup, url)
-            
-        except Exception as e:
-            logger.error(f"Selenium extract failed for {url}: {e}")
-            return {'success': False, 'error': str(e)}
-        finally:
-            if driver:
-                try:
-                    driver.quit()
-                except:
-                    pass
-    
-    def _playwright_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using Playwright for modern JavaScript sites"""
-        try:
-            with sync_playwright() as p:
-                # Launch with more realistic settings
-                browser = p.chromium.launch(
-                    headless=True,
-                    args=['--disable-blink-features=AutomationControlled']
-                )
-                
-                # Create context with realistic viewport and user agent
-                context = browser.new_context(
-                    user_agent=self._get_headers()['User-Agent'],
-                    viewport={'width': 1920, 'height': 1080},
-                    locale='en-US',
-                    timezone_id='America/Los_Angeles'
-                )
-                
-                # Add scripts to avoid detection
-                context.add_init_script("""
-                    Object.defineProperty(navigator, 'webdriver', {
-                        get: () => undefined
-                    })
-                """)
-                
-                page = context.new_page()
-                
-                # Navigate with realistic behavior
-                page.goto(url, wait_until='domcontentloaded', timeout=self.browser_timeout * 1000)
-                
-                # Wait for content
-                page.wait_for_selector('p', timeout=10000)
-                
-                # Additional wait for dynamic content
-                page.wait_for_timeout(2000)
-                
-                content = page.content()
-                browser.close()
-                
-                soup = BeautifulSoup(content, 'html.parser')
-                return self._parse_content(soup, url)
-                
-        except Exception as e:
-            logger.error(f"Playwright extract failed for {url}: {e}")
-            return {'success': False, 'error': str(e)}
-    
-    def _parse_content(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
-        """Parse content from BeautifulSoup object"""
-        try:
-            # Extract metadata
-            title = self._extract_title(soup)
+            # Extract other metadata
+            title = self._extract_title(soup) or 'Untitled'
             author = self._extract_author(soup)
             publish_date = self._extract_date(soup)
             description = self._extract_description(soup)
-            image = self._extract_image(soup, url)
+            image = self._extract_image(soup, url) if url else None
             keywords = self._extract_keywords(soup)
             
-            # Extract main content
-            content, extraction_metadata = self.content_extractor.extract_content(soup)
-            
-            if not content:
-                logger.warning(f"Could not extract article content from {url}")
-                return {
-                    'success': False,
-                    'error': 'Could not extract article content',
-                    'extraction_metadata': extraction_metadata
-                }
-            
-            # Clean and validate content
+            # Clean content
             content = self._clean_content(content)
             word_count = len(content.split())
             
-            logger.info(f"Successfully parsed content from {url}: {word_count} words")
+            # For live pages, prepend update info
+            if is_live_page and extraction_metadata.get('page_type') == 'live_news':
+                update_count = extraction_metadata.get('update_count', 0)
+                if update_count > 0:
+                    content = f"[LIVE NEWS FEED - {update_count} updates extracted]\n\n{content}"
             
             return {
                 'success': True,
@@ -750,13 +377,13 @@ class LegacyArticleExtractor:
                 'author': author,
                 'publish_date': publish_date,
                 'url': url,
-                'domain': urlparse(url).netloc,
+                'domain': urlparse(url).netloc if url else None,
                 'description': description,
                 'image': image,
                 'keywords': keywords,
                 'word_count': word_count,
-                'extracted_at': datetime.now().isoformat(),
-                'extraction_metadata': extraction_metadata
+                'extraction_metadata': extraction_metadata,
+                'extracted_at': datetime.now().isoformat()
             }
             
         except Exception as e:
@@ -766,9 +393,229 @@ class LegacyArticleExtractor:
                 'error': f'Content parsing error: {str(e)}'
             }
     
+    def extract_article_content(self, soup: BeautifulSoup, url: str = None) -> Tuple[Optional[str], Dict[str, Any]]:
+        """Extract article content from BeautifulSoup object"""
+        metadata = {
+            'extraction_method': 'unknown',
+            'content_indicators': [],
+            'issues': []
+        }
+        
+        # Try multiple extraction strategies, including live news
+        strategies = [
+            ('live_news', lambda s: self._extract_live_news_content(s, url)),
+            ('article_tag', self._extract_by_article_tag),
+            ('main_content', self._extract_by_main_content),
+            ('paragraph_clustering', self._extract_by_paragraph_clustering)
+        ]
+        
+        for strategy_name, strategy_func in strategies:
+            try:
+                if strategy_name == 'live_news':
+                    content, meta = strategy_func(soup)
+                    if content:
+                        metadata.update(meta)
+                        logger.info(f"Content extracted successfully using {strategy_name}")
+                        return content, metadata
+                else:
+                    content = strategy_func(soup)
+                    if content and self._validate_content(content):
+                        metadata['extraction_method'] = strategy_name
+                        logger.info(f"Content extracted successfully using {strategy_name}")
+                        return content, metadata
+            except Exception as e:
+                logger.debug(f"Strategy {strategy_name} failed: {e}")
+                metadata['issues'].append(f"{strategy_name}: {str(e)}")
+        
+        logger.warning("All content extraction strategies failed")
+        return None, metadata
+    
+    def _extract_live_news_content(self, soup: BeautifulSoup, url: str) -> Tuple[Optional[str], Dict[str, Any]]:
+        """Extract content from live news pages (CNN, BBC, etc.)"""
+        metadata = {
+            'extraction_method': 'live_news',
+            'content_indicators': [],
+            'issues': []
+        }
+        
+        # Check if this is a live news page
+        is_live_page = any(indicator in url.lower() for indicator in ['/live-news/', '/live/', '/updates/'])
+        
+        if not is_live_page:
+            # Also check page content for live indicators
+            live_indicators = soup.find_all(class_=re.compile(r'live|update|ticker', re.I))
+            is_live_page = len(live_indicators) > 3
+        
+        if not is_live_page:
+            return None, metadata
+        
+        logger.info(f"Detected live news page: {url}")
+        metadata['page_type'] = 'live_news'
+        
+        # Strategy 1: Look for live update containers
+        content_parts = []
+        
+        # Common live update selectors
+        live_selectors = [
+            {'class': re.compile(r'live-update|update-item|post-update', re.I)},
+            {'class': re.compile(r'post__content|update__content', re.I)},
+            {'class': re.compile(r'article-wrap|story-body', re.I)},
+            {'role': 'article'},
+            {'data-type': 'article'},
+        ]
+        
+        for selector in live_selectors:
+            updates = soup.find_all('div', selector)
+            if updates:
+                logger.info(f"Found {len(updates)} updates using selector {selector}")
+                for update in updates[:10]:  # Limit to first 10 updates
+                    # Extract timestamp if available
+                    time_elem = update.find(['time', 'span'], class_=re.compile(r'time|date|timestamp', re.I))
+                    timestamp = time_elem.get_text(strip=True) if time_elem else ''
+                    
+                    # Extract update content
+                    paragraphs = update.find_all('p')
+                    if paragraphs:
+                        update_text = '\n'.join(p.get_text(strip=True) for p in paragraphs)
+                        if timestamp:
+                            content_parts.append(f"[{timestamp}] {update_text}")
+                        else:
+                            content_parts.append(update_text)
+                
+                if content_parts:
+                    break
+        
+        # Strategy 2: Extract from article body if no updates found
+        if not content_parts:
+            article_body = soup.find('div', class_=re.compile(r'article|story|content', re.I))
+            if article_body:
+                paragraphs = article_body.find_all('p')
+                content_parts = [p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 50]
+        
+        # Strategy 3: Fall back to all paragraphs
+        if not content_parts:
+            all_paragraphs = soup.find_all('p')
+            content_parts = [p.get_text(strip=True) for p in all_paragraphs[:20] if len(p.get_text(strip=True)) > 50]
+        
+        if content_parts:
+            content = '\n\n'.join(content_parts)
+            metadata['update_count'] = len(content_parts)
+            return content, metadata
+        
+        return None, metadata
+    
+    def _extract_metadata_from_live_page(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
+        """Extract metadata specific to live news pages"""
+        metadata = {}
+        
+        # Try to get a summary or description
+        summary_selectors = [
+            {'class': re.compile(r'summary|description|intro', re.I)},
+            {'property': 'og:description'},
+            {'name': 'description'}
+        ]
+        
+        for selector in summary_selectors:
+            if 'property' in selector or 'name' in selector:
+                elem = soup.find('meta', selector)
+                if elem and elem.get('content'):
+                    metadata['summary'] = elem['content']
+                    break
+            else:
+                elem = soup.find(['div', 'p'], selector)
+                if elem:
+                    metadata['summary'] = elem.get_text(strip=True)
+                    break
+        
+        # Get headline from title or h1
+        headline = soup.find('h1')
+        if headline:
+            metadata['headline'] = headline.get_text(strip=True)
+        
+        # Get update count
+        updates = soup.find_all(['div', 'article'], class_=re.compile(r'update|post', re.I))
+        metadata['total_updates'] = len(updates)
+        
+        # Get last update time
+        time_elements = soup.find_all('time')
+        if time_elements:
+            metadata['last_updated'] = time_elements[0].get('datetime', time_elements[0].get_text(strip=True))
+        
+        return metadata
+    
+    def _extract_by_article_tag(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract content from article tags"""
+        article = soup.find('article')
+        if article:
+            # Remove non-content elements
+            for element in article.find_all(['script', 'style', 'aside', 'nav']):
+                element.decompose()
+            
+            paragraphs = article.find_all('p')
+            if len(paragraphs) >= self.min_paragraphs:
+                return '\n\n'.join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph)
+        
+        return None
+    
+    def _extract_by_main_content(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract content from main content areas"""
+        # Common content selectors
+        content_selectors = [
+            {'class': re.compile(r'article-body|story-body|content-body', re.I)},
+            {'id': re.compile(r'article|story|content', re.I)},
+            {'role': 'main'},
+            'main'
+        ]
+        
+        for selector in content_selectors:
+            if isinstance(selector, str):
+                content_elem = soup.find(selector)
+            else:
+                content_elem = soup.find('div', selector)
+            
+            if content_elem:
+                paragraphs = content_elem.find_all('p')
+                if len(paragraphs) >= self.min_paragraphs:
+                    content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph)
+                    if content:
+                        return content
+        
+        return None
+    
+    def _extract_by_paragraph_clustering(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract content by finding clusters of paragraphs"""
+        all_paragraphs = soup.find_all('p')
+        
+        # Filter paragraphs by minimum length
+        valid_paragraphs = []
+        for p in all_paragraphs:
+            text = p.get_text(strip=True)
+            if len(text.split()) >= self.min_words_per_paragraph:
+                valid_paragraphs.append(text)
+        
+        # Need at least min_paragraphs
+        if len(valid_paragraphs) >= self.min_paragraphs:
+            return '\n\n'.join(valid_paragraphs)
+        
+        return None
+    
+    def _validate_content(self, content: str) -> bool:
+        """Validate extracted content"""
+        if not content:
+            return False
+        
+        word_count = len(content.split())
+        if word_count < self.min_content_length:
+            return False
+        
+        # Check for common extraction failures
+        if content.lower().startswith(('subscribe', 'please enable javascript', 'you need to enable')):
+            return False
+        
+        return True
+    
     def _extract_title(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract article title"""
-        # Try multiple strategies
         strategies = [
             lambda: soup.find('meta', property='og:title')['content'],
             lambda: soup.find('meta', {'name': 'twitter:title'})['content'],
@@ -887,7 +734,6 @@ class LegacyArticleExtractor:
     
     def extract_from_text(self, text: str) -> Dict[str, Any]:
         """Extract/analyze raw text input"""
-        # For raw text, we don't need extraction, just analysis
         word_count = len(text.split())
         
         # Try to extract a title from the first line
@@ -904,17 +750,9 @@ class LegacyArticleExtractor:
             'domain': 'text-input',
             'word_count': word_count
         }
-    
-    def __del__(self):
-        """Cleanup thread pool on deletion"""
-        try:
-            self.executor.shutdown(wait=False)
-        except:
-            pass
 
 
-# ============= NEW REFACTORED CLASS =============
-
+# Main ArticleExtractor class that inherits from BaseAnalyzer
 class ArticleExtractor(BaseAnalyzer):
     """Article extraction service that inherits from BaseAnalyzer"""
     
@@ -959,101 +797,64 @@ class ArticleExtractor(BaseAnalyzer):
             'service': self.service_name,
             'success': False,  # CRITICAL: This must be included!
             'available': self.is_available,
-            'error': f'Analysis timed out after {self.config.timeout}s',
-            'timeout': True,
+            'error': 'Service timeout',
             'timestamp': time.time()
         }
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Extract article content using the standardized interface
-        
-        Expected input:
-            - url: URL to extract article from
-            OR
-            - text: Raw text to analyze
-            OR
-            - content: URL or text (for backward compatibility)
-            - content_type: 'url' or 'text' (for backward compatibility)
-            
-        Returns:
-            Standardized service response with article data in 'data' field
+        Extract article from URL or text
+        Returns standardized service response
         """
         logger.info("=" * 60)
         logger.info("ArticleExtractor.analyze() CALLED")
         logger.info("=" * 60)
         
         try:
-            # Log the incoming data for debugging
-            logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys()) if data else 'None'}")
-            if data:
-                # Log content and content_type specifically if they exist
-                if 'content' in data:
-                    logger.info(f"  content: {data['content'][:100] if isinstance(data['content'], str) else data['content']}")
-                if 'content_type' in data:
-                    logger.info(f"  content_type: {data['content_type']}")
-                if 'url' in data:
-                    logger.info(f"  url: {data['url']}")
-                if 'text' in data:
-                    logger.info(f"  text: {data['text'][:100] if data['text'] else 'None'}...")
+            logger.info(f"ArticleExtractor.analyze called with data keys: {list(data.keys())}")
             
-            # Handle different input formats for compatibility
-            url = data.get('url')
-            text = data.get('text')
+            # Handle different input formats
+            url = None
+            text = None
+            content_type = 'unknown'
             
-            # Support legacy format from pipeline
-            if not url and not text:
-                content = data.get('content')
-                content_type = data.get('content_type', 'url')
-                logger.info(f"Using legacy format - content: {content}, content_type: {content_type}")
-                if content_type == 'url':
-                    url = content
+            # New format: { 'url': '...' } or { 'text': '...' }
+            if 'url' in data:
+                url = data['url']
+                content_type = 'url'
+                logger.info(f"Using new format - URL: {url}")
+            elif 'text' in data:
+                text = data['text']
+                content_type = 'text'
+                logger.info(f"Using new format - text length: {len(text)}")
+            # Legacy format: { 'content': '...', 'content_type': 'url'/'text' }
+            elif 'content' in data and 'content_type' in data:
+                if data['content_type'] == 'url':
+                    url = data['content']
+                    content_type = 'url'
                 else:
-                    text = content
+                    text = data['content']
+                    content_type = 'text'
+                logger.info(f"Using legacy format - content: {data['content'][:100]}..., content_type: {data['content_type']}")
+            else:
+                error_msg = "Invalid input format. Expected {'url': '...'} or {'text': '...'}"
+                logger.error(f"ArticleExtractor.analyze error: {error_msg}")
+                return self.get_error_result(error_msg)
             
-            # Log what we're extracting
-            if url:
+            # Process based on content type
+            if content_type == 'url' and url:
                 logger.info(f"Extracting from URL: {url}")
-            elif text:
-                logger.info(f"Extracting from text input: {len(text)} characters")
-            else:
-                logger.error("No URL or text provided for extraction")
-            
-            # Check what type of extraction is needed
-            if url:
                 result = self._extract_from_url(url)
-                logger.info(f"URL extraction completed - success={result.get('success')}, has_error={bool(result.get('error'))}")
-                
-                # CRITICAL FIX: Ensure we NEVER have both 'success': True and 'error' field
-                if result.get('success') and 'error' in result:
-                    logger.warning("Removing 'error' field from successful result")
-                    del result['error']
-                
-                # CRITICAL FIX: Ensure 'success' field is always present
-                if 'success' not in result:
-                    result['success'] = not bool(result.get('error'))
-                    
+                logger.info(f"URL extraction completed - success={result.get('success', False)}, has_error={'error' in result}")
                 return result
-                
-            elif text:
+            elif content_type == 'text' and text:
+                logger.info(f"Extracting from text, length: {len(text)}")
                 result = self._extract_from_text(text)
-                logger.info(f"Text extraction completed - success={result.get('success')}")
-                
-                # CRITICAL FIX: Ensure we NEVER have both 'success': True and 'error' field
-                if result.get('success') and 'error' in result:
-                    logger.warning("Removing 'error' field from successful result")
-                    del result['error']
-                    
-                # CRITICAL FIX: Ensure 'success' field is always present
-                if 'success' not in result:
-                    result['success'] = not bool(result.get('error'))
-                    
+                logger.info(f"Text extraction completed - success={result.get('success', False)}")
                 return result
-                
             else:
-                error_msg = "Missing required field: 'url' or 'text'"
-                logger.error(error_msg)
-                # Return properly formatted error with NO ambiguity
+                error_msg = f"Invalid content type or missing content: content_type={content_type}"
+                logger.error(f"ArticleExtractor.analyze error: {error_msg}")
                 return {
                     'service': self.service_name,
                     'success': False,
@@ -1063,10 +864,7 @@ class ArticleExtractor(BaseAnalyzer):
                 }
                 
         except Exception as e:
-            # CRITICAL: This is the most important part - if ANYTHING goes wrong,
-            # we must return a proper error response with 'success': False
             logger.error(f"ArticleExtractor.analyze failed with unexpected error: {e}", exc_info=True)
-            # Return properly formatted error with NO ambiguity
             return {
                 'service': self.service_name,
                 'success': False,
@@ -1151,53 +949,25 @@ class ArticleExtractor(BaseAnalyzer):
                     'text': result.get('text', text),
                     'author': result.get('author'),
                     'publish_date': result.get('publish_date'),
-                    'url': None,
+                    'url': result.get('url'),
                     'domain': result.get('domain', 'text-input'),
                     'word_count': result.get('word_count', len(text.split())),
-                    'source': 'text_input'
-                },
-                'metadata': {
-                    'input_type': 'text'
+                    'extraction_metadata': {'method': 'text_analysis'}
                 }
             }
             
-            logger.info("Text extraction completed successfully")
             return response
             
         except Exception as e:
-            logger.error(f"Article extraction from text failed: {e}", exc_info=True)
+            logger.error(f"Text extraction failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
     def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
         """Basic URL extraction fallback"""
         try:
-            logger.info(f"Attempting basic URL extraction for {url}")
-            
-            # More robust headers for basic extraction
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Cache-Control': 'max-age=0',
-            }
-            
-            response = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
-            
-            if response.status_code == 403:
-                logger.error(f"Got 403 Forbidden for {url}")
-                return {
-                    'success': False,
-                    'error': '403 Forbidden - Access denied by website'
-                }
-            
+            response = requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
