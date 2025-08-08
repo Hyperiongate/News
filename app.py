@@ -224,7 +224,17 @@ def analyze():
         
         # Build response
         article_data = results.get('article', {})
-        services_used = list(results.get('pipeline_metadata', {}).get('services_succeeded', []))
+        
+        # FIX: Use 'successful_services' instead of 'services_succeeded'
+        # The pipeline stores the list of successful service names in 'successful_services'
+        # but stores the count in 'services_succeeded'
+        pipeline_metadata = results.get('pipeline_metadata', {})
+        services_used = pipeline_metadata.get('successful_services', [])
+        
+        # Ensure services_used is a list
+        if not isinstance(services_used, list):
+            logger.warning(f"services_used is not a list: {type(services_used)}")
+            services_used = []
         
         return AnalysisResponseBuilder.build_analysis_response(
             analysis_results=results,
