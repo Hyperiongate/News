@@ -49,16 +49,10 @@ class NewsAnalyzer:
                 'detailed_bias_analysis': is_pro
             }
             
-            # Run pipeline
-            if Config.PIPELINE['parallel_processing']:
-                # Use async pipeline for better performance
-                import asyncio
-                results = asyncio.run(
-                    self.pipeline.run_async(content, content_type, options)
-                )
-            else:
-                # Use sync pipeline
-                results = self.pipeline.run(content, content_type, options)
+            # FIXED: Always use sync pipeline since all our services are sync
+            # The async pipeline was causing "Service not found or not async" errors
+            # because ArticleExtractor and other services are sync, not async
+            results = self.pipeline.run(content, content_type, options)
             
             # Add service metadata
             results['services_available'] = self.service_status['summary']['total_available']
@@ -79,7 +73,9 @@ class NewsAnalyzer:
                 'error': f'Analysis failed: {str(e)}',
                 'trust_score': 50,
                 'trust_level': 'Unknown',
-                'services_available': self.service_status['summary']['total_available']
+                'services_available': self.service_status['summary']['total_available'],
+                'is_pro': is_pro,
+                'analysis_mode': 'error'
             }
     
     def get_service_status(self) -> Dict[str, Any]:
