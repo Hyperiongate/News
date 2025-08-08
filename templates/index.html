@@ -1038,6 +1038,9 @@
 
         // Display results
         function displayResults(data) {
+            console.log('=== FULL API RESPONSE DATA ===');
+            console.log(JSON.stringify(data, null, 2));
+            
             // Show results section
             document.getElementById('resultsSection').style.display = 'block';
             
@@ -1338,7 +1341,14 @@
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            console.log('Author data received:', authorData);
+            console.log('=== AUTHOR ANALYSIS DATA ===');
+            console.log('Raw authorData:', authorData);
+            console.log('Type:', typeof authorData);
+            console.log('Keys:', authorData ? Object.keys(authorData) : 'null');
+            if (authorData && authorData.data) {
+                console.log('authorData.data:', authorData.data);
+                console.log('authorData.data keys:', Object.keys(authorData.data));
+            }
             
             // Extract data - handle both direct data and nested data.data structure
             const data = authorData.data || authorData;
@@ -1353,6 +1363,16 @@
             const content = document.createElement('div');
             content.className = 'card-content';
             
+            // Debug: Log all available fields
+            console.log('=== EXTRACTED AUTHOR FIELDS ===');
+            console.log('author_name:', data.author_name);
+            console.log('name:', data.name);
+            console.log('author:', data.author);
+            console.log('credibility_score:', data.credibility_score);
+            console.log('author_score:', data.author_score);
+            console.log('score:', data.score);
+            console.log('All data keys:', Object.keys(data));
+            
             // Extract author information with multiple fallbacks
             const authorName = data.author_name || data.name || data.author || 'Unknown Author';
             const authorScore = data.credibility_score || data.author_score || data.score || 50;
@@ -1366,6 +1386,17 @@
             // Get verification status and publication context if available
             const verificationStatus = data.verification_status || {};
             const publicationContext = data.publication_context || {};
+            
+            // Check for author_info nested structure
+            if (data.author_info) {
+                console.log('Found author_info:', data.author_info);
+                const info = data.author_info;
+                // Override with nested data if available
+                if (info.bio) authorBio = info.bio;
+                if (info.verified !== undefined) isVerified = info.verified;
+                if (info.experience_years) yearsExperience = info.experience_years;
+                if (info.expertise_areas && info.expertise_areas.length) expertiseAreas = info.expertise_areas;
+            }
             
             let contentHtml = '<div class="card-content-inner">';
             
@@ -2342,7 +2373,25 @@
         window.debugTruthLens = () => {
             console.log('Current Analysis:', currentAnalysis);
             console.log('Is Analyzing:', isAnalyzing);
+            
+            if (currentAnalysis && currentAnalysis.detailed_analysis) {
+                console.log('\n=== DETAILED ANALYSIS BREAKDOWN ===');
+                Object.entries(currentAnalysis.detailed_analysis).forEach(([service, data]) => {
+                    console.log(`\n${service.toUpperCase()}:`);
+                    console.log(data);
+                });
+            }
+            
             return currentAnalysis;
+        };
+        
+        // Add a function to manually refresh cards with current data
+        window.refreshCards = () => {
+            if (currentAnalysis && currentAnalysis.detailed_analysis) {
+                displayAnalysisCards(currentAnalysis.detailed_analysis);
+            } else {
+                console.error('No analysis data available');
+            }
         };
     </script>
 </body>
