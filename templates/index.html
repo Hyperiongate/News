@@ -1274,38 +1274,50 @@
 
         // UPDATED: Display analysis cards with proper data extraction
         function displayAnalysisCards(detailedAnalysis) {
-            if (!detailedAnalysis) return;
+            if (!detailedAnalysis) {
+                console.error('No detailed analysis data provided');
+                return;
+            }
+            
+            console.log('Displaying analysis cards with data:', detailedAnalysis);
             
             const gridEl = document.getElementById('analysisGrid');
             gridEl.innerHTML = '';
             
             // Priority 1 Cards
             if (detailedAnalysis.author_analysis) {
+                console.log('Creating author card with data:', detailedAnalysis.author_analysis);
                 gridEl.appendChild(createAuthorAnalysisCard(detailedAnalysis.author_analysis));
             }
             
             if (detailedAnalysis.bias_analysis) {
+                console.log('Creating bias card with data:', detailedAnalysis.bias_analysis);
                 gridEl.appendChild(createBiasAnalysisCard(detailedAnalysis.bias_analysis));
             }
             
             // Priority 2 Cards
             if (detailedAnalysis.source_credibility) {
+                console.log('Creating source card with data:', detailedAnalysis.source_credibility);
                 gridEl.appendChild(createSourceCredibilityCard(detailedAnalysis.source_credibility));
             }
             
             if (detailedAnalysis.transparency_analysis) {
+                console.log('Creating transparency card with data:', detailedAnalysis.transparency_analysis);
                 gridEl.appendChild(createTransparencyCard(detailedAnalysis.transparency_analysis));
             }
             
             if (detailedAnalysis.fact_checks) {
+                console.log('Creating fact check card with data:', detailedAnalysis.fact_checks);
                 gridEl.appendChild(createFactCheckCard(detailedAnalysis.fact_checks));
             }
             
             if (detailedAnalysis.manipulation_analysis) {
+                console.log('Creating manipulation card with data:', detailedAnalysis.manipulation_analysis);
                 gridEl.appendChild(createManipulationCard(detailedAnalysis.manipulation_analysis));
             }
             
             if (detailedAnalysis.content_analysis) {
+                console.log('Creating content card with data:', detailedAnalysis.content_analysis);
                 gridEl.appendChild(createContentAnalysisCard(detailedAnalysis.content_analysis));
             }
             
@@ -1326,7 +1338,9 @@
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            // Extract data from nested structure if needed
+            console.log('Author data received:', authorData);
+            
+            // Extract data - handle both direct data and nested data.data structure
             const data = authorData.data || authorData;
             
             const header = createCardHeader(
@@ -1339,13 +1353,19 @@
             const content = document.createElement('div');
             content.className = 'card-content';
             
-            // Extract author information
-            const authorName = data.author_name || data.name || 'Unknown Author';
-            const authorScore = data.credibility_score || data.author_score || 50;
+            // Extract author information with multiple fallbacks
+            const authorName = data.author_name || data.name || data.author || 'Unknown Author';
+            const authorScore = data.credibility_score || data.author_score || data.score || 50;
             const authorBio = data.bio || data.description || '';
             const authorWebsite = data.website || data.url || '';
             const isVerified = data.is_verified || data.verified || false;
-            const articlesCount = data.articles_count || data.article_count || 'N/A';
+            const articlesCount = data.articles_count || data.article_count || data.total_articles || 'N/A';
+            const yearsExperience = data.years_experience || data.experience_years || 'N/A';
+            const expertiseAreas = data.expertise_areas || data.expertise || [];
+            
+            // Get verification status and publication context if available
+            const verificationStatus = data.verification_status || {};
+            const publicationContext = data.publication_context || {};
             
             let contentHtml = '<div class="card-content-inner">';
             
@@ -1379,8 +1399,41 @@
                             <span class="stat-label">Articles Published</span>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            
+            // Add experience and expertise if available
+            if (yearsExperience !== 'N/A' || expertiseAreas.length > 0) {
+                contentHtml += `
+                    <div class="stat-grid" style="margin-top: var(--space-sm);">
+                        ${yearsExperience !== 'N/A' ? `
+                            <div class="stat-item">
+                                <span class="stat-value">${yearsExperience}</span>
+                                <span class="stat-label">Years Experience</span>
+                            </div>
+                        ` : ''}
+                        ${expertiseAreas.length > 0 ? `
+                            <div class="stat-item">
+                                <span class="stat-value">${expertiseAreas.length}</span>
+                                <span class="stat-label">Expertise Areas</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            contentHtml += `</div>`;
+            
+            // Expertise areas if available
+            if (expertiseAreas.length > 0) {
+                contentHtml += `
+                    <div class="visual-element">
+                        <strong>Areas of Expertise:</strong>
+                        <div style="margin-top: 0.5rem;">
+                            ${expertiseAreas.map(area => `<span class="score-badge medium" style="margin: 0.25rem;">${escapeHtml(area)}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
             
             // Analysis sections
             contentHtml += `
@@ -1411,7 +1464,7 @@
                             What We Found
                         </div>
                         <div class="section-content">
-                            ${data.findings || data.analysis || `Author credibility score: ${authorScore}/100. ${isVerified ? 'This is a verified journalist with established credentials.' : 'We could not verify this author\'s journalist credentials.'} ${articlesCount !== 'N/A' ? `Found ${articlesCount} articles by this author.` : ''}`}
+                            ${generateAuthorFindings(data, authorScore, isVerified, articlesCount, yearsExperience)}
                         </div>
                     </div>
                     
@@ -1435,12 +1488,49 @@
             
             return card;
         }
+        
+        // New helper function to generate author findings
+        function generateAuthorFindings(data, score, isVerified, articlesCount, yearsExperience) {
+            let findings = [];
+            
+            // Add credibility score finding
+            findings.push(`Author credibility score: ${score}/100`);
+            
+            // Add verification status
+            if (isVerified) {
+                findings.push('This is a verified journalist with established credentials.');
+            } else {
+                findings.push('We could not verify this author\'s journalist credentials.');
+            }
+            
+            // Add article count if available
+            if (articlesCount !== 'N/A') {
+                findings.push(`Found ${articlesCount} articles by this author.`);
+            }
+            
+            // Add experience if available
+            if (yearsExperience !== 'N/A') {
+                findings.push(`${yearsExperience} years of journalism experience.`);
+            }
+            
+            // Add any custom findings from the data
+            if (data.findings) {
+                findings.push(data.findings);
+            } else if (data.analysis) {
+                findings.push(data.analysis);
+            }
+            
+            return findings.join(' ');
+        }
 
         // UPDATED: Create Bias Analysis Card
         function createBiasAnalysisCard(biasData) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
+            console.log('Bias data received:', biasData);
+            
+            // Extract data - handle both direct data and nested data.data structure
             const data = biasData.data || biasData;
             
             const header = createCardHeader(
@@ -1453,8 +1543,12 @@
             const content = document.createElement('div');
             content.className = 'card-content';
             
-            const biasScore = data.bias_score !== undefined ? data.bias_score : 50;
-            const politicalLean = data.political_lean || 0;
+            // Extract bias information with fallbacks
+            const biasScore = data.bias_score !== undefined ? data.bias_score : 
+                             data.political_bias_score !== undefined ? data.political_bias_score : 50;
+            const politicalLean = data.political_lean || data.lean || 0;
+            const biasType = data.bias_type || data.primary_bias || 'Unknown';
+            const confidence = data.confidence || data.confidence_score || 'Medium';
             
             let contentHtml = '<div class="card-content-inner">';
             
@@ -1471,6 +1565,23 @@
                     </div>
                 </div>
             `;
+            
+            // Additional bias metrics if available
+            if (data.bias_dimensions) {
+                contentHtml += `
+                    <div class="visual-element">
+                        <strong>Bias Dimensions:</strong>
+                        <div class="stat-grid" style="margin-top: 0.5rem;">
+                            ${Object.entries(data.bias_dimensions).map(([key, value]) => `
+                                <div class="stat-item">
+                                    <span class="stat-value">${value}%</span>
+                                    <span class="stat-label">${key.replace(/_/g, ' ')}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
             
             // Analysis sections
             contentHtml += `
@@ -1501,7 +1612,7 @@
                             What We Found
                         </div>
                         <div class="section-content">
-                            ${data.findings || data.analysis || generateBiasFindings(biasScore, politicalLean)}
+                            ${generateBiasFindings(data, biasScore, politicalLean, biasType)}
                         </div>
                     </div>
                     
@@ -1524,6 +1635,41 @@
             card.appendChild(content);
             
             return card;
+        }
+        
+        // Updated bias findings generator
+        function generateBiasFindings(data, biasScore, politicalLean, biasType) {
+            // First check if we have custom findings
+            if (data.findings) return data.findings;
+            if (data.analysis) return data.analysis;
+            
+            // Otherwise generate findings
+            const direction = biasScore > 50 ? 'right' : biasScore < 50 ? 'left' : 'center';
+            const strength = Math.abs(50 - biasScore);
+            
+            let finding = `The article shows a ${direction}-leaning bias `;
+            
+            if (strength < 10) {
+                finding += "that is minimal and within normal journalistic variation.";
+            } else if (strength < 25) {
+                finding += "with moderate partisan language and framing.";
+            } else if (strength < 40) {
+                finding += "with significant partisan indicators throughout the text.";
+            } else {
+                finding += "with strong partisan language and one-sided presentation.";
+            }
+            
+            // Add bias type if available
+            if (biasType && biasType !== 'Unknown') {
+                finding += ` Primary bias type detected: ${biasType}.`;
+            }
+            
+            // Add confidence if available
+            if (data.confidence_score) {
+                finding += ` Confidence level: ${Math.round(data.confidence_score)}%.`;
+            }
+            
+            return finding;
         }
 
         // UPDATED: Create Source Credibility Card
