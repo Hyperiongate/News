@@ -350,24 +350,50 @@ class AnalysisPipeline:
         logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
         
         # Prepare data for services
-        service_data = self._prepare_service_data(stage, context)
+        try:
+            service_data = self._prepare_service_data(stage, context)
+            logger.info(f"DEBUG: Prepared service data for stage {stage.name}, keys: {list(service_data.keys()) if service_data else 'None'}")
+        except Exception as e:
+            logger.error(f"ERROR preparing service data for stage {stage.name}: {e}", exc_info=True)
+            raise
+        
+        # ADD DEBUG LOGGING
+        logger.info(f"DEBUG: stage.parallel={stage.parallel}")
+        logger.info(f"DEBUG: len(available_services)={len(available_services)}")
+        logger.info(f"DEBUG: self.config.get('parallel_processing')={self.config.get('parallel_processing')}")
+        
+        # Check parallel execution condition
+        use_parallel = stage.parallel and len(available_services) > 1 and self.config.get('parallel_processing', False)
+        logger.info(f"DEBUG: Will use {'PARALLEL' if use_parallel else 'SEQUENTIAL'} execution")
         
         # Run services
-        if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
+        if use_parallel:
             # Run in parallel using ThreadPoolExecutor
-            results = service_registry.analyze_parallel(available_services, service_data)
-            for service_name, result in results.items():
-                if result.get('error'):
-                    context.add_error(service_name, result['error'], stage.name)
-                else:
-                    context.add_result(service_name, result)
+            logger.info(f"DEBUG: Calling analyze_parallel with {available_services}")
+            try:
+                results = service_registry.analyze_parallel(available_services, service_data)
+                logger.info(f"DEBUG: analyze_parallel returned {len(results)} results")
+                for service_name, result in results.items():
+                    logger.info(f"DEBUG: Result for {service_name}: success={result.get('success', 'N/A')}, has_error={bool(result.get('error'))}")
+                    if result.get('error'):
+                        context.add_error(service_name, result['error'], stage.name)
+                    else:
+                        context.add_result(service_name, result)
+            except Exception as e:
+                logger.error(f"ERROR in analyze_parallel: {e}", exc_info=True)
+                raise
         else:
             # Run sequentially
+            logger.info(f"DEBUG: Running sequential execution for {len(available_services)} services")
             for service_name in available_services:
                 try:
+                    logger.info(f"DEBUG: About to call analyze_with_service for '{service_name}'")
                     result = service_registry.analyze_with_service(service_name, service_data)
+                    logger.info(f"DEBUG: analyze_with_service returned, result keys: {list(result.keys()) if result else 'None'}")
+                    logger.info(f"DEBUG: Result details - success: {result.get('success', 'N/A')}, error: {result.get('error', 'None')}")
                     context.add_result(service_name, result)
                 except Exception as e:
+                    logger.error(f"ERROR calling analyze_with_service for {service_name}: {e}", exc_info=True)
                     context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
