@@ -58,14 +58,16 @@ class PipelineContext:
     
     def has_minimum_results(self, min_required: int) -> bool:
         """Check if we have minimum required successful results"""
+        # FIXED: Check for success field, not absence of error
         successful = sum(1 for r in self.results.values() 
-                        if r and not r.get('error'))
+                        if r and r.get('success', False))
         return successful >= min_required
     
     def get_successful_services(self) -> List[str]:
         """Get list of services that succeeded"""
+        # FIXED: Check for success field, not absence of error
         return [name for name, result in self.results.items()
-                if result and not result.get('error')]
+                if result and result.get('success', False)]
 
 
 class AnalysisPipeline:
@@ -350,50 +352,21 @@ class AnalysisPipeline:
         logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
         
         # Prepare data for services
-        try:
-            service_data = self._prepare_service_data(stage, context)
-            logger.info(f"DEBUG: Prepared service data for stage {stage.name}, keys: {list(service_data.keys()) if service_data else 'None'}")
-        except Exception as e:
-            logger.error(f"ERROR preparing service data for stage {stage.name}: {e}", exc_info=True)
-            raise
-        
-        # ADD DEBUG LOGGING
-        logger.info(f"DEBUG: stage.parallel={stage.parallel}")
-        logger.info(f"DEBUG: len(available_services)={len(available_services)}")
-        logger.info(f"DEBUG: self.config.get('parallel_processing')={self.config.get('parallel_processing')}")
-        
-        # Check parallel execution condition
-        use_parallel = stage.parallel and len(available_services) > 1 and self.config.get('parallel_processing', False)
-        logger.info(f"DEBUG: Will use {'PARALLEL' if use_parallel else 'SEQUENTIAL'} execution")
+        service_data = self._prepare_service_data(stage, context)
         
         # Run services
-        if use_parallel:
+        if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
             # Run in parallel using ThreadPoolExecutor
-            logger.info(f"DEBUG: Calling analyze_parallel with {available_services}")
-            try:
-                results = service_registry.analyze_parallel(available_services, service_data)
-                logger.info(f"DEBUG: analyze_parallel returned {len(results)} results")
-                for service_name, result in results.items():
-                    logger.info(f"DEBUG: Result for {service_name}: success={result.get('success', 'N/A')}, has_error={bool(result.get('error'))}")
-                    if result.get('error'):
-                        context.add_error(service_name, result['error'], stage.name)
-                    else:
-                        context.add_result(service_name, result)
-            except Exception as e:
-                logger.error(f"ERROR in analyze_parallel: {e}", exc_info=True)
-                raise
+            results = service_registry.analyze_parallel(available_services, service_data)
+            for service_name, result in results.items():
+                context.add_result(service_name, result)
         else:
             # Run sequentially
-            logger.info(f"DEBUG: Running sequential execution for {len(available_services)} services")
             for service_name in available_services:
                 try:
-                    logger.info(f"DEBUG: About to call analyze_with_service for '{service_name}'")
                     result = service_registry.analyze_with_service(service_name, service_data)
-                    logger.info(f"DEBUG: analyze_with_service returned, result keys: {list(result.keys()) if result else 'None'}")
-                    logger.info(f"DEBUG: Result details - success: {result.get('success', 'N/A')}, error: {result.get('error', 'None')}")
                     context.add_result(service_name, result)
                 except Exception as e:
-                    logger.error(f"ERROR calling analyze_with_service for {service_name}: {e}", exc_info=True)
                     context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
@@ -412,8 +385,9 @@ class AnalysisPipeline:
             # Add extraction results if available
             if 'article_extractor' in context.results:
                 extraction = context.results['article_extractor']
-                if extraction and not extraction.get('error'):
-                    # FIXED: Check if extraction has the standard service response format
+                # FIXED: Check success field instead of error field
+                if extraction and extraction.get('success', False):
+                    # Check if extraction has the standard service response format
                     if 'data' in extraction and isinstance(extraction['data'], dict):
                         # New format: extract data from the 'data' field
                         data.update(extraction['data'])
@@ -430,10 +404,10 @@ class AnalysisPipeline:
                         # This should not happen with the fixed ArticleExtractor
                         data.update(extraction)
             
-            # Add relevant previous results
+            # Add relevant previous results (only successful ones)
             data['previous_results'] = {
                 k: v for k, v in context.results.items()
-                if not v.get('error')
+                if v and v.get('success', False)
             }
             
             # Add original input data
@@ -443,10 +417,12 @@ class AnalysisPipeline:
     
     def _stage_failed(self, stage: PipelineStage, context: PipelineContext) -> bool:
         """Check if a stage failed"""
+        # FIXED: Check success field instead of error field
         for service in stage.services:
             if service in context.results:
                 result = context.results[service]
-                if result and not result.get('error'):
+                # A stage succeeds if at least one service succeeded
+                if result and result.get('success', False):
                     return False  # At least one service succeeded
         return True  # All services failed or no results
     
@@ -477,108 +453,128 @@ class AnalysisPipeline:
             'success': pipeline_success,
             'trust_score': trust_score,
             'trust_level': self._get_trust_level(trust_score),
+            'summary': self._generate_summary(context),
+            
+            # Service results (only include successful ones)
+            **{name: result for name, result in context.results.items() 
+               if result and result.get('success', False)},
+            
+            # Metadata
             'pipeline_metadata': context.metadata,
-            'errors': context.errors if context.errors else None
+            'errors': context.errors
         }
         
-        # Add individual service results
-        for service_name, result in context.results.items():
-            if result and not result.get('error'):
-                # Map service results to expected fields
-                if service_name == 'article_extractor':
-                    # Extract the data from the service response
-                    if 'data' in result:
-                        final_results['article'] = result['data']
-                    else:
-                        final_results['article'] = result
-                elif service_name == 'source_credibility':
-                    final_results['source_credibility'] = result
-                elif service_name == 'author_analyzer':
-                    final_results['author_analysis'] = result
-                elif service_name == 'bias_detector':
-                    final_results['bias_analysis'] = result
-                elif service_name == 'fact_checker':
-                    final_results['fact_checks'] = result.get('fact_checks', [])
-                elif service_name == 'transparency_analyzer':
-                    final_results['transparency'] = result
-                elif service_name == 'manipulation_detector':
-                    final_results['manipulation_analysis'] = result
-                elif service_name == 'content_analyzer':
-                    final_results['content_analysis'] = result
-                elif service_name == 'plagiarism_detector':
-                    final_results['plagiarism_analysis'] = result
-                elif service_name == 'related_news':
-                    final_results['related_news'] = result
-                elif service_name == 'visualization_generator':
-                    final_results['visualizations'] = result
-                elif service_name == 'pdf_generator':
-                    final_results['pdf_report'] = result
+        # Add article data if extraction succeeded
+        if 'article_extractor' in context.results:
+            extraction = context.results['article_extractor']
+            if extraction and extraction.get('success', False):
+                if 'data' in extraction:
+                    final_results['article'] = extraction['data']
                 else:
-                    # Add any other service results
-                    final_results[service_name] = result
+                    # Fallback for legacy format
+                    final_results['article'] = {
+                        k: v for k, v in extraction.items()
+                        if k not in ['service', 'success', 'error', 'available', 'timestamp']
+                    }
         
         return final_results
     
     def _calculate_trust_score(self, results: Dict[str, Any]) -> int:
-        """
-        Calculate overall trust score from service results
-        Enhanced to handle missing services gracefully
-        """
-        score_components = []
-        weights_used = []
-        
-        # Get weight configuration
-        weights = Config.TRUST_SCORE_WEIGHTS
-        
-        # Process each potential score component
-        service_mapping = {
-            'source_credibility': ('source_credibility', lambda r: r.get('credibility_score', 50)),
-            'author_analyzer': ('author_credibility', lambda r: r.get('author_score', 50)),
-            'bias_detector': ('bias_impact', lambda r: 100 - r.get('bias_score', 50)),
-            'transparency_analyzer': ('transparency', lambda r: r.get('transparency_score', 50)),
-            'fact_checker': ('fact_checking', lambda r: r.get('verification_score', 50)),
-            'manipulation_detector': ('manipulation', lambda r: 100 - r.get('manipulation_score', 50)),
-            'content_analyzer': ('content_quality', lambda r: r.get('quality_score', 50)),
-            'plagiarism_detector': ('originality', lambda r: r.get('originality_score', 50))
+        """Calculate overall trust score from service results"""
+        scores = []
+        weights = {
+            'source_credibility': 2.0,
+            'author_analyzer': 1.5,
+            'fact_checker': 2.0,
+            'bias_detector': 1.5,
+            'content_analyzer': 1.0,
+            'transparency_analyzer': 1.0,
+            'manipulation_detector': 1.5
         }
         
-        for service_name, (weight_key, score_extractor) in service_mapping.items():
-            if service_name in results and not results[service_name].get('error'):
-                try:
-                    # Check if it's a service response with data field
-                    service_result = results[service_name]
-                    if 'data' in service_result and isinstance(service_result['data'], dict):
-                        score = score_extractor(service_result['data'])
-                    else:
-                        score = score_extractor(service_result)
-                    
-                    weight = weights.get(weight_key, 0)
-                    if weight > 0:
-                        score_components.append(score * weight)
-                        weights_used.append(weight)
-                except Exception as e:
-                    logger.warning(f"Failed to extract score from {service_name}: {e}")
+        total_weight = 0
+        weighted_sum = 0
         
-        # Calculate weighted average only for available services
-        if score_components and weights_used:
-            total_weight = sum(weights_used)
-            if total_weight > 0:
-                # Normalize weights to sum to 1.0 for available services
-                normalized_score = sum(score_components) / total_weight
-                return int(round(normalized_score))
+        for service_name, result in results.items():
+            # Only include successful services
+            if result and result.get('success', False):
+                score = None
+                
+                # Extract score based on service type
+                if 'trust_score' in result:
+                    score = result['trust_score']
+                elif 'credibility_score' in result:
+                    score = result['credibility_score']
+                elif 'score' in result:
+                    score = result['score']
+                elif 'data' in result:
+                    # Check in data field
+                    data = result['data']
+                    if 'trust_score' in data:
+                        score = data['trust_score']
+                    elif 'credibility_score' in data:
+                        score = data['credibility_score']
+                    elif 'score' in data:
+                        score = data['score']
+                
+                if score is not None and isinstance(score, (int, float)):
+                    weight = weights.get(service_name, 1.0)
+                    weighted_sum += score * weight
+                    total_weight += weight
         
-        # Default score if no services provided scores
+        # Calculate weighted average
+        if total_weight > 0:
+            return int(weighted_sum / total_weight)
+        
+        # Default to 50 if no scores available
         return 50
     
     def _get_trust_level(self, score: int) -> str:
-        """Convert numeric trust score to trust level"""
+        """Get trust level from score"""
         if score >= 80:
-            return 'Very High'
-        elif score >= 70:
             return 'High'
-        elif score >= 50:
-            return 'Medium'
-        elif score >= 30:
+        elif score >= 60:
+            return 'Moderate'
+        elif score >= 40:
             return 'Low'
         else:
             return 'Very Low'
+    
+    def _generate_summary(self, context: PipelineContext) -> str:
+        """Generate summary of analysis"""
+        successful = context.get_successful_services()
+        
+        if not successful:
+            return "Analysis could not be completed due to extraction failure."
+        
+        if 'article_extractor' in successful:
+            extraction = context.results.get('article_extractor', {})
+            if extraction.get('success') and extraction.get('data', {}).get('title'):
+                title = extraction['data']['title']
+                summary = f"Analysis of '{title}' completed with {len(successful)} services. "
+            else:
+                summary = f"Analysis completed with {len(successful)} services. "
+        else:
+            summary = f"Partial analysis completed with {len(successful)} services. "
+        
+        # Add key findings
+        findings = []
+        
+        if 'fact_checker' in successful:
+            fc_result = context.results['fact_checker']
+            if fc_result.get('data', {}).get('verified_facts'):
+                findings.append(f"{len(fc_result['data']['verified_facts'])} facts verified")
+        
+        if 'bias_detector' in successful:
+            bias_result = context.results['bias_detector']
+            if bias_result.get('data', {}).get('overall_bias'):
+                findings.append(f"{bias_result['data']['overall_bias']} bias detected")
+        
+        if findings:
+            summary += "Key findings: " + ", ".join(findings) + "."
+        
+        return summary
+
+
+# Create a singleton instance
+pipeline = AnalysisPipeline()
