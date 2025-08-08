@@ -1,187 +1,247 @@
 """
-FILE: services/transparency_analyzer.py
-PURPOSE: Transparency analysis service
-REFACTORED: Now inherits from BaseAnalyzer for new architecture
+Transparency Analyzer Service - COMPLETE IMPLEMENTATION
+Analyzes transparency indicators in news articles
 """
 
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
 
-class LegacyTransparencyAnalyzer:
+class TransparencyAnalyzer(BaseAnalyzer):
     """Analyze transparency in news articles"""
     
-    def analyze(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
-        """Analyze transparency indicators in text"""
-        transparency_score = 50  # Base score
-        indicators = []
-        
-        # Check for author attribution
-        if author:
-            transparency_score += 15
-            indicators.append('Has author attribution')
-        else:
-            indicators.append('Missing author attribution')
-        
-        # Check for source citations
-        source_patterns = [
-            r'according to',
-            r'sources? (?:said|told|confirmed)',
-            r'reported by',
-            r'cited',
-            r'study by',
-            r'research (?:from|by)',
-            r'data from',
-            r'survey conducted by'
-        ]
-        
-        sources_found = 0
-        for pattern in source_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            sources_found += len(matches)
-        
-        if sources_found > 0:
-            transparency_score += min(sources_found * 5, 25)
-            indicators.append(f'Found {sources_found} source citations')
-        else:
-            indicators.append('No source citations found')
-        
-        # Check for direct quotes
-        quote_count = text.count('"')
-        if quote_count >= 4:  # At least 2 quoted sections
-            transparency_score += 10
-            indicators.append('Contains direct quotes')
-        
-        # Check for data/statistics with sources
-        data_pattern = r'\d+\s*(?:percent|%|million|billion).*?(?:according to|source:|from)'
-        if re.search(data_pattern, text, re.IGNORECASE):
-            transparency_score += 10
-            indicators.append('Statistics include sources')
-        
-        # Check for disclosure statements
-        disclosure_patterns = [
-            r'disclosure:',
-            r'disclaimer:',
-            r'conflict of interest',
-            r'funded by',
-            r'sponsored by'
-        ]
-        
-        for pattern in disclosure_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                transparency_score += 5
-                indicators.append('Contains disclosure statement')
-                break
-        
-        # Ensure score is within bounds
-        transparency_score = min(100, max(0, transparency_score))
-        
-        return {
-            'transparency_score': transparency_score,
-            'indicators': indicators,
-            'sources_cited': sources_found,
-            'has_author': bool(author),
-            'has_quotes': quote_count >= 4,
-            'transparency_level': self._get_transparency_level(transparency_score)
-        }
-    
-    def _get_transparency_level(self, score: int) -> str:
-        """Determine transparency level based on score"""
-        if score >= 80:
-            return 'High'
-        elif score >= 60:
-            return 'Good'
-        elif score >= 40:
-            return 'Moderate'
-        else:
-            return 'Low'
-
-
-# ============= NEW REFACTORED CLASS =============
-
-class TransparencyAnalyzer(BaseAnalyzer):
-    """Transparency analysis service that inherits from BaseAnalyzer"""
-    
     def __init__(self):
-        # Initialize _legacy BEFORE calling super().__init__
-        self._legacy = None
-        
-        # Now call parent init
         super().__init__('transparency_analyzer')
-        
-        # Try to initialize legacy analyzer
-        try:
-            self._legacy = LegacyTransparencyAnalyzer()
-            logger.info("Legacy TransparencyAnalyzer initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize legacy TransparencyAnalyzer: {e}")
-            self._legacy = None
+        logger.info("TransparencyAnalyzer initialized")
     
     def _check_availability(self) -> bool:
-        """Check if the service is available"""
-        return self._legacy is not None
+        """Service is always available"""
+        return True
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze transparency using the standardized interface
+        Analyze transparency indicators in article
         
         Expected input:
             - text: Article text to analyze
-            - author: (optional) Author name for attribution check
+            - author: (optional) Author name
+            - domain: (optional) Source domain
             
         Returns:
             Standardized response with transparency analysis
         """
-        # Validate input
-        if not self.is_available:
-            return self.get_default_result()
-        
-        text = data.get('text')
-        if not text:
-            return self.get_error_result("Missing required field: 'text'")
-        
-        # Get optional author
-        author = data.get('author')
-        
-        return self._analyze_transparency(text, author)
-    
-    def _analyze_transparency(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
-        """Analyze transparency indicators"""
         try:
-            # Use legacy method
-            result = self._legacy.analyze(text, author)
+            text = data.get('text', '')
+            if not text:
+                return self.get_error_result("No text provided for transparency analysis")
             
-            # Transform to standardized format
+            author = data.get('author')
+            domain = data.get('domain', '')
+            
+            # Perform analysis
+            transparency_score = 50  # Base score
+            indicators = []
+            missing_elements = []
+            disclosures = []
+            
+            # 1. Author Attribution (20 points)
+            if author and author.lower() not in ['unknown', 'staff', 'editor', 'admin']:
+                transparency_score += 20
+                indicators.append('Clear author attribution')
+            else:
+                missing_elements.append('No clear author attribution')
+                transparency_score -= 10
+            
+            # 2. Source Citations (up to 30 points)
+            source_patterns = [
+                r'according to [\w\s]+',
+                r'(?:said|told|confirmed) [\w\s]+ (?:in an? (?:interview|statement|report))',
+                r'(?:reported by|cited by) [\w\s]+',
+                r'(?:study|research|report) (?:by|from) [\w\s]+',
+                r'data from [\w\s]+',
+                r'survey conducted by [\w\s]+',
+                r'(?:based on|derived from) [\w\s]+'
+            ]
+            
+            sources_found = 0
+            source_examples = []
+            for pattern in source_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                sources_found += len(matches)
+                if matches:
+                    source_examples.extend(matches[:2])  # Keep first 2 examples
+            
+            if sources_found > 0:
+                points = min(sources_found * 5, 30)
+                transparency_score += points
+                indicators.append(f'Found {sources_found} source citations')
+                if source_examples:
+                    indicators.append(f'Examples: {", ".join(source_examples[:3])}')
+            else:
+                missing_elements.append('No source citations found')
+                transparency_score -= 15
+            
+            # 3. Direct Quotes (15 points)
+            quote_pattern = r'"[^"]{20,}"'  # Quotes with at least 20 characters
+            quotes = re.findall(quote_pattern, text)
+            quote_count = len(quotes)
+            
+            if quote_count >= 2:
+                transparency_score += 15
+                indicators.append(f'Contains {quote_count} direct quotes')
+            elif quote_count == 1:
+                transparency_score += 7
+                indicators.append('Contains 1 direct quote')
+            else:
+                missing_elements.append('No direct quotes from sources')
+            
+            # 4. Data/Statistics with Sources (15 points)
+            data_pattern = r'(\d+(?:\.\d+)?%?)\s*(?:of|from|according to|based on|source:)\s*([\w\s]+)'
+            data_matches = re.findall(data_pattern, text, re.IGNORECASE)
+            
+            if data_matches:
+                transparency_score += 15
+                indicators.append(f'Statistics include sources ({len(data_matches)} instances)')
+            else:
+                # Check for unsourced statistics
+                unsourced_stats = re.findall(r'\d+(?:\.\d+)?%', text)
+                if len(unsourced_stats) > 2:
+                    missing_elements.append('Statistics lack source attribution')
+                    transparency_score -= 10
+            
+            # 5. Disclosure Statements (10 points)
+            disclosure_patterns = [
+                r'disclosure:\s*[^.]+',
+                r'disclaimer:\s*[^.]+',
+                r'conflict of interest:\s*[^.]+',
+                r'funded by\s*[^.]+',
+                r'sponsored by\s*[^.]+',
+                r'correction:\s*[^.]+',
+                r'update:\s*[^.]+'
+            ]
+            
+            for pattern in disclosure_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                if matches:
+                    transparency_score += 10
+                    disclosures.extend(matches)
+                    indicators.append('Contains disclosure statements')
+                    break
+            
+            # 6. Contact Information (5 points)
+            contact_patterns = [
+                r'contact (?:us|me|the author) at',
+                r'email:?\s*[\w\.-]+@[\w\.-]+',
+                r'reach out (?:at|to)',
+                r'for more information'
+            ]
+            
+            has_contact = False
+            for pattern in contact_patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    transparency_score += 5
+                    indicators.append('Provides contact information')
+                    has_contact = True
+                    break
+            
+            if not has_contact:
+                missing_elements.append('No contact information provided')
+            
+            # 7. Methodology (10 points for investigative pieces)
+            methodology_keywords = ['methodology', 'how we', 'our investigation', 'we analyzed', 'we reviewed']
+            if any(keyword in text.lower() for keyword in methodology_keywords):
+                transparency_score += 10
+                indicators.append('Explains methodology or process')
+            
+            # 8. External Links/References (5 points)
+            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+            urls = re.findall(url_pattern, text)
+            if urls:
+                transparency_score += 5
+                indicators.append(f'Includes {len(urls)} external references')
+            
+            # Ensure score is within bounds
+            transparency_score = max(0, min(100, transparency_score))
+            
+            # Determine transparency level
+            if transparency_score >= 80:
+                level = 'Excellent'
+                assessment = 'Very transparent with clear sourcing and attribution'
+            elif transparency_score >= 65:
+                level = 'Good'
+                assessment = 'Generally transparent with most key elements present'
+            elif transparency_score >= 50:
+                level = 'Moderate'
+                assessment = 'Some transparency but missing important elements'
+            elif transparency_score >= 35:
+                level = 'Low'
+                assessment = 'Limited transparency with many missing elements'
+            else:
+                level = 'Very Low'
+                assessment = 'Lacks basic transparency standards'
+            
+            # Generate recommendations
+            recommendations = self._generate_recommendations(missing_elements, transparency_score)
+            
             return {
                 'service': self.service_name,
                 'success': True,
                 'data': {
-                    'transparency_score': result.get('transparency_score', 50),
-                    'transparency_level': result.get('transparency_level', 'Unknown'),
-                    'indicators': result.get('indicators', []),
-                    'sources_cited': result.get('sources_cited', 0),
-                    'has_author': result.get('has_author', False),
-                    'has_quotes': result.get('has_quotes', False),
-                    'analysis_details': {
+                    'score': transparency_score,
+                    'level': level,
+                    'assessment': assessment,
+                    'indicators': indicators,
+                    'missing_elements': missing_elements,
+                    'disclosures': disclosures,
+                    'recommendations': recommendations,
+                    'transparency_score': transparency_score,  # For backward compatibility
+                    'transparency_level': level,  # For backward compatibility
+                    'sources_cited': sources_found,
+                    'has_author': bool(author),
+                    'has_quotes': quote_count > 0,
+                    'details': {
                         'author_provided': bool(author),
-                        'author_name': author if author else 'Not provided',
-                        'citation_count': result.get('sources_cited', 0),
-                        'has_disclosure': any('disclosure' in ind.lower() for ind in result.get('indicators', []))
+                        'quote_count': quote_count,
+                        'source_count': sources_found,
+                        'has_methodology': any(keyword in text.lower() for keyword in methodology_keywords),
+                        'has_disclosures': len(disclosures) > 0,
+                        'external_links': len(urls) if 'urls' in locals() else 0
                     }
                 },
                 'metadata': {
-                    'indicators_found': len(result.get('indicators', []))
+                    'indicators_found': len(indicators),
+                    'issues_found': len(missing_elements)
                 }
             }
             
         except Exception as e:
-            logger.error(f"Transparency analysis failed: {e}")
+            logger.error(f"Transparency analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
-    def analyze_transparency(self, text: str, author: Optional[str] = None) -> Dict[str, Any]:
-        """Legacy compatibility method"""
-        return self.analyze({'text': text, 'author': author})
+    def _generate_recommendations(self, missing_elements: List[str], score: int) -> List[str]:
+        """Generate specific recommendations based on missing elements"""
+        recommendations = []
+        
+        if 'No clear author attribution' in missing_elements:
+            recommendations.append('Add clear author byline with full name and credentials')
+        
+        if 'No source citations found' in missing_elements:
+            recommendations.append('Include specific sources for all claims and data')
+        
+        if 'No direct quotes from sources' in missing_elements:
+            recommendations.append('Add direct quotes from named sources to support claims')
+        
+        if 'Statistics lack source attribution' in missing_elements:
+            recommendations.append('Provide sources for all statistics and data points')
+        
+        if 'No contact information provided' in missing_elements:
+            recommendations.append('Include contact information for corrections or questions')
+        
+        if score < 50:
+            recommendations.append('Consider adding disclosure statements about funding or conflicts')
+        
+        return recommendations
