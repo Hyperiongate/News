@@ -1,97 +1,28 @@
 """
-Base Analyzer Class
+Base Analyzer Abstract Class
 All analysis services should inherit from this base class
 """
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 import time
 import logging
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List
 from functools import wraps
 import asyncio
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
-from config import Config, ServiceConfig
+from config import Config
 
 logger = logging.getLogger(__name__)
 
 
-def with_timeout(func):
-    """Decorator to add timeout to analyzer methods"""
-    @wraps(func)
-    async def async_wrapper(self, *args, **kwargs):
-        try:
-            return await asyncio.wait_for(
-                func(self, *args, **kwargs),
-                timeout=self.config.timeout
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"{self.service_name} timed out after {self.config.timeout}s")
-            return self.get_timeout_result()
-    
-    @wraps(func)
-    def sync_wrapper(self, *args, **kwargs):
-        try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(func, self, *args, **kwargs)
-                return future.result(timeout=self.config.timeout)
-        except TimeoutError:
-            logger.error(f"{self.service_name} timed out after {self.config.timeout}s")
-            return self.get_timeout_result()
-    
-    # Return appropriate wrapper based on function type
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-    else:
-        return sync_wrapper
-
-
-def with_retry(func):
-    """Decorator to add retry logic to analyzer methods"""
-    @wraps(func)
-    async def async_wrapper(self, *args, **kwargs):
-        last_error = None
-        for attempt in range(self.config.max_retries):
-            try:
-                return await func(self, *args, **kwargs)
-            except Exception as e:
-                last_error = e
-                if attempt < self.config.max_retries - 1:
-                    wait_time = (attempt + 1) * 2  # Exponential backoff
-                    logger.warning(f"{self.service_name} attempt {attempt + 1} failed: {e}. Retrying in {wait_time}s...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error(f"{self.service_name} failed after {self.config.max_retries} attempts: {e}")
-        return self.get_error_result(str(last_error))
-    
-    @wraps(func)
-    def sync_wrapper(self, *args, **kwargs):
-        last_error = None
-        for attempt in range(self.config.max_retries):
-            try:
-                return func(self, *args, **kwargs)
-            except Exception as e:
-                last_error = e
-                if attempt < self.config.max_retries - 1:
-                    wait_time = (attempt + 1) * 2  # Exponential backoff
-                    logger.warning(f"{self.service_name} attempt {attempt + 1} failed: {e}. Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    logger.error(f"{self.service_name} failed after {self.config.max_retries} attempts: {e}")
-        return self.get_error_result(str(last_error))
-    
-    # Return appropriate wrapper based on function type
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-    else:
-        return sync_wrapper
-
-
 class BaseAnalyzer(ABC):
-    """Base class for all analysis services"""
+    """
+    Base class for all analysis services
+    Provides common functionality and interface
+    """
     
     def __init__(self, service_name: str):
         self.service_name = service_name
-        self.config: ServiceConfig = Config.get_service_config(service_name)
+        self.config = Config.get_service_config(service_name)
         self.is_available = self._check_availability()
         self._performance_stats = {
             'total_calls': 0,
@@ -101,23 +32,20 @@ class BaseAnalyzer(ABC):
             'average_time': 0
         }
         
-        if self.is_available:
-            logger.info(f"{service_name} initialized successfully")
-        else:
-            logger.warning(f"{service_name} is not available")
+        logger.info(f"{service_name} initialized successfully")
     
     @abstractmethod
     def _check_availability(self) -> bool:
         """
-        Check if the service is available and properly configured
-        Each service should implement its own availability check
+        Check if the service is available (has required API keys, etc.)
+        Must be implemented by each service
         """
         pass
     
     @abstractmethod
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main analysis method that each service must implement
+        Main analysis method
         
         Args:
             data: Input data for analysis
@@ -140,6 +68,7 @@ class BaseAnalyzer(ABC):
         """Get default result when service is unavailable"""
         return {
             'service': self.service_name,
+            'success': False,  # FIXED: Added success field
             'available': False,
             'error': 'Service unavailable',
             'timestamp': time.time()
@@ -149,6 +78,7 @@ class BaseAnalyzer(ABC):
         """Get error result format"""
         return {
             'service': self.service_name,
+            'success': False,  # FIXED: Added success field
             'available': self.is_available,
             'error': error_message,
             'timestamp': time.time()
@@ -158,6 +88,7 @@ class BaseAnalyzer(ABC):
         """Get timeout result format"""
         return {
             'service': self.service_name,
+            'success': False,  # FIXED: Added success field
             'available': self.is_available,
             'error': f'Analysis timed out after {self.config.timeout}s',
             'timeout': True,
@@ -222,26 +153,75 @@ class BaseAnalyzer(ABC):
                         self._performance_stats['total_calls']
                     )
         
+        # Return appropriate wrapper based on function type
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return wrapper
+        return wrapper
+    
+    def analyze_with_timeout(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run analysis with timeout protection
+        
+        Args:
+            data: Input data for analysis
+            
+        Returns:
+            Analysis results or timeout error
+        """
+        import concurrent.futures
+        
+        timeout = self.config.timeout if self.config else 30
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self.analyze, data)
+            try:
+                result = future.result(timeout=timeout)
+                return result
+            except concurrent.futures.TimeoutError:
+                return self.get_timeout_result()
+            except Exception as e:
+                logger.error(f"Service {self.service_name} failed: {e}")
+                return self.get_error_result(str(e))
 
 
 class AsyncBaseAnalyzer(BaseAnalyzer):
-    """Base class for async analysis services"""
+    """
+    Async version of BaseAnalyzer for services that need async operations
+    """
     
     @abstractmethod
     async def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Async analysis method"""
+        """
+        Async main analysis method
+        
+        Args:
+            data: Input data for analysis
+            
+        Returns:
+            Analysis results dictionary
+        """
         pass
     
     async def analyze_with_timeout(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze with timeout protection"""
+        """
+        Run async analysis with timeout protection
+        
+        Args:
+            data: Input data for analysis
+            
+        Returns:
+            Analysis results or timeout error
+        """
+        timeout = self.config.timeout if self.config else 30
+        
         try:
-            return await asyncio.wait_for(
-                self.analyze(data),
-                timeout=self.config.timeout
+            result = await asyncio.wait_for(
+                self.analyze(data), 
+                timeout=timeout
             )
+            return result
         except asyncio.TimeoutError:
             return self.get_timeout_result()
+        except Exception as e:
+            logger.error(f"Async service {self.service_name} failed: {e}")
+            return self.get_error_result(str(e))
