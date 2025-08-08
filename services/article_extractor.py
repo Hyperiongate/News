@@ -933,6 +933,27 @@ class ArticleExtractor(BaseAnalyzer):
         """Check if the service is available"""
         return True
     
+    def get_error_result(self, error_message: str) -> Dict[str, Any]:
+        """Override to ensure 'success' field is always included"""
+        return {
+            'service': self.service_name,
+            'success': False,  # CRITICAL: This must be included!
+            'available': self.is_available,
+            'error': error_message,
+            'timestamp': time.time()
+        }
+    
+    def get_timeout_result(self) -> Dict[str, Any]:
+        """Override to ensure 'success' field is always included"""
+        return {
+            'service': self.service_name,
+            'success': False,  # CRITICAL: This must be included!
+            'available': self.is_available,
+            'error': f'Analysis timed out after {self.config.timeout}s',
+            'timeout': True,
+            'timestamp': time.time()
+        }
+    
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract article content using the standardized interface
