@@ -1,6 +1,7 @@
 """
-Response Builder
+Response Builder - FIXED VERSION
 Ensures consistent response format across all endpoints
+Properly extracts data from service results
 """
 import time
 import json
@@ -127,8 +128,7 @@ class ResponseBuilder:
             Flask Response object
         """
         response = {
-            'success': True,
-            'partial': True,
+            'success': 'partial',
             'data': successful_data,
             'failures': failures,
             'timestamp': datetime.utcnow().isoformat() + 'Z'
@@ -136,25 +136,15 @@ class ResponseBuilder:
         
         if message:
             response['message'] = message
-        else:
-            response['message'] = f"Completed with {len(failures)} failures"
-        
-        if Config.RESPONSE_FORMAT['include_metadata']:
-            response['metadata'] = ResponseBuilder._build_metadata({
-                'total_operations': len(successful_data) + len(failures),
-                'successful_operations': len(successful_data),
-                'failed_operations': len(failures)
-            })
-        
+            
         return jsonify(response), 207  # 207 Multi-Status
     
     @staticmethod
     def _build_metadata(custom_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Build metadata section"""
+        """Build metadata for response"""
         metadata = {
             'response_time_ms': ResponseBuilder._get_response_time(),
-            'version': '2.0',
-            'environment': Config.ENV
+            'api_version': Config.API_VERSION
         }
         
         if custom_metadata:
@@ -165,14 +155,12 @@ class ResponseBuilder:
     @staticmethod
     def _compressed_response(data: Dict[str, Any], status_code: int) -> Response:
         """Create compressed response"""
-        json_data = json.dumps(data)
-        compressed = gzip.compress(json_data.encode('utf-8'))
+        json_str = json.dumps(data)
+        compressed = gzip.compress(json_str.encode('utf-8'))
         
-        response = Response(compressed, status_code)
-        response.headers['Content-Encoding'] = 'gzip'
+        response = Response(compressed, status=status_code)
         response.headers['Content-Type'] = 'application/json'
-        
-        logger.info(f"Compressed response from {len(json_data)} to {len(compressed)} bytes")
+        response.headers['Content-Encoding'] = 'gzip'
         
         return response
     
@@ -180,7 +168,7 @@ class ResponseBuilder:
     def _get_response_time() -> int:
         """Get response time in milliseconds"""
         # This should be set by middleware
-        return int((time.time() - getattr(ResponseBuilder, '_start_time', time.time())) * 1000)
+        return getattr(ResponseBuilder, '_start_time', 0)
     
     @staticmethod
     def _get_request_id() -> str:
@@ -220,6 +208,22 @@ class AnalysisResponseBuilder(ResponseBuilder):
         Returns:
             Flask Response object
         """
+        # FIXED: Properly extract data from service results
+        extracted_results = {}
+        
+        # Extract data from each service result
+        for service_name, result in analysis_results.items():
+            if isinstance(result, dict) and result.get('success'):
+                # Extract the data field if it exists
+                if 'data' in result:
+                    extracted_results[service_name] = result['data']
+                else:
+                    # If no data field, use the entire result (legacy format)
+                    extracted_results[service_name] = result
+            else:
+                # Service failed or returned empty result
+                extracted_results[service_name] = {}
+        
         # Structure the response data
         data = {
             'article': {
@@ -235,16 +239,16 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'trust_score': analysis_results.get('trust_score', 50),
                 'trust_level': analysis_results.get('trust_level', 'Unknown'),
                 'summary': analysis_results.get('summary'),
-                'key_findings': AnalysisResponseBuilder._extract_key_findings(analysis_results)
+                'key_findings': AnalysisResponseBuilder._extract_key_findings(extracted_results)
             },
             'detailed_analysis': {
-                'source_credibility': analysis_results.get('source_credibility', {}),
-                'author_analysis': analysis_results.get('author_analysis', {}),
-                'bias_analysis': analysis_results.get('bias_analysis', {}),
-                'transparency_analysis': analysis_results.get('transparency_analysis', {}),
-                'fact_checks': analysis_results.get('fact_checks', []),
-                'manipulation_analysis': analysis_results.get('persuasion_analysis', {}),
-                'content_analysis': analysis_results.get('content_analysis', {})
+                'source_credibility': extracted_results.get('source_credibility', {}),
+                'author_analysis': extracted_results.get('author_analysis', {}),
+                'bias_analysis': extracted_results.get('bias_analysis', {}),
+                'transparency_analysis': extracted_results.get('transparency_analysis', {}),
+                'fact_checks': extracted_results.get('fact_checks', []),
+                'manipulation_analysis': extracted_results.get('manipulation_analysis', extracted_results.get('persuasion_analysis', {})),
+                'content_analysis': extracted_results.get('content_analysis', {})
             }
         }
         
@@ -283,7 +287,7 @@ class AnalysisResponseBuilder(ResponseBuilder):
         
         # Source credibility finding
         source_cred = analysis_results.get('source_credibility', {})
-        if source_cred.get('rating'):
+        if source_cred and source_cred.get('rating'):
             findings.append({
                 'type': 'source_credibility',
                 'title': 'Source Credibility',
@@ -291,10 +295,20 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'impact': 'high' if source_cred.get('rating') in ['Very Low', 'Low'] else 'medium'
             })
         
+        # Author finding
+        author = analysis_results.get('author_analysis', {})
+        if author and author.get('level'):
+            findings.append({
+                'type': 'author',
+                'title': 'Author Credibility',
+                'finding': f"{author.get('level')} author credibility",
+                'impact': 'high' if author.get('score', 0) < 40 else 'medium'
+            })
+        
         # Bias finding
         bias = analysis_results.get('bias_analysis', {})
-        if bias.get('political_lean') is not None:
-            lean = bias.get('political_lean')
+        if bias and bias.get('political_lean') is not None:
+            lean = bias.get('political_lean', 0)
             if abs(lean) > 0.5:
                 findings.append({
                     'type': 'bias',
@@ -304,8 +318,8 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 })
         
         # Manipulation finding
-        manipulation = analysis_results.get('persuasion_analysis', {})
-        if manipulation.get('manipulation_score', 0) > 50:
+        manipulation = analysis_results.get('manipulation_analysis', {})
+        if manipulation and manipulation.get('manipulation_score', 0) > 50:
             findings.append({
                 'type': 'manipulation',
                 'title': 'Manipulation Tactics',
