@@ -1,346 +1,447 @@
 """
-FILE: services/manipulation_detector.py 
-PURPOSE: Manipulation detection service
-FIXED: More nuanced scoring that doesn't easily hit 100%
-REFACTORED: Now inherits from BaseAnalyzer for new architecture
+Manipulation Detector Service - COMPLETE IMPLEMENTATION
+Detects propaganda techniques and manipulation tactics in news articles
 """
 
 import re
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
+from collections import Counter
 from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
 
-class LegacyManipulationDetector:
-    """Detect manipulation tactics in articles"""
+class ManipulationDetector(BaseAnalyzer):
+    """Detect manipulation tactics and propaganda techniques in articles"""
     
     def __init__(self):
-        # Enhanced manipulation patterns with severity weights
+        super().__init__('manipulation_detector')
+        self._initialize_manipulation_patterns()
+        logger.info("ManipulationDetector initialized with comprehensive pattern database")
+    
+    def _initialize_manipulation_patterns(self):
+        """Initialize comprehensive manipulation and propaganda patterns"""
         self.manipulation_patterns = {
             'fear_mongering': {
+                'name': 'Fear Mongering',
+                'description': 'Using fear-inducing language to manipulate emotions',
+                'severity': 'high',
                 'keywords': [
                     'catastrophe', 'disaster', 'crisis', 'threat', 'danger',
                     'destroy', 'devastate', 'collapse', 'nightmare', 'apocalypse',
-                    'terrifying', 'horrifying', 'deadly', 'fatal'
+                    'terrifying', 'horrifying', 'deadly', 'fatal', 'doom'
                 ],
-                'weight': 3,  # Reduced from 10
-                'name': 'Fear Mongering',
-                'description': 'Using fear-inducing language'
+                'weight': 3
             },
             'emotional_manipulation': {
+                'name': 'Emotional Manipulation',
+                'description': 'Excessive emotional appeals to bypass rational thinking',
+                'severity': 'medium',
                 'keywords': [
                     'shocking', 'outrageous', 'disgusting', 'horrifying',
                     'unbelievable', 'jaw-dropping', 'mind-blowing', 'heartbreaking',
                     'devastating', 'tragic', 'inspiring', 'miraculous'
                 ],
-                'weight': 2,  # Lower weight
-                'name': 'Emotional Language',
-                'description': 'Excessive emotional appeals'
+                'weight': 2
             },
             'false_urgency': {
+                'name': 'False Urgency',
+                'description': 'Creating artificial time pressure',
+                'severity': 'medium',
                 'keywords': [
                     'act now', 'limited time', 'don\'t wait', 'expires soon',
-                    'last chance', 'hurry', 'immediately', 'breaking', 'urgent',
-                    'alert', 'warning', 'right now', 'before it\'s too late'
+                    'last chance', 'urgent', 'immediately', 'breaking', 'just in'
                 ],
-                'weight': 2.5,
-                'name': 'False Urgency',
-                'description': 'Creating artificial time pressure'
+                'weight': 2
             },
-            'loaded_language': {
+            'bandwagon': {
+                'name': 'Bandwagon Appeal',
+                'description': 'Suggesting everyone else believes/does something',
+                'severity': 'low',
                 'keywords': [
-                    'radical', 'extreme', 'far-left', 'far-right',
-                    'socialist', 'fascist', 'communist', 'nazi', 'terrorist',
-                    'thugs', 'mob', 'evil', 'corrupt', 'crooked'
+                    'everyone knows', 'everybody agrees', 'most people',
+                    'nobody disagrees', 'universally accepted', 'common knowledge',
+                    'widespread belief', 'majority thinks'
                 ],
-                'weight': 4,  # Higher weight for more serious terms
-                'name': 'Loaded Language',
-                'description': 'Using charged political terms'
+                'weight': 2
             },
-            'absolutism': {
+            'ad_hominem': {
+                'name': 'Ad Hominem Attacks',
+                'description': 'Attacking the person rather than the argument',
+                'severity': 'high',
                 'keywords': [
-                    'always', 'never', 'every', 'all', 'none',
-                    'completely', 'totally', 'absolutely', 'definitely',
-                    'undeniable', 'irrefutable', 'proven'
+                    'idiot', 'moron', 'stupid', 'ignorant', 'fool',
+                    'corrupt', 'evil', 'liar', 'fraud', 'incompetent'
                 ],
-                'weight': 1.5,  # Lower weight as these are common
-                'name': 'Absolutist Claims',
-                'description': 'Black-and-white thinking'
+                'weight': 3
             },
-            'conspiracy_rhetoric': {
-                'keywords': [
-                    'cover-up', 'coverup', 'hidden agenda', 'they don\'t want you to know',
-                    'mainstream media won\'t tell', 'wake up', 'sheeple',
-                    'deep state', 'globalist', 'new world order'
+            'loaded_questions': {
+                'name': 'Loaded Questions',
+                'description': 'Questions that contain unfair assumptions',
+                'severity': 'medium',
+                'patterns': [
+                    r'why (?:do|does|did) .+? always',
+                    r'how can .+? justify',
+                    r'isn\'t it true that',
+                    r'don\'t you think'
                 ],
-                'weight': 5,  # High weight for conspiracy language
-                'name': 'Conspiracy Language',
-                'description': 'Suggesting hidden plots'
+                'weight': 2
+            },
+            'false_dichotomy': {
+                'name': 'False Dichotomy',
+                'description': 'Presenting only two options when more exist',
+                'severity': 'medium',
+                'patterns': [
+                    r'either .+? or',
+                    r'you\'re either with us or',
+                    r'only two (?:choices|options)',
+                    r'(?:must|have to) choose between'
+                ],
+                'weight': 2
+            },
+            'cherry_picking': {
+                'name': 'Cherry Picking',
+                'description': 'Selecting only favorable evidence',
+                'severity': 'medium',
+                'keywords': [
+                    'conveniently ignores', 'fails to mention', 'overlooked',
+                    'selective', 'one example', 'single case'
+                ],
+                'weight': 2
+            },
+            'appeal_to_authority': {
+                'name': 'Appeal to Authority',
+                'description': 'Using authority figures inappropriately',
+                'severity': 'low',
+                'patterns': [
+                    r'experts? (?:all )?agree',
+                    r'scientists? (?:all )?say',
+                    r'doctors? (?:all )?recommend',
+                    r'authorities confirm'
+                ],
+                'weight': 1
+            },
+            'strawman': {
+                'name': 'Straw Man',
+                'description': 'Misrepresenting opposing arguments',
+                'severity': 'high',
+                'keywords': [
+                    'claims that', 'pretends', 'wants you to believe',
+                    'would have you think', 'suggests that all'
+                ],
+                'weight': 3
+            }
+        }
+        
+        # Propaganda techniques
+        self.propaganda_techniques = {
+            'card_stacking': {
+                'name': 'Card Stacking',
+                'description': 'Presenting only one side of an argument',
+                'indicators': ['only positive', 'only negative', 'one-sided', 'no counterargument']
+            },
+            'name_calling': {
+                'name': 'Name Calling',
+                'description': 'Using negative labels to discredit',
+                'indicators': ['radical', 'extremist', 'conspiracy theorist', 'denier']
+            },
+            'glittering_generalities': {
+                'name': 'Glittering Generalities',
+                'description': 'Using vague positive phrases',
+                'indicators': ['freedom', 'democracy', 'justice', 'prosperity', 'security']
+            },
+            'transfer': {
+                'name': 'Transfer Technique',
+                'description': 'Connecting something to positive/negative symbols',
+                'indicators': ['flag', 'founding fathers', 'constitution', 'tradition']
             }
         }
     
-    def analyze_persuasion(self, text: str, title: str = '') -> Dict[str, Any]:
-        """Analyze persuasion tactics in text"""
-        full_text = (text + ' ' + title).lower()
-        word_count = len(full_text.split())
-        
-        tactics_found = []
-        total_score = 0
-        
-        # Check for each manipulation type
-        for tactic_type, tactic_info in self.manipulation_patterns.items():
-            found_keywords = []
-            
-            # Use word boundaries for more accurate matching
-            for keyword in tactic_info['keywords']:
-                # Create pattern with word boundaries
-                pattern = r'\b' + re.escape(keyword) + r'\b'
-                matches = re.findall(pattern, full_text, re.IGNORECASE)
-                if matches:
-                    found_keywords.append(keyword)
-            
-            if found_keywords:
-                # Calculate score with diminishing returns
-                keyword_count = len(found_keywords)
-                
-                # Base score calculation with diminishing returns
-                if keyword_count == 1:
-                    score = tactic_info['weight'] * 1.0
-                elif keyword_count == 2:
-                    score = tactic_info['weight'] * 1.5
-                elif keyword_count == 3:
-                    score = tactic_info['weight'] * 1.8
-                else:
-                    # Logarithmic growth for 4+ keywords
-                    score = tactic_info['weight'] * (1.8 + (keyword_count - 3) * 0.1)
-                
-                # Adjust for article length (longer articles might naturally have more keywords)
-                if word_count > 1000:
-                    score *= 0.8  # Reduce score for longer articles
-                elif word_count < 200:
-                    score *= 1.2  # Increase score for short, punchy articles
-                
-                total_score += score
-                
-                # Determine severity
-                if score < tactic_info['weight'] * 1.2:
-                    severity = 'low'
-                elif score < tactic_info['weight'] * 2:
-                    severity = 'medium'
-                else:
-                    severity = 'high'
-                
-                tactics_found.append({
-                    'type': tactic_type,
-                    'name': tactic_info['name'],
-                    'description': tactic_info['description'],
-                    'keywords': found_keywords[:5],  # Limit displayed keywords
-                    'count': keyword_count,
-                    'severity': severity
-                })
-        
-        # Check for ALL CAPS (shouting)
-        caps_words = len(re.findall(r'\b[A-Z]{4,}\b', text))
-        if caps_words > 3:
-            caps_score = min(caps_words * 1.5, 10)  # Cap at 10 points
-            tactics_found.append({
-                'type': 'excessive_capitalization',
-                'name': 'Excessive Capitalization',
-                'description': 'Using ALL CAPS for emphasis',
-                'count': caps_words,
-                'severity': 'medium' if caps_words > 5 else 'low'
-            })
-            total_score += caps_score
-        
-        # Check for excessive punctuation
-        excessive_punct = len(re.findall(r'[!?]{2,}', text))
-        if excessive_punct > 0:
-            punct_score = min(excessive_punct * 2, 8)  # Cap at 8 points
-            tactics_found.append({
-                'type': 'excessive_punctuation',
-                'name': 'Excessive Punctuation',
-                'description': 'Multiple exclamation/question marks',
-                'count': excessive_punct,
-                'severity': 'low'
-            })
-            total_score += punct_score
-        
-        # Check for clickbait patterns
-        clickbait_patterns = [
-            r'you won\'t believe',
-            r'doctors hate',
-            r'this one trick',
-            r'what happened next',
-            r'number \d+ will shock you'
-        ]
-        
-        clickbait_count = 0
-        for pattern in clickbait_patterns:
-            if re.search(pattern, full_text, re.IGNORECASE):
-                clickbait_count += 1
-        
-        if clickbait_count > 0:
-            clickbait_score = clickbait_count * 3
-            tactics_found.append({
-                'type': 'clickbait_patterns',
-                'name': 'Clickbait Tactics',
-                'description': 'Using clickbait formulas',
-                'count': clickbait_count,
-                'severity': 'medium'
-            })
-            total_score += clickbait_score
-        
-        # Normalize score to 0-100 range
-        # Max realistic score would be around 40-50 for heavily manipulative content
-        # Scale it so that a score of 50 maps to 100%
-        normalized_score = min(100, int((total_score / 50) * 100))
-        
-        # Apply final adjustments
-        if normalized_score > 90 and len(tactics_found) < 4:
-            # If we got a very high score but few tactics, moderate it
-            normalized_score = 80
-        
-        # Sort tactics by severity
-        severity_order = {'high': 0, 'medium': 1, 'low': 2}
-        tactics_found.sort(key=lambda x: severity_order.get(x.get('severity', 'low'), 3))
-        
-        return {
-            'persuasion_score': normalized_score,
-            'tactics_found': tactics_found,
-            'manipulation_level': self._get_manipulation_level(normalized_score),
-            'tactic_count': len(tactics_found),
-            'word_count': word_count
-        }
-    
-    def _get_manipulation_level(self, score: int) -> str:
-        """Determine manipulation level based on score"""
-        if score >= 70:
-            return 'High'
-        elif score >= 40:
-            return 'Moderate'
-        elif score >= 20:
-            return 'Low'
-        else:
-            return 'Minimal'
-
-
-# ============= NEW REFACTORED CLASS =============
-
-class ManipulationDetector(BaseAnalyzer):
-    """Manipulation detection service that inherits from BaseAnalyzer"""
-    
-    def __init__(self):
-        # Initialize _legacy BEFORE calling super().__init__
-        self._legacy = None
-        
-        # Now call parent init
-        super().__init__('manipulation_detector')
-        
-        # Try to initialize legacy detector
-        try:
-            self._legacy = LegacyManipulationDetector()
-            logger.info("Legacy ManipulationDetector initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize legacy ManipulationDetector: {e}")
-            self._legacy = None
-    
     def _check_availability(self) -> bool:
-        """Check if the service is available"""
-        return self._legacy is not None
+        """Service is always available"""
+        return True
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Detect manipulation tactics using the standardized interface
+        Detect manipulation tactics in article
         
         Expected input:
             - text: Article text to analyze
-            - title: (optional) Article title for additional context
+            - title: (optional) Article title
             
         Returns:
             Standardized response with manipulation analysis
         """
-        # Validate input
-        if not self.is_available:
-            return self.get_default_result()
-        
-        text = data.get('text')
-        if not text:
-            return self.get_error_result("Missing required field: 'text'")
-        
-        # Get optional title
-        title = data.get('title', '')
-        
-        return self._analyze_manipulation(text, title)
-    
-    def _analyze_manipulation(self, text: str, title: str = '') -> Dict[str, Any]:
-        """Analyze manipulation tactics"""
         try:
-            # Use legacy method
-            result = self._legacy.analyze_persuasion(text, title)
+            text = data.get('text', '')
+            if not text:
+                return self.get_error_result("No text provided for manipulation analysis")
             
-            # Transform to standardized format
+            title = data.get('title', '')
+            full_text = f"{title}\n\n{text}" if title else text
+            
+            # Detect various manipulation tactics
+            tactics_found = self._detect_manipulation_tactics(full_text)
+            propaganda = self._detect_propaganda_techniques(full_text)
+            logical_fallacies = self._detect_logical_fallacies(full_text)
+            clickbait = self._analyze_clickbait(title)
+            
+            # Calculate scores
+            manipulation_score = self._calculate_manipulation_score(
+                tactics_found, propaganda, logical_fallacies, clickbait
+            )
+            
+            # Determine manipulation level
+            if manipulation_score >= 70:
+                level = 'High'
+                assessment = 'Significant manipulation tactics detected'
+            elif manipulation_score >= 40:
+                level = 'Moderate'
+                assessment = 'Some manipulation tactics present'
+            elif manipulation_score >= 20:
+                level = 'Low'
+                assessment = 'Minor manipulation indicators'
+            else:
+                level = 'Minimal'
+                assessment = 'Article appears straightforward'
+            
+            # Get most severe tactics
+            all_tactics = tactics_found + propaganda + logical_fallacies
+            if clickbait['is_clickbait']:
+                all_tactics.append({
+                    'name': 'Clickbait Title',
+                    'type': 'clickbait',
+                    'severity': 'medium',
+                    'description': clickbait['reason']
+                })
+            
+            # Sort by severity
+            severity_order = {'high': 0, 'medium': 1, 'low': 2}
+            all_tactics.sort(key=lambda x: severity_order.get(x.get('severity', 'low'), 3))
+            
+            # Generate summary
+            summary = self._generate_summary(manipulation_score, level, all_tactics)
+            
             return {
                 'service': self.service_name,
                 'success': True,
                 'data': {
-                    'persuasion_score': result.get('persuasion_score', 0),
-                    'manipulation_level': result.get('manipulation_level', 'Unknown'),
-                    'tactics_found': result.get('tactics_found', []),
-                    'tactic_count': result.get('tactic_count', 0),
-                    'analysis_details': {
-                        'word_count': result.get('word_count', 0),
-                        'has_title': bool(title),
-                        'most_severe_tactic': self._get_most_severe_tactic(result.get('tactics_found', []))
-                    },
-                    'summary': self._generate_summary(result)
+                    'score': manipulation_score,
+                    'level': level,
+                    'assessment': assessment,
+                    'summary': summary,
+                    'tactics_found': all_tactics[:10],  # Top 10 tactics
+                    'tactic_count': len(all_tactics),
+                    'propaganda_techniques': propaganda,
+                    'logical_fallacies': logical_fallacies,
+                    'clickbait_analysis': clickbait,
+                    'manipulation_score': manipulation_score,  # Backward compatibility
+                    'manipulation_level': level,  # Backward compatibility
+                    'persuasion_score': manipulation_score,  # Backward compatibility
+                    'details': {
+                        'total_tactics': len(all_tactics),
+                        'high_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'high'),
+                        'medium_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'medium'),
+                        'low_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'low'),
+                        'has_clickbait': clickbait['is_clickbait'],
+                        'word_count': len(full_text.split())
+                    }
                 },
                 'metadata': {
-                    'analyzed_with_title': bool(title),
-                    'text_length': len(text)
+                    'tactics_detected': len(all_tactics),
+                    'analyzed_with_title': bool(title)
                 }
             }
             
         except Exception as e:
-            logger.error(f"Manipulation analysis failed: {e}")
+            logger.error(f"Manipulation analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
-    def _get_most_severe_tactic(self, tactics: list) -> Dict[str, Any]:
-        """Get the most severe manipulation tactic found"""
-        if not tactics:
-            return {'name': 'None', 'severity': 'none'}
+    def _detect_manipulation_tactics(self, text: str) -> List[Dict[str, Any]]:
+        """Detect manipulation patterns in text"""
+        tactics = []
+        text_lower = text.lower()
         
-        # Sort by severity (high > medium > low)
-        severity_order = {'high': 0, 'medium': 1, 'low': 2}
-        sorted_tactics = sorted(tactics, key=lambda x: severity_order.get(x.get('severity', 'low'), 3))
+        for pattern_name, pattern_info in self.manipulation_patterns.items():
+            if 'keywords' in pattern_info:
+                # Check keywords
+                count = sum(1 for keyword in pattern_info['keywords'] 
+                           if keyword in text_lower)
+                if count > 0:
+                    tactics.append({
+                        'type': pattern_name,
+                        'name': pattern_info['name'],
+                        'severity': pattern_info['severity'],
+                        'description': pattern_info['description'],
+                        'instances': count
+                    })
+            
+            if 'patterns' in pattern_info:
+                # Check regex patterns
+                count = 0
+                for pattern in pattern_info['patterns']:
+                    matches = re.findall(pattern, text, re.IGNORECASE)
+                    count += len(matches)
+                
+                if count > 0:
+                    tactics.append({
+                        'type': pattern_name,
+                        'name': pattern_info['name'],
+                        'severity': pattern_info['severity'],
+                        'description': pattern_info['description'],
+                        'instances': count
+                    })
         
-        if sorted_tactics:
-            return {
-                'name': sorted_tactics[0].get('name', 'Unknown'),
-                'severity': sorted_tactics[0].get('severity', 'unknown'),
-                'type': sorted_tactics[0].get('type', 'unknown')
-            }
-        
-        return {'name': 'None', 'severity': 'none'}
+        return tactics
     
-    def _generate_summary(self, result: Dict[str, Any]) -> str:
+    def _detect_propaganda_techniques(self, text: str) -> List[Dict[str, Any]]:
+        """Detect propaganda techniques"""
+        techniques = []
+        text_lower = text.lower()
+        
+        # Card stacking - check for one-sided presentation
+        positive_words = ['excellent', 'outstanding', 'perfect', 'amazing', 'wonderful']
+        negative_words = ['terrible', 'awful', 'disaster', 'horrible', 'catastrophic']
+        
+        pos_count = sum(1 for word in positive_words if word in text_lower)
+        neg_count = sum(1 for word in negative_words if word in text_lower)
+        
+        if (pos_count > 5 and neg_count == 0) or (neg_count > 5 and pos_count == 0):
+            techniques.append({
+                'type': 'card_stacking',
+                'name': 'Card Stacking',
+                'severity': 'medium',
+                'description': 'Presents only one side of the argument'
+            })
+        
+        # Name calling
+        name_calling_terms = ['radical', 'extremist', 'fanatic', 'conspiracy theorist', 'denier', 'apologist']
+        if any(term in text_lower for term in name_calling_terms):
+            techniques.append({
+                'type': 'name_calling',
+                'name': 'Name Calling',
+                'severity': 'high',
+                'description': 'Uses negative labels to discredit opposition'
+            })
+        
+        # Glittering generalities
+        glittering_terms = ['freedom', 'liberty', 'democracy', 'justice', 'patriotic', 'prosperity']
+        glitter_count = sum(1 for term in glittering_terms if term in text_lower)
+        if glitter_count > 3:
+            techniques.append({
+                'type': 'glittering_generalities',
+                'name': 'Glittering Generalities',
+                'severity': 'low',
+                'description': 'Uses vague positive terms without substance'
+            })
+        
+        return techniques
+    
+    def _detect_logical_fallacies(self, text: str) -> List[Dict[str, Any]]:
+        """Detect logical fallacies"""
+        fallacies = []
+        
+        # Slippery slope
+        if re.search(r'(will lead to|slippery slope|before you know it|next thing)', text, re.IGNORECASE):
+            fallacies.append({
+                'type': 'slippery_slope',
+                'name': 'Slippery Slope',
+                'severity': 'medium',
+                'description': 'Suggests one event will lead to extreme consequences'
+            })
+        
+        # Appeal to emotion
+        emotion_phrases = ['think of the children', 'how would you feel', 'imagine if', 'put yourself in']
+        if any(phrase in text.lower() for phrase in emotion_phrases):
+            fallacies.append({
+                'type': 'appeal_to_emotion',
+                'name': 'Appeal to Emotion',
+                'severity': 'medium',
+                'description': 'Manipulates emotions rather than using logic'
+            })
+        
+        # Hasty generalization
+        if re.search(r'(all|every|none|no one|always|never) \w+ (is|are|do|does)', text, re.IGNORECASE):
+            fallacies.append({
+                'type': 'hasty_generalization',
+                'name': 'Hasty Generalization',
+                'severity': 'medium',
+                'description': 'Makes broad claims from limited examples'
+            })
+        
+        return fallacies
+    
+    def _analyze_clickbait(self, title: str) -> Dict[str, Any]:
+        """Analyze if title is clickbait"""
+        if not title:
+            return {'is_clickbait': False, 'score': 0, 'reason': 'No title provided'}
+        
+        clickbait_score = 0
+        reasons = []
+        
+        # Check for clickbait patterns
+        if title.endswith('?'):
+            clickbait_score += 20
+            reasons.append('Question headline')
+        
+        if re.search(r'you won\'t believe|shocking|amazing|this one trick', title, re.IGNORECASE):
+            clickbait_score += 40
+            reasons.append('Sensational language')
+        
+        if re.search(r'\d+ (things|ways|reasons|facts)', title, re.IGNORECASE):
+            clickbait_score += 30
+            reasons.append('Listicle format')
+        
+        if '...' in title or title.count('!') > 1:
+            clickbait_score += 20
+            reasons.append('Excessive punctuation')
+        
+        return {
+            'is_clickbait': clickbait_score > 50,
+            'score': clickbait_score,
+            'reason': '; '.join(reasons) if reasons else 'No clickbait indicators'
+        }
+    
+    def _calculate_manipulation_score(self, tactics: List, propaganda: List, 
+                                    fallacies: List, clickbait: Dict) -> int:
+        """Calculate overall manipulation score"""
+        base_score = 0
+        
+        # Add scores for tactics based on severity
+        for tactic in tactics:
+            if tactic.get('severity') == 'high':
+                base_score += 15
+            elif tactic.get('severity') == 'medium':
+                base_score += 10
+            elif tactic.get('severity') == 'low':
+                base_score += 5
+        
+        # Add propaganda score
+        base_score += len(propaganda) * 12
+        
+        # Add fallacy score
+        base_score += len(fallacies) * 10
+        
+        # Add clickbait score
+        if clickbait['is_clickbait']:
+            base_score += 20
+        
+        # Normalize to 0-100 scale
+        normalized_score = min(100, base_score)
+        
+        return normalized_score
+    
+    def _generate_summary(self, score: int, level: str, tactics: List[Dict]) -> str:
         """Generate a summary of manipulation findings"""
-        score = result.get('persuasion_score', 0)
-        level = result.get('manipulation_level', 'Unknown')
-        tactics = result.get('tactics_found', [])
-        
         if score < 20:
-            return f"Minimal manipulation detected (score: {score}%). Article uses straightforward language."
+            return f"Minimal manipulation detected (score: {score}%). Article uses straightforward language and logical arguments."
         elif score < 40:
-            tactic_names = [t.get('name', 'Unknown') for t in tactics[:2]]
-            return f"Low manipulation level (score: {score}%). Found: {', '.join(tactic_names)}."
+            tactic_names = [t['name'] for t in tactics[:2]]
+            return f"Low manipulation level (score: {score}%). Found: {', '.join(tactic_names)}. Generally factual presentation."
         elif score < 70:
-            tactic_names = [t.get('name', 'Unknown') for t in tactics[:3]]
-            return f"Moderate manipulation (score: {score}%). Multiple tactics: {', '.join(tactic_names)}."
+            tactic_names = [t['name'] for t in tactics[:3]]
+            return f"Moderate manipulation (score: {score}%). Multiple tactics detected: {', '.join(tactic_names)}. Reader caution advised."
         else:
-            return f"High manipulation level (score: {score}%). {len(tactics)} manipulation tactics detected. Reader caution advised."
-    
-    def analyze_persuasion(self, text: str, title: str = '') -> Dict[str, Any]:
-        """Legacy compatibility method"""
-        return self.analyze({'text': text, 'title': title})
+            high_severity = sum(1 for t in tactics if t.get('severity') == 'high')
+            return f"High manipulation level (score: {score}%). {len(tactics)} tactics found including {high_severity} severe issues. Significant bias or propaganda present."
