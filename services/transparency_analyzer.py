@@ -107,7 +107,13 @@ class TransparencyAnalyzer(BaseAnalyzer):
     """Transparency analysis service that inherits from BaseAnalyzer"""
     
     def __init__(self):
+        # Initialize _legacy BEFORE calling super().__init__
+        self._legacy = None
+        
+        # Now call parent init
         super().__init__('transparency_analyzer')
+        
+        # Try to initialize legacy analyzer
         try:
             self._legacy = LegacyTransparencyAnalyzer()
             logger.info("Legacy TransparencyAnalyzer initialized successfully")
