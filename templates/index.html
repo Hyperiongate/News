@@ -899,6 +899,12 @@
 
             <!-- Services Grid -->
             <div id="servicesGrid" class="services-grid"></div>
+            
+            <!-- Debug Info (temporary) -->
+            <div id="debugInfo" style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; display: none;">
+                <h4>Debug Information</h4>
+                <pre id="debugContent"></pre>
+            </div>
         </div>
     </main>
 
@@ -1075,6 +1081,8 @@
             };
             
             console.log('Normalized analysis data:', normalizedData);
+            console.log('=== DETAILED ANALYSIS CONTENT ===');
+            console.log('Full detailed_analysis object:', JSON.stringify(normalizedData.detailed_analysis, null, 2));
             
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.classList.add('active');
@@ -1103,6 +1111,37 @@
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Log final state
+            console.log('Results section visible:', resultsSection.classList.contains('active'));
+            console.log('Trust score element:', document.getElementById('trustLevel')?.textContent);
+            console.log('Article title element:', document.getElementById('articleTitle')?.textContent);
+            
+            // Show debug info if detailed_analysis is empty
+            if (Object.keys(normalizedData.detailed_analysis).length === 0) {
+                console.warn('No detailed analysis data received from backend!');
+                const debugEl = document.getElementById('debugInfo');
+                const debugContent = document.getElementById('debugContent');
+                if (debugEl && debugContent) {
+                    debugEl.style.display = 'block';
+                    debugContent.textContent = `Backend Response Summary:
+                    
+Trust Score: ${normalizedData.analysis.trust_score}
+Trust Level: ${normalizedData.analysis.trust_level}
+Summary: ${normalizedData.analysis.summary}
+Key Findings: ${normalizedData.analysis.key_findings.length} items
+
+Article Title: ${normalizedData.article.title || 'Not provided'}
+Article Author: ${normalizedData.article.author}
+Article Domain: ${normalizedData.article.domain}
+
+Detailed Analysis: ${Object.keys(normalizedData.detailed_analysis).length} services
+${JSON.stringify(normalizedData.detailed_analysis, null, 2)}
+
+Note: The backend appears to be returning minimal analysis data. 
+This suggests the analysis services are not fully implemented.`;
+                }
+            }
         }
 
         // Display trust score with gauge
@@ -1170,6 +1209,10 @@
 
         // Display article info
         function displayArticleInfo(article, analysis) {
+            console.log('=== ARTICLE INFO DEBUG ===');
+            console.log('Article:', article);
+            console.log('Analysis:', analysis);
+            
             document.getElementById('articleTitle').textContent = article.title || 'Untitled Article';
             
             const metaHtml = `
@@ -1194,6 +1237,8 @@
             
             // Display key findings
             const findings = analysis.key_findings || [];
+            console.log('Key findings:', findings);
+            
             if (findings.length > 0) {
                 let findingsHtml = '<h4 class="key-findings-header">Key Findings</h4>';
                 findings.forEach(finding => {
@@ -1210,6 +1255,13 @@
                     `;
                 });
                 document.getElementById('keyFindings').innerHTML = findingsHtml;
+            } else {
+                document.getElementById('keyFindings').innerHTML = `
+                    <div style="padding: 1rem; color: var(--gray-600); text-align: center;">
+                        <i class="fas fa-info-circle"></i>
+                        <p style="margin-top: 0.5rem;">No specific findings reported. Check the detailed analysis below.</p>
+                    </div>
+                `;
             }
         }
 
@@ -1221,7 +1273,12 @@
             // Access detailed_analysis from the data object
             const detailedAnalysis = data.detailed_analysis || {};
             
+            console.log('=== SERVICE CARDS DEBUG ===');
+            console.log('Detailed analysis:', detailedAnalysis);
+            console.log('Detailed analysis keys:', Object.keys(detailedAnalysis));
+            
             services.forEach(service => {
+                console.log(`Creating card for ${service.id}:`, detailedAnalysis[service.id]);
                 const card = createServiceCard(service, data, detailedAnalysis);
                 grid.appendChild(card);
             });
@@ -1238,11 +1295,16 @@
             // Get service data from detailed_analysis
             const serviceData = detailedAnalysis[service.id] || {};
             
+            console.log(`Service ${service.id} raw data:`, serviceData);
+            
             // Handle nested data structure - services return { success: true, data: {...} }
             let actualServiceData = serviceData;
             if (serviceData.success && serviceData.data) {
+                console.log(`Service ${service.id} has nested data structure`);
                 actualServiceData = serviceData.data;
             }
+            
+            console.log(`Service ${service.id} actual data:`, actualServiceData);
             
             card.innerHTML = `
                 <div class="service-header">
@@ -1282,6 +1344,8 @@
 
         // Render service-specific content
         function renderServiceContent(service, data) {
+            console.log(`Rendering content for ${service.id}:`, data);
+            
             // Check if data exists and has content
             if (!data || (Object.keys(data).length === 0 && !data.score && !data.level)) {
                 return `
