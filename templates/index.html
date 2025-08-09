@@ -942,27 +942,52 @@
                 
                 clearTimeout(timeoutId);
                 
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
                     throw new Error(errorData.error || 'Analysis failed');
                 }
                 
-                const data = await response.json();
-                console.log('Received response:', data);
+                const responseText = await response.text();
+                console.log('Raw response text:', responseText);
                 
-                // Handle both response formats
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    throw new Error('Invalid JSON response from server');
+                }
+                
+                console.log('Parsed response:', data);
+                
+                // Handle multiple possible response formats
                 let analysisData;
-                if (data.success && data.data) {
-                    // New format: { success: true, data: {...} }
+                
+                // Format 1: Wrapped response { success: true, data: {...} }
+                if (data.success === true && data.data) {
+                    console.log('Response format: Wrapped with success=true');
                     analysisData = data.data;
-                } else if (data.analysis || data.article || data.detailed_analysis) {
-                    // Direct format: { analysis: {...}, article: {...}, detailed_analysis: {...} }
+                }
+                // Format 2: Direct response { analysis: {...}, article: {...}, detailed_analysis: {...} }
+                else if (data.analysis && data.article) {
+                    console.log('Response format: Direct data');
                     analysisData = data;
-                } else {
-                    throw new Error('Invalid response format');
+                }
+                // Format 3: Error response { success: false, error: {...} }
+                else if (data.success === false) {
+                    throw new Error(data.error?.message || 'Analysis failed');
+                }
+                // Unknown format
+                else {
+                    console.error('Unknown response format:', data);
+                    throw new Error('Unexpected response format from server');
                 }
                 
                 currentAnalysis = analysisData;
+                console.log('Final analysis data:', currentAnalysis);
                 displayResults(currentAnalysis);
                 
             } catch (error) {
