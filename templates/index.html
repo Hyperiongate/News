@@ -292,6 +292,7 @@
         }
 
         .trust-level.high-credibility { color: var(--success); }
+        .trust-level.good-credibility { color: var(--primary-light); }
         .trust-level.generally-credible { color: var(--primary-light); }
         .trust-level.mixed-credibility { color: var(--warning); }
         .trust-level.low-credibility { color: var(--danger); }
@@ -518,7 +519,7 @@
         }
 
         .analysis-card.expanded .card-content {
-            max-height: 1000px;
+            max-height: 2000px;
         }
 
         .card-content-inner {
@@ -553,6 +554,55 @@
             font-size: 0.95rem;
             color: var(--dark);
             line-height: 1.7;
+        }
+
+        /* Score Badge */
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: var(--light);
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .score-badge.high { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .score-badge.medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .score-badge.low { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        /* Status Pills */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .status-pill.verified { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-pill.unverified { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .status-pill.partial { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+
+        /* Finding Lists */
+        .findings-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .findings-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        .findings-list i {
+            flex-shrink: 0;
+            margin-top: 0.2rem;
         }
 
         /* Responsive Design */
@@ -596,6 +646,23 @@
         .text-muted {
             color: var(--neutral);
             font-style: italic;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-xl);
+            color: var(--neutral);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
         }
     </style>
 </head>
@@ -794,22 +861,6 @@
             card.classList.toggle('expanded');
         }
 
-        function createCardHeader(title, icon, description) {
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.innerHTML = `
-                <div>
-                    <div class="card-title">
-                        <i class="fas ${icon}"></i>
-                        <h3>${title}</h3>
-                    </div>
-                    <p style="font-size: 0.875rem; color: var(--neutral); margin: 0.25rem 0 0 0;">${description}</p>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            return header;
-        }
-
         // Main analyze function
         async function analyzeArticle() {
             console.log('analyzeArticle called');
@@ -917,6 +968,7 @@
                 return;
             }
             
+            // Ensure all required data structures exist
             data.analysis = data.analysis || {};
             data.article = data.article || {};
             data.detailed_analysis = data.detailed_analysis || {};
@@ -926,7 +978,7 @@
             displayTrustScore(data.analysis);
             displayArticleSummary(data.article, data.analysis);
             displayAnalysisSummary(data.analysis, data.detailed_analysis);
-            displayAnalysisCards(data.detailed_analysis);
+            displayAnalysisCards(data);
             
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         }
@@ -1021,7 +1073,7 @@
             let findingsHtml = '<h3>Key Findings</h3>';
             
             if (findings.length === 0) {
-                findingsHtml += '<p class="text-muted">No specific findings available.</p>';
+                findingsHtml += '<p class="text-muted">Analysis completed successfully. See detailed results below.</p>';
             } else {
                 findings.forEach(finding => {
                     const type = finding.severity === 'positive' ? 'positive' : 
@@ -1041,42 +1093,37 @@
             document.getElementById('keyFindings').innerHTML = findingsHtml;
         }
 
-        // Display analysis summary - FIXED
+        // Display analysis summary
         function displayAnalysisSummary(analysis, detailedAnalysis) {
-            analysis = analysis || {};
-            detailedAnalysis = detailedAnalysis || {};
+            // Extract data from the nested structure
+            const biasData = detailedAnalysis?.bias_analysis?.data || detailedAnalysis?.bias_analysis || {};
+            const factData = detailedAnalysis?.fact_checks?.data || detailedAnalysis?.fact_checks || {};
+            const transparencyData = detailedAnalysis?.transparency_analysis?.data || detailedAnalysis?.transparency_analysis || {};
+            const manipulationData = detailedAnalysis?.manipulation_analysis?.data || detailedAnalysis?.manipulation_analysis || {};
             
             const summaryData = [
                 {
                     icon: 'bias',
                     iconClass: 'fa-balance-scale',
-                    metric: detailedAnalysis?.bias_analysis?.bias_level || 
-                           detailedAnalysis?.bias_analysis?.level || 
-                           'N/A',
+                    metric: biasData.bias_level || biasData.level || 'Not Analyzed',
                     label: 'Bias Level'
                 },
                 {
                     icon: 'fact',
                     iconClass: 'fa-check-double',
-                    metric: `${detailedAnalysis?.fact_checks?.verified_claims || 
-                              detailedAnalysis?.fact_checks?.verified || 
-                              0} Verified`,
+                    metric: `${factData.verified_claims || factData.verified || 0} Verified`,
                     label: 'Fact Checks'
                 },
                 {
                     icon: 'transparency',
                     iconClass: 'fa-eye',
-                    metric: `${detailedAnalysis?.transparency_analysis?.transparency_score || 
-                              detailedAnalysis?.transparency_analysis?.score || 
-                              0}%`,
+                    metric: `${transparencyData.transparency_score || transparencyData.score || 0}%`,
                     label: 'Transparency'
                 },
                 {
                     icon: 'manipulation',
                     iconClass: 'fa-mask',
-                    metric: detailedAnalysis?.manipulation_analysis?.manipulation_level || 
-                           detailedAnalysis?.manipulation_analysis?.level || 
-                           'N/A',
+                    metric: manipulationData.manipulation_level || manipulationData.level || 'Not Analyzed',
                     label: 'Manipulation'
                 }
             ];
@@ -1100,10 +1147,10 @@
             }
         }
 
-        // Display analysis cards
-        function displayAnalysisCards(detailedAnalysis) {
+        // Display analysis cards - ENHANCED VERSION
+        function displayAnalysisCards(data) {
             console.log('=== DISPLAYING ANALYSIS CARDS ===');
-            console.log('Detailed analysis:', detailedAnalysis);
+            console.log('Full data:', data);
             
             const gridEl = document.getElementById('analysisGrid');
             if (!gridEl) {
@@ -1113,45 +1160,86 @@
             
             gridEl.innerHTML = '';
             
-            // Create simple cards for now
+            const detailedAnalysis = data.detailed_analysis || {};
+            const sourceData = detailedAnalysis.source_credibility || {};
+            
+            // Define all cards with their creation functions
             const cards = [
-                { name: 'Author Analysis', data: detailedAnalysis.author_analysis, create: createSimpleCard },
-                { name: 'Bias Analysis', data: detailedAnalysis.bias_analysis, create: createSimpleCard },
-                { name: 'Source Credibility', data: detailedAnalysis.source_credibility, create: createSimpleCard },
-                { name: 'Transparency Analysis', data: detailedAnalysis.transparency_analysis, create: createSimpleCard },
-                { name: 'Fact Checking', data: detailedAnalysis.fact_checks, create: createSimpleCard },
-                { name: 'Manipulation Detection', data: detailedAnalysis.manipulation_analysis, create: createSimpleCard },
-                { name: 'Content Analysis', data: detailedAnalysis.content_analysis, create: createSimpleCard }
+                {
+                    name: 'Source Credibility',
+                    data: sourceData,
+                    icon: 'fa-shield-alt',
+                    create: createSourceCredibilityCard
+                },
+                {
+                    name: 'Author Analysis',
+                    data: detailedAnalysis.author_analysis || {},
+                    icon: 'fa-user-check',
+                    create: createAuthorAnalysisCard
+                },
+                {
+                    name: 'Bias Detection',
+                    data: detailedAnalysis.bias_analysis || {},
+                    icon: 'fa-balance-scale',
+                    create: createBiasAnalysisCard
+                },
+                {
+                    name: 'Transparency Check',
+                    data: detailedAnalysis.transparency_analysis || {},
+                    icon: 'fa-eye',
+                    create: createTransparencyCard
+                },
+                {
+                    name: 'Fact Verification',
+                    data: detailedAnalysis.fact_checks || {},
+                    icon: 'fa-check-double',
+                    create: createFactCheckCard
+                },
+                {
+                    name: 'Manipulation Detection',
+                    data: detailedAnalysis.manipulation_analysis || {},
+                    icon: 'fa-mask',
+                    create: createManipulationCard
+                },
+                {
+                    name: 'Content Analysis',
+                    data: detailedAnalysis.content_analysis || {},
+                    icon: 'fa-file-alt',
+                    create: createContentAnalysisCard
+                }
             ];
             
+            // Create and add each card
             cards.forEach((cardInfo, index) => {
-                if (cardInfo.data && Object.keys(cardInfo.data).length > 0) {
-                    const card = cardInfo.create(cardInfo.name, cardInfo.data);
-                    gridEl.appendChild(card);
-                    
-                    // Auto-expand first 3 cards
-                    if (index < 3) {
-                        setTimeout(() => {
-                            card.classList.add('expanded');
-                        }, (index + 1) * 100);
-                    }
-                    card.style.animationDelay = `${index * 0.1}s`;
+                const card = cardInfo.create(cardInfo.name, cardInfo.data, cardInfo.icon);
+                gridEl.appendChild(card);
+                
+                // Auto-expand first 3 cards
+                if (index < 3) {
+                    setTimeout(() => {
+                        card.classList.add('expanded');
+                    }, (index + 1) * 100);
                 }
+                card.style.animationDelay = `${index * 0.1}s`;
             });
         }
 
-        // Create simple card for display
-        function createSimpleCard(title, data) {
+        // Enhanced card creation functions
+        function createSourceCredibilityCard(name, data, icon) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
+            
+            const score = data.credibility_score || data.score || 0;
+            const level = data.level || 'Unknown';
+            const findings = data.findings || [];
             
             const header = document.createElement('div');
             header.className = 'card-header';
             header.onclick = () => toggleCard(card);
             header.innerHTML = `
                 <div class="card-title">
-                    <i class="fas fa-chart-bar"></i>
-                    <h3>${title}</h3>
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
                 </div>
                 <i class="fas fa-chevron-down card-toggle"></i>
             `;
@@ -1162,16 +1250,412 @@
             const contentInner = document.createElement('div');
             contentInner.className = 'card-content-inner';
             
-            // Display whatever data we have
-            const summary = data.summary || data.description || 'Analysis complete';
-            const score = data.score || data.credibility_score || data.trust_score || 'N/A';
-            const level = data.level || data.rating || 'N/A';
+            // Check if we have detailed source info
+            if (data.source_name) {
+                contentInner.innerHTML = `
+                    <div class="score-badge ${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                        Credibility Score: ${score}/100
+                    </div>
+                    
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-building"></i>
+                                Source Information
+                            </div>
+                            <div class="section-content">
+                                <strong>${data.source_name}</strong><br>
+                                ${data.source_info?.description || 'Independent news source'}<br>
+                                <span class="status-pill ${data.source_info?.in_database ? 'verified' : 'unverified'}">
+                                    ${data.source_info?.in_database ? 'Known Source' : 'New Source'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        ${findings.length > 0 ? `
+                            <div class="card-section">
+                                <div class="section-label">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="section-content">
+                                    <ul class="findings-list">
+                                        ${findings.map(f => `
+                                            <li>
+                                                <i class="fas ${f.severity === 'positive' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                                                <span>${f.text}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${data.technical_analysis ? `
+                            <div class="card-section">
+                                <div class="section-label">
+                                    <i class="fas fa-cog"></i>
+                                    Technical Details
+                                </div>
+                                <div class="section-content">
+                                    Domain Age: ${data.technical_analysis.age_years?.toFixed(1) || 'Unknown'} years<br>
+                                    SSL Certificate: ${data.technical_analysis.ssl?.valid ? '✓ Valid' : '✗ Invalid'}<br>
+                                    Contact Info: ${data.technical_analysis.structure?.has_contact_page ? '✓ Available' : '✗ Not Found'}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // Simple display for empty data
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-database"></i>
+                        <p>Source credibility analysis in progress...</p>
+                    </div>
+                `;
+            }
             
-            contentInner.innerHTML = `
-                <p><strong>Result:</strong> ${level}</p>
-                <p><strong>Score:</strong> ${score}</p>
-                <p>${summary}</p>
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createAuthorAnalysisCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
             `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            // Check if we have any data
+            if (!data || Object.keys(data).length === 0) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-slash"></i>
+                        <p>Author information not available for this article</p>
+                    </div>
+                `;
+            } else {
+                contentInner.innerHTML = `
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-id-card"></i>
+                                Author Details
+                            </div>
+                            <div class="section-content">
+                                ${data.name || 'Name not provided'}<br>
+                                ${data.credentials || 'Credentials not available'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createBiasAnalysisCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            if (!data || Object.keys(data).length === 0) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-balance-scale"></i>
+                        <p>Bias analysis not completed</p>
+                    </div>
+                `;
+            } else {
+                const biasLevel = data.bias_level || data.level || 'Unknown';
+                const indicators = data.indicators || [];
+                
+                contentInner.innerHTML = `
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Bias Level
+                            </div>
+                            <div class="section-content">
+                                <span class="status-pill ${biasLevel.toLowerCase() === 'minimal' ? 'verified' : 'partial'}">
+                                    ${biasLevel}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        ${indicators.length > 0 ? `
+                            <div class="card-section">
+                                <div class="section-label">
+                                    <i class="fas fa-flag"></i>
+                                    Bias Indicators
+                                </div>
+                                <div class="section-content">
+                                    <ul class="findings-list">
+                                        ${indicators.map(ind => `
+                                            <li>
+                                                <i class="fas fa-info-circle"></i>
+                                                <span>${ind}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createTransparencyCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            if (!data || Object.keys(data).length === 0) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-eye-slash"></i>
+                        <p>Transparency analysis not completed</p>
+                    </div>
+                `;
+            } else {
+                const score = data.transparency_score || data.score || 0;
+                contentInner.innerHTML = `
+                    <div class="score-badge ${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                        Transparency Score: ${score}%
+                    </div>
+                    
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-list-check"></i>
+                                Transparency Factors
+                            </div>
+                            <div class="section-content">
+                                ${data.summary || 'Analysis of source transparency and disclosure practices.'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createFactCheckCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            if (!data || (Object.keys(data).length === 0 && !Array.isArray(data))) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No specific claims identified for fact-checking</p>
+                    </div>
+                `;
+            } else {
+                const checks = Array.isArray(data) ? data : (data.checks || []);
+                contentInner.innerHTML = `
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-clipboard-check"></i>
+                                Fact Check Summary
+                            </div>
+                            <div class="section-content">
+                                ${checks.length} claims analyzed
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createManipulationCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            if (!data || Object.keys(data).length === 0) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-shield-alt"></i>
+                        <p>No manipulation techniques detected</p>
+                    </div>
+                `;
+            } else {
+                const level = data.manipulation_level || data.level || 'Low';
+                contentInner.innerHTML = `
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Manipulation Risk
+                            </div>
+                            <div class="section-content">
+                                <span class="status-pill ${level.toLowerCase() === 'low' ? 'verified' : 'partial'}">
+                                    ${level} Risk
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
+
+        function createContentAnalysisCard(name, data, icon) {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas ${icon}"></i>
+                    <h3>${name}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
+            
+            if (!data || Object.keys(data).length === 0) {
+                contentInner.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-file-alt"></i>
+                        <p>Content analysis in progress...</p>
+                    </div>
+                `;
+            } else {
+                contentInner.innerHTML = `
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-paragraph"></i>
+                                Content Overview
+                            </div>
+                            <div class="section-content">
+                                ${data.summary || 'Detailed content analysis completed.'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
             
             content.appendChild(contentInner);
             card.appendChild(header);
