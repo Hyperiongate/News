@@ -214,18 +214,28 @@ class AnalysisResponseBuilder(ResponseBuilder):
         # FIXED: Properly extract data from service results
         extracted_results = {}
         
+        # Log what we're working with
+        logger.info(f"Building response - analysis_results keys: {list(analysis_results.keys())}")
+        logger.info(f"Services used: {services_used}")
+        
         # Extract data from each service result
         for service_name, result in analysis_results.items():
             if isinstance(result, dict) and result.get('success'):
                 # Extract the data field if it exists
                 if 'data' in result:
                     extracted_results[service_name] = result['data']
+                    logger.info(f"Extracted data from {service_name}")
                 else:
                     # If no data field, use the entire result (legacy format)
                     extracted_results[service_name] = result
+                    logger.info(f"Using full result from {service_name} (no data field)")
             else:
                 # Service failed or returned empty result
                 extracted_results[service_name] = {}
+                logger.warning(f"Service {service_name} failed or returned empty result")
+        
+        # Log what we extracted
+        logger.info(f"Extracted results keys: {list(extracted_results.keys())}")
         
         # Structure the response data
         data = {
@@ -244,16 +254,24 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'summary': analysis_results.get('summary'),
                 'key_findings': AnalysisResponseBuilder._extract_key_findings(extracted_results)
             },
+            # FIXED: Use correct service names that match the service registry
             'detailed_analysis': {
                 'source_credibility': extracted_results.get('source_credibility', {}),
-                'author_analysis': extracted_results.get('author_analysis', {}),
-                'bias_analysis': extracted_results.get('bias_analysis', {}),
-                'transparency_analysis': extracted_results.get('transparency_analysis', {}),
-                'fact_checks': extracted_results.get('fact_checks', []),
-                'manipulation_analysis': extracted_results.get('manipulation_analysis', extracted_results.get('persuasion_analysis', {})),
-                'content_analysis': extracted_results.get('content_analysis', {})
+                'author_analyzer': extracted_results.get('author_analyzer', {}),  # FIXED: was 'author_analysis'
+                'bias_detector': extracted_results.get('bias_detector', {}),      # FIXED: was 'bias_analysis'
+                'transparency_analyzer': extracted_results.get('transparency_analyzer', {}),  # FIXED: was 'transparency_analysis'
+                'fact_checker': extracted_results.get('fact_checker', {}),        # FIXED: was 'fact_checks'
+                'manipulation_detector': extracted_results.get('manipulation_detector', {}),  # FIXED: was 'manipulation_analysis'
+                'content_analyzer': extracted_results.get('content_analyzer', {}),  # FIXED: was 'content_analysis'
+                'plagiarism_detector': extracted_results.get('plagiarism_detector', {})  # Added missing service
             }
         }
+        
+        # Log final detailed_analysis structure
+        logger.info(f"Final detailed_analysis keys: {list(data['detailed_analysis'].keys())}")
+        for key, value in data['detailed_analysis'].items():
+            if value:
+                logger.info(f"  {key}: {type(value).__name__} with {len(value) if isinstance(value, (dict, list)) else 'scalar'} items")
         
         # Build metadata
         metadata = {
@@ -285,7 +303,7 @@ class AnalysisResponseBuilder(ResponseBuilder):
     
     @staticmethod
     def _extract_key_findings(analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extract key findings from analysis results"""
+        """Extract key findings from analysis results - FIXED to use correct service names"""
         findings = []
         
         # Source credibility finding
@@ -293,66 +311,92 @@ class AnalysisResponseBuilder(ResponseBuilder):
         if source_cred and source_cred.get('rating'):
             findings.append({
                 'type': 'source_credibility',
-                'title': 'Source Credibility',
-                'finding': f"{source_cred.get('rating')} credibility source",
-                'impact': 'high' if source_cred.get('rating') in ['Very Low', 'Low'] else 'medium'
+                'severity': 'high' if source_cred.get('rating') in ['Very Low', 'Low'] else 'medium',
+                'text': f"{source_cred.get('rating')} credibility source: {source_cred.get('reason', 'Based on domain analysis')}",
+                'finding': f"Source has {source_cred.get('rating')} credibility"
             })
         
-        # Author finding
-        author = analysis_results.get('author_analysis', {})
-        if author and author.get('level'):
+        # Author finding - FIXED: using 'author_analyzer' not 'author_analysis'
+        author = analysis_results.get('author_analyzer', {})
+        if author and author.get('credibility_level'):
             findings.append({
                 'type': 'author',
-                'title': 'Author Credibility',
-                'finding': f"{author.get('level')} author credibility",
-                'impact': 'high' if author.get('score', 0) < 40 else 'medium'
+                'severity': 'high' if author.get('credibility_level') in ['Very Low', 'Low'] else 'medium',
+                'text': f"Author credibility: {author.get('credibility_level')}",
+                'finding': f"Author has {author.get('credibility_level')} credibility"
             })
         
-        # Bias finding
-        bias = analysis_results.get('bias_analysis', {})
-        if bias and bias.get('political_lean') is not None:
-            lean = bias.get('political_lean', 0)
-            if abs(lean) > 0.5:
-                findings.append({
-                    'type': 'bias',
-                    'title': 'Political Bias',
-                    'finding': f"Strong {'right' if lean > 0 else 'left'}-leaning bias detected",
-                    'impact': 'high'
-                })
-        
-        # Manipulation finding
-        manipulation = analysis_results.get('manipulation_analysis', {})
-        if manipulation and manipulation.get('manipulation_score', 0) > 50:
+        # Bias finding - FIXED: using 'bias_detector' not 'bias_analysis'
+        bias = analysis_results.get('bias_detector', {})
+        if bias and bias.get('overall_bias'):
+            severity = 'high' if bias.get('overall_bias') in ['Extreme', 'Strong'] else 'medium'
             findings.append({
-                'type': 'manipulation',
-                'title': 'Manipulation Tactics',
-                'finding': 'Significant manipulation tactics detected',
-                'impact': 'high'
+                'type': 'bias',
+                'severity': severity,
+                'text': f"{bias.get('overall_bias')} bias detected across multiple dimensions",
+                'finding': f"{bias.get('overall_bias')} bias present"
             })
         
-        # Fact checking finding
-        fact_checks = analysis_results.get('fact_checks', [])
-        if fact_checks:
-            false_claims = sum(1 for fc in fact_checks if 'false' in str(fc.get('verdict', '')).lower())
-            if false_claims > 0:
+        # Fact checking finding - FIXED: using 'fact_checker' not 'fact_checks'
+        facts = analysis_results.get('fact_checker', {})
+        if facts and facts.get('claims_checked'):
+            verified = facts.get('verified_count', 0)
+            total = facts.get('claims_checked', 0)
+            if total > 0:
+                percentage = (verified / total) * 100
+                severity = 'negative' if percentage < 50 else 'positive' if percentage > 80 else 'warning'
                 findings.append({
                     'type': 'fact_check',
-                    'title': 'Fact Check',
-                    'finding': f"{false_claims} false claim{'s' if false_claims > 1 else ''} identified",
-                    'impact': 'high'
+                    'severity': severity,
+                    'text': f"{verified} of {total} claims verified ({percentage:.0f}%)",
+                    'finding': f"Fact verification: {percentage:.0f}%"
                 })
+        
+        # Manipulation finding - using correct name
+        manipulation = analysis_results.get('manipulation_detector', {})
+        if manipulation and manipulation.get('manipulation_level'):
+            if manipulation.get('manipulation_level') != 'None':
+                findings.append({
+                    'type': 'manipulation',
+                    'severity': 'high',
+                    'text': f"{manipulation.get('manipulation_level')} level of manipulation detected",
+                    'finding': "Potential manipulation detected"
+                })
+        
+        # Content quality finding
+        content = analysis_results.get('content_analyzer', {})
+        if content and content.get('quality_score'):
+            score = content.get('quality_score', 0)
+            if score < 50:
+                findings.append({
+                    'type': 'content_quality',
+                    'severity': 'warning',
+                    'text': f"Low content quality score: {score}/100",
+                    'finding': "Content quality concerns"
+                })
+        
+        # Transparency finding
+        transparency = analysis_results.get('transparency_analyzer', {})
+        if transparency and transparency.get('transparency_score'):
+            score = transparency.get('transparency_score', 0)
+            if score < 50:
+                findings.append({
+                    'type': 'transparency',
+                    'severity': 'warning',
+                    'text': f"Low transparency score: {score}/100",
+                    'finding': "Transparency issues identified"
+                })
+        
+        # Log findings
+        logger.info(f"Extracted {len(findings)} key findings")
         
         return findings
     
     @staticmethod
     def _generate_cache_key(article_data: Dict[str, Any]) -> str:
-        """Generate cache key for the analysis"""
+        """Generate cache key for article"""
         import hashlib
         
-        # Use URL or text hash as cache key
-        if article_data.get('url'):
-            key_source = article_data['url']
-        else:
-            key_source = article_data.get('text', '')[:1000]  # First 1000 chars of text
-            
-        return hashlib.md5(key_source.encode('utf-8')).hexdigest()
+        # Use URL or title as cache key base
+        key_base = article_data.get('url') or article_data.get('title', '')
+        return hashlib.md5(key_base.encode()).hexdigest()
