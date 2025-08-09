@@ -295,6 +295,7 @@
         .trust-level.generally-credible { color: var(--primary-light); }
         .trust-level.mixed-credibility { color: var(--warning); }
         .trust-level.low-credibility { color: var(--danger); }
+        .trust-level.very-low { color: var(--danger); }
 
         .trust-summary {
             color: var(--neutral);
@@ -949,6 +950,57 @@
             document.getElementById('resultsSection').style.display = 'none';
         }
 
+        // DIAGNOSTIC FUNCTION
+        function diagnoseDataStructure(data) {
+            console.log('=== DIAGNOSTIC: COMPLETE DATA STRUCTURE ===');
+            
+            // Check top level
+            console.log('Top level keys:', Object.keys(data));
+            console.log('data.success:', data.success);
+            console.log('data.data exists?', !!data.data);
+            
+            // If data.data exists, we have a wrapped response
+            if (data.data) {
+                console.log('WRAPPED RESPONSE DETECTED - data.data keys:', Object.keys(data.data));
+                data = data.data; // Unwrap it
+            }
+            
+            // Check detailed_analysis structure
+            if (data.detailed_analysis) {
+                console.log('\n=== DETAILED ANALYSIS STRUCTURE ===');
+                console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
+                
+                // Check each service
+                Object.keys(data.detailed_analysis).forEach(service => {
+                    const serviceData = data.detailed_analysis[service];
+                    console.log(`\n--- ${service} ---`);
+                    console.log('Type:', typeof serviceData);
+                    console.log('Is empty object?', Object.keys(serviceData).length === 0);
+                    if (typeof serviceData === 'object' && serviceData !== null) {
+                        console.log('Keys:', Object.keys(serviceData));
+                        // Check if it has a nested data field
+                        if (serviceData.data) {
+                            console.log('HAS NESTED .data FIELD!');
+                            console.log('serviceData.data keys:', Object.keys(serviceData.data));
+                        }
+                        // Print first few fields
+                        Object.keys(serviceData).slice(0, 5).forEach(key => {
+                            console.log(`${key}:`, serviceData[key]);
+                        });
+                    }
+                });
+                
+                // Specific checks
+                console.log('\n=== SPECIFIC FIELD CHECKS ===');
+                console.log('bias_analysis.bias_level:', data.detailed_analysis.bias_analysis?.bias_level);
+                console.log('bias_analysis.data?.bias_level:', data.detailed_analysis.bias_analysis?.data?.bias_level);
+                console.log('author_analysis.score:', data.detailed_analysis.author_analysis?.score);
+                console.log('author_analysis.data?.score:', data.detailed_analysis.author_analysis?.data?.score);
+            }
+            
+            return data;
+        }
+
         // Progress bar functions
         function showProgress() {
             const progressBar = document.getElementById('progressBar');
@@ -1101,6 +1153,8 @@
                 
                 if (data.success && data.data) {
                     currentAnalysis = data.data;
+                    // ADD DIAGNOSTIC
+                    currentAnalysis = diagnoseDataStructure(currentAnalysis);
                     displayResults(currentAnalysis);
                 } else {
                     throw new Error(data.error || 'Invalid response format');
@@ -1156,16 +1210,6 @@
             data.analysis = data.analysis || {};
             data.article = data.article || {};
             data.detailed_analysis = data.detailed_analysis || {};
-            
-            // Debug the exact structure
-            console.log('=== DATA STRUCTURE DEBUG ===');
-            console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
-            console.log('data.detailed_analysis.author_analysis exists?', !!(data.detailed_analysis && data.detailed_analysis.author_analysis));
-            if (data.detailed_analysis && data.detailed_analysis.author_analysis) {
-                console.log('author_analysis content:', data.detailed_analysis.author_analysis);
-                console.log('author_analysis type:', typeof data.detailed_analysis.author_analysis);
-                console.log('author_analysis keys:', Object.keys(data.detailed_analysis.author_analysis));
-            }
             
             // Show results section
             document.getElementById('resultsSection').style.display = 'block';
@@ -1279,52 +1323,65 @@
             const findings = analysis.key_findings || [];
             let findingsHtml = '<h3>Key Findings</h3>';
             
-            findings.forEach(finding => {
-                const type = finding.severity === 'positive' ? 'positive' : 
-                            finding.severity === 'high' ? 'negative' : 'warning';
-                const icon = type === 'positive' ? 'fa-check-circle' : 
-                           type === 'negative' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
-                
-                findingsHtml += `
-                    <div class="finding-item ${type}">
-                        <i class="fas ${icon}"></i>
-                        <span>${escapeHtml(finding.text)}</span>
-                    </div>
-                `;
-            });
+            if (findings.length === 0) {
+                findingsHtml += '<p class="text-muted">No specific findings available.</p>';
+            } else {
+                findings.forEach(finding => {
+                    const type = finding.severity === 'positive' ? 'positive' : 
+                                finding.severity === 'high' ? 'negative' : 'warning';
+                    const icon = type === 'positive' ? 'fa-check-circle' : 
+                               type === 'negative' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
+                    
+                    findingsHtml += `
+                        <div class="finding-item ${type}">
+                            <i class="fas ${icon}"></i>
+                            <span>${escapeHtml(finding.text || finding.finding || 'Unknown finding')}</span>
+                        </div>
+                    `;
+                });
+            }
             
             document.getElementById('keyFindings').innerHTML = findingsHtml;
         }
 
-        // Display analysis summary
+        // FIXED Display analysis summary - removing extra .data references
         function displayAnalysisSummary(analysis, detailedAnalysis) {
             // Ensure objects exist
             analysis = analysis || {};
             detailedAnalysis = detailedAnalysis || {};
             
+            // FIXED: Look for data at the correct level
             const summaryData = [
                 {
                     icon: 'bias',
                     iconClass: 'fa-balance-scale',
-                    metric: detailedAnalysis?.bias_analysis?.bias_level || detailedAnalysis?.bias_analysis?.level || 'N/A',
+                    metric: detailedAnalysis?.bias_analysis?.bias_level || 
+                           detailedAnalysis?.bias_analysis?.level || 
+                           'N/A',
                     label: 'Bias Level'
                 },
                 {
                     icon: 'fact',
                     iconClass: 'fa-check-double',
-                    metric: `${detailedAnalysis?.fact_checks?.verified_claims || 0} Verified`,
+                    metric: `${detailedAnalysis?.fact_checks?.verified_claims || 
+                              detailedAnalysis?.fact_checks?.verified || 
+                              0} Verified`,
                     label: 'Fact Checks'
                 },
                 {
                     icon: 'transparency',
                     iconClass: 'fa-eye',
-                    metric: `${detailedAnalysis?.transparency_analysis?.transparency_score || detailedAnalysis?.transparency_analysis?.score || 0}%`,
+                    metric: `${detailedAnalysis?.transparency_analysis?.transparency_score || 
+                              detailedAnalysis?.transparency_analysis?.score || 
+                              0}%`,
                     label: 'Transparency'
                 },
                 {
                     icon: 'manipulation',
                     iconClass: 'fa-mask',
-                    metric: detailedAnalysis?.manipulation_analysis?.manipulation_level || detailedAnalysis?.manipulation_analysis?.level || 'N/A',
+                    metric: detailedAnalysis?.manipulation_analysis?.manipulation_level || 
+                           detailedAnalysis?.manipulation_analysis?.level || 
+                           'N/A',
                     label: 'Manipulation'
                 }
             ];
@@ -1490,7 +1547,7 @@
             });
         }
 
-        // FIXED: Create Author Analysis Card with all available information
+        // FIXED: Create Author Analysis Card
         function createAuthorAnalysisCard(authorData) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
@@ -1547,7 +1604,7 @@
             let awards = data.awards || [];
             let socialMedia = data.social_media || data.twitter || '';
             
-            // Check for author_info nested structure - FIXED: Properly override variables
+            // Check for author_info nested structure
             const authorInfo = data.author_info || {};
             if (authorInfo.bio) authorBio = authorInfo.bio;
             if (authorInfo.position) authorPosition = authorInfo.position;
@@ -1596,7 +1653,7 @@
                     </div>
                 `;
             } else {
-                // Original enhanced display code - NOW WITH ALL FIELDS PROPERLY DISPLAYED
+                // Enhanced display for full data
                 contentHtml = '<div class="card-content-inner">';
                 contentHtml += `
                     <div class="author-info-section">
@@ -1636,7 +1693,7 @@
                 contentHtml += '</div>';
             }
             
-            // Enhanced credibility metrics - FIXED: Now displays all the data
+            // Enhanced credibility metrics
             if (!data.is_basic) {
                 contentHtml += `
                     <div class="visual-element">
@@ -1708,580 +1765,3 @@
                             <div class="section-label">
                                 <i class="fas fa-microscope"></i>
                                 How We Analyze
-                            </div>
-                            <div class="section-content">
-                                Our system searches multiple journalist databases, cross-references bylines across publications, verifies social media profiles, and analyzes the author's previous work for consistency and expertise.
-                            </div>
-                        </div>
-                        
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-clipboard-check"></i>
-                                What We Found
-                            </div>
-                            <div class="section-content">
-                                ${generateAuthorFindings(data, authorScore, isVerified, articlesCount, yearsExperience, authorPosition, outlets)}
-                            </div>
-                        </div>
-                        
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-lightbulb"></i>
-                                What This Means
-                            </div>
-                            <div class="section-content">
-                                ${data.interpretation || data.meaning || generateAuthorMeaning(authorScore, isVerified)}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            contentHtml += '</div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-        
-        // Enhanced helper function to generate author findings
-        function generateAuthorFindings(data, score, isVerified, articlesCount, yearsExperience, position, outlets) {
-            let findings = [];
-            
-            // Check if this is an anonymous article
-            const authorName = data.author_name || 'Unknown';
-            if (authorName === 'Unknown Author' || data.is_anonymous) {
-                findings.push('No author attribution found for this article.');
-                findings.push('Anonymous articles have significantly reduced credibility and accountability.');
-                return findings.join(' ');
-            }
-            
-            // Add credibility score finding with context
-            if (score >= 80) {
-                findings.push(`Author has an excellent credibility score of ${score}/100.`);
-            } else if (score >= 60) {
-                findings.push(`Author has a good credibility score of ${score}/100.`);
-            } else if (score >= 40) {
-                findings.push(`Author has a moderate credibility score of ${score}/100.`);
-            } else {
-                findings.push(`Author has a low credibility score of ${score}/100.`);
-            }
-            
-            // Add verification status with detail
-            if (isVerified) {
-                findings.push('This is a verified journalist with established credentials in professional journalism.');
-            } else {
-                findings.push('We could not verify this author\'s professional journalist credentials through established databases.');
-            }
-            
-            // Add experience findings
-            if (yearsExperience > 0) {
-                findings.push(`The author has ${yearsExperience}+ years of journalism experience.`);
-            }
-            
-            // Add position findings
-            if (position) {
-                findings.push(`Currently holds the position of ${position}.`);
-            }
-            
-            // Add publication history
-            if (articlesCount > 0) {
-                findings.push(`Has published ${articlesCount} articles across various topics.`);
-            }
-            
-            // Add outlet information
-            if (outlets && outlets.length > 0) {
-                findings.push(`Has been published in ${outlets.length} different news outlets including ${outlets.slice(0, 3).join(', ')}.`);
-            }
-            
-            // Add any specific findings from the data
-            if (data.findings && Array.isArray(data.findings)) {
-                data.findings.forEach(finding => {
-                    if (finding.text) {
-                        findings.push(finding.text);
-                    }
-                });
-            }
-            
-            return findings.join(' ');
-        }
-        
-        // Helper function to generate author meaning
-        function generateAuthorMeaning(score, isVerified) {
-            if (score >= 80 && isVerified) {
-                return 'This article is written by a highly credible, verified journalist with established expertise. You can have high confidence in the author\'s credibility and professional standards.';
-            } else if (score >= 60) {
-                return 'The author shows good credibility indicators. While some verification details may be limited, the available information suggests reliable journalism practices.';
-            } else if (score >= 40) {
-                return 'The author has mixed credibility indicators. Consider the content carefully and cross-reference important claims with other sources.';
-            } else {
-                return 'Limited information is available about this author\'s credibility. Exercise caution and verify key claims independently.';
-            }
-        }
-
-        // Create other analysis cards...
-        function createBiasAnalysisCard(biasData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = biasData || {};
-            
-            const header = createCardHeader(
-                'Bias Analysis',
-                'fa-balance-scale',
-                'Detection of political, ideological, or editorial bias'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const biasLevel = data.bias_level || data.level || 'Unknown';
-            const biasScore = data.bias_score || data.score || 50;
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We analyze language patterns, word choices, framing techniques, source selection, and narrative structure to identify potential biases in news reporting.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our AI examines emotional language, loaded terms, one-sided arguments, cherry-picked facts, and missing context to determine bias levels across multiple dimensions.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `This article shows ${biasLevel.toLowerCase()} bias with a score of ${biasScore}/100. ${data.findings && data.findings.length > 0 ? data.findings[0].text : ''}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Understanding bias helps you read critically and form balanced opinions. Consider seeking multiple perspectives on this topic.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // FIXED: Complete createSourceCredibilityCard function
-        function createSourceCredibilityCard(sourceData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = sourceData || {};
-            
-            const header = createCardHeader(
-                'Source Credibility',
-                'fa-newspaper',
-                'Assessment of the publication\'s reliability and track record'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We evaluate the news source's reputation, fact-checking record, editorial standards, transparency policies, and historical accuracy.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        We reference trusted media bias databases, analyze the outlet's track record, check for corrections policies, and assess their journalistic standards.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `This source has a ${data.credibility_level || data.level || 'moderate'} credibility rating with a score of ${data.credibility_score || data.score || 50}/100.`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Source credibility indicates the general reliability of the publication. Higher scores suggest more trustworthy reporting practices.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Transparency Card
-        function createTransparencyCard(transparencyData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = transparencyData || {};
-            
-            const header = createCardHeader(
-                'Transparency Analysis',
-                'fa-eye',
-                'Evaluation of article transparency and disclosure'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We check for source attribution, conflict of interest disclosures, methodology transparency, funding disclosure, and correction policies.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our system examines whether sources are named, checks for disclosure statements, evaluates citation quality, and assesses overall transparency practices.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Transparency score: ${data.transparency_score || data.score || 0}%. ${data.findings && data.findings.length > 0 ? data.findings[0].text : 'Limited transparency indicators found.'}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Transparent reporting builds trust by clearly showing sources, methods, and potential conflicts of interest.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Fact Check Card
-        function createFactCheckCard(factCheckData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = factCheckData || {};
-            
-            const header = createCardHeader(
-                'Fact Checking',
-                'fa-check-double',
-                'Verification of claims and statements'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We identify key claims, cross-reference with reliable sources, check statistics and quotes, verify dates and events, and assess factual accuracy.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our AI extracts factual claims, searches trusted databases, compares with official sources, and identifies potential misinformation or unverified statements.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `${data.verified_claims || 0} claims verified. ${data.findings && data.findings.length > 0 ? data.findings[0].text : 'Limited fact-checking data available.'}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Fact-checking helps identify accurate information and potential misinformation. Always verify important claims through multiple sources.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Manipulation Card
-        function createManipulationCard(manipulationData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = manipulationData || {};
-            
-            const header = createCardHeader(
-                'Manipulation Detection',
-                'fa-mask',
-                'Analysis of persuasion and manipulation tactics'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We detect emotional manipulation, logical fallacies, misleading statistics, cherry-picked data, and propaganda techniques.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our system identifies fear appeals, false dichotomies, ad hominem attacks, straw man arguments, and other manipulation tactics.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Manipulation level: ${data.manipulation_level || data.level || 'Unknown'}. ${data.findings && data.findings.length > 0 ? data.findings[0].text : 'No significant manipulation detected.'}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Understanding manipulation tactics helps you read critically and avoid being misled by emotional or logical manipulation.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Content Analysis Card
-        function createContentAnalysisCard(contentData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = contentData || {};
-            
-            const header = createCardHeader(
-                'Content Analysis',
-                'fa-file-alt',
-                'Deep analysis of article content and structure'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We analyze readability, headline accuracy, emotional tone, content depth, and overall article quality.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our AI evaluates writing clarity, checks headline-content alignment, measures emotional language, and assesses comprehensiveness.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Content quality score: ${data.quality_score || data.score || 0}/100. ${data.findings && data.findings.length > 0 ? data.findings[0].text : 'Standard content quality detected.'}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Content quality affects how well information is communicated. Higher quality articles are clearer, more comprehensive, and less misleading.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing...');
-            
-            const urlInput = document.getElementById('urlInput');
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-            
-            if (urlInput) {
-                urlInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        analyzeArticle();
-                    }
-                });
-            }
-            
-            if (analyzeBtn) {
-                console.log('Adding click listener to analyze button');
-                analyzeBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    analyzeArticle();
-                });
-            } else {
-                console.error('Analyze button not found!');
-            }
-            
-            if (downloadPdfBtn) {
-                downloadPdfBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    downloadPDF();
-                });
-            }
-            
-            console.log('Initialization complete');
-        });
-    </script>
-</body>
-</html>
