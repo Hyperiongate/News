@@ -1377,13 +1377,30 @@
                 } else {
                     console.warn('author_analysis exists but is empty - creating basic card');
                     // Create a basic author card with just the name from article data
+                    let authorNameFromArticle = currentAnalysis.article.author || 'Unknown Author';
+                    
+                    // Handle case where author is a URL (e.g., Guardian profile URLs)
+                    if (authorNameFromArticle.startsWith('http')) {
+                        // Try to extract name from URL
+                        const urlParts = authorNameFromArticle.split('/');
+                        const lastPart = urlParts[urlParts.length - 1];
+                        if (lastPart) {
+                            // Convert gabrielle-canon to Gabrielle Canon
+                            authorNameFromArticle = lastPart
+                                .split('-')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(' ');
+                        }
+                    }
+                    
                     const basicAuthorData = {
-                        author_name: currentAnalysis.article.author || 'Unknown Author',
+                        author_name: authorNameFromArticle,
                         author_score: 0,
                         level: 'Analysis Unavailable',
                         author_info: {
                             bio: 'Author analysis service did not return data.',
-                            verified: false
+                            verified: false,
+                            website: currentAnalysis.article.author.startsWith('http') ? currentAnalysis.article.author : null
                         },
                         summary: 'Author credibility analysis was not completed.',
                         is_basic: true
@@ -1394,13 +1411,30 @@
                 console.warn('No author_analysis in detailedAnalysis - creating basic card');
                 // Create a basic author card with just the name from article data
                 if (currentAnalysis && currentAnalysis.article) {
+                    let authorNameFromArticle = currentAnalysis.article.author || 'Unknown Author';
+                    
+                    // Handle case where author is a URL (e.g., Guardian profile URLs)
+                    if (authorNameFromArticle.startsWith('http')) {
+                        // Try to extract name from URL
+                        const urlParts = authorNameFromArticle.split('/');
+                        const lastPart = urlParts[urlParts.length - 1];
+                        if (lastPart) {
+                            // Convert gabrielle-canon to Gabrielle Canon
+                            authorNameFromArticle = lastPart
+                                .split('-')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(' ');
+                        }
+                    }
+                    
                     const basicAuthorData = {
-                        author_name: currentAnalysis.article.author || 'Unknown Author',
+                        author_name: authorNameFromArticle,
                         author_score: 0,
                         level: 'Analysis Unavailable',
                         author_info: {
                             bio: 'Author analysis service is not available.',
-                            verified: false
+                            verified: false,
+                            website: currentAnalysis.article.author.startsWith('http') ? currentAnalysis.article.author : null
                         },
                         summary: 'Author credibility analysis was not completed.',
                         is_basic: true
@@ -1537,6 +1571,7 @@
                             The author analysis service did not return data for this article. 
                             This may be due to service unavailability or processing errors.
                         </div>
+                        ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
                     </div>
                     <div class="card-sections">
                         <div class="card-section">
@@ -1610,32 +1645,34 @@
             contentHtml += '</div>';
             
             // Enhanced credibility metrics
-            contentHtml += `
-                <div class="visual-element">
-                    <div class="stat-grid">
-                        <div class="stat-item">
-                            <span class="stat-value">${authorScore}</span>
-                            <span class="stat-label">Credibility Score</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">${articlesCount || 'N/A'}</span>
-                            <span class="stat-label">Articles Published</span>
-                        </div>
-                        ${yearsExperience ? `
+            if (!data.is_basic) {
+                contentHtml += `
+                    <div class="visual-element">
+                        <div class="stat-grid">
                             <div class="stat-item">
-                                <span class="stat-value">${yearsExperience}+</span>
-                                <span class="stat-label">Years Experience</span>
+                                <span class="stat-value">${authorScore}</span>
+                                <span class="stat-label">Credibility Score</span>
                             </div>
-                        ` : ''}
-                        ${awards.length > 0 ? `
                             <div class="stat-item">
-                                <span class="stat-value">${awards.length}</span>
-                                <span class="stat-label">Awards Won</span>
+                                <span class="stat-value">${articlesCount || 'N/A'}</span>
+                                <span class="stat-label">Articles Published</span>
                             </div>
-                        ` : ''}
+                            ${yearsExperience ? `
+                                <div class="stat-item">
+                                    <span class="stat-value">${yearsExperience}+</span>
+                                    <span class="stat-label">Years Experience</span>
+                                </div>
+                            ` : ''}
+                            ${awards.length > 0 ? `
+                                <div class="stat-item">
+                                    <span class="stat-value">${awards.length}</span>
+                                    <span class="stat-label">Awards Won</span>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
             
             // Expertise areas if available
             if (expertiseAreas.length > 0) {
