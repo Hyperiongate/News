@@ -462,6 +462,25 @@
             animation: cardSlideIn 0.5s ease forwards;
             opacity: 0;
         }
+        
+        /* Auto-expand first 3 cards */
+        .analysis-card:nth-child(1),
+        .analysis-card:nth-child(2),
+        .analysis-card:nth-child(3) {
+            /* Cards start expanded */
+        }
+        
+        .analysis-card:nth-child(1) .card-content,
+        .analysis-card:nth-child(2) .card-content,
+        .analysis-card:nth-child(3) .card-content {
+            max-height: 2000px !important;
+        }
+        
+        .analysis-card:nth-child(1) .card-toggle,
+        .analysis-card:nth-child(2) .card-toggle,
+        .analysis-card:nth-child(3) .card-toggle {
+            transform: rotate(180deg);
+        }
 
         @keyframes cardSlideIn {
             from {
@@ -653,16 +672,24 @@
             text-align: center;
             padding: var(--space-xl);
             color: var(--neutral);
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .empty-state i {
             font-size: 3rem;
             margin-bottom: var(--space-md);
-            opacity: 0.5;
+            opacity: 0.3;
         }
 
         .empty-state p {
-            font-size: 1.1rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            max-width: 300px;
+            margin: 0 auto;
         }
     </style>
 </head>
@@ -700,7 +727,7 @@
                     placeholder="Paste a news article URL here..."
                     autocomplete="off"
                 >
-                <button id="analyzeBtn" class="analyze-btn" onclick="analyzeArticle()">
+                <button id="analyzeBtn" class="analyze-btn">
                     <i class="fas fa-search"></i>
                     Analyze
                 </button>
@@ -719,7 +746,7 @@
                     <div id="trustLevel" class="trust-level"></div>
                     <p id="trustSummary" class="trust-summary"></p>
                 </div>
-                <button id="downloadPdfBtn" class="pdf-download-btn" onclick="downloadPDF()">
+                <button id="downloadPdfBtn" class="pdf-download-btn">
                     <i class="fas fa-download"></i>
                     PDF Report
                 </button>
@@ -923,12 +950,20 @@
                 const data = await response.json();
                 console.log('Received response:', data);
                 
+                // Handle both response formats
+                let analysisData;
                 if (data.success && data.data) {
-                    currentAnalysis = data.data;
-                    displayResults(currentAnalysis);
+                    // New format: { success: true, data: {...} }
+                    analysisData = data.data;
+                } else if (data.analysis || data.article || data.detailed_analysis) {
+                    // Direct format: { analysis: {...}, article: {...}, detailed_analysis: {...} }
+                    analysisData = data;
                 } else {
-                    throw new Error(data.error || 'Invalid response format');
+                    throw new Error('Invalid response format');
                 }
+                
+                currentAnalysis = analysisData;
+                displayResults(currentAnalysis);
                 
             } catch (error) {
                 console.error('Analysis error:', error);
@@ -963,24 +998,57 @@
             console.log('=== FULL API RESPONSE DATA ===');
             console.log(JSON.stringify(data, null, 2));
             
-            if (!data || typeof data !== 'object') {
-                showError('Invalid response format from server');
-                return;
+            try {
+                if (!data || typeof data !== 'object') {
+                    showError('Invalid response format from server');
+                    return;
+                }
+                
+                // Ensure all required data structures exist
+                data.analysis = data.analysis || {};
+                data.article = data.article || {};
+                data.detailed_analysis = data.detailed_analysis || {};
+                
+                // Show results section
+                const resultsSection = document.getElementById('resultsSection');
+                if (!resultsSection) {
+                    console.error('Results section not found!');
+                    return;
+                }
+                resultsSection.style.display = 'block';
+                
+                // Display each component with error handling
+                try {
+                    displayTrustScore(data.analysis);
+                } catch (e) {
+                    console.error('Error displaying trust score:', e);
+                }
+                
+                try {
+                    displayArticleSummary(data.article, data.analysis);
+                } catch (e) {
+                    console.error('Error displaying article summary:', e);
+                }
+                
+                try {
+                    displayAnalysisSummary(data.analysis, data.detailed_analysis);
+                } catch (e) {
+                    console.error('Error displaying analysis summary:', e);
+                }
+                
+                try {
+                    displayAnalysisCards(data);
+                } catch (e) {
+                    console.error('Error displaying analysis cards:', e);
+                }
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+                
+            } catch (error) {
+                console.error('Fatal error in displayResults:', error);
+                showError('Failed to display analysis results. Check console for details.');
             }
-            
-            // Ensure all required data structures exist
-            data.analysis = data.analysis || {};
-            data.article = data.article || {};
-            data.detailed_analysis = data.detailed_analysis || {};
-            
-            document.getElementById('resultsSection').style.display = 'block';
-            
-            displayTrustScore(data.analysis);
-            displayArticleSummary(data.article, data.analysis);
-            displayAnalysisSummary(data.analysis, data.detailed_analysis);
-            displayAnalysisCards(data);
-            
-            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         }
 
         // Display trust score
@@ -1214,12 +1282,11 @@
                 const card = cardInfo.create(cardInfo.name, cardInfo.data, cardInfo.icon);
                 gridEl.appendChild(card);
                 
-                // Auto-expand first 3 cards
+                // Auto-expand first 3 cards immediately
                 if (index < 3) {
-                    setTimeout(() => {
-                        card.classList.add('expanded');
-                    }, (index + 1) * 100);
+                    card.classList.add('expanded');
                 }
+                
                 card.style.animationDelay = `${index * 0.1}s`;
             });
         }
@@ -1663,10 +1730,6 @@
             
             return card;
         }
-
-        // Make functions globally available
-        window.analyzeArticle = analyzeArticle;
-        window.downloadPDF = downloadPDF;
 
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
