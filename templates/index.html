@@ -904,26 +904,51 @@
         let isAnalyzing = false;
         let trustGaugeChart = null;
 
+        // Make functions globally accessible for inline handlers as backup
+        window.analyzeArticle = analyzeArticle;
+        window.downloadPDF = downloadPDF;
+
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            
             const urlInput = document.getElementById('urlInput');
-            urlInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    analyzeArticle();
-                }
-            });
-            
-            // Add click listener to analyze button
             const analyzeBtn = document.getElementById('analyzeBtn');
-            analyzeBtn.addEventListener('click', analyzeArticle);
-            
-            // Add click listener to PDF download button
             const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-            downloadPdfBtn.addEventListener('click', downloadPDF);
+            
+            if (urlInput) {
+                urlInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        analyzeArticle();
+                    }
+                });
+            }
+            
+            if (analyzeBtn) {
+                console.log('Adding click listener to analyze button');
+                analyzeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    analyzeArticle();
+                });
+            } else {
+                console.error('Analyze button not found!');
+            }
+            
+            if (downloadPdfBtn) {
+                downloadPdfBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    downloadPDF();
+                });
+            }
+            
+            console.log('Initialization complete');
         });
 
         // Analyze article function
-        function analyzeArticle() {
+        async function analyzeArticle() {
+            console.log('analyzeArticle called');
+            
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
@@ -938,6 +963,7 @@
             }
             
             if (isAnalyzing) {
+                console.log('Already analyzing, returning');
                 return;
             }
             
@@ -958,6 +984,8 @@
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
             
             try {
+                console.log('Sending request to /api/analyze with URL:', url);
+                
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
@@ -975,6 +1003,7 @@
                 }
                 
                 const data = await response.json();
+                console.log('Received response:', data);
                 
                 if (data.success && data.data) {
                     currentAnalysis = data.data;
