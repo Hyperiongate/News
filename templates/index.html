@@ -1049,50 +1049,57 @@
             console.log('Data keys:', Object.keys(data));
             console.log('Data structure:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
             
+            // Check if data is wrapped in another data object
+            let analysisData = data;
+            if (data.data && (data.data.analysis || data.data.article)) {
+                console.log('Unwrapping nested data structure');
+                analysisData = data.data;
+            }
+            
             // Ensure we have the expected structure
-            const analysisData = {
-                analysis: data.analysis || {
+            const normalizedData = {
+                analysis: analysisData.analysis || {
                     trust_score: 0,
                     trust_level: 'Unknown',
                     summary: 'Analysis incomplete',
                     key_findings: []
                 },
-                article: data.article || {
+                article: analysisData.article || {
                     title: 'Unknown Article',
                     author: 'Unknown',
                     domain: 'Unknown',
                     publish_date: null,
                     word_count: 0
                 },
-                detailed_analysis: data.detailed_analysis || {}
+                detailed_analysis: analysisData.detailed_analysis || {}
             };
             
-            console.log('Normalized analysis data:', analysisData);
+            console.log('Normalized analysis data:', normalizedData);
             
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.classList.add('active');
             
             // Display each component with error handling
             try {
-                displayTrustScore(analysisData.analysis);
+                displayTrustScore(normalizedData.analysis);
             } catch (e) {
                 console.error('Error displaying trust score:', e);
             }
             
             try {
-                displayArticleInfo(analysisData.article, analysisData.analysis);
+                displayArticleInfo(normalizedData.article, normalizedData.analysis);
             } catch (e) {
                 console.error('Error displaying article info:', e);
             }
             
             try {
-                displayServiceCards(analysisData);
+                displayServiceCards(normalizedData);
             } catch (e) {
                 console.error('Error displaying service cards:', e);
             }
             
             // Update currentAnalysis to the normalized data
-            currentAnalysis = analysisData;
+            currentAnalysis = normalizedData;
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
