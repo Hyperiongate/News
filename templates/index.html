@@ -1110,6 +1110,16 @@
             console.log('=== FULL API RESPONSE DATA ===');
             console.log(JSON.stringify(data, null, 2));
             
+            // Debug the exact structure
+            console.log('=== DATA STRUCTURE DEBUG ===');
+            console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
+            console.log('data.detailed_analysis.author_analysis exists?', !!(data.detailed_analysis && data.detailed_analysis.author_analysis));
+            if (data.detailed_analysis && data.detailed_analysis.author_analysis) {
+                console.log('author_analysis content:', data.detailed_analysis.author_analysis);
+                console.log('author_analysis type:', typeof data.detailed_analysis.author_analysis);
+                console.log('author_analysis keys:', Object.keys(data.detailed_analysis.author_analysis));
+            }
+            
             // Show results section
             document.getElementById('resultsSection').style.display = 'block';
             
@@ -1359,7 +1369,44 @@
             // Priority 1 Cards
             if (detailedAnalysis.author_analysis) {
                 console.log('Creating author card with data:', detailedAnalysis.author_analysis);
-                gridEl.appendChild(createAuthorAnalysisCard(detailedAnalysis.author_analysis));
+                console.log('Is author_analysis empty?', Object.keys(detailedAnalysis.author_analysis).length === 0);
+                
+                // Check if author_analysis is not just an empty object
+                if (Object.keys(detailedAnalysis.author_analysis).length > 0) {
+                    gridEl.appendChild(createAuthorAnalysisCard(detailedAnalysis.author_analysis));
+                } else {
+                    console.warn('author_analysis exists but is empty - creating basic card');
+                    // Create a basic author card with just the name from article data
+                    const basicAuthorData = {
+                        author_name: currentAnalysis.article.author || 'Unknown Author',
+                        author_score: 0,
+                        level: 'Analysis Unavailable',
+                        author_info: {
+                            bio: 'Author analysis service did not return data.',
+                            verified: false
+                        },
+                        summary: 'Author credibility analysis was not completed.',
+                        is_basic: true
+                    };
+                    gridEl.appendChild(createAuthorAnalysisCard(basicAuthorData));
+                }
+            } else {
+                console.warn('No author_analysis in detailedAnalysis - creating basic card');
+                // Create a basic author card with just the name from article data
+                if (currentAnalysis && currentAnalysis.article) {
+                    const basicAuthorData = {
+                        author_name: currentAnalysis.article.author || 'Unknown Author',
+                        author_score: 0,
+                        level: 'Analysis Unavailable',
+                        author_info: {
+                            bio: 'Author analysis service is not available.',
+                            verified: false
+                        },
+                        summary: 'Author credibility analysis was not completed.',
+                        is_basic: true
+                    };
+                    gridEl.appendChild(createAuthorAnalysisCard(basicAuthorData));
+                }
             }
             
             if (detailedAnalysis.bias_analysis) {
@@ -1472,45 +1519,80 @@
             if (authorInfo.outlets) outlets = authorInfo.outlets;
             if (authorInfo.awards) awards = authorInfo.awards;
             
-            let contentHtml = '<div class="card-content-inner">';
-            
-            // Enhanced Author Info Section with Avatar/Photo
-            contentHtml += `
-                <div class="author-info-section">
-                    <div class="author-header">
-                        <div class="author-avatar">
-                            ${authorPhoto ? 
-                                `<img src="${escapeHtml(authorPhoto)}" alt="${escapeHtml(authorName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-user\"></i>';">` : 
-                                '<i class="fas fa-user"></i>'
-                            }
-                        </div>
-                        <div class="author-details">
-                            <h5>${escapeHtml(authorName)}</h5>
-                            ${authorName !== 'Unknown Author' ? 
-                                `<p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>` :
-                                '<p><i class="fas fa-exclamation-circle" style="color: var(--danger)"></i> No Author Attribution</p>'
-                            }
-                            ${authorPosition ? `<p class="author-position">${escapeHtml(authorPosition)}</p>` : ''}
-                        </div>
-                    </div>
-                    ${authorBio ? `<div class="author-bio">${escapeHtml(authorBio)}</div>` : ''}
-                    ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
-                    ${socialMedia && socialMedia.includes('@') ? `<a href="https://twitter.com/${socialMedia.replace('@', '')}" target="_blank" class="author-link"><i class="fab fa-twitter"></i> ${escapeHtml(socialMedia)}</a>` : ''}
-                `;
-            
-            // Add outlets if available
-            if (outlets.length > 0) {
+            // Handle basic/fallback case
+            if (data.is_basic) {
+                contentHtml = '<div class="card-content-inner">';
                 contentHtml += `
-                    <div class="author-outlets">
-                        <h6>Published In:</h6>
-                        <div class="outlet-list">
-                            ${outlets.map(outlet => `<span class="outlet-badge">${escapeHtml(outlet)}</span>`).join('')}
+                    <div class="author-info-section">
+                        <div class="author-header">
+                            <div class="author-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="author-details">
+                                <h5>${escapeHtml(authorName)}</h5>
+                                <p><i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i> Analysis Not Available</p>
+                            </div>
+                        </div>
+                        <div class="author-bio" style="color: var(--neutral); font-style: italic;">
+                            The author analysis service did not return data for this article. 
+                            This may be due to service unavailability or processing errors.
+                        </div>
+                    </div>
+                    <div class="card-sections">
+                        <div class="card-section">
+                            <div class="section-label">
+                                <i class="fas fa-info-circle"></i>
+                                What We Know
+                            </div>
+                            <div class="section-content">
+                                Author Name: ${escapeHtml(authorName)}
+                                ${authorName === 'Unknown Author' ? 
+                                    '<br>This article does not have author attribution, which significantly reduces credibility.' :
+                                    '<br>We were unable to verify additional information about this author.'
+                                }
+                            </div>
                         </div>
                     </div>
                 `;
-            }
+            } else {
+                // Original enhanced display code
+                contentHtml += `
+                    <div class="author-info-section">
+                        <div class="author-header">
+                            <div class="author-avatar">
+                                ${authorPhoto ? 
+                                    `<img src="${escapeHtml(authorPhoto)}" alt="${escapeHtml(authorName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-user\"></i>';">` : 
+                                    '<i class="fas fa-user"></i>'
+                                }
+                            </div>
+                            <div class="author-details">
+                                <h5>${escapeHtml(authorName)}</h5>
+                                ${authorName !== 'Unknown Author' ? 
+                                    `<p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>` :
+                                    '<p><i class="fas fa-exclamation-circle" style="color: var(--danger)"></i> No Author Attribution</p>'
+                                }
+                                ${authorPosition ? `<p class="author-position">${escapeHtml(authorPosition)}</p>` : ''}
+                            </div>
+                        </div>
+                        ${authorBio ? `<div class="author-bio">${escapeHtml(authorBio)}</div>` : ''}
+                        ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
+                        ${socialMedia && socialMedia.includes('@') ? `<a href="https://twitter.com/${socialMedia.replace('@', '')}" target="_blank" class="author-link"><i class="fab fa-twitter"></i> ${escapeHtml(socialMedia)}</a>` : ''}
+                    `;
             
-            contentHtml += '</div>';
+                // Add outlets if available
+                if (outlets.length > 0) {
+                    contentHtml += `
+                        <div class="author-outlets">
+                            <h6>Published In:</h6>
+                            <div class="outlet-list">
+                                ${outlets.map(outlet => `<span class="outlet-badge">${escapeHtml(outlet)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                contentHtml += '</div>';
+            }
             
             // Add outlets if available
             if (outlets.length > 0) {
