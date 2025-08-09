@@ -555,215 +555,6 @@
             line-height: 1.7;
         }
 
-        /* Author Card Specific */
-        .author-info-section {
-            padding: var(--space-md);
-            background: var(--light);
-            border-radius: var(--radius);
-            margin-bottom: var(--space-md);
-        }
-
-        .author-header {
-            display: flex;
-            gap: var(--space-md);
-            align-items: flex-start;
-        }
-
-        .author-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: var(--primary);
-            box-shadow: var(--shadow);
-            flex-shrink: 0;
-        }
-
-        .author-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-
-        .author-details {
-            flex: 1;
-        }
-
-        .author-details h5 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .author-details p {
-            font-size: 0.875rem;
-            color: var(--neutral);
-            margin-bottom: 0.25rem;
-        }
-
-        .author-position {
-            color: var(--dark) !important;
-            font-weight: 500;
-        }
-
-        .author-bio {
-            margin-top: var(--space-md);
-            padding: var(--space-md);
-            background: white;
-            border-radius: var(--radius);
-            border-left: 3px solid var(--primary);
-            font-style: italic;
-            color: var(--dark);
-        }
-
-        .author-link {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            color: var(--primary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            margin-top: var(--space-sm);
-            margin-right: var(--space-sm);
-            transition: all 0.2s ease;
-        }
-
-        .author-link:hover {
-            color: var(--primary-light);
-            text-decoration: underline;
-        }
-
-        /* Author Outlets Section */
-        .author-outlets {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .author-outlets h6 {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-        }
-
-        .outlet-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .outlet-badge {
-            padding: 0.25rem 0.75rem;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            color: var(--primary);
-        }
-
-        /* Enhanced Stats Grid */
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-            padding: 1.5rem;
-            background: rgba(99, 102, 241, 0.05);
-            border-radius: 0.5rem;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            display: block;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-            line-height: 1;
-        }
-
-        .stat-label {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--neutral);
-            margin-top: 0.25rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        /* Expertise Section */
-        .expertise-section {
-            margin-top: 1.5rem;
-        }
-
-        .expertise-section h6 {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-        }
-
-        .expertise-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .expertise-tag {
-            padding: 0.25rem 0.5rem;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 0.25rem;
-            font-size: 0.8rem;
-            color: var(--success);
-        }
-
-        /* Awards Section */
-        .awards-section {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: rgba(245, 158, 11, 0.05);
-            border-radius: 0.5rem;
-            border-left: 3px solid var(--warning);
-        }
-
-        .awards-section h6 {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--warning);
-        }
-
-        .awards-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .awards-list li {
-            padding: 0.25rem 0;
-            font-size: 0.875rem;
-            color: var(--dark);
-        }
-
-        .awards-list li:before {
-            content: "🏆 ";
-            margin-right: 0.25rem;
-        }
-
-        /* Visual Element Container */
-        .visual-element {
-            margin: 1.5rem 0;
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
             .container {
@@ -789,17 +580,6 @@
 
             .analysis-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .author-header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .author-avatar {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5rem;
             }
         }
 
@@ -853,7 +633,7 @@
                     placeholder="Paste a news article URL here..."
                     autocomplete="off"
                 >
-                <button id="analyzeBtn" class="analyze-btn">
+                <button id="analyzeBtn" class="analyze-btn" onclick="analyzeArticle()">
                     <i class="fas fa-search"></i>
                     Analyze
                 </button>
@@ -872,7 +652,7 @@
                     <div id="trustLevel" class="trust-level"></div>
                     <p id="trustSummary" class="trust-summary"></p>
                 </div>
-                <button id="downloadPdfBtn" class="pdf-download-btn">
+                <button id="downloadPdfBtn" class="pdf-download-btn" onclick="downloadPDF()">
                     <i class="fas fa-download"></i>
                     PDF Report
                 </button>
@@ -905,7 +685,7 @@
         let isAnalyzing = false;
         let trustGaugeChart = null;
 
-        // Utility functions
+        // Define all functions BEFORE they're used
         function isValidUrl(string) {
             try {
                 const url = new URL(string);
@@ -950,58 +730,6 @@
             document.getElementById('resultsSection').style.display = 'none';
         }
 
-        // DIAGNOSTIC FUNCTION
-        function diagnoseDataStructure(data) {
-            console.log('=== DIAGNOSTIC: COMPLETE DATA STRUCTURE ===');
-            
-            // Check top level
-            console.log('Top level keys:', Object.keys(data));
-            console.log('data.success:', data.success);
-            console.log('data.data exists?', !!data.data);
-            
-            // If data.data exists, we have a wrapped response
-            if (data.data) {
-                console.log('WRAPPED RESPONSE DETECTED - data.data keys:', Object.keys(data.data));
-                data = data.data; // Unwrap it
-            }
-            
-            // Check detailed_analysis structure
-            if (data.detailed_analysis) {
-                console.log('\n=== DETAILED ANALYSIS STRUCTURE ===');
-                console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
-                
-                // Check each service
-                Object.keys(data.detailed_analysis).forEach(service => {
-                    const serviceData = data.detailed_analysis[service];
-                    console.log(`\n--- ${service} ---`);
-                    console.log('Type:', typeof serviceData);
-                    console.log('Is empty object?', Object.keys(serviceData).length === 0);
-                    if (typeof serviceData === 'object' && serviceData !== null) {
-                        console.log('Keys:', Object.keys(serviceData));
-                        // Check if it has a nested data field
-                        if (serviceData.data) {
-                            console.log('HAS NESTED .data FIELD!');
-                            console.log('serviceData.data keys:', Object.keys(serviceData.data));
-                        }
-                        // Print first few fields
-                        Object.keys(serviceData).slice(0, 5).forEach(key => {
-                            console.log(`${key}:`, serviceData[key]);
-                        });
-                    }
-                });
-                
-                // Specific checks
-                console.log('\n=== SPECIFIC FIELD CHECKS ===');
-                console.log('bias_analysis.bias_level:', data.detailed_analysis.bias_analysis?.bias_level);
-                console.log('bias_analysis.data?.bias_level:', data.detailed_analysis.bias_analysis?.data?.bias_level);
-                console.log('author_analysis.score:', data.detailed_analysis.author_analysis?.score);
-                console.log('author_analysis.data?.score:', data.detailed_analysis.author_analysis?.data?.score);
-            }
-            
-            return data;
-        }
-
-        // Progress bar functions
         function showProgress() {
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
@@ -1015,7 +743,6 @@
             progressBar.classList.add('active');
             progressFill.style.width = '0%';
             
-            // Simulate progress stages
             const stages = [
                 { text: 'Extracting article...', progress: 20 },
                 { text: 'Analyzing content...', progress: 40 },
@@ -1052,7 +779,6 @@
             }, 500);
         }
 
-        // Get color based on score
         function getScoreColor(score) {
             if (score >= 80) return '#10b981';
             if (score >= 60) return '#3b82f6';
@@ -1060,7 +786,6 @@
             return '#ef4444';
         }
 
-        // Toggle card expansion
         function toggleCard(card) {
             if (!card || !card.classList) {
                 console.error('Invalid card element passed to toggleCard');
@@ -1069,7 +794,6 @@
             card.classList.toggle('expanded');
         }
 
-        // Helper function to create card header
         function createCardHeader(title, icon, description) {
             const header = document.createElement('div');
             header.className = 'card-header';
@@ -1086,7 +810,7 @@
             return header;
         }
 
-        // Analyze article function
+        // Main analyze function
         async function analyzeArticle() {
             console.log('analyzeArticle called');
             
@@ -1117,17 +841,14 @@
             hideError();
             hideResults();
             
-            // Disable button and show loading state
             const analyzeBtn = document.getElementById('analyzeBtn');
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
             
-            // Show progress bar
             showProgress();
             
-            // Set a timeout for the request
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
             
             try {
                 console.log('Sending request to /api/analyze with URL:', url);
@@ -1153,8 +874,6 @@
                 
                 if (data.success && data.data) {
                     currentAnalysis = data.data;
-                    // ADD DIAGNOSTIC
-                    currentAnalysis = diagnoseDataStructure(currentAnalysis);
                     displayResults(currentAnalysis);
                 } else {
                     throw new Error(data.error || 'Invalid response format');
@@ -1172,7 +891,6 @@
                 isAnalyzing = false;
                 hideProgress();
                 
-                // Reset button
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze';
             }
@@ -1185,13 +903,7 @@
                 return;
             }
             
-            // Show message that PDF download is coming soon
             showError('PDF download feature coming soon! The feature will allow you to save a complete analysis report.');
-            
-            // In a real implementation, this would:
-            // 1. Call a backend API to generate the PDF
-            // 2. Download the generated PDF file
-            // For now, we'll just log the data
             console.log('PDF Download requested for:', currentAnalysis);
         }
 
@@ -1200,56 +912,42 @@
             console.log('=== FULL API RESPONSE DATA ===');
             console.log(JSON.stringify(data, null, 2));
             
-            // Validate data structure
             if (!data || typeof data !== 'object') {
                 showError('Invalid response format from server');
                 return;
             }
             
-            // Ensure required properties exist with defaults
             data.analysis = data.analysis || {};
             data.article = data.article || {};
             data.detailed_analysis = data.detailed_analysis || {};
             
-            // Show results section
             document.getElementById('resultsSection').style.display = 'block';
             
-            // Display trust score and gauge
             displayTrustScore(data.analysis);
-            
-            // Display enhanced article summary
             displayArticleSummary(data.article, data.analysis);
-            
-            // Display enhanced analysis summary
             displayAnalysisSummary(data.analysis, data.detailed_analysis);
-            
-            // Display detailed analysis cards
             displayAnalysisCards(data.detailed_analysis);
             
-            // Scroll to results
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Display trust score with animated gauge
+        // Display trust score
         function displayTrustScore(analysis) {
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
-            // Update text
             const trustLevelEl = document.getElementById('trustLevel');
             trustLevelEl.textContent = `${level} Credibility`;
             trustLevelEl.className = `trust-level ${level.toLowerCase().replace(/\s+/g, '-')}`;
             
             document.getElementById('trustSummary').textContent = analysis.summary || 'Analysis complete. Review the detailed findings below.';
             
-            // Create or update gauge chart
             const ctx = document.getElementById('trustGauge').getContext('2d');
             
             if (trustGaugeChart) {
                 trustGaugeChart.destroy();
             }
             
-            // Create donut chart as gauge
             trustGaugeChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -1319,7 +1017,6 @@
             `;
             document.getElementById('articleMeta').innerHTML = metaHtml;
             
-            // Display key findings
             const findings = analysis.key_findings || [];
             let findingsHtml = '<h3>Key Findings</h3>';
             
@@ -1344,13 +1041,11 @@
             document.getElementById('keyFindings').innerHTML = findingsHtml;
         }
 
-        // FIXED Display analysis summary - removing extra .data references
+        // Display analysis summary - FIXED
         function displayAnalysisSummary(analysis, detailedAnalysis) {
-            // Ensure objects exist
             analysis = analysis || {};
             detailedAnalysis = detailedAnalysis || {};
             
-            // FIXED: Look for data at the correct level
             const summaryData = [
                 {
                     icon: 'bias',
@@ -1402,21 +1097,13 @@
             const summaryGrid = document.getElementById('summaryGrid');
             if (summaryGrid) {
                 summaryGrid.innerHTML = summaryHtml;
-            } else {
-                console.error('Summary grid element not found');
             }
         }
 
         // Display analysis cards
         function displayAnalysisCards(detailedAnalysis) {
             console.log('=== DISPLAYING ANALYSIS CARDS ===');
-            
-            if (!detailedAnalysis || typeof detailedAnalysis !== 'object') {
-                console.warn('No detailed analysis data available');
-                detailedAnalysis = {};
-            }
-            
-            console.log('Detailed analysis keys:', Object.keys(detailedAnalysis));
+            console.log('Detailed analysis:', detailedAnalysis);
             
             const gridEl = document.getElementById('analysisGrid');
             if (!gridEl) {
@@ -1424,344 +1111,114 @@
                 return;
             }
             
-            gridEl.innerHTML = ''; // Clear existing cards
+            gridEl.innerHTML = '';
             
-            // Priority 1 Cards - Always show first if available
-            if (detailedAnalysis.author_analysis) {
-                console.log('author_analysis found:', detailedAnalysis.author_analysis);
-                console.log('author_analysis type:', typeof detailedAnalysis.author_analysis);
-                console.log('author_analysis is empty object?', Object.keys(detailedAnalysis.author_analysis).length === 0);
-                
-                // Check if author_analysis is not just an empty object
-                if (Object.keys(detailedAnalysis.author_analysis).length > 0) {
-                    gridEl.appendChild(createAuthorAnalysisCard(detailedAnalysis.author_analysis));
-                } else {
-                    console.warn('author_analysis exists but is empty - creating basic card');
-                    // Create a basic author card with just the name from article data
-                    let authorNameFromArticle = currentAnalysis.article.author || 'Unknown Author';
+            // Create simple cards for now
+            const cards = [
+                { name: 'Author Analysis', data: detailedAnalysis.author_analysis, create: createSimpleCard },
+                { name: 'Bias Analysis', data: detailedAnalysis.bias_analysis, create: createSimpleCard },
+                { name: 'Source Credibility', data: detailedAnalysis.source_credibility, create: createSimpleCard },
+                { name: 'Transparency Analysis', data: detailedAnalysis.transparency_analysis, create: createSimpleCard },
+                { name: 'Fact Checking', data: detailedAnalysis.fact_checks, create: createSimpleCard },
+                { name: 'Manipulation Detection', data: detailedAnalysis.manipulation_analysis, create: createSimpleCard },
+                { name: 'Content Analysis', data: detailedAnalysis.content_analysis, create: createSimpleCard }
+            ];
+            
+            cards.forEach((cardInfo, index) => {
+                if (cardInfo.data && Object.keys(cardInfo.data).length > 0) {
+                    const card = cardInfo.create(cardInfo.name, cardInfo.data);
+                    gridEl.appendChild(card);
                     
-                    // Handle case where author is a URL (e.g., Guardian profile URLs)
-                    if (authorNameFromArticle.startsWith('http')) {
-                        // Try to extract name from URL
-                        const urlParts = authorNameFromArticle.split('/');
-                        const lastPart = urlParts[urlParts.length - 1];
-                        if (lastPart) {
-                            // Convert gabrielle-canon to Gabrielle Canon
-                            authorNameFromArticle = lastPart
-                                .split('-')
-                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                .join(' ');
-                        }
+                    // Auto-expand first 3 cards
+                    if (index < 3) {
+                        setTimeout(() => {
+                            card.classList.add('expanded');
+                        }, (index + 1) * 100);
                     }
-                    
-                    const basicAuthorData = {
-                        author_name: authorNameFromArticle,
-                        author_score: 0,
-                        level: 'Analysis Unavailable',
-                        author_info: {
-                            bio: 'Author analysis service did not return data.',
-                            verified: false,
-                            website: currentAnalysis.article.author.startsWith('http') ? currentAnalysis.article.author : null
-                        },
-                        summary: 'Author credibility analysis was not completed.',
-                        is_basic: true
-                    };
-                    gridEl.appendChild(createAuthorAnalysisCard(basicAuthorData));
+                    card.style.animationDelay = `${index * 0.1}s`;
                 }
-            } else {
-                console.warn('No author_analysis in detailedAnalysis - creating basic card');
-                // Create a basic author card with just the name from article data
-                if (currentAnalysis && currentAnalysis.article) {
-                    let authorNameFromArticle = currentAnalysis.article.author || 'Unknown Author';
-                    
-                    // Handle case where author is a URL (e.g., Guardian profile URLs)
-                    if (authorNameFromArticle.startsWith('http')) {
-                        // Try to extract name from URL
-                        const urlParts = authorNameFromArticle.split('/');
-                        const lastPart = urlParts[urlParts.length - 1];
-                        if (lastPart) {
-                            // Convert gabrielle-canon to Gabrielle Canon
-                            authorNameFromArticle = lastPart
-                                .split('-')
-                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                .join(' ');
-                        }
-                    }
-                    
-                    const basicAuthorData = {
-                        author_name: authorNameFromArticle,
-                        author_score: 0,
-                        level: 'Analysis Unavailable',
-                        author_info: {
-                            bio: 'Author analysis service is not available.',
-                            verified: false,
-                            website: currentAnalysis.article.author.startsWith('http') ? currentAnalysis.article.author : null
-                        },
-                        summary: 'Author credibility analysis was not completed.',
-                        is_basic: true
-                    };
-                    gridEl.appendChild(createAuthorAnalysisCard(basicAuthorData));
-                }
-            }
-            
-            if (detailedAnalysis.bias_analysis) {
-                console.log('Creating bias card with data:', detailedAnalysis.bias_analysis);
-                gridEl.appendChild(createBiasAnalysisCard(detailedAnalysis.bias_analysis));
-            }
-            
-            // Priority 2 Cards
-            if (detailedAnalysis.source_credibility) {
-                console.log('Creating source card with data:', detailedAnalysis.source_credibility);
-                gridEl.appendChild(createSourceCredibilityCard(detailedAnalysis.source_credibility));
-            }
-            
-            if (detailedAnalysis.transparency_analysis) {
-                console.log('Creating transparency card with data:', detailedAnalysis.transparency_analysis);
-                gridEl.appendChild(createTransparencyCard(detailedAnalysis.transparency_analysis));
-            }
-            
-            if (detailedAnalysis.fact_checks) {
-                console.log('Creating fact check card with data:', detailedAnalysis.fact_checks);
-                gridEl.appendChild(createFactCheckCard(detailedAnalysis.fact_checks));
-            }
-            
-            if (detailedAnalysis.manipulation_analysis) {
-                console.log('Creating manipulation card with data:', detailedAnalysis.manipulation_analysis);
-                gridEl.appendChild(createManipulationCard(detailedAnalysis.manipulation_analysis));
-            }
-            
-            if (detailedAnalysis.content_analysis) {
-                console.log('Creating content card with data:', detailedAnalysis.content_analysis);
-                gridEl.appendChild(createContentAnalysisCard(detailedAnalysis.content_analysis));
-            }
-            
-            // Auto-expand first 3 cards
-            const cards = gridEl.querySelectorAll('.analysis-card');
-            cards.forEach((card, index) => {
-                if (index < 3) {
-                    setTimeout(() => {
-                        card.classList.add('expanded');
-                    }, (index + 1) * 100);
-                }
-                card.style.animationDelay = `${index * 0.1}s`;
             });
         }
 
-        // FIXED: Create Author Analysis Card
-        function createAuthorAnalysisCard(authorData) {
+        // Create simple card for display
+        function createSimpleCard(title, data) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            console.log('=== AUTHOR ANALYSIS CARD DEBUG ===');
-            console.log('Raw authorData:', authorData);
-            console.log('authorData type:', typeof authorData);
-            console.log('authorData keys:', authorData ? Object.keys(authorData) : 'null');
-            
-            // Handle case where no data is provided
-            if (!authorData || (typeof authorData === 'object' && Object.keys(authorData).length === 0)) {
-                console.error('No author data provided to createAuthorAnalysisCard');
-                
-                const header = createCardHeader(
-                    'Author Analysis',
-                    'fa-user-check',
-                    'Author information not available'
-                );
-                
-                const content = document.createElement('div');
-                content.className = 'card-content';
-                content.innerHTML = '<div class="card-content-inner"><p>Author analysis data is not available for this article.</p></div>';
-                
-                card.appendChild(header);
-                card.appendChild(content);
-                return card;
-            }
-            
-            // FIXED: Don't look for nested .data field - data is already extracted
-            const data = authorData;
-            
-            const header = createCardHeader(
-                'Author Analysis',
-                'fa-user-check',
-                'Verification of author credentials and expertise'
-            );
+            const header = document.createElement('div');
+            header.className = 'card-header';
             header.onclick = () => toggleCard(card);
+            header.innerHTML = `
+                <div class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>${title}</h3>
+                </div>
+                <i class="fas fa-chevron-down card-toggle"></i>
+            `;
             
             const content = document.createElement('div');
             content.className = 'card-content';
             
-            // Extract all author information with comprehensive fallbacks
-            let authorName = data.author_name || data.name || data.author || 'Unknown Author';
-            let authorScore = data.credibility_score || data.author_score || data.score || 50;
-            let authorBio = data.bio || data.description || '';
-            let authorPosition = data.position || data.current_position || '';
-            let authorWebsite = data.website || data.url || '';
-            let authorPhoto = data.photo || data.image || data.avatar || '';
-            let isVerified = data.is_verified || data.verified || false;
-            let articlesCount = data.articles_count || data.article_count || data.total_articles || 0;
-            let yearsExperience = data.years_experience || data.experience_years || 0;
-            let expertiseAreas = data.expertise_areas || data.expertise || [];
-            let outlets = data.outlets || [];
-            let awards = data.awards || [];
-            let socialMedia = data.social_media || data.twitter || '';
+            const contentInner = document.createElement('div');
+            contentInner.className = 'card-content-inner';
             
-            // Check for author_info nested structure
-            const authorInfo = data.author_info || {};
-            if (authorInfo.bio) authorBio = authorInfo.bio;
-            if (authorInfo.position) authorPosition = authorInfo.position;
-            if (authorInfo.verified !== undefined) isVerified = authorInfo.verified;
-            if (authorInfo.experience_years) yearsExperience = authorInfo.experience_years;
-            if (authorInfo.expertise_areas) expertiseAreas = authorInfo.expertise_areas;
-            if (authorInfo.outlets) outlets = authorInfo.outlets;
-            if (authorInfo.awards) awards = authorInfo.awards;
+            // Display whatever data we have
+            const summary = data.summary || data.description || 'Analysis complete';
+            const score = data.score || data.credibility_score || data.trust_score || 'N/A';
+            const level = data.level || data.rating || 'N/A';
             
-            let contentHtml = '';
+            contentInner.innerHTML = `
+                <p><strong>Result:</strong> ${level}</p>
+                <p><strong>Score:</strong> ${score}</p>
+                <p>${summary}</p>
+            `;
             
-            // Handle basic/fallback case
-            if (data.is_basic) {
-                contentHtml = '<div class="card-content-inner">';
-                contentHtml += `
-                    <div class="author-info-section">
-                        <div class="author-header">
-                            <div class="author-avatar">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="author-details">
-                                <h5>${escapeHtml(authorName)}</h5>
-                                <p><i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i> Analysis Not Available</p>
-                            </div>
-                        </div>
-                        <div class="author-bio" style="color: var(--neutral); font-style: italic;">
-                            The author analysis service did not return data for this article. 
-                            This may be due to service unavailability or processing errors.
-                        </div>
-                        ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
-                    </div>
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-info-circle"></i>
-                                What We Know
-                            </div>
-                            <div class="section-content">
-                                Author Name: ${escapeHtml(authorName)}
-                                ${authorName === 'Unknown Author' ? 
-                                    '<br>This article does not have author attribution, which significantly reduces credibility.' :
-                                    '<br>We were unable to verify additional information about this author.'
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Enhanced display for full data
-                contentHtml = '<div class="card-content-inner">';
-                contentHtml += `
-                    <div class="author-info-section">
-                        <div class="author-header">
-                            <div class="author-avatar">
-                                ${authorPhoto ? 
-                                    `<img src="${escapeHtml(authorPhoto)}" alt="${escapeHtml(authorName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-user\"></i>';">` : 
-                                    '<i class="fas fa-user"></i>'
-                                }
-                            </div>
-                            <div class="author-details">
-                                <h5>${escapeHtml(authorName)}</h5>
-                                ${authorName !== 'Unknown Author' ? 
-                                    `<p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>` :
-                                    '<p><i class="fas fa-exclamation-circle" style="color: var(--danger)"></i> No Author Attribution</p>'
-                                }
-                                ${authorPosition ? `<p class="author-position">${escapeHtml(authorPosition)}</p>` : ''}
-                            </div>
-                        </div>
-                        ${authorBio ? `<div class="author-bio">${escapeHtml(authorBio)}</div>` : ''}
-                        ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
-                        ${socialMedia && socialMedia.includes('@') ? `<a href="https://twitter.com/${socialMedia.replace('@', '')}" target="_blank" class="author-link"><i class="fab fa-twitter"></i> ${escapeHtml(socialMedia)}</a>` : ''}
-                `;
+            content.appendChild(contentInner);
+            card.appendChild(header);
+            card.appendChild(content);
             
-                // Add outlets if available
-                if (outlets.length > 0) {
-                    contentHtml += `
-                        <div class="author-outlets">
-                            <h6>Published In:</h6>
-                            <div class="outlet-list">
-                                ${outlets.map(outlet => `<span class="outlet-badge">${escapeHtml(outlet)}</span>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                contentHtml += '</div>';
+            return card;
+        }
+
+        // Make functions globally available
+        window.analyzeArticle = analyzeArticle;
+        window.downloadPDF = downloadPDF;
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            
+            const urlInput = document.getElementById('urlInput');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+            
+            if (urlInput) {
+                urlInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        analyzeArticle();
+                    }
+                });
             }
             
-            // Enhanced credibility metrics
-            if (!data.is_basic) {
-                contentHtml += `
-                    <div class="visual-element">
-                        <div class="stat-grid">
-                            <div class="stat-item">
-                                <span class="stat-value">${authorScore}</span>
-                                <span class="stat-label">Credibility Score</span>
-                            </div>
-                            ${articlesCount > 0 ? `
-                                <div class="stat-item">
-                                    <span class="stat-value">${articlesCount}</span>
-                                    <span class="stat-label">Articles Published</span>
-                                </div>
-                            ` : ''}
-                            ${yearsExperience > 0 ? `
-                                <div class="stat-item">
-                                    <span class="stat-value">${yearsExperience}+</span>
-                                    <span class="stat-label">Years Experience</span>
-                                </div>
-                            ` : ''}
-                            ${awards.length > 0 ? `
-                                <div class="stat-item">
-                                    <span class="stat-value">${awards.length}</span>
-                                    <span class="stat-label">Awards</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                
-                // Add expertise areas if available
-                if (expertiseAreas.length > 0) {
-                    contentHtml += `
-                        <div class="expertise-section">
-                            <h6>Areas of Expertise:</h6>
-                            <div class="expertise-tags">
-                                ${expertiseAreas.map(area => `<span class="expertise-tag">${escapeHtml(area)}</span>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // Add awards if available
-                if (awards.length > 0) {
-                    contentHtml += `
-                        <div class="awards-section">
-                            <h6>Awards & Recognition:</h6>
-                            <ul class="awards-list">
-                                ${awards.map(award => `<li>${escapeHtml(award)}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-                
-                // Add the standard 4 sections
-                contentHtml += `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-search"></i>
-                                What This Analysis Covers
-                            </div>
-                            <div class="section-content">
-                                We verify author identity, check professional credentials, analyze publication history, assess expertise areas, and evaluate overall journalistic credibility.
-                            </div>
-                        </div>
-                        
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-microscope"></i>
-                                How We Analyze
+            if (analyzeBtn) {
+                console.log('Analyze button found, adding event listener');
+                analyzeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Button clicked via addEventListener');
+                    analyzeArticle();
+                });
+            }
+            
+            if (downloadPdfBtn) {
+                downloadPdfBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    downloadPDF();
+                });
+            }
+            
+            console.log('Initialization complete');
+        });
+    </script>
+</body>
+</html>
