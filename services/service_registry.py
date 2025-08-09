@@ -149,6 +149,7 @@ class ServiceRegistry:
         if not service:
             return {
                 'service': service_name,
+                'success': False,  # Always include success field
                 'error': 'Service not found or not async',
                 'available': False
             }
@@ -163,41 +164,31 @@ class ServiceRegistry:
             return service.get_error_result(str(e))
     
     def analyze_with_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run analysis with sync service - WITH DEBUG LOGGING"""
-        logger.info(f"=== analyze_with_service called for '{service_name}' ===")
-        logger.info(f"Data keys: {list(data.keys()) if data else 'None'}")
-        
+        """Run analysis with sync service"""
         service = self.services.get(service_name)
-        logger.info(f"Service lookup result: {service}")
         
         if not service:
-            logger.warning(f"Service '{service_name}' not found in sync services")
             # Check if it's an async service
             if service_name in self.async_services:
-                logger.info(f"Found '{service_name}' in async services, running in sync context")
                 # Run async service in sync context
                 return asyncio.run(self.analyze_with_service_async(service_name, data))
             
-            logger.error(f"Service '{service_name}' not found at all")
             return {
                 'service': service_name,
+                'success': False,  # Always include success field
                 'error': 'Service not found',
                 'available': False
             }
         
-        logger.info(f"Service '{service_name}' found, checking availability...")
-        logger.info(f"Service is_available: {service.is_available}")
-        
         if not service.is_available:
-            logger.warning(f"Service '{service_name}' is not available, returning default result")
             return service.get_default_result()
         
-        logger.info(f"Service '{service_name}' is available, calling analyze method...")
-        
         try:
-            logger.info(f"About to call {service_name}.analyze()")
             result = service.analyze(data)
-            logger.info(f"Service '{service_name}' returned result: success={result.get('success')}, has_error={bool(result.get('error'))}")
+            # Ensure success field is present
+            if 'success' not in result:
+                logger.warning(f"Service {service_name} result missing 'success' field, adding it")
+                result['success'] = 'error' not in result
             return result
         except Exception as e:
             logger.error(f"Service {service_name} failed: {e}", exc_info=True)
@@ -236,6 +227,7 @@ class ServiceRegistry:
                         logger.error(f"Service {service_name} failed in parallel execution: {e}")
                         results[service_name] = {
                             'service': service_name,
+                            'success': False,  # Always include success field
                             'error': str(e),
                             'available': False
                         }
@@ -255,6 +247,7 @@ class ServiceRegistry:
                 if isinstance(result, Exception):
                     results[service_name] = {
                         'service': service_name,
+                        'success': False,  # Always include success field
                         'error': str(result),
                         'available': False
                     }
@@ -330,6 +323,10 @@ except Exception as e:
                 'services': {}
             }
         def analyze_with_service(self, name, data):
-            return {'error': 'Service registry not initialized', 'service': name}
+            return {
+                'service': name,
+                'success': False,
+                'error': 'Service registry not initialized'
+            }
     
     service_registry = DummyRegistry()
