@@ -28,6 +28,7 @@ class ServiceRegistry:
         'transparency_analyzer': ('services.transparency_analyzer', 'TransparencyAnalyzer'),
         'manipulation_detector': ('services.manipulation_detector', 'ManipulationDetector'),
         'content_analyzer': ('services.content_analyzer', 'ContentAnalyzer'),
+        'plagiarism_detector': ('services.plagiarism_detector', 'PlagiarismDetector'),
     }
     
     def __init__(self):
