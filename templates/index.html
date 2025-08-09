@@ -852,7 +852,7 @@
                     placeholder="Paste a news article URL here..."
                     autocomplete="off"
                 >
-                <button id="analyzeBtn" class="analyze-btn" onclick="analyzeArticle()">
+                <button id="analyzeBtn" class="analyze-btn">
                     <i class="fas fa-search"></i>
                     Analyze
                 </button>
@@ -871,7 +871,7 @@
                     <div id="trustLevel" class="trust-level"></div>
                     <p id="trustSummary" class="trust-summary"></p>
                 </div>
-                <button id="downloadPdfBtn" class="pdf-download-btn" onclick="downloadPDF()">
+                <button id="downloadPdfBtn" class="pdf-download-btn">
                     <i class="fas fa-download"></i>
                     PDF Report
                 </button>
@@ -916,10 +916,14 @@
             // Add click listener to analyze button
             const analyzeBtn = document.getElementById('analyzeBtn');
             analyzeBtn.addEventListener('click', analyzeArticle);
+            
+            // Add click listener to PDF download button
+            const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+            downloadPdfBtn.addEventListener('click', downloadPDF);
         });
 
-        // Analyze article function - make it globally accessible
-        window.analyzeArticle = async function() {
+        // Analyze article function
+        function analyzeArticle() {
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
