@@ -1555,6 +1555,7 @@
                 `;
             }
             
+            contentHtml += '</div>';
             content.innerHTML = contentHtml;
             
             card.appendChild(header);
@@ -1668,461 +1669,6 @@
                         What This Analysis Covers
                     </div>
                     <div class="section-content">
-                        We evaluate the news source's reputation, fact-checking record, editorial standards, transparency policies, and historical accuracy.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        We reference trusted media bias databases, analyze the outlet's track record, check for corrections policies, and assess their journalistic standards.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `This source has a ${data.credibility_level || 'moderate'} credibility rating with a score of ${data.credibility_score || data.score || 50}/100.`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Source credibility indicates the general reliability of the publication. Higher scores suggest more trustworthy reporting practices.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Transparency Card
-        function createTransparencyCard(transparencyData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = transparencyData.data || transparencyData;
-            
-            const header = createCardHeader(
-                'Transparency Analysis',
-                'fa-eye',
-                'Evaluation of disclosure and attribution practices'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We check for author attribution, source citations, conflict of interest disclosures, correction policies, and funding transparency.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        We scan for bylines, quoted sources, disclosure statements, update notices, and other transparency indicators that demonstrate journalistic accountability.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `This article has a transparency score of ${data.transparency_score || data.score || 50}%. ${data.findings && data.findings.length > 0 ? data.findings[0].text : ''}`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Transparent journalism practices allow readers to verify information and understand potential conflicts of interest.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Fact Check Card
-        function createFactCheckCard(factCheckData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = factCheckData.data || factCheckData;
-            
-            const header = createCardHeader(
-                'Fact Verification',
-                'fa-check-double',
-                'Verification of claims and factual accuracy'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We identify key claims, verify statistics, check quotes, validate sources, and cross-reference facts with authoritative databases.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        Our system extracts factual claims, searches trusted databases, compares with official sources, and identifies potential misinformation patterns.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Fact verification score: ${data.fact_score || data.score || 50}/100. ${data.verified_claims || 0} claims verified, ${data.unverified_claims || 0} unverified.`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Fact verification helps identify accurate reporting. Higher scores indicate more verifiable claims and reliable information.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Manipulation Detection Card
-        function createManipulationCard(manipulationData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = manipulationData.data || manipulationData;
-            
-            const header = createCardHeader(
-                'Manipulation Detection',
-                'fa-mask',
-                'Identification of misleading tactics and emotional manipulation'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We detect emotional manipulation, misleading headlines, cherry-picked data, false equivalencies, and other persuasion tactics.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        We analyze headline accuracy, emotional language intensity, logical fallacies, data presentation, and narrative framing techniques.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Manipulation level: ${data.manipulation_level || data.level || 'Low'}. ${data.tactics_found || 0} manipulation tactics detected.`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Articles free from manipulation tactics allow readers to form their own opinions based on facts rather than being emotionally or psychologically influenced.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Create Content Analysis Card
-        function createContentAnalysisCard(contentData) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const data = contentData.data || contentData;
-            
-            const header = createCardHeader(
-                'Content Analysis',
-                'fa-file-alt',
-                'Assessment of article quality and structure'
-            );
-            header.onclick = () => toggleCard(card);
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            let contentHtml = '<div class="card-content-inner"><div class="card-sections">';
-            
-            // All 4 required sections
-            contentHtml += `
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-search"></i>
-                        What This Analysis Covers
-                    </div>
-                    <div class="section-content">
-                        We analyze article structure, writing quality, readability, topic coverage depth, and overall content quality to assess professional journalism standards.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-microscope"></i>
-                        How We Analyze
-                    </div>
-                    <div class="section-content">
-                        We evaluate readability scores, sentence structure, vocabulary usage, content organization, and compare against professional journalism benchmarks.
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-clipboard-check"></i>
-                        What We Found
-                    </div>
-                    <div class="section-content">
-                        ${data.summary || `Content quality score: ${data.quality_score || data.score || 50}/100. Readability: ${data.readability_level || 'College level'}.`}
-                    </div>
-                </div>
-                
-                <div class="card-section">
-                    <div class="section-label">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means
-                    </div>
-                    <div class="section-content">
-                        ${data.interpretation || data.meaning || 'Well-structured articles with appropriate complexity indicate professional journalism. Quality content helps readers understand complex topics clearly.'}
-                    </div>
-                </div>
-            `;
-            
-            contentHtml += '</div></div>';
-            content.innerHTML = contentHtml;
-            
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Helper function to create card header
-        function createCardHeader(title, icon, description) {
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.innerHTML = `
-                <div>
-                    <div class="card-title">
-                        <i class="fas ${icon}"></i>
-                        <h3>${title}</h3>
-                    </div>
-                    <p style="font-size: 0.875rem; color: var(--neutral); margin: 0.25rem 0 0 0;">${description}</p>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            return header;
-        }
-
-        // Toggle card expansion
-        function toggleCard(card) {
-            card.classList.toggle('expanded');
-        }
-
-        // Progress bar functions
-        function showProgress() {
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            const progressStage = document.getElementById('progressStage');
-            
-            progressBar.classList.add('active');
-            progressFill.style.width = '0%';
-            
-            // Simulate progress stages
-            const stages = [
-                { text: 'Extracting article...', progress: 20 },
-                { text: 'Analyzing content...', progress: 40 },
-                { text: 'Checking facts...', progress: 60 },
-                { text: 'Evaluating credibility...', progress: 80 },
-                { text: 'Generating report...', progress: 95 }
-            ];
-            
-            let currentStage = 0;
-            const interval = setInterval(() => {
-                if (currentStage < stages.length) {
-                    progressStage.textContent = stages[currentStage].text;
-                    progressFill.style.width = stages[currentStage].progress + '%';
-                    currentStage++;
-                } else {
-                    clearInterval(interval);
-                }
-            }, 500);
-        }
-
-        function hideProgress() {
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            progressFill.style.width = '100%';
-            setTimeout(() => {
-                progressBar.classList.remove('active');
-                progressFill.style.width = '0%';
-            }, 500);
-        }
-
-        // Utility functions
-        function isValidUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch (_) {
-                return false;
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-            } catch (_) {
-                return dateString;
-            }
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-        }
-
-        function hideError() {
-            document.getElementById('errorMessage').style.display = 'none';
-        }
-
-        function hideResults() {
-            document.getElementById('resultsSection').style.display = 'none';
-        }
-
-        // Download PDF function
-        function downloadPDF() {
-            if (!currentAnalysis) {
-                showError('No analysis available to download');
-                return;
-            }
-            
-            // Show message that PDF download is coming soon
-            showError('PDF download feature coming soon! The feature will allow you to save a complete analysis report.');
-            
-            // In a real implementation, this would:
-            // 1. Call a backend API to generate the PDF
-            // 2. Download the generated PDF file
-            // For now, we'll just log the data
-            console.log('PDF Download requested for:', currentAnalysis);
-        }
-    </script>
-</body>
-</html>
-                    <div class="section-content">
                         We analyze language patterns, word choices, framing techniques, source selection, and narrative structure to identify potential biases in news reporting.
                     </div>
                 </div>
@@ -2167,12 +1713,12 @@
             return card;
         }
 
-        // Create Source Credibility Card
+        // FIXED: Complete createSourceCredibilityCard function
         function createSourceCredibilityCard(sourceData) {
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            const data = sourceData.data || sourceData;
+            const data = sourceData || {};
             
             const header = createCardHeader(
                 'Source Credibility',
@@ -2193,3 +1739,47 @@
                         <i class="fas fa-search"></i>
                         What This Analysis Covers
                     </div>
+                    <div class="section-content">
+                        We evaluate the news source's reputation, fact-checking record, editorial standards, transparency policies, and historical accuracy.
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-microscope"></i>
+                        How We Analyze
+                    </div>
+                    <div class="section-content">
+                        We reference trusted media bias databases, analyze the outlet's track record, check for corrections policies, and assess their journalistic standards.
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-clipboard-check"></i>
+                        What We Found
+                    </div>
+                    <div class="section-content">
+                        ${data.summary || `This source has a ${data.credibility_level || data.level || 'moderate'} credibility rating with a score of ${data.credibility_score || data.score || 50}/100.`}
+                    </div>
+                </div>
+                
+                <div class="card-section">
+                    <div class="section-label">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means
+                    </div>
+                    <div class="section-content">
+                        ${data.interpretation || data.meaning || 'Source credibility indicates the general reliability of the publication. Higher scores suggest more trustworthy reporting practices.'}
+                    </div>
+                </div>
+            `;
+            
+            contentHtml += '</div></div>';
+            content.innerHTML = contentHtml;
+            
+            card.appendChild(header);
+            card.appendChild(content);
+            
+            return card;
+        }
