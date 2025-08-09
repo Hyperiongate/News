@@ -51,7 +51,7 @@ class Config:
     FRED_API_KEY = os.getenv('FRED_API_KEY')
     MEDIASTACK_API_KEY = os.getenv('MEDIASTACK_API_KEY')
     
-    # Service Configurations
+    # Service Configurations - ONLY INCLUDE EXISTING SERVICES
     SERVICES = {
         'article_extractor': ServiceConfig(
             enabled=True,
@@ -160,44 +160,6 @@ class Config:
                 'use_copyscape': bool(COPYSCAPE_API_KEY),
                 'highlight_matches': True,
                 'similarity_threshold': 0.3
-            }
-        ),
-        'related_news': ServiceConfig(
-            enabled=bool(NEWS_API_KEY or NEWSAPI_KEY),
-            timeout=20,
-            max_retries=2,
-            api_key=NEWS_API_KEY or NEWSAPI_KEY,
-            options={
-                'max_related_articles': 10,
-                'timeline_analysis': True,
-                'coverage_comparison': True,
-                'bias_diversity': True
-            }
-        ),
-        'visualization_generator': ServiceConfig(
-            enabled=True,
-            timeout=30,
-            max_retries=1,
-            options={
-                'generate_trust_gauge': True,
-                'generate_bias_spectrum': True,
-                'generate_fact_chart': True,
-                'generate_timeline': True,
-                'format': 'png',
-                'style': 'modern'
-            }
-        ),
-        'pdf_report_generator': ServiceConfig(
-            enabled=True,
-            timeout=45,
-            max_retries=2,
-            options={
-                'include_executive_summary': True,
-                'include_visualizations': True,
-                'highlight_article_text': True,
-                'include_methodology': True,
-                'branding': True,
-                'format': 'A4'
             }
         )
     }
@@ -343,7 +305,6 @@ class Config:
         api_key_checks = {
             'fact_checker': ['GOOGLE_FACT_CHECK_API_KEY', 'GOOGLE_FACTCHECK_API_KEY'],
             'plagiarism_detector': ['COPYLEAKS_API_KEY', 'COPYSCAPE_API_KEY'],
-            'related_news': ['NEWS_API_KEY', 'NEWSAPI_KEY'],
             'article_extractor': ['SCRAPERAPI_KEY', 'SCRAPINGBEE_API_KEY']
         }
         
