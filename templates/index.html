@@ -899,12 +899,6 @@
 
             <!-- Services Grid -->
             <div id="servicesGrid" class="services-grid"></div>
-            
-            <!-- Debug Info (temporary) -->
-            <div id="debugInfo" style="margin-top: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; display: none;">
-                <h4>Debug Information</h4>
-                <pre id="debugContent"></pre>
-            </div>
         </div>
     </main>
 
@@ -915,7 +909,7 @@
         let charts = {};
         let isPro = true; // For development, keep pro features open
 
-        // Service definitions
+        // Service definitions - FIXED to match backend service names
         const services = [
             {
                 id: 'source_credibility',
@@ -925,21 +919,21 @@
                 isPro: false
             },
             {
-                id: 'author_analysis',
+                id: 'author_analyzer',  // FIXED: was 'author_analysis'
                 name: 'Author Analysis',
                 icon: 'fa-user-check',
                 description: 'Analyzes author credentials and publishing history',
                 isPro: false
             },
             {
-                id: 'bias_detector',
+                id: 'bias_detector',  // FIXED: was 'bias_analysis'
                 name: 'Bias Detection',
                 icon: 'fa-balance-scale',
                 description: 'Identifies political, ideological, and narrative biases',
                 isPro: true
             },
             {
-                id: 'fact_checker',
+                id: 'fact_checker',  // FIXED: was 'fact_verification'
                 name: 'Fact Verification',
                 icon: 'fa-check-double',
                 description: 'Verifies claims against trusted fact-checking databases',
@@ -1116,32 +1110,6 @@
             console.log('Results section visible:', resultsSection.classList.contains('active'));
             console.log('Trust score element:', document.getElementById('trustLevel')?.textContent);
             console.log('Article title element:', document.getElementById('articleTitle')?.textContent);
-            
-            // Show debug info if detailed_analysis is empty
-            if (Object.keys(normalizedData.detailed_analysis).length === 0) {
-                console.warn('No detailed analysis data received from backend!');
-                const debugEl = document.getElementById('debugInfo');
-                const debugContent = document.getElementById('debugContent');
-                if (debugEl && debugContent) {
-                    debugEl.style.display = 'block';
-                    debugContent.textContent = `Backend Response Summary:
-                    
-Trust Score: ${normalizedData.analysis.trust_score}
-Trust Level: ${normalizedData.analysis.trust_level}
-Summary: ${normalizedData.analysis.summary}
-Key Findings: ${normalizedData.analysis.key_findings.length} items
-
-Article Title: ${normalizedData.article.title || 'Not provided'}
-Article Author: ${normalizedData.article.author}
-Article Domain: ${normalizedData.article.domain}
-
-Detailed Analysis: ${Object.keys(normalizedData.detailed_analysis).length} services
-${JSON.stringify(normalizedData.detailed_analysis, null, 2)}
-
-Note: The backend appears to be returning minimal analysis data. 
-This suggests the analysis services are not fully implemented.`;
-                }
-            }
         }
 
         // Display trust score with gauge
