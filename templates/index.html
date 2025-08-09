@@ -394,6 +394,51 @@
         .trust-summary {
             color: var(--gray-600);
             line-height: 1.8;
+            margin-bottom: var(--space-md);
+        }
+
+        .trust-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-md);
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .breakdown-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .breakdown-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .breakdown-positive { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
+        .breakdown-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .breakdown-negative { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .breakdown-neutral { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+
+        .breakdown-content {
+            flex: 1;
+        }
+
+        .breakdown-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .breakdown-value {
+            font-weight: 600;
+            color: var(--gray-900);
         }
 
         .download-section {
@@ -477,6 +522,7 @@
             align-items: flex-start;
             gap: var(--space-sm);
             margin-bottom: var(--space-sm);
+            line-height: 1.6;
         }
 
         .finding-item i {
@@ -580,6 +626,28 @@
             margin: 0 auto;
         }
 
+        .service-section {
+            margin-bottom: var(--space-lg);
+        }
+
+        .service-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 0.875rem;
+        }
+
         .service-results {
             background: var(--gray-50);
             border-radius: var(--radius);
@@ -622,9 +690,9 @@
 
         /* Progress Bar */
         .progress-bar {
-            height: 4px;
+            height: 8px;
             background: var(--gray-200);
-            border-radius: 2px;
+            border-radius: 4px;
             margin: var(--space-md) 0;
             overflow: hidden;
         }
@@ -632,8 +700,174 @@
         .progress-fill {
             height: 100%;
             background: var(--gradient-primary);
-            border-radius: 2px;
+            border-radius: 4px;
             transition: width 0.3s ease;
+        }
+
+        /* Dimension Bars */
+        .dimension-item {
+            margin-bottom: var(--space-md);
+        }
+
+        .dimension-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-xs);
+        }
+
+        .dimension-name {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .dimension-score {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .dimension-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .dimension-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+
+        /* Claim List */
+        .claims-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .claim-item {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            transition: all 0.3s ease;
+        }
+
+        .claim-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .claim-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-sm);
+        }
+
+        .claim-text {
+            flex: 1;
+            font-weight: 500;
+            color: var(--gray-900);
+            line-height: 1.5;
+        }
+
+        .claim-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .claim-verified { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
+        .claim-unverified { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .claim-false { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .claim-details {
+            margin-top: var(--space-sm);
+            padding-top: var(--space-sm);
+            border-top: 1px solid var(--gray-100);
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+
+        /* Technique List */
+        .techniques-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .technique-card {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .technique-card:hover {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .technique-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: var(--space-xs);
+        }
+
+        .technique-description {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .technique-severity {
+            display: inline-block;
+            margin-top: var(--space-sm);
+            padding: 0.125rem 0.5rem;
+            background: var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .severity-high { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .severity-medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .severity-low { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+
+        /* Info Box */
+        .info-box {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-top: var(--space-md);
+            border-left: 4px solid var(--info);
+        }
+
+        .info-box-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: var(--space-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .info-box-title i {
+            color: var(--info);
+        }
+
+        .info-box-content {
+            color: var(--gray-600);
+            line-height: 1.6;
         }
 
         /* Responsive Design */
@@ -655,6 +889,10 @@
                 margin: 0 auto;
             }
 
+            .trust-breakdown {
+                grid-template-columns: 1fr;
+            }
+
             .header-content {
                 flex-direction: column;
                 gap: var(--space-md);
@@ -668,6 +906,10 @@
             .analyze-button {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .techniques-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -746,6 +988,29 @@
         .upgrade-button:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-xl);
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 1.125rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .empty-state-subtext {
+            font-size: 0.875rem;
+            color: var(--gray-400);
         }
     </style>
 </head>
@@ -884,6 +1149,7 @@
                     <div class="trust-score-details">
                         <div id="trustLevel" class="trust-level"></div>
                         <p id="trustSummary" class="trust-summary"></p>
+                        <div id="trustBreakdown" class="trust-breakdown"></div>
                     </div>
                 </div>
             </div>
@@ -919,21 +1185,21 @@
                 isPro: false
             },
             {
-                id: 'author_analyzer',  // FIXED: was 'author_analysis'
+                id: 'author_analyzer',
                 name: 'Author Analysis',
                 icon: 'fa-user-check',
                 description: 'Analyzes author credentials and publishing history',
                 isPro: false
             },
             {
-                id: 'bias_detector',  // FIXED: was 'bias_analysis'
+                id: 'bias_detector',
                 name: 'Bias Detection',
                 icon: 'fa-balance-scale',
                 description: 'Identifies political, ideological, and narrative biases',
                 isPro: true
             },
             {
-                id: 'fact_checker',  // FIXED: was 'fact_verification'
+                id: 'fact_checker',
                 name: 'Fact Verification',
                 icon: 'fa-check-double',
                 description: 'Verifies claims against trusted fact-checking databases',
@@ -978,6 +1244,12 @@
                 }
             });
         });
+
+        // Try example URL
+        function tryExample(url) {
+            document.getElementById('urlInput').value = url;
+            document.getElementById('urlInput').focus();
+        }
 
         // Main analysis function
         async function analyzeArticle() {
@@ -1044,15 +1316,9 @@
                 return;
             }
             
-            // Log what we actually have
-            console.log('Data type:', typeof data);
-            console.log('Data keys:', Object.keys(data));
-            console.log('Data structure:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
-            
             // Check if data is wrapped in another data object
             let analysisData = data;
             if (data.data && (data.data.analysis || data.data.article)) {
-                console.log('Unwrapping nested data structure');
                 analysisData = data.data;
             }
             
@@ -1083,7 +1349,7 @@
             
             // Display each component with error handling
             try {
-                displayTrustScore(normalizedData.analysis);
+                displayTrustScore(normalizedData.analysis, normalizedData.detailed_analysis);
             } catch (e) {
                 console.error('Error displaying trust score:', e);
             }
@@ -1105,16 +1371,10 @@
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
-            // Log final state
-            console.log('Results section visible:', resultsSection.classList.contains('active'));
-            console.log('Trust score element:', document.getElementById('trustLevel')?.textContent);
-            console.log('Article title element:', document.getElementById('articleTitle')?.textContent);
         }
 
-        // Display trust score with gauge
-        function displayTrustScore(analysis) {
-            // Add safety checks
+        // Display trust score with gauge and breakdown
+        function displayTrustScore(analysis, detailedAnalysis) {
             if (!analysis) {
                 console.error('No analysis data provided to displayTrustScore');
                 return;
@@ -1126,6 +1386,51 @@
             document.getElementById('trustLevel').textContent = `${level} (${score}/100)`;
             document.getElementById('trustLevel').style.color = getScoreColor(score);
             document.getElementById('trustSummary').textContent = analysis.summary || '';
+            
+            // Create trust breakdown
+            const breakdownData = [
+                {
+                    icon: 'fa-shield-alt',
+                    label: 'Source Credibility',
+                    value: detailedAnalysis?.source_credibility?.data?.credibility_score || 0,
+                    type: getBreakdownType(detailedAnalysis?.source_credibility?.data?.credibility_score || 0)
+                },
+                {
+                    icon: 'fa-user-check',
+                    label: 'Author Credibility',
+                    value: detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
+                    type: getBreakdownType(detailedAnalysis?.author_analyzer?.data?.credibility_score || 0)
+                },
+                {
+                    icon: 'fa-balance-scale',
+                    label: 'Bias Score',
+                    value: 100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
+                    type: getBreakdownType(100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0))
+                },
+                {
+                    icon: 'fa-check-double',
+                    label: 'Fact Accuracy',
+                    value: calculateFactAccuracy(detailedAnalysis?.fact_checker?.data),
+                    type: getBreakdownType(calculateFactAccuracy(detailedAnalysis?.fact_checker?.data))
+                }
+            ];
+            
+            let breakdownHtml = '';
+            breakdownData.forEach(item => {
+                breakdownHtml += `
+                    <div class="breakdown-item">
+                        <div class="breakdown-icon breakdown-${item.type}">
+                            <i class="fas ${item.icon}"></i>
+                        </div>
+                        <div class="breakdown-content">
+                            <div class="breakdown-label">${item.label}</div>
+                            <div class="breakdown-value">${item.value}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('trustBreakdown').innerHTML = breakdownHtml;
             
             // Create gauge chart
             const ctx = document.getElementById('trustGauge').getContext('2d');
@@ -1173,6 +1478,24 @@
                     }
                 }]
             });
+        }
+
+        // Calculate fact accuracy percentage
+        function calculateFactAccuracy(factData) {
+            if (!factData || !factData.total_claims || factData.total_claims === 0) {
+                return 0;
+            }
+            const verified = factData.verified_claims || 0;
+            const total = factData.total_claims;
+            return Math.round((verified / total) * 100);
+        }
+
+        // Get breakdown type based on score
+        function getBreakdownType(score) {
+            if (score >= 80) return 'positive';
+            if (score >= 60) return 'neutral';
+            if (score >= 40) return 'warning';
+            return 'negative';
         }
 
         // Display article info
@@ -1225,20 +1548,24 @@
                 document.getElementById('keyFindings').innerHTML = findingsHtml;
             } else {
                 document.getElementById('keyFindings').innerHTML = `
-                    <div style="padding: 1rem; color: var(--gray-600); text-align: center;">
-                        <i class="fas fa-info-circle"></i>
-                        <p style="margin-top: 0.5rem;">No specific findings reported. Check the detailed analysis below.</p>
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-info-circle"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            The detailed analysis of this article is complete. Review the individual service cards below for specific insights about credibility, bias, factual accuracy, and more.
+                        </div>
                     </div>
                 `;
             }
         }
 
-        // Display service cards
+        // Display service cards with full data
         function displayServiceCards(data) {
             const grid = document.getElementById('servicesGrid');
             grid.innerHTML = '';
             
-            // Access detailed_analysis from the data object
             const detailedAnalysis = data.detailed_analysis || {};
             
             console.log('=== SERVICE CARDS DEBUG ===');
@@ -1252,7 +1579,7 @@
             });
         }
 
-        // Create service card
+        // Create service card with full content
         function createServiceCard(service, data, detailedAnalysis) {
             const card = document.createElement('div');
             card.className = 'service-card';
@@ -1310,18 +1637,17 @@
             return card;
         }
 
-        // Render service-specific content
+        // Render service-specific content with full data display
         function renderServiceContent(service, data) {
             console.log(`Rendering content for ${service.id}:`, data);
             
             // Check if data exists and has content
             if (!data || (Object.keys(data).length === 0 && !data.score && !data.level)) {
                 return `
-                    <div class="service-visualization">
-                        <p style="color: var(--gray-500); text-align: center;">
-                            <i class="fas fa-info-circle"></i><br>
-                            No data available for this analysis
-                        </p>
+                    <div class="empty-state">
+                        <i class="fas fa-info-circle"></i>
+                        <p class="empty-state-text">No data available</p>
+                        <p class="empty-state-subtext">This analysis could not be completed</p>
                     </div>
                 `;
             }
@@ -1329,7 +1655,7 @@
             switch (service.id) {
                 case 'source_credibility':
                     return renderSourceCredibility(data);
-                case 'author_analysis':
+                case 'author_analyzer':
                     return renderAuthorAnalysis(data);
                 case 'bias_detector':
                     return renderBiasDetection(data);
@@ -1348,170 +1674,929 @@
             }
         }
 
-        // Service-specific renderers
+        // Enhanced service renderers with full data display
         function renderSourceCredibility(data) {
             const score = data.credibility_score || data.score || 0;
-            const level = data.level || 'Unknown';
+            const level = data.credibility_level || data.level || 'Unknown';
             
-            return `
+            let content = `
                 <div class="service-visualization">
                     <div class="chart-container">
-                        <canvas id="credibilityChart"></canvas>
+                        <canvas id="credibilityChart-${Date.now()}"></canvas>
                     </div>
-                </div>
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Credibility Score</span>
-                        <span class="result-value">${score}/100</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Rating</span>
-                        <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                            ${level}
-                        </span>
-                    </div>
-                    ${data.source_name ? `
-                        <div class="result-item">
-                            <span class="result-label">Source</span>
-                            <span class="result-value">${data.source_name}</span>
-                        </div>
-                    ` : ''}
                 </div>
             `;
+            
+            // Main metrics
+            content += `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Credibility Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Overall Score</span>
+                            <span class="result-value">${score}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Credibility Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                        ${data.source_name ? `
+                            <div class="result-item">
+                                <span class="result-label">Source Name</span>
+                                <span class="result-value">${data.source_name}</span>
+                            </div>
+                        ` : ''}
+                        ${data.domain_age ? `
+                            <div class="result-item">
+                                <span class="result-label">Domain Age</span>
+                                <span class="result-value">${data.domain_age}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Credibility factors
+            if (data.credibility_factors) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list-check"></i>
+                            Credibility Factors
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.credibility_factors).forEach(([factor, value]) => {
+                    const score = typeof value === 'number' ? value : (value.score || 0);
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${formatFactorName(factor)}</span>
+                                <span class="dimension-score">${score}%</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${score}%; background: ${getDimensionColor(score)};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Analysis details
+            if (data.analysis_details) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-microscope"></i>
+                            Detailed Analysis
+                        </h4>
+                        <div class="info-box">
+                            <div class="info-box-content">
+                                ${data.analysis_details}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Create chart after DOM update
+            setTimeout(() => {
+                const chartId = `credibilityChart-${Date.now()}`;
+                const canvas = document.getElementById(chartId);
+                if (canvas && data.credibility_factors) {
+                    const ctx = canvas.getContext('2d');
+                    const labels = Object.keys(data.credibility_factors).map(k => formatFactorName(k));
+                    const values = Object.values(data.credibility_factors).map(v => 
+                        typeof v === 'number' ? v : (v.score || 0)
+                    );
+                    
+                    new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                borderColor: 'rgba(99, 102, 241, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    ticks: {
+                                        stepSize: 20
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
+            
+            return content;
         }
 
         function renderAuthorAnalysis(data) {
-            return `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Author</span>
-                        <span class="result-value">${data.name || 'Not identified'}</span>
+            let content = '';
+            
+            // Author information
+            content += `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-id-card"></i>
+                        Author Information
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Name</span>
+                            <span class="result-value">${data.name || 'Not identified'}</span>
+                        </div>
+                        ${data.credibility_score !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Credibility Score</span>
+                                <span class="result-value">${data.credibility_score}/100</span>
+                            </div>
+                        ` : ''}
+                        ${data.verified ? `
+                            <div class="result-item">
+                                <span class="result-label">Verification Status</span>
+                                <span class="status-badge status-${data.verified ? 'high' : 'low'}">
+                                    ${data.verified ? 'Verified' : 'Unverified'}
+                                </span>
+                            </div>
+                        ` : ''}
                     </div>
-                    ${data.credentials ? `
+                </div>
+            `;
+            
+            // Credentials and expertise
+            if (data.credentials || data.expertise_areas) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-graduation-cap"></i>
+                            Credentials & Expertise
+                        </h4>
+                        <div class="service-results">
+                `;
+                
+                if (data.credentials) {
+                    content += `
                         <div class="result-item">
                             <span class="result-label">Credentials</span>
                             <span class="result-value">${data.credentials}</span>
                         </div>
-                    ` : ''}
-                    ${data.expertise_areas ? `
+                    `;
+                }
+                
+                if (data.expertise_areas && data.expertise_areas.length > 0) {
+                    content += `
                         <div class="result-item">
-                            <span class="result-label">Expertise</span>
+                            <span class="result-label">Areas of Expertise</span>
                             <span class="result-value">${data.expertise_areas.join(', ')}</span>
                         </div>
-                    ` : ''}
-                </div>
-            `;
+                    `;
+                }
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Publishing history
+            if (data.publishing_history) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-newspaper"></i>
+                            Publishing History
+                        </h4>
+                        <div class="service-results">
+                            ${data.publishing_history.total_articles ? `
+                                <div class="result-item">
+                                    <span class="result-label">Total Articles</span>
+                                    <span class="result-value">${data.publishing_history.total_articles}</span>
+                                </div>
+                            ` : ''}
+                            ${data.publishing_history.domains ? `
+                                <div class="result-item">
+                                    <span class="result-label">Publications</span>
+                                    <span class="result-value">${data.publishing_history.domains.join(', ')}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Social media presence
+            if (data.social_media_presence) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-share-nodes"></i>
+                            Social Media Presence
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                Object.entries(data.social_media_presence).forEach(([platform, info]) => {
+                    if (info && info.verified !== undefined) {
+                        content += `
+                            <div class="technique-card">
+                                <div class="technique-name">${platform}</div>
+                                <div class="technique-description">
+                                    ${info.followers ? `Followers: ${formatNumber(info.followers)}<br>` : ''}
+                                    ${info.verified ? '<span class="status-badge status-high">Verified</span>' : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Analysis summary
+            if (data.analysis_summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.analysis_summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         function renderBiasDetection(data) {
+            const overallBias = data.overall_bias_score || 0;
             const biasLevel = data.bias_level || data.level || 'Unknown';
             
-            return `
+            let content = `
                 <div class="service-visualization">
                     <div class="chart-container">
-                        <canvas id="biasChart"></canvas>
-                    </div>
-                </div>
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Bias Level</span>
-                        <span class="status-badge status-${biasLevel.toLowerCase() === 'minimal' ? 'high' : 'medium'}">
-                            ${biasLevel}
-                        </span>
+                        <canvas id="biasChart-${Date.now()}"></canvas>
                     </div>
                 </div>
             `;
+            
+            // Overall bias assessment
+            content += `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-balance-scale"></i>
+                        Overall Bias Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Bias Score</span>
+                            <span class="result-value">${overallBias}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Bias Level</span>
+                            <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
+                                ${biasLevel}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Bias dimensions
+            if (data.bias_dimensions) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Bias Dimensions Analysis
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.bias_dimensions).forEach(([dimension, score]) => {
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${formatDimensionName(dimension)}</span>
+                                <span class="dimension-score">${score}%</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Detected biases
+            if (data.detected_biases && data.detected_biases.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Detected Bias Patterns
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.detected_biases.forEach(bias => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${bias.type || bias.name || 'Bias Pattern'}</div>
+                            <div class="technique-description">
+                                ${bias.description || bias.evidence || 'Pattern detected in content'}
+                                ${bias.severity ? `<span class="technique-severity severity-${bias.severity.toLowerCase()}">${bias.severity}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Create bias visualization
+            setTimeout(() => {
+                const chartId = `biasChart-${Date.now()}`;
+                const canvas = document.getElementById(chartId);
+                if (canvas && data.bias_dimensions) {
+                    const ctx = canvas.getContext('2d');
+                    const labels = Object.keys(data.bias_dimensions).map(k => formatDimensionName(k));
+                    const values = Object.values(data.bias_dimensions);
+                    
+                    new Chart(ctx, {
+                        type: 'polarArea',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.5)',
+                                    'rgba(54, 162, 235, 0.5)',
+                                    'rgba(255, 206, 86, 0.5)',
+                                    'rgba(75, 192, 192, 0.5)',
+                                    'rgba(153, 102, 255, 0.5)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                }
+                            },
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
+            
+            return content;
         }
 
         function renderFactChecker(data) {
             const verified = data.verified_claims || 0;
             const total = data.total_claims || 0;
+            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
             
-            return `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Claims Analyzed</span>
-                        <span class="result-value">${total}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Verified</span>
-                        <span class="result-value">${verified}</span>
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-check-circle"></i>
+                        Fact Checking Summary
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Claims Analyzed</span>
+                            <span class="result-value">${total}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Verified Claims</span>
+                            <span class="result-value">${verified}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Accuracy Rate</span>
+                            <span class="result-value">${accuracy}%</span>
+                        </div>
                     </div>
                     ${total > 0 ? `
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(verified/total)*100}%"></div>
+                            <div class="progress-fill" style="width: ${accuracy}%"></div>
                         </div>
                     ` : ''}
                 </div>
             `;
+            
+            // Individual claims
+            if (data.claims && data.claims.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list"></i>
+                            Individual Claims Analysis
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.claims.forEach(claim => {
+                    const status = claim.verification_status || 'unverified';
+                    const statusClass = status === 'verified' ? 'verified' : 
+                                      status === 'false' ? 'false' : 'unverified';
+                    const statusIcon = status === 'verified' ? 'fa-check' : 
+                                     status === 'false' ? 'fa-times' : 'fa-question';
+                    
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">"${escapeHtml(claim.claim_text || claim.text)}"</div>
+                                <div class="claim-status claim-${statusClass}">
+                                    <i class="fas ${statusIcon}"></i>
+                                    ${formatStatus(status)}
+                                </div>
+                            </div>
+                            ${claim.fact_check_result || claim.verification_details ? `
+                                <div class="claim-details">
+                                    ${claim.fact_check_result || claim.verification_details}
+                                    ${claim.sources && claim.sources.length > 0 ? 
+                                        `<br><small>Sources: ${claim.sources.join(', ')}</small>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Fact checking sources
+            if (data.fact_check_sources && data.fact_check_sources.length > 0) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-database"></i>
+                            Fact Checking Sources
+                        </div>
+                        <div class="info-box-content">
+                            Claims were verified against: ${data.fact_check_sources.join(', ')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         function renderTransparency(data) {
             const score = data.transparency_score || data.score || 0;
             
-            return `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Transparency Score</span>
-                        <span class="result-value">${score}%</span>
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-eye"></i>
+                        Transparency Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Transparency Score</span>
+                            <span class="result-value">${score}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Transparency Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${getTransparencyLevel(score)}
+                            </span>
+                        </div>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${score}%"></div>
                     </div>
                 </div>
             `;
+            
+            // Transparency factors
+            if (data.transparency_factors) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list-check"></i>
+                            Transparency Checklist
+                        </h4>
+                        <div class="service-results">
+                `;
+                
+                Object.entries(data.transparency_factors).forEach(([factor, present]) => {
+                    content += `
+                        <div class="result-item">
+                            <span class="result-label">${formatFactorName(factor)}</span>
+                            <span class="result-value">
+                                ${present ? 
+                                    '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
+                                    '<i class="fas fa-times" style="color: var(--danger);"></i> Missing'}
+                            </span>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Transparency issues
+            if (data.transparency_issues && data.transparency_issues.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Transparency Issues
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.transparency_issues.forEach(issue => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${issue.type || 'Issue'}</div>
+                            <div class="technique-description">
+                                ${issue.description}
+                                ${issue.impact ? `<span class="technique-severity severity-${issue.impact.toLowerCase()}">${issue.impact} impact</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         function renderManipulation(data) {
             const level = data.manipulation_level || data.level || 'Low';
+            const score = data.manipulation_score || 0;
             
-            return `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Manipulation Risk</span>
-                        <span class="status-badge status-${level.toLowerCase() === 'low' ? 'high' : 'low'}">
-                            ${level}
-                        </span>
-                    </div>
-                    ${data.techniques_found ? `
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-mask"></i>
+                        Manipulation Assessment
+                    </h4>
+                    <div class="service-results">
                         <div class="result-item">
-                            <span class="result-label">Techniques Found</span>
-                            <span class="result-value">${data.techniques_found.length}</span>
+                            <span class="result-label">Manipulation Risk</span>
+                            <span class="status-badge status-${level.toLowerCase() === 'low' ? 'high' : level.toLowerCase() === 'medium' ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
                         </div>
-                    ` : ''}
+                        ${score ? `
+                            <div class="result-item">
+                                <span class="result-label">Manipulation Score</span>
+                                <span class="result-value">${score}/100</span>
+                            </div>
+                        ` : ''}
+                        ${data.techniques_found ? `
+                            <div class="result-item">
+                                <span class="result-label">Techniques Detected</span>
+                                <span class="result-value">${data.techniques_found.length}</span>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             `;
+            
+            // Manipulation techniques
+            if (data.techniques_found && data.techniques_found.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-brain"></i>
+                            Detected Manipulation Techniques
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.techniques_found.forEach(technique => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${technique.name || technique.type}</div>
+                            <div class="technique-description">
+                                ${technique.description || technique.evidence}
+                                ${technique.severity ? 
+                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">${technique.severity} severity</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Emotional manipulation
+            if (data.emotional_manipulation) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-heart"></i>
+                            Emotional Manipulation Analysis
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.emotional_manipulation).forEach(([emotion, intensity]) => {
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${formatEmotionName(emotion)}</span>
+                                <span class="dimension-score">${intensity}%</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${intensity}%; background: ${getEmotionColor(emotion)};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         function renderContentAnalysis(data) {
-            return `
-                <div class="service-results">
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Content Quality Metrics
+                    </h4>
+                    <div class="service-results">
+            `;
+            
+            // Readability metrics
+            if (data.readability_score !== undefined) {
+                content += `
                     <div class="result-item">
-                        <span class="result-label">Readability</span>
-                        <span class="result-value">${data.readability_score || 'N/A'}</span>
+                        <span class="result-label">Readability Score</span>
+                        <span class="result-value">${data.readability_score}/100</span>
                     </div>
+                `;
+            }
+            
+            if (data.reading_level) {
+                content += `
                     <div class="result-item">
-                        <span class="result-label">Structure</span>
-                        <span class="result-value">${data.structure_quality || 'Good'}</span>
+                        <span class="result-label">Reading Level</span>
+                        <span class="result-value">${data.reading_level}</span>
+                    </div>
+                `;
+            }
+            
+            if (data.structure_quality) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Structure Quality</span>
+                        <span class="status-badge status-${data.structure_quality.toLowerCase() === 'excellent' ? 'high' : 'medium'}">
+                            ${data.structure_quality}
+                        </span>
+                    </div>
+                `;
+            }
+            
+            content += `
                     </div>
                 </div>
             `;
+            
+            // Content metrics
+            if (data.content_metrics) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-line"></i>
+                            Detailed Metrics
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.content_metrics).forEach(([metric, value]) => {
+                    if (typeof value === 'number' && metric.includes('score')) {
+                        content += `
+                            <div class="dimension-item">
+                                <div class="dimension-header">
+                                    <span class="dimension-name">${formatMetricName(metric)}</span>
+                                    <span class="dimension-score">${value}%</span>
+                                </div>
+                                <div class="dimension-bar">
+                                    <div class="dimension-fill" style="width: ${value}%; background: ${getDimensionColor(value)};"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Writing style analysis
+            if (data.writing_style) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-pen-fancy"></i>
+                            Writing Style Analysis
+                        </h4>
+                        <div class="info-box">
+                            <div class="info-box-content">
+                                <strong>Tone:</strong> ${data.writing_style.tone || 'Neutral'}<br>
+                                <strong>Voice:</strong> ${data.writing_style.voice || 'Third person'}<br>
+                                <strong>Style:</strong> ${data.writing_style.style || 'Informative'}<br>
+                                ${data.writing_style.clarity ? `<strong>Clarity:</strong> ${data.writing_style.clarity}<br>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Content issues
+            if (data.content_issues && data.content_issues.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Content Issues
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.content_issues.forEach(issue => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${issue.type || 'Issue'}</div>
+                            <div class="technique-description">
+                                ${issue.description}
+                                ${issue.severity ? `<span class="technique-severity severity-${issue.severity.toLowerCase()}">${issue.severity}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         function renderPlagiarism(data) {
-            const similarity = data.similarity_score || 0;
+            const similarity = data.similarity_score || data.plagiarism_score || 0;
+            const originality = 100 - similarity;
             
-            return `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Originality</span>
-                        <span class="result-value">${100 - similarity}%</span>
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-copy"></i>
+                        Plagiarism Check Results
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Originality Score</span>
+                            <span class="result-value">${originality}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Similarity Score</span>
+                            <span class="result-value">${similarity}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Status</span>
+                            <span class="status-badge status-${originality >= 80 ? 'high' : originality >= 60 ? 'medium' : 'low'}">
+                                ${originality >= 80 ? 'Original' : originality >= 60 ? 'Mostly Original' : 'Potential Issues'}
+                            </span>
+                        </div>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${100 - similarity}%; background: var(--accent);"></div>
+                        <div class="progress-fill" style="width: ${originality}%; background: var(--accent);"></div>
                     </div>
                 </div>
             `;
+            
+            // Matched sources
+            if (data.matched_sources && data.matched_sources.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-link"></i>
+                            Matched Sources
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.matched_sources.forEach(source => {
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${source.source || source.url || 'Unknown source'}</div>
+                                <div class="claim-status">
+                                    ${source.similarity || source.match_percentage || 0}% match
+                                </div>
+                            </div>
+                            ${source.matched_text ? `
+                                <div class="claim-details">
+                                    "${escapeHtml(source.matched_text.substring(0, 150))}..."
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Plagiarism analysis
+            if (data.analysis_details) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-info-circle"></i>
+                            Analysis Details
+                        </div>
+                        <div class="info-box-content">
+                            ${data.analysis_details}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
         // Utility functions
@@ -1574,6 +2659,34 @@
             return '#EF4444';
         }
 
+        function getDimensionColor(score) {
+            if (score >= 80) return 'var(--accent)';
+            if (score >= 60) return 'var(--info)';
+            if (score >= 40) return 'var(--warning)';
+            return 'var(--danger)';
+        }
+
+        function getBiasColor(score) {
+            // Lower bias score is better
+            if (score <= 20) return 'var(--accent)';
+            if (score <= 50) return 'var(--warning)';
+            return 'var(--danger)';
+        }
+
+        function getEmotionColor(emotion) {
+            const emotionColors = {
+                'fear': '#EF4444',
+                'anger': '#DC2626',
+                'joy': '#10B981',
+                'sadness': '#3B82F6',
+                'trust': '#6366F1',
+                'disgust': '#A855F7',
+                'surprise': '#F59E0B',
+                'anticipation': '#EC4899'
+            };
+            return emotionColors[emotion.toLowerCase()] || '#6B7280';
+        }
+
         function formatDate(dateString) {
             if (!dateString) return 'Unknown';
             const date = new Date(dateString);
@@ -1584,43 +2697,349 @@
             });
         }
 
+        function formatFactorName(factor) {
+            return factor
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatDimensionName(dimension) {
+            const dimensionNames = {
+                'political': 'Political Bias',
+                'ideological': 'Ideological Bias',
+                'commercial': 'Commercial Bias',
+                'sensational': 'Sensationalism',
+                'cultural': 'Cultural Bias',
+                'confirmation': 'Confirmation Bias'
+            };
+            return dimensionNames[dimension.toLowerCase()] || formatFactorName(dimension);
+        }
+
+        function formatMetricName(metric) {
+            return metric
+                .replace(/_/g, ' ')
+                .replace(/score/gi, '')
+                .trim()
+                .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatEmotionName(emotion) {
+            return emotion.charAt(0).toUpperCase() + emotion.slice(1);
+        }
+
+        function formatStatus(status) {
+            const statusNames = {
+                'verified': 'Verified',
+                'false': 'False',
+                'unverified': 'Unverified',
+                'partially_true': 'Partially True',
+                'misleading': 'Misleading'
+            };
+            return statusNames[status.toLowerCase()] || status;
+        }
+
+        function getTransparencyLevel(score) {
+            if (score >= 80) return 'Highly Transparent';
+            if (score >= 60) return 'Transparent';
+            if (score >= 40) return 'Partially Transparent';
+            return 'Low Transparency';
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // PDF download
+        // PDF download with comprehensive report
         async function downloadPDF() {
             if (!currentAnalysis || !currentAnalysis.analysis || !currentAnalysis.article) {
                 showError('No analysis available to download');
                 return;
             }
             
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            showLoading();
             
-            // Add header
-            doc.setFontSize(20);
-            doc.text('TruthLens AI Analysis Report', 20, 20);
-            
-            // Add basic info
-            doc.setFontSize(12);
-            doc.text(`URL: ${document.getElementById('urlInput').value}`, 20, 40);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
-            doc.text(`Trust Score: ${currentAnalysis.analysis.trust_score || 0}/100`, 20, 60);
-            doc.text(`Trust Level: ${currentAnalysis.analysis.trust_level || 'Unknown'}`, 20, 70);
-            
-            // Add article info
-            doc.setFontSize(14);
-            doc.text('Article Information', 20, 90);
-            doc.setFontSize(11);
-            doc.text(`Title: ${currentAnalysis.article.title || 'Unknown'}`, 20, 100);
-            doc.text(`Author: ${currentAnalysis.article.author || 'Unknown'}`, 20, 110);
-            doc.text(`Source: ${currentAnalysis.article.domain || 'Unknown'}`, 20, 120);
-            
-            // Save the PDF
-            doc.save('truthlens-analysis-report.pdf');
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                let yPosition = 20;
+                const lineHeight = 7;
+                const pageHeight = doc.internal.pageSize.height;
+                const pageWidth = doc.internal.pageSize.width;
+                const margin = 20;
+                const contentWidth = pageWidth - (2 * margin);
+                
+                // Helper function to add text with page break check
+                function addText(text, fontSize = 12, fontStyle = 'normal', indent = 0) {
+                    doc.setFontSize(fontSize);
+                    doc.setFont(undefined, fontStyle);
+                    
+                    const lines = doc.splitTextToSize(text, contentWidth - indent);
+                    
+                    lines.forEach(line => {
+                        if (yPosition > pageHeight - 30) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin + indent, yPosition);
+                        yPosition += fontSize === 12 ? lineHeight : lineHeight + 2;
+                    });
+                }
+                
+                // Title Page
+                doc.setFillColor(99, 102, 241);
+                doc.rect(0, 0, pageWidth, 60, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(24);
+                doc.setFont(undefined, 'bold');
+                doc.text('TruthLens AI Analysis Report', pageWidth / 2, 30, { align: 'center' });
+                
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'normal');
+                doc.text('Professional News Verification', pageWidth / 2, 45, { align: 'center' });
+                
+                doc.setTextColor(0, 0, 0);
+                yPosition = 80;
+                
+                // Executive Summary
+                addText('EXECUTIVE SUMMARY', 18, 'bold');
+                yPosition += 5;
+                
+                addText(`URL: ${document.getElementById('urlInput').value}`, 12);
+                addText(`Analysis Date: ${new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}`, 12);
+                
+                yPosition += 10;
+                
+                // Trust Score Box
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition, contentWidth, 40, 'F');
+                
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Overall Trust Score: ${currentAnalysis.analysis.trust_score}/100`, margin + 10, yPosition + 15);
+                
+                doc.setFontSize(14);
+                doc.text(`Trust Level: ${currentAnalysis.analysis.trust_level}`, margin + 10, yPosition + 30);
+                
+                yPosition += 50;
+                
+                // Article Information
+                addText('ARTICLE INFORMATION', 16, 'bold');
+                yPosition += 5;
+                
+                addText(`Title: ${currentAnalysis.article.title || 'Unknown'}`, 12);
+                addText(`Author: ${currentAnalysis.article.author || 'Unknown'}`, 12);
+                addText(`Source: ${currentAnalysis.article.domain || 'Unknown'}`, 12);
+                addText(`Publication Date: ${formatDate(currentAnalysis.article.publish_date)}`, 12);
+                addText(`Word Count: ${currentAnalysis.article.word_count || 'Unknown'}`, 12);
+                
+                yPosition += 10;
+                
+                // Analysis Summary
+                addText('ANALYSIS SUMMARY', 16, 'bold');
+                yPosition += 5;
+                addText(currentAnalysis.analysis.summary || 'No summary available.', 12);
+                
+                // Key Findings
+                if (currentAnalysis.analysis.key_findings && currentAnalysis.analysis.key_findings.length > 0) {
+                    yPosition += 10;
+                    addText('KEY FINDINGS', 16, 'bold');
+                    yPosition += 5;
+                    
+                    currentAnalysis.analysis.key_findings.forEach((finding, index) => {
+                        const findingText = `${index + 1}. ${finding.text || finding.finding}`;
+                        const severity = finding.severity === 'positive' ? '✓' : 
+                                       finding.severity === 'high' ? '⚠' : '•';
+                        addText(`${severity} ${findingText}`, 12, 'normal', 5);
+                    });
+                }
+                
+                // New page for detailed analysis
+                doc.addPage();
+                yPosition = 20;
+                
+                addText('DETAILED ANALYSIS', 18, 'bold');
+                yPosition += 10;
+                
+                // Process each service
+                const detailedAnalysis = currentAnalysis.detailed_analysis || {};
+                
+                services.forEach(service => {
+                    const serviceData = detailedAnalysis[service.id];
+                    if (!serviceData) return;
+                    
+                    const actualData = serviceData.data || serviceData;
+                    if (!actualData || Object.keys(actualData).length === 0) return;
+                    
+                    // Add page break if needed
+                    if (yPosition > pageHeight - 80) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    // Service header
+                    doc.setFillColor(245, 245, 245);
+                    doc.rect(margin, yPosition, contentWidth, 10, 'F');
+                    addText(service.name.toUpperCase(), 14, 'bold');
+                    yPosition += 5;
+                    
+                    // Service-specific content
+                    switch (service.id) {
+                        case 'source_credibility':
+                            if (actualData.credibility_score !== undefined) {
+                                addText(`Credibility Score: ${actualData.credibility_score}/100`, 12);
+                            }
+                            if (actualData.credibility_level) {
+                                addText(`Credibility Level: ${actualData.credibility_level}`, 12);
+                            }
+                            if (actualData.analysis_details) {
+                                addText('Analysis:', 12, 'bold');
+                                addText(actualData.analysis_details, 12, 'normal', 5);
+                            }
+                            break;
+                            
+                        case 'author_analyzer':
+                            if (actualData.name) {
+                                addText(`Author: ${actualData.name}`, 12);
+                            }
+                            if (actualData.credibility_score !== undefined) {
+                                addText(`Author Credibility: ${actualData.credibility_score}/100`, 12);
+                            }
+                            if (actualData.credentials) {
+                                addText(`Credentials: ${actualData.credentials}`, 12);
+                            }
+                            if (actualData.expertise_areas && actualData.expertise_areas.length > 0) {
+                                addText(`Expertise: ${actualData.expertise_areas.join(', ')}`, 12);
+                            }
+                            break;
+                            
+                        case 'bias_detector':
+                            if (actualData.overall_bias_score !== undefined) {
+                                addText(`Bias Score: ${actualData.overall_bias_score}/100`, 12);
+                            }
+                            if (actualData.bias_level) {
+                                addText(`Bias Level: ${actualData.bias_level}`, 12);
+                            }
+                            if (actualData.detected_biases && actualData.detected_biases.length > 0) {
+                                addText('Detected Biases:', 12, 'bold');
+                                actualData.detected_biases.forEach(bias => {
+                                    addText(`• ${bias.type || bias.name}: ${bias.description || bias.evidence}`, 12, 'normal', 5);
+                                });
+                            }
+                            break;
+                            
+                        case 'fact_checker':
+                            if (actualData.total_claims) {
+                                addText(`Claims Analyzed: ${actualData.total_claims}`, 12);
+                            }
+                            if (actualData.verified_claims !== undefined) {
+                                addText(`Verified Claims: ${actualData.verified_claims}`, 12);
+                            }
+                            if (actualData.claims && actualData.claims.length > 0) {
+                                addText('Individual Claims:', 12, 'bold');
+                                actualData.claims.forEach(claim => {
+                                    addText(`• "${claim.claim_text || claim.text}"`, 12, 'normal', 5);
+                                    addText(`  Status: ${claim.verification_status || 'unverified'}`, 11, 'normal', 10);
+                                });
+                            }
+                            break;
+                            
+                        case 'transparency_analyzer':
+                            if (actualData.transparency_score !== undefined) {
+                                addText(`Transparency Score: ${actualData.transparency_score}%`, 12);
+                            }
+                            if (actualData.transparency_issues && actualData.transparency_issues.length > 0) {
+                                addText('Transparency Issues:', 12, 'bold');
+                                actualData.transparency_issues.forEach(issue => {
+                                    addText(`• ${issue.description}`, 12, 'normal', 5);
+                                });
+                            }
+                            break;
+                            
+                        case 'manipulation_detector':
+                            if (actualData.manipulation_level) {
+                                addText(`Manipulation Risk: ${actualData.manipulation_level}`, 12);
+                            }
+                            if (actualData.techniques_found && actualData.techniques_found.length > 0) {
+                                addText('Detected Techniques:', 12, 'bold');
+                                actualData.techniques_found.forEach(technique => {
+                                    addText(`• ${technique.name || technique.type}: ${technique.description || technique.evidence}`, 12, 'normal', 5);
+                                });
+                            }
+                            break;
+                            
+                        case 'content_analyzer':
+                            if (actualData.readability_score !== undefined) {
+                                addText(`Readability Score: ${actualData.readability_score}/100`, 12);
+                            }
+                            if (actualData.reading_level) {
+                                addText(`Reading Level: ${actualData.reading_level}`, 12);
+                            }
+                            if (actualData.structure_quality) {
+                                addText(`Structure Quality: ${actualData.structure_quality}`, 12);
+                            }
+                            break;
+                            
+                        case 'plagiarism_detector':
+                            const originality = actualData.similarity_score !== undefined ? 
+                                100 - actualData.similarity_score : 100;
+                            addText(`Originality Score: ${originality}%`, 12);
+                            if (actualData.matched_sources && actualData.matched_sources.length > 0) {
+                                addText('Matched Sources:', 12, 'bold');
+                                actualData.matched_sources.forEach(source => {
+                                    addText(`• ${source.source || source.url}: ${source.similarity || source.match_percentage}% match`, 12, 'normal', 5);
+                                });
+                            }
+                            break;
+                    }
+                    
+                    yPosition += 10;
+                });
+                
+                // Footer
+                doc.setFontSize(10);
+                doc.setTextColor(128, 128, 128);
+                const totalPages = doc.internal.getNumberOfPages();
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    doc.setPage(i);
+                    doc.text(
+                        `Page ${i} of ${totalPages} | Generated by TruthLens AI | ${new Date().toLocaleDateString()}`,
+                        pageWidth / 2,
+                        pageHeight - 10,
+                        { align: 'center' }
+                    );
+                }
+                
+                // Save the PDF
+                const fileName = `truthlens-analysis-${Date.now()}.pdf`;
+                doc.save(fileName);
+                
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showError('Failed to generate PDF report. Please try again.');
+            } finally {
+                hideLoading();
+            }
         }
 
         // Share results
@@ -1631,11 +3050,14 @@
             }
             
             const trustScore = currentAnalysis.analysis.trust_score || 0;
+            const articleTitle = currentAnalysis.article.title || 'Article';
+            
+            const shareText = `TruthLens AI Analysis: "${articleTitle}" scored ${trustScore}/100 for trustworthiness. Check out the detailed analysis:`;
             
             if (navigator.share) {
                 navigator.share({
                     title: 'TruthLens AI Analysis',
-                    text: `Check out this news analysis: Trust Score ${trustScore}/100`,
+                    text: shareText,
                     url: window.location.href
                 }).catch(err => {
                     console.log('Share cancelled:', err);
@@ -1643,8 +3065,8 @@
             } else {
                 // Fallback: Copy link to clipboard
                 const url = window.location.href;
-                navigator.clipboard.writeText(url).then(() => {
-                    showError('Link copied to clipboard!');
+                navigator.clipboard.writeText(`${shareText} ${url}`).then(() => {
+                    showError('Analysis link copied to clipboard!');
                     setTimeout(hideError, 3000);
                 }).catch(() => {
                     showError('Sharing is not supported on this device');
@@ -1656,42 +3078,6 @@
         function showUpgradeModal() {
             alert('Pro features coming soon! For now, all features are available.');
         }
-
-        // Create visualizations after content is rendered
-        document.addEventListener('DOMContentLoaded', function() {
-            // Credibility chart will be created when data is loaded
-            setTimeout(() => {
-                const credCanvas = document.getElementById('credibilityChart');
-                if (credCanvas) {
-                    const ctx = credCanvas.getContext('2d');
-                    new Chart(ctx, {
-                        type: 'radar',
-                        data: {
-                            labels: ['Authority', 'Accuracy', 'Coverage', 'Currency', 'Purpose'],
-                            datasets: [{
-                                data: [80, 75, 90, 85, 70],
-                                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                                borderColor: 'rgba(99, 102, 241, 1)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                r: {
-                                    beginAtZero: true,
-                                    max: 100
-                                }
-                            }
-                        }
-                    });
-                }
-            }, 100);
-        });
     </script>
 </body>
 </html>
