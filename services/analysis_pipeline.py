@@ -58,14 +58,12 @@ class PipelineContext:
     
     def has_minimum_results(self, min_required: int) -> bool:
         """Check if we have minimum required successful results"""
-        # FIXED: Check for success field, not absence of error
         successful = sum(1 for r in self.results.values() 
                         if r and r.get('success', False))
         return successful >= min_required
     
     def get_successful_services(self) -> List[str]:
         """Get list of services that succeeded"""
-        # FIXED: Check for success field, not absence of error
         return [name for name, result in self.results.items()
                 if result and result.get('success', False)]
 
@@ -73,7 +71,7 @@ class PipelineContext:
 class AnalysisPipeline:
     """Main analysis pipeline orchestrator"""
     
-    # Define pipeline stages
+    # Define pipeline stages - ONLY INCLUDE EXISTING SERVICES
     DEFAULT_STAGES = [
         PipelineStage(
             name='extraction',
@@ -101,20 +99,6 @@ class AnalysisPipeline:
             required=False,
             parallel=False,
             depends_on=['extraction']
-        ),
-        PipelineStage(
-            name='enhancement',
-            services=['plagiarism_detector', 'related_news', 'visualization_generator'],
-            required=False,
-            parallel=True,
-            depends_on=['extraction']
-        ),
-        PipelineStage(
-            name='reporting',
-            services=['pdf_generator'],
-            required=False,
-            parallel=False,
-            depends_on=['basic_analysis', 'content_analysis']
         )
     ]
     
@@ -268,14 +252,9 @@ class AnalysisPipeline:
                 self._run_stage_sync(stage, context)
                 completed_stages.add(stage.name)
                 
-                # DEBUG: Log context results after stage
-                logger.info(f"DEBUG: After stage {stage.name}, context.results = {list(context.results.keys())}")
-                
                 # Check if we should continue after required stage failure
                 if stage.required and self._stage_failed(stage, context):
                     logger.error(f"Required stage {stage.name} failed, stopping pipeline")
-                    # DEBUG: Log why it failed
-                    logger.error(f"DEBUG: Stage {stage.name} failed check - results in context: {context.results}")
                     break
                     
             except Exception as e:
@@ -364,29 +343,15 @@ class AnalysisPipeline:
             # Run in parallel using ThreadPoolExecutor
             results = service_registry.analyze_parallel(available_services, service_data)
             for service_name, result in results.items():
-                # DEBUG LOGGING
-                logger.info(f"DEBUG: Service {service_name} returned result")
-                logger.info(f"DEBUG: Result keys: {list(result.keys()) if result else 'None'}")
-                logger.info(f"DEBUG: Success field: {result.get('success') if result else 'N/A'}")
-                logger.info(f"DEBUG: Error field: {result.get('error') if result else 'None'}")
-                if result and 'success' not in result:
-                    logger.error(f"ERROR: Service {service_name} result missing 'success' field!")
                 context.add_result(service_name, result)
         else:
             # Run sequentially
             for service_name in available_services:
                 try:
                     result = service_registry.analyze_with_service(service_name, service_data)
-                    # DEBUG LOGGING
-                    logger.info(f"DEBUG: Service {service_name} returned result")
-                    logger.info(f"DEBUG: Result keys: {list(result.keys()) if result else 'None'}")
-                    logger.info(f"DEBUG: Success field: {result.get('success') if result else 'N/A'}")
-                    logger.info(f"DEBUG: Error field: {result.get('error') if result else 'None'}")
-                    if result and 'success' not in result:
-                        logger.error(f"ERROR: Service {service_name} result missing 'success' field!")
                     context.add_result(service_name, result)
                 except Exception as e:
-                    logger.error(f"ERROR: Service {service_name} threw exception: {e}", exc_info=True)
+                    logger.error(f"Service {service_name} threw exception: {e}", exc_info=True)
                     context.add_error(service_name, str(e), stage.name)
         
         # Track stage metadata
@@ -394,7 +359,7 @@ class AnalysisPipeline:
         context.metadata[f'stage_{stage.name}_services'] = available_services
     
     def _prepare_service_data(self, stage: PipelineStage, context: PipelineContext) -> Dict[str, Any]:
-        """Prepare data for services based on stage - FIXED VERSION"""
+        """Prepare data for services based on stage"""
         if stage.name == 'extraction':
             # Extraction stage uses raw input
             return context.input_data
@@ -405,24 +370,19 @@ class AnalysisPipeline:
             # Add extraction results if available
             if 'article_extractor' in context.results:
                 extraction = context.results['article_extractor']
-                # FIXED: Check success field instead of error field
+                # Check success field
                 if extraction and extraction.get('success', False):
-                    # Check if extraction has the standard service response format
+                    # Handle both formats: nested data field or flat structure
                     if 'data' in extraction and isinstance(extraction['data'], dict):
-                        # New format: extract data from the 'data' field
+                        # Preferred format: extract data from the 'data' field
                         data.update(extraction['data'])
-                    elif 'service' in extraction and extraction.get('service') == 'article_extractor':
-                        # It's a service response but might have data at top level (shouldn't happen)
-                        # Extract only the article fields
+                    else:
+                        # Legacy format: extract article fields from top level
                         article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
                                         'domain', 'description', 'image', 'keywords', 'word_count']
                         for field in article_fields:
                             if field in extraction:
                                 data[field] = extraction[field]
-                    else:
-                        # Old format: data is at top level (legacy compatibility)
-                        # This should not happen with the fixed ArticleExtractor
-                        data.update(extraction)
             
             # Add relevant previous results (only successful ones)
             data['previous_results'] = {
@@ -437,25 +397,13 @@ class AnalysisPipeline:
     
     def _stage_failed(self, stage: PipelineStage, context: PipelineContext) -> bool:
         """Check if a stage failed"""
-        # DEBUG LOGGING
-        logger.info(f"DEBUG: Checking if stage {stage.name} failed")
-        logger.info(f"DEBUG: Stage services: {stage.services}")
-        logger.info(f"DEBUG: Context results keys: {list(context.results.keys())}")
-        
-        # FIXED: Check success field instead of error field
+        # A stage succeeds if at least one service succeeded
         for service in stage.services:
             if service in context.results:
                 result = context.results[service]
-                logger.info(f"DEBUG: Checking service {service} - result exists: {result is not None}")
-                if result:
-                    logger.info(f"DEBUG: Service {service} - success field: {result.get('success', 'MISSING')}")
-                    logger.info(f"DEBUG: Service {service} - error field: {result.get('error', 'None')}")
-                # A stage succeeds if at least one service succeeded
                 if result and result.get('success', False):
-                    logger.info(f"DEBUG: Stage {stage.name} succeeded because {service} succeeded")
                     return False  # At least one service succeeded
         
-        logger.info(f"DEBUG: Stage {stage.name} failed - no successful services")
         return True  # All services failed or no results
     
     def _finalize_results(self, context: PipelineContext, min_required: int) -> Dict[str, Any]:
@@ -533,21 +481,21 @@ class AnalysisPipeline:
                 score = None
                 
                 # Extract score based on service type
-                if 'trust_score' in result:
-                    score = result['trust_score']
-                elif 'credibility_score' in result:
-                    score = result['credibility_score']
-                elif 'score' in result:
-                    score = result['score']
-                elif 'data' in result:
-                    # Check in data field
+                if 'data' in result and isinstance(result['data'], dict):
                     data = result['data']
-                    if 'trust_score' in data:
-                        score = data['trust_score']
-                    elif 'credibility_score' in data:
-                        score = data['credibility_score']
-                    elif 'score' in data:
-                        score = data['score']
+                    # Try various score field names
+                    for score_field in ['trust_score', 'credibility_score', 'score', 
+                                       'transparency_score', 'bias_score']:
+                        if score_field in data:
+                            score = data[score_field]
+                            break
+                
+                # Try top-level score fields
+                if score is None:
+                    for score_field in ['trust_score', 'credibility_score', 'score']:
+                        if score_field in result:
+                            score = result[score_field]
+                            break
                 
                 if score is not None and isinstance(score, (int, float)):
                     weight = weights.get(service_name, 1.0)
@@ -581,9 +529,18 @@ class AnalysisPipeline:
         
         if 'article_extractor' in successful:
             extraction = context.results.get('article_extractor', {})
-            if extraction.get('success') and extraction.get('data', {}).get('title'):
-                title = extraction['data']['title']
-                summary = f"Analysis of '{title}' completed with {len(successful)} services. "
+            if extraction.get('success'):
+                # Try to get title from either nested or flat structure
+                title = None
+                if 'data' in extraction:
+                    title = extraction['data'].get('title')
+                else:
+                    title = extraction.get('title')
+                
+                if title:
+                    summary = f"Analysis of '{title[:50]}...' completed with {len(successful)} services. "
+                else:
+                    summary = f"Analysis completed with {len(successful)} services. "
             else:
                 summary = f"Analysis completed with {len(successful)} services. "
         else:
