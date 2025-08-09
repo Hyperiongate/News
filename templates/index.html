@@ -1019,17 +1019,62 @@
 
         // Display results
         function displayResults(data) {
+            console.log('displayResults called with:', data);
+            
+            // Validate data structure
+            if (!data) {
+                console.error('No data provided to displayResults');
+                showError('No analysis data received');
+                return;
+            }
+            
+            // Ensure required properties exist
+            if (!data.analysis) {
+                console.error('Missing analysis in data:', data);
+                data.analysis = {
+                    trust_score: 0,
+                    trust_level: 'Unknown',
+                    summary: 'Analysis incomplete'
+                };
+            }
+            
+            if (!data.article) {
+                console.error('Missing article in data:', data);
+                data.article = {
+                    title: 'Unknown Article',
+                    author: 'Unknown',
+                    domain: 'Unknown',
+                    publish_date: null,
+                    word_count: 0
+                };
+            }
+            
+            if (!data.detailed_analysis) {
+                console.error('Missing detailed_analysis in data:', data);
+                data.detailed_analysis = {};
+            }
+            
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.classList.add('active');
             
-            // Display trust score
-            displayTrustScore(data.analysis);
+            // Display each component with error handling
+            try {
+                displayTrustScore(data.analysis);
+            } catch (e) {
+                console.error('Error displaying trust score:', e);
+            }
             
-            // Display article info
-            displayArticleInfo(data.article, data.analysis);
+            try {
+                displayArticleInfo(data.article, data.analysis);
+            } catch (e) {
+                console.error('Error displaying article info:', e);
+            }
             
-            // Display service cards
-            displayServiceCards(data);
+            try {
+                displayServiceCards(data);
+            } catch (e) {
+                console.error('Error displaying service cards:', e);
+            }
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1037,6 +1082,12 @@
 
         // Display trust score with gauge
         function displayTrustScore(analysis) {
+            // Add safety checks
+            if (!analysis) {
+                console.error('No analysis data provided to displayTrustScore');
+                return;
+            }
+            
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
@@ -1464,7 +1515,7 @@
 
         // PDF download
         async function downloadPDF() {
-            if (!currentAnalysis) {
+            if (!currentAnalysis || !currentAnalysis.analysis || !currentAnalysis.article) {
                 showError('No analysis available to download');
                 return;
             }
@@ -1480,8 +1531,8 @@
             doc.setFontSize(12);
             doc.text(`URL: ${document.getElementById('urlInput').value}`, 20, 40);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
-            doc.text(`Trust Score: ${currentAnalysis.analysis.trust_score}/100`, 20, 60);
-            doc.text(`Trust Level: ${currentAnalysis.analysis.trust_level}`, 20, 70);
+            doc.text(`Trust Score: ${currentAnalysis.analysis.trust_score || 0}/100`, 20, 60);
+            doc.text(`Trust Level: ${currentAnalysis.analysis.trust_level || 'Unknown'}`, 20, 70);
             
             // Add article info
             doc.setFontSize(14);
@@ -1497,15 +1548,17 @@
 
         // Share results
         function shareResults() {
-            if (!currentAnalysis) {
+            if (!currentAnalysis || !currentAnalysis.analysis) {
                 showError('No analysis available to share');
                 return;
             }
             
+            const trustScore = currentAnalysis.analysis.trust_score || 0;
+            
             if (navigator.share) {
                 navigator.share({
                     title: 'TruthLens AI Analysis',
-                    text: `Check out this news analysis: Trust Score ${currentAnalysis.analysis.trust_score}/100`,
+                    text: `Check out this news analysis: Trust Score ${trustScore}/100`,
                     url: window.location.href
                 }).catch(err => {
                     console.log('Share cancelled:', err);
