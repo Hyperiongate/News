@@ -836,6 +836,11 @@
                     </button>
                 </div>
                 <div id="errorMessage" class="error-message"></div>
+                
+                <!-- Example URLs for testing -->
+                <div style="margin-top: 1rem; text-align: center; color: var(--gray-600); font-size: 0.875rem;">
+                    <p>Try these example news sites: CNN, BBC, Reuters, NPR, The Guardian, AP News</p>
+                </div>
             </div>
         </div>
     </section>
@@ -1471,8 +1476,28 @@
 
         function showError(message) {
             const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
+            
+            // Make error messages more user-friendly
+            let displayMessage = message;
+            
+            // Common error translations
+            if (message.includes('timed out') || message.includes('timeout')) {
+                displayMessage = 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.';
+            } else if (message.includes('extraction methods failed')) {
+                displayMessage = 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.';
+            } else if (message.includes('Invalid URL')) {
+                displayMessage = 'Please enter a valid news article URL starting with http:// or https://';
+            } else if (message.includes('Analysis failed')) {
+                displayMessage = 'Unable to analyze the article. Please try a different URL or check your internet connection.';
+            }
+            
+            errorEl.textContent = displayMessage;
             errorEl.classList.add('active');
+            
+            // Hide error after 10 seconds
+            setTimeout(() => {
+                hideError();
+            }, 10000);
         }
 
         function hideError() {
