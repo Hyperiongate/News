@@ -1142,21 +1142,31 @@
             const grid = document.getElementById('servicesGrid');
             grid.innerHTML = '';
             
+            // Access detailed_analysis from the data object
+            const detailedAnalysis = data.detailed_analysis || {};
+            
             services.forEach(service => {
-                const card = createServiceCard(service, data);
+                const card = createServiceCard(service, data, detailedAnalysis);
                 grid.appendChild(card);
             });
         }
 
         // Create service card
-        function createServiceCard(service, data) {
+        function createServiceCard(service, data, detailedAnalysis) {
             const card = document.createElement('div');
             card.className = 'service-card';
             if (service.isPro && !isPro) {
                 card.classList.add('locked');
             }
             
-            const serviceData = data.detailed_analysis?.[service.id] || {};
+            // Get service data from detailed_analysis
+            const serviceData = detailedAnalysis[service.id] || {};
+            
+            // Handle nested data structure - services return { success: true, data: {...} }
+            let actualServiceData = serviceData;
+            if (serviceData.success && serviceData.data) {
+                actualServiceData = serviceData.data;
+            }
             
             card.innerHTML = `
                 <div class="service-header">
@@ -1168,7 +1178,7 @@
                     ${service.isPro && !isPro ? '<div class="pro-lock"><i class="fas fa-lock"></i> PRO</div>' : ''}
                 </div>
                 <div class="service-content">
-                    ${renderServiceContent(service, serviceData)}
+                    ${renderServiceContent(service, actualServiceData)}
                 </div>
             `;
             
@@ -1196,10 +1206,14 @@
 
         // Render service-specific content
         function renderServiceContent(service, data) {
-            if (!data || Object.keys(data).length === 0) {
+            // Check if data exists and has content
+            if (!data || (Object.keys(data).length === 0 && !data.score && !data.level)) {
                 return `
                     <div class="service-visualization">
-                        <p style="color: var(--gray-500);">No data available</p>
+                        <p style="color: var(--gray-500); text-align: center;">
+                            <i class="fas fa-info-circle"></i><br>
+                            No data available for this analysis
+                        </p>
                     </div>
                 `;
             }
@@ -1458,30 +1472,53 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Add content to PDF
+            // Add header
             doc.setFontSize(20);
             doc.text('TruthLens AI Analysis Report', 20, 20);
             
+            // Add basic info
             doc.setFontSize(12);
             doc.text(`URL: ${document.getElementById('urlInput').value}`, 20, 40);
             doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
             doc.text(`Trust Score: ${currentAnalysis.analysis.trust_score}/100`, 20, 60);
+            doc.text(`Trust Level: ${currentAnalysis.analysis.trust_level}`, 20, 70);
             
-            // Add more content as needed
+            // Add article info
+            doc.setFontSize(14);
+            doc.text('Article Information', 20, 90);
+            doc.setFontSize(11);
+            doc.text(`Title: ${currentAnalysis.article.title || 'Unknown'}`, 20, 100);
+            doc.text(`Author: ${currentAnalysis.article.author || 'Unknown'}`, 20, 110);
+            doc.text(`Source: ${currentAnalysis.article.domain || 'Unknown'}`, 20, 120);
             
+            // Save the PDF
             doc.save('truthlens-analysis-report.pdf');
         }
 
         // Share results
         function shareResults() {
+            if (!currentAnalysis) {
+                showError('No analysis available to share');
+                return;
+            }
+            
             if (navigator.share) {
                 navigator.share({
                     title: 'TruthLens AI Analysis',
                     text: `Check out this news analysis: Trust Score ${currentAnalysis.analysis.trust_score}/100`,
                     url: window.location.href
+                }).catch(err => {
+                    console.log('Share cancelled:', err);
                 });
             } else {
-                showError('Sharing is not supported on this device');
+                // Fallback: Copy link to clipboard
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    showError('Link copied to clipboard!');
+                    setTimeout(hideError, 3000);
+                }).catch(() => {
+                    showError('Sharing is not supported on this device');
+                });
             }
         }
 
