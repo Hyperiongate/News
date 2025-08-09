@@ -1306,25 +1306,25 @@
                 {
                     icon: 'bias',
                     iconClass: 'fa-balance-scale',
-                    metric: detailedAnalysis?.bias_analysis?.data?.bias_level || detailedAnalysis?.bias_analysis?.bias_level || 'N/A',
+                    metric: detailedAnalysis?.bias_analysis?.bias_level || detailedAnalysis?.bias_analysis?.level || 'N/A',
                     label: 'Bias Level'
                 },
                 {
                     icon: 'fact',
                     iconClass: 'fa-check-double',
-                    metric: `${detailedAnalysis?.fact_checks?.data?.verified_claims || detailedAnalysis?.fact_checks?.verified_claims || 0} Verified`,
+                    metric: `${detailedAnalysis?.fact_checks?.verified_claims || 0} Verified`,
                     label: 'Fact Checks'
                 },
                 {
                     icon: 'transparency',
                     iconClass: 'fa-eye',
-                    metric: `${detailedAnalysis?.transparency_analysis?.data?.transparency_score || detailedAnalysis?.transparency_analysis?.transparency_score || 0}%`,
+                    metric: `${detailedAnalysis?.transparency_analysis?.transparency_score || detailedAnalysis?.transparency_analysis?.score || 0}%`,
                     label: 'Transparency'
                 },
                 {
                     icon: 'manipulation',
                     iconClass: 'fa-mask',
-                    metric: detailedAnalysis?.manipulation_analysis?.data?.manipulation_level || detailedAnalysis?.manipulation_analysis?.manipulation_level || 'N/A',
+                    metric: detailedAnalysis?.manipulation_analysis?.manipulation_level || detailedAnalysis?.manipulation_analysis?.level || 'N/A',
                     label: 'Manipulation'
                 }
             ];
@@ -1519,8 +1519,8 @@
                 return card;
             }
             
-            // Extract data - handle both direct data and nested data.data structure
-            const data = authorData.data || authorData;
+            // FIXED: Don't look for nested .data field - data is already extracted
+            const data = authorData;
             
             const header = createCardHeader(
                 'Author Analysis',
@@ -1826,7 +1826,7 @@
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            const data = biasData.data || biasData;
+            const data = biasData || {};
             
             const header = createCardHeader(
                 'Bias Analysis',
