@@ -3,47 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI - Advanced News Analysis</title>
+    <title>TruthLens AI - Professional News Verification Platform</title>
     
-    <!-- Chart.js for Trust Gauge -->
+    <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Font Awesome for Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        /* CSS Variables - Design System */
+        /* Modern Design System */
         :root {
-            --primary: #1e3a8a;
-            --primary-light: #3b82f6;
-            --accent: #fbbf24;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --neutral: #64748b;
-            --dark: #1e293b;
-            --light: #f8fafc;
+            /* Premium Color Palette */
+            --primary: #6366F1;
+            --primary-dark: #4F46E5;
+            --primary-light: #818CF8;
+            --secondary: #EC4899;
+            --accent: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #3B82F6;
             
+            /* Neutral Colors */
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            
+            /* Typography */
             --font-primary: 'Inter', -apple-system, sans-serif;
-            --font-display: 'Playfair Display', serif;
+            --font-display: 'Space Grotesk', sans-serif;
             
+            /* Spacing */
             --space-xs: 0.5rem;
             --space-sm: 1rem;
             --space-md: 1.5rem;
             --space-lg: 2rem;
             --space-xl: 3rem;
+            --space-2xl: 4rem;
             
-            --radius: 0.75rem;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            /* Layout */
+            --radius: 1rem;
+            --radius-sm: 0.5rem;
+            --radius-lg: 1.5rem;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            --gradient-premium: linear-gradient(135deg, #FFD93D 0%, #FFB344 100%);
+            --gradient-dark: linear-gradient(180deg, #1F2937 0%, #111827 100%);
         }
 
-        /* Reset & Base Styles */
+        /* Global Reset */
         * {
             margin: 0;
             padding: 0;
@@ -52,88 +79,84 @@
 
         body {
             font-family: var(--font-primary);
-            background: var(--light);
-            color: var(--dark);
+            background: var(--gray-50);
+            color: var(--gray-900);
             line-height: 1.6;
-            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        /* Progress Bar - Always Visible */
-        .progress-bar {
+        /* Premium Loading Animation */
+        .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            z-index: 9999;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             display: none;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
         }
 
-        .progress-bar.active {
-            display: block;
+        .loading-overlay.active {
+            display: flex;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-light), var(--accent));
-            width: 0%;
-            transition: width 0.3s ease;
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
             position: relative;
-            overflow: hidden;
         }
 
-        .progress-fill::after {
+        .loading-spinner::before,
+        .loading-spinner::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
-            bottom: 0;
             right: 0;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.3),
-                transparent
-            );
-            animation: shimmer 1.5s infinite;
+            bottom: 0;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
         }
 
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        .loading-spinner::after {
+            animation-delay: 0.3s;
+            border-top-color: var(--secondary);
         }
 
-        .progress-stage {
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--dark);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-            white-space: nowrap;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        /* Header */
+        /* Premium Header */
         .header {
             background: white;
-            box-shadow: var(--shadow);
+            border-bottom: 1px solid var(--gray-200);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
         }
 
         .header-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: var(--space-md) var(--space-lg);
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
         }
 
         .logo {
@@ -142,347 +165,179 @@
             gap: var(--space-sm);
         }
 
-        .logo i {
-            font-size: 2rem;
-            color: var(--primary);
-        }
-
-        .logo h1 {
-            font-family: var(--font-display);
-            font-size: 1.75rem;
-            color: var(--dark);
-        }
-
-        .tagline {
-            font-size: 0.875rem;
-            color: var(--neutral);
-        }
-
-        /* Main Container */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: var(--space-lg);
-        }
-
-        /* Input Section */
-        .input-section {
-            background: white;
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
             border-radius: var(--radius);
-            padding: var(--space-xl);
-            box-shadow: var(--shadow);
-            margin-bottom: var(--space-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
         }
 
-        .input-title {
-            font-size: 1.5rem;
+        .logo-text h1 {
+            font-family: var(--font-display);
+            font-size: 1.875rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .pro-badge {
+            background: var(--gradient-premium);
+            color: var(--gray-900);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            background: white;
+            padding: var(--space-2xl) 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--space-lg);
             text-align: center;
         }
 
-        .input-group {
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: var(--space-md);
+            background: var(--gradient-dark);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--gray-600);
+            margin-bottom: var(--space-xl);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Service Pills */
+        .service-pills {
             display: flex;
+            flex-wrap: wrap;
             gap: var(--space-sm);
+            justify-content: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .service-pill {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: 999px;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .service-pill i {
+            color: var(--primary);
+        }
+
+        /* Input Section */
+        .input-container {
             max-width: 800px;
             margin: 0 auto;
         }
 
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            gap: var(--space-sm);
+            align-items: center;
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xs);
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), var(--shadow-xl);
+        }
+
         .url-input {
             flex: 1;
-            padding: var(--space-sm) var(--space-md);
-            border: 2px solid #e5e7eb;
-            border-radius: var(--radius);
+            padding: var(--space-md);
+            border: none;
             font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .url-input:focus {
+            background: transparent;
             outline: none;
-            border-color: var(--primary-light);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        .analyze-btn {
-            padding: var(--space-sm) var(--space-lg);
-            background: var(--primary);
+        .analyze-button {
+            padding: var(--space-md) var(--space-xl);
+            background: var(--gradient-primary);
             color: white;
             border: none;
             border-radius: var(--radius);
             font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: var(--space-xs);
+            gap: var(--space-sm);
+            white-space: nowrap;
         }
 
-        .analyze-btn:hover {
-            background: var(--primary-light);
+        .analyze-button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
 
-        .analyze-btn:disabled {
-            background: var(--neutral);
+        .analyze-button:disabled {
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
 
-        /* Error Message */
-        .error-message {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: var(--danger);
-            padding: var(--space-sm);
-            border-radius: var(--radius);
-            margin-top: var(--space-sm);
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-xl) var(--space-lg);
         }
 
         /* Results Section */
         .results-section {
             display: none;
-            animation: fadeIn 0.5s ease;
+            animation: fadeInUp 0.6s ease;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .results-section.active {
+            display: block;
         }
 
-        /* UPDATED: Compact Trust Score Section */
-        .trust-score-section {
-            background: white;
-            border-radius: var(--radius);
-            padding: var(--space-md);
-            box-shadow: var(--shadow);
-            margin-bottom: var(--space-lg);
-            display: flex;
-            align-items: center;
-            gap: var(--space-lg);
-        }
-
-        .trust-gauge-container {
-            width: 150px;
-            height: 100px;
-            flex-shrink: 0;
-        }
-
-        .trust-score-details {
-            flex: 1;
-        }
-
-        .trust-level {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: var(--space-xs);
-        }
-
-        .trust-level.high-credibility { color: var(--success); }
-        .trust-level.good-credibility { color: var(--primary-light); }
-        .trust-level.generally-credible { color: var(--primary-light); }
-        .trust-level.mixed-credibility { color: var(--warning); }
-        .trust-level.low-credibility { color: var(--danger); }
-        .trust-level.very-low { color: var(--danger); }
-
-        .trust-summary {
-            color: var(--neutral);
-            font-size: 0.95rem;
-        }
-
-        .pdf-download-btn {
-            padding: var(--space-xs) var(--space-md);
-            background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-            border-radius: var(--radius);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: var(--space-xs);
-            margin-left: auto;
-        }
-
-        .pdf-download-btn:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        /* Article Summary */
-        .article-summary {
-            background: white;
-            border-radius: var(--radius);
-            padding: var(--space-lg);
-            box-shadow: var(--shadow);
-            margin-bottom: var(--space-lg);
-        }
-
-        .article-title {
-            font-family: var(--font-display);
-            font-size: 1.75rem;
-            line-height: 1.3;
-            margin-bottom: var(--space-sm);
-        }
-
-        .article-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-md);
-            font-size: 0.875rem;
-            color: var(--neutral);
-            margin-bottom: var(--space-md);
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: var(--space-xs);
-        }
-
-        .key-findings {
-            padding: var(--space-md);
-            background: rgba(99, 102, 241, 0.05);
-            border-radius: var(--radius);
-            border-left: 3px solid var(--primary);
-        }
-
-        .key-findings h3 {
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--primary);
-            margin-bottom: var(--space-sm);
-        }
-
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--space-sm);
-            margin-bottom: var(--space-xs);
-            padding: var(--space-xs) 0;
-        }
-
-        .finding-item i {
-            flex-shrink: 0;
-            margin-top: 0.2rem;
-        }
-
-        .finding-item.positive i { color: var(--success); }
-        .finding-item.warning i { color: var(--warning); }
-        .finding-item.negative i { color: var(--danger); }
-
-        /* Analysis Summary */
-        .analysis-summary {
-            background: white;
-            border-radius: var(--radius);
-            padding: var(--space-lg);
-            box-shadow: var(--shadow);
-            margin-bottom: var(--space-xl);
-        }
-
-        .summary-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: var(--space-md);
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-md);
-        }
-
-        .summary-card {
-            padding: var(--space-md);
-            background: var(--light);
-            border-radius: var(--radius);
-            text-align: center;
-        }
-
-        .summary-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto var(--space-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 1.5rem;
-        }
-
-        .summary-icon.bias { background: rgba(59, 130, 246, 0.1); color: var(--primary-light); }
-        .summary-icon.fact { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .summary-icon.transparency { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .summary-icon.manipulation { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-
-        .summary-metric {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .summary-label {
-            font-size: 0.875rem;
-            color: var(--neutral);
-        }
-
-        /* Analysis Cards Grid */
-        .analysis-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: var(--space-lg);
-            margin-bottom: var(--space-xl);
-        }
-
-        /* Analysis Card Base */
-        .analysis-card {
-            background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            animation: cardSlideIn 0.5s ease forwards;
-            opacity: 0;
-        }
-        
-        /* Auto-expand first 3 cards */
-        .analysis-card:nth-child(1),
-        .analysis-card:nth-child(2),
-        .analysis-card:nth-child(3) {
-            /* Cards start expanded */
-        }
-        
-        .analysis-card:nth-child(1) .card-content,
-        .analysis-card:nth-child(2) .card-content,
-        .analysis-card:nth-child(3) .card-content {
-            max-height: 2000px !important;
-        }
-        
-        .analysis-card:nth-child(1) .card-toggle,
-        .analysis-card:nth-child(2) .card-toggle,
-        .analysis-card:nth-child(3) .card-toggle {
-            transform: rotate(180deg);
-        }
-
-        @keyframes cardSlideIn {
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(20px);
@@ -493,612 +348,715 @@
             }
         }
 
-        .analysis-card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
+        /* Trust Score Section */
+        .trust-score-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
         }
 
-        .card-header {
-            padding: var(--space-md);
-            background: var(--light);
-            cursor: pointer;
+        .trust-score-header {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-lg);
+        }
+
+        .trust-score-content {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: var(--space-xl);
             align-items: center;
         }
 
-        .card-title {
+        .trust-gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+
+        .trust-score-details h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+
+        .trust-level {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+
+        .trust-summary {
+            color: var(--gray-600);
+            line-height: 1.8;
+        }
+
+        .download-section {
             display: flex;
-            align-items: center;
             gap: var(--space-sm);
         }
 
-        .card-title h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .card-title i {
-            color: var(--primary);
-        }
-
-        .card-toggle {
-            transition: transform 0.3s ease;
-            color: var(--neutral);
-        }
-
-        .analysis-card.expanded .card-toggle {
-            transform: rotate(180deg);
-        }
-
-        .card-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .analysis-card.expanded .card-content {
-            max-height: 2000px;
-        }
-
-        .card-content-inner {
-            padding: var(--space-md);
-        }
-
-        /* Card Sections */
-        .card-sections {
-            margin-top: var(--space-md);
-        }
-
-        .card-section {
-            padding: var(--space-sm) 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .card-section:last-child {
-            border-bottom: none;
-        }
-
-        .section-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: var(--space-xs);
+        .download-button {
+            padding: var(--space-sm) var(--space-md);
+            background: white;
+            border: 2px solid var(--gray-300);
+            border-radius: var(--radius);
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: var(--space-xs);
         }
 
-        .section-content {
-            font-size: 0.95rem;
-            color: var(--dark);
-            line-height: 1.7;
+        .download-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--gray-50);
         }
 
-        /* Score Badge */
-        .score-badge {
-            display: inline-flex;
+        /* Article Info Section */
+        .article-info-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+            box-shadow: var(--shadow-md);
+        }
+
+        .article-header {
+            margin-bottom: var(--space-lg);
+        }
+
+        .article-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: var(--space-md);
+        }
+
+        .article-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-lg);
+            color: var(--gray-600);
+        }
+
+        .meta-item {
+            display: flex;
             align-items: center;
-            padding: 0.25rem 0.75rem;
-            background: var(--light);
-            border-radius: 999px;
+            gap: var(--space-xs);
+        }
+
+        .meta-item i {
+            color: var(--primary);
+        }
+
+        /* Key Findings */
+        .key-findings {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            border-left: 4px solid var(--primary);
+        }
+
+        .key-findings-header {
             font-weight: 600;
-            font-size: 0.875rem;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            color: var(--primary);
         }
 
-        .score-badge.high { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .score-badge.medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .score-badge.low { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-
-        /* Status Pills */
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-right: 0.5rem;
-        }
-
-        .status-pill.verified { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .status-pill.unverified { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-        .status-pill.partial { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-
-        /* Finding Lists */
-        .findings-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .findings-list li {
+        .finding-item {
             display: flex;
             align-items: flex-start;
             gap: var(--space-sm);
             margin-bottom: var(--space-sm);
         }
 
-        .findings-list i {
+        .finding-item i {
+            margin-top: 0.25rem;
             flex-shrink: 0;
-            margin-top: 0.2rem;
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: var(--space-sm);
-            }
+        .finding-positive i { color: var(--accent); }
+        .finding-warning i { color: var(--warning); }
+        .finding-negative i { color: var(--danger); }
 
-            .input-group {
-                flex-direction: column;
-            }
-
-            .trust-score-section {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .article-meta {
-                justify-content: center;
-            }
-
-            .summary-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .analysis-grid {
-                grid-template-columns: 1fr;
-            }
+        /* Service Cards Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
         }
 
-        /* Utility Classes */
-        .hidden {
-            display: none !important;
+        /* Service Card */
+        .service-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .loading {
-            pointer-events: none;
-            opacity: 0.6;
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
         }
 
-        .text-muted {
-            color: var(--neutral);
-            font-style: italic;
+        .service-card.locked {
+            opacity: 0.8;
         }
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: var(--space-xl);
-            color: var(--neutral);
-            min-height: 150px;
+        .service-header {
+            padding: var(--space-lg);
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            position: relative;
+        }
+
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius);
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .service-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: var(--space-xs);
+        }
+
+        .service-description {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        .pro-lock {
+            position: absolute;
+            top: var(--space-md);
+            right: var(--space-md);
+            background: var(--gradient-premium);
+            color: var(--gray-900);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .service-content {
+            padding: var(--space-lg);
+        }
+
+        .service-visualization {
+            margin-bottom: var(--space-lg);
+            min-height: 200px;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: var(--space-md);
-            opacity: 0.3;
-        }
-
-        .empty-state p {
-            font-size: 1rem;
-            line-height: 1.5;
+        .chart-container {
+            position: relative;
+            width: 100%;
             max-width: 300px;
             margin: 0 auto;
+        }
+
+        .service-results {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm) 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .result-value {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-high { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
+        .status-medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .status-low { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 4px;
+            background: var(--gray-200);
+            border-radius: 2px;
+            margin: var(--space-md) 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .trust-score-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .trust-gauge-container {
+                margin: 0 auto;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+
+            .input-wrapper {
+                flex-direction: column;
+                padding: var(--space-md);
+            }
+
+            .analyze-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Error State */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: var(--space-md);
+            border-radius: var(--radius);
+            margin-top: var(--space-md);
+            display: none;
+            animation: shake 0.5s ease;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Locked Content Overlay */
+        .locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-lg);
+        }
+
+        .locked-content {
+            text-align: center;
+            padding: var(--space-lg);
+        }
+
+        .locked-icon {
+            font-size: 3rem;
+            color: var(--gray-400);
+            margin-bottom: var(--space-md);
+        }
+
+        .locked-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+
+        .locked-description {
+            color: var(--gray-600);
+            margin-bottom: var(--space-lg);
+        }
+
+        .upgrade-button {
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--gradient-premium);
+            color: var(--gray-900);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
     </style>
 </head>
 <body>
-    <!-- Progress Bar -->
-    <div class="progress-bar" id="progressBar">
-        <div class="progress-fill" id="progressFill">
-            <div class="progress-stage" id="progressStage"></div>
-        </div>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
     </div>
 
     <!-- Header -->
     <header class="header">
         <div class="header-content">
-            <div class="logo">
-                <i class="fas fa-microscope"></i>
-                <div>
-                    <h1>TruthLens AI</h1>
-                    <p class="tagline">Professional News Analysis & Fact Checking</p>
+            <div class="logo-section">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>TruthLens AI</h1>
+                        <p>Professional News Verification</p>
+                    </div>
                 </div>
+                <span class="pro-badge">PRO</span>
             </div>
         </div>
     </header>
 
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Advanced AI-Powered News Analysis</h1>
+            <p class="hero-subtitle">
+                Verify news articles with our comprehensive suite of 9 specialized AI services.
+                Get detailed insights on credibility, bias, manipulation, and more.
+            </p>
+
+            <!-- Service Pills -->
+            <div class="service-pills">
+                <div class="service-pill">
+                    <i class="fas fa-newspaper"></i>
+                    <span>Article Extraction</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Source Credibility</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-user-check"></i>
+                    <span>Author Analysis</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Bias Detection</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-check-double"></i>
+                    <span>Fact Checking</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-eye"></i>
+                    <span>Transparency Analysis</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-mask"></i>
+                    <span>Manipulation Detection</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Content Analysis</span>
+                </div>
+                <div class="service-pill">
+                    <i class="fas fa-copy"></i>
+                    <span>Plagiarism Detection</span>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        class="url-input" 
+                        placeholder="Enter a news article URL to analyze..."
+                        autocomplete="off"
+                    >
+                    <button id="analyzeBtn" class="analyze-button" onclick="analyzeArticle()">
+                        <i class="fas fa-search"></i>
+                        Analyze Article
+                    </button>
+                </div>
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Main Content -->
-    <main class="container">
-        <!-- Input Section -->
-        <section class="input-section">
-            <h2 class="input-title">Analyze Any News Article</h2>
-            <div class="input-group">
-                <input 
-                    type="url" 
-                    id="urlInput" 
-                    class="url-input" 
-                    placeholder="Paste a news article URL here..."
-                    autocomplete="off"
-                >
-                <button id="analyzeBtn" class="analyze-btn">
-                    <i class="fas fa-search"></i>
-                    Analyze
-                </button>
-            </div>
-            <div id="errorMessage" class="error-message"></div>
-        </section>
-
+    <main class="main-content">
         <!-- Results Section -->
-        <section id="resultsSection" class="results-section">
-            <!-- UPDATED: Compact Trust Score with Download -->
+        <div id="resultsSection" class="results-section">
+            <!-- Trust Score Section -->
             <div class="trust-score-section">
-                <div class="trust-gauge-container">
-                    <canvas id="trustGauge"></canvas>
+                <div class="trust-score-header">
+                    <div>
+                        <h2>Overall Trust Score</h2>
+                    </div>
+                    <div class="download-section">
+                        <button class="download-button" onclick="downloadPDF()">
+                            <i class="fas fa-file-pdf"></i>
+                            Download Report
+                        </button>
+                        <button class="download-button" onclick="shareResults()">
+                            <i class="fas fa-share-alt"></i>
+                            Share
+                        </button>
+                    </div>
                 </div>
-                <div class="trust-score-details">
-                    <div id="trustLevel" class="trust-level"></div>
-                    <p id="trustSummary" class="trust-summary"></p>
+                <div class="trust-score-content">
+                    <div class="trust-gauge-container">
+                        <canvas id="trustGauge"></canvas>
+                    </div>
+                    <div class="trust-score-details">
+                        <div id="trustLevel" class="trust-level"></div>
+                        <p id="trustSummary" class="trust-summary"></p>
+                    </div>
                 </div>
-                <button id="downloadPdfBtn" class="pdf-download-btn">
-                    <i class="fas fa-download"></i>
-                    PDF Report
-                </button>
             </div>
 
-            <!-- Article Summary -->
-            <div class="article-summary">
-                <h2 id="articleTitle" class="article-title"></h2>
-                <div id="articleMeta" class="article-meta"></div>
+            <!-- Article Info Section -->
+            <div class="article-info-section">
+                <div class="article-header">
+                    <h3 id="articleTitle" class="article-title"></h3>
+                    <div id="articleMeta" class="article-meta"></div>
+                </div>
                 <div id="keyFindings" class="key-findings"></div>
             </div>
 
-            <!-- Analysis Summary -->
-            <div class="analysis-summary">
-                <h3 class="summary-title">
-                    <i class="fas fa-chart-bar"></i>
-                    Analysis Overview
-                </h3>
-                <div id="summaryGrid" class="summary-grid"></div>
-            </div>
-
-            <!-- Analysis Cards Grid -->
-            <div id="analysisGrid" class="analysis-grid"></div>
-        </section>
+            <!-- Services Grid -->
+            <div id="servicesGrid" class="services-grid"></div>
+        </div>
     </main>
 
     <script>
-        // Global variables
+        // Global state
         let currentAnalysis = null;
         let isAnalyzing = false;
-        let trustGaugeChart = null;
+        let charts = {};
+        let isPro = true; // For development, keep pro features open
 
-        // Define all functions BEFORE they're used
-        function isValidUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch (_) {
-                return false;
+        // Service definitions
+        const services = [
+            {
+                id: 'source_credibility',
+                name: 'Source Credibility',
+                icon: 'fa-shield-alt',
+                description: 'Evaluates the reliability and trustworthiness of the news source',
+                isPro: false
+            },
+            {
+                id: 'author_analysis',
+                name: 'Author Analysis',
+                icon: 'fa-user-check',
+                description: 'Analyzes author credentials and publishing history',
+                isPro: false
+            },
+            {
+                id: 'bias_detector',
+                name: 'Bias Detection',
+                icon: 'fa-balance-scale',
+                description: 'Identifies political, ideological, and narrative biases',
+                isPro: true
+            },
+            {
+                id: 'fact_checker',
+                name: 'Fact Verification',
+                icon: 'fa-check-double',
+                description: 'Verifies claims against trusted fact-checking databases',
+                isPro: true
+            },
+            {
+                id: 'transparency_analyzer',
+                name: 'Transparency Analysis',
+                icon: 'fa-eye',
+                description: 'Evaluates source disclosure and funding transparency',
+                isPro: true
+            },
+            {
+                id: 'manipulation_detector',
+                name: 'Manipulation Detection',
+                icon: 'fa-mask',
+                description: 'Detects emotional manipulation and propaganda techniques',
+                isPro: true
+            },
+            {
+                id: 'content_analyzer',
+                name: 'Content Analysis',
+                icon: 'fa-file-alt',
+                description: 'Analyzes writing quality, structure, and coherence',
+                isPro: true
+            },
+            {
+                id: 'plagiarism_detector',
+                name: 'Plagiarism Check',
+                icon: 'fa-copy',
+                description: 'Checks for copied content and proper attribution',
+                isPro: true
             }
-        }
+        ];
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-            } catch (_) {
-                return dateString;
-            }
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-        }
-
-        function hideError() {
-            document.getElementById('errorMessage').style.display = 'none';
-        }
-
-        function hideResults() {
-            document.getElementById('resultsSection').style.display = 'none';
-        }
-
-        function showProgress() {
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            const progressStage = document.getElementById('progressStage');
-            
-            if (!progressBar || !progressFill || !progressStage) {
-                console.error('Progress bar elements not found');
-                return;
-            }
-            
-            progressBar.classList.add('active');
-            progressFill.style.width = '0%';
-            
-            const stages = [
-                { text: 'Extracting article...', progress: 20 },
-                { text: 'Analyzing content...', progress: 40 },
-                { text: 'Checking facts...', progress: 60 },
-                { text: 'Evaluating credibility...', progress: 80 },
-                { text: 'Generating report...', progress: 95 }
-            ];
-            
-            let currentStage = 0;
-            const interval = setInterval(() => {
-                if (currentStage < stages.length) {
-                    progressStage.textContent = stages[currentStage].text;
-                    progressFill.style.width = stages[currentStage].progress + '%';
-                    currentStage++;
-                } else {
-                    clearInterval(interval);
-                }
-            }, 500);
-        }
-
-        function hideProgress() {
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            
-            if (!progressBar || !progressFill) {
-                console.error('Progress bar elements not found');
-                return;
-            }
-            
-            progressFill.style.width = '100%';
-            setTimeout(() => {
-                progressBar.classList.remove('active');
-                progressFill.style.width = '0%';
-            }, 500);
-        }
-
-        function getScoreColor(score) {
-            if (score >= 80) return '#10b981';
-            if (score >= 60) return '#3b82f6';
-            if (score >= 40) return '#f59e0b';
-            return '#ef4444';
-        }
-
-        function toggleCard(card) {
-            if (!card || !card.classList) {
-                console.error('Invalid card element passed to toggleCard');
-                return;
-            }
-            card.classList.toggle('expanded');
-        }
-
-        // Main analyze function
-        async function analyzeArticle() {
-            console.log('analyzeArticle called');
-            
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
             const urlInput = document.getElementById('urlInput');
-            if (!urlInput) {
-                console.error('URL input not found!');
-                return;
-            }
-            
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    analyzeArticle();
+                }
+            });
+        });
+
+        // Main analysis function
+        async function analyzeArticle() {
+            const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
             if (!url) {
-                showError('Please enter a valid URL');
+                showError('Please enter a URL');
                 return;
             }
             
             if (!isValidUrl(url)) {
-                showError('Please enter a valid news article URL');
+                showError('Please enter a valid URL');
                 return;
             }
             
-            if (isAnalyzing) {
-                console.log('Already analyzing, returning');
-                return;
-            }
+            if (isAnalyzing) return;
             
             isAnalyzing = true;
             hideError();
             hideResults();
+            showLoading();
             
             const analyzeBtn = document.getElementById('analyzeBtn');
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
             
-            showProgress();
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
-            
             try {
-                console.log('Sending request to /api/analyze with URL:', url);
-                
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url }),
-                    signal: controller.signal
+                    body: JSON.stringify({ url: url })
                 });
                 
-                clearTimeout(timeoutId);
-                
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
-                    throw new Error(errorData.error || 'Analysis failed');
+                    const error = await response.json();
+                    throw new Error(error.error || 'Analysis failed');
                 }
                 
-                const responseText = await response.text();
-                console.log('Raw response text:', responseText);
-                
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (e) {
-                    console.error('Failed to parse JSON:', e);
-                    throw new Error('Invalid JSON response from server');
-                }
-                
-                console.log('Parsed response:', data);
-                
-                // Handle multiple possible response formats
-                let analysisData;
-                
-                // Format 1: Wrapped response { success: true, data: {...} }
-                if (data.success === true && data.data) {
-                    console.log('Response format: Wrapped with success=true');
-                    analysisData = data.data;
-                }
-                // Format 2: Direct response { analysis: {...}, article: {...}, detailed_analysis: {...} }
-                else if (data.analysis && data.article) {
-                    console.log('Response format: Direct data');
-                    analysisData = data;
-                }
-                // Format 3: Error response { success: false, error: {...} }
-                else if (data.success === false) {
-                    throw new Error(data.error?.message || 'Analysis failed');
-                }
-                // Unknown format
-                else {
-                    console.error('Unknown response format:', data);
-                    throw new Error('Unexpected response format from server');
-                }
-                
-                currentAnalysis = analysisData;
-                console.log('Final analysis data:', currentAnalysis);
-                displayResults(currentAnalysis);
+                const data = await response.json();
+                currentAnalysis = data;
+                displayResults(data);
                 
             } catch (error) {
-                console.error('Analysis error:', error);
-                if (error.name === 'AbortError') {
-                    showError('Request timed out. Please try again.');
-                } else {
-                    showError(error.message || 'Failed to analyze article. Please try again.');
-                }
-                hideResults();
+                showError(error.message || 'Failed to analyze article');
             } finally {
                 isAnalyzing = false;
-                hideProgress();
-                
+                hideLoading();
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze';
+                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
             }
-        }
-
-        // Download PDF function
-        function downloadPDF() {
-            if (!currentAnalysis) {
-                showError('No analysis available to download');
-                return;
-            }
-            
-            showError('PDF download feature coming soon! The feature will allow you to save a complete analysis report.');
-            console.log('PDF Download requested for:', currentAnalysis);
         }
 
         // Display results
         function displayResults(data) {
-            console.log('=== FULL API RESPONSE DATA ===');
-            console.log(JSON.stringify(data, null, 2));
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.add('active');
             
-            try {
-                if (!data || typeof data !== 'object') {
-                    showError('Invalid response format from server');
-                    return;
-                }
-                
-                // Ensure all required data structures exist
-                data.analysis = data.analysis || {};
-                data.article = data.article || {};
-                data.detailed_analysis = data.detailed_analysis || {};
-                
-                // Show results section
-                const resultsSection = document.getElementById('resultsSection');
-                if (!resultsSection) {
-                    console.error('Results section not found!');
-                    return;
-                }
-                resultsSection.style.display = 'block';
-                
-                // Display each component with error handling
-                try {
-                    displayTrustScore(data.analysis);
-                } catch (e) {
-                    console.error('Error displaying trust score:', e);
-                }
-                
-                try {
-                    displayArticleSummary(data.article, data.analysis);
-                } catch (e) {
-                    console.error('Error displaying article summary:', e);
-                }
-                
-                try {
-                    displayAnalysisSummary(data.analysis, data.detailed_analysis);
-                } catch (e) {
-                    console.error('Error displaying analysis summary:', e);
-                }
-                
-                try {
-                    displayAnalysisCards(data);
-                } catch (e) {
-                    console.error('Error displaying analysis cards:', e);
-                }
-                
-                // Scroll to results
-                resultsSection.scrollIntoView({ behavior: 'smooth' });
-                
-            } catch (error) {
-                console.error('Fatal error in displayResults:', error);
-                showError('Failed to display analysis results. Check console for details.');
-            }
+            // Display trust score
+            displayTrustScore(data.analysis);
+            
+            // Display article info
+            displayArticleInfo(data.article, data.analysis);
+            
+            // Display service cards
+            displayServiceCards(data);
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Display trust score
+        // Display trust score with gauge
         function displayTrustScore(analysis) {
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
-            const trustLevelEl = document.getElementById('trustLevel');
-            trustLevelEl.textContent = `${level} Credibility`;
-            trustLevelEl.className = `trust-level ${level.toLowerCase().replace(/\s+/g, '-')}`;
+            document.getElementById('trustLevel').textContent = `${level} (${score}/100)`;
+            document.getElementById('trustLevel').style.color = getScoreColor(score);
+            document.getElementById('trustSummary').textContent = analysis.summary || '';
             
-            document.getElementById('trustSummary').textContent = analysis.summary || 'Analysis complete. Review the detailed findings below.';
-            
+            // Create gauge chart
             const ctx = document.getElementById('trustGauge').getContext('2d');
             
-            if (trustGaugeChart) {
-                trustGaugeChart.destroy();
+            if (charts.trustGauge) {
+                charts.trustGauge.destroy();
             }
             
-            trustGaugeChart = new Chart(ctx, {
+            charts.trustGauge = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     datasets: [{
                         data: [score, 100 - score],
-                        backgroundColor: [getScoreColor(score), '#e5e7eb'],
+                        backgroundColor: [getScoreColor(score), '#E5E7EB'],
                         borderWidth: 0
                     }]
                 },
@@ -1107,39 +1065,35 @@
                     maintainAspectRatio: false,
                     circumference: 180,
                     rotation: -90,
-                    cutout: '75%',
+                    cutout: '80%',
                     plugins: {
                         legend: { display: false },
                         tooltip: { enabled: false }
                     }
                 },
                 plugins: [{
-                    id: 'text',
+                    id: 'centerText',
                     beforeDraw: function(chart) {
-                        const width = chart.width,
-                            height = chart.height,
-                            ctx = chart.ctx;
+                        const ctx = chart.ctx;
+                        ctx.save();
+                        
+                        const centerX = chart.width / 2;
+                        const centerY = chart.height / 2 + 20;
+                        
+                        ctx.font = 'bold 48px Inter';
+                        ctx.fillStyle = getScoreColor(score);
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(score, centerX, centerY);
                         
                         ctx.restore();
-                        const fontSize = (height / 100).toFixed(2);
-                        ctx.font = `bold ${fontSize * 30}px sans-serif`;
-                        ctx.textBaseline = "middle";
-                        ctx.textAlign = "center";
-                        ctx.fillStyle = getScoreColor(score);
-                        
-                        const text = score.toString();
-                        const textX = Math.round(width / 2);
-                        const textY = height / 2 + 10;
-                        
-                        ctx.fillText(text, textX, textY);
-                        ctx.save();
                     }
                 }]
             });
         }
 
-        // Display article summary
-        function displayArticleSummary(article, analysis) {
+        // Display article info
+        function displayArticleInfo(article, analysis) {
             document.getElementById('articleTitle').textContent = article.title || 'Untitled Article';
             
             const metaHtml = `
@@ -1153,643 +1107,423 @@
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-calendar"></i>
-                    <span>${formatDate(article.publish_date) || 'Unknown Date'}</span>
+                    <span>${formatDate(article.publish_date)}</span>
                 </div>
                 <div class="meta-item">
-                    <i class="fas fa-file-word"></i>
-                    <span>${article.word_count || 0} words</span>
+                    <i class="fas fa-clock"></i>
+                    <span>${Math.ceil((article.word_count || 0) / 200)} min read</span>
                 </div>
             `;
             document.getElementById('articleMeta').innerHTML = metaHtml;
             
+            // Display key findings
             const findings = analysis.key_findings || [];
-            let findingsHtml = '<h3>Key Findings</h3>';
-            
-            if (findings.length === 0) {
-                findingsHtml += '<p class="text-muted">Analysis completed successfully. See detailed results below.</p>';
-            } else {
+            if (findings.length > 0) {
+                let findingsHtml = '<h4 class="key-findings-header">Key Findings</h4>';
                 findings.forEach(finding => {
                     const type = finding.severity === 'positive' ? 'positive' : 
-                                finding.severity === 'high' ? 'negative' : 'warning';
+                               finding.severity === 'high' ? 'negative' : 'warning';
                     const icon = type === 'positive' ? 'fa-check-circle' : 
-                               type === 'negative' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
+                               type === 'negative' ? 'fa-times-circle' : 'fa-exclamation-circle';
                     
                     findingsHtml += `
-                        <div class="finding-item ${type}">
+                        <div class="finding-item finding-${type}">
                             <i class="fas ${icon}"></i>
-                            <span>${escapeHtml(finding.text || finding.finding || 'Unknown finding')}</span>
+                            <span>${escapeHtml(finding.text || finding.finding)}</span>
                         </div>
                     `;
                 });
+                document.getElementById('keyFindings').innerHTML = findingsHtml;
             }
-            
-            document.getElementById('keyFindings').innerHTML = findingsHtml;
         }
 
-        // Display analysis summary
-        function displayAnalysisSummary(analysis, detailedAnalysis) {
-            // Extract data from the nested structure
-            const biasData = detailedAnalysis?.bias_analysis?.data || detailedAnalysis?.bias_analysis || {};
-            const factData = detailedAnalysis?.fact_checks?.data || detailedAnalysis?.fact_checks || {};
-            const transparencyData = detailedAnalysis?.transparency_analysis?.data || detailedAnalysis?.transparency_analysis || {};
-            const manipulationData = detailedAnalysis?.manipulation_analysis?.data || detailedAnalysis?.manipulation_analysis || {};
+        // Display service cards
+        function displayServiceCards(data) {
+            const grid = document.getElementById('servicesGrid');
+            grid.innerHTML = '';
             
-            const summaryData = [
-                {
-                    icon: 'bias',
-                    iconClass: 'fa-balance-scale',
-                    metric: biasData.bias_level || biasData.level || 'Not Analyzed',
-                    label: 'Bias Level'
-                },
-                {
-                    icon: 'fact',
-                    iconClass: 'fa-check-double',
-                    metric: `${factData.verified_claims || factData.verified || 0} Verified`,
-                    label: 'Fact Checks'
-                },
-                {
-                    icon: 'transparency',
-                    iconClass: 'fa-eye',
-                    metric: `${transparencyData.transparency_score || transparencyData.score || 0}%`,
-                    label: 'Transparency'
-                },
-                {
-                    icon: 'manipulation',
-                    iconClass: 'fa-mask',
-                    metric: manipulationData.manipulation_level || manipulationData.level || 'Not Analyzed',
-                    label: 'Manipulation'
-                }
-            ];
+            services.forEach(service => {
+                const card = createServiceCard(service, data);
+                grid.appendChild(card);
+            });
+        }
+
+        // Create service card
+        function createServiceCard(service, data) {
+            const card = document.createElement('div');
+            card.className = 'service-card';
+            if (service.isPro && !isPro) {
+                card.classList.add('locked');
+            }
             
-            let summaryHtml = '';
-            summaryData.forEach(item => {
-                summaryHtml += `
-                    <div class="summary-card">
-                        <div class="summary-icon ${item.icon}">
-                            <i class="fas ${item.iconClass}"></i>
-                        </div>
-                        <div class="summary-metric">${item.metric}</div>
-                        <div class="summary-label">${item.label}</div>
+            const serviceData = data.detailed_analysis?.[service.id] || {};
+            
+            card.innerHTML = `
+                <div class="service-header">
+                    <div class="service-icon">
+                        <i class="fas ${service.icon}"></i>
+                    </div>
+                    <h3 class="service-title">${service.name}</h3>
+                    <p class="service-description">${service.description}</p>
+                    ${service.isPro && !isPro ? '<div class="pro-lock"><i class="fas fa-lock"></i> PRO</div>' : ''}
+                </div>
+                <div class="service-content">
+                    ${renderServiceContent(service, serviceData)}
+                </div>
+            `;
+            
+            // Add locked overlay if needed
+            if (service.isPro && !isPro) {
+                const overlay = document.createElement('div');
+                overlay.className = 'locked-overlay';
+                overlay.innerHTML = `
+                    <div class="locked-content">
+                        <i class="fas fa-lock locked-icon"></i>
+                        <h4 class="locked-title">Pro Feature</h4>
+                        <p class="locked-description">
+                            Upgrade to Pro to access ${service.name} and unlock all advanced features
+                        </p>
+                        <button class="upgrade-button" onclick="showUpgradeModal()">
+                            Upgrade to Pro
+                        </button>
                     </div>
                 `;
-            });
+                card.appendChild(overlay);
+            }
             
-            const summaryGrid = document.getElementById('summaryGrid');
-            if (summaryGrid) {
-                summaryGrid.innerHTML = summaryHtml;
+            return card;
+        }
+
+        // Render service-specific content
+        function renderServiceContent(service, data) {
+            if (!data || Object.keys(data).length === 0) {
+                return `
+                    <div class="service-visualization">
+                        <p style="color: var(--gray-500);">No data available</p>
+                    </div>
+                `;
+            }
+            
+            switch (service.id) {
+                case 'source_credibility':
+                    return renderSourceCredibility(data);
+                case 'author_analysis':
+                    return renderAuthorAnalysis(data);
+                case 'bias_detector':
+                    return renderBiasDetection(data);
+                case 'fact_checker':
+                    return renderFactChecker(data);
+                case 'transparency_analyzer':
+                    return renderTransparency(data);
+                case 'manipulation_detector':
+                    return renderManipulation(data);
+                case 'content_analyzer':
+                    return renderContentAnalysis(data);
+                case 'plagiarism_detector':
+                    return renderPlagiarism(data);
+                default:
+                    return '<p>Analysis complete</p>';
             }
         }
 
-        // Display analysis cards - ENHANCED VERSION
-        function displayAnalysisCards(data) {
-            console.log('=== DISPLAYING ANALYSIS CARDS ===');
-            console.log('Full data:', data);
+        // Service-specific renderers
+        function renderSourceCredibility(data) {
+            const score = data.credibility_score || data.score || 0;
+            const level = data.level || 'Unknown';
             
-            const gridEl = document.getElementById('analysisGrid');
-            if (!gridEl) {
-                console.error('Analysis grid element not found!');
+            return `
+                <div class="service-visualization">
+                    <div class="chart-container">
+                        <canvas id="credibilityChart"></canvas>
+                    </div>
+                </div>
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Credibility Score</span>
+                        <span class="result-value">${score}/100</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Rating</span>
+                        <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                            ${level}
+                        </span>
+                    </div>
+                    ${data.source_name ? `
+                        <div class="result-item">
+                            <span class="result-label">Source</span>
+                            <span class="result-value">${data.source_name}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderAuthorAnalysis(data) {
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Author</span>
+                        <span class="result-value">${data.name || 'Not identified'}</span>
+                    </div>
+                    ${data.credentials ? `
+                        <div class="result-item">
+                            <span class="result-label">Credentials</span>
+                            <span class="result-value">${data.credentials}</span>
+                        </div>
+                    ` : ''}
+                    ${data.expertise_areas ? `
+                        <div class="result-item">
+                            <span class="result-label">Expertise</span>
+                            <span class="result-value">${data.expertise_areas.join(', ')}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderBiasDetection(data) {
+            const biasLevel = data.bias_level || data.level || 'Unknown';
+            
+            return `
+                <div class="service-visualization">
+                    <div class="chart-container">
+                        <canvas id="biasChart"></canvas>
+                    </div>
+                </div>
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Bias Level</span>
+                        <span class="status-badge status-${biasLevel.toLowerCase() === 'minimal' ? 'high' : 'medium'}">
+                            ${biasLevel}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFactChecker(data) {
+            const verified = data.verified_claims || 0;
+            const total = data.total_claims || 0;
+            
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Claims Analyzed</span>
+                        <span class="result-value">${total}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Verified</span>
+                        <span class="result-value">${verified}</span>
+                    </div>
+                    ${total > 0 ? `
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(verified/total)*100}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderTransparency(data) {
+            const score = data.transparency_score || data.score || 0;
+            
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Transparency Score</span>
+                        <span class="result-value">${score}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${score}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderManipulation(data) {
+            const level = data.manipulation_level || data.level || 'Low';
+            
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Manipulation Risk</span>
+                        <span class="status-badge status-${level.toLowerCase() === 'low' ? 'high' : 'low'}">
+                            ${level}
+                        </span>
+                    </div>
+                    ${data.techniques_found ? `
+                        <div class="result-item">
+                            <span class="result-label">Techniques Found</span>
+                            <span class="result-value">${data.techniques_found.length}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderContentAnalysis(data) {
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Readability</span>
+                        <span class="result-value">${data.readability_score || 'N/A'}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Structure</span>
+                        <span class="result-value">${data.structure_quality || 'Good'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlagiarism(data) {
+            const similarity = data.similarity_score || 0;
+            
+            return `
+                <div class="service-results">
+                    <div class="result-item">
+                        <span class="result-label">Originality</span>
+                        <span class="result-value">${100 - similarity}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${100 - similarity}%; background: var(--accent);"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Utility functions
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+        }
+
+        function hideError() {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.classList.remove('active');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function hideResults() {
+            document.getElementById('resultsSection').classList.remove('active');
+        }
+
+        function getScoreColor(score) {
+            if (score >= 80) return '#10B981';
+            if (score >= 60) return '#3B82F6';
+            if (score >= 40) return '#F59E0B';
+            return '#EF4444';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // PDF download
+        async function downloadPDF() {
+            if (!currentAnalysis) {
+                showError('No analysis available to download');
                 return;
             }
             
-            gridEl.innerHTML = '';
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            const detailedAnalysis = data.detailed_analysis || {};
-            const sourceData = detailedAnalysis.source_credibility || {};
+            // Add content to PDF
+            doc.setFontSize(20);
+            doc.text('TruthLens AI Analysis Report', 20, 20);
             
-            // Define all cards with their creation functions
-            const cards = [
-                {
-                    name: 'Source Credibility',
-                    data: sourceData,
-                    icon: 'fa-shield-alt',
-                    create: createSourceCredibilityCard
-                },
-                {
-                    name: 'Author Analysis',
-                    data: detailedAnalysis.author_analysis || {},
-                    icon: 'fa-user-check',
-                    create: createAuthorAnalysisCard
-                },
-                {
-                    name: 'Bias Detection',
-                    data: detailedAnalysis.bias_analysis || {},
-                    icon: 'fa-balance-scale',
-                    create: createBiasAnalysisCard
-                },
-                {
-                    name: 'Transparency Check',
-                    data: detailedAnalysis.transparency_analysis || {},
-                    icon: 'fa-eye',
-                    create: createTransparencyCard
-                },
-                {
-                    name: 'Fact Verification',
-                    data: detailedAnalysis.fact_checks || {},
-                    icon: 'fa-check-double',
-                    create: createFactCheckCard
-                },
-                {
-                    name: 'Manipulation Detection',
-                    data: detailedAnalysis.manipulation_analysis || {},
-                    icon: 'fa-mask',
-                    create: createManipulationCard
-                },
-                {
-                    name: 'Content Analysis',
-                    data: detailedAnalysis.content_analysis || {},
-                    icon: 'fa-file-alt',
-                    create: createContentAnalysisCard
-                }
-            ];
+            doc.setFontSize(12);
+            doc.text(`URL: ${document.getElementById('urlInput').value}`, 20, 40);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
+            doc.text(`Trust Score: ${currentAnalysis.analysis.trust_score}/100`, 20, 60);
             
-            // Create and add each card
-            cards.forEach((cardInfo, index) => {
-                const card = cardInfo.create(cardInfo.name, cardInfo.data, cardInfo.icon);
-                gridEl.appendChild(card);
-                
-                // Auto-expand first 3 cards immediately
-                if (index < 3) {
-                    card.classList.add('expanded');
-                }
-                
-                card.style.animationDelay = `${index * 0.1}s`;
-            });
+            // Add more content as needed
+            
+            doc.save('truthlens-analysis-report.pdf');
         }
 
-        // Enhanced card creation functions
-        function createSourceCredibilityCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const score = data.credibility_score || data.score || 0;
-            const level = data.level || 'Unknown';
-            const findings = data.findings || [];
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            // Check if we have detailed source info
-            if (data.source_name) {
-                contentInner.innerHTML = `
-                    <div class="score-badge ${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        Credibility Score: ${score}/100
-                    </div>
-                    
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-building"></i>
-                                Source Information
-                            </div>
-                            <div class="section-content">
-                                <strong>${data.source_name}</strong><br>
-                                ${data.source_info?.description || 'Independent news source'}<br>
-                                <span class="status-pill ${data.source_info?.in_database ? 'verified' : 'unverified'}">
-                                    ${data.source_info?.in_database ? 'Known Source' : 'New Source'}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        ${findings.length > 0 ? `
-                            <div class="card-section">
-                                <div class="section-label">
-                                    <i class="fas fa-search"></i>
-                                    Key Findings
-                                </div>
-                                <div class="section-content">
-                                    <ul class="findings-list">
-                                        ${findings.map(f => `
-                                            <li>
-                                                <i class="fas ${f.severity === 'positive' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
-                                                <span>${f.text}</span>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        ${data.technical_analysis ? `
-                            <div class="card-section">
-                                <div class="section-label">
-                                    <i class="fas fa-cog"></i>
-                                    Technical Details
-                                </div>
-                                <div class="section-content">
-                                    Domain Age: ${data.technical_analysis.age_years?.toFixed(1) || 'Unknown'} years<br>
-                                    SSL Certificate: ${data.technical_analysis.ssl?.valid ? '✓ Valid' : '✗ Invalid'}<br>
-                                    Contact Info: ${data.technical_analysis.structure?.has_contact_page ? '✓ Available' : '✗ Not Found'}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
+        // Share results
+        function shareResults() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'TruthLens AI Analysis',
+                    text: `Check out this news analysis: Trust Score ${currentAnalysis.analysis.trust_score}/100`,
+                    url: window.location.href
+                });
             } else {
-                // Simple display for empty data
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-database"></i>
-                        <p>Source credibility analysis in progress...</p>
-                    </div>
-                `;
+                showError('Sharing is not supported on this device');
             }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
         }
 
-        function createAuthorAnalysisCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            // Check if we have any data
-            if (!data || Object.keys(data).length === 0) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-user-slash"></i>
-                        <p>Author information not available for this article</p>
-                    </div>
-                `;
-            } else {
-                contentInner.innerHTML = `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-id-card"></i>
-                                Author Details
-                            </div>
-                            <div class="section-content">
-                                ${data.name || 'Name not provided'}<br>
-                                ${data.credentials || 'Credentials not available'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
+        // Show upgrade modal (placeholder)
+        function showUpgradeModal() {
+            alert('Pro features coming soon! For now, all features are available.');
         }
 
-        function createBiasAnalysisCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            if (!data || Object.keys(data).length === 0) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-balance-scale"></i>
-                        <p>Bias analysis not completed</p>
-                    </div>
-                `;
-            } else {
-                const biasLevel = data.bias_level || data.level || 'Unknown';
-                const indicators = data.indicators || [];
-                
-                contentInner.innerHTML = `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-tachometer-alt"></i>
-                                Bias Level
-                            </div>
-                            <div class="section-content">
-                                <span class="status-pill ${biasLevel.toLowerCase() === 'minimal' ? 'verified' : 'partial'}">
-                                    ${biasLevel}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        ${indicators.length > 0 ? `
-                            <div class="card-section">
-                                <div class="section-label">
-                                    <i class="fas fa-flag"></i>
-                                    Bias Indicators
-                                </div>
-                                <div class="section-content">
-                                    <ul class="findings-list">
-                                        ${indicators.map(ind => `
-                                            <li>
-                                                <i class="fas fa-info-circle"></i>
-                                                <span>${ind}</span>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        function createTransparencyCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            if (!data || Object.keys(data).length === 0) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-eye-slash"></i>
-                        <p>Transparency analysis not completed</p>
-                    </div>
-                `;
-            } else {
-                const score = data.transparency_score || data.score || 0;
-                contentInner.innerHTML = `
-                    <div class="score-badge ${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        Transparency Score: ${score}%
-                    </div>
-                    
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-list-check"></i>
-                                Transparency Factors
-                            </div>
-                            <div class="section-content">
-                                ${data.summary || 'Analysis of source transparency and disclosure practices.'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        function createFactCheckCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            if (!data || (Object.keys(data).length === 0 && !Array.isArray(data))) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <p>No specific claims identified for fact-checking</p>
-                    </div>
-                `;
-            } else {
-                const checks = Array.isArray(data) ? data : (data.checks || []);
-                contentInner.innerHTML = `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-clipboard-check"></i>
-                                Fact Check Summary
-                            </div>
-                            <div class="section-content">
-                                ${checks.length} claims analyzed
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        function createManipulationCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            if (!data || Object.keys(data).length === 0) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-shield-alt"></i>
-                        <p>No manipulation techniques detected</p>
-                    </div>
-                `;
-            } else {
-                const level = data.manipulation_level || data.level || 'Low';
-                contentInner.innerHTML = `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Manipulation Risk
-                            </div>
-                            <div class="section-content">
-                                <span class="status-pill ${level.toLowerCase() === 'low' ? 'verified' : 'partial'}">
-                                    ${level} Risk
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        function createContentAnalysisCard(name, data, icon) {
-            const card = document.createElement('div');
-            card.className = 'analysis-card';
-            
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.onclick = () => toggleCard(card);
-            header.innerHTML = `
-                <div class="card-title">
-                    <i class="fas ${icon}"></i>
-                    <h3>${name}</h3>
-                </div>
-                <i class="fas fa-chevron-down card-toggle"></i>
-            `;
-            
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            
-            const contentInner = document.createElement('div');
-            contentInner.className = 'card-content-inner';
-            
-            if (!data || Object.keys(data).length === 0) {
-                contentInner.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-file-alt"></i>
-                        <p>Content analysis in progress...</p>
-                    </div>
-                `;
-            } else {
-                contentInner.innerHTML = `
-                    <div class="card-sections">
-                        <div class="card-section">
-                            <div class="section-label">
-                                <i class="fas fa-paragraph"></i>
-                                Content Overview
-                            </div>
-                            <div class="section-content">
-                                ${data.summary || 'Detailed content analysis completed.'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.appendChild(contentInner);
-            card.appendChild(header);
-            card.appendChild(content);
-            
-            return card;
-        }
-
-        // Initialize when DOM is ready
+        // Create visualizations after content is rendered
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing...');
-            
-            const urlInput = document.getElementById('urlInput');
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-            
-            if (urlInput) {
-                urlInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        analyzeArticle();
-                    }
-                });
-            }
-            
-            if (analyzeBtn) {
-                console.log('Analyze button found, adding event listener');
-                analyzeBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('Button clicked via addEventListener');
-                    analyzeArticle();
-                });
-            }
-            
-            if (downloadPdfBtn) {
-                downloadPdfBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    downloadPDF();
-                });
-            }
-            
-            console.log('Initialization complete');
+            // Credibility chart will be created when data is loaded
+            setTimeout(() => {
+                const credCanvas = document.getElementById('credibilityChart');
+                if (credCanvas) {
+                    const ctx = credCanvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: ['Authority', 'Accuracy', 'Coverage', 'Currency', 'Purpose'],
+                            datasets: [{
+                                data: [80, 75, 90, 85, 70],
+                                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                borderColor: 'rgba(99, 102, 241, 1)',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                }
+            }, 100);
         });
     </script>
 </body>
