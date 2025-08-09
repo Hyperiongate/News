@@ -673,14 +673,16 @@
 
         /* Error State */
         .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--danger);
-            color: var(--danger);
+            background: #FEE2E2;
+            border: 1px solid #FCA5A5;
+            color: #991B1B;
             padding: var(--space-md);
             border-radius: var(--radius);
             margin-top: var(--space-md);
             display: none;
             animation: shake 0.5s ease;
+            font-weight: 500;
+            text-align: center;
         }
 
         .error-message.active {
@@ -838,8 +840,17 @@
                 <div id="errorMessage" class="error-message"></div>
                 
                 <!-- Example URLs for testing -->
-                <div style="margin-top: 1rem; text-align: center; color: var(--gray-600); font-size: 0.875rem;">
-                    <p>Try these example news sites: CNN, BBC, Reuters, NPR, The Guardian, AP News</p>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: var(--radius); text-align: center;">
+                    <p style="color: var(--gray-700); font-size: 0.875rem; margin-bottom: 0.5rem;">
+                        <strong>Note:</strong> Some sites like Washington Post block automated analysis. Try these instead:
+                    </p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                        <button onclick="tryExample('https://www.cnn.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">CNN</button>
+                        <button onclick="tryExample('https://www.bbc.com/news')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">BBC News</button>
+                        <button onclick="tryExample('https://www.reuters.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">Reuters</button>
+                        <button onclick="tryExample('https://www.npr.org')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">NPR</button>
+                        <button onclick="tryExample('https://www.theguardian.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">The Guardian</button>
+                    </div>
                 </div>
             </div>
         </div>
