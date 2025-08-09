@@ -1410,8 +1410,29 @@
             const card = document.createElement('div');
             card.className = 'analysis-card';
             
-            console.log('=== AUTHOR ANALYSIS DATA ===');
+            console.log('=== AUTHOR ANALYSIS CARD DEBUG ===');
             console.log('Raw authorData:', authorData);
+            console.log('authorData type:', typeof authorData);
+            console.log('authorData keys:', authorData ? Object.keys(authorData) : 'null');
+            
+            // Handle case where no data is provided
+            if (!authorData || (typeof authorData === 'object' && Object.keys(authorData).length === 0)) {
+                console.error('No author data provided to createAuthorAnalysisCard');
+                
+                const header = createCardHeader(
+                    'Author Analysis',
+                    'fa-user-check',
+                    'Author information not available'
+                );
+                
+                const content = document.createElement('div');
+                content.className = 'card-content';
+                content.innerHTML = '<div class="card-content-inner"><p>Author analysis data is not available for this article.</p></div>';
+                
+                card.appendChild(header);
+                card.appendChild(content);
+                return card;
+            }
             
             // Extract data - handle both direct data and nested data.data structure
             const data = authorData.data || authorData;
@@ -1465,7 +1486,10 @@
                         </div>
                         <div class="author-details">
                             <h5>${escapeHtml(authorName)}</h5>
-                            <p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>
+                            ${authorName !== 'Unknown Author' ? 
+                                `<p>${isVerified ? '<i class="fas fa-check-circle" style="color: var(--success)"></i> Verified Journalist' : '<i class="fas fa-question-circle" style="color: var(--warning)"></i> Unverified Author'}</p>` :
+                                '<p><i class="fas fa-exclamation-circle" style="color: var(--danger)"></i> No Author Attribution</p>'
+                            }
                             ${authorPosition ? `<p class="author-position">${escapeHtml(authorPosition)}</p>` : ''}
                         </div>
                     </div>
@@ -1473,6 +1497,20 @@
                     ${authorWebsite ? `<a href="${escapeHtml(authorWebsite)}" target="_blank" class="author-link"><i class="fas fa-external-link-alt"></i> View Author Profile</a>` : ''}
                     ${socialMedia && socialMedia.includes('@') ? `<a href="https://twitter.com/${socialMedia.replace('@', '')}" target="_blank" class="author-link"><i class="fab fa-twitter"></i> ${escapeHtml(socialMedia)}</a>` : ''}
                 `;
+            
+            // Add outlets if available
+            if (outlets.length > 0) {
+                contentHtml += `
+                    <div class="author-outlets">
+                        <h6>Published In:</h6>
+                        <div class="outlet-list">
+                            ${outlets.map(outlet => `<span class="outlet-badge">${escapeHtml(outlet)}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            contentHtml += '</div>';
             
             // Add outlets if available
             if (outlets.length > 0) {
@@ -1597,6 +1635,14 @@
         // Enhanced helper function to generate author findings
         function generateAuthorFindings(data, score, isVerified, articlesCount, yearsExperience, position, outlets) {
             let findings = [];
+            
+            // Check if this is an anonymous article
+            const authorName = data.author_name || 'Unknown';
+            if (authorName === 'Unknown Author' || data.is_anonymous) {
+                findings.push('No author attribution found for this article.');
+                findings.push('Anonymous articles have significantly reduced credibility and accountability.');
+                return findings.join(' ');
+            }
             
             // Add credibility score finding with context
             if (score >= 80) {
