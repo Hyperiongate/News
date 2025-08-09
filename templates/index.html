@@ -912,10 +912,14 @@
                     analyzeArticle();
                 }
             });
+            
+            // Add click listener to analyze button
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.addEventListener('click', analyzeArticle);
         });
 
-        // Analyze article function
-        async function analyzeArticle() {
+        // Analyze article function - make it globally accessible
+        window.analyzeArticle = async function() {
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
@@ -945,17 +949,24 @@
             // Show progress bar
             showProgress();
             
+            // Set a timeout for the request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url })
+                    body: JSON.stringify({ url: url }),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
                     throw new Error(errorData.error || 'Analysis failed');
                 }
                 
@@ -970,7 +981,11 @@
                 
             } catch (error) {
                 console.error('Analysis error:', error);
-                showError(error.message || 'Failed to analyze article. Please try again.');
+                if (error.name === 'AbortError') {
+                    showError('Request timed out. Please try again.');
+                } else {
+                    showError(error.message || 'Failed to analyze article. Please try again.');
+                }
                 hideResults();
             } finally {
                 isAnalyzing = false;
@@ -986,6 +1001,17 @@
         function displayResults(data) {
             console.log('=== FULL API RESPONSE DATA ===');
             console.log(JSON.stringify(data, null, 2));
+            
+            // Validate data structure
+            if (!data || typeof data !== 'object') {
+                showError('Invalid response format from server');
+                return;
+            }
+            
+            // Ensure required properties exist with defaults
+            data.analysis = data.analysis || {};
+            data.article = data.article || {};
+            data.detailed_analysis = data.detailed_analysis || {};
             
             // Debug the exact structure
             console.log('=== DATA STRUCTURE DEBUG ===');
@@ -1136,29 +1162,33 @@
 
         // Display analysis summary
         function displayAnalysisSummary(analysis, detailedAnalysis) {
+            // Ensure objects exist
+            analysis = analysis || {};
+            detailedAnalysis = detailedAnalysis || {};
+            
             const summaryData = [
                 {
                     icon: 'bias',
                     iconClass: 'fa-balance-scale',
-                    metric: detailedAnalysis?.bias_analysis?.data?.bias_level || 'N/A',
+                    metric: detailedAnalysis?.bias_analysis?.data?.bias_level || detailedAnalysis?.bias_analysis?.bias_level || 'N/A',
                     label: 'Bias Level'
                 },
                 {
                     icon: 'fact',
                     iconClass: 'fa-check-double',
-                    metric: `${detailedAnalysis?.fact_checks?.data?.verified_claims || 0} Verified`,
+                    metric: `${detailedAnalysis?.fact_checks?.data?.verified_claims || detailedAnalysis?.fact_checks?.verified_claims || 0} Verified`,
                     label: 'Fact Checks'
                 },
                 {
                     icon: 'transparency',
                     iconClass: 'fa-eye',
-                    metric: `${detailedAnalysis?.transparency_analysis?.data?.transparency_score || 0}%`,
+                    metric: `${detailedAnalysis?.transparency_analysis?.data?.transparency_score || detailedAnalysis?.transparency_analysis?.transparency_score || 0}%`,
                     label: 'Transparency'
                 },
                 {
                     icon: 'manipulation',
                     iconClass: 'fa-mask',
-                    metric: detailedAnalysis?.manipulation_analysis?.data?.manipulation_level || 'N/A',
+                    metric: detailedAnalysis?.manipulation_analysis?.data?.manipulation_level || detailedAnalysis?.manipulation_analysis?.manipulation_level || 'N/A',
                     label: 'Manipulation'
                 }
             ];
@@ -1176,15 +1206,31 @@
                 `;
             });
             
-            document.getElementById('summaryGrid').innerHTML = summaryHtml;
+            const summaryGrid = document.getElementById('summaryGrid');
+            if (summaryGrid) {
+                summaryGrid.innerHTML = summaryHtml;
+            } else {
+                console.error('Summary grid element not found');
+            }
         }
 
         // Display analysis cards
         function displayAnalysisCards(detailedAnalysis) {
             console.log('=== DISPLAYING ANALYSIS CARDS ===');
+            
+            if (!detailedAnalysis || typeof detailedAnalysis !== 'object') {
+                console.warn('No detailed analysis data available');
+                detailedAnalysis = {};
+            }
+            
             console.log('Detailed analysis keys:', Object.keys(detailedAnalysis));
             
             const gridEl = document.getElementById('analysisGrid');
+            if (!gridEl) {
+                console.error('Analysis grid element not found!');
+                return;
+            }
+            
             gridEl.innerHTML = ''; // Clear existing cards
             
             // Priority 1 Cards - Always show first if available
