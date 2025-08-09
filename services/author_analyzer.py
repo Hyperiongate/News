@@ -69,8 +69,12 @@ class AuthorAnalyzer(BaseAnalyzer):
         try:
             start_time = time.time()
             
-            # Extract author information
-            author_name = data.get('author', '').strip()
+            # FIXED: Handle null author properly
+            author_name = data.get('author')
+            if author_name:
+                author_name = str(author_name).strip()
+            else:
+                author_name = ''
             
             if not author_name:
                 # Try to extract from article if provided
@@ -91,7 +95,17 @@ class AuthorAnalyzer(BaseAnalyzer):
                         }],
                         'summary': 'This article has no author attribution, significantly reducing its credibility.',
                         'author_score': 20,
-                        'is_anonymous': True
+                        'author_name': 'Unknown Author',
+                        'is_anonymous': True,
+                        'author_info': {
+                            'bio': 'No author information available.',
+                            'position': None,
+                            'outlets': [],
+                            'experience_years': 0,
+                            'expertise_areas': [],
+                            'awards': [],
+                            'verified': False
+                        }
                     },
                     'metadata': {
                         'processing_time': time.time() - start_time
@@ -883,6 +897,14 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'tier': 'tier3',
                 'credibility_score': 70,
                 'type': 'newspaper',
+                'fact_checking': True,
+                'editorial_standards': 'good'
+            },
+            'aljazeera.com': {
+                'name': 'Al Jazeera',
+                'tier': 'tier2',
+                'credibility_score': 75,
+                'type': 'international',
                 'fact_checking': True,
                 'editorial_standards': 'good'
             }
