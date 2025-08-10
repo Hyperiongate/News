@@ -1552,9 +1552,18 @@
                 console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
                 if (data.detailed_analysis) {
                     console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
-                    // Log each service's data
+                    // Log each service's data WITH CONTENT
                     Object.keys(data.detailed_analysis).forEach(key => {
                         console.log(`detailed_analysis.${key}:`, data.detailed_analysis[key]);
+                        console.log(`  Keys in ${key}:`, Object.keys(data.detailed_analysis[key]));
+                        // Check for nested data field
+                        if (data.detailed_analysis[key].data) {
+                            console.log(`  ${key} has nested 'data' field:`, data.detailed_analysis[key].data);
+                        }
+                        // Check for success field
+                        if (data.detailed_analysis[key].success !== undefined) {
+                            console.log(`  ${key} success:`, data.detailed_analysis[key].success);
+                        }
                     });
                 }
                 
@@ -2064,6 +2073,12 @@
             
             console.log('Using servicesData:', servicesData);
             
+            // Log the first service's complete structure as an example
+            if (servicesData && servicesData.source_credibility) {
+                console.log('=== EXAMPLE SERVICE DATA STRUCTURE (source_credibility) ===');
+                console.log(JSON.stringify(servicesData.source_credibility, null, 2));
+            }
+            
             services.forEach((service, index) => {
                 let serviceData = {};
                 
@@ -2096,6 +2111,8 @@
                 }
                 
                 console.log(`Creating accordion for ${service.id} with data:`, serviceData);
+                console.log(`  Keys in ${service.id}:`, Object.keys(serviceData));
+                
                 const accordionItem = createServiceAccordionItem(service, serviceData, index);
                 container.appendChild(accordionItem);
             });
@@ -2280,9 +2297,12 @@
         // Render service content
         function renderServiceContent(service, data) {
             console.log(`Rendering content for ${service.id}:`, data);
+            console.log(`  Data keys:`, Object.keys(data));
+            console.log(`  Data values:`, data);
             
             // Check if data exists
             if (!data || Object.keys(data).length === 0) {
+                console.log(`  No data or empty object for ${service.id}`);
                 return `
                     <div class="empty-state">
                         <i class="fas fa-info-circle"></i>
@@ -2301,6 +2321,12 @@
                         <p class="empty-state-subtext">Upgrade to access ${service.name}</p>
                     </div>
                 `;
+            }
+            
+            // Check if data has a nested 'data' field (from service response)
+            if (data.data && typeof data.data === 'object') {
+                console.log(`  Found nested data field for ${service.id}, using data.data`);
+                data = data.data;
             }
             
             switch (service.id) {
