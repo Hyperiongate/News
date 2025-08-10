@@ -2353,8 +2353,8 @@
 
         // Service renderers
         function renderSourceCredibility(data) {
-            const score = data.credibility_score || 0;
-            const level = data.credibility_level || 'Unknown';
+            const score = data.credibility_score || data.score || 0;
+            const level = data.credibility_level || data.level || 'Unknown';
             const sourceName = data.source_name || 'Unknown Source';
             
             let content = `
@@ -2382,9 +2382,9 @@
                 </div>
             `;
             
-            // Source details
-            if (data.source_details) {
-                const details = data.source_details;
+            // Source info (updated field names)
+            if (data.source_info) {
+                const info = data.source_info;
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -2392,22 +2392,22 @@
                             Source Information
                         </h4>
                         <div class="service-results">
-                            ${details.type ? `
+                            ${info.type ? `
                                 <div class="result-item">
                                     <span class="result-label">Source Type</span>
-                                    <span class="result-value">${details.type}</span>
+                                    <span class="result-value">${info.type}</span>
                                 </div>
                             ` : ''}
-                            ${details.established ? `
+                            ${info.bias ? `
                                 <div class="result-item">
-                                    <span class="result-label">Established</span>
-                                    <span class="result-value">${details.established}</span>
+                                    <span class="result-label">Political Bias</span>
+                                    <span class="result-value">${info.bias}</span>
                                 </div>
                             ` : ''}
-                            ${details.ownership ? `
+                            ${info.credibility_rating ? `
                                 <div class="result-item">
-                                    <span class="result-label">Ownership</span>
-                                    <span class="result-value">${details.ownership}</span>
+                                    <span class="result-label">Database Rating</span>
+                                    <span class="result-value">${info.credibility_rating}</span>
                                 </div>
                             ` : ''}
                         </div>
@@ -2415,35 +2415,74 @@
                 `;
             }
             
-            // Credibility factors
-            if (data.factors || data.credibility_factors) {
-                const factors = data.factors || data.credibility_factors;
-                const chartId = `credibility-chart-${Date.now()}`;
-                const chartData = {
-                    labels: Object.keys(factors).map(k => formatFactorName(k)),
-                    values: Object.values(factors).map(v => typeof v === 'number' ? v : (v.score || 0))
-                };
-                
+            // Technical analysis
+            if (data.technical_analysis) {
+                const tech = data.technical_analysis;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-server"></i>
+                            Technical Analysis
+                        </h4>
+                        <div class="service-results">
+                            ${tech.age_years ? `
+                                <div class="result-item">
+                                    <span class="result-label">Domain Age</span>
+                                    <span class="result-value">${tech.age_years.toFixed(1)} years</span>
+                                </div>
+                            ` : ''}
+                            ${tech.ssl && tech.ssl.valid !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">SSL Certificate</span>
+                                    <span class="result-value">
+                                        ${tech.ssl.valid ? 
+                                            '<i class="fas fa-check" style="color: var(--accent);"></i> Valid' : 
+                                            '<i class="fas fa-times" style="color: var(--danger);"></i> Invalid'}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            ${tech.registrar ? `
+                                <div class="result-item">
+                                    <span class="result-label">Registrar</span>
+                                    <span class="result-value">${tech.registrar}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Findings
+            if (data.findings && data.findings.length > 0) {
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
                             <i class="fas fa-list-check"></i>
-                            Credibility Breakdown
+                            Key Findings
                         </h4>
-                        <div class="dimension-list">
+                        <div class="claims-list">
                 `;
                 
-                Object.entries(factors).forEach(([factor, value]) => {
-                    const factorScore = typeof value === 'number' ? value : (value.score || 0);
+                data.findings.forEach(finding => {
+                    const severityClass = finding.severity === 'positive' ? 'verified' : 
+                                        finding.severity === 'high' ? 'false' : 'unverified';
+                    const icon = finding.severity === 'positive' ? 'fa-check' : 
+                               finding.severity === 'high' ? 'fa-times' : 'fa-exclamation';
+                    
                     content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${formatFactorName(factor)}</span>
-                                <span class="dimension-score">${factorScore}%</span>
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${finding.text}</div>
+                                <div class="claim-status claim-${severityClass}">
+                                    <i class="fas ${icon}"></i>
+                                    ${finding.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </div>
                             </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${factorScore}%; background: ${getDimensionColor(factorScore)};"></div>
-                            </div>
+                            ${finding.explanation ? `
+                                <div class="claim-details">
+                                    ${finding.explanation}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 });
@@ -2451,16 +2490,11 @@
                 content += `
                         </div>
                     </div>
-                    <div class="service-visualization">
-                        <div class="chart-container">
-                            <canvas id="${chartId}" data-chart-type="radar" data-chart-data='${JSON.stringify(chartData)}'></canvas>
-                        </div>
-                    </div>
                 `;
             }
             
             // Summary
-            if (data.summary || data.analysis_summary) {
+            if (data.summary) {
                 content += `
                     <div class="info-box">
                         <div class="info-box-title">
@@ -2468,7 +2502,7 @@
                             Analysis Summary
                         </div>
                         <div class="info-box-content">
-                            ${data.summary || data.analysis_summary}
+                            ${data.summary}
                         </div>
                     </div>
                 `;
@@ -2660,8 +2694,9 @@
         }
 
         function renderFactChecker(data) {
-            const verified = data.verified_claims || 0;
-            const total = data.total_claims || 0;
+            // Handle both old and new data structures
+            const verified = data.verified_claims || data.verified || 0;
+            const total = data.total_claims || data.total || 0;
             const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
             
             let content = `
@@ -2704,24 +2739,25 @@
                 `;
                 
                 data.claims.forEach(claim => {
-                    const status = claim.verification_status || 'unverified';
-                    const statusClass = status === 'verified' ? 'verified' : 
-                                      status === 'false' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' ? 'fa-check' : 
-                                     status === 'false' ? 'fa-times' : 'fa-question';
+                    const status = claim.verdict || claim.verification_status || 'unverified';
+                    const statusLower = status.toLowerCase();
+                    const statusClass = statusLower.includes('true') || statusLower === 'verified' ? 'verified' : 
+                                      statusLower.includes('false') ? 'false' : 'unverified';
+                    const statusIcon = statusClass === 'verified' ? 'fa-check' : 
+                                     statusClass === 'false' ? 'fa-times' : 'fa-question';
                     
                     content += `
                         <div class="claim-item">
                             <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim_text || claim.text)}"</div>
+                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text)}"</div>
                                 <div class="claim-status claim-${statusClass}">
                                     <i class="fas ${statusIcon}"></i>
                                     ${formatStatus(status)}
                                 </div>
                             </div>
-                            ${claim.fact_check_result || claim.verification_details ? `
+                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
                                 <div class="claim-details">
-                                    ${claim.fact_check_result || claim.verification_details}
+                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
                                 </div>
                             ` : ''}
                         </div>
@@ -2729,6 +2765,21 @@
                 });
                 
                 content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
                         </div>
                     </div>
                 `;
