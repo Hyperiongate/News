@@ -1315,7 +1315,7 @@
                         placeholder="Enter a news article URL to analyze..."
                         autocomplete="off"
                     >
-                    <button id="analyzeBtn" class="analyze-button" onclick="analyzeArticle()">
+                    <button id="analyzeBtn" class="analyze-button">
                         <i class="fas fa-search"></i>
                         Analyze Article
                     </button>
@@ -1328,11 +1328,11 @@
                         <strong>Note:</strong> Some sites like Washington Post block automated analysis. Try these instead:
                     </p>
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
-                        <button onclick="tryExample('https://www.cnn.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">CNN</button>
-                        <button onclick="tryExample('https://www.bbc.com/news')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">BBC News</button>
-                        <button onclick="tryExample('https://www.reuters.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">Reuters</button>
-                        <button onclick="tryExample('https://www.npr.org')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">NPR</button>
-                        <button onclick="tryExample('https://www.theguardian.com')" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">The Guardian</button>
+                        <button class="example-btn" data-url="https://www.cnn.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">CNN</button>
+                        <button class="example-btn" data-url="https://www.bbc.com/news" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">BBC News</button>
+                        <button class="example-btn" data-url="https://www.reuters.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">Reuters</button>
+                        <button class="example-btn" data-url="https://www.npr.org" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">NPR</button>
+                        <button class="example-btn" data-url="https://www.theguardian.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">The Guardian</button>
                     </div>
                 </div>
             </div>
@@ -1350,11 +1350,11 @@
                         <h2>Overall Trust Score Analysis</h2>
                     </div>
                     <div class="download-section">
-                        <button class="download-button" onclick="downloadPDF()">
+                        <button class="download-button" id="downloadPdfBtn">
                             <i class="fas fa-file-pdf"></i>
                             Download Report
                         </button>
-                        <button class="download-button" onclick="shareResults()">
+                        <button class="download-button" id="shareResultsBtn">
                             <i class="fas fa-share-alt"></i>
                             Share
                         </button>
@@ -1484,6 +1484,28 @@
                     analyzeArticle();
                 }
             });
+            
+            // Add click handler for analyze button
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.addEventListener('click', analyzeArticle);
+            
+            // Add click handlers for example buttons
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    tryExample(this.getAttribute('data-url'));
+                });
+            });
+            
+            // Add click handlers for download and share buttons
+            const downloadBtn = document.getElementById('downloadPdfBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', downloadPDF);
+            }
+            
+            const shareBtn = document.getElementById('shareResultsBtn');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', shareResults);
+            }
         });
 
         // Try example URL
