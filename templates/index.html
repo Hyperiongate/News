@@ -1,184 +1,4 @@
-function renderFactChecker(data) {
-            console.log('renderFactChecker data:', data);
-            
-            const verified = data.verified_claims || data.claims_verified || 0;
-            const total = data.total_claims || data.claims_analyzed || 0;
-            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-check-circle"></i>
-                        Fact Checking Summary
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Claims Analyzed</span>
-                            <span class="result-value">${total}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Verified Claims</span>
-                            <span class="result-value">${verified}</span>
-                        </div>
-                        ${data.disputed_claims !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Disputed Claims</span>
-                                <span class="result-value">${data.disputed_claims}</span>
-                            </div>
-                        ` : ''}
-                        <div class="result-item">
-                            <span class="result-label">Accuracy Rate</span>
-                            <span class="result-value">${accuracy}%</span>
-                        </div>
-                    </div>
-                    ${total > 0 ? `
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${accuracy}%"></div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            // Overall credibility
-            if (data.overall_credibility !== undefined) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Factual Credibility
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Credibility Score</span>
-                                <span class="result-value">${data.overall_credibility}%</span>
-                            </div>
-                            ${data.confidence_level ? `
-                                <div class="result-item">
-                                    <span class="result-label">Confidence Level</span>
-                                    <span class="status-badge status-${data.confidence_level.toLowerCase() === 'high' ? 'high' : 'medium'}">
-                                        ${data.confidence_level}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-            }
-            
-            // Individual claims
-            if (data.claims && data.claims.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Individual Claims Analysis
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.claims.forEach(claim => {
-                    const status = claim.verification_status || claim.status || 'unverified';
-                    const statusClass = status === 'verified' || status === 'true' ? 'verified' : 
-                                      status === 'false' || status === 'disputed' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' || status === 'true' ? 'fa-check' : 
-                                     status === 'false' || status === 'disputed' ? 'fa-times' : 'fa-question';
-                    
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text || 'Claim text unavailable')}"</div>
-                                <div class="claim-status claim-${statusClass}">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${formatStatus(status)}
-                                </div>
-                            </div>
-                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
-                                <div class="claim-details">
-                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
-                                    ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.map(s => s.name || s).join(', ')}</small>` : ''}
-                                    ${claim.confidence ? `<br><small>Confidence: ${claim.confidence}%</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Claim categories if available
-            if (data.claim_categories) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-pie"></i>
-                            Claim Categories
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(data.claim_categories).forEach(([category, count]) => {
-                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                    content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${formatFactorName(category)}</span>
-                                <span class="dimension-score">${count} claims (${percentage}%)</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${percentage}%; background: var(--primary);"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Fact checking sources
-            if (data.sources_used && data.sources_used.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-database"></i>
-                            Verification Sources
-                        </h4>
-                        <div class="techniques-grid">
-                            ${data.sources_used.map(source => `
-                                <div class="technique-card">
-                                    <div class="technique-name">${source.name || source}</div>
-                                    ${source.type ? `<div class="technique-description">Type: ${source.type}</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -248,6 +68,10 @@ function renderFactChecker(data) {
             --gradient-primary: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
             --gradient-premium: linear-gradient(135deg, #FFD93D 0%, #FFB344 100%);
             --gradient-dark: linear-gradient(180deg, #1F2937 0%, #111827 100%);
+            --gradient-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            --gradient-warning: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            --gradient-danger: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            --gradient-info: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
         }
 
         /* Global Reset */
@@ -528,7 +352,7 @@ function renderFactChecker(data) {
             }
         }
 
-        /* Trust Score Section */
+        /* Enhanced Trust Score Section */
         .trust-score-section {
             background: white;
             border-radius: var(--radius-lg);
@@ -548,53 +372,167 @@ function renderFactChecker(data) {
 
         .trust-score-content {
             display: grid;
-            grid-template-columns: 200px 1fr;
+            grid-template-columns: 280px 1fr;
             gap: var(--space-xl);
-            align-items: center;
+            align-items: start;
         }
 
         .trust-gauge-container {
             position: relative;
-            width: 200px;
+            width: 280px;
+            height: 280px;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            box-shadow: var(--shadow) inset;
+        }
+
+        .trust-gauge-visual {
+            position: relative;
+            width: 100%;
             height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .trust-score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .trust-score-number {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+            display: block;
+        }
+
+        .trust-score-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 0.5rem;
+        }
+
+        .trust-level-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            margin-top: var(--space-md);
+            justify-content: center;
+        }
+
+        .trust-level-icon {
+            font-size: 1.25rem;
+        }
+
+        .trust-level-text {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .trust-score-details {
+            flex: 1;
         }
 
         .trust-score-details h2 {
             font-size: 2rem;
             font-weight: 700;
-            margin-bottom: var(--space-sm);
-        }
-
-        .trust-level {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
         }
 
         .trust-summary {
             color: var(--gray-600);
             line-height: 1.8;
-            margin-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+            font-size: 1.125rem;
+        }
+
+        .what-we-analyzed {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .what-we-analyzed-title {
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .what-we-analyzed-title i {
+            color: var(--primary);
+        }
+
+        .what-we-analyzed-content {
+            color: var(--gray-600);
+            line-height: 1.6;
         }
 
         .trust-breakdown {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: var(--space-md);
-            margin-top: var(--space-lg);
-            padding-top: var(--space-lg);
-            border-top: 1px solid var(--gray-200);
         }
 
         .breakdown-item {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breakdown-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .breakdown-item:hover {
+            background: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .breakdown-item:hover::before {
+            transform: scaleX(1);
+        }
+
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-sm);
+        }
+
+        .breakdown-label {
+            font-weight: 600;
+            color: var(--gray-700);
             display: flex;
             align-items: center;
             gap: var(--space-sm);
         }
 
         .breakdown-icon {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
@@ -602,24 +540,74 @@ function renderFactChecker(data) {
             font-size: 1rem;
         }
 
-        .breakdown-positive { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
-        .breakdown-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .breakdown-negative { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-        .breakdown-neutral { background: rgba(59, 130, 246, 0.1); color: var(--info); }
-
-        .breakdown-content {
-            flex: 1;
+        .breakdown-value {
+            font-size: 1.5rem;
+            font-weight: 700;
         }
 
-        .breakdown-label {
+        .breakdown-explanation {
             font-size: 0.875rem;
             color: var(--gray-600);
+            margin-top: var(--space-xs);
         }
 
-        .breakdown-value {
-            font-weight: 600;
-            color: var(--gray-900);
+        .breakdown-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            margin-top: var(--space-sm);
+            overflow: hidden;
+            position: relative;
         }
+
+        .breakdown-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breakdown-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.3) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .breakdown-positive { background: rgba(16, 185, 129, 0.1); }
+        .breakdown-positive .breakdown-icon { background: rgba(16, 185, 129, 0.2); color: var(--accent); }
+        .breakdown-positive .breakdown-fill { background: var(--gradient-success); }
+
+        .breakdown-warning { background: rgba(245, 158, 11, 0.1); }
+        .breakdown-warning .breakdown-icon { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .breakdown-warning .breakdown-fill { background: var(--gradient-warning); }
+
+        .breakdown-negative { background: rgba(239, 68, 68, 0.1); }
+        .breakdown-negative .breakdown-icon { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .breakdown-negative .breakdown-fill { background: var(--gradient-danger); }
+
+        .breakdown-neutral { background: rgba(59, 130, 246, 0.1); }
+        .breakdown-neutral .breakdown-icon { background: rgba(59, 130, 246, 0.2); color: var(--info); }
+        .breakdown-neutral .breakdown-fill { background: var(--gradient-info); }
 
         .download-section {
             display: flex;
@@ -714,68 +702,132 @@ function renderFactChecker(data) {
         .finding-warning i { color: var(--warning); }
         .finding-negative i { color: var(--danger); }
 
-        /* Service Cards Grid */
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: var(--space-lg);
-            margin-bottom: var(--space-xl);
+        /* Accordion Service Container */
+        .services-accordion {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
         }
 
-        /* Service Card */
-        .service-card {
+        /* Service Accordion Item */
+        .service-accordion-item {
             background: white;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
             overflow: hidden;
             transition: all 0.3s ease;
-            position: relative;
         }
 
-        .service-card:hover {
-            transform: translateY(-4px);
+        .service-accordion-item:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-accordion-item.active {
             box-shadow: var(--shadow-xl);
         }
 
-        .service-card.locked {
-            opacity: 0.8;
-        }
-
-        .service-header {
+        .service-accordion-header {
             padding: var(--space-lg);
-            background: var(--gray-50);
-            border-bottom: 1px solid var(--gray-200);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            background: white;
             position: relative;
         }
 
-        .service-icon {
-            width: 48px;
-            height: 48px;
+        .service-accordion-header:hover {
+            background: var(--gray-50);
+        }
+
+        .service-accordion-item.active .service-accordion-header {
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .service-header-content {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .service-icon-wrapper {
+            width: 56px;
+            height: 56px;
             background: var(--gradient-primary);
             border-radius: var(--radius);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.25rem;
-            margin-bottom: var(--space-sm);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
-        .service-title {
+        .service-accordion-item.active .service-icon-wrapper {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
             font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: var(--space-xs);
+            margin-bottom: 0.25rem;
+            color: var(--gray-900);
         }
 
         .service-description {
+            font-size: 0.875rem;
             color: var(--gray-600);
+            margin-bottom: var(--space-sm);
+        }
+
+        .service-preview {
+            display: flex;
+            gap: var(--space-lg);
+            align-items: center;
+            margin-top: var(--space-sm);
+        }
+
+        .preview-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
             font-size: 0.875rem;
         }
 
-        .pro-lock {
+        .preview-label {
+            color: var(--gray-500);
+        }
+
+        .preview-value {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .service-expand-icon {
+            position: absolute;
+            right: var(--space-lg);
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            color: var(--gray-400);
+            transition: all 0.3s ease;
+        }
+
+        .service-accordion-item.active .service-expand-icon {
+            transform: translateY(-50%) rotate(180deg);
+            color: var(--primary);
+        }
+
+        .pro-lock-badge {
             position: absolute;
             top: var(--space-md);
-            right: var(--space-md);
+            right: calc(var(--space-lg) + 40px);
             background: var(--gradient-premium);
             color: var(--gray-900);
             padding: 0.25rem 0.75rem;
@@ -787,25 +839,22 @@ function renderFactChecker(data) {
             gap: 0.25rem;
         }
 
-        .service-content {
-            padding: var(--space-lg);
+        .service-accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.5s ease;
         }
 
-        .service-visualization {
-            margin-bottom: var(--space-lg);
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .service-accordion-item.active .service-accordion-content {
+            max-height: 2000px;
         }
 
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
-            margin: 0 auto;
+        .service-content-inner {
+            padding: var(--space-xl);
+            padding-top: 0;
         }
 
+        /* Service Content Sections */
         .service-section {
             margin-bottom: var(--space-lg);
         }
@@ -885,8 +934,23 @@ function renderFactChecker(data) {
         }
 
         /* Dimension Bars */
+        .dimension-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
         .dimension-item {
-            margin-bottom: var(--space-md);
+            background: white;
+            padding: var(--space-md);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+
+        .dimension-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
         }
 
         .dimension-header {
@@ -1050,14 +1114,29 @@ function renderFactChecker(data) {
             line-height: 1.6;
         }
 
+        /* Visualization Container */
+        .service-visualization {
+            margin: var(--space-lg) 0;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 2rem;
-            }
-
-            .services-grid {
-                grid-template-columns: 1fr;
             }
 
             .trust-score-content {
@@ -1091,6 +1170,12 @@ function renderFactChecker(data) {
             .techniques-grid {
                 grid-template-columns: 1fr;
             }
+
+            .service-preview {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-sm);
+            }
         }
 
         /* Error State */
@@ -1115,59 +1200,6 @@ function renderFactChecker(data) {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-10px); }
             75% { transform: translateX(10px); }
-        }
-
-        /* Locked Content Overlay */
-        .locked-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius-lg);
-        }
-
-        .locked-content {
-            text-align: center;
-            padding: var(--space-lg);
-        }
-
-        .locked-icon {
-            font-size: 3rem;
-            color: var(--gray-400);
-            margin-bottom: var(--space-md);
-        }
-
-        .locked-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: var(--space-sm);
-        }
-
-        .locked-description {
-            color: var(--gray-600);
-            margin-bottom: var(--space-lg);
-        }
-
-        .upgrade-button {
-            padding: var(--space-sm) var(--space-lg);
-            background: var(--gradient-premium);
-            color: var(--gray-900);
-            border: none;
-            border-radius: var(--radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upgrade-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
         }
 
         /* Empty State */
@@ -1223,16 +1255,12 @@ function renderFactChecker(data) {
         <div class="hero-content">
             <h1 class="hero-title">Advanced AI-Powered News Analysis</h1>
             <p class="hero-subtitle">
-                Verify news articles with our comprehensive suite of 9 specialized AI services.
+                Verify news articles with our comprehensive suite of 8 specialized AI services.
                 Get detailed insights on credibility, bias, manipulation, and more.
             </p>
 
             <!-- Service Pills -->
             <div class="service-pills">
-                <div class="service-pill">
-                    <i class="fas fa-newspaper"></i>
-                    <span>Article Extraction</span>
-                </div>
                 <div class="service-pill">
                     <i class="fas fa-shield-alt"></i>
                     <span>Source Credibility</span>
@@ -1305,11 +1333,11 @@ function renderFactChecker(data) {
     <main class="main-content">
         <!-- Results Section -->
         <div id="resultsSection" class="results-section">
-            <!-- Trust Score Section -->
+            <!-- Enhanced Trust Score Section -->
             <div class="trust-score-section">
                 <div class="trust-score-header">
                     <div>
-                        <h2>Overall Trust Score</h2>
+                        <h2>Overall Trust Score Analysis</h2>
                     </div>
                     <div class="download-section">
                         <button class="download-button" onclick="downloadPDF()">
@@ -1324,11 +1352,34 @@ function renderFactChecker(data) {
                 </div>
                 <div class="trust-score-content">
                     <div class="trust-gauge-container">
-                        <canvas id="trustGauge"></canvas>
+                        <div class="trust-gauge-visual">
+                            <canvas id="trustGauge"></canvas>
+                            <div class="trust-score-value">
+                                <span id="trustScoreNumber" class="trust-score-number">0</span>
+                                <span class="trust-score-label">out of 100</span>
+                            </div>
+                        </div>
+                        <div id="trustLevelIndicator" class="trust-level-indicator">
+                            <i id="trustLevelIcon" class="fas fa-circle trust-level-icon"></i>
+                            <span id="trustLevelText" class="trust-level-text">Analyzing...</span>
+                        </div>
                     </div>
                     <div class="trust-score-details">
-                        <div id="trustLevel" class="trust-level"></div>
+                        <h2>What This Score Means</h2>
                         <p id="trustSummary" class="trust-summary"></p>
+                        
+                        <div class="what-we-analyzed">
+                            <div class="what-we-analyzed-title">
+                                <i class="fas fa-search"></i>
+                                What We Analyzed
+                            </div>
+                            <div class="what-we-analyzed-content">
+                                We examined 8 critical dimensions of this article including the credibility of the source and author, 
+                                potential biases, factual accuracy, transparency of information, manipulation techniques, 
+                                content quality, and originality. Each component contributes to the overall trust score.
+                            </div>
+                        </div>
+
                         <div id="trustBreakdown" class="trust-breakdown"></div>
                     </div>
                 </div>
@@ -1343,8 +1394,8 @@ function renderFactChecker(data) {
                 <div id="keyFindings" class="key-findings"></div>
             </div>
 
-            <!-- Services Grid -->
-            <div id="servicesGrid" class="services-grid"></div>
+            <!-- Services Accordion -->
+            <div id="servicesAccordion" class="services-accordion"></div>
         </div>
     </main>
 
@@ -1355,7 +1406,7 @@ function renderFactChecker(data) {
         let charts = {};
         let isPro = true; // For development, keep pro features open
 
-        // Service definitions - FIXED to match backend service names
+        // Service definitions
         const services = [
             {
                 id: 'source_credibility',
@@ -1468,10 +1519,18 @@ function renderFactChecker(data) {
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Analysis failed');
+                    throw new Error(error.error?.message || error.error || 'Analysis failed');
                 }
                 
-                const data = await response.json();
+                const responseData = await response.json();
+                console.log('Raw API response:', responseData);
+                
+                // Extract data from response
+                let data = responseData;
+                if (responseData.success && responseData.data) {
+                    data = responseData.data;
+                }
+                
                 currentAnalysis = data;
                 displayResults(data);
                 
@@ -1485,126 +1544,111 @@ function renderFactChecker(data) {
             }
         }
 
-        // Display results
+        // Display results with enhanced trust score section
         function displayResults(data) {
             console.log('displayResults called with:', data);
             
-            // Validate data structure
             if (!data) {
                 console.error('No data provided to displayResults');
                 showError('No analysis data received');
                 return;
             }
             
-            // Check if data is wrapped in another data object
-            let analysisData = data;
-            if (data.data && (data.data.analysis || data.data.article)) {
-                analysisData = data.data;
-            }
-            
-            // Ensure we have the expected structure
-            const normalizedData = {
-                analysis: analysisData.analysis || {
-                    trust_score: 0,
-                    trust_level: 'Unknown',
-                    summary: 'Analysis incomplete',
-                    key_findings: []
-                },
-                article: analysisData.article || {
-                    title: 'Unknown Article',
-                    author: 'Unknown',
-                    domain: 'Unknown',
-                    publish_date: null,
-                    word_count: 0
-                },
-                detailed_analysis: analysisData.detailed_analysis || {}
-            };
-            
-            console.log('Normalized analysis data:', normalizedData);
-            console.log('=== DETAILED ANALYSIS CONTENT ===');
-            console.log('Full detailed_analysis object:', JSON.stringify(normalizedData.detailed_analysis, null, 2));
-            
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.classList.add('active');
             
-            // Display each component with error handling
+            // Display each component
             try {
-                displayTrustScore(normalizedData.analysis, normalizedData.detailed_analysis);
+                displayEnhancedTrustScore(data.analysis, data.detailed_analysis);
             } catch (e) {
                 console.error('Error displaying trust score:', e);
             }
             
             try {
-                displayArticleInfo(normalizedData.article, normalizedData.analysis);
+                displayArticleInfo(data.article, data.analysis);
             } catch (e) {
                 console.error('Error displaying article info:', e);
             }
             
             try {
-                displayServiceCards(normalizedData);
+                displayServiceAccordion(data);
             } catch (e) {
-                console.error('Error displaying service cards:', e);
+                console.error('Error displaying service accordion:', e);
             }
-            
-            // Update currentAnalysis to the normalized data
-            currentAnalysis = normalizedData;
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Display trust score with gauge and breakdown
-        function displayTrustScore(analysis, detailedAnalysis) {
+        // Enhanced trust score display with explanations
+        function displayEnhancedTrustScore(analysis, detailedAnalysis) {
             if (!analysis) {
-                console.error('No analysis data provided to displayTrustScore');
+                console.error('No analysis data provided to displayEnhancedTrustScore');
                 return;
             }
             
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
-            document.getElementById('trustLevel').textContent = `${level} (${score}/100)`;
-            document.getElementById('trustLevel').style.color = getScoreColor(score);
-            document.getElementById('trustSummary').textContent = analysis.summary || '';
+            // Update score number with animation
+            animateTrustScore(score);
             
-            // Create trust breakdown
+            // Update level indicator
+            updateTrustLevelIndicator(score, level);
+            
+            // Update summary with contextual explanation
+            const summaryEl = document.getElementById('trustSummary');
+            summaryEl.textContent = getTrustSummaryExplanation(score, level, analysis);
+            
+            // Create detailed breakdown with explanations
             const breakdownData = [
                 {
+                    id: 'source_credibility',
                     icon: 'fa-shield-alt',
                     label: 'Source Credibility',
-                    value: detailedAnalysis?.source_credibility?.data?.credibility_score || 0,
-                    type: getBreakdownType(detailedAnalysis?.source_credibility?.data?.credibility_score || 0)
+                    value: detailedAnalysis?.source_credibility?.credibility_score || 0,
+                    explanation: getSourceCredibilityExplanation(detailedAnalysis?.source_credibility)
                 },
                 {
+                    id: 'author_credibility',
                     icon: 'fa-user-check',
                     label: 'Author Credibility',
-                    value: detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
-                    type: getBreakdownType(detailedAnalysis?.author_analyzer?.data?.credibility_score || 0)
+                    value: detailedAnalysis?.author_analyzer?.credibility_score || 0,
+                    explanation: getAuthorCredibilityExplanation(detailedAnalysis?.author_analyzer)
                 },
                 {
+                    id: 'objectivity',
                     icon: 'fa-balance-scale',
-                    label: 'Bias Score',
-                    value: 100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
-                    type: getBreakdownType(100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0))
+                    label: 'Objectivity Score',
+                    value: 100 - (detailedAnalysis?.bias_detector?.overall_bias_score || 0),
+                    explanation: getObjectivityExplanation(detailedAnalysis?.bias_detector)
                 },
                 {
+                    id: 'fact_accuracy',
                     icon: 'fa-check-double',
                     label: 'Fact Accuracy',
-                    value: calculateFactAccuracy(detailedAnalysis?.fact_checker?.data),
-                    type: getBreakdownType(calculateFactAccuracy(detailedAnalysis?.fact_checker?.data))
+                    value: calculateFactAccuracy(detailedAnalysis?.fact_checker),
+                    explanation: getFactAccuracyExplanation(detailedAnalysis?.fact_checker)
                 }
             ];
             
             let breakdownHtml = '';
             breakdownData.forEach(item => {
+                const type = getBreakdownType(item.value);
                 breakdownHtml += `
-                    <div class="breakdown-item">
-                        <div class="breakdown-icon breakdown-${item.type}">
-                            <i class="fas ${item.icon}"></i>
-                        </div>
-                        <div class="breakdown-content">
-                            <div class="breakdown-label">${item.label}</div>
+                    <div class="breakdown-item breakdown-${type}">
+                        <div class="breakdown-header">
+                            <div class="breakdown-label">
+                                <div class="breakdown-icon">
+                                    <i class="fas ${item.icon}"></i>
+                                </div>
+                                <span>${item.label}</span>
+                            </div>
                             <div class="breakdown-value">${item.value}%</div>
+                        </div>
+                        <div class="breakdown-explanation">${item.explanation}</div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill" style="width: 0%;" data-target="${item.value}"></div>
                         </div>
                     </div>
                 `;
@@ -1612,11 +1656,184 @@ function renderFactChecker(data) {
             
             document.getElementById('trustBreakdown').innerHTML = breakdownHtml;
             
-            // Create gauge chart
+            // Animate breakdown bars after DOM update
+            setTimeout(() => {
+                document.querySelectorAll('.breakdown-fill').forEach(bar => {
+                    const target = bar.getAttribute('data-target');
+                    bar.style.width = target + '%';
+                });
+            }, 100);
+            
+            // Create enhanced gauge chart
+            createEnhancedTrustGauge(score);
+        }
+
+        // Get contextual trust summary explanation
+        function getTrustSummaryExplanation(score, level, analysis) {
+            if (score >= 80) {
+                return "This article demonstrates high credibility across all dimensions. The source is well-established, the author has verified credentials, minimal bias was detected, and factual claims have been verified. You can generally trust the information presented.";
+            } else if (score >= 60) {
+                return "This article shows moderate credibility. While some trust indicators are positive, there are areas of concern such as limited source transparency, some detected bias, or unverified claims. Read with a critical eye and cross-reference important information.";
+            } else if (score >= 40) {
+                return "This article has low credibility. Significant issues were found including questionable source reliability, strong bias indicators, or multiple unverified claims. Be cautious about accepting information at face value and seek additional sources.";
+            } else {
+                return "This article shows very low credibility. Major red flags include unverifiable sources, extreme bias, false claims, or manipulation techniques. The information presented should not be trusted without extensive verification from reliable sources.";
+            }
+        }
+
+        // Get explanation for source credibility
+        function getSourceCredibilityExplanation(data) {
+            if (!data) return "Unable to verify source credibility";
+            
+            const score = data.credibility_score || 0;
+            const sourceName = data.source_name || "Unknown source";
+            
+            if (score >= 80) {
+                return `${sourceName} is an established, reputable news source with strong editorial standards and fact-checking processes.`;
+            } else if (score >= 60) {
+                return `${sourceName} is a moderately credible source with some concerns about consistency or transparency.`;
+            } else if (score >= 40) {
+                return `${sourceName} has questionable credibility with known issues in reporting accuracy or bias.`;
+            } else if (score > 0) {
+                return `${sourceName} is not a reliable news source and has a poor track record for accuracy.`;
+            } else {
+                return "Source could not be verified or is not in our database of known news sources.";
+            }
+        }
+
+        // Get explanation for author credibility
+        function getAuthorCredibilityExplanation(data) {
+            if (!data) return "Author information not available";
+            
+            const score = data.credibility_score || 0;
+            const authorName = data.author_name || data.name || "Unknown author";
+            
+            if (score >= 80) {
+                return `${authorName} is a verified journalist with established credentials and expertise in this topic area.`;
+            } else if (score >= 60) {
+                return `${authorName} has some journalistic experience but limited verification or expertise in this specific area.`;
+            } else if (score >= 40) {
+                return `Limited information available about ${authorName}'s credentials or journalistic background.`;
+            } else if (score > 0) {
+                return `${authorName} has no verifiable journalistic credentials or has credibility concerns.`;
+            } else {
+                return "No author information provided or author could not be verified.";
+            }
+        }
+
+        // Get explanation for objectivity
+        function getObjectivityExplanation(data) {
+            if (!data) return "Bias analysis not available";
+            
+            const biasScore = data.overall_bias_score || 0;
+            const objectivityScore = 100 - biasScore;
+            
+            if (objectivityScore >= 80) {
+                return "Minimal bias detected. The article presents information objectively with balanced viewpoints.";
+            } else if (objectivityScore >= 60) {
+                return "Some bias detected in language or framing, but generally maintains journalistic standards.";
+            } else if (objectivityScore >= 40) {
+                return "Significant bias present through selective facts, loaded language, or one-sided arguments.";
+            } else {
+                return "Extreme bias detected. The article heavily favors one perspective without balance.";
+            }
+        }
+
+        // Get explanation for fact accuracy
+        function getFactAccuracyExplanation(data) {
+            if (!data) return "Fact checking not performed";
+            
+            const total = data?.total_claims || 0;
+            const verified = data?.verified_claims || 0;
+            
+            if (total === 0) {
+                return "No factual claims found to verify in this article.";
+            }
+            
+            const accuracy = Math.round((verified / total) * 100);
+            
+            if (accuracy >= 80) {
+                return `${verified} of ${total} factual claims verified as accurate through trusted fact-checking sources.`;
+            } else if (accuracy >= 60) {
+                return `${verified} of ${total} claims verified. Some claims could not be confirmed or contain inaccuracies.`;
+            } else if (accuracy >= 40) {
+                return `Only ${verified} of ${total} claims could be verified. Multiple unverified or disputed claims present.`;
+            } else {
+                return `Major factual issues: only ${verified} of ${total} claims are accurate. Contains false or misleading information.`;
+            }
+        }
+
+        // Animate trust score number
+        function animateTrustScore(targetScore) {
+            const scoreEl = document.getElementById('trustScoreNumber');
+            let currentScore = 0;
+            const increment = targetScore / 50;
+            const interval = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= targetScore) {
+                    currentScore = targetScore;
+                    clearInterval(interval);
+                }
+                scoreEl.textContent = Math.round(currentScore);
+                scoreEl.style.color = getScoreColor(currentScore);
+            }, 20);
+        }
+
+        // Update trust level indicator
+        function updateTrustLevelIndicator(score, level) {
+            const iconEl = document.getElementById('trustLevelIcon');
+            const textEl = document.getElementById('trustLevelText');
+            const indicatorEl = document.getElementById('trustLevelIndicator');
+            
+            // Set text
+            textEl.textContent = level;
+            
+            // Set color and icon based on score
+            if (score >= 80) {
+                iconEl.className = 'fas fa-check-circle trust-level-icon';
+                iconEl.style.color = 'var(--accent)';
+                indicatorEl.style.background = 'rgba(16, 185, 129, 0.1)';
+                indicatorEl.style.border = '2px solid var(--accent)';
+            } else if (score >= 60) {
+                iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+                iconEl.style.color = 'var(--info)';
+                indicatorEl.style.background = 'rgba(59, 130, 246, 0.1)';
+                indicatorEl.style.border = '2px solid var(--info)';
+            } else if (score >= 40) {
+                iconEl.className = 'fas fa-exclamation-triangle trust-level-icon';
+                iconEl.style.color = 'var(--warning)';
+                indicatorEl.style.background = 'rgba(245, 158, 11, 0.1)';
+                indicatorEl.style.border = '2px solid var(--warning)';
+            } else {
+                iconEl.className = 'fas fa-times-circle trust-level-icon';
+                iconEl.style.color = 'var(--danger)';
+                indicatorEl.style.background = 'rgba(239, 68, 68, 0.1)';
+                indicatorEl.style.border = '2px solid var(--danger)';
+            }
+        }
+
+        // Create enhanced trust gauge
+        function createEnhancedTrustGauge(score) {
             const ctx = document.getElementById('trustGauge').getContext('2d');
             
             if (charts.trustGauge) {
                 charts.trustGauge.destroy();
+            }
+            
+            // Create gradient based on score
+            const gradient = ctx.createLinearGradient(0, 0, 300, 0);
+            if (score >= 80) {
+                gradient.addColorStop(0, '#10b981');
+                gradient.addColorStop(1, '#059669');
+            } else if (score >= 60) {
+                gradient.addColorStop(0, '#3b82f6');
+                gradient.addColorStop(1, '#2563eb');
+            } else if (score >= 40) {
+                gradient.addColorStop(0, '#f59e0b');
+                gradient.addColorStop(1, '#d97706');
+            } else {
+                gradient.addColorStop(0, '#ef4444');
+                gradient.addColorStop(1, '#dc2626');
             }
             
             charts.trustGauge = new Chart(ctx, {
@@ -1624,7 +1841,7 @@ function renderFactChecker(data) {
                 data: {
                     datasets: [{
                         data: [score, 100 - score],
-                        backgroundColor: [getScoreColor(score), '#E5E7EB'],
+                        backgroundColor: [gradient, '#E5E7EB'],
                         borderWidth: 0
                     }]
                 },
@@ -1633,30 +1850,12 @@ function renderFactChecker(data) {
                     maintainAspectRatio: false,
                     circumference: 180,
                     rotation: -90,
-                    cutout: '80%',
+                    cutout: '85%',
                     plugins: {
                         legend: { display: false },
                         tooltip: { enabled: false }
                     }
-                },
-                plugins: [{
-                    id: 'centerText',
-                    beforeDraw: function(chart) {
-                        const ctx = chart.ctx;
-                        ctx.save();
-                        
-                        const centerX = chart.width / 2;
-                        const centerY = chart.height / 2 + 20;
-                        
-                        ctx.font = 'bold 48px Inter';
-                        ctx.fillStyle = getScoreColor(score);
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(score, centerX, centerY);
-                        
-                        ctx.restore();
-                    }
-                }]
+                }
             });
         }
 
@@ -1680,35 +1879,30 @@ function renderFactChecker(data) {
 
         // Display article info
         function displayArticleInfo(article, analysis) {
-            console.log('=== ARTICLE INFO DEBUG ===');
-            console.log('Article:', article);
-            console.log('Analysis:', analysis);
-            
-            document.getElementById('articleTitle').textContent = article.title || 'Untitled Article';
+            document.getElementById('articleTitle').textContent = article?.title || 'Untitled Article';
             
             const metaHtml = `
                 <div class="meta-item">
                     <i class="fas fa-user"></i>
-                    <span>${article.author || 'Unknown Author'}</span>
+                    <span>${article?.author || 'Unknown Author'}</span>
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-globe"></i>
-                    <span>${article.domain || 'Unknown Source'}</span>
+                    <span>${article?.domain || 'Unknown Source'}</span>
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-calendar"></i>
-                    <span>${formatDate(article.publish_date)}</span>
+                    <span>${formatDate(article?.publish_date)}</span>
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-clock"></i>
-                    <span>${Math.ceil((article.word_count || 0) / 200)} min read</span>
+                    <span>${Math.ceil((article?.word_count || 0) / 200)} min read</span>
                 </div>
             `;
             document.getElementById('articleMeta').innerHTML = metaHtml;
             
             // Display key findings
-            const findings = analysis.key_findings || [];
-            console.log('Key findings:', findings);
+            const findings = analysis?.key_findings || [];
             
             if (findings.length > 0) {
                 let findingsHtml = '<h4 class="key-findings-header">Key Findings</h4>';
@@ -1734,119 +1928,225 @@ function renderFactChecker(data) {
                             Analysis Summary
                         </div>
                         <div class="info-box-content">
-                            The detailed analysis of this article is complete. Review the individual service cards below for specific insights about credibility, bias, factual accuracy, and more.
+                            The detailed analysis of this article is complete. Review the individual service results below for specific insights about credibility, bias, factual accuracy, and more.
                         </div>
                     </div>
                 `;
             }
         }
 
-        // Display service cards with full data
-        function displayServiceCards(data) {
-            const grid = document.getElementById('servicesGrid');
-            grid.innerHTML = '';
+        // Display service accordion
+        function displayServiceAccordion(data) {
+            const container = document.getElementById('servicesAccordion');
+            container.innerHTML = '';
             
             const detailedAnalysis = data.detailed_analysis || {};
             
-            console.log('=== SERVICE CARDS DEBUG ===');
-            console.log('Detailed analysis:', detailedAnalysis);
-            console.log('Detailed analysis keys:', Object.keys(detailedAnalysis));
-            
-            services.forEach(service => {
-                console.log(`Creating card for ${service.id}:`, detailedAnalysis[service.id]);
-                
-                // Handle service name mismatches
-                let serviceData = detailedAnalysis[service.id];
-                
-                // Check for alternate names
-                if (!serviceData) {
-                    const alternateNames = {
-                        'author_analyzer': 'author_analysis',
-                        'author_analysis': 'author_analyzer',
-                        'bias_detector': 'bias_analysis',
-                        'bias_analysis': 'bias_detector',
-                        'fact_checker': 'fact_verification',
-                        'fact_verification': 'fact_checker'
-                    };
-                    
-                    const alternateName = alternateNames[service.id];
-                    if (alternateName && detailedAnalysis[alternateName]) {
-                        serviceData = detailedAnalysis[alternateName];
-                        console.log(`Using alternate name ${alternateName} for ${service.id}`);
-                    }
-                }
-                
-                const card = createServiceCard(service, data, serviceData);
-                grid.appendChild(card);
+            services.forEach((service, index) => {
+                const serviceData = detailedAnalysis[service.id] || {};
+                const accordionItem = createServiceAccordionItem(service, serviceData, index);
+                container.appendChild(accordionItem);
             });
         }
 
-        // Create service card with full content
-        function createServiceCard(service, data, serviceData) {
-            const card = document.createElement('div');
-            card.className = 'service-card';
-            if (service.isPro && !isPro) {
-                card.classList.add('locked');
-            }
+        // Create service accordion item
+        function createServiceAccordionItem(service, serviceData, index) {
+            const item = document.createElement('div');
+            item.className = 'service-accordion-item';
+            item.id = `service-${service.id}`;
             
-            console.log(`Service ${service.id} raw data:`, serviceData);
+            // Extract preview data
+            const previewData = getServicePreviewData(service.id, serviceData);
             
-            // Handle nested data structure - services return { success: true, data: {...} }
-            let actualServiceData = serviceData || {};
-            if (serviceData && serviceData.success && serviceData.data) {
-                console.log(`Service ${service.id} has nested data structure`);
-                actualServiceData = serviceData.data;
-            }
-            
-            console.log(`Service ${service.id} actual data:`, actualServiceData);
-            
-            card.innerHTML = `
-                <div class="service-header">
-                    <div class="service-icon">
-                        <i class="fas ${service.icon}"></i>
+            item.innerHTML = `
+                <div class="service-accordion-header" onclick="toggleAccordion('${service.id}')">
+                    <div class="service-header-content">
+                        <div class="service-icon-wrapper">
+                            <i class="fas ${service.icon}"></i>
+                        </div>
+                        <div class="service-info">
+                            <h3 class="service-name">${service.name}</h3>
+                            <p class="service-description">${service.description}</p>
+                            <div class="service-preview">
+                                ${previewData.map(preview => `
+                                    <div class="preview-item">
+                                        <span class="preview-label">${preview.label}:</span>
+                                        <span class="preview-value" style="color: ${preview.color || 'inherit'}">
+                                            ${preview.value}
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="service-title">${service.name}</h3>
-                    <p class="service-description">${service.description}</p>
-                    ${service.isPro && !isPro ? '<div class="pro-lock"><i class="fas fa-lock"></i> PRO</div>' : ''}
+                    ${service.isPro && !isPro ? '<div class="pro-lock-badge"><i class="fas fa-lock"></i> PRO</div>' : ''}
+                    <i class="fas fa-chevron-down service-expand-icon"></i>
                 </div>
-                <div class="service-content">
-                    ${renderServiceContent(service, actualServiceData)}
+                <div class="service-accordion-content">
+                    <div class="service-content-inner">
+                        ${renderServiceContent(service, serviceData)}
+                    </div>
                 </div>
             `;
             
-            // Add locked overlay if needed
-            if (service.isPro && !isPro) {
-                const overlay = document.createElement('div');
-                overlay.className = 'locked-overlay';
-                overlay.innerHTML = `
-                    <div class="locked-content">
-                        <i class="fas fa-lock locked-icon"></i>
-                        <h4 class="locked-title">Pro Feature</h4>
-                        <p class="locked-description">
-                            Upgrade to Pro to access ${service.name} and unlock all advanced features
-                        </p>
-                        <button class="upgrade-button" onclick="showUpgradeModal()">
-                            Upgrade to Pro
-                        </button>
-                    </div>
-                `;
-                card.appendChild(overlay);
-            }
-            
-            return card;
+            return item;
         }
 
-        // Render service-specific content with full data display
+        // Get service preview data
+        function getServicePreviewData(serviceId, data) {
+            switch (serviceId) {
+                case 'source_credibility':
+                    const sourceScore = data.credibility_score || 0;
+                    return [
+                        { label: 'Score', value: `${sourceScore}/100`, color: getScoreColor(sourceScore) },
+                        { label: 'Level', value: data.credibility_level || 'Unknown' }
+                    ];
+                    
+                case 'author_analyzer':
+                    const authorScore = data.credibility_score || 0;
+                    return [
+                        { label: 'Score', value: `${authorScore}/100`, color: getScoreColor(authorScore) },
+                        { label: 'Status', value: data.verification_status?.verified ? 'Verified' : 'Unverified' }
+                    ];
+                    
+                case 'bias_detector':
+                    const biasScore = data.overall_bias_score || 0;
+                    return [
+                        { label: 'Bias Level', value: data.bias_level || 'Unknown' },
+                        { label: 'Objectivity', value: `${100 - biasScore}%`, color: getScoreColor(100 - biasScore) }
+                    ];
+                    
+                case 'fact_checker':
+                    const verified = data.verified_claims || 0;
+                    const total = data.total_claims || 0;
+                    const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
+                    return [
+                        { label: 'Claims Checked', value: total },
+                        { label: 'Accuracy', value: `${accuracy}%`, color: getScoreColor(accuracy) }
+                    ];
+                    
+                case 'transparency_analyzer':
+                    const transparencyScore = data.transparency_score || 0;
+                    return [
+                        { label: 'Score', value: `${transparencyScore}%`, color: getScoreColor(transparencyScore) },
+                        { label: 'Level', value: data.transparency_level || 'Unknown' }
+                    ];
+                    
+                case 'manipulation_detector':
+                    return [
+                        { label: 'Risk Level', value: data.manipulation_level || 'Unknown' },
+                        { label: 'Techniques', value: data.techniques_count || 0 }
+                    ];
+                    
+                case 'content_analyzer':
+                    const qualityScore = data.quality_score || 0;
+                    return [
+                        { label: 'Quality', value: `${qualityScore}/100`, color: getScoreColor(qualityScore) },
+                        { label: 'Readability', value: data.readability?.level || 'Unknown' }
+                    ];
+                    
+                case 'plagiarism_detector':
+                    const originalityScore = data.originality_score || (100 - (data.similarity_score || 0));
+                    return [
+                        { label: 'Originality', value: `${originalityScore}%`, color: getScoreColor(originalityScore) },
+                        { label: 'Status', value: originalityScore >= 80 ? 'Original' : 'Issues Found' }
+                    ];
+                    
+                default:
+                    return [{ label: 'Status', value: 'Analysis Complete' }];
+            }
+        }
+
+        // Toggle accordion
+        function toggleAccordion(serviceId) {
+            const item = document.getElementById(`service-${serviceId}`);
+            const isActive = item.classList.contains('active');
+            
+            // Close all other items
+            document.querySelectorAll('.service-accordion-item').forEach(el => {
+                if (el.id !== `service-${serviceId}`) {
+                    el.classList.remove('active');
+                }
+            });
+            
+            // Toggle current item
+            item.classList.toggle('active');
+            
+            // If opening, create/update visualizations after animation
+            if (!isActive) {
+                setTimeout(() => {
+                    updateServiceVisualizations(serviceId);
+                }, 300);
+            }
+        }
+
+        // Update service visualizations
+        function updateServiceVisualizations(serviceId) {
+            const serviceData = currentAnalysis?.detailed_analysis?.[serviceId];
+            if (!serviceData) return;
+            
+            // Find all canvases in this service section
+            const canvases = document.querySelectorAll(`#service-${serviceId} canvas`);
+            canvases.forEach(canvas => {
+                const chartType = canvas.getAttribute('data-chart-type');
+                const chartData = canvas.getAttribute('data-chart-data');
+                if (chartType && chartData) {
+                    createServiceChart(canvas, chartType, JSON.parse(chartData));
+                }
+            });
+        }
+
+        // Create service chart
+        function createServiceChart(canvas, type, data) {
+            const ctx = canvas.getContext('2d');
+            const chartId = canvas.id;
+            
+            // Destroy existing chart
+            if (charts[chartId]) {
+                charts[chartId].destroy();
+            }
+            
+            // Create new chart based on type
+            let config;
+            switch (type) {
+                case 'radar':
+                    config = createRadarChartConfig(data);
+                    break;
+                case 'polarArea':
+                    config = createPolarAreaChartConfig(data);
+                    break;
+                case 'bar':
+                    config = createBarChartConfig(data);
+                    break;
+                default:
+                    return;
+            }
+            
+            charts[chartId] = new Chart(ctx, config);
+        }
+
+        // Render service content
         function renderServiceContent(service, data) {
             console.log(`Rendering content for ${service.id}:`, data);
             
-            // Check if data exists and has content
-            if (!data || (Object.keys(data).length === 0 && !data.score && !data.level)) {
+            // Check if data exists
+            if (!data || Object.keys(data).length === 0) {
                 return `
                     <div class="empty-state">
                         <i class="fas fa-info-circle"></i>
                         <p class="empty-state-text">No data available</p>
                         <p class="empty-state-subtext">This analysis could not be completed</p>
+                    </div>
+                `;
+            }
+            
+            // Check if service is locked
+            if (service.isPro && !isPro) {
+                return `
+                    <div class="empty-state">
+                        <i class="fas fa-lock"></i>
+                        <p class="empty-state-text">Pro Feature</p>
+                        <p class="empty-state-subtext">Upgrade to access ${service.name}</p>
                     </div>
                 `;
             }
@@ -1873,19 +2173,13 @@ function renderFactChecker(data) {
             }
         }
 
-        // Enhanced service renderers with full data display
+        // Service renderers
         function renderSourceCredibility(data) {
-            console.log('renderSourceCredibility data:', data);
+            const score = data.credibility_score || 0;
+            const level = data.credibility_level || 'Unknown';
+            const sourceName = data.source_name || 'Unknown Source';
             
-            // Extract the score and level from various possible locations
-            const score = data.credibility_score || data.score || data.source_credibility?.score || 0;
-            const level = data.credibility_level || data.level || data.source_credibility?.level || 'Unknown';
-            const sourceName = data.source_name || data.source?.name || data.name || 'Unknown Source';
-            
-            let content = '';
-            
-            // Main metrics
-            content += `
+            let content = `
                 <div class="service-section">
                     <h4 class="section-title">
                         <i class="fas fa-chart-line"></i>
@@ -1911,8 +2205,8 @@ function renderFactChecker(data) {
             `;
             
             // Source details
-            if (data.source_details || data.source) {
-                const details = data.source_details || data.source;
+            if (data.source_details) {
+                const details = data.source_details;
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -1926,10 +2220,10 @@ function renderFactChecker(data) {
                                     <span class="result-value">${details.type}</span>
                                 </div>
                             ` : ''}
-                            ${details.established || data.domain_age ? `
+                            ${details.established ? `
                                 <div class="result-item">
                                     <span class="result-label">Established</span>
-                                    <span class="result-value">${details.established || data.domain_age}</span>
+                                    <span class="result-value">${details.established}</span>
                                 </div>
                             ` : ''}
                             ${details.ownership ? `
@@ -1938,20 +2232,20 @@ function renderFactChecker(data) {
                                     <span class="result-value">${details.ownership}</span>
                                 </div>
                             ` : ''}
-                            ${details.reach ? `
-                                <div class="result-item">
-                                    <span class="result-label">Reach</span>
-                                    <span class="result-value">${details.reach}</span>
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
                 `;
             }
             
-            // Credibility factors with visualization
+            // Credibility factors
             if (data.factors || data.credibility_factors) {
                 const factors = data.factors || data.credibility_factors;
+                const chartId = `credibility-chart-${Date.now()}`;
+                const chartData = {
+                    labels: Object.keys(factors).map(k => formatFactorName(k)),
+                    values: Object.values(factors).map(v => typeof v === 'number' ? v : (v.score || 0))
+                };
+                
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -1963,11 +2257,10 @@ function renderFactChecker(data) {
                 
                 Object.entries(factors).forEach(([factor, value]) => {
                     const factorScore = typeof value === 'number' ? value : (value.score || 0);
-                    const factorLabel = formatFactorName(factor);
                     content += `
                         <div class="dimension-item">
                             <div class="dimension-header">
-                                <span class="dimension-name">${factorLabel}</span>
+                                <span class="dimension-name">${formatFactorName(factor)}</span>
                                 <span class="dimension-score">${factorScore}%</span>
                             </div>
                             <div class="dimension-bar">
@@ -1980,122 +2273,9 @@ function renderFactChecker(data) {
                 content += `
                         </div>
                     </div>
-                `;
-                
-                // Create radar chart visualization
-                content += `
                     <div class="service-visualization">
                         <div class="chart-container">
-                            <canvas id="credibilityChart-${Date.now()}"></canvas>
-                        </div>
-                    </div>
-                `;
-                
-                // Create chart after DOM update
-                setTimeout(() => {
-                    const chartCanvas = document.querySelector('#servicesGrid canvas[id^="credibilityChart-"]');
-                    if (chartCanvas && factors) {
-                        const ctx = chartCanvas.getContext('2d');
-                        const labels = Object.keys(factors).map(k => formatFactorName(k));
-                        const values = Object.values(factors).map(v => 
-                            typeof v === 'number' ? v : (v.score || 0)
-                        );
-                        
-                        new Chart(ctx, {
-                            type: 'radar',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    data: values,
-                                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                                    borderColor: 'rgba(99, 102, 241, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
-                                    pointBorderColor: '#fff',
-                                    pointHoverBackgroundColor: '#fff',
-                                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    r: {
-                                        beginAtZero: true,
-                                        max: 100,
-                                        ticks: {
-                                            stepSize: 20
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                }, 100);
-            }
-            
-            // Awards and recognitions
-            if (data.awards && data.awards.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-trophy"></i>
-                            Awards & Recognition
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.awards.forEach(award => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${award.name || award}</div>
-                            ${award.year ? `<div class="technique-description">Awarded: ${award.year}</div>` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Key Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'positive' ? 'verified' : 
-                                        finding.severity === 'negative' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    <i class="fas ${finding.severity === 'positive' ? 'fa-check' : 'fa-info'}"></i>
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
+                            <canvas id="${chartId}" data-chart-type="radar" data-chart-data='${JSON.stringify(chartData)}'></canvas>
                         </div>
                     </div>
                 `;
@@ -2120,17 +2300,11 @@ function renderFactChecker(data) {
         }
 
         function renderAuthorAnalysis(data) {
-            console.log('renderAuthorAnalysis data:', data);
+            const authorName = data.author_name || data.name || 'Unknown Author';
+            const score = data.credibility_score || 0;
+            const level = data.credibility_level || 'Unknown';
             
-            // Extract author information from various possible locations
-            const authorName = data.author_name || data.name || data.author_info?.name || 'Unknown Author';
-            const authorScore = data.author_score || data.score || data.credibility_score || 0;
-            const level = data.level || 'Unknown';
-            
-            let content = '';
-            
-            // Author information section
-            content += `
+            let content = `
                 <div class="service-section">
                     <h4 class="section-title">
                         <i class="fas fa-id-card"></i>
@@ -2143,11 +2317,11 @@ function renderFactChecker(data) {
                         </div>
                         <div class="result-item">
                             <span class="result-label">Credibility Score</span>
-                            <span class="result-value">${authorScore}/100</span>
+                            <span class="result-value">${score}/100</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Credibility Level</span>
-                            <span class="status-badge status-${authorScore >= 70 ? 'high' : authorScore >= 40 ? 'medium' : 'low'}">
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
                                 ${level}
                             </span>
                         </div>
@@ -2155,11 +2329,10 @@ function renderFactChecker(data) {
                 </div>
             `;
             
-            // Author details from author_info
+            // Author details
             if (data.author_info) {
                 const info = data.author_info;
                 
-                // Credentials and expertise
                 if (info.position || info.bio || info.expertise_areas?.length > 0) {
                     content += `
                         <div class="service-section">
@@ -2179,15 +2352,6 @@ function renderFactChecker(data) {
                         `;
                     }
                     
-                    if (info.bio) {
-                        content += `
-                            <div class="result-item" style="flex-direction: column; align-items: flex-start;">
-                                <span class="result-label">Biography</span>
-                                <span class="result-value" style="margin-top: 0.5rem; line-height: 1.6;">${info.bio}</span>
-                            </div>
-                        `;
-                    }
-                    
                     if (info.expertise_areas && info.expertise_areas.length > 0) {
                         content += `
                             <div class="result-item">
@@ -2197,54 +2361,7 @@ function renderFactChecker(data) {
                         `;
                     }
                     
-                    if (info.experience_years !== null && info.experience_years !== undefined) {
-                        content += `
-                            <div class="result-item">
-                                <span class="result-label">Years of Experience</span>
-                                <span class="result-value">${info.experience_years || 'Not specified'}</span>
-                            </div>
-                        `;
-                    }
-                    
                     content += `
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // Publications
-                if (info.outlets && info.outlets.length > 0) {
-                    content += `
-                        <div class="service-section">
-                            <h4 class="section-title">
-                                <i class="fas fa-newspaper"></i>
-                                Publications
-                            </h4>
-                            <div class="techniques-grid">
-                                ${info.outlets.map(outlet => `
-                                    <div class="technique-card">
-                                        <div class="technique-name">${outlet}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // Awards
-                if (info.awards && info.awards.length > 0) {
-                    content += `
-                        <div class="service-section">
-                            <h4 class="section-title">
-                                <i class="fas fa-trophy"></i>
-                                Awards & Recognition
-                            </h4>
-                            <div class="techniques-grid">
-                                ${info.awards.map(award => `
-                                    <div class="technique-card">
-                                        <div class="technique-name">${award}</div>
-                                    </div>
-                                `).join('')}
                             </div>
                         </div>
                     `;
@@ -2264,110 +2381,9 @@ function renderFactChecker(data) {
                             <div class="result-item">
                                 <span class="result-label">Verification Level</span>
                                 <span class="status-badge status-${verStatus.verified ? 'high' : 'low'}">
-                                    ${verStatus.verification_level || (verStatus.verified ? 'Verified' : 'Unverified')}
+                                    ${verStatus.verified ? 'Verified' : 'Unverified'}
                                 </span>
                             </div>
-                            ${verStatus.verification_details && verStatus.verification_details.length > 0 ? `
-                                <div class="result-item" style="flex-direction: column; align-items: flex-start;">
-                                    <span class="result-label">Verification Details</span>
-                                    <ul style="margin-top: 0.5rem; margin-left: 1rem;">
-                                        ${verStatus.verification_details.map(detail => `<li>${detail}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Publication context
-            if (data.publication_context) {
-                const pubContext = data.publication_context;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-building"></i>
-                            Publication Context
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Publication</span>
-                                <span class="result-value">${pubContext.name || 'Unknown'}</span>
-                            </div>
-                            ${pubContext.type ? `
-                                <div class="result-item">
-                                    <span class="result-label">Type</span>
-                                    <span class="result-value">${pubContext.type}</span>
-                                </div>
-                            ` : ''}
-                            ${pubContext.credibility_score !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Publication Credibility</span>
-                                    <span class="result-value">${pubContext.credibility_score}/100</span>
-                                </div>
-                            ` : ''}
-                            ${pubContext.fact_checking !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Fact Checking</span>
-                                    <span class="result-value">
-                                        ${pubContext.fact_checking ? 
-                                            '<i class="fas fa-check" style="color: var(--accent);"></i> Yes' : 
-                                            '<i class="fas fa-times" style="color: var(--danger);"></i> No'}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Analysis Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'low' ? 'verified' : 
-                                        finding.severity === 'high' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
                         </div>
                     </div>
                 `;
@@ -2377,17 +2393,11 @@ function renderFactChecker(data) {
         }
 
         function renderBiasDetection(data) {
-            console.log('renderBiasDetection data:', data);
+            const overallBias = data.overall_bias_score || 0;
+            const biasLevel = data.bias_level || 'Unknown';
+            const objectivityScore = 100 - overallBias;
             
-            // Extract bias information
-            const overallBias = data.bias_score || data.overall_bias_score || data.score || 0;
-            const biasLevel = data.level || data.bias_level || 'Unknown';
-            const objectivityScore = data.objectivity_score || (100 - overallBias);
-            
-            let content = '';
-            
-            // Overall bias assessment
-            content += `
+            let content = `
                 <div class="service-section">
                     <h4 class="section-title">
                         <i class="fas fa-balance-scale"></i>
@@ -2406,23 +2416,21 @@ function renderFactChecker(data) {
                         </div>
                         <div class="result-item">
                             <span class="result-label">Objectivity Score</span>
-                            <span class="result-value">${objectivityScore.toFixed(0)}%</span>
+                            <span class="result-value">${objectivityScore}%</span>
                         </div>
-                        ${data.confidence !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Analysis Confidence</span>
-                                <span class="result-value">${data.confidence}%</span>
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
             `;
             
-            // Bias dimensions from either dimensions or detailed_analysis
-            const dimensions = data.dimensions || data.bias_dimensions;
-            const detailedAnalysis = data.detailed_analysis;
-            
-            if (dimensions || detailedAnalysis) {
+            // Bias dimensions
+            if (data.dimensions || data.bias_dimensions) {
+                const dimensions = data.dimensions || data.bias_dimensions;
+                const chartId = `bias-chart-${Date.now()}`;
+                const chartData = {
+                    labels: [],
+                    values: []
+                };
+                
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -2432,150 +2440,28 @@ function renderFactChecker(data) {
                         <div class="dimension-list">
                 `;
                 
-                if (dimensions) {
-                    Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                        let score, label, explanation;
-                        
-                        if (typeof dimData === 'object') {
-                            score = Math.abs(dimData.score || 0) * 100;
-                            label = dimData.label || dimension;
-                            explanation = dimData.explanation || '';
-                        } else {
-                            score = dimData;
-                            label = formatDimensionName(dimension);
-                            explanation = '';
-                        }
-                        
-                        content += `
-                            <div class="dimension-item">
-                                <div class="dimension-header">
-                                    <span class="dimension-name">${label}</span>
-                                    <span class="dimension-score">${score.toFixed(0)}%</span>
-                                </div>
-                                <div class="dimension-bar">
-                                    <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
-                                </div>
-                                ${explanation ? `<div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">${explanation}</div>` : ''}
-                            </div>
-                        `;
-                    });
-                } else if (detailedAnalysis) {
-                    // Handle detailed_analysis format
-                    const analysisMap = {
-                        'political_lean': { label: 'Political Bias', value: detailedAnalysis.political_label },
-                        'sensationalism': { label: 'Sensationalism', value: detailedAnalysis.sensationalism },
-                        'corporate_stance': { label: 'Corporate Bias', value: detailedAnalysis.corporate_stance },
-                        'establishment_trust': { label: 'Establishment Bias', value: detailedAnalysis.establishment_trust }
-                    };
+                Object.entries(dimensions).forEach(([dimension, dimData]) => {
+                    let score, label;
                     
-                    Object.entries(analysisMap).forEach(([key, info]) => {
-                        if (info.value) {
-                            content += `
-                                <div class="dimension-item">
-                                    <div class="dimension-header">
-                                        <span class="dimension-name">${info.label}</span>
-                                        <span class="dimension-score">${info.value}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    });
-                }
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-                
-                // Create visualization if we have dimensional data
-                if (dimensions && Object.keys(dimensions).length > 0) {
-                    content += `
-                        <div class="service-visualization">
-                            <div class="chart-container">
-                                <canvas id="biasChart-${Date.now()}"></canvas>
-                            </div>
-                        </div>
-                    `;
+                    if (typeof dimData === 'object') {
+                        score = Math.abs(dimData.score || 0) * 100;
+                        label = dimData.label || dimension;
+                    } else {
+                        score = dimData;
+                        label = formatDimensionName(dimension);
+                    }
                     
-                    // Create chart after DOM update
-                    setTimeout(() => {
-                        const chartCanvas = document.querySelector('#servicesGrid canvas[id^="biasChart-"]');
-                        if (chartCanvas) {
-                            const ctx = chartCanvas.getContext('2d');
-                            const labels = [];
-                            const values = [];
-                            
-                            Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                                if (typeof dimData === 'object') {
-                                    labels.push(dimData.label || formatDimensionName(dimension));
-                                    values.push(Math.abs(dimData.score || 0) * 100);
-                                } else {
-                                    labels.push(formatDimensionName(dimension));
-                                    values.push(dimData);
-                                }
-                            });
-                            
-                            new Chart(ctx, {
-                                type: 'polarArea',
-                                data: {
-                                    labels: labels,
-                                    datasets: [{
-                                        data: values,
-                                        backgroundColor: [
-                                            'rgba(255, 99, 132, 0.5)',
-                                            'rgba(54, 162, 235, 0.5)',
-                                            'rgba(255, 206, 86, 0.5)',
-                                            'rgba(75, 192, 192, 0.5)',
-                                            'rgba(153, 102, 255, 0.5)',
-                                            'rgba(255, 159, 64, 0.5)'
-                                        ],
-                                        borderWidth: 1
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            position: 'right',
-                                        }
-                                    },
-                                    scales: {
-                                        r: {
-                                            beginAtZero: true,
-                                            max: 100
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }, 100);
-                }
-            }
-            
-            // Loaded phrases
-            if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-quote-left"></i>
-                            Loaded Language Detected
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.loaded_phrases.forEach(phrase => {
+                    chartData.labels.push(label);
+                    chartData.values.push(score);
+                    
                     content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${phrase.text}"</div>
-                                <div class="claim-status claim-${phrase.severity === 'high' ? 'false' : 'unverified'}">
-                                    ${phrase.type || phrase.severity}
-                                </div>
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${label}</span>
+                                <span class="dimension-score">${score.toFixed(0)}%</span>
                             </div>
-                            <div class="claim-details">
-                                ${phrase.explanation || 'Potentially biased language'}
-                                ${phrase.context ? `<br><small>Context: "${phrase.context}"</small>` : ''}
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
                             </div>
                         </div>
                     `;
@@ -2584,118 +2470,9 @@ function renderFactChecker(data) {
                 content += `
                         </div>
                     </div>
-                `;
-            }
-            
-            // Manipulation tactics
-            if (data.manipulation_tactics && data.manipulation_tactics.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Manipulation Tactics
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.manipulation_tactics.forEach(tactic => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${tactic.name || tactic.type}</div>
-                            <div class="technique-description">
-                                ${tactic.description}
-                                <span class="technique-severity severity-${(tactic.severity || 'medium').toLowerCase()}">${tactic.severity || 'medium'}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Source analysis
-            if (data.source_analysis) {
-                const sourceAnalysis = data.source_analysis;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-users"></i>
-                            Source Diversity
-                        </h4>
-                        <div class="service-results">
-                            ${sourceAnalysis.total_sources !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Total Sources</span>
-                                    <span class="result-value">${sourceAnalysis.total_sources}</span>
-                                </div>
-                            ` : ''}
-                            ${sourceAnalysis.diversity_score !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Diversity Score</span>
-                                    <span class="result-value">${sourceAnalysis.diversity_score}%</span>
-                                </div>
-                            ` : ''}
-                            ${sourceAnalysis.primary_source ? `
-                                <div class="result-item">
-                                    <span class="result-label">Primary Source Type</span>
-                                    <span class="result-value">${sourceAnalysis.primary_source}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Key Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'low' ? 'verified' : 
-                                        finding.severity === 'high' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
+                    <div class="service-visualization">
+                        <div class="chart-container">
+                            <canvas id="${chartId}" data-chart-type="polarArea" data-chart-data='${JSON.stringify(chartData)}'></canvas>
                         </div>
                     </div>
                 `;
@@ -2767,8 +2544,6 @@ function renderFactChecker(data) {
                             ${claim.fact_check_result || claim.verification_details ? `
                                 <div class="claim-details">
                                     ${claim.fact_check_result || claim.verification_details}
-                                    ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.join(', ')}</small>` : ''}
                                 </div>
                             ` : ''}
                         </div>
@@ -2781,29 +2556,12 @@ function renderFactChecker(data) {
                 `;
             }
             
-            // Fact checking sources
-            if (data.fact_check_sources && data.fact_check_sources.length > 0) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-database"></i>
-                            Fact Checking Sources
-                        </div>
-                        <div class="info-box-content">
-                            Claims were verified against: ${data.fact_check_sources.join(', ')}
-                        </div>
-                    </div>
-                `;
-            }
-            
             return content;
         }
 
         function renderTransparency(data) {
-            console.log('renderTransparency data:', data);
-            
-            const score = data.transparency_score || data.score || 0;
-            const level = data.transparency_level || data.level || getTransparencyLevel(score);
+            const score = data.transparency_score || 0;
+            const level = data.transparency_level || getTransparencyLevel(score);
             
             let content = `
                 <div class="service-section">
@@ -2843,18 +2601,14 @@ function renderFactChecker(data) {
                 
                 Object.entries(factors).forEach(([factor, value]) => {
                     const present = typeof value === 'boolean' ? value : (value.present || value.found || false);
-                    const score = typeof value === 'number' ? value : (value.score || 0);
                     
                     content += `
                         <div class="result-item">
                             <span class="result-label">${formatFactorName(factor)}</span>
                             <span class="result-value">
-                                ${typeof value === 'boolean' || value.present !== undefined ?
-                                    (present ? 
-                                        '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
-                                        '<i class="fas fa-times" style="color: var(--danger);"></i> Missing') :
-                                    `${score}%`
-                                }
+                                ${present ? 
+                                    '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
+                                    '<i class="fas fa-times" style="color: var(--danger);"></i> Missing'}
                             </span>
                         </div>
                     `;
@@ -2866,125 +2620,13 @@ function renderFactChecker(data) {
                 `;
             }
             
-            // Disclosures found
-            if (data.disclosures_found && data.disclosures_found.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-file-contract"></i>
-                            Disclosures Found
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.disclosures_found.forEach(disclosure => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${disclosure.type || disclosure.name || 'Disclosure'}</div>
-                            <div class="technique-description">
-                                ${disclosure.content || disclosure.description || 'Information disclosed'}
-                                ${disclosure.location ? `<br><small>Location: ${disclosure.location}</small>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Missing disclosures
-            if (data.missing_disclosures && data.missing_disclosures.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Missing Disclosures
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.missing_disclosures.forEach(missing => {
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${missing.type || missing.name || 'Required disclosure'}</div>
-                                <div class="claim-status claim-false">
-                                    <i class="fas fa-times"></i>
-                                    Missing
-                                </div>
-                            </div>
-                            ${missing.importance || missing.description ? `
-                                <div class="claim-details">
-                                    ${missing.importance || missing.description}
-                                    ${missing.impact ? `<br><small>Impact: ${missing.impact}</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Transparency issues
-            if (data.issues && data.issues.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Transparency Issues
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.issues.forEach(issue => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${issue.type || issue.name || 'Issue'}</div>
-                            <div class="technique-description">
-                                ${issue.description || issue.details}
-                                ${issue.severity ? `<span class="technique-severity severity-${issue.severity.toLowerCase()}">${issue.severity} severity</span>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
             return content;
         }
 
         function renderManipulation(data) {
-            console.log('renderManipulation data:', data);
-            
-            const level = data.manipulation_level || data.level || 'Low';
-            const score = data.manipulation_score || data.score || 0;
-            const riskScore = data.risk_score !== undefined ? data.risk_score : score;
+            const level = data.manipulation_level || 'Unknown';
+            const score = data.manipulation_score || 0;
+            const techniquesCount = data.techniques_count || 0;
             
             let content = `
                 <div class="service-section">
@@ -2999,22 +2641,10 @@ function renderFactChecker(data) {
                                 ${level}
                             </span>
                         </div>
-                        ${riskScore !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Risk Score</span>
-                                <span class="result-value">${riskScore}/100</span>
-                            </div>
-                        ` : ''}
-                        ${data.techniques_count !== undefined ? `
+                        ${techniquesCount !== undefined ? `
                             <div class="result-item">
                                 <span class="result-label">Techniques Detected</span>
-                                <span class="result-value">${data.techniques_count}</span>
-                            </div>
-                        ` : ''}
-                        ${data.confidence !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Detection Confidence</span>
-                                <span class="result-value">${data.confidence}%</span>
+                                <span class="result-value">${techniquesCount}</span>
                             </div>
                         ` : ''}
                     </div>
@@ -3051,133 +2681,11 @@ function renderFactChecker(data) {
                 `;
             }
             
-            // Emotional tactics
-            if (data.emotional_tactics && data.emotional_tactics.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-heart"></i>
-                            Emotional Manipulation Tactics
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.emotional_tactics.forEach(tactic => {
-                    const impactClass = tactic.impact === 'high' ? 'false' : tactic.impact === 'low' ? 'verified' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${tactic.emotion || tactic.type}</div>
-                                <div class="claim-status claim-${impactClass}">
-                                    ${tactic.intensity || tactic.impact || 'Detected'}
-                                </div>
-                            </div>
-                            ${tactic.evidence || tactic.description ? `
-                                <div class="claim-details">
-                                    ${tactic.evidence || tactic.description}
-                                    ${tactic.examples && tactic.examples.length > 0 ? 
-                                        `<br><small>Examples: "${tactic.examples.join('", "')}"</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Rhetorical devices
-            if (data.rhetorical_devices && data.rhetorical_devices.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-comments"></i>
-                            Rhetorical Devices Used
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.rhetorical_devices.forEach(device => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${device.name || device.type}</div>
-                            <div class="technique-description">
-                                ${device.purpose || device.effect || 'Used in article'}
-                                ${device.example ? `<br><small>"${device.example}"</small>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Manipulation categories
-            if (data.categories) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-layer-group"></i>
-                            Manipulation Categories
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(data.categories).forEach(([category, details]) => {
-                    const score = typeof details === 'number' ? details : (details.score || details.count || 0);
-                    const maxScore = typeof details === 'object' && details.max ? details.max : 100;
-                    const percentage = maxScore > 0 ? (score / maxScore) * 100 : score;
-                    
-                    content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${formatFactorName(category)}</span>
-                                <span class="dimension-score">${score}${typeof details === 'object' && details.max ? `/${details.max}` : '%'}</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${percentage}%; background: ${getDimensionColor(100 - percentage)};"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
             return content;
         }
 
         function renderContentAnalysis(data) {
-            console.log('renderContentAnalysis data:', data);
-            
-            let content = '';
-            
-            // Main quality metrics
-            content += `
+            let content = `
                 <div class="service-section">
                     <h4 class="section-title">
                         <i class="fas fa-file-alt"></i>
@@ -3186,77 +2694,32 @@ function renderFactChecker(data) {
                     <div class="service-results">
             `;
             
-            // Quality score
-            if (data.quality_score !== undefined || data.overall_quality !== undefined) {
-                const qualityScore = data.quality_score || data.overall_quality;
+            if (data.quality_score !== undefined) {
                 content += `
                     <div class="result-item">
                         <span class="result-label">Overall Quality</span>
-                        <span class="result-value">${qualityScore}/100</span>
+                        <span class="result-value">${data.quality_score}/100</span>
                     </div>
                 `;
             }
             
-            // Readability
             if (data.readability) {
-                const readability = data.readability;
-                if (readability.score !== undefined) {
+                if (data.readability.score !== undefined) {
                     content += `
                         <div class="result-item">
                             <span class="result-label">Readability Score</span>
-                            <span class="result-value">${readability.score}/100</span>
+                            <span class="result-value">${data.readability.score}/100</span>
                         </div>
                     `;
                 }
-                if (readability.level) {
+                if (data.readability.level) {
                     content += `
                         <div class="result-item">
                             <span class="result-label">Reading Level</span>
-                            <span class="result-value">${readability.level}</span>
+                            <span class="result-value">${data.readability.level}</span>
                         </div>
                     `;
                 }
-                if (readability.grade_level) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Grade Level</span>
-                            <span class="result-value">Grade ${readability.grade_level}</span>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Structure
-            if (data.structure) {
-                const structure = data.structure;
-                if (structure.quality) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Structure Quality</span>
-                            <span class="status-badge status-${structure.quality.toLowerCase() === 'excellent' || structure.quality.toLowerCase() === 'good' ? 'high' : 'medium'}">
-                                ${structure.quality}
-                            </span>
-                        </div>
-                    `;
-                }
-                if (structure.score !== undefined) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Structure Score</span>
-                            <span class="result-value">${structure.score}/100</span>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Grammar score
-            if (data.grammar_score !== undefined) {
-                content += `
-                    <div class="result-item">
-                        <span class="result-label">Grammar Score</span>
-                        <span class="result-value">${data.grammar_score}/100</span>
-                    </div>
-                `;
             }
             
             content += `
@@ -3264,229 +2727,13 @@ function renderFactChecker(data) {
                 </div>
             `;
             
-            // Content metrics breakdown
-            if (data.metrics) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-line"></i>
-                            Detailed Metrics
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(data.metrics).forEach(([metric, value]) => {
-                    if (typeof value === 'number') {
-                        content += `
-                            <div class="dimension-item">
-                                <div class="dimension-header">
-                                    <span class="dimension-name">${formatMetricName(metric)}</span>
-                                    <span class="dimension-score">${value}${metric.includes('score') || metric.includes('percentage') ? '%' : ''}</span>
-                                </div>
-                                <div class="dimension-bar">
-                                    <div class="dimension-fill" style="width: ${metric.includes('score') || metric.includes('percentage') ? value : Math.min(value, 100)}%; background: ${getDimensionColor(value)};"></div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Style analysis
-            if (data.style_analysis || data.writing_style) {
-                const style = data.style_analysis || data.writing_style;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-pen-fancy"></i>
-                            Writing Style Analysis
-                        </h4>
-                        <div class="service-results">
-                            ${style.tone ? `
-                                <div class="result-item">
-                                    <span class="result-label">Tone</span>
-                                    <span class="result-value">${style.tone}</span>
-                                </div>
-                            ` : ''}
-                            ${style.voice ? `
-                                <div class="result-item">
-                                    <span class="result-label">Voice</span>
-                                    <span class="result-value">${style.voice}</span>
-                                </div>
-                            ` : ''}
-                            ${style.style || style.type ? `
-                                <div class="result-item">
-                                    <span class="result-label">Style</span>
-                                    <span class="result-value">${style.style || style.type}</span>
-                                </div>
-                            ` : ''}
-                            ${style.clarity ? `
-                                <div class="result-item">
-                                    <span class="result-label">Clarity</span>
-                                    <span class="result-value">${style.clarity}</span>
-                                </div>
-                            ` : ''}
-                            ${style.formality ? `
-                                <div class="result-item">
-                                    <span class="result-label">Formality</span>
-                                    <span class="result-value">${style.formality}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Text statistics
-            if (data.text_statistics) {
-                const stats = data.text_statistics;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-calculator"></i>
-                            Text Statistics
-                        </h4>
-                        <div class="service-results">
-                            ${stats.sentence_count !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Sentences</span>
-                                    <span class="result-value">${stats.sentence_count}</span>
-                                </div>
-                            ` : ''}
-                            ${stats.paragraph_count !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Paragraphs</span>
-                                    <span class="result-value">${stats.paragraph_count}</span>
-                                </div>
-                            ` : ''}
-                            ${stats.avg_sentence_length !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Avg. Sentence Length</span>
-                                    <span class="result-value">${stats.avg_sentence_length.toFixed(1)} words</span>
-                                </div>
-                            ` : ''}
-                            ${stats.complex_words_percentage !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Complex Words</span>
-                                    <span class="result-value">${stats.complex_words_percentage.toFixed(1)}%</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Issues found
-            if (data.issues && data.issues.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Content Issues
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.issues.forEach(issue => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${issue.type || issue.category || 'Issue'}</div>
-                            <div class="technique-description">
-                                ${issue.description || issue.details}
-                                ${issue.severity ? `<span class="technique-severity severity-${issue.severity.toLowerCase()}">${issue.severity}</span>` : ''}
-                                ${issue.location ? `<br><small>Location: ${issue.location}</small>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Strengths and weaknesses
-            if ((data.strengths && data.strengths.length > 0) || (data.weaknesses && data.weaknesses.length > 0)) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-clipboard-check"></i>
-                            Content Assessment
-                        </h4>
-                `;
-                
-                if (data.strengths && data.strengths.length > 0) {
-                    content += `
-                        <div style="margin-bottom: 1rem;">
-                            <h5 style="color: var(--accent); margin-bottom: 0.5rem;">
-                                <i class="fas fa-thumbs-up"></i> Strengths
-                            </h5>
-                            <ul style="margin-left: 1.5rem; color: var(--gray-700);">
-                                ${data.strengths.map(s => `<li>${s}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-                
-                if (data.weaknesses && data.weaknesses.length > 0) {
-                    content += `
-                        <div>
-                            <h5 style="color: var(--warning); margin-bottom: 0.5rem;">
-                                <i class="fas fa-thumbs-down"></i> Areas for Improvement
-                            </h5>
-                            <ul style="margin-left: 1.5rem; color: var(--gray-700);">
-                                ${data.weaknesses.map(w => `<li>${w}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-                
-                content += `
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
             return content;
         }
 
         function renderPlagiarism(data) {
-            console.log('renderPlagiarism data:', data);
-            
-            // Handle empty data case
-            if (!data || Object.keys(data).length === 0) {
-                return `
-                    <div class="empty-state">
-                        <i class="fas fa-copy"></i>
-                        <p class="empty-state-text">Plagiarism check not available</p>
-                        <p class="empty-state-subtext">This service requires Pro access</p>
-                    </div>
-                `;
-            }
-            
-            const similarity = data.similarity_score || data.plagiarism_score || data.similarity_percentage || 0;
+            const similarity = data.similarity_score || 0;
             const originality = data.originality_score !== undefined ? data.originality_score : (100 - similarity);
-            const status = data.status || (originality >= 80 ? 'Original' : originality >= 60 ? 'Mostly Original' : 'Potential Issues');
+            const status = originality >= 80 ? 'Original' : originality >= 60 ? 'Mostly Original' : 'Potential Issues';
             
             let content = `
                 <div class="service-section">
@@ -3509,12 +2756,6 @@ function renderFactChecker(data) {
                                 ${status}
                             </span>
                         </div>
-                        ${data.sources_checked !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Sources Checked</span>
-                                <span class="result-value">${data.sources_checked}</span>
-                            </div>
-                        ` : ''}
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${originality}%; background: var(--accent);"></div>
@@ -3534,21 +2775,15 @@ function renderFactChecker(data) {
                 `;
                 
                 data.matches.forEach(match => {
-                    const matchPercentage = match.similarity || match.match_percentage || match.percentage || 0;
+                    const matchPercentage = match.similarity || match.match_percentage || 0;
                     content += `
                         <div class="claim-item">
                             <div class="claim-header">
-                                <div class="claim-text">${match.source || match.url || match.title || 'Unknown source'}</div>
+                                <div class="claim-text">${match.source || match.url || 'Unknown source'}</div>
                                 <div class="claim-status">
                                     ${matchPercentage}% match
                                 </div>
                             </div>
-                            ${match.matched_text || match.excerpt ? `
-                                <div class="claim-details">
-                                    "${escapeHtml((match.matched_text || match.excerpt).substring(0, 150))}..."
-                                    ${match.published_date ? `<br><small>Published: ${formatDate(match.published_date)}</small>` : ''}
-                                </div>
-                            ` : ''}
                         </div>
                     `;
                 });
@@ -3559,76 +2794,107 @@ function renderFactChecker(data) {
                 `;
             }
             
-            // Analysis breakdown
-            if (data.analysis_breakdown) {
-                const breakdown = data.analysis_breakdown;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-pie"></i>
-                            Content Breakdown
-                        </h4>
-                        <div class="service-results">
-                            ${breakdown.original_content !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Original Content</span>
-                                    <span class="result-value">${breakdown.original_content}%</span>
-                                </div>
-                            ` : ''}
-                            ${breakdown.quoted_content !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Properly Quoted</span>
-                                    <span class="result-value">${breakdown.quoted_content}%</span>
-                                </div>
-                            ` : ''}
-                            ${breakdown.paraphrased_content !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Paraphrased</span>
-                                    <span class="result-value">${breakdown.paraphrased_content}%</span>
-                                </div>
-                            ` : ''}
-                            ${breakdown.potentially_plagiarized !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Potentially Plagiarized</span>
-                                    <span class="result-value" style="color: var(--danger);">${breakdown.potentially_plagiarized}%</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Recommendations
-            if (data.recommendations && data.recommendations.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Recommendations
-                        </h4>
-                        <ul style="margin-left: 1.5rem; color: var(--gray-700);">
-                            ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary || data.analysis_summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-info-circle"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary || data.analysis_summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
             return content;
+        }
+
+        // Chart configuration functions
+        function createRadarChartConfig(data) {
+            return {
+                type: 'radar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function createPolarAreaChartConfig(data) {
+            return {
+                type: 'polarArea',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.5)',
+                            'rgba(54, 162, 235, 0.5)',
+                            'rgba(255, 206, 86, 0.5)',
+                            'rgba(75, 192, 192, 0.5)',
+                            'rgba(153, 102, 255, 0.5)',
+                            'rgba(255, 159, 64, 0.5)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            };
+        }
+
+        function createBarChartConfig(data) {
+            return {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            };
         }
 
         // Utility functions
@@ -3647,7 +2913,6 @@ function renderFactChecker(data) {
             // Make error messages more user-friendly
             let displayMessage = message;
             
-            // Common error translations
             if (message.includes('timed out') || message.includes('timeout')) {
                 displayMessage = 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.';
             } else if (message.includes('extraction methods failed')) {
@@ -3661,7 +2926,6 @@ function renderFactChecker(data) {
             errorEl.textContent = displayMessage;
             errorEl.classList.add('active');
             
-            // Hide error after 10 seconds
             setTimeout(() => {
                 hideError();
             }, 10000);
@@ -3705,20 +2969,6 @@ function renderFactChecker(data) {
             return 'var(--danger)';
         }
 
-        function getEmotionColor(emotion) {
-            const emotionColors = {
-                'fear': '#EF4444',
-                'anger': '#DC2626',
-                'joy': '#10B981',
-                'sadness': '#3B82F6',
-                'trust': '#6366F1',
-                'disgust': '#A855F7',
-                'surprise': '#F59E0B',
-                'anticipation': '#EC4899'
-            };
-            return emotionColors[emotion.toLowerCase()] || '#6B7280';
-        }
-
         function formatDate(dateString) {
             if (!dateString) return 'Unknown';
             const date = new Date(dateString);
@@ -3747,18 +2997,6 @@ function renderFactChecker(data) {
             return dimensionNames[dimension.toLowerCase()] || formatFactorName(dimension);
         }
 
-        function formatMetricName(metric) {
-            return metric
-                .replace(/_/g, ' ')
-                .replace(/score/gi, '')
-                .trim()
-                .replace(/\b\w/g, l => l.toUpperCase());
-        }
-
-        function formatEmotionName(emotion) {
-            return emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        }
-
         function formatStatus(status) {
             const statusNames = {
                 'verified': 'Verified',
@@ -3777,23 +3015,13 @@ function renderFactChecker(data) {
             return 'Low Transparency';
         }
 
-        function formatNumber(num) {
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            }
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
-            }
-            return num.toString();
-        }
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // PDF download with comprehensive report
+        // Enhanced PDF download
         async function downloadPDF() {
             if (!currentAnalysis || !currentAnalysis.analysis || !currentAnalysis.article) {
                 showError('No analysis available to download');
@@ -3886,10 +3114,45 @@ function renderFactChecker(data) {
                 
                 yPosition += 10;
                 
-                // Analysis Summary
-                addText('ANALYSIS SUMMARY', 16, 'bold');
+                // Trust Score Analysis
+                addText('TRUST SCORE ANALYSIS', 16, 'bold');
                 yPosition += 5;
-                addText(currentAnalysis.analysis.summary || 'No summary available.', 12);
+                addText(getTrustSummaryExplanation(currentAnalysis.analysis.trust_score, currentAnalysis.analysis.trust_level, currentAnalysis.analysis), 12);
+                
+                yPosition += 10;
+                
+                // Component Scores
+                addText('TRUST COMPONENTS', 16, 'bold');
+                yPosition += 5;
+                
+                const components = [
+                    {
+                        name: 'Source Credibility',
+                        score: currentAnalysis.detailed_analysis?.source_credibility?.credibility_score || 0,
+                        explanation: getSourceCredibilityExplanation(currentAnalysis.detailed_analysis?.source_credibility)
+                    },
+                    {
+                        name: 'Author Credibility',
+                        score: currentAnalysis.detailed_analysis?.author_analyzer?.credibility_score || 0,
+                        explanation: getAuthorCredibilityExplanation(currentAnalysis.detailed_analysis?.author_analyzer)
+                    },
+                    {
+                        name: 'Objectivity Score',
+                        score: 100 - (currentAnalysis.detailed_analysis?.bias_detector?.overall_bias_score || 0),
+                        explanation: getObjectivityExplanation(currentAnalysis.detailed_analysis?.bias_detector)
+                    },
+                    {
+                        name: 'Fact Accuracy',
+                        score: calculateFactAccuracy(currentAnalysis.detailed_analysis?.fact_checker),
+                        explanation: getFactAccuracyExplanation(currentAnalysis.detailed_analysis?.fact_checker)
+                    }
+                ];
+                
+                components.forEach(comp => {
+                    addText(`${comp.name}: ${comp.score}%`, 12, 'bold');
+                    addText(comp.explanation, 11, 'normal', 5);
+                    yPosition += 3;
+                });
                 
                 // Key Findings
                 if (currentAnalysis.analysis.key_findings && currentAnalysis.analysis.key_findings.length > 0) {
@@ -3917,10 +3180,7 @@ function renderFactChecker(data) {
                 
                 services.forEach(service => {
                     const serviceData = detailedAnalysis[service.id];
-                    if (!serviceData) return;
-                    
-                    const actualData = serviceData.data || serviceData;
-                    if (!actualData || Object.keys(actualData).length === 0) return;
+                    if (!serviceData || Object.keys(serviceData).length === 0) return;
                     
                     // Add page break if needed
                     if (yPosition > pageHeight - 80) {
@@ -3935,113 +3195,16 @@ function renderFactChecker(data) {
                     yPosition += 5;
                     
                     // Service-specific content
-                    switch (service.id) {
-                        case 'source_credibility':
-                            if (actualData.credibility_score !== undefined) {
-                                addText(`Credibility Score: ${actualData.credibility_score}/100`, 12);
-                            }
-                            if (actualData.credibility_level) {
-                                addText(`Credibility Level: ${actualData.credibility_level}`, 12);
-                            }
-                            if (actualData.analysis_details) {
-                                addText('Analysis:', 12, 'bold');
-                                addText(actualData.analysis_details, 12, 'normal', 5);
-                            }
-                            break;
-                            
-                        case 'author_analyzer':
-                            if (actualData.name) {
-                                addText(`Author: ${actualData.name}`, 12);
-                            }
-                            if (actualData.credibility_score !== undefined) {
-                                addText(`Author Credibility: ${actualData.credibility_score}/100`, 12);
-                            }
-                            if (actualData.credentials) {
-                                addText(`Credentials: ${actualData.credentials}`, 12);
-                            }
-                            if (actualData.expertise_areas && actualData.expertise_areas.length > 0) {
-                                addText(`Expertise: ${actualData.expertise_areas.join(', ')}`, 12);
-                            }
-                            break;
-                            
-                        case 'bias_detector':
-                            if (actualData.overall_bias_score !== undefined) {
-                                addText(`Bias Score: ${actualData.overall_bias_score}/100`, 12);
-                            }
-                            if (actualData.bias_level) {
-                                addText(`Bias Level: ${actualData.bias_level}`, 12);
-                            }
-                            if (actualData.detected_biases && actualData.detected_biases.length > 0) {
-                                addText('Detected Biases:', 12, 'bold');
-                                actualData.detected_biases.forEach(bias => {
-                                    addText(`• ${bias.type || bias.name}: ${bias.description || bias.evidence}`, 12, 'normal', 5);
-                                });
-                            }
-                            break;
-                            
-                        case 'fact_checker':
-                            if (actualData.total_claims) {
-                                addText(`Claims Analyzed: ${actualData.total_claims}`, 12);
-                            }
-                            if (actualData.verified_claims !== undefined) {
-                                addText(`Verified Claims: ${actualData.verified_claims}`, 12);
-                            }
-                            if (actualData.claims && actualData.claims.length > 0) {
-                                addText('Individual Claims:', 12, 'bold');
-                                actualData.claims.forEach(claim => {
-                                    addText(`• "${claim.claim_text || claim.text}"`, 12, 'normal', 5);
-                                    addText(`  Status: ${claim.verification_status || 'unverified'}`, 11, 'normal', 10);
-                                });
-                            }
-                            break;
-                            
-                        case 'transparency_analyzer':
-                            if (actualData.transparency_score !== undefined) {
-                                addText(`Transparency Score: ${actualData.transparency_score}%`, 12);
-                            }
-                            if (actualData.transparency_issues && actualData.transparency_issues.length > 0) {
-                                addText('Transparency Issues:', 12, 'bold');
-                                actualData.transparency_issues.forEach(issue => {
-                                    addText(`• ${issue.description}`, 12, 'normal', 5);
-                                });
-                            }
-                            break;
-                            
-                        case 'manipulation_detector':
-                            if (actualData.manipulation_level) {
-                                addText(`Manipulation Risk: ${actualData.manipulation_level}`, 12);
-                            }
-                            if (actualData.techniques_found && actualData.techniques_found.length > 0) {
-                                addText('Detected Techniques:', 12, 'bold');
-                                actualData.techniques_found.forEach(technique => {
-                                    addText(`• ${technique.name || technique.type}: ${technique.description || technique.evidence}`, 12, 'normal', 5);
-                                });
-                            }
-                            break;
-                            
-                        case 'content_analyzer':
-                            if (actualData.readability_score !== undefined) {
-                                addText(`Readability Score: ${actualData.readability_score}/100`, 12);
-                            }
-                            if (actualData.reading_level) {
-                                addText(`Reading Level: ${actualData.reading_level}`, 12);
-                            }
-                            if (actualData.structure_quality) {
-                                addText(`Structure Quality: ${actualData.structure_quality}`, 12);
-                            }
-                            break;
-                            
-                        case 'plagiarism_detector':
-                            const originality = actualData.similarity_score !== undefined ? 
-                                100 - actualData.similarity_score : 100;
-                            addText(`Originality Score: ${originality}%`, 12);
-                            if (actualData.matched_sources && actualData.matched_sources.length > 0) {
-                                addText('Matched Sources:', 12, 'bold');
-                                actualData.matched_sources.forEach(source => {
-                                    addText(`• ${source.source || source.url}: ${source.similarity || source.match_percentage}% match`, 12, 'normal', 5);
-                                });
-                            }
-                            break;
+                    const previewData = getServicePreviewData(service.id, serviceData);
+                    previewData.forEach(item => {
+                        addText(`${item.label}: ${item.value}`, 12);
+                    });
+                    
+                    // Add service summary if available
+                    if (serviceData.summary) {
+                        yPosition += 3;
+                        addText('Summary:', 12, 'bold');
+                        addText(serviceData.summary, 11, 'normal', 5);
                     }
                     
                     yPosition += 10;
@@ -4104,11 +3267,6 @@ function renderFactChecker(data) {
                     showError('Sharing is not supported on this device');
                 });
             }
-        }
-
-        // Show upgrade modal (placeholder)
-        function showUpgradeModal() {
-            alert('Pro features coming soon! For now, all features are available.');
         }
     </script>
 </body>
