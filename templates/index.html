@@ -1,184 +1,4 @@
-function renderFactChecker(data) {
-            console.log('renderFactChecker data:', data);
-            
-            const verified = data.verified_claims || data.claims_verified || 0;
-            const total = data.total_claims || data.claims_analyzed || 0;
-            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-check-circle"></i>
-                        Fact Checking Summary
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Claims Analyzed</span>
-                            <span class="result-value">${total}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Verified Claims</span>
-                            <span class="result-value">${verified}</span>
-                        </div>
-                        ${data.disputed_claims !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Disputed Claims</span>
-                                <span class="result-value">${data.disputed_claims}</span>
-                            </div>
-                        ` : ''}
-                        <div class="result-item">
-                            <span class="result-label">Accuracy Rate</span>
-                            <span class="result-value">${accuracy}%</span>
-                        </div>
-                    </div>
-                    ${total > 0 ? `
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${accuracy}%"></div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            // Overall credibility
-            if (data.overall_credibility !== undefined) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Factual Credibility
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Credibility Score</span>
-                                <span class="result-value">${data.overall_credibility}%</span>
-                            </div>
-                            ${data.confidence_level ? `
-                                <div class="result-item">
-                                    <span class="result-label">Confidence Level</span>
-                                    <span class="status-badge status-${data.confidence_level.toLowerCase() === 'high' ? 'high' : 'medium'}">
-                                        ${data.confidence_level}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-            }
-            
-            // Individual claims
-            if (data.claims && data.claims.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Individual Claims Analysis
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.claims.forEach(claim => {
-                    const status = claim.verification_status || claim.status || 'unverified';
-                    const statusClass = status === 'verified' || status === 'true' ? 'verified' : 
-                                      status === 'false' || status === 'disputed' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' || status === 'true' ? 'fa-check' : 
-                                     status === 'false' || status === 'disputed' ? 'fa-times' : 'fa-question';
-                    
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text || 'Claim text unavailable')}"</div>
-                                <div class="claim-status claim-${statusClass}">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${formatStatus(status)}
-                                </div>
-                            </div>
-                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
-                                <div class="claim-details">
-                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
-                                    ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.map(s => s.name || s).join(', ')}</small>` : ''}
-                                    ${claim.confidence ? `<br><small>Confidence: ${claim.confidence}%</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Claim categories if available
-            if (data.claim_categories) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-pie"></i>
-                            Claim Categories
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(data.claim_categories).forEach(([category, count]) => {
-                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                    content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${formatFactorName(category)}</span>
-                                <span class="dimension-score">${count} claims (${percentage}%)</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${percentage}%; background: var(--primary);"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Fact checking sources
-            if (data.sources_used && data.sources_used.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-database"></i>
-                            Verification Sources
-                        </h4>
-                        <div class="techniques-grid">
-                            ${data.sources_used.map(source => `
-                                <div class="technique-card">
-                                    <div class="technique-name">${source.name || source}</div>
-                                    ${source.type ? `<div class="technique-description">Type: ${source.type}</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -248,6 +68,10 @@ function renderFactChecker(data) {
             --gradient-primary: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
             --gradient-premium: linear-gradient(135deg, #FFD93D 0%, #FFB344 100%);
             --gradient-dark: linear-gradient(180deg, #1F2937 0%, #111827 100%);
+            --gradient-trust-high: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            --gradient-trust-medium: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            --gradient-trust-low: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            --gradient-trust-very-low: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
         }
 
         /* Global Reset */
@@ -528,7 +352,7 @@ function renderFactChecker(data) {
             }
         }
 
-        /* Trust Score Section */
+        /* Enhanced Trust Score Section */
         .trust-score-section {
             background: white;
             border-radius: var(--radius-lg);
@@ -537,6 +361,16 @@ function renderFactChecker(data) {
             box-shadow: var(--shadow-md);
             position: relative;
             overflow: hidden;
+        }
+
+        .trust-score-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
         }
 
         .trust-score-header {
@@ -548,58 +382,172 @@ function renderFactChecker(data) {
 
         .trust-score-content {
             display: grid;
-            grid-template-columns: 200px 1fr;
+            grid-template-columns: 250px 1fr;
             gap: var(--space-xl);
-            align-items: center;
+            align-items: flex-start;
         }
 
         .trust-gauge-container {
             position: relative;
-            width: 200px;
-            height: 200px;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto;
+        }
+
+        .trust-gauge-visual {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .trust-gauge-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 180deg,
+                var(--danger) 0deg,
+                var(--warning) 90deg,
+                var(--info) 180deg,
+                var(--accent) 270deg
+            );
+            mask: radial-gradient(circle, transparent 60%, black 60%);
+            -webkit-mask: radial-gradient(circle, transparent 60%, black 60%);
+            animation: rotateIn 1s ease-out;
+        }
+
+        @keyframes rotateIn {
+            from { transform: rotate(-90deg); opacity: 0; }
+            to { transform: rotate(0deg); opacity: 1; }
+        }
+
+        .trust-gauge-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: white;
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .trust-gauge-score {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .trust-gauge-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .trust-score-details {
+            flex: 1;
         }
 
         .trust-score-details h2 {
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: var(--space-sm);
+            color: var(--gray-900);
         }
 
         .trust-level {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .trust-level-icon {
+            font-size: 1.25rem;
         }
 
         .trust-summary {
-            color: var(--gray-600);
+            color: var(--gray-700);
             line-height: 1.8;
-            margin-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+            font-size: 1.125rem;
+        }
+
+        .trust-explained {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+            border-left: 4px solid var(--primary);
+        }
+
+        .trust-explained-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: var(--space-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .trust-explained-content {
+            color: var(--gray-700);
+            line-height: 1.6;
         }
 
         .trust-breakdown {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-md);
+            gap: var(--space-lg);
             margin-top: var(--space-lg);
             padding-top: var(--space-lg);
             border-top: 1px solid var(--gray-200);
         }
 
         .breakdown-item {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .breakdown-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--gray-300);
+            box-shadow: var(--shadow-md);
+        }
+
+        .breakdown-header {
             display: flex;
             align-items: center;
             gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
         }
 
         .breakdown-icon {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
+            font-size: 1.125rem;
         }
 
         .breakdown-positive { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
@@ -612,13 +560,41 @@ function renderFactChecker(data) {
         }
 
         .breakdown-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
         }
 
         .breakdown-value {
-            font-weight: 600;
+            font-size: 1.5rem;
+            font-weight: 700;
             color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .breakdown-explanation {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .breakdown-progress {
+            margin-top: var(--space-sm);
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .breakdown-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease-out;
+            animation: progressFill 1s ease-out;
+        }
+
+        @keyframes progressFill {
+            from { width: 0; }
         }
 
         .download-section {
@@ -1305,11 +1281,11 @@ function renderFactChecker(data) {
     <main class="main-content">
         <!-- Results Section -->
         <div id="resultsSection" class="results-section">
-            <!-- Trust Score Section -->
+            <!-- Enhanced Trust Score Section -->
             <div class="trust-score-section">
                 <div class="trust-score-header">
                     <div>
-                        <h2>Overall Trust Score</h2>
+                        <h2>Overall Trust Score Analysis</h2>
                     </div>
                     <div class="download-section">
                         <button class="download-button" onclick="downloadPDF()">
@@ -1324,11 +1300,28 @@ function renderFactChecker(data) {
                 </div>
                 <div class="trust-score-content">
                     <div class="trust-gauge-container">
-                        <canvas id="trustGauge"></canvas>
+                        <div class="trust-gauge-visual">
+                            <div class="trust-gauge-ring" id="trustGaugeRing"></div>
+                            <div class="trust-gauge-inner">
+                                <div class="trust-gauge-score" id="trustGaugeScore">0</div>
+                                <div class="trust-gauge-label">out of 100</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="trust-score-details">
                         <div id="trustLevel" class="trust-level"></div>
                         <p id="trustSummary" class="trust-summary"></p>
+                        
+                        <div class="trust-explained">
+                            <div class="trust-explained-title">
+                                <i class="fas fa-info-circle"></i>
+                                What We Analyzed
+                            </div>
+                            <div class="trust-explained-content">
+                                We examined this article across 8 key dimensions: source credibility, author expertise, factual accuracy, bias levels, transparency, manipulation tactics, content quality, and originality. Each component contributes to the overall trust score you see here.
+                            </div>
+                        </div>
+                        
                         <div id="trustBreakdown" class="trust-breakdown"></div>
                     </div>
                 </div>
@@ -1553,7 +1546,7 @@ function renderFactChecker(data) {
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Display trust score with gauge and breakdown
+        // Enhanced display trust score with explanations and visual improvements
         function displayTrustScore(analysis, detailedAnalysis) {
             if (!analysis) {
                 console.error('No analysis data provided to displayTrustScore');
@@ -1563,101 +1556,212 @@ function renderFactChecker(data) {
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
-            document.getElementById('trustLevel').textContent = `${level} (${score}/100)`;
-            document.getElementById('trustLevel').style.color = getScoreColor(score);
-            document.getElementById('trustSummary').textContent = analysis.summary || '';
+            // Update gauge visual
+            const gaugeScore = document.getElementById('trustGaugeScore');
+            const gaugeRing = document.getElementById('trustGaugeRing');
             
-            // Create trust breakdown
+            // Animate score counter
+            let currentScore = 0;
+            const increment = score / 50;
+            const timer = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= score) {
+                    currentScore = score;
+                    clearInterval(timer);
+                }
+                gaugeScore.textContent = Math.round(currentScore);
+            }, 20);
+            
+            // Set gauge ring color based on score
+            let gradientColor;
+            if (score >= 80) {
+                gradientColor = 'var(--gradient-trust-high)';
+            } else if (score >= 60) {
+                gradientColor = 'var(--gradient-trust-medium)';
+            } else if (score >= 40) {
+                gradientColor = 'var(--gradient-trust-low)';
+            } else {
+                gradientColor = 'var(--gradient-trust-very-low)';
+            }
+            
+            gaugeRing.style.background = `conic-gradient(
+                ${gradientColor} 0deg ${score * 3.6}deg,
+                var(--gray-200) ${score * 3.6}deg 360deg
+            )`;
+            
+            // Update trust level with icon and color
+            let levelIcon, levelColor, levelExplanation;
+            if (score >= 80) {
+                levelIcon = 'fa-check-circle';
+                levelColor = 'var(--accent)';
+                levelExplanation = 'This article meets high standards for credibility and accuracy.';
+            } else if (score >= 60) {
+                levelIcon = 'fa-info-circle';
+                levelColor = 'var(--info)';
+                levelExplanation = 'This article is generally trustworthy with some minor concerns.';
+            } else if (score >= 40) {
+                levelIcon = 'fa-exclamation-triangle';
+                levelColor = 'var(--warning)';
+                levelExplanation = 'This article has significant issues that affect its trustworthiness.';
+            } else {
+                levelIcon = 'fa-times-circle';
+                levelColor = 'var(--danger)';
+                levelExplanation = 'This article has serious credibility issues and should be verified with other sources.';
+            }
+            
+            const trustLevelEl = document.getElementById('trustLevel');
+            trustLevelEl.innerHTML = `
+                <i class="fas ${levelIcon} trust-level-icon" style="color: ${levelColor};"></i>
+                <span style="color: ${levelColor};">${level}</span>
+            `;
+            
+            // Enhanced summary with explanation
+            const summaryEl = document.getElementById('trustSummary');
+            summaryEl.innerHTML = `
+                ${analysis.summary || levelExplanation}
+                <br><br>
+                <strong>What this means:</strong> A trust score of ${score}/100 indicates that this article is 
+                ${score >= 80 ? 'highly reliable and well-sourced' : 
+                  score >= 60 ? 'reasonably reliable but should be cross-referenced' :
+                  score >= 40 ? 'questionable and requires careful verification' :
+                  'unreliable and likely contains misinformation'}.
+            `;
+            
+            // Create enhanced breakdown with explanations
             const breakdownData = [
                 {
                     icon: 'fa-shield-alt',
                     label: 'Source Credibility',
                     value: detailedAnalysis?.source_credibility?.data?.credibility_score || 0,
+                    explanation: getSourceCredibilityExplanation(detailedAnalysis?.source_credibility?.data),
                     type: getBreakdownType(detailedAnalysis?.source_credibility?.data?.credibility_score || 0)
                 },
                 {
                     icon: 'fa-user-check',
                     label: 'Author Credibility',
                     value: detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
+                    explanation: getAuthorCredibilityExplanation(detailedAnalysis?.author_analyzer?.data),
                     type: getBreakdownType(detailedAnalysis?.author_analyzer?.data?.credibility_score || 0)
                 },
                 {
                     icon: 'fa-balance-scale',
-                    label: 'Bias Score',
+                    label: 'Objectivity Score',
                     value: 100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
+                    explanation: getBiasExplanation(detailedAnalysis?.bias_detector?.data),
                     type: getBreakdownType(100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0))
                 },
                 {
                     icon: 'fa-check-double',
                     label: 'Fact Accuracy',
                     value: calculateFactAccuracy(detailedAnalysis?.fact_checker?.data),
+                    explanation: getFactAccuracyExplanation(detailedAnalysis?.fact_checker?.data),
                     type: getBreakdownType(calculateFactAccuracy(detailedAnalysis?.fact_checker?.data))
                 }
             ];
             
             let breakdownHtml = '';
             breakdownData.forEach(item => {
+                const progressColor = item.value >= 80 ? 'var(--accent)' : 
+                                    item.value >= 60 ? 'var(--info)' :
+                                    item.value >= 40 ? 'var(--warning)' : 'var(--danger)';
+                
                 breakdownHtml += `
                     <div class="breakdown-item">
-                        <div class="breakdown-icon breakdown-${item.type}">
-                            <i class="fas ${item.icon}"></i>
-                        </div>
-                        <div class="breakdown-content">
-                            <div class="breakdown-label">${item.label}</div>
-                            <div class="breakdown-value">${item.value}%</div>
+                        <div class="breakdown-header">
+                            <div class="breakdown-icon breakdown-${item.type}">
+                                <i class="fas ${item.icon}"></i>
+                            </div>
+                            <div class="breakdown-content">
+                                <div class="breakdown-label">${item.label}</div>
+                                <div class="breakdown-value">${item.value}%</div>
+                                <div class="breakdown-explanation">${item.explanation}</div>
+                                <div class="breakdown-progress">
+                                    <div class="breakdown-progress-fill" 
+                                         style="width: ${item.value}%; background: ${progressColor};"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
             
             document.getElementById('trustBreakdown').innerHTML = breakdownHtml;
-            
-            // Create gauge chart
-            const ctx = document.getElementById('trustGauge').getContext('2d');
-            
-            if (charts.trustGauge) {
-                charts.trustGauge.destroy();
+        }
+
+        // Helper functions for explanations
+        function getSourceCredibilityExplanation(data) {
+            if (!data || data.credibility_score === undefined) {
+                return "Unable to verify the credibility of this news source.";
             }
             
-            charts.trustGauge = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [score, 100 - score],
-                        backgroundColor: [getScoreColor(score), '#E5E7EB'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    circumference: 180,
-                    rotation: -90,
-                    cutout: '80%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
-                },
-                plugins: [{
-                    id: 'centerText',
-                    beforeDraw: function(chart) {
-                        const ctx = chart.ctx;
-                        ctx.save();
-                        
-                        const centerX = chart.width / 2;
-                        const centerY = chart.height / 2 + 20;
-                        
-                        ctx.font = 'bold 48px Inter';
-                        ctx.fillStyle = getScoreColor(score);
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(score, centerX, centerY);
-                        
-                        ctx.restore();
-                    }
-                }]
-            });
+            const score = data.credibility_score;
+            if (score >= 80) {
+                return "Established, reputable news source with strong editorial standards";
+            } else if (score >= 60) {
+                return "Generally reliable source with moderate credibility";
+            } else if (score >= 40) {
+                return "Questionable source with limited credibility";
+            } else if (score > 0) {
+                return "Unreliable source with poor credibility record";
+            } else {
+                return "Unknown or unverifiable news source";
+            }
+        }
+
+        function getAuthorCredibilityExplanation(data) {
+            if (!data || data.credibility_score === undefined) {
+                return "Author information not available or could not be verified.";
+            }
+            
+            const score = data.credibility_score;
+            if (score >= 80) {
+                return "Verified journalist with established credentials and expertise";
+            } else if (score >= 60) {
+                return "Author has some verifiable credentials";
+            } else if (score >= 40) {
+                return "Limited information available about the author";
+            } else if (score > 0) {
+                return "Author lacks verifiable credentials or expertise";
+            } else {
+                return "No author information provided";
+            }
+        }
+
+        function getBiasExplanation(data) {
+            if (!data || data.overall_bias_score === undefined) {
+                return "Bias analysis could not be completed.";
+            }
+            
+            const biasScore = data.overall_bias_score;
+            if (biasScore <= 20) {
+                return "Minimal bias detected - balanced and objective reporting";
+            } else if (biasScore <= 40) {
+                return "Some bias present but generally balanced";
+            } else if (biasScore <= 60) {
+                return "Moderate bias detected - noticeable slant in reporting";
+            } else {
+                return "Significant bias present - heavily slanted reporting";
+            }
+        }
+
+        function getFactAccuracyExplanation(data) {
+            if (!data || !data.total_claims || data.total_claims === 0) {
+                return "No specific factual claims found to verify in this article.";
+            }
+            
+            const verified = data.verified_claims || 0;
+            const total = data.total_claims;
+            const accuracy = Math.round((verified / total) * 100);
+            
+            if (accuracy >= 80) {
+                return `${verified} of ${total} factual claims verified as accurate`;
+            } else if (accuracy >= 60) {
+                return `${verified} of ${total} claims verified - some unverified content`;
+            } else if (accuracy >= 40) {
+                return `Only ${verified} of ${total} claims could be verified`;
+            } else {
+                return `Most claims (${total - verified} of ${total}) could not be verified`;
+            }
         }
 
         // Calculate fact accuracy percentage
@@ -2705,8 +2809,10 @@ function renderFactChecker(data) {
         }
 
         function renderFactChecker(data) {
-            const verified = data.verified_claims || 0;
-            const total = data.total_claims || 0;
+            console.log('renderFactChecker data:', data);
+            
+            const verified = data.verified_claims || data.claims_verified || 0;
+            const total = data.total_claims || data.claims_analyzed || 0;
             const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
             
             let content = `
@@ -2724,6 +2830,12 @@ function renderFactChecker(data) {
                             <span class="result-label">Verified Claims</span>
                             <span class="result-value">${verified}</span>
                         </div>
+                        ${data.disputed_claims !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Disputed Claims</span>
+                                <span class="result-value">${data.disputed_claims}</span>
+                            </div>
+                        ` : ''}
                         <div class="result-item">
                             <span class="result-label">Accuracy Rate</span>
                             <span class="result-value">${accuracy}%</span>
@@ -2737,6 +2849,47 @@ function renderFactChecker(data) {
                 </div>
             `;
             
+            // Overall credibility
+            if (data.overall_credibility !== undefined) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-shield-alt"></i>
+                            Factual Credibility
+                        </h4>
+                        <div class="service-results">
+                            <div class="result-item">
+                                <span class="result-label">Credibility Score</span>
+                                <span class="result-value">${data.overall_credibility}%</span>
+                            </div>
+                            ${data.confidence_level ? `
+                                <div class="result-item">
+                                    <span class="result-label">Confidence Level</span>
+                                    <span class="status-badge status-${data.confidence_level.toLowerCase() === 'high' ? 'high' : 'medium'}">
+                                        ${data.confidence_level}
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Individual claims
             if (data.claims && data.claims.length > 0) {
                 content += `
@@ -2749,26 +2902,27 @@ function renderFactChecker(data) {
                 `;
                 
                 data.claims.forEach(claim => {
-                    const status = claim.verification_status || 'unverified';
-                    const statusClass = status === 'verified' ? 'verified' : 
-                                      status === 'false' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' ? 'fa-check' : 
-                                     status === 'false' ? 'fa-times' : 'fa-question';
+                    const status = claim.verification_status || claim.status || 'unverified';
+                    const statusClass = status === 'verified' || status === 'true' ? 'verified' : 
+                                      status === 'false' || status === 'disputed' ? 'false' : 'unverified';
+                    const statusIcon = status === 'verified' || status === 'true' ? 'fa-check' : 
+                                     status === 'false' || status === 'disputed' ? 'fa-times' : 'fa-question';
                     
                     content += `
                         <div class="claim-item">
                             <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim_text || claim.text)}"</div>
+                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text || 'Claim text unavailable')}"</div>
                                 <div class="claim-status claim-${statusClass}">
                                     <i class="fas ${statusIcon}"></i>
                                     ${formatStatus(status)}
                                 </div>
                             </div>
-                            ${claim.fact_check_result || claim.verification_details ? `
+                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
                                 <div class="claim-details">
-                                    ${claim.fact_check_result || claim.verification_details}
+                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
                                     ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.join(', ')}</small>` : ''}
+                                        `<br><small>Sources: ${claim.sources.map(s => s.name || s).join(', ')}</small>` : ''}
+                                    ${claim.confidence ? `<br><small>Confidence: ${claim.confidence}%</small>` : ''}
                                 </div>
                             ` : ''}
                         </div>
@@ -2781,16 +2935,53 @@ function renderFactChecker(data) {
                 `;
             }
             
-            // Fact checking sources
-            if (data.fact_check_sources && data.fact_check_sources.length > 0) {
+            // Claim categories if available
+            if (data.claim_categories) {
                 content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-database"></i>
-                            Fact Checking Sources
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-pie"></i>
+                            Claim Categories
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.claim_categories).forEach(([category, count]) => {
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${formatFactorName(category)}</span>
+                                <span class="dimension-score">${count} claims (${percentage}%)</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${percentage}%; background: var(--primary);"></div>
+                            </div>
                         </div>
-                        <div class="info-box-content">
-                            Claims were verified against: ${data.fact_check_sources.join(', ')}
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Fact checking sources
+            if (data.sources_used && data.sources_used.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-database"></i>
+                            Verification Sources
+                        </h4>
+                        <div class="techniques-grid">
+                            ${data.sources_used.map(source => `
+                                <div class="technique-card">
+                                    <div class="technique-name">${source.name || source}</div>
+                                    ${source.type ? `<div class="technique-description">Type: ${source.type}</div>` : ''}
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
