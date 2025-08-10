@@ -191,34 +191,46 @@ class TruthLensApp {
             };
         }
 
-        // Create shortcuts for backward compatibility
-        // This allows the frontend to use data.bias_analysis instead of data.detailed_analysis.bias_detector
+        // CRITICAL FIX: Create shortcuts WITHOUT removing original structure
+        // This allows BOTH access patterns to work:
+        // 1. data.bias_analysis (for app.js)
+        // 2. data.detailed_analysis.bias_detector (for index.html)
         if (data.detailed_analysis) {
-            // Map new service names to old expected names
+            // Create top-level shortcuts for app.js compatibility
             data.bias_analysis = data.detailed_analysis.bias_detector || {};
             data.author_analysis = data.detailed_analysis.author_analyzer || {};
             data.source_credibility = data.detailed_analysis.source_credibility || {};
-            data.fact_checks = data.detailed_analysis.fact_checker || {};
             data.transparency_analysis = data.detailed_analysis.transparency_analyzer || {};
             data.persuasion_analysis = data.detailed_analysis.manipulation_detector || {};
             data.content_analysis = data.detailed_analysis.content_analyzer || {};
             data.plagiarism_analysis = data.detailed_analysis.plagiarism_detector || {};
             
-            // Also ensure fact_checks is in the expected format
-            if (data.fact_checks && !Array.isArray(data.fact_checks)) {
-                // Convert fact checker data to array format if needed
-                if (data.fact_checks.claims && Array.isArray(data.fact_checks.claims)) {
-                    data.fact_checks = data.fact_checks.claims;
-                } else {
-                    data.fact_checks = [];
-                }
+            // Handle fact_checks specially - it needs to be an array
+            const factChecker = data.detailed_analysis.fact_checker || {};
+            if (factChecker.claims && Array.isArray(factChecker.claims)) {
+                data.fact_checks = factChecker.claims;
+            } else {
+                data.fact_checks = [];
             }
+            
+            // IMPORTANT: Keep the original detailed_analysis structure intact!
+            // Do NOT delete or modify data.detailed_analysis
         }
 
         // Ensure trust_score is at the root level for backward compatibility
         if (!data.trust_score && data.analysis && data.analysis.trust_score !== undefined) {
             data.trust_score = data.analysis.trust_score;
         }
+
+        // Log the final structure for debugging
+        console.log('Normalized data structure:', {
+            hasAnalysis: !!data.analysis,
+            hasTrustScore: data.analysis?.trust_score !== undefined,
+            hasDetailedAnalysis: !!data.detailed_analysis,
+            hasBiasShortcut: !!data.bias_analysis,
+            hasBiasInDetailed: !!data.detailed_analysis?.bias_detector,
+            topLevelKeys: Object.keys(data)
+        });
 
         return data;
     }
