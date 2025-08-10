@@ -1,184 +1,4 @@
-function renderFactChecker(data) {
-            console.log('renderFactChecker data:', data);
-            
-            const verified = data.verified_claims || data.claims_verified || 0;
-            const total = data.total_claims || data.claims_analyzed || 0;
-            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-check-circle"></i>
-                        Fact Checking Summary
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Claims Analyzed</span>
-                            <span class="result-value">${total}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Verified Claims</span>
-                            <span class="result-value">${verified}</span>
-                        </div>
-                        ${data.disputed_claims !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Disputed Claims</span>
-                                <span class="result-value">${data.disputed_claims}</span>
-                            </div>
-                        ` : ''}
-                        <div class="result-item">
-                            <span class="result-label">Accuracy Rate</span>
-                            <span class="result-value">${accuracy}%</span>
-                        </div>
-                    </div>
-                    ${total > 0 ? `
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${accuracy}%"></div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            // Overall credibility
-            if (data.overall_credibility !== undefined) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Factual Credibility
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Credibility Score</span>
-                                <span class="result-value">${data.overall_credibility}%</span>
-                            </div>
-                            ${data.confidence_level ? `
-                                <div class="result-item">
-                                    <span class="result-label">Confidence Level</span>
-                                    <span class="status-badge status-${data.confidence_level.toLowerCase() === 'high' ? 'high' : 'medium'}">
-                                        ${data.confidence_level}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-            }
-            
-            // Individual claims
-            if (data.claims && data.claims.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Individual Claims Analysis
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.claims.forEach(claim => {
-                    const status = claim.verification_status || claim.status || 'unverified';
-                    const statusClass = status === 'verified' || status === 'true' ? 'verified' : 
-                                      status === 'false' || status === 'disputed' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' || status === 'true' ? 'fa-check' : 
-                                     status === 'false' || status === 'disputed' ? 'fa-times' : 'fa-question';
-                    
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text || 'Claim text unavailable')}"</div>
-                                <div class="claim-status claim-${statusClass}">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${formatStatus(status)}
-                                </div>
-                            </div>
-                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
-                                <div class="claim-details">
-                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
-                                    ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.map(s => s.name || s).join(', ')}</small>` : ''}
-                                    ${claim.confidence ? `<br><small>Confidence: ${claim.confidence}%</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Claim categories if available
-            if (data.claim_categories) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-pie"></i>
-                            Claim Categories
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(data.claim_categories).forEach(([category, count]) => {
-                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                    content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${formatFactorName(category)}</span>
-                                <span class="dimension-score">${count} claims (${percentage}%)</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${percentage}%; background: var(--primary);"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Fact checking sources
-            if (data.sources_used && data.sources_used.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-database"></i>
-                            Verification Sources
-                        </h4>
-                        <div class="techniques-grid">
-                            ${data.sources_used.map(source => `
-                                <div class="technique-card">
-                                    <div class="technique-name">${source.name || source}</div>
-                                    ${source.type ? `<div class="technique-description">Type: ${source.type}</div>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -207,6 +27,12 @@ function renderFactChecker(data) {
             --warning: #F59E0B;
             --danger: #EF4444;
             --info: #3B82F6;
+            
+            /* Gradient variations for trust scores */
+            --gradient-excellent: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+            --gradient-good: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+            --gradient-fair: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+            --gradient-poor: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
             
             /* Neutral Colors */
             --gray-50: #F9FAFB;
@@ -528,7 +354,7 @@ function renderFactChecker(data) {
             }
         }
 
-        /* Trust Score Section */
+        /* Enhanced Trust Score Section */
         .trust-score-section {
             background: white;
             border-radius: var(--radius-lg);
@@ -548,17 +374,83 @@ function renderFactChecker(data) {
 
         .trust-score-content {
             display: grid;
-            grid-template-columns: 200px 1fr;
+            grid-template-columns: 240px 1fr;
             gap: var(--space-xl);
             align-items: center;
         }
 
+        /* Enhanced Gauge Container */
         .trust-gauge-container {
             position: relative;
-            width: 200px;
-            height: 200px;
+            width: 240px;
+            height: 240px;
         }
 
+        .trust-gauge-visual {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gauge-background {
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: var(--gray-100);
+        }
+
+        .gauge-fill {
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 180deg,
+                transparent 0deg,
+                var(--gauge-color, var(--primary)) var(--gauge-angle, 0deg),
+                transparent var(--gauge-angle, 0deg)
+            );
+            mask: radial-gradient(circle at center, transparent 65%, black 65%);
+            -webkit-mask: radial-gradient(circle at center, transparent 65%, black 65%);
+            transition: all 0.8s ease;
+        }
+
+        .gauge-center {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .gauge-score {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            background: var(--gauge-gradient, var(--gradient-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .gauge-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Trust Score Details */
         .trust-score-details h2 {
             font-size: 2rem;
             font-weight: 700;
@@ -566,35 +458,129 @@ function renderFactChecker(data) {
         }
 
         .trust-level {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: var(--space-sm);
-        }
-
-        .trust-summary {
-            color: var(--gray-600);
-            line-height: 1.8;
             margin-bottom: var(--space-md);
-        }
-
-        .trust-breakdown {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-md);
-            margin-top: var(--space-lg);
-            padding-top: var(--space-lg);
-            border-top: 1px solid var(--gray-200);
-        }
-
-        .breakdown-item {
             display: flex;
             align-items: center;
             gap: var(--space-sm);
         }
 
-        .breakdown-icon {
+        .trust-level-icon {
             width: 36px;
             height: 36px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .trust-level-excellent { 
+            color: var(--accent); 
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .trust-level-good { 
+            color: var(--info); 
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .trust-level-fair { 
+            color: var(--warning); 
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .trust-level-poor { 
+            color: var(--danger); 
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .trust-summary {
+            color: var(--gray-700);
+            line-height: 1.8;
+            margin-bottom: var(--space-lg);
+            font-size: 1.125rem;
+        }
+
+        /* What We Analyzed Section */
+        .analysis-overview {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .analysis-overview-title {
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            color: var(--gray-900);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .analysis-overview-title i {
+            color: var(--primary);
+        }
+
+        .analysis-dimensions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-sm);
+        }
+
+        .dimension-check {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            color: var(--gray-700);
+        }
+
+        .dimension-check i {
+            color: var(--accent);
+            font-size: 0.875rem;
+        }
+
+        /* Enhanced Trust Breakdown */
+        .trust-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-lg);
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 2px solid var(--gray-100);
+        }
+
+        .breakdown-item {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .breakdown-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--gray-200);
+        }
+
+        .breakdown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-sm);
+        }
+
+        .breakdown-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .breakdown-icon {
+            width: 32px;
+            height: 32px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
@@ -607,20 +593,57 @@ function renderFactChecker(data) {
         .breakdown-negative { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
         .breakdown-neutral { background: rgba(59, 130, 246, 0.1); color: var(--info); }
 
-        .breakdown-content {
-            flex: 1;
-        }
-
-        .breakdown-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-
-        .breakdown-value {
-            font-weight: 600;
+        .breakdown-score {
+            font-size: 1.5rem;
+            font-weight: 700;
             color: var(--gray-900);
         }
 
+        .breakdown-description {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: var(--space-sm);
+        }
+
+        .breakdown-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .breakdown-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breakdown-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Download Section */
         .download-section {
             display: flex;
             gap: var(--space-sm);
@@ -918,6 +941,10 @@ function renderFactChecker(data) {
             transition: width 0.6s ease;
         }
 
+        .dimension-list {
+            margin-top: var(--space-md);
+        }
+
         /* Claim List */
         .claims-list {
             display: flex;
@@ -1089,6 +1116,10 @@ function renderFactChecker(data) {
             }
 
             .techniques-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .analysis-dimensions {
                 grid-template-columns: 1fr;
             }
         }
@@ -1324,11 +1355,61 @@ function renderFactChecker(data) {
                 </div>
                 <div class="trust-score-content">
                     <div class="trust-gauge-container">
-                        <canvas id="trustGauge"></canvas>
+                        <div class="trust-gauge-visual">
+                            <div class="gauge-background"></div>
+                            <div class="gauge-fill" id="gaugeFill"></div>
+                            <div class="gauge-center">
+                                <div class="gauge-score" id="gaugeScore">0</div>
+                                <div class="gauge-label">Trust Score</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="trust-score-details">
                         <div id="trustLevel" class="trust-level"></div>
                         <p id="trustSummary" class="trust-summary"></p>
+                        
+                        <!-- What We Analyzed -->
+                        <div class="analysis-overview">
+                            <div class="analysis-overview-title">
+                                <i class="fas fa-magnifying-glass-chart"></i>
+                                What We Analyzed
+                            </div>
+                            <div class="analysis-dimensions">
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Source reputation & history</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Author credentials & expertise</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Political & ideological bias</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Factual accuracy of claims</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Transparency & disclosures</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Manipulation tactics</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Writing quality & structure</span>
+                                </div>
+                                <div class="dimension-check">
+                                    <i class="fas fa-check"></i>
+                                    <span>Original vs copied content</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="trustBreakdown" class="trust-breakdown"></div>
                     </div>
                 </div>
@@ -1553,7 +1634,7 @@ function renderFactChecker(data) {
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Display trust score with gauge and breakdown
+        // Enhanced display trust score with better visuals and explanations
         function displayTrustScore(analysis, detailedAnalysis) {
             if (!analysis) {
                 console.error('No analysis data provided to displayTrustScore');
@@ -1561,50 +1642,135 @@ function renderFactChecker(data) {
             }
             
             const score = analysis.trust_score || 0;
-            const level = analysis.trust_level || 'Unknown';
+            const level = analysis.trust_level || getTrustLevel(score);
             
-            document.getElementById('trustLevel').textContent = `${level} (${score}/100)`;
-            document.getElementById('trustLevel').style.color = getScoreColor(score);
-            document.getElementById('trustSummary').textContent = analysis.summary || '';
+            // Animate the gauge
+            const gaugeFill = document.getElementById('gaugeFill');
+            const gaugeScore = document.getElementById('gaugeScore');
             
-            // Create trust breakdown
+            // Set colors based on score
+            let gaugeColor, gaugeGradient, levelClass, levelIcon, levelText;
+            if (score >= 80) {
+                gaugeColor = '#10B981';
+                gaugeGradient = 'var(--gradient-excellent)';
+                levelClass = 'trust-level-excellent';
+                levelIcon = 'fa-circle-check';
+                levelText = 'Highly Trustworthy';
+            } else if (score >= 60) {
+                gaugeColor = '#3B82F6';
+                gaugeGradient = 'var(--gradient-good)';
+                levelClass = 'trust-level-good';
+                levelIcon = 'fa-thumbs-up';
+                levelText = 'Moderately Trustworthy';
+            } else if (score >= 40) {
+                gaugeColor = '#F59E0B';
+                gaugeGradient = 'var(--gradient-fair)';
+                levelClass = 'trust-level-fair';
+                levelIcon = 'fa-exclamation-triangle';
+                levelText = 'Low Trust - Be Cautious';
+            } else {
+                gaugeColor = '#EF4444';
+                gaugeGradient = 'var(--gradient-poor)';
+                levelClass = 'trust-level-poor';
+                levelIcon = 'fa-circle-xmark';
+                levelText = 'Very Low Trust - High Risk';
+            }
+            
+            // Set CSS variables for gauge
+            gaugeFill.style.setProperty('--gauge-color', gaugeColor);
+            gaugeFill.style.setProperty('--gauge-angle', `${(score / 100) * 180}deg`);
+            gaugeScore.style.setProperty('--gauge-gradient', gaugeGradient);
+            
+            // Animate score counter
+            let currentScore = 0;
+            const increment = score / 30;
+            const timer = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= score) {
+                    currentScore = score;
+                    clearInterval(timer);
+                }
+                gaugeScore.textContent = Math.round(currentScore);
+            }, 50);
+            
+            // Update trust level with icon
+            document.getElementById('trustLevel').innerHTML = `
+                <div class="trust-level-icon ${levelClass}">
+                    <i class="fas ${levelIcon}"></i>
+                </div>
+                <span>${levelText}</span>
+            `;
+            
+            // Enhanced summary based on score
+            let summaryText = analysis.summary || '';
+            if (!summaryText) {
+                if (score >= 80) {
+                    summaryText = "Great news! This article comes from a reputable source with strong journalistic standards. The content shows minimal bias and the facts have been verified. You can trust this information with high confidence.";
+                } else if (score >= 60) {
+                    summaryText = "This article is generally trustworthy but has some areas of concern. The source is established but may have slight biases. We recommend cross-checking key facts with other sources.";
+                } else if (score >= 40) {
+                    summaryText = "Caution advised. This article shows significant issues with credibility, bias, or factual accuracy. The source may have a history of misleading content. Please verify important claims independently.";
+                } else {
+                    summaryText = "Warning: This article has serious credibility issues. We detected major problems with the source reliability, high bias, and potential misinformation. We strongly recommend finding alternative sources for this topic.";
+                }
+            }
+            document.getElementById('trustSummary').textContent = summaryText;
+            
+            // Create enhanced trust breakdown with explanations
             const breakdownData = [
                 {
                     icon: 'fa-shield-alt',
-                    label: 'Source Credibility',
-                    value: detailedAnalysis?.source_credibility?.data?.credibility_score || 0,
+                    title: 'Source Credibility',
+                    score: detailedAnalysis?.source_credibility?.data?.credibility_score || 0,
+                    description: getSourceCredibilityDescription(detailedAnalysis?.source_credibility?.data?.credibility_score || 0),
                     type: getBreakdownType(detailedAnalysis?.source_credibility?.data?.credibility_score || 0)
                 },
                 {
                     icon: 'fa-user-check',
-                    label: 'Author Credibility',
-                    value: detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
+                    title: 'Author Credibility',
+                    score: detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
+                    description: getAuthorCredibilityDescription(
+                        detailedAnalysis?.author_analyzer?.data?.credibility_score || 0,
+                        detailedAnalysis?.author_analyzer?.data?.author_name
+                    ),
                     type: getBreakdownType(detailedAnalysis?.author_analyzer?.data?.credibility_score || 0)
                 },
                 {
                     icon: 'fa-balance-scale',
-                    label: 'Bias Score',
-                    value: 100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
+                    title: 'Objectivity Score',
+                    score: 100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
+                    description: getBiasDescription(detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0),
                     type: getBreakdownType(100 - (detailedAnalysis?.bias_detector?.data?.overall_bias_score || 0))
                 },
                 {
                     icon: 'fa-check-double',
-                    label: 'Fact Accuracy',
-                    value: calculateFactAccuracy(detailedAnalysis?.fact_checker?.data),
+                    title: 'Fact Accuracy',
+                    score: calculateFactAccuracy(detailedAnalysis?.fact_checker?.data),
+                    description: getFactAccuracyDescription(detailedAnalysis?.fact_checker?.data),
                     type: getBreakdownType(calculateFactAccuracy(detailedAnalysis?.fact_checker?.data))
                 }
             ];
             
             let breakdownHtml = '';
             breakdownData.forEach(item => {
+                const fillColor = item.type === 'positive' ? 'var(--gradient-excellent)' : 
+                                item.type === 'neutral' ? 'var(--gradient-good)' :
+                                item.type === 'warning' ? 'var(--gradient-fair)' : 'var(--gradient-poor)';
+                
                 breakdownHtml += `
                     <div class="breakdown-item">
-                        <div class="breakdown-icon breakdown-${item.type}">
-                            <i class="fas ${item.icon}"></i>
+                        <div class="breakdown-header">
+                            <div class="breakdown-title">
+                                <div class="breakdown-icon breakdown-${item.type}">
+                                    <i class="fas ${item.icon}"></i>
+                                </div>
+                                <span>${item.title}</span>
+                            </div>
+                            <div class="breakdown-score">${item.score}%</div>
                         </div>
-                        <div class="breakdown-content">
-                            <div class="breakdown-label">${item.label}</div>
-                            <div class="breakdown-value">${item.value}%</div>
+                        <div class="breakdown-description">${item.description}</div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill" style="width: 0%; background: ${fillColor};"></div>
                         </div>
                     </div>
                 `;
@@ -1612,52 +1778,84 @@ function renderFactChecker(data) {
             
             document.getElementById('trustBreakdown').innerHTML = breakdownHtml;
             
-            // Create gauge chart
-            const ctx = document.getElementById('trustGauge').getContext('2d');
-            
-            if (charts.trustGauge) {
-                charts.trustGauge.destroy();
+            // Animate the breakdown bars after a short delay
+            setTimeout(() => {
+                const bars = document.querySelectorAll('.breakdown-fill');
+                bars.forEach((bar, index) => {
+                    setTimeout(() => {
+                        bar.style.width = `${breakdownData[index].score}%`;
+                    }, index * 100);
+                });
+            }, 500);
+        }
+
+        // Helper functions for descriptions
+        function getTrustLevel(score) {
+            if (score >= 80) return 'Excellent';
+            if (score >= 60) return 'Good';
+            if (score >= 40) return 'Fair';
+            return 'Poor';
+        }
+
+        function getSourceCredibilityDescription(score) {
+            if (score === 0) {
+                return "Unable to verify source. This may be a new or unrecognized website without established credibility.";
+            } else if (score >= 80) {
+                return "Established, reputable news source with strong editorial standards and fact-checking processes.";
+            } else if (score >= 60) {
+                return "Generally reliable source with good reputation, though may have occasional accuracy issues.";
+            } else if (score >= 40) {
+                return "Source has mixed credibility record. Known for some reliable reporting but also bias or errors.";
+            } else {
+                return "Source has poor credibility record with history of misinformation or strong bias.";
             }
+        }
+
+        function getAuthorCredibilityDescription(score, authorName) {
+            const name = authorName || "the author";
+            if (score === 0) {
+                return "Author information not available. Unable to verify credentials or expertise.";
+            } else if (score >= 80) {
+                return `${name} is a verified journalist with strong credentials and expertise in this topic area.`;
+            } else if (score >= 60) {
+                return `${name} has some verified credentials but limited track record in this specific topic.`;
+            } else if (score >= 40) {
+                return `${name} has minimal verifiable credentials or mixed reputation for accuracy.`;
+            } else {
+                return `Unable to verify ${name}'s credentials or found concerning issues with past reporting.`;
+            }
+        }
+
+        function getBiasDescription(biasScore) {
+            const objectivity = 100 - biasScore;
+            if (biasScore <= 20) {
+                return "Excellent objectivity. The article presents facts with minimal bias or opinion.";
+            } else if (biasScore <= 40) {
+                return "Generally objective with slight bias detected in language or source selection.";
+            } else if (biasScore <= 60) {
+                return "Moderate bias present. The article shows clear perspective that may affect objectivity.";
+            } else {
+                return "Significant bias detected. The article heavily favors one perspective over others.";
+            }
+        }
+
+        function getFactAccuracyDescription(factData) {
+            if (!factData || !factData.total_claims || factData.total_claims === 0) {
+                return "No factual claims found to verify. This may be an opinion piece or breaking news.";
+            }
+            const accuracy = calculateFactAccuracy(factData);
+            const verified = factData.verified_claims || 0;
+            const total = factData.total_claims;
             
-            charts.trustGauge = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [score, 100 - score],
-                        backgroundColor: [getScoreColor(score), '#E5E7EB'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    circumference: 180,
-                    rotation: -90,
-                    cutout: '80%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
-                },
-                plugins: [{
-                    id: 'centerText',
-                    beforeDraw: function(chart) {
-                        const ctx = chart.ctx;
-                        ctx.save();
-                        
-                        const centerX = chart.width / 2;
-                        const centerY = chart.height / 2 + 20;
-                        
-                        ctx.font = 'bold 48px Inter';
-                        ctx.fillStyle = getScoreColor(score);
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(score, centerX, centerY);
-                        
-                        ctx.restore();
-                    }
-                }]
-            });
+            if (accuracy >= 80) {
+                return `Excellent fact accuracy. ${verified} of ${total} claims verified as accurate.`;
+            } else if (accuracy >= 60) {
+                return `Good factual accuracy. ${verified} of ${total} claims verified, some unverifiable.`;
+            } else if (accuracy >= 40) {
+                return `Mixed factual accuracy. Only ${verified} of ${total} claims could be verified.`;
+            } else {
+                return `Poor factual accuracy. Only ${verified} of ${total} claims verified as accurate.`;
+            }
         }
 
         // Calculate fact accuracy percentage
@@ -1965,1125 +2163,6 @@ function renderFactChecker(data) {
                     const factorScore = typeof value === 'number' ? value : (value.score || 0);
                     const factorLabel = formatFactorName(factor);
                     content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${factorLabel}</span>
-                                <span class="dimension-score">${factorScore}%</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${factorScore}%; background: ${getDimensionColor(factorScore)};"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-                
-                // Create radar chart visualization
-                content += `
-                    <div class="service-visualization">
-                        <div class="chart-container">
-                            <canvas id="credibilityChart-${Date.now()}"></canvas>
-                        </div>
-                    </div>
-                `;
-                
-                // Create chart after DOM update
-                setTimeout(() => {
-                    const chartCanvas = document.querySelector('#servicesGrid canvas[id^="credibilityChart-"]');
-                    if (chartCanvas && factors) {
-                        const ctx = chartCanvas.getContext('2d');
-                        const labels = Object.keys(factors).map(k => formatFactorName(k));
-                        const values = Object.values(factors).map(v => 
-                            typeof v === 'number' ? v : (v.score || 0)
-                        );
-                        
-                        new Chart(ctx, {
-                            type: 'radar',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    data: values,
-                                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                                    borderColor: 'rgba(99, 102, 241, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
-                                    pointBorderColor: '#fff',
-                                    pointHoverBackgroundColor: '#fff',
-                                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    r: {
-                                        beginAtZero: true,
-                                        max: 100,
-                                        ticks: {
-                                            stepSize: 20
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                }, 100);
-            }
-            
-            // Awards and recognitions
-            if (data.awards && data.awards.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-trophy"></i>
-                            Awards & Recognition
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.awards.forEach(award => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${award.name || award}</div>
-                            ${award.year ? `<div class="technique-description">Awarded: ${award.year}</div>` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Key Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'positive' ? 'verified' : 
-                                        finding.severity === 'negative' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    <i class="fas ${finding.severity === 'positive' ? 'fa-check' : 'fa-info'}"></i>
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary || data.analysis_summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary || data.analysis_summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-
-        function renderAuthorAnalysis(data) {
-            console.log('renderAuthorAnalysis data:', data);
-            
-            // Extract author information from various possible locations
-            const authorName = data.author_name || data.name || data.author_info?.name || 'Unknown Author';
-            const authorScore = data.author_score || data.score || data.credibility_score || 0;
-            const level = data.level || 'Unknown';
-            
-            let content = '';
-            
-            // Author information section
-            content += `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-id-card"></i>
-                        Author Information
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Name</span>
-                            <span class="result-value">${authorName}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Credibility Score</span>
-                            <span class="result-value">${authorScore}/100</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Credibility Level</span>
-                            <span class="status-badge status-${authorScore >= 70 ? 'high' : authorScore >= 40 ? 'medium' : 'low'}">
-                                ${level}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Author details from author_info
-            if (data.author_info) {
-                const info = data.author_info;
-                
-                // Credentials and expertise
-                if (info.position || info.bio || info.expertise_areas?.length > 0) {
-                    content += `
-                        <div class="service-section">
-                            <h4 class="section-title">
-                                <i class="fas fa-graduation-cap"></i>
-                                Professional Background
-                            </h4>
-                            <div class="service-results">
-                    `;
-                    
-                    if (info.position) {
-                        content += `
-                            <div class="result-item">
-                                <span class="result-label">Position</span>
-                                <span class="result-value">${info.position}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (info.bio) {
-                        content += `
-                            <div class="result-item" style="flex-direction: column; align-items: flex-start;">
-                                <span class="result-label">Biography</span>
-                                <span class="result-value" style="margin-top: 0.5rem; line-height: 1.6;">${info.bio}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (info.expertise_areas && info.expertise_areas.length > 0) {
-                        content += `
-                            <div class="result-item">
-                                <span class="result-label">Areas of Expertise</span>
-                                <span class="result-value">${info.expertise_areas.join(', ')}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (info.experience_years !== null && info.experience_years !== undefined) {
-                        content += `
-                            <div class="result-item">
-                                <span class="result-label">Years of Experience</span>
-                                <span class="result-value">${info.experience_years || 'Not specified'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    content += `
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // Publications
-                if (info.outlets && info.outlets.length > 0) {
-                    content += `
-                        <div class="service-section">
-                            <h4 class="section-title">
-                                <i class="fas fa-newspaper"></i>
-                                Publications
-                            </h4>
-                            <div class="techniques-grid">
-                                ${info.outlets.map(outlet => `
-                                    <div class="technique-card">
-                                        <div class="technique-name">${outlet}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // Awards
-                if (info.awards && info.awards.length > 0) {
-                    content += `
-                        <div class="service-section">
-                            <h4 class="section-title">
-                                <i class="fas fa-trophy"></i>
-                                Awards & Recognition
-                            </h4>
-                            <div class="techniques-grid">
-                                ${info.awards.map(award => `
-                                    <div class="technique-card">
-                                        <div class="technique-name">${award}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Verification status
-            if (data.verification_status) {
-                const verStatus = data.verification_status;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-check-circle"></i>
-                            Verification Status
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Verification Level</span>
-                                <span class="status-badge status-${verStatus.verified ? 'high' : 'low'}">
-                                    ${verStatus.verification_level || (verStatus.verified ? 'Verified' : 'Unverified')}
-                                </span>
-                            </div>
-                            ${verStatus.verification_details && verStatus.verification_details.length > 0 ? `
-                                <div class="result-item" style="flex-direction: column; align-items: flex-start;">
-                                    <span class="result-label">Verification Details</span>
-                                    <ul style="margin-top: 0.5rem; margin-left: 1rem;">
-                                        ${verStatus.verification_details.map(detail => `<li>${detail}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Publication context
-            if (data.publication_context) {
-                const pubContext = data.publication_context;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-building"></i>
-                            Publication Context
-                        </h4>
-                        <div class="service-results">
-                            <div class="result-item">
-                                <span class="result-label">Publication</span>
-                                <span class="result-value">${pubContext.name || 'Unknown'}</span>
-                            </div>
-                            ${pubContext.type ? `
-                                <div class="result-item">
-                                    <span class="result-label">Type</span>
-                                    <span class="result-value">${pubContext.type}</span>
-                                </div>
-                            ` : ''}
-                            ${pubContext.credibility_score !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Publication Credibility</span>
-                                    <span class="result-value">${pubContext.credibility_score}/100</span>
-                                </div>
-                            ` : ''}
-                            ${pubContext.fact_checking !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Fact Checking</span>
-                                    <span class="result-value">
-                                        ${pubContext.fact_checking ? 
-                                            '<i class="fas fa-check" style="color: var(--accent);"></i> Yes' : 
-                                            '<i class="fas fa-times" style="color: var(--danger);"></i> No'}
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Analysis Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'low' ? 'verified' : 
-                                        finding.severity === 'high' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-
-        function renderBiasDetection(data) {
-            console.log('renderBiasDetection data:', data);
-            
-            // Extract bias information
-            const overallBias = data.bias_score || data.overall_bias_score || data.score || 0;
-            const biasLevel = data.level || data.bias_level || 'Unknown';
-            const objectivityScore = data.objectivity_score || (100 - overallBias);
-            
-            let content = '';
-            
-            // Overall bias assessment
-            content += `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-balance-scale"></i>
-                        Overall Bias Assessment
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Bias Score</span>
-                            <span class="result-value">${overallBias}/100</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Bias Level</span>
-                            <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
-                                ${biasLevel}
-                            </span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Objectivity Score</span>
-                            <span class="result-value">${objectivityScore.toFixed(0)}%</span>
-                        </div>
-                        ${data.confidence !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Analysis Confidence</span>
-                                <span class="result-value">${data.confidence}%</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-            
-            // Bias dimensions from either dimensions or detailed_analysis
-            const dimensions = data.dimensions || data.bias_dimensions;
-            const detailedAnalysis = data.detailed_analysis;
-            
-            if (dimensions || detailedAnalysis) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-bar"></i>
-                            Bias Dimensions Analysis
-                        </h4>
-                        <div class="dimension-list">
-                `;
-                
-                if (dimensions) {
-                    Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                        let score, label, explanation;
-                        
-                        if (typeof dimData === 'object') {
-                            score = Math.abs(dimData.score || 0) * 100;
-                            label = dimData.label || dimension;
-                            explanation = dimData.explanation || '';
-                        } else {
-                            score = dimData;
-                            label = formatDimensionName(dimension);
-                            explanation = '';
-                        }
-                        
-                        content += `
-                            <div class="dimension-item">
-                                <div class="dimension-header">
-                                    <span class="dimension-name">${label}</span>
-                                    <span class="dimension-score">${score.toFixed(0)}%</span>
-                                </div>
-                                <div class="dimension-bar">
-                                    <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
-                                </div>
-                                ${explanation ? `<div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">${explanation}</div>` : ''}
-                            </div>
-                        `;
-                    });
-                } else if (detailedAnalysis) {
-                    // Handle detailed_analysis format
-                    const analysisMap = {
-                        'political_lean': { label: 'Political Bias', value: detailedAnalysis.political_label },
-                        'sensationalism': { label: 'Sensationalism', value: detailedAnalysis.sensationalism },
-                        'corporate_stance': { label: 'Corporate Bias', value: detailedAnalysis.corporate_stance },
-                        'establishment_trust': { label: 'Establishment Bias', value: detailedAnalysis.establishment_trust }
-                    };
-                    
-                    Object.entries(analysisMap).forEach(([key, info]) => {
-                        if (info.value) {
-                            content += `
-                                <div class="dimension-item">
-                                    <div class="dimension-header">
-                                        <span class="dimension-name">${info.label}</span>
-                                        <span class="dimension-score">${info.value}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    });
-                }
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-                
-                // Create visualization if we have dimensional data
-                if (dimensions && Object.keys(dimensions).length > 0) {
-                    content += `
-                        <div class="service-visualization">
-                            <div class="chart-container">
-                                <canvas id="biasChart-${Date.now()}"></canvas>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Create chart after DOM update
-                    setTimeout(() => {
-                        const chartCanvas = document.querySelector('#servicesGrid canvas[id^="biasChart-"]');
-                        if (chartCanvas) {
-                            const ctx = chartCanvas.getContext('2d');
-                            const labels = [];
-                            const values = [];
-                            
-                            Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                                if (typeof dimData === 'object') {
-                                    labels.push(dimData.label || formatDimensionName(dimension));
-                                    values.push(Math.abs(dimData.score || 0) * 100);
-                                } else {
-                                    labels.push(formatDimensionName(dimension));
-                                    values.push(dimData);
-                                }
-                            });
-                            
-                            new Chart(ctx, {
-                                type: 'polarArea',
-                                data: {
-                                    labels: labels,
-                                    datasets: [{
-                                        data: values,
-                                        backgroundColor: [
-                                            'rgba(255, 99, 132, 0.5)',
-                                            'rgba(54, 162, 235, 0.5)',
-                                            'rgba(255, 206, 86, 0.5)',
-                                            'rgba(75, 192, 192, 0.5)',
-                                            'rgba(153, 102, 255, 0.5)',
-                                            'rgba(255, 159, 64, 0.5)'
-                                        ],
-                                        borderWidth: 1
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            position: 'right',
-                                        }
-                                    },
-                                    scales: {
-                                        r: {
-                                            beginAtZero: true,
-                                            max: 100
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }, 100);
-                }
-            }
-            
-            // Loaded phrases
-            if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-quote-left"></i>
-                            Loaded Language Detected
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.loaded_phrases.forEach(phrase => {
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${phrase.text}"</div>
-                                <div class="claim-status claim-${phrase.severity === 'high' ? 'false' : 'unverified'}">
-                                    ${phrase.type || phrase.severity}
-                                </div>
-                            </div>
-                            <div class="claim-details">
-                                ${phrase.explanation || 'Potentially biased language'}
-                                ${phrase.context ? `<br><small>Context: "${phrase.context}"</small>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Manipulation tactics
-            if (data.manipulation_tactics && data.manipulation_tactics.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Manipulation Tactics
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.manipulation_tactics.forEach(tactic => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${tactic.name || tactic.type}</div>
-                            <div class="technique-description">
-                                ${tactic.description}
-                                <span class="technique-severity severity-${(tactic.severity || 'medium').toLowerCase()}">${tactic.severity || 'medium'}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Source analysis
-            if (data.source_analysis) {
-                const sourceAnalysis = data.source_analysis;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-users"></i>
-                            Source Diversity
-                        </h4>
-                        <div class="service-results">
-                            ${sourceAnalysis.total_sources !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Total Sources</span>
-                                    <span class="result-value">${sourceAnalysis.total_sources}</span>
-                                </div>
-                            ` : ''}
-                            ${sourceAnalysis.diversity_score !== undefined ? `
-                                <div class="result-item">
-                                    <span class="result-label">Diversity Score</span>
-                                    <span class="result-value">${sourceAnalysis.diversity_score}%</span>
-                                </div>
-                            ` : ''}
-                            ${sourceAnalysis.primary_source ? `
-                                <div class="result-item">
-                                    <span class="result-label">Primary Source Type</span>
-                                    <span class="result-value">${sourceAnalysis.primary_source}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Findings
-            if (data.findings && data.findings.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-search"></i>
-                            Key Findings
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.findings.forEach(finding => {
-                    const severityClass = finding.severity === 'low' ? 'verified' : 
-                                        finding.severity === 'high' ? 'false' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${finding.text}</div>
-                                <div class="claim-status claim-${severityClass}">
-                                    ${finding.type || finding.severity}
-                                </div>
-                            </div>
-                            ${finding.explanation ? `
-                                <div class="claim-details">
-                                    ${finding.explanation}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-
-        function renderFactChecker(data) {
-            const verified = data.verified_claims || 0;
-            const total = data.total_claims || 0;
-            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-check-circle"></i>
-                        Fact Checking Summary
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Claims Analyzed</span>
-                            <span class="result-value">${total}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Verified Claims</span>
-                            <span class="result-value">${verified}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Accuracy Rate</span>
-                            <span class="result-value">${accuracy}%</span>
-                        </div>
-                    </div>
-                    ${total > 0 ? `
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${accuracy}%"></div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            // Individual claims
-            if (data.claims && data.claims.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Individual Claims Analysis
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.claims.forEach(claim => {
-                    const status = claim.verification_status || 'unverified';
-                    const statusClass = status === 'verified' ? 'verified' : 
-                                      status === 'false' ? 'false' : 'unverified';
-                    const statusIcon = status === 'verified' ? 'fa-check' : 
-                                     status === 'false' ? 'fa-times' : 'fa-question';
-                    
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim_text || claim.text)}"</div>
-                                <div class="claim-status claim-${statusClass}">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${formatStatus(status)}
-                                </div>
-                            </div>
-                            ${claim.fact_check_result || claim.verification_details ? `
-                                <div class="claim-details">
-                                    ${claim.fact_check_result || claim.verification_details}
-                                    ${claim.sources && claim.sources.length > 0 ? 
-                                        `<br><small>Sources: ${claim.sources.join(', ')}</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Fact checking sources
-            if (data.fact_check_sources && data.fact_check_sources.length > 0) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-database"></i>
-                            Fact Checking Sources
-                        </div>
-                        <div class="info-box-content">
-                            Claims were verified against: ${data.fact_check_sources.join(', ')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-
-        function renderTransparency(data) {
-            console.log('renderTransparency data:', data);
-            
-            const score = data.transparency_score || data.score || 0;
-            const level = data.transparency_level || data.level || getTransparencyLevel(score);
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-eye"></i>
-                        Transparency Assessment
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Transparency Score</span>
-                            <span class="result-value">${score}%</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Transparency Level</span>
-                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                                ${level}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${score}%"></div>
-                    </div>
-                </div>
-            `;
-            
-            // Transparency factors
-            if (data.factors || data.transparency_factors) {
-                const factors = data.factors || data.transparency_factors;
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-list-check"></i>
-                            Transparency Checklist
-                        </h4>
-                        <div class="service-results">
-                `;
-                
-                Object.entries(factors).forEach(([factor, value]) => {
-                    const present = typeof value === 'boolean' ? value : (value.present || value.found || false);
-                    const score = typeof value === 'number' ? value : (value.score || 0);
-                    
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">${formatFactorName(factor)}</span>
-                            <span class="result-value">
-                                ${typeof value === 'boolean' || value.present !== undefined ?
-                                    (present ? 
-                                        '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
-                                        '<i class="fas fa-times" style="color: var(--danger);"></i> Missing') :
-                                    `${score}%`
-                                }
-                            </span>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Disclosures found
-            if (data.disclosures_found && data.disclosures_found.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-file-contract"></i>
-                            Disclosures Found
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.disclosures_found.forEach(disclosure => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${disclosure.type || disclosure.name || 'Disclosure'}</div>
-                            <div class="technique-description">
-                                ${disclosure.content || disclosure.description || 'Information disclosed'}
-                                ${disclosure.location ? `<br><small>Location: ${disclosure.location}</small>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Missing disclosures
-            if (data.missing_disclosures && data.missing_disclosures.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Missing Disclosures
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.missing_disclosures.forEach(missing => {
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${missing.type || missing.name || 'Required disclosure'}</div>
-                                <div class="claim-status claim-false">
-                                    <i class="fas fa-times"></i>
-                                    Missing
-                                </div>
-                            </div>
-                            ${missing.importance || missing.description ? `
-                                <div class="claim-details">
-                                    ${missing.importance || missing.description}
-                                    ${missing.impact ? `<br><small>Impact: ${missing.impact}</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Transparency issues
-            if (data.issues && data.issues.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Transparency Issues
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.issues.forEach(issue => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${issue.type || issue.name || 'Issue'}</div>
-                            <div class="technique-description">
-                                ${issue.description || issue.details}
-                                ${issue.severity ? `<span class="technique-severity severity-${issue.severity.toLowerCase()}">${issue.severity} severity</span>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Summary
-            if (data.summary) {
-                content += `
-                    <div class="info-box">
-                        <div class="info-box-title">
-                            <i class="fas fa-lightbulb"></i>
-                            Analysis Summary
-                        </div>
-                        <div class="info-box-content">
-                            ${data.summary}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            return content;
-        }
-
-        function renderManipulation(data) {
-            console.log('renderManipulation data:', data);
-            
-            const level = data.manipulation_level || data.level || 'Low';
-            const score = data.manipulation_score || data.score || 0;
-            const riskScore = data.risk_score !== undefined ? data.risk_score : score;
-            
-            let content = `
-                <div class="service-section">
-                    <h4 class="section-title">
-                        <i class="fas fa-mask"></i>
-                        Manipulation Assessment
-                    </h4>
-                    <div class="service-results">
-                        <div class="result-item">
-                            <span class="result-label">Manipulation Level</span>
-                            <span class="status-badge status-${level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : level.toLowerCase() === 'moderate' ? 'medium' : 'low'}">
-                                ${level}
-                            </span>
-                        </div>
-                        ${riskScore !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Risk Score</span>
-                                <span class="result-value">${riskScore}/100</span>
-                            </div>
-                        ` : ''}
-                        ${data.techniques_count !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Techniques Detected</span>
-                                <span class="result-value">${data.techniques_count}</span>
-                            </div>
-                        ` : ''}
-                        ${data.confidence !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Detection Confidence</span>
-                                <span class="result-value">${data.confidence}%</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-            
-            // Manipulation techniques
-            if (data.techniques && data.techniques.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-brain"></i>
-                            Detected Manipulation Techniques
-                        </h4>
-                        <div class="techniques-grid">
-                `;
-                
-                data.techniques.forEach(technique => {
-                    content += `
-                        <div class="technique-card">
-                            <div class="technique-name">${technique.name || technique.type}</div>
-                            <div class="technique-description">
-                                ${technique.description || technique.details || technique.evidence}
-                                ${technique.severity ? 
-                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">${technique.severity} severity</span>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                content += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Emotional tactics
-            if (data.emotional_tactics && data.emotional_tactics.length > 0) {
-                content += `
-                    <div class="service-section">
-                        <h4 class="section-title">
-                            <i class="fas fa-heart"></i>
-                            Emotional Manipulation Tactics
-                        </h4>
-                        <div class="claims-list">
-                `;
-                
-                data.emotional_tactics.forEach(tactic => {
-                    const impactClass = tactic.impact === 'high' ? 'false' : tactic.impact === 'low' ? 'verified' : 'unverified';
-                    content += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">${tactic.emotion || tactic.type}</div>
-                                <div class="claim-status claim-${impactClass}">
-                                    ${tactic.intensity || tactic.impact || 'Detected'}
-                                </div>
-                            </div>
-                            ${tactic.evidence || tactic.description ? `
-                                <div class="claim-details">
-                                    ${tactic.evidence || tactic.description}
-                                    ${tactic.examples && tactic.examples.length > 0 ? 
-                                        `<br><small>Examples: "${tactic.examples.join('", "')}"</small>` : ''}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                content += `
                         </div>
                     </div>
                 `;
@@ -4112,4 +3191,1209 @@ function renderFactChecker(data) {
         }
     </script>
 </body>
-</html>
+</html><div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${factorLabel}</span>
+                                <span class="dimension-score">${factorScore}%</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${factorScore}%; background: ${getDimensionColor(factorScore)};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+                
+                // Create radar chart visualization
+                content += `
+                    <div class="service-visualization">
+                        <div class="chart-container">
+                            <canvas id="credibilityChart-${Date.now()}"></canvas>
+                        </div>
+                    </div>
+                `;
+                
+                // Create chart after DOM update
+                setTimeout(() => {
+                    const chartCanvas = document.querySelector('#servicesGrid canvas[id^="credibilityChart-"]');
+                    if (chartCanvas && factors) {
+                        const ctx = chartCanvas.getContext('2d');
+                        const labels = Object.keys(factors).map(k => formatFactorName(k));
+                        const values = Object.values(factors).map(v => 
+                            typeof v === 'number' ? v : (v.score || 0)
+                        );
+                        
+                        new Chart(ctx, {
+                            type: 'radar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: values,
+                                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                    borderColor: 'rgba(99, 102, 241, 1)',
+                                    borderWidth: 2,
+                                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                                    pointBorderColor: '#fff',
+                                    pointHoverBackgroundColor: '#fff',
+                                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    r: {
+                                        beginAtZero: true,
+                                        max: 100,
+                                        ticks: {
+                                            stepSize: 20
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }, 100);
+            }
+            
+            // Awards and recognitions
+            if (data.awards && data.awards.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-trophy"></i>
+                            Awards & Recognition
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.awards.forEach(award => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${award.name || award}</div>
+                            ${award.year ? `<div class="technique-description">Awarded: ${award.year}</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Findings
+            if (data.findings && data.findings.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-search"></i>
+                            Key Findings
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.findings.forEach(finding => {
+                    const severityClass = finding.severity === 'positive' ? 'verified' : 
+                                        finding.severity === 'negative' ? 'false' : 'unverified';
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${finding.text}</div>
+                                <div class="claim-status claim-${severityClass}">
+                                    <i class="fas ${finding.severity === 'positive' ? 'fa-check' : 'fa-info'}"></i>
+                                    ${finding.type || finding.severity}
+                                </div>
+                            </div>
+                            ${finding.explanation ? `
+                                <div class="claim-details">
+                                    ${finding.explanation}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary || data.analysis_summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary || data.analysis_summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderAuthorAnalysis(data) {
+            console.log('renderAuthorAnalysis data:', data);
+            
+            // Extract author information from various possible locations
+            const authorName = data.author_name || data.name || data.author_info?.name || 'Unknown Author';
+            const authorScore = data.author_score || data.score || data.credibility_score || 0;
+            const level = data.level || 'Unknown';
+            
+            let content = '';
+            
+            // Author information section
+            content += `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-id-card"></i>
+                        Author Information
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Name</span>
+                            <span class="result-value">${authorName}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Credibility Score</span>
+                            <span class="result-value">${authorScore}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Credibility Level</span>
+                            <span class="status-badge status-${authorScore >= 70 ? 'high' : authorScore >= 40 ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Author details from author_info
+            if (data.author_info) {
+                const info = data.author_info;
+                
+                // Credentials and expertise
+                if (info.position || info.bio || info.expertise_areas?.length > 0) {
+                    content += `
+                        <div class="service-section">
+                            <h4 class="section-title">
+                                <i class="fas fa-graduation-cap"></i>
+                                Professional Background
+                            </h4>
+                            <div class="service-results">
+                    `;
+                    
+                    if (info.position) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Position</span>
+                                <span class="result-value">${info.position}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (info.bio) {
+                        content += `
+                            <div class="result-item" style="flex-direction: column; align-items: flex-start;">
+                                <span class="result-label">Biography</span>
+                                <span class="result-value" style="margin-top: 0.5rem; line-height: 1.6;">${info.bio}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (info.expertise_areas && info.expertise_areas.length > 0) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Areas of Expertise</span>
+                                <span class="result-value">${info.expertise_areas.join(', ')}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (info.experience_years !== null && info.experience_years !== undefined) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Years of Experience</span>
+                                <span class="result-value">${info.experience_years || 'Not specified'}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    content += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Publications
+                if (info.outlets && info.outlets.length > 0) {
+                    content += `
+                        <div class="service-section">
+                            <h4 class="section-title">
+                                <i class="fas fa-newspaper"></i>
+                                Publications
+                            </h4>
+                            <div class="techniques-grid">
+                                ${info.outlets.map(outlet => `
+                                    <div class="technique-card">
+                                        <div class="technique-name">${outlet}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Awards
+                if (info.awards && info.awards.length > 0) {
+                    content += `
+                        <div class="service-section">
+                            <h4 class="section-title">
+                                <i class="fas fa-trophy"></i>
+                                Awards & Recognition
+                            </h4>
+                            <div class="techniques-grid">
+                                ${info.awards.map(award => `
+                                    <div class="technique-card">
+                                        <div class="technique-name">${award}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Verification status
+            if (data.verification_status) {
+                const verStatus = data.verification_status;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-check-circle"></i>
+                            Verification Status
+                        </h4>
+                        <div class="service-results">
+                            <div class="result-item">
+                                <span class="result-label">Verification Level</span>
+                                <span class="status-badge status-${verStatus.verified ? 'high' : 'low'}">
+                                    ${verStatus.verification_level || (verStatus.verified ? 'Verified' : 'Unverified')}
+                                </span>
+                            </div>
+                            ${verStatus.verification_details && verStatus.verification_details.length > 0 ? `
+                                <div class="result-item" style="flex-direction: column; align-items: flex-start;">
+                                    <span class="result-label">Verification Details</span>
+                                    <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                                        ${verStatus.verification_details.map(detail => `<li>${detail}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Publication context
+            if (data.publication_context) {
+                const pubContext = data.publication_context;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-building"></i>
+                            Publication Context
+                        </h4>
+                        <div class="service-results">
+                            <div class="result-item">
+                                <span class="result-label">Publication</span>
+                                <span class="result-value">${pubContext.name || 'Unknown'}</span>
+                            </div>
+                            ${pubContext.type ? `
+                                <div class="result-item">
+                                    <span class="result-label">Type</span>
+                                    <span class="result-value">${pubContext.type}</span>
+                                </div>
+                            ` : ''}
+                            ${pubContext.credibility_score !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Publication Credibility</span>
+                                    <span class="result-value">${pubContext.credibility_score}/100</span>
+                                </div>
+                            ` : ''}
+                            ${pubContext.fact_checking !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Fact Checking</span>
+                                    <span class="result-value">
+                                        ${pubContext.fact_checking ? 
+                                            '<i class="fas fa-check" style="color: var(--accent);"></i> Yes' : 
+                                            '<i class="fas fa-times" style="color: var(--danger);"></i> No'}
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Findings
+            if (data.findings && data.findings.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-search"></i>
+                            Analysis Findings
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.findings.forEach(finding => {
+                    const severityClass = finding.severity === 'low' ? 'verified' : 
+                                        finding.severity === 'high' ? 'false' : 'unverified';
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${finding.text}</div>
+                                <div class="claim-status claim-${severityClass}">
+                                    ${finding.type || finding.severity}
+                                </div>
+                            </div>
+                            ${finding.explanation ? `
+                                <div class="claim-details">
+                                    ${finding.explanation}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderBiasDetection(data) {
+            console.log('renderBiasDetection data:', data);
+            
+            // Extract bias information
+            const overallBias = data.bias_score || data.overall_bias_score || data.score || 0;
+            const biasLevel = data.level || data.bias_level || 'Unknown';
+            const objectivityScore = data.objectivity_score || (100 - overallBias);
+            
+            let content = '';
+            
+            // Overall bias assessment
+            content += `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-balance-scale"></i>
+                        Overall Bias Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Bias Score</span>
+                            <span class="result-value">${overallBias}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Bias Level</span>
+                            <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
+                                ${biasLevel}
+                            </span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Objectivity Score</span>
+                            <span class="result-value">${objectivityScore.toFixed(0)}%</span>
+                        </div>
+                        ${data.confidence !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Analysis Confidence</span>
+                                <span class="result-value">${data.confidence}%</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Bias dimensions from either dimensions or detailed_analysis
+            const dimensions = data.dimensions || data.bias_dimensions;
+            const detailedAnalysis = data.detailed_analysis;
+            
+            if (dimensions || detailedAnalysis) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Bias Dimensions Analysis
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                if (dimensions) {
+                    Object.entries(dimensions).forEach(([dimension, dimData]) => {
+                        let score, label, explanation;
+                        
+                        if (typeof dimData === 'object') {
+                            score = Math.abs(dimData.score || 0) * 100;
+                            label = dimData.label || dimension;
+                            explanation = dimData.explanation || '';
+                        } else {
+                            score = dimData;
+                            label = formatDimensionName(dimension);
+                            explanation = '';
+                        }
+                        
+                        content += `
+                            <div class="dimension-item">
+                                <div class="dimension-header">
+                                    <span class="dimension-name">${label}</span>
+                                    <span class="dimension-score">${score.toFixed(0)}%</span>
+                                </div>
+                                <div class="dimension-bar">
+                                    <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
+                                </div>
+                                ${explanation ? `<div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">${explanation}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                } else if (detailedAnalysis) {
+                    // Handle detailed_analysis format
+                    const analysisMap = {
+                        'political_lean': { label: 'Political Bias', value: detailedAnalysis.political_label },
+                        'sensationalism': { label: 'Sensationalism', value: detailedAnalysis.sensationalism },
+                        'corporate_stance': { label: 'Corporate Bias', value: detailedAnalysis.corporate_stance },
+                        'establishment_trust': { label: 'Establishment Bias', value: detailedAnalysis.establishment_trust }
+                    };
+                    
+                    Object.entries(analysisMap).forEach(([key, info]) => {
+                        if (info.value) {
+                            content += `
+                                <div class="dimension-item">
+                                    <div class="dimension-header">
+                                        <span class="dimension-name">${info.label}</span>
+                                        <span class="dimension-score">${info.value}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+                
+                // Create visualization if we have dimensional data
+                if (dimensions && Object.keys(dimensions).length > 0) {
+                    content += `
+                        <div class="service-visualization">
+                            <div class="chart-container">
+                                <canvas id="biasChart-${Date.now()}"></canvas>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Create chart after DOM update
+                    setTimeout(() => {
+                        const chartCanvas = document.querySelector('#servicesGrid canvas[id^="biasChart-"]');
+                        if (chartCanvas) {
+                            const ctx = chartCanvas.getContext('2d');
+                            const labels = [];
+                            const values = [];
+                            
+                            Object.entries(dimensions).forEach(([dimension, dimData]) => {
+                                if (typeof dimData === 'object') {
+                                    labels.push(dimData.label || formatDimensionName(dimension));
+                                    values.push(Math.abs(dimData.score || 0) * 100);
+                                } else {
+                                    labels.push(formatDimensionName(dimension));
+                                    values.push(dimData);
+                                }
+                            });
+                            
+                            new Chart(ctx, {
+                                type: 'polarArea',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        data: values,
+                                        backgroundColor: [
+                                            'rgba(255, 99, 132, 0.5)',
+                                            'rgba(54, 162, 235, 0.5)',
+                                            'rgba(255, 206, 86, 0.5)',
+                                            'rgba(75, 192, 192, 0.5)',
+                                            'rgba(153, 102, 255, 0.5)',
+                                            'rgba(255, 159, 64, 0.5)'
+                                        ],
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'right',
+                                        }
+                                    },
+                                    scales: {
+                                        r: {
+                                            beginAtZero: true,
+                                            max: 100
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }, 100);
+                }
+            }
+            
+            // Loaded phrases
+            if (data.loaded_phrases && data.loaded_phrases.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-quote-left"></i>
+                            Loaded Language Detected
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.loaded_phrases.forEach(phrase => {
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">"${phrase.text}"</div>
+                                <div class="claim-status claim-${phrase.severity === 'high' ? 'false' : 'unverified'}">
+                                    ${phrase.type || phrase.severity}
+                                </div>
+                            </div>
+                            <div class="claim-details">
+                                ${phrase.explanation || 'Potentially biased language'}
+                                ${phrase.context ? `<br><small>Context: "${phrase.context}"</small>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Manipulation tactics
+            if (data.manipulation_tactics && data.manipulation_tactics.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Manipulation Tactics
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.manipulation_tactics.forEach(tactic => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${tactic.name || tactic.type}</div>
+                            <div class="technique-description">
+                                ${tactic.description}
+                                <span class="technique-severity severity-${(tactic.severity || 'medium').toLowerCase()}">${tactic.severity || 'medium'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Source analysis
+            if (data.source_analysis) {
+                const sourceAnalysis = data.source_analysis;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-users"></i>
+                            Source Diversity
+                        </h4>
+                        <div class="service-results">
+                            ${sourceAnalysis.total_sources !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Total Sources</span>
+                                    <span class="result-value">${sourceAnalysis.total_sources}</span>
+                                </div>
+                            ` : ''}
+                            ${sourceAnalysis.diversity_score !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Diversity Score</span>
+                                    <span class="result-value">${sourceAnalysis.diversity_score}%</span>
+                                </div>
+                            ` : ''}
+                            ${sourceAnalysis.primary_source ? `
+                                <div class="result-item">
+                                    <span class="result-label">Primary Source Type</span>
+                                    <span class="result-value">${sourceAnalysis.primary_source}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Findings
+            if (data.findings && data.findings.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-search"></i>
+                            Key Findings
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.findings.forEach(finding => {
+                    const severityClass = finding.severity === 'low' ? 'verified' : 
+                                        finding.severity === 'high' ? 'false' : 'unverified';
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${finding.text}</div>
+                                <div class="claim-status claim-${severityClass}">
+                                    ${finding.type || finding.severity}
+                                </div>
+                            </div>
+                            ${finding.explanation ? `
+                                <div class="claim-details">
+                                    ${finding.explanation}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderFactChecker(data) {
+            console.log('renderFactChecker data:', data);
+            
+            const verified = data.verified_claims || data.claims_verified || 0;
+            const total = data.total_claims || data.claims_analyzed || 0;
+            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-check-circle"></i>
+                        Fact Checking Summary
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Claims Analyzed</span>
+                            <span class="result-value">${total}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Verified Claims</span>
+                            <span class="result-value">${verified}</span>
+                        </div>
+                        ${data.disputed_claims !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Disputed Claims</span>
+                                <span class="result-value">${data.disputed_claims}</span>
+                            </div>
+                        ` : ''}
+                        <div class="result-item">
+                            <span class="result-label">Accuracy Rate</span>
+                            <span class="result-value">${accuracy}%</span>
+                        </div>
+                    </div>
+                    ${total > 0 ? `
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${accuracy}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Overall credibility
+            if (data.overall_credibility !== undefined) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-shield-alt"></i>
+                            Factual Credibility
+                        </h4>
+                        <div class="service-results">
+                            <div class="result-item">
+                                <span class="result-label">Credibility Score</span>
+                                <span class="result-value">${data.overall_credibility}%</span>
+                            </div>
+                            ${data.confidence_level ? `
+                                <div class="result-item">
+                                    <span class="result-label">Confidence Level</span>
+                                    <span class="status-badge status-${data.confidence_level.toLowerCase() === 'high' ? 'high' : 'medium'}">
+                                        ${data.confidence_level}
+                                    </span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Individual claims
+            if (data.claims && data.claims.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list"></i>
+                            Individual Claims Analysis
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.claims.forEach(claim => {
+                    const status = claim.verification_status || claim.status || 'unverified';
+                    const statusClass = status === 'verified' || status === 'true' ? 'verified' : 
+                                      status === 'false' || status === 'disputed' ? 'false' : 'unverified';
+                    const statusIcon = status === 'verified' || status === 'true' ? 'fa-check' : 
+                                     status === 'false' || status === 'disputed' ? 'fa-times' : 'fa-question';
+                    
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text || 'Claim text unavailable')}"</div>
+                                <div class="claim-status claim-${statusClass}">
+                                    <i class="fas ${statusIcon}"></i>
+                                    ${formatStatus(status)}
+                                </div>
+                            </div>
+                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
+                                <div class="claim-details">
+                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
+                                    ${claim.sources && claim.sources.length > 0 ? 
+                                        `<br><small>Sources: ${claim.sources.map(s => s.name || s).join(', ')}</small>` : ''}
+                                    ${claim.confidence ? `<br><small>Confidence: ${claim.confidence}%</small>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Claim categories if available
+            if (data.claim_categories) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-pie"></i>
+                            Claim Categories
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(data.claim_categories).forEach(([category, count]) => {
+                    const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${formatFactorName(category)}</span>
+                                <span class="dimension-score">${count} claims (${percentage}%)</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${percentage}%; background: var(--primary);"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Fact checking sources
+            if (data.sources_used && data.sources_used.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-database"></i>
+                            Verification Sources
+                        </h4>
+                        <div class="techniques-grid">
+                            ${data.sources_used.map(source => `
+                                <div class="technique-card">
+                                    <div class="technique-name">${source.name || source}</div>
+                                    ${source.type ? `<div class="technique-description">Type: ${source.type}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderTransparency(data) {
+            console.log('renderTransparency data:', data);
+            
+            const score = data.transparency_score || data.score || 0;
+            const level = data.transparency_level || data.level || getTransparencyLevel(score);
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-eye"></i>
+                        Transparency Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Transparency Score</span>
+                            <span class="result-value">${score}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Transparency Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${score}%"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Transparency factors
+            if (data.factors || data.transparency_factors) {
+                const factors = data.factors || data.transparency_factors;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list-check"></i>
+                            Transparency Checklist
+                        </h4>
+                        <div class="service-results">
+                `;
+                
+                Object.entries(factors).forEach(([factor, value]) => {
+                    const present = typeof value === 'boolean' ? value : (value.present || value.found || false);
+                    const score = typeof value === 'number' ? value : (value.score || 0);
+                    
+                    content += `
+                        <div class="result-item">
+                            <span class="result-label">${formatFactorName(factor)}</span>
+                            <span class="result-value">
+                                ${typeof value === 'boolean' || value.present !== undefined ?
+                                    (present ? 
+                                        '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
+                                        '<i class="fas fa-times" style="color: var(--danger);"></i> Missing') :
+                                    `${score}%`
+                                }
+                            </span>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Disclosures found
+            if (data.disclosures_found && data.disclosures_found.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-file-contract"></i>
+                            Disclosures Found
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.disclosures_found.forEach(disclosure => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${disclosure.type || disclosure.name || 'Disclosure'}</div>
+                            <div class="technique-description">
+                                ${disclosure.content || disclosure.description || 'Information disclosed'}
+                                ${disclosure.location ? `<br><small>Location: ${disclosure.location}</small>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Missing disclosures
+            if (data.missing_disclosures && data.missing_disclosures.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Missing Disclosures
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.missing_disclosures.forEach(missing => {
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${missing.type || missing.name || 'Required disclosure'}</div>
+                                <div class="claim-status claim-false">
+                                    <i class="fas fa-times"></i>
+                                    Missing
+                                </div>
+                            </div>
+                            ${missing.importance || missing.description ? `
+                                <div class="claim-details">
+                                    ${missing.importance || missing.description}
+                                    ${missing.impact ? `<br><small>Impact: ${missing.impact}</small>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Transparency issues
+            if (data.issues && data.issues.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Transparency Issues
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.issues.forEach(issue => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${issue.type || issue.name || 'Issue'}</div>
+                            <div class="technique-description">
+                                ${issue.description || issue.details}
+                                ${issue.severity ? `<span class="technique-severity severity-${issue.severity.toLowerCase()}">${issue.severity} severity</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderManipulation(data) {
+            console.log('renderManipulation data:', data);
+            
+            const level = data.manipulation_level || data.level || 'Low';
+            const score = data.manipulation_score || data.score || 0;
+            const riskScore = data.risk_score !== undefined ? data.risk_score : score;
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-mask"></i>
+                        Manipulation Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Manipulation Level</span>
+                            <span class="status-badge status-${level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : level.toLowerCase() === 'moderate' ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                        ${riskScore !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Risk Score</span>
+                                <span class="result-value">${riskScore}/100</span>
+                            </div>
+                        ` : ''}
+                        ${data.techniques_count !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Techniques Detected</span>
+                                <span class="result-value">${data.techniques_count}</span>
+                            </div>
+                        ` : ''}
+                        ${data.confidence !== undefined ? `
+                            <div class="result-item">
+                                <span class="result-label">Detection Confidence</span>
+                                <span class="result-value">${data.confidence}%</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Manipulation techniques
+            if (data.techniques && data.techniques.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-brain"></i>
+                            Detected Manipulation Techniques
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                data.techniques.forEach(technique => {
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${technique.name || technique.type}</div>
+                            <div class="technique-description">
+                                ${technique.description || technique.details || technique.evidence}
+                                ${technique.severity ? 
+                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">${technique.severity} severity</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Emotional tactics
+            if (data.emotional_tactics && data.emotional_tactics.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-heart"></i>
+                            Emotional Manipulation Tactics
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.emotional_tactics.forEach(tactic => {
+                    const impactClass = tactic.impact === 'high' ? 'false' : tactic.impact === 'low' ? 'verified' : 'unverified';
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${tactic.emotion || tactic.type}</div>
+                                <div class="claim-status claim-${impactClass}">
+                                    ${tactic.intensity || tactic.impact || 'Detected'}
+                                </div>
+                            </div>
+                            ${tactic.evidence || tactic.description ? `
+                                <div class="claim-details">
+                                    ${tactic.evidence || tactic.description}
+                                    ${tactic.examples && tactic.examples.length > 0 ? 
+                                        `<br><small>Examples: "${tactic.examples.join('", "')}"</small>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
