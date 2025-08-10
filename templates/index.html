@@ -1224,6 +1224,16 @@
             font-size: 0.875rem;
             color: var(--gray-400);
         }
+
+        /* CRITICAL FIX: Ensure content is always visible */
+        .card-content {
+            display: block !important;
+        }
+
+        .analysis-card {
+            display: block !important;
+            opacity: 1 !important;
+        }
     </style>
 </head>
 <body>
@@ -1399,12 +1409,17 @@
         </div>
     </main>
 
+    <!-- Load external scripts if available -->
+    <script src="/static/js/components.js"></script>
+    <script src="/static/js/app.js"></script>
+
     <script>
         // Global state
         let currentAnalysis = null;
         let isAnalyzing = false;
         let charts = {};
         let isPro = true; // For development, keep pro features open
+        let app = null; // Will hold the NewsAnalyzer instance if available
 
         // Service definitions
         const services = [
@@ -1466,8 +1481,16 @@
             }
         ];
 
-        // Initialize
+        // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', function() {
+            // Try to initialize NewsAnalyzer if available
+            if (typeof NewsAnalyzer !== 'undefined') {
+                app = new NewsAnalyzer();
+                console.log('NewsAnalyzer app initialized');
+            } else {
+                console.log('Running in standalone mode');
+            }
+
             const urlInput = document.getElementById('urlInput');
             urlInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -1482,8 +1505,55 @@
             document.getElementById('urlInput').focus();
         }
 
+        // Normalize data structure to handle backend/frontend mismatches
+        function normalizeAnalysisData(data) {
+            // If we have the app instance, use its normalization
+            if (app && app.normalizeAnalysisData) {
+                return app.normalizeAnalysisData(data);
+            }
+            
+            // Otherwise, do our own normalization
+            // Ensure we have the expected structure
+            if (!data.analysis) {
+                data.analysis = {
+                    trust_score: data.trust_score || 50,
+                    trust_level: data.trust_level || 'Unknown',
+                    summary: data.summary,
+                    key_findings: data.key_findings || []
+                };
+            }
+
+            // Create shortcuts for easier access
+            if (data.detailed_analysis) {
+                // Map backend service names to frontend expectations
+                data.source_credibility = data.detailed_analysis.source_credibility || {};
+                data.author_analysis = data.detailed_analysis.author_analyzer || {};
+                data.bias_analysis = data.detailed_analysis.bias_detector || {};
+                data.transparency_analysis = data.detailed_analysis.transparency_analyzer || {};
+                data.persuasion_analysis = data.detailed_analysis.manipulation_detector || {};
+                data.content_analysis = data.detailed_analysis.content_analyzer || {};
+                data.plagiarism_analysis = data.detailed_analysis.plagiarism_detector || {};
+                
+                // Handle fact_checks specially
+                const factChecker = data.detailed_analysis.fact_checker || {};
+                if (factChecker.claims && Array.isArray(factChecker.claims)) {
+                    data.fact_checks = factChecker.claims;
+                } else {
+                    data.fact_checks = [];
+                }
+            }
+
+            return data;
+        }
+
         // Main analysis function
         async function analyzeArticle() {
+            // If app instance exists, delegate to it
+            if (app && app.analyzeUrl) {
+                return app.analyzeUrl();
+            }
+            
+            // Otherwise, run our own analysis
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
@@ -1531,6 +1601,9 @@
                     data = responseData.data;
                 }
                 
+                // Normalize the data structure
+                data = normalizeAnalysisData(data);
+                
                 currentAnalysis = data;
                 displayResults(data);
                 
@@ -1559,7 +1632,7 @@
             
             // Display each component
             try {
-                displayEnhancedTrustScore(data.analysis, data.detailed_analysis);
+                displayEnhancedTrustScore(data.analysis, data);
             } catch (e) {
                 console.error('Error displaying trust score:', e);
             }
@@ -1581,7 +1654,7 @@
         }
 
         // Enhanced trust score display with explanations
-        function displayEnhancedTrustScore(analysis, detailedAnalysis) {
+        function displayEnhancedTrustScore(analysis, fullData) {
             if (!analysis) {
                 console.error('No analysis data provided to displayEnhancedTrustScore');
                 return;
@@ -1606,29 +1679,29 @@
                     id: 'source_credibility',
                     icon: 'fa-shield-alt',
                     label: 'Source Credibility',
-                    value: detailedAnalysis?.source_credibility?.credibility_score || 0,
-                    explanation: getSourceCredibilityExplanation(detailedAnalysis?.source_credibility)
+                    value: fullData.source_credibility?.credibility_score || 0,
+                    explanation: getSourceCredibilityExplanation(fullData.source_credibility)
                 },
                 {
                     id: 'author_credibility',
                     icon: 'fa-user-check',
                     label: 'Author Credibility',
-                    value: detailedAnalysis?.author_analyzer?.credibility_score || 0,
-                    explanation: getAuthorCredibilityExplanation(detailedAnalysis?.author_analyzer)
+                    value: fullData.author_analysis?.credibility_score || 0,
+                    explanation: getAuthorCredibilityExplanation(fullData.author_analysis)
                 },
                 {
                     id: 'objectivity',
                     icon: 'fa-balance-scale',
                     label: 'Objectivity Score',
-                    value: 100 - (detailedAnalysis?.bias_detector?.overall_bias_score || 0),
-                    explanation: getObjectivityExplanation(detailedAnalysis?.bias_detector)
+                    value: 100 - (fullData.bias_analysis?.overall_bias_score || 0),
+                    explanation: getObjectivityExplanation(fullData.bias_analysis)
                 },
                 {
                     id: 'fact_accuracy',
                     icon: 'fa-check-double',
                     label: 'Fact Accuracy',
-                    value: calculateFactAccuracy(detailedAnalysis?.fact_checker),
-                    explanation: getFactAccuracyExplanation(detailedAnalysis?.fact_checker)
+                    value: calculateFactAccuracy(fullData.fact_checks),
+                    explanation: getFactAccuracyExplanation(fullData.fact_checks)
                 }
             ];
             
@@ -1740,16 +1813,15 @@
         }
 
         // Get explanation for fact accuracy
-        function getFactAccuracyExplanation(data) {
-            if (!data) return "Fact checking not performed";
+        function getFactAccuracyExplanation(factChecks) {
+            if (!factChecks || !Array.isArray(factChecks)) return "Fact checking not performed";
             
-            const total = data?.total_claims || 0;
-            const verified = data?.verified_claims || 0;
-            
+            const total = factChecks.length;
             if (total === 0) {
                 return "No factual claims found to verify in this article.";
             }
             
+            const verified = factChecks.filter(f => f.verdict?.toLowerCase().includes('true')).length;
             const accuracy = Math.round((verified / total) * 100);
             
             if (accuracy >= 80) {
@@ -1761,6 +1833,15 @@
             } else {
                 return `Major factual issues: only ${verified} of ${total} claims are accurate. Contains false or misleading information.`;
             }
+        }
+
+        // Calculate fact accuracy percentage
+        function calculateFactAccuracy(factChecks) {
+            if (!factChecks || !Array.isArray(factChecks) || factChecks.length === 0) {
+                return 0;
+            }
+            const verified = factChecks.filter(f => f.verdict?.toLowerCase().includes('true')).length;
+            return Math.round((verified / factChecks.length) * 100);
         }
 
         // Animate trust score number
@@ -1859,16 +1940,6 @@
             });
         }
 
-        // Calculate fact accuracy percentage
-        function calculateFactAccuracy(factData) {
-            if (!factData || !factData.total_claims || factData.total_claims === 0) {
-                return 0;
-            }
-            const verified = factData.verified_claims || 0;
-            const total = factData.total_claims;
-            return Math.round((verified / total) * 100);
-        }
-
         // Get breakdown type based on score
         function getBreakdownType(score) {
             if (score >= 80) return 'positive';
@@ -1940,13 +2011,32 @@
             const container = document.getElementById('servicesAccordion');
             container.innerHTML = '';
             
-            const detailedAnalysis = data.detailed_analysis || {};
-            
             services.forEach((service, index) => {
-                const serviceData = detailedAnalysis[service.id] || {};
+                const serviceData = getServiceData(data, service.id);
                 const accordionItem = createServiceAccordionItem(service, serviceData, index);
                 container.appendChild(accordionItem);
             });
+        }
+
+        // Get service data from normalized structure
+        function getServiceData(data, serviceId) {
+            // Map service IDs to the normalized data structure
+            const serviceMap = {
+                'source_credibility': data.source_credibility,
+                'author_analyzer': data.author_analysis,
+                'bias_detector': data.bias_analysis,
+                'fact_checker': {
+                    claims: data.fact_checks,
+                    total_claims: data.fact_checks?.length || 0,
+                    verified_claims: data.fact_checks?.filter(f => f.verdict?.toLowerCase().includes('true')).length || 0
+                },
+                'transparency_analyzer': data.transparency_analysis,
+                'manipulation_detector': data.persuasion_analysis,
+                'content_analyzer': data.content_analysis,
+                'plagiarism_detector': data.plagiarism_analysis
+            };
+            
+            return serviceMap[serviceId] || {};
         }
 
         // Create service accordion item
@@ -2082,8 +2172,8 @@
 
         // Update service visualizations
         function updateServiceVisualizations(serviceId) {
-            const serviceData = currentAnalysis?.detailed_analysis?.[serviceId];
-            if (!serviceData) return;
+            const serviceData = currentAnalysis ? getServiceData(currentAnalysis, serviceId) : {};
+            if (!serviceData || Object.keys(serviceData).length === 0) return;
             
             // Find all canvases in this service section
             const canvases = document.querySelectorAll(`#service-${serviceId} canvas`);
@@ -3128,23 +3218,23 @@
                 const components = [
                     {
                         name: 'Source Credibility',
-                        score: currentAnalysis.detailed_analysis?.source_credibility?.credibility_score || 0,
-                        explanation: getSourceCredibilityExplanation(currentAnalysis.detailed_analysis?.source_credibility)
+                        score: currentAnalysis.source_credibility?.credibility_score || 0,
+                        explanation: getSourceCredibilityExplanation(currentAnalysis.source_credibility)
                     },
                     {
                         name: 'Author Credibility',
-                        score: currentAnalysis.detailed_analysis?.author_analyzer?.credibility_score || 0,
-                        explanation: getAuthorCredibilityExplanation(currentAnalysis.detailed_analysis?.author_analyzer)
+                        score: currentAnalysis.author_analysis?.credibility_score || 0,
+                        explanation: getAuthorCredibilityExplanation(currentAnalysis.author_analysis)
                     },
                     {
                         name: 'Objectivity Score',
-                        score: 100 - (currentAnalysis.detailed_analysis?.bias_detector?.overall_bias_score || 0),
-                        explanation: getObjectivityExplanation(currentAnalysis.detailed_analysis?.bias_detector)
+                        score: 100 - (currentAnalysis.bias_analysis?.overall_bias_score || 0),
+                        explanation: getObjectivityExplanation(currentAnalysis.bias_analysis)
                     },
                     {
                         name: 'Fact Accuracy',
-                        score: calculateFactAccuracy(currentAnalysis.detailed_analysis?.fact_checker),
-                        explanation: getFactAccuracyExplanation(currentAnalysis.detailed_analysis?.fact_checker)
+                        score: calculateFactAccuracy(currentAnalysis.fact_checks),
+                        explanation: getFactAccuracyExplanation(currentAnalysis.fact_checks)
                     }
                 ];
                 
@@ -3176,10 +3266,8 @@
                 yPosition += 10;
                 
                 // Process each service
-                const detailedAnalysis = currentAnalysis.detailed_analysis || {};
-                
                 services.forEach(service => {
-                    const serviceData = detailedAnalysis[service.id];
+                    const serviceData = getServiceData(currentAnalysis, service.id);
                     if (!serviceData || Object.keys(serviceData).length === 0) return;
                     
                     // Add page break if needed
