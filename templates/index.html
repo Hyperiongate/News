@@ -1533,13 +1533,37 @@
                 }
                 
                 const responseData = await response.json();
+                console.log('=== DEBUGGING API RESPONSE ===');
                 console.log('Raw API response:', responseData);
+                console.log('Response keys:', Object.keys(responseData));
                 
                 // Extract data from response
                 let data = responseData;
                 if (responseData.success && responseData.data) {
                     data = responseData.data;
+                    console.log('Extracted data from responseData.data');
+                    console.log('Data keys:', Object.keys(data));
                 }
+                
+                // Deep inspection of the data structure
+                console.log('=== DETAILED DATA STRUCTURE ===');
+                console.log('data.analysis:', data.analysis);
+                console.log('data.article:', data.article);
+                console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
+                if (data.detailed_analysis) {
+                    console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
+                    // Log each service's data
+                    Object.keys(data.detailed_analysis).forEach(key => {
+                        console.log(`detailed_analysis.${key}:`, data.detailed_analysis[key]);
+                    });
+                }
+                
+                // Check for other possible locations
+                services.forEach(service => {
+                    console.log(`Checking for ${service.id} in various locations:`);
+                    console.log(`  - data.${service.id}:`, data[service.id]);
+                    console.log(`  - data.detailed_analysis?.${service.id}:`, data.detailed_analysis?.[service.id]);
+                });
                 
                 currentAnalysis = data;
                 displayResults(data);
@@ -1592,6 +1616,10 @@
 
         // Enhanced trust score display with explanations
         function displayEnhancedTrustScore(analysis, fullData) {
+            console.log('=== displayEnhancedTrustScore called ===');
+            console.log('analysis:', analysis);
+            console.log('fullData:', fullData);
+            
             if (!analysis) {
                 console.error('No analysis data provided to displayEnhancedTrustScore');
                 return;
@@ -1610,38 +1638,49 @@
             const summaryEl = document.getElementById('trustSummary');
             summaryEl.textContent = getTrustSummaryExplanation(score, level, analysis);
             
+            // Find the services data
+            let servicesData = null;
+            if (fullData.detailed_analysis) {
+                servicesData = fullData.detailed_analysis;
+            } else if (fullData.source_credibility || fullData.author_analyzer) {
+                servicesData = fullData;
+            }
+            
+            console.log('Services data for trust breakdown:', servicesData);
+            
             // Create detailed breakdown with explanations
-            const detailedAnalysis = fullData.detailed_analysis || {};
             const breakdownData = [
                 {
                     id: 'source_credibility',
                     icon: 'fa-shield-alt',
                     label: 'Source Credibility',
-                    value: detailedAnalysis.source_credibility?.credibility_score || 0,
-                    explanation: getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
+                    value: servicesData?.source_credibility?.credibility_score || 0,
+                    explanation: getSourceCredibilityExplanation(servicesData?.source_credibility)
                 },
                 {
                     id: 'author_credibility',
                     icon: 'fa-user-check',
                     label: 'Author Credibility',
-                    value: detailedAnalysis.author_analyzer?.credibility_score || 0,
-                    explanation: getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
+                    value: servicesData?.author_analyzer?.credibility_score || servicesData?.author_analysis?.credibility_score || 0,
+                    explanation: getAuthorCredibilityExplanation(servicesData?.author_analyzer || servicesData?.author_analysis)
                 },
                 {
                     id: 'objectivity',
                     icon: 'fa-balance-scale',
                     label: 'Objectivity Score',
-                    value: 100 - (detailedAnalysis.bias_detector?.overall_bias_score || 0),
-                    explanation: getObjectivityExplanation(detailedAnalysis.bias_detector)
+                    value: 100 - (servicesData?.bias_detector?.overall_bias_score || servicesData?.bias_analysis?.overall_bias_score || 0),
+                    explanation: getObjectivityExplanation(servicesData?.bias_detector || servicesData?.bias_analysis)
                 },
                 {
                     id: 'fact_accuracy',
                     icon: 'fa-check-double',
                     label: 'Fact Accuracy',
-                    value: calculateFactAccuracy(detailedAnalysis.fact_checker),
-                    explanation: getFactAccuracyExplanation(detailedAnalysis.fact_checker)
+                    value: calculateFactAccuracy(servicesData?.fact_checker || servicesData?.fact_checks),
+                    explanation: getFactAccuracyExplanation(servicesData?.fact_checker || servicesData?.fact_checks)
                 }
             ];
+            
+            console.log('Breakdown data:', breakdownData);
             
             let breakdownHtml = '';
             breakdownData.forEach(item => {
@@ -1752,10 +1791,30 @@
 
         // Get explanation for fact accuracy
         function getFactAccuracyExplanation(factCheckerData) {
+            console.log('getFactAccuracyExplanation called with:', factCheckerData);
+            
             if (!factCheckerData) return "Fact checking not performed";
             
-            const total = factCheckerData.total_claims || 0;
-            const verified = factCheckerData.verified_claims || 0;
+            let total = 0;
+            let verified = 0;
+            
+            // Handle different data structures
+            if (factCheckerData.total_claims !== undefined) {
+                total = factCheckerData.total_claims;
+                verified = factCheckerData.verified_claims || 0;
+            } else if (factCheckerData.claims && Array.isArray(factCheckerData.claims)) {
+                total = factCheckerData.claims.length;
+                verified = factCheckerData.claims.filter(claim => 
+                    claim.verification_status === 'verified' || 
+                    claim.verdict?.toLowerCase().includes('true')
+                ).length;
+            } else if (Array.isArray(factCheckerData)) {
+                total = factCheckerData.length;
+                verified = factCheckerData.filter(claim => 
+                    claim.verification_status === 'verified' || 
+                    claim.verdict?.toLowerCase().includes('true')
+                ).length;
+            }
             
             if (total === 0) {
                 return "No factual claims found to verify in this article.";
@@ -1776,10 +1835,35 @@
 
         // Calculate fact accuracy percentage
         function calculateFactAccuracy(factCheckerData) {
+            console.log('calculateFactAccuracy called with:', factCheckerData);
+            
             if (!factCheckerData) return 0;
             
-            const total = factCheckerData.total_claims || 0;
-            const verified = factCheckerData.verified_claims || 0;
+            // Handle different data structures
+            let total = 0;
+            let verified = 0;
+            
+            // If it has total_claims and verified_claims
+            if (factCheckerData.total_claims !== undefined) {
+                total = factCheckerData.total_claims;
+                verified = factCheckerData.verified_claims || 0;
+            }
+            // If it has a claims array
+            else if (factCheckerData.claims && Array.isArray(factCheckerData.claims)) {
+                total = factCheckerData.claims.length;
+                verified = factCheckerData.claims.filter(claim => 
+                    claim.verification_status === 'verified' || 
+                    claim.verdict?.toLowerCase().includes('true')
+                ).length;
+            }
+            // If it's an array itself (legacy format)
+            else if (Array.isArray(factCheckerData)) {
+                total = factCheckerData.length;
+                verified = factCheckerData.filter(claim => 
+                    claim.verification_status === 'verified' || 
+                    claim.verdict?.toLowerCase().includes('true')
+                ).length;
+            }
             
             if (total === 0) return 0;
             return Math.round((verified / total) * 100);
@@ -1949,13 +2033,69 @@
 
         // Display service accordion
         function displayServiceAccordion(data) {
+            console.log('=== displayServiceAccordion called ===');
+            console.log('data structure:', data);
+            
             const container = document.getElementById('servicesAccordion');
             container.innerHTML = '';
             
-            const detailedAnalysis = data.detailed_analysis || {};
+            // Try multiple possible data locations
+            let servicesData = null;
+            
+            // Check if data is directly in the root
+            if (data.source_credibility || data.author_analyzer || data.bias_detector) {
+                console.log('Found services data at root level');
+                servicesData = data;
+            }
+            // Check if it's in detailed_analysis
+            else if (data.detailed_analysis) {
+                console.log('Found services data in detailed_analysis');
+                servicesData = data.detailed_analysis;
+            }
+            // Check if there's a nested data structure
+            else if (data.data) {
+                console.log('Found nested data structure');
+                if (data.data.detailed_analysis) {
+                    servicesData = data.data.detailed_analysis;
+                } else {
+                    servicesData = data.data;
+                }
+            }
+            
+            console.log('Using servicesData:', servicesData);
             
             services.forEach((service, index) => {
-                const serviceData = detailedAnalysis[service.id] || {};
+                let serviceData = {};
+                
+                if (servicesData) {
+                    // Try to find the service data
+                    serviceData = servicesData[service.id] || {};
+                    
+                    // If not found, try alternative names
+                    if (Object.keys(serviceData).length === 0) {
+                        const alternativeNames = {
+                            'author_analyzer': ['author_analysis', 'author_info'],
+                            'bias_detector': ['bias_analysis', 'bias'],
+                            'fact_checker': ['fact_checks', 'fact_checking'],
+                            'transparency_analyzer': ['transparency_analysis', 'transparency'],
+                            'manipulation_detector': ['manipulation_analysis', 'persuasion_analysis'],
+                            'content_analyzer': ['content_analysis', 'content'],
+                            'plagiarism_detector': ['plagiarism_analysis', 'plagiarism']
+                        };
+                        
+                        if (alternativeNames[service.id]) {
+                            for (const altName of alternativeNames[service.id]) {
+                                if (servicesData[altName]) {
+                                    serviceData = servicesData[altName];
+                                    console.log(`Found ${service.id} data under alternative name: ${altName}`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                console.log(`Creating accordion for ${service.id} with data:`, serviceData);
                 const accordionItem = createServiceAccordionItem(service, serviceData, index);
                 container.appendChild(accordionItem);
             });
