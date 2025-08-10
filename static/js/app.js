@@ -1,4 +1,4 @@
-// static/js/app.js - Main Application Logic
+// static/js/app.js - Main Application Logic with FIXED data access
 
 class TruthLensApp {
     constructor() {
@@ -60,7 +60,7 @@ class TruthLensApp {
     }
 
     async analyzeContent() {
-        this.analysisStartTime = Date.now(); // Track start time
+        this.analysisStartTime = Date.now();
         
         // Get input based on current tab
         let input, inputType;
@@ -109,7 +109,6 @@ class TruthLensApp {
                 })
             });
 
-            // CRITICAL FIX 1: Check HTTP response status first
             if (!response.ok) {
                 let errorMessage = 'Analysis failed';
                 try {
@@ -124,18 +123,15 @@ class TruthLensApp {
             // Parse response
             const responseData = await response.json();
             
-            // CRITICAL FIX 2: Log the EXACT response structure
             console.log('RAW API RESPONSE:', responseData);
             console.log('Response type:', typeof responseData);
             console.log('Response keys:', Object.keys(responseData));
             
-            // CRITICAL FIX 3: Check for success field in response
             if (responseData.success === false) {
                 throw new Error(responseData.error || 'Analysis failed on server');
             }
             
-            // CRITICAL FIX 4: Extract the actual data
-            // The backend might be wrapping the data in different ways
+            // Extract the actual data
             let analysisData = responseData;
             
             // Check if data is nested in a 'data' field
@@ -144,33 +140,18 @@ class TruthLensApp {
                 analysisData = responseData.data;
             }
             
-            // Check if we have the expected fields
-            if (!analysisData.trust_score && analysisData.trust_score !== 0) {
-                console.error('Missing trust_score in response:', analysisData);
-                // Try to find trust_score in different locations
-                if (responseData.result && responseData.result.trust_score !== undefined) {
-                    analysisData = responseData.result;
-                } else if (responseData.analysis && responseData.analysis.trust_score !== undefined) {
-                    analysisData = responseData.analysis;
-                }
-            }
+            // CRITICAL FIX: Normalize the data structure
+            // Create shortcuts for commonly accessed data to handle both old and new formats
+            analysisData = this.normalizeAnalysisData(analysisData);
             
-            // CRITICAL FIX 5: Validate we have minimum required data
-            if (!analysisData.trust_score && analysisData.trust_score !== 0) {
-                console.error('No trust_score found anywhere in response');
+            // Validate we have minimum required data
+            if (!analysisData.analysis || (!analysisData.analysis.trust_score && analysisData.analysis.trust_score !== 0)) {
+                console.error('No trust_score found in analysis');
                 throw new Error('Invalid response format: missing trust_score');
             }
             
             // Store the analysis data
             this.currentAnalysis = analysisData;
-            
-            // Enhanced debugging
-            console.log('PROCESSED ANALYSIS DATA:', analysisData);
-            console.log('Trust Score:', analysisData.trust_score);
-            console.log('Has article?', !!analysisData.article);
-            console.log('Has bias_analysis?', !!analysisData.bias_analysis);
-            console.log('Has author_analysis?', !!analysisData.author_analysis);
-            console.log('Has source_credibility?', !!analysisData.source_credibility);
             
             // Store for debugging
             window.debugData = analysisData;
@@ -182,20 +163,13 @@ class TruthLensApp {
             // Display results with the correct data
             this.displayResults(analysisData);
             
-            // Log success
-            console.log('Analysis complete - Trust Score:', analysisData.trust_score);
+            console.log('Analysis complete - Trust Score:', analysisData.analysis.trust_score);
             
         } catch (error) {
             console.error('Analysis error:', error);
             console.error('Error stack:', error.stack);
             this.showError(error.message || 'An error occurred during analysis');
             this.hideProgress();
-            
-            // Additional error debugging
-            console.log('Last known state:');
-            console.log('- API endpoint:', this.API_ENDPOINT);
-            console.log('- Input type:', inputType);
-            console.log('- Input value:', input);
         } finally {
             // Re-enable buttons
             analyzeBtns.forEach(btn => {
@@ -203,6 +177,50 @@ class TruthLensApp {
                 btn.innerHTML = '<i class="fas fa-search"></i> <span>Analyze</span>';
             });
         }
+    }
+
+    // NEW METHOD: Normalize data structure to handle both old and new formats
+    normalizeAnalysisData(data) {
+        // Ensure we have the expected structure
+        if (!data.analysis) {
+            data.analysis = {
+                trust_score: data.trust_score || 50,
+                trust_level: data.trust_level || 'Unknown',
+                summary: data.summary,
+                key_findings: data.key_findings || []
+            };
+        }
+
+        // Create shortcuts for backward compatibility
+        // This allows the frontend to use data.bias_analysis instead of data.detailed_analysis.bias_detector
+        if (data.detailed_analysis) {
+            // Map new service names to old expected names
+            data.bias_analysis = data.detailed_analysis.bias_detector || {};
+            data.author_analysis = data.detailed_analysis.author_analyzer || {};
+            data.source_credibility = data.detailed_analysis.source_credibility || {};
+            data.fact_checks = data.detailed_analysis.fact_checker || {};
+            data.transparency_analysis = data.detailed_analysis.transparency_analyzer || {};
+            data.persuasion_analysis = data.detailed_analysis.manipulation_detector || {};
+            data.content_analysis = data.detailed_analysis.content_analyzer || {};
+            data.plagiarism_analysis = data.detailed_analysis.plagiarism_detector || {};
+            
+            // Also ensure fact_checks is in the expected format
+            if (data.fact_checks && !Array.isArray(data.fact_checks)) {
+                // Convert fact checker data to array format if needed
+                if (data.fact_checks.claims && Array.isArray(data.fact_checks.claims)) {
+                    data.fact_checks = data.fact_checks.claims;
+                } else {
+                    data.fact_checks = [];
+                }
+            }
+        }
+
+        // Ensure trust_score is at the root level for backward compatibility
+        if (!data.trust_score && data.analysis && data.analysis.trust_score !== undefined) {
+            data.trust_score = data.analysis.trust_score;
+        }
+
+        return data;
     }
 
     showProgress() {
@@ -264,7 +282,7 @@ class TruthLensApp {
         console.log('Data type:', typeof data);
         console.log('Data keys:', data ? Object.keys(data) : 'data is null/undefined');
         
-        // CRITICAL FIX: Validate data exists
+        // Validate data exists
         if (!data) {
             console.error('No data provided to displayResults');
             this.showError('No analysis data received');
@@ -286,7 +304,7 @@ class TruthLensApp {
         }, 100);
 
         // Display trust score with animation
-        const trustScore = data.trust_score || 50;
+        const trustScore = data.analysis?.trust_score || data.trust_score || 50;
         console.log('Animating trust score:', trustScore);
         this.animateTrustScore(trustScore);
         
@@ -394,10 +412,10 @@ class TruthLensApp {
             return;
         }
         
-        const trustScore = data.trust_score || 50;
-        const biasData = data.bias_analysis || {};
-        const biasScore = Math.abs(biasData.political_lean || biasData.bias_score || 0);
-        const sourceCred = data.source_credibility?.rating || 'Unknown';
+        const trustScore = data.analysis?.trust_score || data.trust_score || 50;
+        const biasData = data.bias_analysis || data.detailed_analysis?.bias_detector || {};
+        const biasScore = Math.abs(biasData.overall_bias_score || biasData.political_lean || biasData.bias_score || 0);
+        const sourceCred = data.source_credibility?.rating || data.source_credibility?.credibility_level || 'Unknown';
         
         let summaryHTML = '<ul>';
         
@@ -413,9 +431,9 @@ class TruthLensApp {
         }
         
         // Source assessment
-        if (sourceCred === 'High') {
+        if (sourceCred === 'High' || sourceCred === 'Very High') {
             summaryHTML += '<li><i class="fas fa-building text-success"></i> Published by a <strong>highly credible source</strong> with strong fact-checking standards.</li>';
-        } else if (sourceCred === 'Medium') {
+        } else if (sourceCred === 'Medium' || sourceCred === 'Moderate') {
             summaryHTML += '<li><i class="fas fa-building text-info"></i> Published by a <strong>moderately credible source</strong> with mixed reliability.</li>';
         } else if (sourceCred === 'Low' || sourceCred === 'Very Low') {
             summaryHTML += '<li><i class="fas fa-building text-danger"></i> Published by a <strong>low credibility source</strong> known for unreliable content.</li>';
@@ -593,46 +611,14 @@ class TruthLensApp {
         this.showError('PDF download feature coming soon!');
         
         // TODO: Implement actual PDF generation
-        /*
-        // Show loading overlay
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        
-        try {
-            const response = await fetch('/api/generate-pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(this.currentAnalysis)
-            });
-            
-            if (!response.ok) throw new Error('PDF generation failed');
-            
-            // Download the PDF
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `truthlens-analysis-${Date.now()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-        } catch (error) {
-            console.error('PDF download error:', error);
-            this.showError('Failed to generate PDF. Please try again.');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-        */
     }
 
     shareAnalysis() {
         if (!this.currentAnalysis) return;
         
         const article = this.currentAnalysis.article || {};
-        const text = `Check out this news analysis: "${article.title}" - Trust Score: ${this.currentAnalysis.trust_score}/100`;
+        const trustScore = this.currentAnalysis.analysis?.trust_score || this.currentAnalysis.trust_score || 0;
+        const text = `Check out this news analysis: "${article.title}" - Trust Score: ${trustScore}/100`;
         
         if (navigator.share) {
             navigator.share({
