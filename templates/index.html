@@ -1480,6 +1480,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing TruthLens...');
             
+            // Add event listener for URL input Enter key
             const urlInput = document.getElementById('urlInput');
             if (urlInput) {
                 console.log('URL input found');
@@ -1493,7 +1494,7 @@
                 console.error('URL input not found!');
             }
             
-            // Add click handler for analyze button - WITH NULL CHECK
+            // Add click handler for analyze button
             const analyzeBtn = document.getElementById('analyzeBtn');
             if (analyzeBtn) {
                 console.log('Analyze button found, adding click handler');
@@ -1530,7 +1531,7 @@
             document.getElementById('urlInput').focus();
         }
 
-        // Main analysis function
+        // Main analysis function - FIXED API CALL
         async function analyzeArticle() {
             console.log('analyzeArticle function called');
             
@@ -1567,20 +1568,27 @@
             console.log('Starting API call to /api/analyze');
             
             try {
+                // FIXED: Use correct API endpoint and payload format
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url })
+                    body: JSON.stringify({ url: url }) // FIXED: Send just { url } not { input, input_type }
                 });
                 
                 console.log('API response status:', response.status);
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    console.error('API error response:', error);
-                    throw new Error(error.error?.message || error.error || 'Analysis failed');
+                    let errorMessage = 'Analysis failed';
+                    try {
+                        const errorData = await response.json();
+                        console.error('API error response:', errorData);
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                    } catch (e) {
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const responseData = await response.json();
@@ -1588,25 +1596,36 @@
                 console.log('Raw API response:', responseData);
                 console.log('Response keys:', Object.keys(responseData));
                 
-                // Extract data from response
+                // Extract data from response - handle different response structures
                 let data = responseData;
-                if (responseData.success && responseData.data) {
+                
+                // If response has a data field, use that
+                if (responseData.data && typeof responseData.data === 'object') {
                     data = responseData.data;
                     console.log('Extracted data from responseData.data');
-                    console.log('Data keys:', Object.keys(data));
                 }
                 
-                // Deep inspection of the data structure
+                // If response has success field and it's false, handle error
+                if (responseData.success === false) {
+                    throw new Error(responseData.error || 'Analysis failed');
+                }
+                
+                // Validate the data structure
+                if (!data.analysis || (!data.analysis.trust_score && data.analysis.trust_score !== 0)) {
+                    console.error('Invalid response structure:', data);
+                    throw new Error('Invalid response from server');
+                }
+                
                 console.log('=== DETAILED DATA STRUCTURE ===');
                 console.log('data.analysis:', data.analysis);
                 console.log('data.article:', data.article);
                 console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
+                
                 if (data.detailed_analysis) {
                     console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
-                    // Log each service's data WITH CONTENT
+                    // Log each service's data
                     Object.keys(data.detailed_analysis).forEach(key => {
                         console.log(`detailed_analysis.${key}:`, data.detailed_analysis[key]);
-                        console.log(`  Keys in ${key}:`, Object.keys(data.detailed_analysis[key]));
                     });
                 }
                 
@@ -1615,7 +1634,7 @@
                 
             } catch (error) {
                 console.error('Analysis error:', error);
-                showError(error.message || 'Failed to analyze article');
+                showError(error.message || 'Failed to analyze article. Please try again.');
             } finally {
                 isAnalyzing = false;
                 hideLoading();
@@ -2477,7 +2496,7 @@
                             Technical Analysis
                         </h4>
                         <div class="service-results">
-                            ${tech.age_years ? `
+                            ${tech.age_years !== undefined ? `
                                 <div class="result-item">
                                     <span class="result-label">Domain Age</span>
                                     <span class="result-value">${tech.age_years.toFixed(1)} years</span>
@@ -3733,3 +3752,9 @@
                 });
             }
         }
+
+        // Make toggleAccordion function global so onclick can access it
+        window.toggleAccordion = toggleAccordion;
+    </script>
+</body>
+</html>
