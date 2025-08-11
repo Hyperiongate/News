@@ -1485,9 +1485,13 @@
                 }
             });
             
-            // Add click handler for analyze button
+            // Add click handler for analyze button - WITH NULL CHECK
             const analyzeBtn = document.getElementById('analyzeBtn');
-            analyzeBtn.addEventListener('click', analyzeArticle);
+            if (analyzeBtn) {
+                analyzeBtn.addEventListener('click', analyzeArticle);
+            } else {
+                console.error('Analyze button not found!');
+            }
             
             // Add click handlers for example buttons
             document.querySelectorAll('.example-btn').forEach(btn => {
