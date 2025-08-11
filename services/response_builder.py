@@ -203,7 +203,7 @@ class AnalysisResponseBuilder(ResponseBuilder):
         Build standardized analysis response
         
         Args:
-            analysis_results: Results from all analyzers
+            analysis_results: Results from all analyzers (including service results)
             article_data: Extracted article data
             processing_time: Total processing time
             services_used: List of services that were used
@@ -211,31 +211,70 @@ class AnalysisResponseBuilder(ResponseBuilder):
         Returns:
             Flask Response object
         """
-        # FIXED: Properly extract data from service results
-        extracted_results = {}
+        logger.info("=" * 80)
+        logger.info("AnalysisResponseBuilder.build_analysis_response called")
+        logger.info(f"analysis_results keys: {list(analysis_results.keys())}")
+        logger.info(f"article_data keys: {list(article_data.keys())}")
+        logger.info(f"services_used: {services_used}")
+        logger.info("=" * 80)
         
-        # Log what we're working with
-        logger.info(f"Building response - analysis_results keys: {list(analysis_results.keys())}")
-        logger.info(f"Services used: {services_used}")
+        # CRITICAL FIX: The analysis_results contains ALL pipeline results including service results
+        # We need to separate out the service results from the metadata
         
-        # Extract data from each service result
-        for service_name, result in analysis_results.items():
-            if isinstance(result, dict) and result.get('success'):
-                # Extract the data field if it exists
-                if 'data' in result:
-                    extracted_results[service_name] = result['data']
-                    logger.info(f"Extracted data from {service_name}")
+        # Extract service results from the analysis_results
+        service_results = {}
+        metadata_fields = ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 
+                          'errors', 'article', 'services_available', 'is_pro', 'analysis_mode']
+        
+        # Separate service results from metadata
+        for key, value in analysis_results.items():
+            if key not in metadata_fields and isinstance(value, dict) and 'service' in value:
+                # This is a service result
+                service_results[key] = value
+                logger.info(f"Found service result: {key}")
+        
+        logger.info(f"Extracted {len(service_results)} service results")
+        
+        # Now build the detailed_analysis section with actual data
+        detailed_analysis = {}
+        
+        for service_name in services_used:
+            if service_name in service_results:
+                result = service_results[service_name]
+                
+                # Extract the actual data from the service result
+                if result.get('success', False):
+                    # If the service has a 'data' field, use it
+                    if 'data' in result and isinstance(result['data'], dict):
+                        detailed_analysis[service_name] = result['data']
+                        logger.info(f"Added {service_name} data from 'data' field")
+                    else:
+                        # Otherwise, extract relevant fields (exclude metadata)
+                        service_data = {}
+                        exclude_fields = ['service', 'success', 'available', 'timestamp', 'error']
+                        for k, v in result.items():
+                            if k not in exclude_fields:
+                                service_data[k] = v
+                        
+                        if service_data:
+                            detailed_analysis[service_name] = service_data
+                            logger.info(f"Added {service_name} data from result fields")
+                        else:
+                            detailed_analysis[service_name] = {}
+                            logger.warning(f"No data found for {service_name}")
                 else:
-                    # If no data field, use the entire result (legacy format)
-                    extracted_results[service_name] = result
-                    logger.info(f"Using full result from {service_name} (no data field)")
+                    # Service failed
+                    detailed_analysis[service_name] = {}
+                    logger.warning(f"Service {service_name} failed")
             else:
-                # Service failed or returned empty result
-                extracted_results[service_name] = {}
-                logger.warning(f"Service {service_name} failed or returned empty result")
+                # Service result not found
+                detailed_analysis[service_name] = {}
+                logger.warning(f"No result found for service {service_name}")
         
-        # Log what we extracted
-        logger.info(f"Extracted results keys: {list(extracted_results.keys())}")
+        # Log what we're putting in detailed_analysis
+        logger.info("Final detailed_analysis structure:")
+        for service, data in detailed_analysis.items():
+            logger.info(f"  {service}: {list(data.keys()) if data else 'empty'}")
         
         # Structure the response data
         data = {
@@ -252,26 +291,11 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'trust_score': analysis_results.get('trust_score', 50),
                 'trust_level': analysis_results.get('trust_level', 'Unknown'),
                 'summary': analysis_results.get('summary'),
-                'key_findings': AnalysisResponseBuilder._extract_key_findings(extracted_results)
+                'key_findings': AnalysisResponseBuilder._extract_key_findings(detailed_analysis)
             },
-            # FIXED: Use correct service names that match the service registry
-            'detailed_analysis': {
-                'source_credibility': extracted_results.get('source_credibility', {}),
-                'author_analyzer': extracted_results.get('author_analyzer', {}),  # FIXED: was 'author_analysis'
-                'bias_detector': extracted_results.get('bias_detector', {}),      # FIXED: was 'bias_analysis'
-                'transparency_analyzer': extracted_results.get('transparency_analyzer', {}),  # FIXED: was 'transparency_analysis'
-                'fact_checker': extracted_results.get('fact_checker', {}),        # FIXED: was 'fact_checks'
-                'manipulation_detector': extracted_results.get('manipulation_detector', {}),  # FIXED: was 'manipulation_analysis'
-                'content_analyzer': extracted_results.get('content_analyzer', {}),  # FIXED: was 'content_analysis'
-                'plagiarism_detector': extracted_results.get('plagiarism_detector', {})  # Added missing service
-            }
+            # Use the properly extracted service data
+            'detailed_analysis': detailed_analysis
         }
-        
-        # Log final detailed_analysis structure
-        logger.info(f"Final detailed_analysis keys: {list(data['detailed_analysis'].keys())}")
-        for key, value in data['detailed_analysis'].items():
-            if value:
-                logger.info(f"  {key}: {type(value).__name__} with {len(value) if isinstance(value, (dict, list)) else 'scalar'} items")
         
         # Build metadata
         metadata = {
@@ -308,15 +332,18 @@ class AnalysisResponseBuilder(ResponseBuilder):
         
         # Source credibility finding
         source_cred = analysis_results.get('source_credibility', {})
-        if source_cred and source_cred.get('rating'):
+        if source_cred and source_cred.get('credibility_score') is not None:
+            score = source_cred.get('credibility_score', 0)
+            level = source_cred.get('credibility_level', 'Unknown')
+            severity = 'high' if score < 40 else 'medium' if score < 70 else 'low'
             findings.append({
                 'type': 'source_credibility',
-                'severity': 'high' if source_cred.get('rating') in ['Very Low', 'Low'] else 'medium',
-                'text': f"{source_cred.get('rating')} credibility source: {source_cred.get('reason', 'Based on domain analysis')}",
-                'finding': f"Source has {source_cred.get('rating')} credibility"
+                'severity': severity,
+                'text': f"Source has {level} credibility (score: {score}/100)",
+                'finding': f"Source credibility: {level}"
             })
         
-        # Author finding - FIXED: using 'author_analyzer' not 'author_analysis'
+        # Author finding
         author = analysis_results.get('author_analyzer', {})
         if author and author.get('credibility_level'):
             findings.append({
@@ -326,7 +353,7 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'finding': f"Author has {author.get('credibility_level')} credibility"
             })
         
-        # Bias finding - FIXED: using 'bias_detector' not 'bias_analysis'
+        # Bias finding
         bias = analysis_results.get('bias_detector', {})
         if bias and bias.get('overall_bias'):
             severity = 'high' if bias.get('overall_bias') in ['Extreme', 'Strong'] else 'medium'
@@ -337,66 +364,72 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'finding': f"{bias.get('overall_bias')} bias present"
             })
         
-        # Fact checking finding - FIXED: using 'fact_checker' not 'fact_checks'
+        # Transparency finding
+        transparency = analysis_results.get('transparency_analyzer', {})
+        if transparency and transparency.get('transparency_score') is not None:
+            score = transparency.get('transparency_score', 0)
+            severity = 'high' if score < 40 else 'medium' if score < 70 else 'low'
+            findings.append({
+                'type': 'transparency',
+                'severity': severity,
+                'text': f"Transparency score: {score}/100",
+                'finding': f"{'Low' if score < 40 else 'Moderate' if score < 70 else 'High'} transparency"
+            })
+        
+        # Fact checking finding
         facts = analysis_results.get('fact_checker', {})
         if facts and facts.get('claims_checked'):
             verified = facts.get('verified_count', 0)
             total = facts.get('claims_checked', 0)
             if total > 0:
                 percentage = (verified / total) * 100
-                severity = 'negative' if percentage < 50 else 'positive' if percentage > 80 else 'warning'
+                severity = 'high' if percentage < 50 else 'low' if percentage > 80 else 'medium'
                 findings.append({
-                    'type': 'fact_check',
+                    'type': 'fact_checking',
                     'severity': severity,
-                    'text': f"{verified} of {total} claims verified ({percentage:.0f}%)",
-                    'finding': f"Fact verification: {percentage:.0f}%"
+                    'text': f"{verified}/{total} claims verified ({percentage:.0f}%)",
+                    'finding': f"{percentage:.0f}% of claims verified"
                 })
         
-        # Manipulation finding - using correct name
+        # Manipulation finding
         manipulation = analysis_results.get('manipulation_detector', {})
-        if manipulation and manipulation.get('manipulation_level'):
-            if manipulation.get('manipulation_level') != 'None':
+        if manipulation and manipulation.get('manipulation_detected') is not None:
+            if manipulation.get('manipulation_detected'):
                 findings.append({
                     'type': 'manipulation',
                     'severity': 'high',
-                    'text': f"{manipulation.get('manipulation_level')} level of manipulation detected",
-                    'finding': "Potential manipulation detected"
+                    'text': 'Potential manipulation techniques detected',
+                    'finding': 'Manipulation detected'
                 })
         
-        # Content quality finding
-        content = analysis_results.get('content_analyzer', {})
-        if content and content.get('quality_score'):
-            score = content.get('quality_score', 0)
-            if score < 50:
-                findings.append({
-                    'type': 'content_quality',
-                    'severity': 'warning',
-                    'text': f"Low content quality score: {score}/100",
-                    'finding': "Content quality concerns"
-                })
+        # Sort by severity (high first)
+        severity_order = {'high': 0, 'medium': 1, 'low': 2}
+        findings.sort(key=lambda x: severity_order.get(x.get('severity', 'medium'), 1))
         
-        # Transparency finding
-        transparency = analysis_results.get('transparency_analyzer', {})
-        if transparency and transparency.get('transparency_score'):
-            score = transparency.get('transparency_score', 0)
-            if score < 50:
-                findings.append({
-                    'type': 'transparency',
-                    'severity': 'warning',
-                    'text': f"Low transparency score: {score}/100",
-                    'finding': "Transparency issues identified"
-                })
-        
-        # Log findings
-        logger.info(f"Extracted {len(findings)} key findings")
-        
-        return findings
+        # Limit to top 5 findings
+        return findings[:5]
     
     @staticmethod
     def _generate_cache_key(article_data: Dict[str, Any]) -> str:
         """Generate cache key for article"""
         import hashlib
         
-        # Use URL or title as cache key base
-        key_base = article_data.get('url') or article_data.get('title', '')
-        return hashlib.md5(key_base.encode()).hexdigest()
+        # Use URL if available, otherwise use title+author
+        if article_data.get('url'):
+            key_source = article_data['url']
+        else:
+            key_source = f"{article_data.get('title', '')}-{article_data.get('author', '')}"
+        
+        return hashlib.md5(key_source.encode()).hexdigest()
+
+
+# For backward compatibility
+def build_response(success: bool, 
+                  data: Optional[Dict[str, Any]] = None,
+                  error: Optional[str] = None,
+                  status_code: int = 200) -> Response:
+    """Legacy response builder for backward compatibility"""
+    if success:
+        return ResponseBuilder.success(data or {}, status_code=status_code)
+    else:
+        return ResponseBuilder.error(error or "Unknown error", status_code=status_code)
