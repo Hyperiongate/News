@@ -1478,17 +1478,29 @@
 
         // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing TruthLens...');
+            
             const urlInput = document.getElementById('urlInput');
-            urlInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    analyzeArticle();
-                }
-            });
+            if (urlInput) {
+                console.log('URL input found');
+                urlInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        console.log('Enter key pressed');
+                        analyzeArticle();
+                    }
+                });
+            } else {
+                console.error('URL input not found!');
+            }
             
             // Add click handler for analyze button - WITH NULL CHECK
             const analyzeBtn = document.getElementById('analyzeBtn');
             if (analyzeBtn) {
-                analyzeBtn.addEventListener('click', analyzeArticle);
+                console.log('Analyze button found, adding click handler');
+                analyzeBtn.addEventListener('click', function() {
+                    console.log('Analyze button clicked');
+                    analyzeArticle();
+                });
             } else {
                 console.error('Analyze button not found!');
             }
@@ -1520,20 +1532,28 @@
 
         // Main analysis function
         async function analyzeArticle() {
+            console.log('analyzeArticle function called');
+            
             const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
+            console.log('URL to analyze:', url);
             
             if (!url) {
+                console.log('No URL provided');
                 showError('Please enter a URL');
                 return;
             }
             
             if (!isValidUrl(url)) {
+                console.log('Invalid URL format');
                 showError('Please enter a valid URL');
                 return;
             }
             
-            if (isAnalyzing) return;
+            if (isAnalyzing) {
+                console.log('Already analyzing');
+                return;
+            }
             
             isAnalyzing = true;
             hideError();
@@ -1544,6 +1564,8 @@
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
             
+            console.log('Starting API call to /api/analyze');
+            
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -1553,8 +1575,11 @@
                     body: JSON.stringify({ url: url })
                 });
                 
+                console.log('API response status:', response.status);
+                
                 if (!response.ok) {
                     const error = await response.json();
+                    console.error('API error response:', error);
                     throw new Error(error.error?.message || error.error || 'Analysis failed');
                 }
                 
@@ -1589,6 +1614,7 @@
                 displayResults(data);
                 
             } catch (error) {
+                console.error('Analysis error:', error);
                 showError(error.message || 'Failed to analyze article');
             } finally {
                 isAnalyzing = false;
