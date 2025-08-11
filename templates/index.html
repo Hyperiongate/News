@@ -709,14 +709,26 @@
             gap: var(--space-md);
         }
 
-        /* Service Accordion Item */
+        /* Service Accordion Item - FIXED WITH COLORED BORDERS */
         .service-accordion-item {
             background: white;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
             overflow: hidden;
             transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
         }
+
+        /* Different colored borders for each service */
+        #service-source_credibility { border-color: #6366F1; }
+        #service-author_analyzer { border-color: #10B981; }
+        #service-bias_detector { border-color: #F59E0B; }
+        #service-fact_checker { border-color: #3B82F6; }
+        #service-transparency_analyzer { border-color: #8B5CF6; }
+        #service-manipulation_detector { border-color: #EF4444; }
+        #service-content_analyzer { border-color: #EC4899; }
+        #service-plagiarism_detector { border-color: #14B8A6; }
 
         .service-accordion-item:hover {
             box-shadow: var(--shadow-lg);
@@ -726,6 +738,7 @@
             box-shadow: var(--shadow-xl);
         }
 
+        /* FIXED: Prevent auto-scrolling on accordion click */
         .service-accordion-header {
             padding: var(--space-lg);
             cursor: pointer;
@@ -763,6 +776,16 @@
             flex-shrink: 0;
             transition: all 0.3s ease;
         }
+
+        /* Match icon wrapper colors to borders */
+        #service-source_credibility .service-icon-wrapper { background: linear-gradient(135deg, #6366F1, #4F46E5); }
+        #service-author_analyzer .service-icon-wrapper { background: linear-gradient(135deg, #10B981, #059669); }
+        #service-bias_detector .service-icon-wrapper { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        #service-fact_checker .service-icon-wrapper { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+        #service-transparency_analyzer .service-icon-wrapper { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
+        #service-manipulation_detector .service-icon-wrapper { background: linear-gradient(135deg, #EF4444, #DC2626); }
+        #service-content_analyzer .service-icon-wrapper { background: linear-gradient(135deg, #EC4899, #DB2777); }
+        #service-plagiarism_detector .service-icon-wrapper { background: linear-gradient(135deg, #14B8A6, #0D9488); }
 
         .service-accordion-item.active .service-icon-wrapper {
             transform: scale(1.1);
@@ -1234,6 +1257,25 @@
             display: block !important;
             opacity: 1 !important;
         }
+
+        /* Data state indicator */
+        .data-state-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+
+        .data-state-indicator.no-data {
+            background: #EF4444;
+        }
+
+        .data-state-indicator.partial-data {
+            background: #F59E0B;
+        }
     </style>
 </head>
 <body>
@@ -1476,6 +1518,86 @@
             }
         ];
 
+        // CRITICAL FIX: Data structure mapper to handle backend inconsistencies
+        class DataStructureMapper {
+            static mapServiceData(rawData) {
+                console.log('=== DataStructureMapper.mapServiceData called ===');
+                console.log('Raw data keys:', Object.keys(rawData));
+                
+                // Create a normalized structure
+                const mapped = {};
+                
+                // Map each service with fallback field names
+                const serviceMappings = {
+                    'source_credibility': ['source_credibility'],
+                    'author_analyzer': ['author_analyzer', 'author_analysis', 'author_info'],
+                    'bias_detector': ['bias_detector', 'bias_analysis', 'bias'],
+                    'fact_checker': ['fact_checker', 'fact_checks', 'fact_checking'],
+                    'transparency_analyzer': ['transparency_analyzer', 'transparency_analysis', 'transparency'],
+                    'manipulation_detector': ['manipulation_detector', 'manipulation_analysis', 'persuasion_analysis'],
+                    'content_analyzer': ['content_analyzer', 'content_analysis', 'content'],
+                    'plagiarism_detector': ['plagiarism_detector', 'plagiarism_analysis', 'plagiarism']
+                };
+                
+                // Try to find data for each service
+                Object.entries(serviceMappings).forEach(([serviceId, possibleNames]) => {
+                    for (const name of possibleNames) {
+                        if (rawData[name]) {
+                            mapped[serviceId] = this.extractServiceData(rawData[name]);
+                            console.log(`Mapped ${name} to ${serviceId}`);
+                            break;
+                        }
+                    }
+                    
+                    // If still not found, create empty structure
+                    if (!mapped[serviceId]) {
+                        mapped[serviceId] = {};
+                        console.log(`No data found for ${serviceId}`);
+                    }
+                });
+                
+                return mapped;
+            }
+            
+            static extractServiceData(serviceResult) {
+                // If the service result has a 'data' field, extract it
+                if (serviceResult && typeof serviceResult === 'object') {
+                    if (serviceResult.data && typeof serviceResult.data === 'object') {
+                        return serviceResult.data;
+                    }
+                    // If success is false, return empty object
+                    if (serviceResult.success === false) {
+                        return {};
+                    }
+                    // Otherwise return the whole object
+                    return serviceResult;
+                }
+                return {};
+            }
+            
+            static normalizeFactCheckerData(data) {
+                // Normalize fact checker data structure
+                if (!data) return { claims_checked: 0, verified_count: 0, claims: [] };
+                
+                const normalized = {
+                    claims_checked: data.claims_checked || data.total_claims || 0,
+                    verified_count: data.verified_count || data.verified_claims || 0,
+                    claims: []
+                };
+                
+                // Extract claims array
+                if (data.claims && Array.isArray(data.claims)) {
+                    normalized.claims = data.claims;
+                } else if (data.results && Array.isArray(data.results)) {
+                    normalized.claims = data.results;
+                } else if (Array.isArray(data)) {
+                    normalized.claims = data;
+                }
+                
+                return normalized;
+            }
+        }
+
         // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing TruthLens...');
@@ -1531,7 +1653,7 @@
             document.getElementById('urlInput').focus();
         }
 
-        // Main analysis function - FIXED API CALL
+        // Main analysis function - FIXED with comprehensive data handling
         async function analyzeArticle() {
             console.log('analyzeArticle function called');
             
@@ -1574,7 +1696,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url }) // FIXED: Send just { url } not { input, input_type }
+                    body: JSON.stringify({ url: url })
                 });
                 
                 console.log('API response status:', response.status);
@@ -1592,8 +1714,9 @@
                 }
                 
                 const responseData = await response.json();
-                console.log('=== DEBUGGING API RESPONSE ===');
+                console.log('=== COMPREHENSIVE API RESPONSE DEBUG ===');
                 console.log('Raw API response:', responseData);
+                console.log('Response type:', typeof responseData);
                 console.log('Response keys:', Object.keys(responseData));
                 
                 // Extract data from response - handle different response structures
@@ -1610,23 +1733,26 @@
                     throw new Error(responseData.error || 'Analysis failed');
                 }
                 
+                // CRITICAL: Log the complete data structure
+                console.log('=== COMPLETE DATA STRUCTURE ===');
+                console.log(JSON.stringify(data, null, 2));
+                
                 // Validate the data structure
                 if (!data.analysis || (!data.analysis.trust_score && data.analysis.trust_score !== 0)) {
-                    console.error('Invalid response structure:', data);
+                    console.error('Invalid response structure - missing analysis.trust_score');
                     throw new Error('Invalid response from server');
                 }
                 
-                console.log('=== DETAILED DATA STRUCTURE ===');
-                console.log('data.analysis:', data.analysis);
-                console.log('data.article:', data.article);
-                console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
-                
+                // CRITICAL FIX: Normalize the service data
                 if (data.detailed_analysis) {
+                    console.log('=== BEFORE NORMALIZATION ===');
                     console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
-                    // Log each service's data
-                    Object.keys(data.detailed_analysis).forEach(key => {
-                        console.log(`detailed_analysis.${key}:`, data.detailed_analysis[key]);
-                    });
+                    
+                    // Apply data structure mapping
+                    data.detailed_analysis = DataStructureMapper.mapServiceData(data.detailed_analysis);
+                    
+                    console.log('=== AFTER NORMALIZATION ===');
+                    console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
                 }
                 
                 currentAnalysis = data;
@@ -1675,8 +1801,10 @@
                 console.error('Error displaying service accordion:', e);
             }
             
-            // Scroll to results
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll to results smoothly without triggering accordion auto-scroll
+            setTimeout(() => {
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
 
         // Enhanced trust score display with explanations
@@ -1703,13 +1831,8 @@
             const summaryEl = document.getElementById('trustSummary');
             summaryEl.textContent = getTrustSummaryExplanation(score, level, analysis);
             
-            // Find the services data
-            let servicesData = null;
-            if (fullData.detailed_analysis) {
-                servicesData = fullData.detailed_analysis;
-            } else if (fullData.source_credibility || fullData.author_analyzer) {
-                servicesData = fullData;
-            }
+            // CRITICAL FIX: Use normalized data
+            const servicesData = fullData.detailed_analysis || {};
             
             console.log('Services data for trust breakdown:', servicesData);
             
@@ -1719,29 +1842,29 @@
                     id: 'source_credibility',
                     icon: 'fa-shield-alt',
                     label: 'Source Credibility',
-                    value: servicesData?.source_credibility?.credibility_score || servicesData?.source_credibility?.score || 0,
-                    explanation: getSourceCredibilityExplanation(servicesData?.source_credibility)
+                    value: extractScore(servicesData.source_credibility, ['credibility_score', 'score']),
+                    explanation: getSourceCredibilityExplanation(servicesData.source_credibility)
                 },
                 {
                     id: 'author_credibility',
                     icon: 'fa-user-check',
                     label: 'Author Credibility',
-                    value: servicesData?.author_analyzer?.credibility_score || servicesData?.author_analysis?.credibility_score || 0,
-                    explanation: getAuthorCredibilityExplanation(servicesData?.author_analyzer || servicesData?.author_analysis)
+                    value: extractScore(servicesData.author_analyzer, ['credibility_score', 'score']),
+                    explanation: getAuthorCredibilityExplanation(servicesData.author_analyzer)
                 },
                 {
                     id: 'objectivity',
                     icon: 'fa-balance-scale',
                     label: 'Objectivity Score',
-                    value: 100 - (servicesData?.bias_detector?.overall_bias_score || servicesData?.bias_analysis?.overall_bias_score || 0),
-                    explanation: getObjectivityExplanation(servicesData?.bias_detector || servicesData?.bias_analysis)
+                    value: 100 - extractScore(servicesData.bias_detector, ['overall_bias_score', 'bias_score'], 0),
+                    explanation: getObjectivityExplanation(servicesData.bias_detector)
                 },
                 {
                     id: 'fact_accuracy',
                     icon: 'fa-check-double',
                     label: 'Fact Accuracy',
-                    value: calculateFactAccuracy(servicesData?.fact_checker || servicesData?.fact_checks),
-                    explanation: getFactAccuracyExplanation(servicesData?.fact_checker || servicesData?.fact_checks)
+                    value: calculateFactAccuracy(servicesData.fact_checker),
+                    explanation: getFactAccuracyExplanation(servicesData.fact_checker)
                 }
             ];
             
@@ -1783,6 +1906,19 @@
             createEnhancedTrustGauge(score);
         }
 
+        // Helper function to extract score from nested data
+        function extractScore(data, fields, defaultValue = 0) {
+            if (!data) return defaultValue;
+            
+            for (const field of fields) {
+                if (data[field] !== undefined && data[field] !== null) {
+                    return Number(data[field]) || defaultValue;
+                }
+            }
+            
+            return defaultValue;
+        }
+
         // Get contextual trust summary explanation
         function getTrustSummaryExplanation(score, level, analysis) {
             if (score >= 80) {
@@ -1798,10 +1934,10 @@
 
         // Get explanation for source credibility
         function getSourceCredibilityExplanation(data) {
-            if (!data) return "Unable to verify source credibility";
+            if (!data || Object.keys(data).length === 0) return "Unable to verify source credibility";
             
-            const score = data.credibility_score || data.score || 0;
-            const sourceName = data.source_name || "Unknown source";
+            const score = extractScore(data, ['credibility_score', 'score']);
+            const sourceName = data.source_name || data.name || "Unknown source";
             
             if (score >= 80) {
                 return `${sourceName} is an established, reputable news source with strong editorial standards and fact-checking processes.`;
@@ -1818,9 +1954,9 @@
 
         // Get explanation for author credibility
         function getAuthorCredibilityExplanation(data) {
-            if (!data) return "Author information not available";
+            if (!data || Object.keys(data).length === 0) return "Author information not available";
             
-            const score = data.credibility_score || 0;
+            const score = extractScore(data, ['credibility_score', 'score']);
             const authorName = data.author_name || data.name || "Unknown author";
             
             if (score >= 80) {
@@ -1838,9 +1974,9 @@
 
         // Get explanation for objectivity
         function getObjectivityExplanation(data) {
-            if (!data) return "Bias analysis not available";
+            if (!data || Object.keys(data).length === 0) return "Bias analysis not available";
             
-            const biasScore = data.overall_bias_score || 0;
+            const biasScore = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
             const objectivityScore = 100 - biasScore;
             
             if (objectivityScore >= 80) {
@@ -1858,32 +1994,11 @@
         function getFactAccuracyExplanation(factCheckerData) {
             console.log('getFactAccuracyExplanation called with:', factCheckerData);
             
-            if (!factCheckerData) return "Fact checking not performed";
+            if (!factCheckerData || Object.keys(factCheckerData).length === 0) return "Fact checking not performed";
             
-            let total = 0;
-            let verified = 0;
-            
-            // Handle different data structures
-            if (factCheckerData.total_claims !== undefined) {
-                total = factCheckerData.total_claims;
-                verified = factCheckerData.verified_claims || 0;
-            } else if (factCheckerData.claims_checked !== undefined) {
-                // Handle the actual data structure from the backend
-                total = factCheckerData.claims_checked;
-                verified = factCheckerData.verified_count || 0;
-            } else if (factCheckerData.claims && Array.isArray(factCheckerData.claims)) {
-                total = factCheckerData.claims.length;
-                verified = factCheckerData.claims.filter(claim => 
-                    claim.verification_status === 'verified' || 
-                    claim.verdict?.toLowerCase().includes('true')
-                ).length;
-            } else if (Array.isArray(factCheckerData)) {
-                total = factCheckerData.length;
-                verified = factCheckerData.filter(claim => 
-                    claim.verification_status === 'verified' || 
-                    claim.verdict?.toLowerCase().includes('true')
-                ).length;
-            }
+            // Normalize the data
+            const normalized = DataStructureMapper.normalizeFactCheckerData(factCheckerData);
+            const { claims_checked: total, verified_count: verified } = normalized;
             
             if (total === 0) {
                 return "No factual claims found to verify in this article.";
@@ -1906,38 +2021,10 @@
         function calculateFactAccuracy(factCheckerData) {
             console.log('calculateFactAccuracy called with:', factCheckerData);
             
-            if (!factCheckerData) return 0;
+            if (!factCheckerData || Object.keys(factCheckerData).length === 0) return 0;
             
-            // Handle different data structures
-            let total = 0;
-            let verified = 0;
-            
-            // If it has total_claims and verified_claims
-            if (factCheckerData.total_claims !== undefined) {
-                total = factCheckerData.total_claims;
-                verified = factCheckerData.verified_claims || 0;
-            }
-            // If it has claims_checked and verified_count (actual backend structure)
-            else if (factCheckerData.claims_checked !== undefined) {
-                total = factCheckerData.claims_checked;
-                verified = factCheckerData.verified_count || 0;
-            }
-            // If it has a claims array
-            else if (factCheckerData.claims && Array.isArray(factCheckerData.claims)) {
-                total = factCheckerData.claims.length;
-                verified = factCheckerData.claims.filter(claim => 
-                    claim.verification_status === 'verified' || 
-                    claim.verdict?.toLowerCase().includes('true')
-                ).length;
-            }
-            // If it's an array itself (legacy format)
-            else if (Array.isArray(factCheckerData)) {
-                total = factCheckerData.length;
-                verified = factCheckerData.filter(claim => 
-                    claim.verification_status === 'verified' || 
-                    claim.verdict?.toLowerCase().includes('true')
-                ).length;
-            }
+            const normalized = DataStructureMapper.normalizeFactCheckerData(factCheckerData);
+            const { claims_checked: total, verified_count: verified } = normalized;
             
             if (total === 0) return 0;
             return Math.round((verified / total) * 100);
@@ -2105,7 +2192,7 @@
             }
         }
 
-        // Display service accordion
+        // Display service accordion - FIXED with proper data mapping
         function displayServiceAccordion(data) {
             console.log('=== displayServiceAccordion called ===');
             console.log('data structure:', data);
@@ -2113,70 +2200,15 @@
             const container = document.getElementById('servicesAccordion');
             container.innerHTML = '';
             
-            // Try multiple possible data locations
-            let servicesData = null;
-            
-            // Check if data is directly in the root
-            if (data.source_credibility || data.author_analyzer || data.bias_detector) {
-                console.log('Found services data at root level');
-                servicesData = data;
-            }
-            // Check if it's in detailed_analysis
-            else if (data.detailed_analysis) {
-                console.log('Found services data in detailed_analysis');
-                servicesData = data.detailed_analysis;
-            }
-            // Check if there's a nested data structure
-            else if (data.data) {
-                console.log('Found nested data structure');
-                if (data.data.detailed_analysis) {
-                    servicesData = data.data.detailed_analysis;
-                } else {
-                    servicesData = data.data;
-                }
-            }
+            // Use normalized data
+            const servicesData = data.detailed_analysis || {};
             
             console.log('Using servicesData:', servicesData);
             
-            // Log the first service's complete structure as an example
-            if (servicesData && servicesData.source_credibility) {
-                console.log('=== EXAMPLE SERVICE DATA STRUCTURE (source_credibility) ===');
-                console.log(JSON.stringify(servicesData.source_credibility, null, 2));
-            }
-            
             services.forEach((service, index) => {
-                let serviceData = {};
-                
-                if (servicesData) {
-                    // Try to find the service data
-                    serviceData = servicesData[service.id] || {};
-                    
-                    // If not found, try alternative names
-                    if (Object.keys(serviceData).length === 0) {
-                        const alternativeNames = {
-                            'author_analyzer': ['author_analysis', 'author_info'],
-                            'bias_detector': ['bias_analysis', 'bias'],
-                            'fact_checker': ['fact_checks', 'fact_checking'],
-                            'transparency_analyzer': ['transparency_analysis', 'transparency'],
-                            'manipulation_detector': ['manipulation_analysis', 'persuasion_analysis'],
-                            'content_analyzer': ['content_analysis', 'content'],
-                            'plagiarism_detector': ['plagiarism_analysis', 'plagiarism']
-                        };
-                        
-                        if (alternativeNames[service.id]) {
-                            for (const altName of alternativeNames[service.id]) {
-                                if (servicesData[altName]) {
-                                    serviceData = servicesData[altName];
-                                    console.log(`Found ${service.id} data under alternative name: ${altName}`);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
+                const serviceData = servicesData[service.id] || {};
                 
                 console.log(`Creating accordion for ${service.id} with data:`, serviceData);
-                console.log(`  Keys in ${service.id}:`, Object.keys(serviceData));
                 
                 const accordionItem = createServiceAccordionItem(service, serviceData, index);
                 container.appendChild(accordionItem);
@@ -2189,11 +2221,16 @@
             item.className = 'service-accordion-item';
             item.id = `service-${service.id}`;
             
+            // Add data state indicator
+            const hasData = serviceData && Object.keys(serviceData).length > 0;
+            const dataStateClass = hasData ? '' : 'no-data';
+            
             // Extract preview data
             const previewData = getServicePreviewData(service.id, serviceData);
             
             item.innerHTML = `
-                <div class="service-accordion-header" onclick="toggleAccordion('${service.id}')">
+                <div class="service-accordion-header" onclick="toggleAccordion('${service.id}', event)">
+                    <div class="data-state-indicator ${dataStateClass}"></div>
                     <div class="service-header-content">
                         <div class="service-icon-wrapper">
                             <i class="fas ${service.icon}"></i>
@@ -2226,44 +2263,52 @@
             return item;
         }
 
-        // Get service preview data
+        // Get service preview data - FIXED with proper data extraction
         function getServicePreviewData(serviceId, data) {
+            const hasData = data && Object.keys(data).length > 0;
+            
+            if (!hasData) {
+                return [{ label: 'Status', value: 'No data available', color: '#6B7280' }];
+            }
+            
             switch (serviceId) {
                 case 'source_credibility':
-                    const sourceScore = data.credibility_score || data.score || 0;
-                    const sourceLevel = data.level || data.credibility_level || 'Unknown';
+                    const sourceScore = extractScore(data, ['credibility_score', 'score']);
+                    const sourceLevel = data.level || data.credibility_level || getCredibilityLevel(sourceScore);
                     return [
                         { label: 'Score', value: `${sourceScore}/100`, color: getScoreColor(sourceScore) },
                         { label: 'Level', value: sourceLevel }
                     ];
                     
                 case 'author_analyzer':
-                    const authorScore = data.credibility_score || 0;
+                    const authorScore = extractScore(data, ['credibility_score', 'score']);
+                    const verificationStatus = data.verification_status?.verified || 
+                                            (authorScore > 0 ? 'Analyzed' : 'Unverified');
                     return [
                         { label: 'Score', value: `${authorScore}/100`, color: getScoreColor(authorScore) },
-                        { label: 'Status', value: data.verification_status?.verified ? 'Verified' : 'Unverified' }
+                        { label: 'Status', value: verificationStatus }
                     ];
                     
                 case 'bias_detector':
-                    const biasScore = data.overall_bias_score || 0;
-                    const biasLevel = data.bias_level || 'Unknown';
+                    const biasScore = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
+                    const biasLevel = data.bias_level || getBiasLevel(biasScore);
                     return [
                         { label: 'Bias Level', value: biasLevel },
                         { label: 'Objectivity', value: `${100 - biasScore}%`, color: getScoreColor(100 - biasScore) }
                     ];
                     
                 case 'fact_checker':
-                    const verified = data.verified_count || data.verified_claims || 0;
-                    const total = data.claims_checked || data.total_claims || 0;
-                    const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
+                    const normalized = DataStructureMapper.normalizeFactCheckerData(data);
+                    const accuracy = normalized.claims_checked > 0 ? 
+                        Math.round((normalized.verified_count / normalized.claims_checked) * 100) : 0;
                     return [
-                        { label: 'Claims Checked', value: total },
+                        { label: 'Claims Checked', value: normalized.claims_checked },
                         { label: 'Accuracy', value: `${accuracy}%`, color: getScoreColor(accuracy) }
                     ];
                     
                 case 'transparency_analyzer':
-                    const transparencyScore = data.transparency_score || 0;
-                    const transparencyLevel = data.transparency_level || 'Unknown';
+                    const transparencyScore = extractScore(data, ['transparency_score', 'score'], 0);
+                    const transparencyLevel = data.transparency_level || getTransparencyLevel(transparencyScore);
                     return [
                         { label: 'Score', value: `${transparencyScore}%`, color: getScoreColor(transparencyScore) },
                         { label: 'Level', value: transparencyLevel }
@@ -2271,22 +2316,27 @@
                     
                 case 'manipulation_detector':
                     const manipLevel = data.manipulation_level || data.level || 'Unknown';
-                    const techniquesCount = data.techniques_count || (data.techniques ? data.techniques.length : 0);
+                    const techniquesCount = data.techniques_count || 
+                                          (data.techniques ? data.techniques.length : 0);
                     return [
                         { label: 'Risk Level', value: manipLevel },
                         { label: 'Techniques', value: techniquesCount }
                     ];
                     
                 case 'content_analyzer':
-                    const qualityScore = data.quality_score || 0;
-                    const readabilityLevel = data.readability?.level || data.readability_level || 'Unknown';
+                    const qualityScore = extractScore(data, ['quality_score', 'score'], 0);
+                    const readabilityLevel = data.readability?.level || 
+                                           data.readability_level || 
+                                           'Not analyzed';
                     return [
                         { label: 'Quality', value: `${qualityScore}/100`, color: getScoreColor(qualityScore) },
                         { label: 'Readability', value: readabilityLevel }
                     ];
                     
                 case 'plagiarism_detector':
-                    const originalityScore = data.originality_score || (100 - (data.similarity_score || 0));
+                    const originalityScore = data.originality_score !== undefined ? 
+                        data.originality_score : 
+                        (100 - (data.similarity_score || 0));
                     return [
                         { label: 'Originality', value: `${originalityScore}%`, color: getScoreColor(originalityScore) },
                         { label: 'Status', value: originalityScore >= 80 ? 'Original' : 'Issues Found' }
@@ -2297,8 +2347,13 @@
             }
         }
 
-        // Toggle accordion
-        function toggleAccordion(serviceId) {
+        // Toggle accordion - FIXED to prevent auto-scrolling
+        function toggleAccordion(serviceId, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
             const item = document.getElementById(`service-${serviceId}`);
             const isActive = item.classList.contains('active');
             
@@ -2331,7 +2386,11 @@
                 const chartType = canvas.getAttribute('data-chart-type');
                 const chartData = canvas.getAttribute('data-chart-data');
                 if (chartType && chartData) {
-                    createServiceChart(canvas, chartType, JSON.parse(chartData));
+                    try {
+                        createServiceChart(canvas, chartType, JSON.parse(chartData));
+                    } catch (e) {
+                        console.error(`Failed to create chart for ${serviceId}:`, e);
+                    }
                 }
             });
         }
@@ -2365,15 +2424,13 @@
             charts[chartId] = new Chart(ctx, config);
         }
 
-        // Render service content
+        // Render service content - COMPREHENSIVE FIX
         function renderServiceContent(service, data) {
             console.log(`Rendering content for ${service.id}:`, data);
-            console.log(`  Data keys:`, Object.keys(data));
-            console.log(`  Data values:`, data);
             
             // Check if data exists
             if (!data || Object.keys(data).length === 0) {
-                console.log(`  No data or empty object for ${service.id}`);
+                console.log(`No data for ${service.id}`);
                 return `
                     <div class="empty-state">
                         <i class="fas fa-info-circle"></i>
@@ -2394,12 +2451,7 @@
                 `;
             }
             
-            // Check if data has a nested 'data' field (from service response)
-            if (data.data && typeof data.data === 'object') {
-                console.log(`  Found nested data field for ${service.id}, using data.data`);
-                data = data.data;
-            }
-            
+            // Render based on service type
             switch (service.id) {
                 case 'source_credibility':
                     return renderSourceCredibility(data);
@@ -2422,11 +2474,11 @@
             }
         }
 
-        // Service renderers
+        // Service renderers - FIXED to handle various data structures
         function renderSourceCredibility(data) {
-            const score = data.credibility_score || data.score || 0;
-            const level = data.credibility_level || data.level || 'Unknown';
-            const sourceName = data.source_name || 'Unknown Source';
+            const score = extractScore(data, ['credibility_score', 'score']);
+            const level = data.credibility_level || data.level || getCredibilityLevel(score);
+            const sourceName = data.source_name || data.name || 'Unknown Source';
             
             let content = `
                 <div class="service-section">
@@ -2453,9 +2505,9 @@
                 </div>
             `;
             
-            // Source info (updated field names)
-            if (data.source_info) {
-                const info = data.source_info;
+            // Source info - handle multiple possible field names
+            const sourceInfo = data.source_info || data.source_details || data.details;
+            if (sourceInfo) {
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -2463,22 +2515,22 @@
                             Source Information
                         </h4>
                         <div class="service-results">
-                            ${info.type ? `
+                            ${sourceInfo.type ? `
                                 <div class="result-item">
                                     <span class="result-label">Source Type</span>
-                                    <span class="result-value">${info.type}</span>
+                                    <span class="result-value">${sourceInfo.type}</span>
                                 </div>
                             ` : ''}
-                            ${info.bias ? `
+                            ${sourceInfo.bias ? `
                                 <div class="result-item">
                                     <span class="result-label">Political Bias</span>
-                                    <span class="result-value">${info.bias}</span>
+                                    <span class="result-value">${sourceInfo.bias}</span>
                                 </div>
                             ` : ''}
-                            ${info.credibility_rating ? `
+                            ${sourceInfo.credibility_rating ? `
                                 <div class="result-item">
                                     <span class="result-label">Database Rating</span>
-                                    <span class="result-value">${info.credibility_rating}</span>
+                                    <span class="result-value">${sourceInfo.credibility_rating}</span>
                                 </div>
                             ` : ''}
                         </div>
@@ -2546,7 +2598,7 @@
                                 <div class="claim-text">${finding.text}</div>
                                 <div class="claim-status claim-${severityClass}">
                                     <i class="fas ${icon}"></i>
-                                    ${finding.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    ${finding.type ? finding.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : ''}
                                 </div>
                             </div>
                             ${finding.explanation ? `
@@ -2584,8 +2636,8 @@
 
         function renderAuthorAnalysis(data) {
             const authorName = data.author_name || data.name || 'Unknown Author';
-            const score = data.credibility_score || 0;
-            const level = data.credibility_level || 'Unknown';
+            const score = extractScore(data, ['credibility_score', 'score']);
+            const level = data.credibility_level || getCredibilityLevel(score);
             
             let content = `
                 <div class="service-section">
@@ -2613,10 +2665,9 @@
             `;
             
             // Author details
-            if (data.author_info) {
-                const info = data.author_info;
-                
-                if (info.position || info.bio || info.expertise_areas?.length > 0) {
+            const authorInfo = data.author_info || data.details || data.profile;
+            if (authorInfo) {
+                if (authorInfo.position || authorInfo.bio || authorInfo.expertise_areas?.length > 0) {
                     content += `
                         <div class="service-section">
                             <h4 class="section-title">
@@ -2626,20 +2677,29 @@
                             <div class="service-results">
                     `;
                     
-                    if (info.position) {
+                    if (authorInfo.position) {
                         content += `
                             <div class="result-item">
                                 <span class="result-label">Position</span>
-                                <span class="result-value">${info.position}</span>
+                                <span class="result-value">${authorInfo.position}</span>
                             </div>
                         `;
                     }
                     
-                    if (info.expertise_areas && info.expertise_areas.length > 0) {
+                    if (authorInfo.expertise_areas && authorInfo.expertise_areas.length > 0) {
                         content += `
                             <div class="result-item">
                                 <span class="result-label">Areas of Expertise</span>
-                                <span class="result-value">${info.expertise_areas.join(', ')}</span>
+                                <span class="result-value">${authorInfo.expertise_areas.join(', ')}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (authorInfo.article_count !== undefined) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Articles Written</span>
+                                <span class="result-value">${authorInfo.article_count}</span>
                             </div>
                         `;
                     }
@@ -2667,6 +2727,12 @@
                                     ${verStatus.verified ? 'Verified' : 'Unverified'}
                                 </span>
                             </div>
+                            ${verStatus.method ? `
+                                <div class="result-item">
+                                    <span class="result-label">Verification Method</span>
+                                    <span class="result-value">${verStatus.method}</span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -2676,8 +2742,8 @@
         }
 
         function renderBiasDetection(data) {
-            const overallBias = data.overall_bias_score || 0;
-            const biasLevel = data.bias_level || 'Unknown';
+            const overallBias = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
+            const biasLevel = data.bias_level || getBiasLevel(overallBias);
             const objectivityScore = 100 - overallBias;
             
             let content = `
@@ -2706,8 +2772,8 @@
             `;
             
             // Bias dimensions
-            if (data.dimensions || data.bias_dimensions) {
-                const dimensions = data.dimensions || data.bias_dimensions;
+            const dimensions = data.dimensions || data.bias_dimensions || data.biases;
+            if (dimensions && typeof dimensions === 'object') {
                 const chartId = `bias-chart-${Date.now()}`;
                 const chartData = {
                     labels: [],
@@ -2726,22 +2792,24 @@
                 Object.entries(dimensions).forEach(([dimension, dimData]) => {
                     let score, label;
                     
-                    if (typeof dimData === 'object') {
-                        score = Math.abs(dimData.score || 0) * 100;
+                    if (typeof dimData === 'object' && dimData !== null) {
+                        score = Math.abs(dimData.score || dimData.value || 0) * 
+                               (dimData.score > 1 ? 1 : 100);
                         label = dimData.label || dimension;
                     } else {
-                        score = dimData;
+                        score = Math.abs(Number(dimData) || 0);
+                        if (score <= 1) score *= 100;
                         label = formatDimensionName(dimension);
                     }
                     
                     chartData.labels.push(label);
-                    chartData.values.push(score);
+                    chartData.values.push(Math.round(score));
                     
                     content += `
                         <div class="dimension-item">
                             <div class="dimension-header">
                                 <span class="dimension-name">${label}</span>
-                                <span class="dimension-score">${score.toFixed(0)}%</span>
+                                <span class="dimension-score">${Math.round(score)}%</span>
                             </div>
                             <div class="dimension-bar">
                                 <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
@@ -2753,21 +2821,27 @@
                 content += `
                         </div>
                     </div>
-                    <div class="service-visualization">
-                        <div class="chart-container">
-                            <canvas id="${chartId}" data-chart-type="polarArea" data-chart-data='${JSON.stringify(chartData)}'></canvas>
-                        </div>
-                    </div>
                 `;
+                
+                // Add visualization if we have data
+                if (chartData.labels.length > 0) {
+                    content += `
+                        <div class="service-visualization">
+                            <div class="chart-container">
+                                <canvas id="${chartId}" data-chart-type="polarArea" data-chart-data='${JSON.stringify(chartData)}'></canvas>
+                            </div>
+                        </div>
+                    `;
+                }
             }
             
             return content;
         }
 
         function renderFactChecker(data) {
-            // Handle both old and new data structures
-            const verified = data.verified_count || data.verified_claims || data.verified || 0;
-            const total = data.claims_checked || data.total_claims || data.total || 0;
+            // Normalize the data
+            const normalized = DataStructureMapper.normalizeFactCheckerData(data);
+            const { claims_checked: total, verified_count: verified, claims } = normalized;
             const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
             
             let content = `
@@ -2799,7 +2873,7 @@
             `;
             
             // Individual claims
-            if (data.claims && data.claims.length > 0) {
+            if (claims && claims.length > 0) {
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -2809,7 +2883,8 @@
                         <div class="claims-list">
                 `;
                 
-                data.claims.forEach(claim => {
+                claims.forEach(claim => {
+                    const claimText = claim.claim || claim.claim_text || claim.text || 'Unknown claim';
                     const status = claim.verdict || claim.verification_status || 'unverified';
                     const statusLower = status.toLowerCase();
                     const statusClass = statusLower.includes('true') || statusLower === 'verified' ? 'verified' : 
@@ -2820,7 +2895,7 @@
                     content += `
                         <div class="claim-item">
                             <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claim.claim || claim.claim_text || claim.text)}"</div>
+                                <div class="claim-text">"${escapeHtml(claimText)}"</div>
                                 <div class="claim-status claim-${statusClass}">
                                     <i class="fas ${statusIcon}"></i>
                                     ${formatStatus(status)}
@@ -2860,7 +2935,7 @@
         }
 
         function renderTransparency(data) {
-            const score = data.transparency_score || 0;
+            const score = extractScore(data, ['transparency_score', 'score'], 0);
             const level = data.transparency_level || data.level || getTransparencyLevel(score);
             
             let content = `
@@ -2887,9 +2962,9 @@
                 </div>
             `;
             
-            // Transparency indicators (updated to match backend structure)
-            if (data.transparency_indicators) {
-                const indicators = data.transparency_indicators;
+            // Transparency indicators
+            const indicators = data.transparency_indicators || data.indicators;
+            if (indicators) {
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -2898,10 +2973,13 @@
                         </h4>
                 `;
                 
-                if (indicators.indicators && Array.isArray(indicators.indicators)) {
+                const indicatorsList = indicators.indicators || indicators.list || 
+                                     (Array.isArray(indicators) ? indicators : []);
+                
+                if (indicatorsList.length > 0) {
                     content += `
                         <div class="service-results">
-                            ${indicators.indicators.map(indicator => `
+                            ${indicatorsList.map(indicator => `
                                 <div class="result-item">
                                     <span class="result-label">${indicator}</span>
                                     <span class="result-value">
@@ -2969,8 +3047,9 @@
 
         function renderManipulation(data) {
             const level = data.manipulation_level || data.level || 'Unknown';
-            const score = data.manipulation_score || data.score || 0;
-            const techniquesCount = data.techniques_count || (data.techniques ? data.techniques.length : 0);
+            const score = extractScore(data, ['manipulation_score', 'score'], 0);
+            const techniques = data.techniques || [];
+            const techniquesCount = data.techniques_count || techniques.length;
             
             let content = `
                 <div class="service-section">
@@ -2981,28 +3060,29 @@
                     <div class="service-results">
                         <div class="result-item">
                             <span class="result-label">Manipulation Level</span>
-                            <span class="status-badge status-${level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : level.toLowerCase() === 'moderate' ? 'medium' : 'low'}">
+                            <span class="status-badge status-${
+                                level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : 
+                                level.toLowerCase() === 'moderate' ? 'medium' : 'low'
+                            }">
                                 ${level}
                             </span>
                         </div>
-                        ${score !== undefined ? `
+                        ${score !== undefined && score !== 0 ? `
                             <div class="result-item">
                                 <span class="result-label">Manipulation Score</span>
                                 <span class="result-value">${score}/100</span>
                             </div>
                         ` : ''}
-                        ${techniquesCount !== undefined ? `
-                            <div class="result-item">
-                                <span class="result-label">Techniques Detected</span>
-                                <span class="result-value">${techniquesCount}</span>
-                            </div>
-                        ` : ''}
+                        <div class="result-item">
+                            <span class="result-label">Techniques Detected</span>
+                            <span class="result-value">${techniquesCount}</span>
+                        </div>
                     </div>
                 </div>
             `;
             
             // Manipulation techniques
-            if (data.techniques && data.techniques.length > 0) {
+            if (techniques.length > 0) {
                 content += `
                     <div class="service-section">
                         <h4 class="section-title">
@@ -3012,14 +3092,20 @@
                         <div class="techniques-grid">
                 `;
                 
-                data.techniques.forEach(technique => {
+                techniques.forEach(technique => {
+                    const techName = technique.name || technique.type || technique.technique || 'Unknown';
+                    const techDesc = technique.description || technique.details || 
+                                   technique.evidence || technique.explanation || '';
+                    
                     content += `
                         <div class="technique-card">
-                            <div class="technique-name">${technique.name || technique.type || technique.technique}</div>
+                            <div class="technique-name">${techName}</div>
                             <div class="technique-description">
-                                ${technique.description || technique.details || technique.evidence || technique.explanation || ''}
+                                ${techDesc}
                                 ${technique.severity ? 
-                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">${technique.severity} severity</span>` : ''}
+                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">
+                                        ${technique.severity} severity
+                                    </span>` : ''}
                             </div>
                         </div>
                     `;
@@ -3086,40 +3172,41 @@
                     <div class="service-results">
             `;
             
-            if (data.quality_score !== undefined) {
+            const qualityScore = extractScore(data, ['quality_score', 'score'], 0);
+            if (qualityScore !== undefined) {
                 content += `
                     <div class="result-item">
                         <span class="result-label">Overall Quality</span>
-                        <span class="result-value">${data.quality_score}/100</span>
+                        <span class="result-value">${qualityScore}/100</span>
                     </div>
                 `;
             }
             
-            if (data.readability) {
-                if (data.readability.score !== undefined) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Readability Score</span>
-                            <span class="result-value">${data.readability.score}/100</span>
-                        </div>
-                    `;
-                }
-                if (data.readability.level) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Reading Level</span>
-                            <span class="result-value">${data.readability.level}</span>
-                        </div>
-                    `;
-                }
-                if (data.readability.flesch_kincaid_grade !== undefined) {
-                    content += `
-                        <div class="result-item">
-                            <span class="result-label">Flesch-Kincaid Grade</span>
-                            <span class="result-value">${data.readability.flesch_kincaid_grade.toFixed(1)}</span>
-                        </div>
-                    `;
-                }
+            // Readability
+            const readability = data.readability || {};
+            if (readability.score !== undefined) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Readability Score</span>
+                        <span class="result-value">${readability.score}/100</span>
+                    </div>
+                `;
+            }
+            if (readability.level) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Reading Level</span>
+                        <span class="result-value">${readability.level}</span>
+                    </div>
+                `;
+            }
+            if (readability.flesch_kincaid_grade !== undefined) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Flesch-Kincaid Grade</span>
+                        <span class="result-value">${readability.flesch_kincaid_grade.toFixed(1)}</span>
+                    </div>
+                `;
             }
             
             if (data.structure_quality) {
@@ -3217,8 +3304,10 @@
 
         function renderPlagiarism(data) {
             const similarity = data.similarity_score || 0;
-            const originality = data.originality_score !== undefined ? data.originality_score : (100 - similarity);
-            const status = originality >= 80 ? 'Original' : originality >= 60 ? 'Mostly Original' : 'Potential Issues';
+            const originality = data.originality_score !== undefined ? 
+                data.originality_score : (100 - similarity);
+            const status = originality >= 80 ? 'Original' : 
+                          originality >= 60 ? 'Mostly Original' : 'Potential Issues';
             
             let content = `
                 <div class="service-section">
@@ -3493,6 +3582,23 @@
             return statusNames[status.toLowerCase()] || status;
         }
 
+        // Helper functions for missing level calculations
+        function getCredibilityLevel(score) {
+            if (score >= 80) return 'Very High';
+            if (score >= 60) return 'High';
+            if (score >= 40) return 'Moderate';
+            if (score >= 20) return 'Low';
+            return 'Very Low';
+        }
+
+        function getBiasLevel(score) {
+            if (score <= 20) return 'Minimal';
+            if (score <= 40) return 'Low';
+            if (score <= 60) return 'Moderate';
+            if (score <= 80) return 'High';
+            return 'Extreme';
+        }
+
         function getTransparencyLevel(score) {
             if (score >= 80) return 'Highly Transparent';
             if (score >= 60) return 'Transparent';
@@ -3614,17 +3720,17 @@
                 const components = [
                     {
                         name: 'Source Credibility',
-                        score: detailedAnalysis.source_credibility?.credibility_score || detailedAnalysis.source_credibility?.score || 0,
+                        score: extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
                         explanation: getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
                     },
                     {
                         name: 'Author Credibility',
-                        score: detailedAnalysis.author_analyzer?.credibility_score || 0,
+                        score: extractScore(detailedAnalysis.author_analyzer, ['credibility_score', 'score']),
                         explanation: getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
                     },
                     {
                         name: 'Objectivity Score',
-                        score: 100 - (detailedAnalysis.bias_detector?.overall_bias_score || 0),
+                        score: 100 - extractScore(detailedAnalysis.bias_detector, ['overall_bias_score', 'bias_score'], 0),
                         explanation: getObjectivityExplanation(detailedAnalysis.bias_detector)
                     },
                     {
