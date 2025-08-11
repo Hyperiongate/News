@@ -1234,6 +1234,11 @@
             display: block !important;
             opacity: 1 !important;
         }
+
+        /* Debug helper class */
+        .debug-border {
+            border: 2px solid red !important;
+        }
     </style>
 </head>
 <body>
@@ -1315,7 +1320,7 @@
                         placeholder="Enter a news article URL to analyze..."
                         autocomplete="off"
                     >
-                    <button id="analyzeBtn" class="analyze-button">
+                    <button id="analyzeBtn" class="analyze-button" type="button">
                         <i class="fas fa-search"></i>
                         Analyze Article
                     </button>
@@ -1410,6 +1415,9 @@
     </main>
 
     <script>
+        // Debug: Log script loading
+        console.log('TruthLens script starting...');
+
         // Global state
         let currentAnalysis = null;
         let isAnalyzing = false;
@@ -1480,34 +1488,46 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing TruthLens...');
             
+            // Check if essential elements exist
             const urlInput = document.getElementById('urlInput');
-            if (urlInput) {
-                console.log('URL input found');
-                urlInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        console.log('Enter key pressed');
-                        analyzeArticle();
-                    }
-                });
-            } else {
-                console.error('URL input not found!');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            console.log('Essential elements check:');
+            console.log('- URL Input:', urlInput ? 'Found' : 'NOT FOUND');
+            console.log('- Analyze Button:', analyzeBtn ? 'Found' : 'NOT FOUND');
+            console.log('- Error Message:', errorMessage ? 'Found' : 'NOT FOUND');  
+            console.log('- Results Section:', resultsSection ? 'Found' : 'NOT FOUND');
+            
+            if (!urlInput || !analyzeBtn) {
+                console.error('CRITICAL: Essential elements missing!');
+                return;
             }
             
-            // Add click handler for analyze button - WITH NULL CHECK
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            if (analyzeBtn) {
-                console.log('Analyze button found, adding click handler');
-                analyzeBtn.addEventListener('click', function() {
-                    console.log('Analyze button clicked');
+            // Add event listeners
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    console.log('Enter key pressed in URL input');
+                    e.preventDefault();
                     analyzeArticle();
-                });
-            } else {
-                console.error('Analyze button not found!');
-            }
+                }
+            });
+            
+            analyzeBtn.addEventListener('click', function(e) {
+                console.log('Analyze button clicked');
+                e.preventDefault();
+                analyzeArticle();
+            });
+            
+            // Test button click programmatically
+            console.log('Testing button clickability...');
+            analyzeBtn.click();
             
             // Add click handlers for example buttons
             document.querySelectorAll('.example-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    console.log('Example button clicked:', this.getAttribute('data-url'));
                     tryExample(this.getAttribute('data-url'));
                 });
             });
@@ -1522,19 +1542,27 @@
             if (shareBtn) {
                 shareBtn.addEventListener('click', shareResults);
             }
+            
+            console.log('Initialization complete');
         });
 
         // Try example URL
         function tryExample(url) {
+            console.log('tryExample called with:', url);
             document.getElementById('urlInput').value = url;
             document.getElementById('urlInput').focus();
         }
 
         // Main analysis function
         async function analyzeArticle() {
-            console.log('analyzeArticle function called');
+            console.log('=== analyzeArticle function called ===');
             
             const urlInput = document.getElementById('urlInput');
+            if (!urlInput) {
+                console.error('URL input element not found!');
+                return;
+            }
+            
             const url = urlInput.value.trim();
             console.log('URL to analyze:', url);
             
@@ -1551,76 +1579,81 @@
             }
             
             if (isAnalyzing) {
-                console.log('Already analyzing');
+                console.log('Already analyzing, returning');
                 return;
             }
             
+            console.log('Starting analysis...');
             isAnalyzing = true;
             hideError();
             hideResults();
             showLoading();
             
             const analyzeBtn = document.getElementById('analyzeBtn');
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            if (analyzeBtn) {
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            }
             
-            console.log('Starting API call to /api/analyze');
+            console.log('Making API call to /api/analyze');
             
             try {
+                const requestBody = JSON.stringify({ url: url });
+                console.log('Request body:', requestBody);
+                
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url })
+                    body: requestBody
                 });
                 
-                console.log('API response status:', response.status);
+                console.log('API response received');
+                console.log('Status:', response.status);
+                console.log('Status Text:', response.statusText);
+                console.log('Headers:', response.headers);
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    console.error('API error response:', error);
-                    throw new Error(error.error?.message || error.error || 'Analysis failed');
+                    console.error('Response not OK');
+                    let errorMessage = 'Analysis failed';
+                    try {
+                        const error = await response.json();
+                        console.error('Error response:', error);
+                        errorMessage = error.error?.message || error.error || errorMessage;
+                    } catch (e) {
+                        console.error('Failed to parse error response:', e);
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const responseData = await response.json();
-                console.log('=== DEBUGGING API RESPONSE ===');
-                console.log('Raw API response:', responseData);
-                console.log('Response keys:', Object.keys(responseData));
+                console.log('=== API RESPONSE DATA ===');
+                console.log('Full response:', responseData);
                 
                 // Extract data from response
                 let data = responseData;
                 if (responseData.success && responseData.data) {
                     data = responseData.data;
-                    console.log('Extracted data from responseData.data');
-                    console.log('Data keys:', Object.keys(data));
-                }
-                
-                // Deep inspection of the data structure
-                console.log('=== DETAILED DATA STRUCTURE ===');
-                console.log('data.analysis:', data.analysis);
-                console.log('data.article:', data.article);
-                console.log('data.detailed_analysis exists?', !!data.detailed_analysis);
-                if (data.detailed_analysis) {
-                    console.log('detailed_analysis keys:', Object.keys(data.detailed_analysis));
-                    // Log each service's data WITH CONTENT
-                    Object.keys(data.detailed_analysis).forEach(key => {
-                        console.log(`detailed_analysis.${key}:`, data.detailed_analysis[key]);
-                        console.log(`  Keys in ${key}:`, Object.keys(data.detailed_analysis[key]));
-                    });
                 }
                 
                 currentAnalysis = data;
                 displayResults(data);
                 
             } catch (error) {
-                console.error('Analysis error:', error);
+                console.error('=== ANALYSIS ERROR ===');
+                console.error('Error type:', error.constructor.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
                 showError(error.message || 'Failed to analyze article');
             } finally {
                 isAnalyzing = false;
                 hideLoading();
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+                }
+                console.log('Analysis complete');
             }
         }
 
@@ -3374,6 +3407,7 @@
         }
 
         function showError(message) {
+            console.log('showError called:', message);
             const errorEl = document.getElementById('errorMessage');
             
             // Make error messages more user-friendly
@@ -3403,10 +3437,12 @@
         }
 
         function showLoading() {
+            console.log('showLoading called');
             document.getElementById('loadingOverlay').classList.add('active');
         }
 
         function hideLoading() {
+            console.log('hideLoading called');
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
@@ -3733,3 +3769,10 @@
                 });
             }
         }
+
+        // Debug: Log when script finishes loading
+        console.log('TruthLens script loaded successfully');
+    </script>
+</body>
+</html>
+            }
