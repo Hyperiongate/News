@@ -44,18 +44,18 @@
             --font-primary: 'Inter', -apple-system, sans-serif;
             --font-display: 'Space Grotesk', sans-serif;
             
-            /* Compact Spacing */
-            --space-xs: 0.25rem;
-            --space-sm: 0.5rem;
-            --space-md: 1rem;
-            --space-lg: 1.5rem;
-            --space-xl: 2rem;
-            --space-2xl: 3rem;
+            /* Spacing */
+            --space-xs: 0.5rem;
+            --space-sm: 1rem;
+            --space-md: 1.5rem;
+            --space-lg: 2rem;
+            --space-xl: 3rem;
+            --space-2xl: 4rem;
             
             /* Layout */
-            --radius: 0.75rem;
-            --radius-sm: 0.375rem;
-            --radius-lg: 1rem;
+            --radius: 1rem;
+            --radius-sm: 0.5rem;
+            --radius-lg: 1.5rem;
             
             /* Shadows */
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -79,10 +79,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
         }
 
         body {
@@ -141,7 +137,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Premium Header - Compact */
+        /* Premium Header */
         .header {
             background: white;
             border-bottom: 1px solid var(--gray-200);
@@ -174,20 +170,20 @@
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             background: var(--gradient-primary);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
         }
 
         .logo-text h1 {
             font-family: var(--font-display);
-            font-size: 1.5rem;
+            font-size: 1.875rem;
             font-weight: 700;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
@@ -195,7 +191,7 @@
         }
 
         .logo-text p {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
         }
 
@@ -210,10 +206,10 @@
             letter-spacing: 0.05em;
         }
 
-        /* Hero Section - Compact */
+        /* Hero Section */
         .hero-section {
             background: white;
-            padding: var(--space-xl) 0;
+            padding: var(--space-2xl) 0;
             border-bottom: 1px solid var(--gray-200);
         }
 
@@ -226,116 +222,54 @@
 
         .hero-title {
             font-family: var(--font-display);
-            font-size: 2rem;
+            font-size: 3rem;
             font-weight: 700;
             line-height: 1.2;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
             background: var(--gradient-dark);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .hero-subtitle {
-            font-size: 1rem;
+            font-size: 1.25rem;
             color: var(--gray-600);
-            margin-bottom: var(--space-lg);
+            margin-bottom: var(--space-xl);
             max-width: 800px;
             margin-left: auto;
             margin-right: auto;
         }
 
-        /* Service Pills - Compact */
+        /* Service Pills */
         .service-pills {
             display: flex;
             flex-wrap: wrap;
             gap: var(--space-sm);
             justify-content: center;
-            margin-bottom: var(--space-lg);
+            margin-bottom: var(--space-xl);
         }
 
         .service-pill {
             display: flex;
             align-items: center;
             gap: var(--space-xs);
-            padding: 0.375rem 0.75rem;
+            padding: 0.5rem 1rem;
             background: var(--gray-100);
             border-radius: 999px;
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-700);
         }
 
         .service-pill i {
             color: var(--primary);
-            font-size: 0.875rem;
         }
 
-        /* Input Section - Enhanced with Tabs */
+        /* Input Section */
         .input-container {
             max-width: 800px;
             margin: 0 auto;
         }
 
-        /* Tab Buttons */
-        .input-tabs {
-            display: flex;
-            gap: var(--space-sm);
-            margin-bottom: var(--space-md);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: var(--space-sm) var(--space-md);
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-sm);
-            color: var(--gray-600);
-        }
-
-        .tab-btn:hover {
-            border-color: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .tab-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Help Text */
-        .help-text {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            padding: var(--space-md);
-            border-radius: var(--radius-sm);
-            margin-bottom: var(--space-md);
-            font-size: 0.875rem;
-            color: var(--gray-700);
-            line-height: 1.5;
-        }
-
-        .help-text i {
-            color: var(--info);
-            margin-right: var(--space-sm);
-        }
-
-        /* Input Wrapper */
         .input-wrapper {
             position: relative;
             display: flex;
@@ -343,45 +277,34 @@
             align-items: center;
             background: white;
             border: 2px solid var(--gray-200);
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             padding: var(--space-xs);
             transition: all 0.3s ease;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow-lg);
         }
 
         .input-wrapper:focus-within {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), var(--shadow-lg);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), var(--shadow-xl);
         }
 
-        .url-input, .text-input {
+        .url-input {
             flex: 1;
             padding: var(--space-md);
             border: none;
             font-size: 1rem;
             background: transparent;
             outline: none;
-            font-family: inherit;
         }
 
-        .text-input {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            gap: var(--space-sm);
-            margin-top: var(--space-md);
-        }
-
-        .analyze-button, .reset-button {
-            padding: var(--space-sm) var(--space-lg);
+        .analyze-button {
+            padding: var(--space-md) var(--space-xl);
+            background: var(--gradient-primary);
+            color: white;
             border: none;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -390,13 +313,8 @@
             white-space: nowrap;
         }
 
-        .analyze-button {
-            background: var(--gradient-primary);
-            color: white;
-        }
-
         .analyze-button:hover:not(:disabled) {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
 
@@ -406,34 +324,6 @@
             transform: none;
         }
 
-        .reset-button {
-            background: white;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-        }
-
-        .reset-button:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-1px);
-        }
-
-        /* URL Input Specific */
-        .url-input-wrapper {
-            display: flex;
-            gap: var(--space-sm);
-            align-items: stretch;
-        }
-
-        .url-input-field {
-            flex: 1;
-        }
-
-        /* Text Input Specific */
-        .text-input-wrapper {
-            width: 100%;
-        }
-
         /* Main Content */
         .main-content {
             max-width: 1400px;
@@ -441,18 +331,14 @@
             padding: var(--space-xl) var(--space-lg);
         }
 
-        /* CRITICAL FIX: Force results section to be hidden initially */
-        #resultsSection {
-            display: none !important;
-        }
-        
+        /* Results Section */
         .results-section {
-            display: none !important;
+            display: none;
             animation: fadeInUp 0.6s ease;
         }
 
         .results-section.active {
-            display: block !important;
+            display: block;
         }
 
         @keyframes fadeInUp {
@@ -466,12 +352,12 @@
             }
         }
 
-        /* Enhanced Trust Score Section - Compact */
+        /* Enhanced Trust Score Section */
         .trust-score-section {
             background: white;
-            border-radius: var(--radius);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-lg);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
             box-shadow: var(--shadow-md);
             position: relative;
             overflow: hidden;
@@ -486,74 +372,69 @@
 
         .trust-score-content {
             display: grid;
-            grid-template-columns: 220px 1fr;
-            gap: var(--space-lg);
+            grid-template-columns: 280px 1fr;
+            gap: var(--space-xl);
             align-items: start;
         }
 
         .trust-gauge-container {
             position: relative;
-            width: 220px;
-            height: 140px;
+            width: 280px;
+            height: 280px;
             background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: var(--space-md);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
             box-shadow: var(--shadow) inset;
         }
 
         .trust-gauge-visual {
             position: relative;
             width: 100%;
-            height: 100%;
+            height: 200px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        #trustGauge {
-            width: 100%;
-            height: 100%;
-        }
-
         .trust-score-value {
             position: absolute;
-            bottom: 10px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             text-align: center;
         }
 
         .trust-score-number {
-            font-size: 2.5rem;
+            font-size: 4rem;
             font-weight: 700;
             line-height: 1;
             display: block;
         }
 
         .trust-score-label {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
-            margin-top: 0.25rem;
+            margin-top: 0.5rem;
         }
 
         .trust-level-indicator {
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            padding: var(--space-xs) var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            margin-top: var(--space-sm);
+            border-radius: var(--radius);
+            margin-top: var(--space-md);
             justify-content: center;
-            font-size: 0.875rem;
         }
 
         .trust-level-icon {
-            font-size: 1rem;
+            font-size: 1.25rem;
         }
 
         .trust-level-text {
             font-weight: 600;
+            font-size: 1.125rem;
         }
 
         .trust-score-details {
@@ -561,33 +442,32 @@
         }
 
         .trust-score-details h2 {
-            font-size: 1.5rem;
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
         }
 
         .trust-summary {
             color: var(--gray-600);
-            line-height: 1.6;
+            line-height: 1.8;
             margin-bottom: var(--space-lg);
-            font-size: 0.9rem;
+            font-size: 1.125rem;
         }
 
         .what-we-analyzed {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             padding: var(--space-md);
             margin-bottom: var(--space-lg);
         }
 
         .what-we-analyzed-title {
             font-weight: 600;
-            margin-bottom: var(--space-xs);
+            margin-bottom: var(--space-sm);
             color: var(--gray-700);
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            font-size: 0.875rem;
         }
 
         .what-we-analyzed-title i {
@@ -596,8 +476,7 @@
 
         .what-we-analyzed-content {
             color: var(--gray-600);
-            line-height: 1.5;
-            font-size: 0.813rem;
+            line-height: 1.6;
         }
 
         .trust-breakdown {
@@ -608,7 +487,7 @@
 
         .breakdown-item {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             padding: var(--space-md);
             transition: all 0.3s ease;
             position: relative;
@@ -621,7 +500,7 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: var(--gradient-primary);
             transform: scaleX(0);
             transition: transform 0.3s ease;
@@ -640,7 +519,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--space-xs);
+            margin-bottom: var(--space-sm);
         }
 
         .breakdown-label {
@@ -649,35 +528,33 @@
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            font-size: 0.875rem;
         }
 
         .breakdown-icon {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.875rem;
+            font-size: 1rem;
         }
 
         .breakdown-value {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 700;
         }
 
         .breakdown-explanation {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
             margin-top: var(--space-xs);
-            line-height: 1.4;
         }
 
         .breakdown-bar {
-            height: 6px;
+            height: 8px;
             background: var(--gray-200);
-            border-radius: 3px;
+            border-radius: 4px;
             margin-top: var(--space-sm);
             overflow: hidden;
             position: relative;
@@ -685,7 +562,7 @@
 
         .breakdown-fill {
             height: 100%;
-            border-radius: 3px;
+            border-radius: 4px;
             transition: width 1s ease-out;
             position: relative;
             overflow: hidden;
@@ -738,10 +615,10 @@
         }
 
         .download-button {
-            padding: var(--space-xs) var(--space-md);
+            padding: var(--space-sm) var(--space-md);
             background: white;
             border: 2px solid var(--gray-300);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             color: var(--gray-700);
             font-weight: 500;
             cursor: pointer;
@@ -749,7 +626,6 @@
             display: flex;
             align-items: center;
             gap: var(--space-xs);
-            font-size: 0.875rem;
         }
 
         .download-button:hover {
@@ -758,32 +634,31 @@
             background: var(--gray-50);
         }
 
-        /* Article Info Section - Compact */
+        /* Article Info Section */
         .article-info-section {
             background: white;
-            border-radius: var(--radius);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-lg);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
             box-shadow: var(--shadow-md);
         }
 
         .article-header {
-            margin-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
         }
 
         .article-title {
-            font-size: 1.5rem;
+            font-size: 1.875rem;
             font-weight: 700;
             line-height: 1.3;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
         }
 
         .article-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: var(--space-md);
+            gap: var(--space-lg);
             color: var(--gray-600);
-            font-size: 0.875rem;
         }
 
         .meta-item {
@@ -794,37 +669,33 @@
 
         .meta-item i {
             color: var(--primary);
-            font-size: 0.875rem;
         }
 
-        /* Key Findings - Compact */
+        /* Key Findings */
         .key-findings {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            padding: var(--space-md);
-            border-left: 3px solid var(--primary);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            border-left: 4px solid var(--primary);
         }
 
         .key-findings-header {
             font-weight: 600;
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
             color: var(--primary);
-            font-size: 0.9rem;
         }
 
         .finding-item {
             display: flex;
             align-items: flex-start;
             gap: var(--space-sm);
-            margin-bottom: var(--space-xs);
-            line-height: 1.5;
-            font-size: 0.813rem;
+            margin-bottom: var(--space-sm);
+            line-height: 1.6;
         }
 
         .finding-item i {
-            margin-top: 0.125rem;
+            margin-top: 0.25rem;
             flex-shrink: 0;
-            font-size: 0.875rem;
         }
 
         .finding-positive i { color: var(--accent); }
@@ -838,14 +709,14 @@
             gap: var(--space-md);
         }
 
-        /* Service Accordion Item - Compact with Colored Borders */
+        /* Service Accordion Item - FIXED WITH COLORED BORDERS */
         .service-accordion-item {
             background: white;
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
             overflow: hidden;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            border: 3px solid transparent;
             position: relative;
         }
 
@@ -867,9 +738,9 @@
             box-shadow: var(--shadow-xl);
         }
 
-        /* Prevent auto-scrolling on accordion click */
+        /* FIXED: Prevent auto-scrolling on accordion click */
         .service-accordion-header {
-            padding: var(--space-md);
+            padding: var(--space-lg);
             cursor: pointer;
             user-select: none;
             transition: all 0.3s ease;
@@ -893,15 +764,15 @@
         }
 
         .service-icon-wrapper {
-            width: 48px;
-            height: 48px;
+            width: 56px;
+            height: 56px;
             background: var(--gradient-primary);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             flex-shrink: 0;
             transition: all 0.3s ease;
         }
@@ -917,7 +788,8 @@
         #service-plagiarism_detector .service-icon-wrapper { background: linear-gradient(135deg, #14B8A6, #0D9488); }
 
         .service-accordion-item.active .service-icon-wrapper {
-            transform: scale(1.05);
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .service-info {
@@ -925,30 +797,30 @@
         }
 
         .service-name {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: 0.125rem;
+            margin-bottom: 0.25rem;
             color: var(--gray-900);
         }
 
         .service-description {
-            font-size: 0.813rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
-            margin-bottom: var(--space-xs);
+            margin-bottom: var(--space-sm);
         }
 
         .service-preview {
             display: flex;
-            gap: var(--space-md);
+            gap: var(--space-lg);
             align-items: center;
-            margin-top: var(--space-xs);
+            margin-top: var(--space-sm);
         }
 
         .preview-item {
             display: flex;
             align-items: center;
             gap: var(--space-xs);
-            font-size: 0.75rem;
+            font-size: 0.875rem;
         }
 
         .preview-label {
@@ -962,10 +834,10 @@
 
         .service-expand-icon {
             position: absolute;
-            right: var(--space-md);
+            right: var(--space-lg);
             top: 50%;
             transform: translateY(-50%);
-            font-size: 1rem;
+            font-size: 1.25rem;
             color: var(--gray-400);
             transition: all 0.3s ease;
         }
@@ -977,13 +849,13 @@
 
         .pro-lock-badge {
             position: absolute;
-            top: var(--space-sm);
-            right: calc(var(--space-md) + 30px);
+            top: var(--space-md);
+            right: calc(var(--space-lg) + 40px);
             background: var(--gradient-premium);
             color: var(--gray-900);
-            padding: 0.125rem 0.5rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 999px;
-            font-size: 0.675rem;
+            font-size: 0.75rem;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -993,7 +865,7 @@
         .service-accordion-content {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            transition: all 0.5s ease;
         }
 
         .service-accordion-item.active .service-accordion-content {
@@ -1001,13 +873,13 @@
         }
 
         .service-content-inner {
-            padding: var(--space-lg);
+            padding: var(--space-xl);
             padding-top: 0;
         }
 
-        /* Service Content Sections - Compact */
+        /* Service Content Sections */
         .service-section {
-            margin-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
         }
 
         .service-section:last-child {
@@ -1016,60 +888,30 @@
 
         .section-title {
             font-weight: 600;
-            margin-bottom: var(--space-xs);
+            margin-bottom: var(--space-sm);
             color: var(--gray-700);
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            font-size: 0.875rem;
         }
 
         .section-title i {
             color: var(--primary);
-            font-size: 0.75rem;
-        }
-
-        /* Enhanced Service Content Sections */
-        .service-analysis-section {
-            background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            padding: var(--space-md);
-            margin-bottom: var(--space-md);
-        }
-
-        .service-analysis-section h4 {
             font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: var(--space-sm);
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-        }
-
-        .service-analysis-section h4 i {
-            font-size: 0.875rem;
-        }
-
-        .service-analysis-section p {
-            font-size: 0.813rem;
-            line-height: 1.5;
-            color: var(--gray-700);
         }
 
         .service-results {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            padding: var(--space-sm);
+            border-radius: var(--radius);
+            padding: var(--space-md);
         }
 
         .result-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: var(--space-xs) var(--space-sm);
+            padding: var(--space-sm) 0;
             border-bottom: 1px solid var(--gray-200);
-            font-size: 0.813rem;
         }
 
         .result-item:last-child {
@@ -1087,9 +929,9 @@
         }
 
         .status-badge {
-            padding: 0.125rem 0.5rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 999px;
-            font-size: 0.675rem;
+            font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
         }
@@ -1098,62 +940,33 @@
         .status-medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
         .status-low { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 
-        /* Author Info Enhanced */
-        .author-info-enhanced {
-            margin-top: var(--space-md);
-        }
-
-        .author-info-enhanced h5 {
-            font-size: 1rem;
-            margin-bottom: var(--space-sm);
-            color: var(--gray-900);
-        }
-
-        .author-details {
-            display: grid;
-            gap: var(--space-sm);
-        }
-
-        .author-detail-item {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-            font-size: 0.813rem;
-            color: var(--gray-700);
-        }
-
-        .author-detail-item i {
-            color: var(--primary);
-            width: 16px;
-        }
-
         /* Progress Bar */
         .progress-bar {
-            height: 6px;
+            height: 8px;
             background: var(--gray-200);
-            border-radius: 3px;
-            margin: var(--space-sm) 0;
+            border-radius: 4px;
+            margin: var(--space-md) 0;
             overflow: hidden;
         }
 
         .progress-fill {
             height: 100%;
             background: var(--gradient-primary);
-            border-radius: 3px;
+            border-radius: 4px;
             transition: width 0.3s ease;
         }
 
-        /* Dimension Bars - Compact */
+        /* Dimension Bars */
         .dimension-list {
             display: flex;
             flex-direction: column;
-            gap: var(--space-sm);
+            gap: var(--space-md);
         }
 
         .dimension-item {
             background: white;
-            padding: var(--space-sm);
-            border-radius: var(--radius-sm);
+            padding: var(--space-md);
+            border-radius: var(--radius);
             border: 1px solid var(--gray-200);
             transition: all 0.3s ease;
         }
@@ -1167,7 +980,6 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: var(--space-xs);
-            font-size: 0.813rem;
         }
 
         .dimension-name {
@@ -1181,30 +993,30 @@
         }
 
         .dimension-bar {
-            height: 4px;
+            height: 8px;
             background: var(--gray-200);
-            border-radius: 2px;
+            border-radius: 4px;
             overflow: hidden;
         }
 
         .dimension-fill {
             height: 100%;
-            border-radius: 2px;
+            border-radius: 4px;
             transition: width 0.6s ease;
         }
 
-        /* Claim List - Compact */
+        /* Claim List */
         .claims-list {
             display: flex;
             flex-direction: column;
-            gap: var(--space-sm);
+            gap: var(--space-md);
         }
 
         .claim-item {
             background: white;
             border: 1px solid var(--gray-200);
-            border-radius: var(--radius-sm);
-            padding: var(--space-sm);
+            border-radius: var(--radius);
+            padding: var(--space-md);
             transition: all 0.3s ease;
         }
 
@@ -1217,24 +1029,23 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: var(--space-xs);
+            margin-bottom: var(--space-sm);
         }
 
         .claim-text {
             flex: 1;
             font-weight: 500;
             color: var(--gray-900);
-            line-height: 1.4;
-            font-size: 0.813rem;
+            line-height: 1.5;
         }
 
         .claim-status {
             display: flex;
             align-items: center;
             gap: var(--space-xs);
-            padding: 0.125rem 0.375rem;
+            padding: 0.25rem 0.5rem;
             border-radius: var(--radius-sm);
-            font-size: 0.675rem;
+            font-size: 0.75rem;
             font-weight: 600;
             white-space: nowrap;
         }
@@ -1244,25 +1055,25 @@
         .claim-false { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 
         .claim-details {
-            margin-top: var(--space-xs);
-            padding-top: var(--space-xs);
+            margin-top: var(--space-sm);
+            padding-top: var(--space-sm);
             border-top: 1px solid var(--gray-100);
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
-            line-height: 1.4;
+            line-height: 1.6;
         }
 
-        /* Technique List - Compact */
+        /* Technique List */
         .techniques-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-sm);
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-md);
         }
 
         .technique-card {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            padding: var(--space-sm);
+            border-radius: var(--radius);
+            padding: var(--space-md);
             border: 1px solid transparent;
             transition: all 0.3s ease;
         }
@@ -1277,22 +1088,21 @@
             font-weight: 600;
             color: var(--gray-900);
             margin-bottom: var(--space-xs);
-            font-size: 0.813rem;
         }
 
         .technique-description {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
             color: var(--gray-600);
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .technique-severity {
             display: inline-block;
-            margin-top: var(--space-xs);
-            padding: 0.0625rem 0.375rem;
+            margin-top: var(--space-sm);
+            padding: 0.125rem 0.5rem;
             background: var(--gray-200);
             border-radius: var(--radius-sm);
-            font-size: 0.675rem;
+            font-size: 0.75rem;
             font-weight: 600;
         }
 
@@ -1303,10 +1113,10 @@
         /* Info Box */
         .info-box {
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             padding: var(--space-md);
             margin-top: var(--space-md);
-            border-left: 3px solid var(--info);
+            border-left: 4px solid var(--info);
         }
 
         .info-box-title {
@@ -1316,7 +1126,6 @@
             display: flex;
             align-items: center;
             gap: var(--space-sm);
-            font-size: 0.875rem;
         }
 
         .info-box-title i {
@@ -1325,97 +1134,32 @@
 
         .info-box-content {
             color: var(--gray-600);
-            line-height: 1.5;
-            font-size: 0.813rem;
+            line-height: 1.6;
         }
 
-        /* Visualization Container - Compact */
+        /* Visualization Container */
         .service-visualization {
-            margin: var(--space-md) 0;
-            min-height: 200px;
+            margin: var(--space-lg) 0;
+            min-height: 300px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: var(--gray-50);
-            border-radius: var(--radius-sm);
-            padding: var(--space-md);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
         }
 
         .chart-container {
             position: relative;
             width: 100%;
-            max-width: 300px;
+            max-width: 400px;
             margin: 0 auto;
-        }
-
-        /* Trust Components Info */
-        .trust-components-info {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            padding: var(--space-md);
-            border-radius: var(--radius-sm);
-            margin-bottom: var(--space-md);
-            font-size: 0.813rem;
-        }
-
-        .trust-components-info p {
-            margin: 0;
-            color: var(--gray-700);
-        }
-
-        .missing-info {
-            color: var(--warning);
-            font-size: 0.813rem;
-            margin-top: var(--space-xs);
-        }
-
-        .missing-info i {
-            margin-right: var(--space-xs);
-        }
-
-        /* Example URLs */
-        .example-urls {
-            margin-top: var(--space-md);
-            padding: var(--space-md);
-            background: var(--gray-100);
-            border-radius: var(--radius-sm);
-            text-align: center;
-        }
-
-        .example-urls p {
-            color: var(--gray-700);
-            font-size: 0.813rem;
-            margin-bottom: var(--space-sm);
-        }
-
-        .example-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-xs);
-            justify-content: center;
-            margin-top: var(--space-sm);
-        }
-
-        .example-btn {
-            padding: 0.25rem 0.75rem;
-            background: white;
-            border: 1px solid var(--gray-300);
-            border-radius: var(--radius-sm);
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .example-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: var(--gray-50);
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
             .hero-title {
-                font-size: 1.5rem;
+                font-size: 2rem;
             }
 
             .trust-score-content {
@@ -1433,7 +1177,7 @@
 
             .header-content {
                 flex-direction: column;
-                gap: var(--space-sm);
+                gap: var(--space-md);
             }
 
             .input-wrapper {
@@ -1453,17 +1197,7 @@
             .service-preview {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: var(--space-xs);
-            }
-
-            .action-buttons {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .reset-button {
-                width: 100%;
-                justify-content: center;
+                gap: var(--space-sm);
             }
         }
 
@@ -1473,13 +1207,12 @@
             border: 1px solid #FCA5A5;
             color: #991B1B;
             padding: var(--space-md);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             margin-top: var(--space-md);
             display: none;
             animation: shake 0.5s ease;
             font-weight: 500;
             text-align: center;
-            font-size: 0.875rem;
         }
 
         .error-message.active {
@@ -1500,28 +1233,38 @@
         }
 
         .empty-state i {
-            font-size: 2.5rem;
+            font-size: 3rem;
             margin-bottom: var(--space-md);
             opacity: 0.5;
         }
 
         .empty-state-text {
-            font-size: 1rem;
-            margin-bottom: var(--space-xs);
+            font-size: 1.125rem;
+            margin-bottom: var(--space-sm);
         }
 
         .empty-state-subtext {
-            font-size: 0.813rem;
+            font-size: 0.875rem;
             color: var(--gray-400);
+        }
+
+        /* CRITICAL FIX: Ensure content is always visible */
+        .card-content {
+            display: block !important;
+        }
+
+        .analysis-card {
+            display: block !important;
+            opacity: 1 !important;
         }
 
         /* Data state indicator */
         .data-state-indicator {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 6px;
-            height: 6px;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #10B981;
         }
@@ -1604,78 +1347,34 @@
                 </div>
             </div>
 
-            <!-- Input Section with Tabs -->
+            <!-- Input Section -->
             <div class="input-container">
-                <!-- Tab Buttons -->
-                <div class="input-tabs">
-                    <button class="tab-btn active" onclick="switchTab('url')">
-                        <i class="fas fa-link"></i>
-                        <span>URL</span>
-                    </button>
-                    <button class="tab-btn" onclick="switchTab('text')">
-                        <i class="fas fa-file-text"></i>
-                        <span>Text</span>
-                    </button>
-                </div>
-
-                <!-- URL Tab Content -->
-                <div id="url-tab" class="tab-content active">
-                    <div class="url-input-wrapper">
-                        <div class="input-wrapper url-input-field">
-                            <input 
-                                type="url" 
-                                id="urlInput" 
-                                class="url-input" 
-                                placeholder="Enter a news article URL to analyze..."
-                                autocomplete="off"
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Text Tab Content -->
-                <div id="text-tab" class="tab-content">
-                    <div class="help-text">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Tip:</strong> Try the URL option first. If the website blocks our analysis (some sites like Washington Post do this), 
-                        you can copy and paste the entire article text here instead.
-                    </div>
-                    <div class="text-input-wrapper">
-                        <div class="input-wrapper">
-                            <textarea 
-                                id="textInput" 
-                                class="text-input" 
-                                placeholder="Paste the complete article text here..."
-                            ></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button id="analyzeBtn" class="analyze-button" onclick="analyzeArticle()">
+                <div class="input-wrapper">
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        class="url-input" 
+                        placeholder="Enter a news article URL to analyze..."
+                        autocomplete="off"
+                    >
+                    <button id="analyzeBtn" class="analyze-button">
                         <i class="fas fa-search"></i>
-                        <span>Analyze Article</span>
-                    </button>
-                    <button id="resetBtn" class="reset-button" onclick="resetAnalysis()">
-                        <i class="fas fa-redo"></i>
-                        <span>Reset</span>
+                        Analyze Article
                     </button>
                 </div>
-
                 <div id="errorMessage" class="error-message"></div>
                 
-                <!-- Example URLs -->
-                <div class="example-urls">
-                    <p>
+                <!-- Example URLs for testing -->
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: var(--radius); text-align: center;">
+                    <p style="color: var(--gray-700); font-size: 0.875rem; margin-bottom: 0.5rem;">
                         <strong>Note:</strong> Some sites like Washington Post block automated analysis. Try these instead:
                     </p>
-                    <div class="example-buttons">
-                        <button class="example-btn" onclick="tryExample('https://www.cnn.com')">CNN</button>
-                        <button class="example-btn" onclick="tryExample('https://www.bbc.com/news')">BBC News</button>
-                        <button class="example-btn" onclick="tryExample('https://www.reuters.com')">Reuters</button>
-                        <button class="example-btn" onclick="tryExample('https://www.npr.org')">NPR</button>
-                        <button class="example-btn" onclick="tryExample('https://www.theguardian.com')">The Guardian</button>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                        <button class="example-btn" data-url="https://www.cnn.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">CNN</button>
+                        <button class="example-btn" data-url="https://www.bbc.com/news" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">BBC News</button>
+                        <button class="example-btn" data-url="https://www.reuters.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">Reuters</button>
+                        <button class="example-btn" data-url="https://www.npr.org" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">NPR</button>
+                        <button class="example-btn" data-url="https://www.theguardian.com" style="padding: 0.25rem 0.75rem; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 0.813rem; cursor: pointer; transition: all 0.2s;">The Guardian</button>
                     </div>
                 </div>
             </div>
@@ -1684,8 +1383,8 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Results Section (Hidden by default) -->
-        <div id="resultsSection" class="results-section" style="display: none;">
+        <!-- Results Section -->
+        <div id="resultsSection" class="results-section">
             <!-- Enhanced Trust Score Section -->
             <div class="trust-score-section">
                 <div class="trust-score-header">
@@ -1707,6 +1406,10 @@
                     <div class="trust-gauge-container">
                         <div class="trust-gauge-visual">
                             <canvas id="trustGauge"></canvas>
+                            <div class="trust-score-value">
+                                <span id="trustScoreNumber" class="trust-score-number">0</span>
+                                <span class="trust-score-label">out of 100</span>
+                            </div>
                         </div>
                         <div id="trustLevelIndicator" class="trust-level-indicator">
                             <i id="trustLevelIcon" class="fas fa-circle trust-level-icon"></i>
@@ -1753,8 +1456,7 @@
         let currentAnalysis = null;
         let isAnalyzing = false;
         let charts = {};
-        let isPro = true;
-        let currentTab = 'url';
+        let isPro = true; // For development, keep pro features open
 
         // Service definitions
         const services = [
@@ -1815,27 +1517,6 @@
                 isPro: true
             }
         ];
-
-        // Tab switching
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // Update tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.closest('.tab-btn').classList.add('active');
-            
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById('url-tab').classList.add('active');
-            
-            // Set URL
-            document.getElementById('urlInput').value = url;
-            document.getElementById('urlInput').focus();
-        }
 
         // CRITICAL FIX: Data structure mapper to handle backend inconsistencies
         class DataStructureMapper {
@@ -1921,40 +1602,38 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing TruthLens...');
             
-            // CRITICAL: Ensure results are hidden on page load
-            const resultsSection = document.getElementById('resultsSection');
-            if (resultsSection) {
-                resultsSection.style.display = 'none';
-                resultsSection.classList.remove('active');
-            }
-            
-            // Hide any error messages
-            hideError();
-            
-            // Reset to initial state
-            currentAnalysis = null;
-            isAnalyzing = false;
-            
             // Add event listener for URL input Enter key
             const urlInput = document.getElementById('urlInput');
             if (urlInput) {
+                console.log('URL input found');
                 urlInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
+                        console.log('Enter key pressed');
                         analyzeArticle();
                     }
                 });
+            } else {
+                console.error('URL input not found!');
             }
             
-            // Add event listener for text input Ctrl+Enter
-            const textInput = document.getElementById('textInput');
-            if (textInput) {
-                textInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter' && e.ctrlKey) {
-                        e.preventDefault();
-                        analyzeArticle();
-                    }
+            // Add click handler for analyze button
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (analyzeBtn) {
+                console.log('Analyze button found, adding click handler');
+                analyzeBtn.addEventListener('click', function() {
+                    console.log('Analyze button clicked');
+                    analyzeArticle();
                 });
+            } else {
+                console.error('Analyze button not found!');
             }
+            
+            // Add click handlers for example buttons
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    tryExample(this.getAttribute('data-url'));
+                });
+            });
             
             // Add click handlers for download and share buttons
             const downloadBtn = document.getElementById('downloadPdfBtn');
@@ -1968,39 +1647,30 @@
             }
         });
 
+        // Try example URL
+        function tryExample(url) {
+            document.getElementById('urlInput').value = url;
+            document.getElementById('urlInput').focus();
+        }
+
         // Main analysis function - FIXED with comprehensive data handling
         async function analyzeArticle() {
             console.log('analyzeArticle function called');
             
-            let url = '';
-            let text = '';
-            let payload = {};
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            console.log('URL to analyze:', url);
             
-            if (currentTab === 'url') {
-                url = document.getElementById('urlInput').value.trim();
-                console.log('URL to analyze:', url);
-                
-                if (!url) {
-                    showError('Please enter a URL');
-                    return;
-                }
-                
-                if (!isValidUrl(url)) {
-                    showError('Please enter a valid URL');
-                    return;
-                }
-                
-                payload = { url: url };
-            } else {
-                text = document.getElementById('textInput').value.trim();
-                console.log('Text length:', text.length);
-                
-                if (!text || text.length < 100) {
-                    showError('Please enter at least 100 characters of article text');
-                    return;
-                }
-                
-                payload = { text: text };
+            if (!url) {
+                console.log('No URL provided');
+                showError('Please enter a URL');
+                return;
+            }
+            
+            if (!isValidUrl(url)) {
+                console.log('Invalid URL format');
+                showError('Please enter a valid URL');
+                return;
             }
             
             if (isAnalyzing) {
@@ -2017,15 +1687,16 @@
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
             
-            console.log('Starting API call to /api/analyze with payload:', payload);
+            console.log('Starting API call to /api/analyze');
             
             try {
+                // FIXED: Use correct API endpoint and payload format
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ url: url })
                 });
                 
                 console.log('API response status:', response.status);
@@ -2094,7 +1765,7 @@
                 isAnalyzing = false;
                 hideLoading();
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> <span>Analyze Article</span>';
+                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
             }
         }
 
@@ -2109,7 +1780,6 @@
             }
             
             const resultsSection = document.getElementById('resultsSection');
-            resultsSection.style.display = 'block';
             resultsSection.classList.add('active');
             
             // Display each component
@@ -2131,7 +1801,7 @@
                 console.error('Error displaying service accordion:', e);
             }
             
-            // Scroll to results smoothly
+            // Scroll to results smoothly without triggering accordion auto-scroll
             setTimeout(() => {
                 resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -2151,8 +1821,8 @@
             const score = analysis.trust_score || 0;
             const level = analysis.trust_level || 'Unknown';
             
-            // Update score display
-            createEnhancedTrustGauge(score);
+            // Update score number with animation
+            animateTrustScore(score);
             
             // Update level indicator
             updateTrustLevelIndicator(score, level);
@@ -2200,26 +1870,7 @@
             
             console.log('Breakdown data:', breakdownData);
             
-            // Check for missing components and recalculate if needed
             let breakdownHtml = '';
-            
-            // Add warning if some components failed
-            const missingComponents = [];
-            breakdownData.forEach(item => {
-                if (item.value === 0 && !servicesData[item.id]) {
-                    missingComponents.push(item.label);
-                }
-            });
-            
-            if (missingComponents.length > 0) {
-                breakdownHtml += `
-                    <div class="trust-components-info">
-                        <p><strong>Note:</strong> The following components could not be analyzed: ${missingComponents.join(', ')}. 
-                        The trust score has been calculated based on available components only.</p>
-                    </div>
-                `;
-            }
-            
             breakdownData.forEach(item => {
                 const type = getBreakdownType(item.value);
                 breakdownHtml += `
@@ -2250,82 +1901,9 @@
                     bar.style.width = target + '%';
                 });
             }, 100);
-        }
-
-        // Create enhanced trust gauge that fits properly
-        function createEnhancedTrustGauge(score) {
-            const canvas = document.getElementById('trustGauge');
-            if (!canvas) return;
             
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width = 220;
-            const height = canvas.height = 140;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            // Settings
-            const centerX = width / 2;
-            const centerY = height - 20;
-            const radius = 80;
-            const startAngle = Math.PI;
-            const endAngle = 2 * Math.PI;
-            
-            // Draw background arc
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.lineWidth = 20;
-            ctx.strokeStyle = '#E5E7EB';
-            ctx.stroke();
-            
-            // Draw score arc
-            const scoreAngle = startAngle + (score / 100) * Math.PI;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, startAngle, scoreAngle);
-            ctx.lineWidth = 20;
-            
-            // Create gradient based on score
-            const gradient = ctx.createLinearGradient(centerX - radius, 0, centerX + radius, 0);
-            if (score >= 80) {
-                gradient.addColorStop(0, '#10B981');
-                gradient.addColorStop(1, '#059669');
-            } else if (score >= 60) {
-                gradient.addColorStop(0, '#3B82F6');
-                gradient.addColorStop(1, '#2563EB');
-            } else if (score >= 40) {
-                gradient.addColorStop(0, '#F59E0B');
-                gradient.addColorStop(1, '#D97706');
-            } else {
-                gradient.addColorStop(0, '#EF4444');
-                gradient.addColorStop(1, '#DC2626');
-            }
-            
-            ctx.strokeStyle = gradient;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-            
-            // Animate the score number
-            animateTrustScore(score);
-        }
-
-        // Animate trust score number
-        function animateTrustScore(targetScore) {
-            const scoreEl = document.querySelector('.trust-score-value');
-            if (!scoreEl) return;
-            
-            let currentScore = 0;
-            const increment = targetScore / 50;
-            const interval = setInterval(() => {
-                currentScore += increment;
-                if (currentScore >= targetScore) {
-                    currentScore = targetScore;
-                    clearInterval(interval);
-                }
-                scoreEl.innerHTML = `
-                    <span class="trust-score-number" style="color: ${getScoreColor(currentScore)}">${Math.round(currentScore)}</span>
-                    <span class="trust-score-label">out of 100</span>
-                `;
-            }, 20);
+            // Create enhanced gauge chart
+            createEnhancedTrustGauge(score);
         }
 
         // Helper function to extract score from nested data
@@ -2452,6 +2030,22 @@
             return Math.round((verified / total) * 100);
         }
 
+        // Animate trust score number
+        function animateTrustScore(targetScore) {
+            const scoreEl = document.getElementById('trustScoreNumber');
+            let currentScore = 0;
+            const increment = targetScore / 50;
+            const interval = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= targetScore) {
+                    currentScore = targetScore;
+                    clearInterval(interval);
+                }
+                scoreEl.textContent = Math.round(currentScore);
+                scoreEl.style.color = getScoreColor(currentScore);
+            }, 20);
+        }
+
         // Update trust level indicator
         function updateTrustLevelIndicator(score, level) {
             const iconEl = document.getElementById('trustLevelIcon');
@@ -2483,6 +2077,53 @@
                 indicatorEl.style.background = 'rgba(239, 68, 68, 0.1)';
                 indicatorEl.style.border = '2px solid var(--danger)';
             }
+        }
+
+        // Create enhanced trust gauge
+        function createEnhancedTrustGauge(score) {
+            const ctx = document.getElementById('trustGauge').getContext('2d');
+            
+            if (charts.trustGauge) {
+                charts.trustGauge.destroy();
+            }
+            
+            // Create gradient based on score
+            const gradient = ctx.createLinearGradient(0, 0, 300, 0);
+            if (score >= 80) {
+                gradient.addColorStop(0, '#10b981');
+                gradient.addColorStop(1, '#059669');
+            } else if (score >= 60) {
+                gradient.addColorStop(0, '#3b82f6');
+                gradient.addColorStop(1, '#2563eb');
+            } else if (score >= 40) {
+                gradient.addColorStop(0, '#f59e0b');
+                gradient.addColorStop(1, '#d97706');
+            } else {
+                gradient.addColorStop(0, '#ef4444');
+                gradient.addColorStop(1, '#dc2626');
+            }
+            
+            charts.trustGauge = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [score, 100 - score],
+                        backgroundColor: [gradient, '#E5E7EB'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    circumference: 180,
+                    rotation: -90,
+                    cutout: '85%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
         }
 
         // Get breakdown type based on score
@@ -2551,7 +2192,7 @@
             }
         }
 
-        // Display service accordion - Enhanced with What/Found/Means structure
+        // Display service accordion - FIXED with proper data mapping
         function displayServiceAccordion(data) {
             console.log('=== displayServiceAccordion called ===');
             console.log('data structure:', data);
@@ -2574,7 +2215,7 @@
             });
         }
 
-        // Create service accordion item with enhanced content
+        // Create service accordion item
         function createServiceAccordionItem(service, serviceData, index) {
             const item = document.createElement('div');
             item.className = 'service-accordion-item';
@@ -2614,7 +2255,7 @@
                 </div>
                 <div class="service-accordion-content">
                     <div class="service-content-inner">
-                        ${renderEnhancedServiceContent(service, serviceData)}
+                        ${renderServiceContent(service, serviceData)}
                     </div>
                 </div>
             `;
@@ -2726,12 +2367,66 @@
             // Toggle current item
             item.classList.toggle('active');
             
-            // Don't scroll - let user control their view
+            // If opening, create/update visualizations after animation
+            if (!isActive) {
+                setTimeout(() => {
+                    updateServiceVisualizations(serviceId);
+                }, 300);
+            }
         }
 
-        // Render enhanced service content with What/Found/Means structure
-        function renderEnhancedServiceContent(service, data) {
-            console.log(`Rendering enhanced content for ${service.id}:`, data);
+        // Update service visualizations
+        function updateServiceVisualizations(serviceId) {
+            const serviceData = currentAnalysis?.detailed_analysis?.[serviceId] || {};
+            if (!serviceData || Object.keys(serviceData).length === 0) return;
+            
+            // Find all canvases in this service section
+            const canvases = document.querySelectorAll(`#service-${serviceId} canvas`);
+            canvases.forEach(canvas => {
+                const chartType = canvas.getAttribute('data-chart-type');
+                const chartData = canvas.getAttribute('data-chart-data');
+                if (chartType && chartData) {
+                    try {
+                        createServiceChart(canvas, chartType, JSON.parse(chartData));
+                    } catch (e) {
+                        console.error(`Failed to create chart for ${serviceId}:`, e);
+                    }
+                }
+            });
+        }
+
+        // Create service chart
+        function createServiceChart(canvas, type, data) {
+            const ctx = canvas.getContext('2d');
+            const chartId = canvas.id;
+            
+            // Destroy existing chart
+            if (charts[chartId]) {
+                charts[chartId].destroy();
+            }
+            
+            // Create new chart based on type
+            let config;
+            switch (type) {
+                case 'radar':
+                    config = createRadarChartConfig(data);
+                    break;
+                case 'polarArea':
+                    config = createPolarAreaChartConfig(data);
+                    break;
+                case 'bar':
+                    config = createBarChartConfig(data);
+                    break;
+                default:
+                    return;
+            }
+            
+            charts[chartId] = new Chart(ctx, config);
+        }
+
+        // Render service content - COMPREHENSIVE FIX
+        function renderServiceContent(service, data) {
+            console.log(`Rendering content for ${service.id}:`, data);
             
             // Check if data exists
             if (!data || Object.keys(data).length === 0) {
@@ -2756,347 +2451,1024 @@
                 `;
             }
             
-            // Get content based on service type
-            const enhancedContent = getEnhancedServiceContent(service.id, data);
-            
-            return `
-                <div class="service-analysis-section">
-                    <h4><i class="fas fa-search"></i> What We're Analyzing</h4>
-                    <p>${enhancedContent.whatWeAnalyze}</p>
-                </div>
-                
-                <div class="service-analysis-section">
-                    <h4><i class="fas fa-clipboard-check"></i> What We Found</h4>
-                    ${enhancedContent.whatWeFound}
-                </div>
-                
-                <div class="service-analysis-section">
-                    <h4><i class="fas fa-lightbulb"></i> What This Means</h4>
-                    <p>${enhancedContent.whatThisMeans}</p>
-                </div>
-                
-                ${enhancedContent.additionalContent || ''}
-            `;
-        }
-
-        // Get enhanced service content based on service type
-        function getEnhancedServiceContent(serviceId, data) {
-            switch (serviceId) {
+            // Render based on service type
+            switch (service.id) {
                 case 'source_credibility':
-                    return getSourceCredibilityContent(data);
+                    return renderSourceCredibility(data);
                 case 'author_analyzer':
-                    return getAuthorAnalysisContent(data);
+                    return renderAuthorAnalysis(data);
                 case 'bias_detector':
-                    return getBiasDetectionContent(data);
+                    return renderBiasDetection(data);
                 case 'fact_checker':
-                    return getFactCheckerContent(data);
+                    return renderFactChecker(data);
                 case 'transparency_analyzer':
-                    return getTransparencyContent(data);
+                    return renderTransparency(data);
                 case 'manipulation_detector':
-                    return getManipulationContent(data);
+                    return renderManipulation(data);
                 case 'content_analyzer':
-                    return getContentAnalysisContent(data);
+                    return renderContentAnalysis(data);
                 case 'plagiarism_detector':
-                    return getPlagiarismContent(data);
+                    return renderPlagiarism(data);
                 default:
-                    return {
-                        whatWeAnalyze: 'Analyzing various aspects of the article.',
-                        whatWeFound: '<p>Analysis complete.</p>',
-                        whatThisMeans: 'The results provide insights into the article\'s credibility.'
-                    };
+                    return '<p>Analysis complete</p>';
             }
         }
 
-        // Enhanced content functions for each service
-        function getSourceCredibilityContent(data) {
+        // Service renderers - FIXED to handle various data structures
+        function renderSourceCredibility(data) {
             const score = extractScore(data, ['credibility_score', 'score']);
+            const level = data.credibility_level || data.level || getCredibilityLevel(score);
             const sourceName = data.source_name || data.name || 'Unknown Source';
-            const sourceInfo = data.source_info || data.details || {};
             
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Source Name</span>
-                        <span class="result-value">${sourceName}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Credibility Score</span>
-                        <span class="result-value">${score}/100</span>
-                    </div>
-            `;
-            
-            if (sourceInfo.type) {
-                findingsHtml += `
-                    <div class="result-item">
-                        <span class="result-label">Source Type</span>
-                        <span class="result-value">${sourceInfo.type}</span>
-                    </div>
-                `;
-            }
-            
-            if (sourceInfo.bias) {
-                findingsHtml += `
-                    <div class="result-item">
-                        <span class="result-label">Known Bias</span>
-                        <span class="result-value">${sourceInfo.bias}</span>
-                    </div>
-                `;
-            }
-            
-            findingsHtml += '</div>';
-            
-            // Add technical analysis if available
-            if (data.technical_analysis) {
-                const tech = data.technical_analysis;
-                findingsHtml += `
-                    <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-server"></i>
-                            Technical Analysis
-                        </h5>
-                        <div class="service-results">
-                `;
-                
-                if (tech.age_years !== undefined) {
-                    findingsHtml += `
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Credibility Assessment
+                    </h4>
+                    <div class="service-results">
                         <div class="result-item">
-                            <span class="result-label">Domain Age</span>
-                            <span class="result-value">${tech.age_years.toFixed(1)} years</span>
+                            <span class="result-label">Overall Score</span>
+                            <span class="result-value">${score}/100</span>
                         </div>
-                    `;
-                }
-                
-                if (tech.ssl && tech.ssl.valid !== undefined) {
-                    findingsHtml += `
                         <div class="result-item">
-                            <span class="result-label">SSL Certificate</span>
-                            <span class="result-value">
-                                ${tech.ssl.valid ? 
-                                    '<i class="fas fa-check" style="color: var(--accent);"></i> Valid' : 
-                                    '<i class="fas fa-times" style="color: var(--danger);"></i> Invalid'}
+                            <span class="result-label">Credibility Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${level}
                             </span>
                         </div>
-                    `;
-                }
-                
-                findingsHtml += `
+                        <div class="result-item">
+                            <span class="result-label">Source Name</span>
+                            <span class="result-value">${sourceName}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Source info - handle multiple possible field names
+            const sourceInfo = data.source_info || data.source_details || data.details;
+            if (sourceInfo) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-building"></i>
+                            Source Information
+                        </h4>
+                        <div class="service-results">
+                            ${sourceInfo.type ? `
+                                <div class="result-item">
+                                    <span class="result-label">Source Type</span>
+                                    <span class="result-value">${sourceInfo.type}</span>
+                                </div>
+                            ` : ''}
+                            ${sourceInfo.bias ? `
+                                <div class="result-item">
+                                    <span class="result-label">Political Bias</span>
+                                    <span class="result-value">${sourceInfo.bias}</span>
+                                </div>
+                            ` : ''}
+                            ${sourceInfo.credibility_rating ? `
+                                <div class="result-item">
+                                    <span class="result-label">Database Rating</span>
+                                    <span class="result-value">${sourceInfo.credibility_rating}</span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             }
             
-            let meaning = '';
-            if (score >= 80) {
-                meaning = `${sourceName} is a highly credible news source with strong editorial standards. You can generally trust information from this publication, though it's always good to verify important claims.`;
-            } else if (score >= 60) {
-                meaning = `${sourceName} has moderate credibility. While they produce legitimate journalism, they may have occasional accuracy issues or slight bias. Cross-reference important claims with other sources.`;
-            } else if (score >= 40) {
-                meaning = `${sourceName} has questionable credibility. This source has been flagged for bias, inaccuracy, or poor editorial standards. Be very cautious and verify all claims independently.`;
-            } else {
-                meaning = `${sourceName} is not a reliable source for factual information. This publication has a poor track record for accuracy and may spread misinformation. Seek alternative sources.`;
+            // Technical analysis
+            if (data.technical_analysis) {
+                const tech = data.technical_analysis;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-server"></i>
+                            Technical Analysis
+                        </h4>
+                        <div class="service-results">
+                            ${tech.age_years !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Domain Age</span>
+                                    <span class="result-value">${tech.age_years.toFixed(1)} years</span>
+                                </div>
+                            ` : ''}
+                            ${tech.ssl && tech.ssl.valid !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">SSL Certificate</span>
+                                    <span class="result-value">
+                                        ${tech.ssl.valid ? 
+                                            '<i class="fas fa-check" style="color: var(--accent);"></i> Valid' : 
+                                            '<i class="fas fa-times" style="color: var(--danger);"></i> Invalid'}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            ${tech.registrar ? `
+                                <div class="result-item">
+                                    <span class="result-label">Registrar</span>
+                                    <span class="result-value">${tech.registrar}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
             }
             
-            return {
-                whatWeAnalyze: 'We evaluate the publication\'s history, editorial standards, fact-checking practices, ownership transparency, and track record for accuracy. We also perform technical checks on the website\'s age, security certificates, and registration details.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
+            // Findings
+            if (data.findings && data.findings.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list-check"></i>
+                            Key Findings
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                data.findings.forEach(finding => {
+                    const severityClass = finding.severity === 'positive' ? 'verified' : 
+                                        finding.severity === 'high' ? 'false' : 'unverified';
+                    const icon = finding.severity === 'positive' ? 'fa-check' : 
+                               finding.severity === 'high' ? 'fa-times' : 'fa-exclamation';
+                    
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">${finding.text}</div>
+                                <div class="claim-status claim-${severityClass}">
+                                    <i class="fas ${icon}"></i>
+                                    ${finding.type ? finding.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : ''}
+                                </div>
+                            </div>
+                            ${finding.explanation ? `
+                                <div class="claim-details">
+                                    ${finding.explanation}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
-        function getContentAnalysisContent(data) {
-            const qualityScore = extractScore(data, ['quality_score', 'score'], 0);
-            const readability = data.readability || {};
+        function renderAuthorAnalysis(data) {
+            const authorName = data.author_name || data.name || 'Unknown Author';
+            const score = extractScore(data, ['credibility_score', 'score']);
+            const level = data.credibility_level || getCredibilityLevel(score);
             
-            let findingsHtml = `
-                <div class="service-results">
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-id-card"></i>
+                        Author Information
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Name</span>
+                            <span class="result-value">${authorName}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Credibility Score</span>
+                            <span class="result-value">${score}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Credibility Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Author details
+            const authorInfo = data.author_info || data.details || data.profile;
+            if (authorInfo) {
+                if (authorInfo.position || authorInfo.bio || authorInfo.expertise_areas?.length > 0) {
+                    content += `
+                        <div class="service-section">
+                            <h4 class="section-title">
+                                <i class="fas fa-graduation-cap"></i>
+                                Professional Background
+                            </h4>
+                            <div class="service-results">
+                    `;
+                    
+                    if (authorInfo.position) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Position</span>
+                                <span class="result-value">${authorInfo.position}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (authorInfo.expertise_areas && authorInfo.expertise_areas.length > 0) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Areas of Expertise</span>
+                                <span class="result-value">${authorInfo.expertise_areas.join(', ')}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (authorInfo.article_count !== undefined) {
+                        content += `
+                            <div class="result-item">
+                                <span class="result-label">Articles Written</span>
+                                <span class="result-value">${authorInfo.article_count}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    content += `
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Verification status
+            if (data.verification_status) {
+                const verStatus = data.verification_status;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-check-circle"></i>
+                            Verification Status
+                        </h4>
+                        <div class="service-results">
+                            <div class="result-item">
+                                <span class="result-label">Verification Level</span>
+                                <span class="status-badge status-${verStatus.verified ? 'high' : 'low'}">
+                                    ${verStatus.verified ? 'Verified' : 'Unverified'}
+                                </span>
+                            </div>
+                            ${verStatus.method ? `
+                                <div class="result-item">
+                                    <span class="result-label">Verification Method</span>
+                                    <span class="result-value">${verStatus.method}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderBiasDetection(data) {
+            const overallBias = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
+            const biasLevel = data.bias_level || getBiasLevel(overallBias);
+            const objectivityScore = 100 - overallBias;
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-balance-scale"></i>
+                        Overall Bias Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Bias Score</span>
+                            <span class="result-value">${overallBias}/100</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Bias Level</span>
+                            <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
+                                ${biasLevel}
+                            </span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Objectivity Score</span>
+                            <span class="result-value">${objectivityScore}%</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Bias dimensions
+            const dimensions = data.dimensions || data.bias_dimensions || data.biases;
+            if (dimensions && typeof dimensions === 'object') {
+                const chartId = `bias-chart-${Date.now()}`;
+                const chartData = {
+                    labels: [],
+                    values: []
+                };
+                
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Bias Dimensions Analysis
+                        </h4>
+                        <div class="dimension-list">
+                `;
+                
+                Object.entries(dimensions).forEach(([dimension, dimData]) => {
+                    let score, label;
+                    
+                    if (typeof dimData === 'object' && dimData !== null) {
+                        score = Math.abs(dimData.score || dimData.value || 0) * 
+                               (dimData.score > 1 ? 1 : 100);
+                        label = dimData.label || dimension;
+                    } else {
+                        score = Math.abs(Number(dimData) || 0);
+                        if (score <= 1) score *= 100;
+                        label = formatDimensionName(dimension);
+                    }
+                    
+                    chartData.labels.push(label);
+                    chartData.values.push(Math.round(score));
+                    
+                    content += `
+                        <div class="dimension-item">
+                            <div class="dimension-header">
+                                <span class="dimension-name">${label}</span>
+                                <span class="dimension-score">${Math.round(score)}%</span>
+                            </div>
+                            <div class="dimension-bar">
+                                <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+                
+                // Add visualization if we have data
+                if (chartData.labels.length > 0) {
+                    content += `
+                        <div class="service-visualization">
+                            <div class="chart-container">
+                                <canvas id="${chartId}" data-chart-type="polarArea" data-chart-data='${JSON.stringify(chartData)}'></canvas>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            return content;
+        }
+
+        function renderFactChecker(data) {
+            // Normalize the data
+            const normalized = DataStructureMapper.normalizeFactCheckerData(data);
+            const { claims_checked: total, verified_count: verified, claims } = normalized;
+            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-check-circle"></i>
+                        Fact Checking Summary
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Claims Analyzed</span>
+                            <span class="result-value">${total}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Verified Claims</span>
+                            <span class="result-value">${verified}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Accuracy Rate</span>
+                            <span class="result-value">${accuracy}%</span>
+                        </div>
+                    </div>
+                    ${total > 0 ? `
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${accuracy}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Individual claims
+            if (claims && claims.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list"></i>
+                            Individual Claims Analysis
+                        </h4>
+                        <div class="claims-list">
+                `;
+                
+                claims.forEach(claim => {
+                    const claimText = claim.claim || claim.claim_text || claim.text || 'Unknown claim';
+                    const status = claim.verdict || claim.verification_status || 'unverified';
+                    const statusLower = status.toLowerCase();
+                    const statusClass = statusLower.includes('true') || statusLower === 'verified' ? 'verified' : 
+                                      statusLower.includes('false') ? 'false' : 'unverified';
+                    const statusIcon = statusClass === 'verified' ? 'fa-check' : 
+                                     statusClass === 'false' ? 'fa-times' : 'fa-question';
+                    
+                    content += `
+                        <div class="claim-item">
+                            <div class="claim-header">
+                                <div class="claim-text">"${escapeHtml(claimText)}"</div>
+                                <div class="claim-status claim-${statusClass}">
+                                    <i class="fas ${statusIcon}"></i>
+                                    ${formatStatus(status)}
+                                </div>
+                            </div>
+                            ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
+                                <div class="claim-details">
+                                    ${claim.explanation || claim.fact_check_result || claim.verification_details}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderTransparency(data) {
+            const score = extractScore(data, ['transparency_score', 'score'], 0);
+            const level = data.transparency_level || data.level || getTransparencyLevel(score);
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-eye"></i>
+                        Transparency Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Transparency Score</span>
+                            <span class="result-value">${score}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Transparency Level</span>
+                            <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                                ${level}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${score}%"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Transparency indicators
+            const indicators = data.transparency_indicators || data.indicators;
+            if (indicators) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-list-check"></i>
+                            Transparency Indicators
+                        </h4>
+                `;
+                
+                const indicatorsList = indicators.indicators || indicators.list || 
+                                     (Array.isArray(indicators) ? indicators : []);
+                
+                if (indicatorsList.length > 0) {
+                    content += `
+                        <div class="service-results">
+                            ${indicatorsList.map(indicator => `
+                                <div class="result-item">
+                                    <span class="result-label">${indicator}</span>
+                                    <span class="result-value">
+                                        <i class="fas fa-check" style="color: var(--accent);"></i> Present
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                if (indicators.score !== undefined) {
+                    content += `
+                        <div class="result-item" style="margin-top: 1rem;">
+                            <span class="result-label">Indicator Score</span>
+                            <span class="result-value">${indicators.score}/100</span>
+                        </div>
+                    `;
+                }
+                
+                content += `</div>`;
+            }
+            
+            // Issues or findings
+            if (data.issues && data.issues.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Transparency Issues
+                        </h4>
+                        <div class="claims-list">
+                            ${data.issues.map(issue => `
+                                <div class="claim-item">
+                                    <div class="claim-text">${issue.text || issue}</div>
+                                    ${issue.severity ? `
+                                        <span class="technique-severity severity-${issue.severity.toLowerCase()}">
+                                            ${issue.severity} severity
+                                        </span>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderManipulation(data) {
+            const level = data.manipulation_level || data.level || 'Unknown';
+            const score = extractScore(data, ['manipulation_score', 'score'], 0);
+            const techniques = data.techniques || [];
+            const techniquesCount = data.techniques_count || techniques.length;
+            
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-mask"></i>
+                        Manipulation Assessment
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Manipulation Level</span>
+                            <span class="status-badge status-${
+                                level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : 
+                                level.toLowerCase() === 'moderate' ? 'medium' : 'low'
+                            }">
+                                ${level}
+                            </span>
+                        </div>
+                        ${score !== undefined && score !== 0 ? `
+                            <div class="result-item">
+                                <span class="result-label">Manipulation Score</span>
+                                <span class="result-value">${score}/100</span>
+                            </div>
+                        ` : ''}
+                        <div class="result-item">
+                            <span class="result-label">Techniques Detected</span>
+                            <span class="result-value">${techniquesCount}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Manipulation techniques
+            if (techniques.length > 0) {
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-brain"></i>
+                            Detected Manipulation Techniques
+                        </h4>
+                        <div class="techniques-grid">
+                `;
+                
+                techniques.forEach(technique => {
+                    const techName = technique.name || technique.type || technique.technique || 'Unknown';
+                    const techDesc = technique.description || technique.details || 
+                                   technique.evidence || technique.explanation || '';
+                    
+                    content += `
+                        <div class="technique-card">
+                            <div class="technique-name">${techName}</div>
+                            <div class="technique-description">
+                                ${techDesc}
+                                ${technique.severity ? 
+                                    `<span class="technique-severity severity-${technique.severity.toLowerCase()}">
+                                        ${technique.severity} severity
+                                    </span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Emotional manipulation
+            if (data.emotional_manipulation) {
+                const em = data.emotional_manipulation;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-heart"></i>
+                            Emotional Manipulation
+                        </h4>
+                        <div class="service-results">
+                            ${em.level ? `
+                                <div class="result-item">
+                                    <span class="result-label">Level</span>
+                                    <span class="result-value">${em.level}</span>
+                                </div>
+                            ` : ''}
+                            ${em.score !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Score</span>
+                                    <span class="result-value">${em.score}/100</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+
+        function renderContentAnalysis(data) {
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Content Quality Metrics
+                    </h4>
+                    <div class="service-results">
+            `;
+            
+            const qualityScore = extractScore(data, ['quality_score', 'score'], 0);
+            if (qualityScore !== undefined) {
+                content += `
                     <div class="result-item">
                         <span class="result-label">Overall Quality</span>
                         <span class="result-value">${qualityScore}/100</span>
                     </div>
-            `;
+                `;
+            }
             
+            // Readability
+            const readability = data.readability || {};
             if (readability.score !== undefined) {
-                findingsHtml += `
+                content += `
                     <div class="result-item">
                         <span class="result-label">Readability Score</span>
                         <span class="result-value">${readability.score}/100</span>
                     </div>
                 `;
             }
-            
             if (readability.level) {
-                findingsHtml += `
+                content += `
                     <div class="result-item">
                         <span class="result-label">Reading Level</span>
                         <span class="result-value">${readability.level}</span>
                     </div>
                 `;
             }
-            
-            if (data.word_count) {
-                findingsHtml += `
+            if (readability.flesch_kincaid_grade !== undefined) {
+                content += `
                     <div class="result-item">
-                        <span class="result-label">Article Length</span>
-                        <span class="result-value">${data.word_count} words</span>
+                        <span class="result-label">Flesch-Kincaid Grade</span>
+                        <span class="result-value">${readability.flesch_kincaid_grade.toFixed(1)}</span>
                     </div>
                 `;
             }
             
-            findingsHtml += '</div>';
+            if (data.structure_quality) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Structure Quality</span>
+                        <span class="result-value">${data.structure_quality}</span>
+                    </div>
+                `;
+            }
             
-            // Add quality indicators if available
-            if (data.quality_indicators && data.quality_indicators.length > 0) {
-                findingsHtml += `
+            if (data.evidence_quality) {
+                content += `
+                    <div class="result-item">
+                        <span class="result-label">Evidence Quality</span>
+                        <span class="result-value">${data.evidence_quality}</span>
+                    </div>
+                `;
+            }
+            
+            content += `
+                    </div>
+                </div>
+            `;
+            
+            // Statistical claims
+            if (data.statistical_claims && data.statistical_claims.total_claims > 0) {
+                const stats = data.statistical_claims;
+                content += `
                     <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-check-circle"></i>
-                            Quality Indicators
-                        </h5>
+                        <h4 class="section-title">
+                            <i class="fas fa-chart-line"></i>
+                            Statistical Claims Analysis
+                        </h4>
                         <div class="service-results">
-                `;
-                
-                data.quality_indicators.forEach(indicator => {
-                    findingsHtml += `
-                        <div class="result-item">
-                            <span class="result-label">${indicator}</span>
-                            <span class="result-value">
-                                <i class="fas fa-check" style="color: var(--accent);"></i>
-                            </span>
-                        </div>
-                    `;
-                });
-                
-                findingsHtml += `
+                            <div class="result-item">
+                                <span class="result-label">Total Claims</span>
+                                <span class="result-value">${stats.total_claims}</span>
+                            </div>
+                            ${stats.sourced_percentage !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Sourced Claims</span>
+                                    <span class="result-value">${stats.sourced_percentage.toFixed(0)}%</span>
+                                </div>
+                            ` : ''}
+                            ${stats.verified_percentage !== undefined ? `
+                                <div class="result-item">
+                                    <span class="result-label">Verified Claims</span>
+                                    <span class="result-value">${stats.verified_percentage.toFixed(0)}%</span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             }
             
-            let meaning = '';
-            if (qualityScore >= 80) {
-                meaning = 'High-quality content that meets professional journalism standards. Well-structured, clearly written, and properly sourced.';
-            } else if (qualityScore >= 60) {
-                meaning = 'Good content quality with minor issues. Generally well-written but may have some structural or clarity problems.';
-            } else if (qualityScore >= 40) {
-                meaning = 'Mediocre content quality. May have issues with structure, clarity, or depth that affect credibility.';
-            } else {
-                meaning = 'Poor content quality raises credibility concerns. Poorly written, structured, or lacking substance.';
+            // Content indicators
+            if (data.content_indicators) {
+                const indicators = data.content_indicators;
+                content += `
+                    <div class="service-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-tasks"></i>
+                            Content Indicators
+                        </h4>
+                        <div class="service-results">
+                            ${Object.entries(indicators).map(([key, value]) => `
+                                <div class="result-item">
+                                    <span class="result-label">${formatFactorName(key)}</span>
+                                    <span class="result-value">${value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
             }
             
-            return {
-                whatWeAnalyze: 'We evaluate writing quality, readability, article structure, evidence presentation, use of sources, and adherence to journalistic standards.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
+            // Summary
+            if (data.summary) {
+                content += `
+                    <div class="info-box">
+                        <div class="info-box-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Analysis Summary
+                        </div>
+                        <div class="info-box-content">
+                            ${data.summary}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
         }
 
-        function getPlagiarismContent(data) {
+        function renderPlagiarism(data) {
             const similarity = data.similarity_score || 0;
             const originality = data.originality_score !== undefined ? 
                 data.originality_score : (100 - similarity);
             const status = originality >= 80 ? 'Original' : 
                           originality >= 60 ? 'Mostly Original' : 'Potential Issues';
             
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Originality Score</span>
-                        <span class="result-value">${originality}%</span>
+            let content = `
+                <div class="service-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-copy"></i>
+                        Plagiarism Check Results
+                    </h4>
+                    <div class="service-results">
+                        <div class="result-item">
+                            <span class="result-label">Originality Score</span>
+                            <span class="result-value">${originality}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Similarity Score</span>
+                            <span class="result-value">${similarity}%</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Status</span>
+                            <span class="status-badge status-${originality >= 80 ? 'high' : originality >= 60 ? 'medium' : 'low'}">
+                                ${status}
+                            </span>
+                        </div>
                     </div>
-                    <div class="result-item">
-                        <span class="result-label">Similarity Score</span>
-                        <span class="result-value">${similarity}%</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${originality}%; background: var(--accent);"></div>
                     </div>
-                    <div class="result-item">
-                        <span class="result-label">Status</span>
-                        <span class="status-badge status-${originality >= 80 ? 'high' : originality >= 60 ? 'medium' : 'low'}">
-                            ${status}
-                        </span>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${originality}%; background: var(--accent);"></div>
                 </div>
             `;
             
-            // Add matched sources if available
+            // Matched sources
             if (data.matches && data.matches.length > 0) {
-                findingsHtml += `
+                content += `
                     <div class="service-section">
-                        <h5 class="section-title">
+                        <h4 class="section-title">
                             <i class="fas fa-link"></i>
-                            Similar Content Found
-                        </h5>
+                            Matched Sources
+                        </h4>
                         <div class="claims-list">
                 `;
                 
                 data.matches.forEach(match => {
                     const matchPercentage = match.similarity || match.match_percentage || 0;
-                    findingsHtml += `
+                    content += `
                         <div class="claim-item">
                             <div class="claim-header">
                                 <div class="claim-text">${match.source || match.url || 'Unknown source'}</div>
                                 <div class="claim-status">
-                                    ${matchPercentage}% similar
+                                    ${matchPercentage}% match
                                 </div>
                             </div>
                         </div>
                     `;
                 });
                 
-                findingsHtml += `
+                content += `
                         </div>
                     </div>
                 `;
             }
             
-            let meaning = '';
-            if (originality >= 80) {
-                meaning = 'This appears to be original content. No significant copying detected, indicating proper journalistic work.';
-            } else if (originality >= 60) {
-                meaning = 'Mostly original with some similar content found. This could be legitimate use of sources or minor copying.';
-            } else {
-                meaning = 'Significant similarity to existing content detected. This may indicate plagiarism or heavy reliance on other sources without proper attribution.';
-            }
-            
+            return content;
+        }
+
+        // Chart configuration functions
+        function createRadarChartConfig(data) {
             return {
-                whatWeAnalyze: 'We check for copied content by comparing the article against millions of online sources to detect plagiarism or improper use of others\' work.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
+                type: 'radar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
             };
         }
 
-        // Helper functions for enhanced content
-        function formatDimensionName(dimension) {
-            const dimensionNames = {
-                'political': 'Political Bias',
-                'ideological': 'Ideological Bias',
-                'commercial': 'Commercial Bias',
-                'sensational': 'Sensationalism',
-                'cultural': 'Cultural Bias',
-                'nationalistic': 'Nationalistic Bias',
-                'establishment': 'Establishment Bias'
+        function createPolarAreaChartConfig(data) {
+            return {
+                type: 'polarArea',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.5)',
+                            'rgba(54, 162, 235, 0.5)',
+                            'rgba(255, 206, 86, 0.5)',
+                            'rgba(75, 192, 192, 0.5)',
+                            'rgba(153, 102, 255, 0.5)',
+                            'rgba(255, 159, 64, 0.5)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
             };
-            return dimensionNames[dimension.toLowerCase()] || dimension.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
-        function getBiasColor(score) {
-            // Lower bias score is better
-            if (score <= 20) return 'var(--accent)';
-            if (score <= 50) return 'var(--warning)';
-            return 'var(--danger)';
-        }
-
-        function formatStatus(status) {
-            const statusNames = {
-                'verified': 'Verified',
-                'true': 'True',
-                'false': 'False',
-                'unverified': 'Unverified',
-                'partially_true': 'Partially True',
-                'misleading': 'Misleading'
+        function createBarChartConfig(data) {
+            return {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
             };
-            return statusNames[status.toLowerCase()] || status;
         }
 
         // Utility functions
@@ -3116,13 +3488,13 @@
             let displayMessage = message;
             
             if (message.includes('timed out') || message.includes('timeout')) {
-                displayMessage = 'The website took too long to respond. This might be due to the site blocking automated requests. Try using the Text option instead.';
+                displayMessage = 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.';
             } else if (message.includes('extraction methods failed')) {
-                displayMessage = 'Unable to extract article content. The website may be blocking our service. Try copying and pasting the article text instead.';
+                displayMessage = 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.';
             } else if (message.includes('Invalid URL')) {
                 displayMessage = 'Please enter a valid news article URL starting with http:// or https://';
             } else if (message.includes('Analysis failed')) {
-                displayMessage = 'Unable to analyze the article. Please try a different URL or use the text option.';
+                displayMessage = 'Unable to analyze the article. Please try a different URL or check your internet connection.';
             }
             
             errorEl.textContent = displayMessage;
@@ -3147,9 +3519,7 @@
         }
 
         function hideResults() {
-            const resultsSection = document.getElementById('resultsSection');
-            resultsSection.classList.remove('active');
-            resultsSection.style.display = 'none';
+            document.getElementById('resultsSection').classList.remove('active');
         }
 
         function getScoreColor(score) {
@@ -3157,6 +3527,20 @@
             if (score >= 60) return '#3B82F6';
             if (score >= 40) return '#F59E0B';
             return '#EF4444';
+        }
+
+        function getDimensionColor(score) {
+            if (score >= 80) return 'var(--accent)';
+            if (score >= 60) return 'var(--info)';
+            if (score >= 40) return 'var(--warning)';
+            return 'var(--danger)';
+        }
+
+        function getBiasColor(score) {
+            // Lower bias score is better
+            if (score <= 20) return 'var(--accent)';
+            if (score <= 50) return 'var(--warning)';
+            return 'var(--danger)';
         }
 
         function formatDate(dateString) {
@@ -3167,6 +3551,35 @@
                 month: 'long', 
                 day: 'numeric' 
             });
+        }
+
+        function formatFactorName(factor) {
+            return factor
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatDimensionName(dimension) {
+            const dimensionNames = {
+                'political': 'Political Bias',
+                'ideological': 'Ideological Bias',
+                'commercial': 'Commercial Bias',
+                'sensational': 'Sensationalism',
+                'cultural': 'Cultural Bias',
+                'confirmation': 'Confirmation Bias'
+            };
+            return dimensionNames[dimension.toLowerCase()] || formatFactorName(dimension);
+        }
+
+        function formatStatus(status) {
+            const statusNames = {
+                'verified': 'Verified',
+                'false': 'False',
+                'unverified': 'Unverified',
+                'partially_true': 'Partially True',
+                'misleading': 'Misleading'
+            };
+            return statusNames[status.toLowerCase()] || status;
         }
 
         // Helper functions for missing level calculations
@@ -3256,7 +3669,7 @@
                 addText('EXECUTIVE SUMMARY', 18, 'bold');
                 yPosition += 5;
                 
-                addText(`URL: ${currentTab === 'url' ? document.getElementById('urlInput').value : 'Text Analysis'}`, 12);
+                addText(`URL: ${document.getElementById('urlInput').value}`, 12);
                 addText(`Analysis Date: ${new Date().toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'long', 
@@ -3446,492 +3859,8 @@
             }
         }
 
-        // Add remaining enhanced content functions
-        function getAuthorAnalysisContent(data) {
-            const authorName = data.author_name || data.name || 'Unknown Author';
-            const score = extractScore(data, ['credibility_score', 'score']);
-            const authorInfo = data.author_info || data.professional_info || {};
-            
-            let findingsHtml = `
-                <div class="author-info-enhanced">
-                    <h5>${authorName}</h5>
-                    <div class="author-details">
-            `;
-            
-            if (authorInfo.current_position || authorInfo.position) {
-                findingsHtml += `
-                    <div class="author-detail-item">
-                        <i class="fas fa-briefcase"></i>
-                        <span>${authorInfo.current_position || authorInfo.position}</span>
-                    </div>
-                `;
-            }
-            
-            if (authorInfo.years_experience) {
-                findingsHtml += `
-                    <div class="author-detail-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>${authorInfo.years_experience}+ years of experience</span>
-                    </div>
-                `;
-            }
-            
-            if (authorInfo.outlets && authorInfo.outlets.length > 0) {
-                findingsHtml += `
-                    <div class="author-detail-item">
-                        <i class="fas fa-newspaper"></i>
-                        <span>Published in: ${authorInfo.outlets.slice(0, 3).join(', ')}</span>
-                    </div>
-                `;
-            }
-            
-            if (authorInfo.expertise_areas && authorInfo.expertise_areas.length > 0) {
-                findingsHtml += `
-                    <div class="author-detail-item">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span>Expertise: ${authorInfo.expertise_areas.join(', ')}</span>
-                    </div>
-                `;
-            }
-            
-            if (data.verification_status?.verified) {
-                findingsHtml += `
-                    <div class="author-detail-item">
-                        <i class="fas fa-check-circle" style="color: var(--accent);"></i>
-                        <span>Verified journalist</span>
-                    </div>
-                `;
-            }
-            
-            findingsHtml += `
-                    </div>
-                </div>
-                <div class="service-results" style="margin-top: 1rem;">
-                    <div class="result-item">
-                        <span class="result-label">Credibility Score</span>
-                        <span class="result-value">${score}/100</span>
-                    </div>
-                </div>
-            `;
-            
-            let meaning = '';
-            if (score >= 80) {
-                meaning = 'This is a well-established journalist with verified credentials and relevant expertise. Their work is generally trustworthy and follows professional journalism standards.';
-            } else if (score >= 60) {
-                meaning = 'The author has some verifiable journalistic background, though information is limited. Their work appears legitimate but consider the source and topic expertise.';
-            } else if (score >= 40) {
-                meaning = 'Limited information is available about this author\'s credentials. This doesn\'t necessarily mean the content is unreliable, but additional verification is recommended.';
-            } else {
-                meaning = 'No verifiable information found about this author. This significantly reduces accountability and credibility. Be extra cautious with claims made in this article.';
-            }
-            
-            return {
-                whatWeAnalyze: 'We search for the author\'s professional history, verify their identity, check their publication record across major news outlets, identify areas of expertise, and look for any conflicts of interest or credibility concerns.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
-        }
-
-        function getBiasDetectionContent(data) {
-            const overallBias = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
-            const biasLevel = data.bias_level || getBiasLevel(overallBias);
-            const objectivityScore = 100 - overallBias;
-            
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Overall Bias Score</span>
-                        <span class="result-value">${overallBias}/100</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Bias Level</span>
-                        <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
-                            ${biasLevel}
-                        </span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Objectivity Score</span>
-                        <span class="result-value">${objectivityScore}%</span>
-                    </div>
-                </div>
-            `;
-            
-            // Add bias dimensions if available
-            const dimensions = data.dimensions || data.bias_dimensions || {};
-            if (Object.keys(dimensions).length > 0) {
-                findingsHtml += `
-                    <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-chart-bar"></i>
-                            Bias Dimensions
-                        </h5>
-                        <div class="dimension-list">
-                `;
-                
-                Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                    let score = 0;
-                    let label = '';
-                    
-                    if (typeof dimData === 'object' && dimData !== null) {
-                        score = Math.abs(dimData.score || dimData.value || 0);
-                        if (score <= 1) score *= 100;
-                        label = dimData.label || formatDimensionName(dimension);
-                    } else {
-                        score = Math.abs(Number(dimData) || 0);
-                        if (score <= 1) score *= 100;
-                        label = formatDimensionName(dimension);
-                    }
-                    
-                    findingsHtml += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${label}</span>
-                                <span class="dimension-score">${Math.round(score)}%</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                findingsHtml += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Add manipulation tactics if found
-            if (data.manipulation_tactics && data.manipulation_tactics.length > 0) {
-                findingsHtml += `
-                    <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Manipulation Tactics Detected
-                        </h5>
-                        <div class="techniques-grid">
-                `;
-                
-                data.manipulation_tactics.slice(0, 4).forEach(tactic => {
-                    findingsHtml += `
-                        <div class="technique-card">
-                            <div class="technique-name">${tactic.name || tactic}</div>
-                            ${tactic.description ? `<div class="technique-description">${tactic.description}</div>` : ''}
-                        </div>
-                    `;
-                });
-                
-                findingsHtml += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            let meaning = '';
-            if (objectivityScore >= 80) {
-                meaning = 'This article maintains high objectivity with minimal bias. The reporting appears balanced and factual, presenting multiple perspectives fairly.';
-            } else if (objectivityScore >= 60) {
-                meaning = 'Some bias is present but within acceptable journalistic bounds. Be aware of the slight perspective while the core facts remain reliable.';
-            } else if (objectivityScore >= 40) {
-                meaning = 'Significant bias detected. The article favors a particular viewpoint through selective facts, loaded language, or one-sided arguments. Read critically.';
-            } else {
-                meaning = 'Extreme bias makes this more opinion/advocacy than news. The strong slant may distort facts. Seek alternative sources for balanced information.';
-            }
-            
-            return {
-                whatWeAnalyze: 'We analyze language patterns, emotional tone, source selection, story framing, and rhetorical techniques. We check for political, ideological, commercial, and sensational biases that might influence how information is presented.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
-        }
-
-        function getFactCheckerContent(data) {
-            const normalized = DataStructureMapper.normalizeFactCheckerData(data);
-            const { claims_checked: total, verified_count: verified, claims } = normalized;
-            const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-            
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Claims Analyzed</span>
-                        <span class="result-value">${total}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Verified Claims</span>
-                        <span class="result-value">${verified}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Accuracy Rate</span>
-                        <span class="result-value">${accuracy}%</span>
-                    </div>
-                </div>
-            `;
-            
-            if (total > 0) {
-                findingsHtml += `
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${accuracy}%"></div>
-                    </div>
-                `;
-            }
-            
-            // Add individual claims if available
-            if (claims && claims.length > 0) {
-                findingsHtml += `
-                    <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Claims Analyzed
-                        </h5>
-                        <div class="claims-list">
-                `;
-                
-                claims.slice(0, 5).forEach(claim => {
-                    const claimText = claim.claim || claim.claim_text || claim.text || 'Unknown claim';
-                    const status = claim.verdict || claim.verification_status || 'unverified';
-                    const statusLower = status.toLowerCase();
-                    const statusClass = statusLower.includes('true') || statusLower === 'verified' ? 'verified' : 
-                                      statusLower.includes('false') ? 'false' : 'unverified';
-                    const statusIcon = statusClass === 'verified' ? 'fa-check' : 
-                                     statusClass === 'false' ? 'fa-times' : 'fa-question';
-                    
-                    findingsHtml += `
-                        <div class="claim-item">
-                            <div class="claim-header">
-                                <div class="claim-text">"${escapeHtml(claimText)}"</div>
-                                <div class="claim-status claim-${statusClass}">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${formatStatus(status)}
-                                </div>
-                            </div>
-                            ${claim.explanation || claim.evidence ? `
-                                <div class="claim-details">
-                                    ${claim.explanation || claim.evidence}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                findingsHtml += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            let meaning = '';
-            if (total === 0) {
-                meaning = 'This article makes few specific factual claims, focusing more on opinion or analysis. This isn\'t necessarily negative but limits our ability to verify accuracy.';
-            } else if (accuracy >= 80) {
-                meaning = 'The vast majority of factual claims are accurate and verifiable. This indicates careful reporting and fact-checking by the author.';
-            } else if (accuracy >= 60) {
-                meaning = 'Most claims are accurate, but some could not be verified or contain minor inaccuracies. Cross-reference important information.';
-            } else {
-                meaning = 'Many claims could not be verified or appear to be inaccurate. Be very cautious about accepting information from this article without independent verification.';
-            }
-            
-            return {
-                whatWeAnalyze: 'We identify specific factual claims in the article and verify them against 21+ authoritative sources including fact-checking databases, academic sources, government data, and trusted news archives.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
-        }
-
-        function getTransparencyContent(data) {
-            const score = extractScore(data, ['transparency_score', 'score'], 0);
-            const level = data.transparency_level || data.level || getTransparencyLevel(score);
-            
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Transparency Score</span>
-                        <span class="result-value">${score}%</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Transparency Level</span>
-                        <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                            ${level}
-                        </span>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${score}%"></div>
-                </div>
-            `;
-            
-            // Add transparency indicators
-            const indicators = {
-                'Author Attribution': data.has_author !== false,
-                'Publication Date': data.has_date !== false,
-                'Source Citations': data.has_sources !== false,
-                'Corrections Policy': data.has_corrections_policy || false,
-                'Funding Disclosure': data.has_funding_disclosure || false
-            };
-            
-            findingsHtml += `
-                <div class="service-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-list-check"></i>
-                        Transparency Checklist
-                    </h5>
-                    <div class="service-results">
-            `;
-            
-            Object.entries(indicators).forEach(([name, present]) => {
-                findingsHtml += `
-                    <div class="result-item">
-                        <span class="result-label">${name}</span>
-                        <span class="result-value">
-                            ${present ? 
-                                '<i class="fas fa-check" style="color: var(--accent);"></i> Present' : 
-                                '<i class="fas fa-times" style="color: var(--danger);"></i> Missing'}
-                        </span>
-                    </div>
-                `;
-            });
-            
-            findingsHtml += `
-                    </div>
-                </div>
-            `;
-            
-            let meaning = '';
-            if (score >= 80) {
-                meaning = 'Excellent transparency enhances credibility. Clear attribution, proper sourcing, and disclosure policies allow readers to verify information and understand potential biases.';
-            } else if (score >= 60) {
-                meaning = 'Good transparency overall, though some elements could be clearer. Most important information is properly attributed and sourced.';
-            } else if (score >= 40) {
-                meaning = 'Limited transparency raises concerns. Missing attribution or sources make it difficult to verify claims or assess potential conflicts of interest.';
-            } else {
-                meaning = 'Poor transparency is a major red flag. Without proper attribution, sources, or disclosures, this content cannot be properly evaluated or verified.';
-            }
-            
-            return {
-                whatWeAnalyze: 'We check for proper author attribution, publication dates, source citations, correction policies, funding disclosures, and conflicts of interest statements that allow readers to evaluate the content.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
-        }
-
-        function getManipulationContent(data) {
-            const level = data.manipulation_level || data.level || 'Unknown';
-            const techniques = data.techniques || [];
-            const techniquesCount = data.techniques_count || techniques.length;
-            
-            let findingsHtml = `
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Manipulation Level</span>
-                        <span class="status-badge status-${
-                            level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : 
-                            level.toLowerCase() === 'moderate' ? 'medium' : 'low'
-                        }">
-                            ${level}
-                        </span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Techniques Detected</span>
-                        <span class="result-value">${techniquesCount}</span>
-                    </div>
-                </div>
-            `;
-            
-            // Add detected techniques
-            if (techniques.length > 0) {
-                findingsHtml += `
-                    <div class="service-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-brain"></i>
-                            Manipulation Techniques Found
-                        </h5>
-                        <div class="techniques-grid">
-                `;
-                
-                techniques.slice(0, 6).forEach(technique => {
-                    const techName = technique.name || technique.type || technique.technique || 'Unknown';
-                    const techDesc = technique.description || technique.details || '';
-                    
-                    findingsHtml += `
-                        <div class="technique-card">
-                            <div class="technique-name">${techName}</div>
-                            ${techDesc ? `<div class="technique-description">${techDesc}</div>` : ''}
-                            ${technique.severity ? 
-                                `<span class="technique-severity severity-${technique.severity.toLowerCase()}">
-                                    ${technique.severity} impact
-                                </span>` : ''}
-                        </div>
-                    `;
-                });
-                
-                findingsHtml += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            let meaning = '';
-            if (techniquesCount === 0) {
-                meaning = 'No significant manipulation tactics detected. The article presents information straightforwardly without attempting to unduly influence emotions or opinions.';
-            } else if (techniquesCount <= 2) {
-                meaning = 'Minor persuasion techniques present. While not necessarily malicious, be aware these may influence how you perceive the information.';
-            } else if (techniquesCount <= 4) {
-                meaning = 'Multiple manipulation tactics detected. The article actively tries to influence your emotions and opinions. Read very critically.';
-            } else {
-                meaning = 'Heavy manipulation detected. This content appears designed to manipulate rather than inform. Approach with extreme skepticism.';
-            }
-            
-            return {
-                whatWeAnalyze: 'We identify psychological manipulation techniques, emotional exploitation, logical fallacies, propaganda methods, and other tactics designed to influence readers beyond presenting facts.',
-                whatWeFound: findingsHtml,
-                whatThisMeans: meaning
-            };
-        }
-
         // Make toggleAccordion function global so onclick can access it
         window.toggleAccordion = toggleAccordion;
     </script>
 </body>
 </html>
-            });
-            document.getElementById(`${tab}-tab`).classList.add('active');
-        }
-
-        // Reset analysis
-        function resetAnalysis() {
-            // Clear inputs
-            document.getElementById('urlInput').value = '';
-            document.getElementById('textInput').value = '';
-            
-            // Hide results
-            document.getElementById('resultsSection').classList.remove('active');
-            document.getElementById('resultsSection').style.display = 'none';
-            
-            // Clear error
-            hideError();
-            
-            // Reset data
-            currentAnalysis = null;
-            
-            // Reset to URL tab
-            currentTab = 'url';
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById('url-tab').classList.add('active');
-            
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // Try example URL
-        function tryExample(url) {
-            // Switch to URL tab
-            currentTab = 'url';
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
