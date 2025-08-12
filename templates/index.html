@@ -441,7 +441,7 @@
             padding: var(--space-xl) var(--space-lg);
         }
 
-        /* Results Section - Force hidden by default */
+        /* CRITICAL FIX: Force results section to be hidden initially */
         #resultsSection {
             display: none !important;
         }
@@ -1830,48 +1830,6 @@
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            document.getElementById(`${tab}-tab`).classList.add('active');
-        }
-
-        // Reset analysis
-        function resetAnalysis() {
-            // Clear inputs
-            document.getElementById('urlInput').value = '';
-            document.getElementById('textInput').value = '';
-            
-            // Hide results
-            document.getElementById('resultsSection').classList.remove('active');
-            
-            // Clear error
-            hideError();
-            
-            // Reset data
-            currentAnalysis = null;
-            
-            // Reset to URL tab
-            currentTab = 'url';
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById('url-tab').classList.add('active');
-            
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // Try example URL
-        function tryExample(url) {
-            // Switch to URL tab
-            currentTab = 'url';
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
             document.getElementById('url-tab').classList.add('active');
             
             // Set URL
@@ -1917,7 +1875,7 @@
                     }
                 });
                 
-     mapped;
+                return mapped;
             }
             
             static extractServiceData(serviceResult) {
@@ -2151,6 +2109,7 @@
             }
             
             const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.display = 'block';
             resultsSection.classList.add('active');
             
             // Display each component
@@ -3188,7 +3147,9 @@
         }
 
         function hideResults() {
-            document.getElementById('resultsSection').classList.remove('active');
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.remove('active');
+            resultsSection.style.display = 'none';
         }
 
         function getScoreColor(score) {
@@ -3485,15 +3446,7 @@
             }
         }
 
-        // Make toggleAccordion function global so onclick can access it
-        window.toggleAccordion = toggleAccordion;
-    </script>
-</body>
-</html>tml,
-                whatThisMeans: meaning
-            };
-        }
-
+        // Add remaining enhanced content functions
         function getAuthorAnalysisContent(data) {
             const authorName = data.author_name || data.name || 'Unknown Author';
             const score = extractScore(data, ['credibility_score', 'score']);
@@ -3930,3 +3883,55 @@
             return {
                 whatWeAnalyze: 'We identify psychological manipulation techniques, emotional exploitation, logical fallacies, propaganda methods, and other tactics designed to influence readers beyond presenting facts.',
                 whatWeFound: findingsHtml,
+                whatThisMeans: meaning
+            };
+        }
+
+        // Make toggleAccordion function global so onclick can access it
+        window.toggleAccordion = toggleAccordion;
+    </script>
+</body>
+</html>
+            });
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        // Reset analysis
+        function resetAnalysis() {
+            // Clear inputs
+            document.getElementById('urlInput').value = '';
+            document.getElementById('textInput').value = '';
+            
+            // Hide results
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            // Clear error
+            hideError();
+            
+            // Reset data
+            currentAnalysis = null;
+            
+            // Reset to URL tab
+            currentTab = 'url';
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById('url-tab').classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Try example URL
+        function tryExample(url) {
+            // Switch to URL tab
+            currentTab = 'url';
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === 'URL');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
