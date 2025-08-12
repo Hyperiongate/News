@@ -1518,10 +1518,16 @@
             }
         ];
 
-        // CRITICAL FIX: Data structure mapper to handle backend inconsistencies
+        // CRITICAL FIX: Enhanced Data structure mapper to handle backend inconsistencies
         class DataStructureMapper {
             static mapServiceData(rawData) {
                 console.log('=== DataStructureMapper.mapServiceData called ===');
+                
+                if (!rawData || typeof rawData !== 'object') {
+                    console.error('Invalid rawData provided to mapServiceData');
+                    return {};
+                }
+                
                 console.log('Raw data keys:', Object.keys(rawData));
                 
                 // Create a normalized structure
@@ -1529,20 +1535,20 @@
                 
                 // Map each service with fallback field names
                 const serviceMappings = {
-                    'source_credibility': ['source_credibility'],
-                    'author_analyzer': ['author_analyzer', 'author_analysis', 'author_info'],
-                    'bias_detector': ['bias_detector', 'bias_analysis', 'bias'],
-                    'fact_checker': ['fact_checker', 'fact_checks', 'fact_checking'],
+                    'source_credibility': ['source_credibility', 'sourceCredibility', 'source_analysis'],
+                    'author_analyzer': ['author_analyzer', 'author_analysis', 'author_info', 'authorAnalysis'],
+                    'bias_detector': ['bias_detector', 'bias_analysis', 'bias', 'biasDetection'],
+                    'fact_checker': ['fact_checker', 'fact_checks', 'fact_checking', 'factChecker'],
                     'transparency_analyzer': ['transparency_analyzer', 'transparency_analysis', 'transparency'],
                     'manipulation_detector': ['manipulation_detector', 'manipulation_analysis', 'persuasion_analysis'],
-                    'content_analyzer': ['content_analyzer', 'content_analysis', 'content'],
+                    'content_analyzer': ['content_analyzer', 'content_analysis', 'content', 'contentAnalysis'],
                     'plagiarism_detector': ['plagiarism_detector', 'plagiarism_analysis', 'plagiarism']
                 };
                 
                 // Try to find data for each service
                 Object.entries(serviceMappings).forEach(([serviceId, possibleNames]) => {
                     for (const name of possibleNames) {
-                        if (rawData[name]) {
+                        if (rawData[name] !== undefined && rawData[name] !== null) {
                             mapped[serviceId] = this.extractServiceData(rawData[name]);
                             console.log(`Mapped ${name} to ${serviceId}`);
                             break;
@@ -1560,6 +1566,9 @@
             }
             
             static extractServiceData(serviceResult) {
+                // Handle null/undefined
+                if (!serviceResult) return {};
+                
                 // If the service result has a 'data' field, extract it
                 if (serviceResult && typeof serviceResult === 'object') {
                     if (serviceResult.data && typeof serviceResult.data === 'object') {
@@ -1576,23 +1585,47 @@
             }
             
             static normalizeFactCheckerData(data) {
-                // Normalize fact checker data structure
+                // Handle null/undefined
                 if (!data) return { claims_checked: 0, verified_count: 0, claims: [] };
                 
                 const normalized = {
-                    claims_checked: data.claims_checked || data.total_claims || 0,
-                    verified_count: data.verified_count || data.verified_claims || 0,
+                    claims_checked: 0,
+                    verified_count: 0,
                     claims: []
                 };
+                
+                // Extract claims count - check multiple possible fields
+                normalized.claims_checked = data.claims_checked || 
+                                          data.total_claims || 
+                                          data.totalClaims ||
+                                          data.claims?.length || 
+                                          0;
+                
+                // Extract verified count
+                normalized.verified_count = data.verified_count || 
+                                          data.verified_claims || 
+                                          data.verifiedClaims ||
+                                          data.verified || 
+                                          0;
                 
                 // Extract claims array
                 if (data.claims && Array.isArray(data.claims)) {
                     normalized.claims = data.claims;
                 } else if (data.results && Array.isArray(data.results)) {
                     normalized.claims = data.results;
+                } else if (data.fact_checks && Array.isArray(data.fact_checks)) {
+                    normalized.claims = data.fact_checks;
                 } else if (Array.isArray(data)) {
                     normalized.claims = data;
                 }
+                
+                // Ensure claims have required structure
+                normalized.claims = normalized.claims.map(claim => {
+                    if (typeof claim === 'string') {
+                        return { claim: claim, verdict: 'unverified' };
+                    }
+                    return claim;
+                });
                 
                 return normalized;
             }
@@ -1653,6 +1686,104 @@
             document.getElementById('urlInput').focus();
         }
 
+        // Performance monitoring
+        function measurePerformance(operationName, operation) {
+            const startTime = performance.now();
+            console.log(`[PERF] Starting ${operationName}`);
+            
+            try {
+                const result = operation();
+                const duration = performance.now() - startTime;
+                console.log(`[PERF] ${operationName} completed in ${duration.toFixed(2)}ms`);
+                return result;
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                console.error(`[PERF] ${operationName} failed after ${duration.toFixed(2)}ms`, error);
+                throw error;
+            }
+        }
+
+        // Validate API response structure
+        function validateApiResponse(response) {
+            const required = ['analysis', 'article'];
+            const missing = [];
+            
+            for (const field of required) {
+                if (!response[field]) {
+                    missing.push(field);
+                }
+            }
+            
+            if (missing.length > 0) {
+                console.error('Missing required fields in API response:', missing);
+                console.error('Response structure:', Object.keys(response));
+                
+                // Try to recover from common response structures
+                if (response.data) {
+                    return validateApiResponse(response.data);
+                }
+                
+                if (response.result) {
+                    return validateApiResponse(response.result);
+                }
+                
+                throw new Error(`Invalid API response: missing ${missing.join(', ')}`);
+            }
+            
+            // Validate analysis structure
+            if (!response.analysis.trust_score && response.analysis.trust_score !== 0) {
+                console.warn('Missing trust_score in analysis');
+                response.analysis.trust_score = 0;
+            }
+            
+            if (!response.analysis.trust_level) {
+                response.analysis.trust_level = 'Unknown';
+            }
+            
+            return response;
+        }
+
+        // Retry mechanism for API calls
+        async function analyzeArticleWithRetry(url, maxRetries = 2) {
+            let lastError;
+            
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    if (attempt > 0) {
+                        console.log(`Retry attempt ${attempt} of ${maxRetries}`);
+                        // Wait before retry (exponential backoff)
+                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+                    }
+                    
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url: url })
+                    });
+                    
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    
+                    // Don't retry on client errors (4xx)
+                    if (response.status >= 400 && response.status < 500) {
+                        const error = await response.json();
+                        throw new Error(error.error || error.message || `HTTP ${response.status}`);
+                    }
+                    
+                    lastError = new Error(`HTTP ${response.status}`);
+                    
+                } catch (error) {
+                    lastError = error;
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                }
+            }
+            
+            throw lastError;
+        }
+
         // Main analysis function - FIXED with comprehensive data handling
         async function analyzeArticle() {
             console.log('analyzeArticle function called');
@@ -1690,58 +1821,22 @@
             console.log('Starting API call to /api/analyze');
             
             try {
-                // FIXED: Use correct API endpoint and payload format
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: url })
+                // Use retry mechanism
+                const responseData = await measurePerformance('API Call', async () => {
+                    return await analyzeArticleWithRetry(url);
                 });
                 
-                console.log('API response status:', response.status);
-                
-                if (!response.ok) {
-                    let errorMessage = 'Analysis failed';
-                    try {
-                        const errorData = await response.json();
-                        console.error('API error response:', errorData);
-                        errorMessage = errorData.error || errorData.message || errorMessage;
-                    } catch (e) {
-                        console.error('Failed to parse error response:', e);
-                    }
-                    throw new Error(errorMessage);
-                }
-                
-                const responseData = await response.json();
                 console.log('=== COMPREHENSIVE API RESPONSE DEBUG ===');
                 console.log('Raw API response:', responseData);
                 console.log('Response type:', typeof responseData);
                 console.log('Response keys:', Object.keys(responseData));
                 
-                // Extract data from response - handle different response structures
-                let data = responseData;
-                
-                // If response has a data field, use that
-                if (responseData.data && typeof responseData.data === 'object') {
-                    data = responseData.data;
-                    console.log('Extracted data from responseData.data');
-                }
-                
-                // If response has success field and it's false, handle error
-                if (responseData.success === false) {
-                    throw new Error(responseData.error || 'Analysis failed');
-                }
+                // Validate and normalize response
+                let data = validateApiResponse(responseData);
                 
                 // CRITICAL: Log the complete data structure
                 console.log('=== COMPLETE DATA STRUCTURE ===');
                 console.log(JSON.stringify(data, null, 2));
-                
-                // Validate the data structure
-                if (!data.analysis || (!data.analysis.trust_score && data.analysis.trust_score !== 0)) {
-                    console.error('Invalid response structure - missing analysis.trust_score');
-                    throw new Error('Invalid response from server');
-                }
                 
                 // CRITICAL FIX: Normalize the service data
                 if (data.detailed_analysis) {
@@ -1779,14 +1874,31 @@
                 return;
             }
             
+            // CRITICAL FIX: Ensure we have the required structure
+            if (!data.analysis && !data.article) {
+                // Check if data is nested
+                if (data.data) {
+                    data = data.data;
+                } else if (data.result) {
+                    data = data.result;
+                } else {
+                    console.error('Invalid data structure - missing analysis and article');
+                    showError('Invalid response format from server');
+                    return;
+                }
+            }
+            
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.classList.add('active');
             
-            // Display each component
+            // Display each component with individual error handling
             try {
                 displayEnhancedTrustScore(data.analysis, data);
             } catch (e) {
                 console.error('Error displaying trust score:', e);
+                // Show partial results even if trust score fails
+                document.getElementById('trustScoreNumber').textContent = '?';
+                document.getElementById('trustSummary').textContent = 'Trust score calculation failed';
             }
             
             try {
@@ -1908,11 +2020,27 @@
 
         // Helper function to extract score from nested data
         function extractScore(data, fields, defaultValue = 0) {
-            if (!data) return defaultValue;
+            if (!data || typeof data !== 'object') return defaultValue;
             
             for (const field of fields) {
-                if (data[field] !== undefined && data[field] !== null) {
-                    return Number(data[field]) || defaultValue;
+                // Handle nested fields (e.g., "score.value")
+                const fieldParts = field.split('.');
+                let value = data;
+                
+                for (const part of fieldParts) {
+                    if (value && typeof value === 'object' && part in value) {
+                        value = value[part];
+                    } else {
+                        value = undefined;
+                        break;
+                    }
+                }
+                
+                if (value !== undefined && value !== null) {
+                    const numValue = Number(value);
+                    if (!isNaN(numValue)) {
+                        return numValue;
+                    }
                 }
             }
             
@@ -2354,6 +2482,9 @@
                 event.stopPropagation();
             }
             
+            // Save current scroll position
+            const currentScrollY = window.scrollY;
+            
             const item = document.getElementById(`service-${serviceId}`);
             const isActive = item.classList.contains('active');
             
@@ -2366,6 +2497,9 @@
             
             // Toggle current item
             item.classList.toggle('active');
+            
+            // Restore scroll position
+            window.scrollTo(0, currentScrollY);
             
             // If opening, create/update visualizations after animation
             if (!isActive) {
@@ -2742,8 +2876,8 @@
         }
 
         function renderBiasDetection(data) {
-            const overallBias = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
-            const biasLevel = data.bias_level || getBiasLevel(overallBias);
+            const overallBias = extractScore(data, ['overall_bias_score', 'bias_score', 'overallBias'], 0);
+            const biasLevel = data.bias_level || data.level || getBiasLevel(overallBias);
             const objectivityScore = 100 - overallBias;
             
             let content = `
@@ -2771,9 +2905,9 @@
                 </div>
             `;
             
-            // Bias dimensions
-            const dimensions = data.dimensions || data.bias_dimensions || data.biases;
-            if (dimensions && typeof dimensions === 'object') {
+            // Bias dimensions - handle multiple possible structures
+            const dimensions = data.dimensions || data.bias_dimensions || data.biases || data.dimension_scores;
+            if (dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0) {
                 const chartId = `bias-chart-${Date.now()}`;
                 const chartData = {
                     labels: [],
@@ -2789,33 +2923,45 @@
                         <div class="dimension-list">
                 `;
                 
+                // Process each dimension safely
                 Object.entries(dimensions).forEach(([dimension, dimData]) => {
-                    let score, label;
-                    
-                    if (typeof dimData === 'object' && dimData !== null) {
-                        score = Math.abs(dimData.score || dimData.value || 0) * 
-                               (dimData.score > 1 ? 1 : 100);
-                        label = dimData.label || dimension;
-                    } else {
-                        score = Math.abs(Number(dimData) || 0);
-                        if (score <= 1) score *= 100;
-                        label = formatDimensionName(dimension);
+                    try {
+                        let score, label;
+                        
+                        // Handle different data structures
+                        if (typeof dimData === 'object' && dimData !== null) {
+                            score = extractScore(dimData, ['score', 'value', 'level'], 0);
+                            // Normalize score to 0-100 range
+                            if (score > 0 && score <= 1) {
+                                score = score * 100;
+                            }
+                            label = dimData.label || dimData.name || formatDimensionName(dimension);
+                        } else {
+                            score = Math.abs(Number(dimData) || 0);
+                            if (score <= 1) score *= 100;
+                            label = formatDimensionName(dimension);
+                        }
+                        
+                        // Clamp score between 0 and 100
+                        score = Math.max(0, Math.min(100, score));
+                        
+                        chartData.labels.push(label);
+                        chartData.values.push(Math.round(score));
+                        
+                        content += `
+                            <div class="dimension-item">
+                                <div class="dimension-header">
+                                    <span class="dimension-name">${label}</span>
+                                    <span class="dimension-score">${Math.round(score)}%</span>
+                                </div>
+                                <div class="dimension-bar">
+                                    <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
+                                </div>
+                            </div>
+                        `;
+                    } catch (e) {
+                        console.error(`Error processing dimension ${dimension}:`, e);
                     }
-                    
-                    chartData.labels.push(label);
-                    chartData.values.push(Math.round(score));
-                    
-                    content += `
-                        <div class="dimension-item">
-                            <div class="dimension-header">
-                                <span class="dimension-name">${label}</span>
-                                <span class="dimension-score">${Math.round(score)}%</span>
-                            </div>
-                            <div class="dimension-bar">
-                                <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
-                            </div>
-                        </div>
-                    `;
                 });
                 
                 content += `
@@ -2823,8 +2969,8 @@
                     </div>
                 `;
                 
-                // Add visualization if we have data
-                if (chartData.labels.length > 0) {
+                // Add visualization only if we have valid data
+                if (chartData.labels.length > 0 && chartData.values.length > 0) {
                     content += `
                         <div class="service-visualization">
                             <div class="chart-container">
@@ -3484,22 +3630,33 @@
         function showError(message) {
             const errorEl = document.getElementById('errorMessage');
             
-            // Make error messages more user-friendly
-            let displayMessage = message;
+            // Enhanced error message mapping
+            const errorMappings = {
+                'timed out': 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.',
+                'timeout': 'Request timed out. The website may be slow or blocking our service.',
+                'extraction methods failed': 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.',
+                'Invalid URL': 'Please enter a valid news article URL starting with http:// or https://',
+                'Analysis failed': 'Unable to analyze the article. Please try a different URL or check your internet connection.',
+                '403': 'Access denied. This website blocks automated analysis. Try a different news source.',
+                '404': 'Article not found. Please check the URL and try again.',
+                '500': 'Server error occurred. Please try again in a few moments.',
+                'No data available': 'The analysis completed but no data was returned. This might be a temporary issue.',
+                'Invalid response format': 'The server returned an unexpected response. Please try again.'
+            };
             
-            if (message.includes('timed out') || message.includes('timeout')) {
-                displayMessage = 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.';
-            } else if (message.includes('extraction methods failed')) {
-                displayMessage = 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.';
-            } else if (message.includes('Invalid URL')) {
-                displayMessage = 'Please enter a valid news article URL starting with http:// or https://';
-            } else if (message.includes('Analysis failed')) {
-                displayMessage = 'Unable to analyze the article. Please try a different URL or check your internet connection.';
+            // Find matching error pattern
+            let displayMessage = message;
+            for (const [pattern, friendlyMessage] of Object.entries(errorMappings)) {
+                if (message.toLowerCase().includes(pattern.toLowerCase())) {
+                    displayMessage = friendlyMessage;
+                    break;
+                }
             }
             
             errorEl.textContent = displayMessage;
             errorEl.classList.add('active');
             
+            // Auto-hide after 10 seconds
             setTimeout(() => {
                 hideError();
             }, 10000);
@@ -3560,15 +3717,23 @@
         }
 
         function formatDimensionName(dimension) {
+            if (!dimension || typeof dimension !== 'string') return 'Unknown';
+            
             const dimensionNames = {
                 'political': 'Political Bias',
                 'ideological': 'Ideological Bias',
                 'commercial': 'Commercial Bias',
                 'sensational': 'Sensationalism',
                 'cultural': 'Cultural Bias',
-                'confirmation': 'Confirmation Bias'
+                'confirmation': 'Confirmation Bias',
+                'partisan': 'Partisan Bias',
+                'corporate': 'Corporate Bias'
             };
-            return dimensionNames[dimension.toLowerCase()] || formatFactorName(dimension);
+            
+            const key = dimension.toLowerCase().trim();
+            return dimensionNames[key] || dimension
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
         }
 
         function formatStatus(status) {
