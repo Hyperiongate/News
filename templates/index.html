@@ -443,12 +443,12 @@
 
         /* Results Section */
         .results-section {
-            display: none;
+            display: none !important;
             animation: fadeInUp 0.6s ease;
         }
 
         .results-section.active {
-            display: block;
+            display: block !important;
         }
 
         @keyframes fadeInUp {
@@ -1680,8 +1680,8 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Results Section -->
-        <div id="resultsSection" class="results-section">
+        <!-- Results Section (Hidden by default) -->
+        <div id="resultsSection" class="results-section" style="display: none;">
             <!-- Enhanced Trust Score Section -->
             <div class="trust-score-section">
                 <div class="trust-score-header">
