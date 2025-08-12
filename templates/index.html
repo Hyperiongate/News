@@ -441,7 +441,11 @@
             padding: var(--space-xl) var(--space-lg);
         }
 
-        /* Results Section */
+        /* Results Section - Force hidden by default */
+        #resultsSection {
+            display: none !important;
+        }
+        
         .results-section {
             display: none !important;
             animation: fadeInUp 0.6s ease;
@@ -1958,6 +1962,20 @@
         // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing TruthLens...');
+            
+            // CRITICAL: Ensure results are hidden on page load
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+                resultsSection.classList.remove('active');
+            }
+            
+            // Hide any error messages
+            hideError();
+            
+            // Reset to initial state
+            currentAnalysis = null;
+            isAnalyzing = false;
             
             // Add event listener for URL input Enter key
             const urlInput = document.getElementById('urlInput');
