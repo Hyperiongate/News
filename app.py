@@ -6,8 +6,9 @@ import os
 import time
 import logging
 import uuid
+import mimetypes
 from functools import wraps
-from flask import Flask, request, render_template, g
+from flask import Flask, request, render_template, g, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -16,6 +17,10 @@ from config import Config
 from services.news_analyzer import NewsAnalyzer
 from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
 from services.service_registry import service_registry
+
+# Fix MIME types for JavaScript files
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('text/javascript', '.js')
 
 # Configure logging
 logging.basicConfig(
@@ -117,6 +122,31 @@ def require_analyzer(f):
 def index():
     """Serve the main page"""
     return render_template('index.html')
+
+
+# Fix for JavaScript MIME type - serve JS files with correct content type
+@app.route('/static/js/<path:filename>')
+def serve_js(filename):
+    """Serve JavaScript files with correct MIME type"""
+    return send_from_directory('static/js', filename, mimetype='application/javascript')
+
+
+# Additional route if truthlens.js is served from root
+@app.route('/truthlens.js')
+def serve_truthlens():
+    """Serve truthlens.js with correct MIME type"""
+    return send_from_directory('static/js', 'truthlens.js', mimetype='application/javascript')
+
+
+# Serve favicon to avoid 404 errors
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    # If you have a favicon in static folder
+    if os.path.exists(os.path.join(app.static_folder, 'favicon.ico')):
+        return send_from_directory(app.static_folder, 'favicon.ico', mimetype='image/x-icon')
+    # Otherwise return empty response
+    return '', 204
 
 
 @app.route('/api/health')
