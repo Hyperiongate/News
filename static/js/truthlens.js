@@ -1620,6 +1620,7 @@ function displayResults(data) {
     
     const resultsSection = document.getElementById('resultsSection');
     resultsSection.classList.add('active');
+    resultsSection.style.display = 'block';
     
     // Display each component with individual error handling
     try {
