@@ -1370,6 +1370,214 @@ console.log('%cType window.rawResponse to see the raw API response', 'font-size:
 // 4. TruthLensApp class (from app.js)
 // 5. Main initialization and utility functions (from index.html)
 
+// Utility functions - MOVED TO TOP
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+function showError(message) {
+    const errorEl = document.getElementById('errorMessage');
+    
+    // Enhanced error message mapping
+    const errorMappings = {
+        'timed out': 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.',
+        'timeout': 'Request timed out. The website may be slow or blocking our service.',
+        'extraction methods failed': 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.',
+        'Invalid URL': 'Please enter a valid news article URL starting with http:// or https://',
+        'Analysis failed': 'Unable to analyze the article. Please try a different URL or check your internet connection.',
+        '403': 'Access denied. This website blocks automated analysis. Try a different news source.',
+        '404': 'Article not found. Please check the URL and try again.',
+        '500': 'Server error occurred. Please try again in a few moments.',
+        'No data available': 'The analysis completed but no data was returned. This might be a temporary issue.',
+        'Invalid response format': 'The server returned an unexpected response. Please try again.'
+    };
+    
+    // Find matching error pattern
+    let displayMessage = message;
+    for (const [pattern, friendlyMessage] of Object.entries(errorMappings)) {
+        if (message.toLowerCase().includes(pattern.toLowerCase())) {
+            displayMessage = friendlyMessage;
+            break;
+        }
+    }
+    
+    errorEl.textContent = displayMessage;
+    errorEl.classList.add('active');
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+        hideError();
+    }, 10000);
+}
+
+function hideError() {
+    const errorEl = document.getElementById('errorMessage');
+    errorEl.classList.remove('active');
+}
+
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+function hideResults() {
+    document.getElementById('resultsSection').classList.remove('active');
+}
+
+function getScoreColor(score) {
+    if (score >= 80) return '#10B981';
+    if (score >= 60) return '#3B82F6';
+    if (score >= 40) return '#F59E0B';
+    return '#EF4444';
+}
+
+function getDimensionColor(score) {
+    if (score >= 80) return 'var(--accent)';
+    if (score >= 60) return 'var(--info)';
+    if (score >= 40) return 'var(--warning)';
+    return 'var(--danger)';
+}
+
+function getBiasColor(score) {
+    // Lower bias score is better
+    if (score <= 20) return 'var(--accent)';
+    if (score <= 50) return 'var(--warning)';
+    return 'var(--danger)';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+}
+
+function formatFactorName(factor) {
+    return factor
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatDimensionName(dimension) {
+    if (!dimension || typeof dimension !== 'string') return 'Unknown';
+    
+    const dimensionNames = {
+        'political': 'Political Bias',
+        'ideological': 'Ideological Bias',
+        'commercial': 'Commercial Bias',
+        'sensational': 'Sensationalism',
+        'cultural': 'Cultural Bias',
+        'confirmation': 'Confirmation Bias',
+        'partisan': 'Partisan Bias',
+        'corporate': 'Corporate Bias'
+    };
+    
+    const key = dimension.toLowerCase().trim();
+    return dimensionNames[key] || dimension
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatStatus(status) {
+    const statusNames = {
+        'verified': 'Verified',
+        'true': 'True',
+        'false': 'False',
+        'unverified': 'Unverified',
+        'partially_true': 'Partially True',
+        'misleading': 'Misleading',
+        'mostly_true': 'Mostly True',
+        'mostly_false': 'Mostly False'
+    };
+    return statusNames[status.toLowerCase()] || status;
+}
+
+// Helper functions for missing level calculations
+function getCredibilityLevel(score) {
+    if (score >= 80) return 'Very High';
+    if (score >= 60) return 'High';
+    if (score >= 40) return 'Moderate';
+    if (score >= 20) return 'Low';
+    return 'Very Low';
+}
+
+function getBiasLevel(score) {
+    if (score <= 20) return 'Minimal';
+    if (score <= 40) return 'Low';
+    if (score <= 60) return 'Moderate';
+    if (score <= 80) return 'High';
+    return 'Extreme';
+}
+
+function getTransparencyLevel(score) {
+    if (score >= 80) return 'Highly Transparent';
+    if (score >= 60) return 'Transparent';
+    if (score >= 40) return 'Partially Transparent';
+    return 'Low Transparency';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper function to extract score from nested data
+function extractScore(data, fields, defaultValue = 0) {
+    if (!data || typeof data !== 'object') return defaultValue;
+    
+    for (const field of fields) {
+        const fieldParts = field.split('.');
+        let value = data;
+        
+        for (const part of fieldParts) {
+            if (value && typeof value === 'object' && part in value) {
+                value = value[part];
+            } else {
+                value = undefined;
+                break;
+            }
+        }
+        
+        if (value !== undefined && value !== null) {
+            const numValue = Number(value);
+            if (!isNaN(numValue)) {
+                return numValue;
+            }
+        }
+    }
+    
+    return defaultValue;
+}
+
+// Get trust level based on score
+function getTrustLevel(score) {
+    if (score >= 80) return 'Very High';
+    if (score >= 60) return 'High';
+    if (score >= 40) return 'Moderate';
+    if (score >= 20) return 'Low';
+    return 'Very Low';
+}
+
+// Get breakdown type based on score
+function getBreakdownType(score) {
+    if (score >= 80) return 'positive';
+    if (score >= 60) return 'neutral';
+    if (score >= 40) return 'warning';
+    return 'negative';
+}
+
 // ============================================================================
 // SECTION 1: Configuration and Constants
 // ============================================================================
@@ -2620,6 +2828,95 @@ function measurePerformance(operationName, operation) {
         console.error(`[PERF] ${operationName} failed after ${duration.toFixed(2)}ms`, error);
         throw error;
     }
+}
+
+// Calculate fact accuracy percentage
+function calculateFactAccuracy(factCheckerData) {
+    console.log('calculateFactAccuracy called with:', factCheckerData);
+    
+    if (!factCheckerData || Object.keys(factCheckerData).length === 0) return 0;
+    
+    const normalized = DataStructureMapper.normalizeFactCheckerData(factCheckerData);
+    const { claims_checked: total, verified_count: verified } = normalized;
+    
+    if (total === 0) return 0;
+    return Math.round((verified / total) * 100);
+}
+
+// Display article info
+function displayArticleInfo(article, analysis) {
+    document.getElementById('articleTitle').textContent = article?.title || 'Untitled Article';
+    
+    const metaHtml = `
+        <div class="meta-item">
+            <i class="fas fa-user"></i>
+            <span>${article?.author || 'Unknown Author'}</span>
+        </div>
+        <div class="meta-item">
+            <i class="fas fa-globe"></i>
+            <span>${article?.domain || 'Unknown Source'}</span>
+        </div>
+        <div class="meta-item">
+            <i class="fas fa-calendar"></i>
+            <span>${formatDate(article?.publish_date)}</span>
+        </div>
+        <div class="meta-item">
+            <i class="fas fa-clock"></i>
+            <span>${Math.ceil((article?.word_count || 0) / 200)} min read</span>
+        </div>
+    `;
+    document.getElementById('articleMeta').innerHTML = metaHtml;
+    
+    // Display key findings
+    const findings = analysis?.key_findings || [];
+    
+    if (findings.length > 0) {
+        let findingsHtml = '<h4 class="key-findings-header">Key Findings</h4>';
+        findings.forEach(finding => {
+            const type = finding.severity === 'positive' ? 'positive' : 
+                       finding.severity === 'high' ? 'negative' : 'warning';
+            const icon = type === 'positive' ? 'fa-check-circle' : 
+                       type === 'negative' ? 'fa-times-circle' : 'fa-exclamation-circle';
+            
+            findingsHtml += `
+                <div class="finding-item finding-${type}">
+                    <i class="fas ${icon}"></i>
+                    <span>${escapeHtml(finding.text || finding.finding)}</span>
+                </div>
+            `;
+        });
+        document.getElementById('keyFindings').innerHTML = findingsHtml;
+    } else {
+        document.getElementById('keyFindings').innerHTML = `
+            <div class="info-box">
+                <div class="info-box-title">
+                    <i class="fas fa-info-circle"></i>
+                    Analysis Summary
+                </div>
+                <div class="info-box-content">
+                    The detailed analysis of this article is complete. Review the individual service results below for specific insights about credibility, bias, factual accuracy, and more.
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Display service accordion
+function displayServiceAccordion(data) {
+    console.log('=== displayServiceAccordion called ===');
+    
+    const container = document.getElementById('servicesAccordion');
+    container.innerHTML = '';
+    
+    // Use normalized data
+    const servicesData = data.detailed_analysis || {};
+    
+    services.forEach((service, index) => {
+        const serviceData = servicesData[service.id] || {};
+        
+        const accordionItem = createServiceAccordionItem(service, serviceData, index);
+        container.appendChild(accordionItem);
+    });
 }
 
 // Calculate adjusted trust score excluding failed services
