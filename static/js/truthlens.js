@@ -1,1368 +1,4 @@
-// Render detailed service content
-function renderDetailedServiceContent(serviceId, data) {
-    switch (serviceId) {
-        case 'source_credibility':
-            return renderSourceCredibility(data);
-        case 'author_analyzer':
-            return renderAuthorAnalysis(data);
-        case 'bias_detector':
-            return renderBiasDetection(data);
-        case 'fact_checker':
-            return renderFactChecker(data);
-        case 'transparency_analyzer':
-            return renderTransparency(data);
-        case 'manipulation_detector':
-            return renderManipulation(data);
-        case 'content_analyzer':
-            return renderContentAnalysis(data);
-        default:
-            return '<p>Analysis complete</p>';
-    }
-}
-
-// Service renderers
-function renderSourceCredibility(data) {
-    const score = extractScore(data, ['credibility_score', 'score']);
-    const level = data.credibility_level || data.level || getCredibilityLevel(score);
-    const sourceName = data.source_name || data.name || 'Unknown Source';
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-chart-line"></i>
-                Credibility Metrics
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Overall Score</span>
-                    <span class="result-value">${score}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Level</span>
-                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        ${level}
-                    </span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Source Name</span>
-                    <span class="result-value">${sourceName}</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Additional sections based on available data
-    if (data.source_info || data.technical_analysis || data.editorial_info || data.findings) {
-        content += renderAdditionalSourceSections(data);
-    }
-    
-    return content;
-}
-
-function renderAdditionalSourceSections(data) {
-    let content = '';
-    
-    // Source info
-    const sourceInfo = data.source_info || data.source_details || data.details;
-    if (sourceInfo) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-building"></i>
-                    Publication Profile
-                </h4>
-                <div class="service-results">
-                    ${sourceInfo.type ? `
-                        <div class="result-item">
-                            <span class="result-label">Source Type</span>
-                            <span class="result-value">${sourceInfo.type}</span>
-                        </div>
-                    ` : ''}
-                    ${sourceInfo.bias ? `
-                        <div class="result-item">
-                            <span class="result-label">Known Political Bias</span>
-                            <span class="result-value">${sourceInfo.bias}</span>
-                        </div>
-                    ` : ''}
-                    ${sourceInfo.credibility_rating ? `
-                        <div class="result-item">
-                            <span class="result-label">Industry Rating</span>
-                            <span class="result-value">${sourceInfo.credibility_rating}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderAuthorAnalysis(data) {
-    const authorName = data.author_name || data.name || 'Unknown Author';
-    const score = extractScore(data, ['credibility_score', 'score']);
-    const level = data.credibility_level || getCredibilityLevel(score);
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-id-card"></i>
-                Author Profile
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Name</span>
-                    <span class="result-value">${authorName}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Score</span>
-                    <span class="result-value">${score}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Level</span>
-                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        ${level}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Professional info
-    if (data.professional_info || data.author_info) {
-        const info = data.professional_info || data.author_info;
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-briefcase"></i>
-                    Professional Background
-                </h4>
-                <div class="service-results">
-                    ${info.position ? `
-                        <div class="result-item">
-                            <span class="result-label">Current Position</span>
-                            <span class="result-value">${info.position}</span>
-                        </div>
-                    ` : ''}
-                    ${info.years_experience ? `
-                        <div class="result-item">
-                            <span class="result-label">Years of Experience</span>
-                            <span class="result-value">${info.years_experience}+ years</span>
-                        </div>
-                    ` : ''}
-                    ${info.expertise_areas && info.expertise_areas.length > 0 ? `
-                        <div class="result-item">
-                            <span class="result-label">Expertise Areas</span>
-                            <span class="result-value">${info.expertise_areas.join(', ')}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    // Recent work
-    if (data.recent_articles && data.recent_articles.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-newspaper"></i>
-                    Recent Articles
-                </h4>
-                <div class="recent-articles-list">
-                    ${data.recent_articles.slice(0, 5).map(article => `
-                        <div class="recent-article-item">
-                            <span class="article-title">${article.title || 'Untitled'}</span>
-                            <span class="article-date">${formatDate(article.date)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderBiasDetection(data) {
-    const overallBias = extractScore(data, ['overall_bias_score', 'bias_score', 'overallBias'], 0);
-    const biasLevel = data.bias_level || data.level || getBiasLevel(overallBias);
-    const objectivityScore = 100 - overallBias;
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-balance-scale"></i>
-                Overall Bias Assessment
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Bias Score</span>
-                    <span class="result-value">${overallBias}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Bias Level</span>
-                    <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
-                        ${biasLevel}
-                    </span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Objectivity Score</span>
-                    <span class="result-value">${objectivityScore}%</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Bias dimensions
-    const dimensions = data.dimensions || data.bias_dimensions || data.biases || data.dimension_scores;
-    if (dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0) {
-        content += renderBiasDimensions(dimensions);
-    }
-    
-    // Loaded phrases
-    if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-quote-right"></i>
-                    Loaded Language Examples
-                </h4>
-                <div class="loaded-phrases-list">
-                    ${data.loaded_phrases.slice(0, 5).map(phrase => `
-                        <div class="loaded-phrase-item">
-                            <span class="phrase-text">"${phrase.phrase || phrase}"</span>
-                            ${phrase.severity ? `<span class="phrase-severity severity-${phrase.severity.toLowerCase()}">${phrase.severity}</span>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderBiasDimensions(dimensions) {
-    const chartId = `bias-chart-${Date.now()}`;
-    const chartData = {
-        labels: [],
-        values: []
-    };
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-chart-bar"></i>
-                Bias Dimensions Analysis
-            </h4>
-            <div class="dimension-list">
-    `;
-    
-    Object.entries(dimensions).forEach(([dimension, dimData]) => {
-        try {
-            let score, label;
-            
-            if (typeof dimData === 'object' && dimData !== null) {
-                score = extractScore(dimData, ['score', 'value', 'level'], 0);
-                if (score > 0 && score <= 1) {
-                    score = score * 100;
-                }
-                label = dimData.label || dimData.name || formatDimensionName(dimension);
-            } else {
-                score = Math.abs(Number(dimData) || 0);
-                if (score <= 1) score *= 100;
-                label = formatDimensionName(dimension);
-            }
-            
-            score = Math.max(0, Math.min(100, score));
-            
-            chartData.labels.push(label);
-            chartData.values.push(Math.round(score));
-            
-            content += `
-                <div class="dimension-item">
-                    <div class="dimension-header">
-                        <span class="dimension-name">${label}</span>
-                        <span class="dimension-score">${Math.round(score)}%</span>
-                    </div>
-                    <div class="dimension-bar">
-                        <div class="dimension-fill" style="width: ${score}%; background: ${getBiasColor(score)};"></div>
-                    </div>
-                </div>
-            `;
-        } catch (e) {
-            console.error(`Error processing dimension ${dimension}:`, e);
-        }
-    });
-    
-    content += `
-            </div>
-        </div>
-    `;
-    
-    if (chartData.labels.length > 0) {
-        content += `
-            <div class="service-visualization">
-                <div class="chart-container">
-                    <canvas id="${chartId}" data-chart-type="polarArea" data-chart-data='${JSON.stringify(chartData)}'></canvas>
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderFactChecker(data) {
-    const normalized = DataStructureMapper.normalizeFactCheckerData(data);
-    const { claims_checked: total, verified_count: verified, claims } = normalized;
-    const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-check-circle"></i>
-                Fact Checking Summary
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Claims Analyzed</span>
-                    <span class="result-value">${total}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Verified Claims</span>
-                    <span class="result-value">${verified}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Accuracy Rate</span>
-                    <span class="result-value">${accuracy}%</span>
-                </div>
-            </div>
-            ${total > 0 ? `
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${accuracy}%"></div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    // Individual claims
-    if (claims && claims.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-list"></i>
-                    Individual Claims Analysis
-                </h4>
-                <div class="claims-list">
-        `;
-        
-        claims.forEach(claim => {
-            const claimText = claim.claim || claim.claim_text || claim.text || 'Unknown claim';
-            const status = claim.verdict || claim.verification_status || 'unverified';
-            const statusLower = status.toLowerCase();
-            const statusClass = statusLower.includes('true') || statusLower === 'verified' ? 'verified' : 
-                              statusLower.includes('false') ? 'false' : 'unverified';
-            const statusIcon = statusClass === 'verified' ? 'fa-check' : 
-                             statusClass === 'false' ? 'fa-times' : 'fa-question';
-            
-            content += `
-                <div class="claim-item">
-                    <div class="claim-header">
-                        <div class="claim-text">"${escapeHtml(claimText)}"</div>
-                        <div class="claim-status claim-${statusClass}">
-                            <i class="fas ${statusIcon}"></i>
-                            ${formatStatus(status)}
-                        </div>
-                    </div>
-                    ${claim.explanation || claim.fact_check_result || claim.verification_details ? `
-                        <div class="claim-details">
-                            ${claim.explanation || claim.fact_check_result || claim.verification_details}
-                            ${claim.source ? `<br><small>Source: ${claim.source}</small>` : ''}
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-        
-        content += `
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderTransparency(data) {
-    const score = extractScore(data, ['transparency_score', 'score'], 0);
-    const level = data.transparency_level || data.level || getTransparencyLevel(score);
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-eye"></i>
-                Transparency Assessment
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Transparency Score</span>
-                    <span class="result-value">${score}%</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Transparency Level</span>
-                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        ${level}
-                    </span>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: ${score}%"></div>
-            </div>
-        </div>
-    `;
-    
-    // Transparency checklist
-    if (data.has_author !== undefined || data.has_date !== undefined || data.has_sources !== undefined) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-tasks"></i>
-                    Transparency Checklist
-                </h4>
-                <div class="transparency-checklist">
-                    ${data.has_author !== false ? `
-                        <div class="checklist-item checklist-pass">
-                            <i class="fas fa-check"></i>
-                            <span>Author clearly identified</span>
-                        </div>
-                    ` : `
-                        <div class="checklist-item checklist-fail">
-                            <i class="fas fa-times"></i>
-                            <span>No author attribution</span>
-                        </div>
-                    `}
-                    ${data.has_date !== false ? `
-                        <div class="checklist-item checklist-pass">
-                            <i class="fas fa-check"></i>
-                            <span>Publication date provided</span>
-                        </div>
-                    ` : `
-                        <div class="checklist-item checklist-fail">
-                            <i class="fas fa-times"></i>
-                            <span>No publication date</span>
-                        </div>
-                    `}
-                    ${data.has_sources !== false ? `
-                        <div class="checklist-item checklist-pass">
-                            <i class="fas fa-check"></i>
-                            <span>Sources properly cited</span>
-                        </div>
-                    ` : `
-                        <div class="checklist-item checklist-fail">
-                            <i class="fas fa-times"></i>
-                            <span>No source citations</span>
-                        </div>
-                    `}
-                    ${data.has_corrections_policy ? `
-                        <div class="checklist-item checklist-pass">
-                            <i class="fas fa-check"></i>
-                            <span>Corrections policy exists</span>
-                        </div>
-                    ` : ''}
-                    ${data.has_funding_disclosure ? `
-                        <div class="checklist-item checklist-pass">
-                            <i class="fas fa-check"></i>
-                            <span>Funding sources disclosed</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderManipulation(data) {
-    const level = data.manipulation_level || data.level || 'Unknown';
-    const score = extractScore(data, ['manipulation_score', 'score'], 0);
-    const techniques = data.techniques || [];
-    const techniquesCount = data.techniques_count || techniques.length;
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-mask"></i>
-                Manipulation Assessment
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Manipulation Level</span>
-                    <span class="status-badge status-${
-                        level.toLowerCase() === 'low' || level.toLowerCase() === 'minimal' ? 'high' : 
-                        level.toLowerCase() === 'moderate' ? 'medium' : 'low'
-                    }">
-                        ${level}
-                    </span>
-                </div>
-                ${score !== undefined && score !== 0 ? `
-                    <div class="result-item">
-                        <span class="result-label">Manipulation Score</span>
-                        <span class="result-value">${score}/100</span>
-                    </div>
-                ` : ''}
-                <div class="result-item">
-                    <span class="result-label">Techniques Detected</span>
-                    <span class="result-value">${techniquesCount}</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Manipulation techniques
-    if (techniques.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-brain"></i>
-                    Detected Manipulation Techniques
-                </h4>
-                <div class="techniques-grid">
-        `;
-        
-        techniques.forEach(technique => {
-            const techName = technique.name || technique.type || technique.technique || 'Unknown';
-            const techDesc = technique.description || technique.details || 
-                           technique.evidence || technique.explanation || '';
-            
-            content += `
-                <div class="technique-card">
-                    <div class="technique-name">${techName}</div>
-                    <div class="technique-description">
-                        ${techDesc}
-                        ${technique.severity ? 
-                            `<span class="technique-severity severity-${technique.severity.toLowerCase()}">
-                                ${technique.severity} severity
-                            </span>` : ''}
-                    </div>
-                </div>
-            `;
-        });
-        
-        content += `
-                </div>
-            </div>
-        `;
-    } else {
-        content += `
-            <div class="service-section">
-                <div class="empty-state success-state">
-                    <i class="fas fa-check-circle"></i>
-                    <p class="empty-state-text">No manipulation tactics detected</p>
-                    <p class="empty-state-subtext">The article uses straightforward language and logical arguments</p>
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderContentAnalysis(data) {
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-file-alt"></i>
-                Content Quality Metrics
-            </h4>
-            <div class="service-results">
-    `;
-    
-    const qualityScore = extractScore(data, ['quality_score', 'score'], 0);
-    if (qualityScore !== undefined) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Overall Quality</span>
-                <span class="result-value">${qualityScore}/100</span>
-            </div>
-        `;
-    }
-    
-    // Readability
-    const readability = data.readability || {};
-    if (readability.score !== undefined) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Readability Score</span>
-                <span class="result-value">${readability.score}/100</span>
-            </div>
-        `;
-    }
-    if (readability.level) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Reading Level</span>
-                <span class="result-value">${readability.level}</span>
-            </div>
-        `;
-    }
-    if (readability.flesch_kincaid_grade !== undefined) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Flesch-Kincaid Grade</span>
-                <span class="result-value">${readability.flesch_kincaid_grade.toFixed(1)}</span>
-            </div>
-        `;
-    }
-    
-    if (data.structure_quality) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Structure Quality</span>
-                <span class="result-value">${data.structure_quality}</span>
-            </div>
-        `;
-    }
-    
-    if (data.evidence_quality) {
-        content += `
-            <div class="result-item">
-                <span class="result-label">Evidence Quality</span>
-                <span class="result-value">${data.evidence_quality}</span>
-            </div>
-        `;
-    }
-    
-    content += `
-            </div>
-        </div>
-    `;
-    
-    // Statistical claims
-    if (data.statistical_claims && data.statistical_claims.total_claims > 0) {
-        const stats = data.statistical_claims;
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-chart-line"></i>
-                    Statistical Claims Analysis
-                </h4>
-                <div class="service-results">
-                    <div class="result-item">
-                        <span class="result-label">Total Claims</span>
-                        <span class="result-value">${stats.total_claims}</span>
-                    </div>
-                    ${stats.sourced_percentage !== undefined ? `
-                        <div class="result-item">
-                            <span class="result-label">Sourced Claims</span>
-                            <span class="result-value">${stats.sourced_percentage.toFixed(0)}%</span>
-                        </div>
-                    ` : ''}
-                    ${stats.verified_percentage !== undefined ? `
-                        <div class="result-item">
-                            <span class="result-label">Verified Claims</span>
-                            <span class="result-value">${stats.verified_percentage.toFixed(0)}%</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-// Chart configuration functions
-function createRadarChartConfig(data) {
-    return {
-        type: 'radar',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(99, 102, 241, 1)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgba(99, 102, 241, 1)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        stepSize: 20
-                    }
-                }
-            }
-        }
-    };
-}
-
-function createPolarAreaChartConfig(data) {
-    return {
-        type: 'polarArea',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.5)',
-                    'rgba(54, 162, 235, 0.5)',
-                    'rgba(255, 206, 86, 0.5)',
-                    'rgba(75, 192, 192, 0.5)',
-                    'rgba(153, 102, 255, 0.5)',
-                    'rgba(255, 159, 64, 0.5)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                }
-            },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    };
-}
-
-function createBarChartConfig(data) {
-    return {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    };
-}
-
-// Utility functions
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
-
-function showError(message) {
-    const errorEl = document.getElementById('errorMessage');
-    
-    // Enhanced error message mapping
-    const errorMappings = {
-        'timed out': 'The website took too long to respond. This might be due to the site blocking automated requests. Try a different article.',
-        'timeout': 'Request timed out. The website may be slow or blocking our service.',
-        'extraction methods failed': 'Unable to extract article content. The website may be blocking our service or the URL might be invalid.',
-        'Invalid URL': 'Please enter a valid news article URL starting with http:// or https://',
-        'Analysis failed': 'Unable to analyze the article. Please try a different URL or check your internet connection.',
-        '403': 'Access denied. This website blocks automated analysis. Try a different news source.',
-        '404': 'Article not found. Please check the URL and try again.',
-        '500': 'Server error occurred. Please try again in a few moments.',
-        'No data available': 'The analysis completed but no data was returned. This might be a temporary issue.',
-        'Invalid response format': 'The server returned an unexpected response. Please try again.'
-    };
-    
-    // Find matching error pattern
-    let displayMessage = message;
-    for (const [pattern, friendlyMessage] of Object.entries(errorMappings)) {
-        if (message.toLowerCase().includes(pattern.toLowerCase())) {
-            displayMessage = friendlyMessage;
-            break;
-        }
-    }
-    
-    errorEl.textContent = displayMessage;
-    errorEl.classList.add('active');
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-        hideError();
-    }, 10000);
-}
-
-function hideError() {
-    const errorEl = document.getElementById('errorMessage');
-    errorEl.classList.remove('active');
-}
-
-function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('active');
-}
-
-function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
-}
-
-function hideResults() {
-    document.getElementById('resultsSection').classList.remove('active');
-}
-
-function getScoreColor(score) {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#3B82F6';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
-}
-
-function getDimensionColor(score) {
-    if (score >= 80) return 'var(--accent)';
-    if (score >= 60) return 'var(--info)';
-    if (score >= 40) return 'var(--warning)';
-    return 'var(--danger)';
-}
-
-function getBiasColor(score) {
-    // Lower bias score is better
-    if (score <= 20) return 'var(--accent)';
-    if (score <= 50) return 'var(--warning)';
-    return 'var(--danger)';
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-}
-
-function formatFactorName(factor) {
-    return factor
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function formatDimensionName(dimension) {
-    if (!dimension || typeof dimension !== 'string') return 'Unknown';
-    
-    const dimensionNames = {
-        'political': 'Political Bias',
-        'ideological': 'Ideological Bias',
-        'commercial': 'Commercial Bias',
-        'sensational': 'Sensationalism',
-        'cultural': 'Cultural Bias',
-        'confirmation': 'Confirmation Bias',
-        'partisan': 'Partisan Bias',
-        'corporate': 'Corporate Bias'
-    };
-    
-    const key = dimension.toLowerCase().trim();
-    return dimensionNames[key] || dimension
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function formatStatus(status) {
-    const statusNames = {
-        'verified': 'Verified',
-        'true': 'True',
-        'false': 'False',
-        'unverified': 'Unverified',
-        'partially_true': 'Partially True',
-        'misleading': 'Misleading',
-        'mostly_true': 'Mostly True',
-        'mostly_false': 'Mostly False'
-    };
-    return statusNames[status.toLowerCase()] || status;
-}
-
-// Helper functions for missing level calculations
-function getCredibilityLevel(score) {
-    if (score >= 80) return 'Very High';
-    if (score >= 60) return 'High';
-    if (score >= 40) return 'Moderate';
-    if (score >= 20) return 'Low';
-    return 'Very Low';
-}
-
-function getBiasLevel(score) {
-    if (score <= 20) return 'Minimal';
-    if (score <= 40) return 'Low';
-    if (score <= 60) return 'Moderate';
-    if (score <= 80) return 'High';
-    return 'Extreme';
-}
-
-function getTransparencyLevel(score) {
-    if (score >= 80) return 'Highly Transparent';
-    if (score >= 60) return 'Transparent';
-    if (score >= 40) return 'Partially Transparent';
-    return 'Low Transparency';
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Enhanced PDF download
-async function downloadPDF() {
-    if (!currentAnalysis || !currentAnalysis.analysis || !currentAnalysis.article) {
-        showError('No analysis available to download');
-        return;
-    }
-    
-    showLoading();
-    
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        let yPosition = 20;
-        const lineHeight = 7;
-        const pageHeight = doc.internal.pageSize.height;
-        const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
-        const contentWidth = pageWidth - (2 * margin);
-        
-        // Helper function to add text with page break check
-        function addText(text, fontSize = 12, fontStyle = 'normal', indent = 0) {
-            doc.setFontSize(fontSize);
-            doc.setFont(undefined, fontStyle);
-            
-            const lines = doc.splitTextToSize(text, contentWidth - indent);
-            
-            lines.forEach(line => {
-                if (yPosition > pageHeight - 30) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-                doc.text(line, margin + indent, yPosition);
-                yPosition += fontSize === 12 ? lineHeight : lineHeight + 2;
-            });
-        }
-        
-        // Title Page
-        doc.setFillColor(99, 102, 241);
-        doc.rect(0, 0, pageWidth, 60, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.setFont(undefined, 'bold');
-        doc.text('TruthLens AI Analysis Report', pageWidth / 2, 30, { align: 'center' });
-        
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'normal');
-        doc.text('Professional News Verification', pageWidth / 2, 45, { align: 'center' });
-        
-        doc.setTextColor(0, 0, 0);
-        yPosition = 80;
-        
-        // Executive Summary
-        addText('EXECUTIVE SUMMARY', 18, 'bold');
-        yPosition += 5;
-        
-        addText(`URL: ${document.getElementById('urlInput').value}`, 12);
-        addText(`Analysis Date: ${new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })}`, 12);
-        
-        yPosition += 10;
-        
-        // Trust Score Box
-        doc.setFillColor(240, 240, 240);
-        doc.rect(margin, yPosition, contentWidth, 40, 'F');
-        
-        // Calculate adjusted trust score
-        const adjustedScore = calculateAdjustedTrustScore(currentAnalysis.detailed_analysis || {});
-        const displayScore = adjustedScore || currentAnalysis.analysis.trust_score || 0;
-        
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Overall Trust Score: ${displayScore}/100`, margin + 10, yPosition + 15);
-        
-        doc.setFontSize(14);
-        doc.text(`Trust Level: ${getTrustLevel(displayScore)}`, margin + 10, yPosition + 30);
-        
-        yPosition += 50;
-        
-        // Article Information
-        addText('ARTICLE INFORMATION', 16, 'bold');
-        yPosition += 5;
-        
-        addText(`Title: ${currentAnalysis.article.title || 'Unknown'}`, 12);
-        addText(`Author: ${currentAnalysis.article.author || 'Unknown'}`, 12);
-        addText(`Source: ${currentAnalysis.article.domain || 'Unknown'}`, 12);
-        addText(`Publication Date: ${formatDate(currentAnalysis.article.publish_date)}`, 12);
-        addText(`Word Count: ${currentAnalysis.article.word_count || 'Unknown'}`, 12);
-        
-        yPosition += 10;
-        
-        // Trust Score Analysis
-        addText('TRUST SCORE ANALYSIS', 16, 'bold');
-        yPosition += 5;
-        addText(getTrustSummaryExplanation(displayScore, getTrustLevel(displayScore), currentAnalysis.analysis), 12);
-        
-        yPosition += 10;
-        
-        // Component Scores
-        addText('TRUST COMPONENTS', 16, 'bold');
-        yPosition += 5;
-        
-        const detailedAnalysis = currentAnalysis.detailed_analysis || {};
-        const components = [
-            {
-                name: 'Source Credibility',
-                score: extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
-                explanation: getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
-            },
-            {
-                name: 'Author Credibility',
-                score: extractScore(detailedAnalysis.author_analyzer, ['credibility_score', 'score']),
-                explanation: getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
-            },
-            {
-                name: 'Objectivity Score',
-                score: 100 - extractScore(detailedAnalysis.bias_detector, ['overall_bias_score', 'bias_score'], 0),
-                explanation: getObjectivityExplanation(detailedAnalysis.bias_detector)
-            },
-            {
-                name: 'Fact Accuracy',
-                score: calculateFactAccuracy(detailedAnalysis.fact_checker),
-                explanation: getFactAccuracyExplanation(detailedAnalysis.fact_checker)
-            }
-        ];
-        
-        components.forEach(comp => {
-            addText(`${comp.name}: ${comp.score}%`, 12, 'bold');
-            addText(comp.explanation, 11, 'normal', 5);
-            yPosition += 3;
-        });
-        
-        // Key Findings
-        if (currentAnalysis.analysis.key_findings && currentAnalysis.analysis.key_findings.length > 0) {
-            yPosition += 10;
-            addText('KEY FINDINGS', 16, 'bold');
-            yPosition += 5;
-            
-            currentAnalysis.analysis.key_findings.forEach((finding, index) => {
-                const findingText = `${index + 1}. ${finding.text || finding.finding}`;
-                const severity = finding.severity === 'positive' ? '✓' : 
-                               finding.severity === 'high' ? '⚠' : '•';
-                addText(`${severity} ${findingText}`, 12, 'normal', 5);
-            });
-        }
-        
-        // New page for detailed analysis
-        doc.addPage();
-        yPosition = 20;
-        
-        addText('DETAILED ANALYSIS', 18, 'bold');
-        yPosition += 10;
-        
-        // Process each service
-        services.forEach(service => {
-            const serviceData = detailedAnalysis[service.id];
-            if (!serviceData || Object.keys(serviceData).length === 0) return;
-            
-            // Add page break if needed
-            if (yPosition > pageHeight - 80) {
-                doc.addPage();
-                yPosition = 20;
-            }
-            
-            // Service header
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, yPosition, contentWidth, 10, 'F');
-            addText(service.name.toUpperCase(), 14, 'bold');
-            yPosition += 5;
-            
-            // Service-specific content
-            const previewData = getServicePreviewData(service.id, serviceData);
-            previewData.forEach(item => {
-                addText(`${item.label}: ${item.value}`, 12);
-            });
-            
-            yPosition += 10;
-        });
-        
-        // Footer
-        doc.setFontSize(10);
-        doc.setTextColor(128, 128, 128);
-        const totalPages = doc.internal.getNumberOfPages();
-        
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            doc.text(
-                `Page ${i} of ${totalPages} | Generated by TruthLens AI | ${new Date().toLocaleDateString()}`,
-                pageWidth / 2,
-                pageHeight - 10,
-                { align: 'center' }
-            );
-        }
-        
-        // Save the PDF
-        const fileName = `truthlens-analysis-${Date.now()}.pdf`;
-        doc.save(fileName);
-        
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        showError('Failed to generate PDF report. Please try again.');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Share results
-function shareResults() {
-    if (!currentAnalysis || !currentAnalysis.analysis) {
-        showError('No analysis available to share');
-        return;
-    }
-    
-    const adjustedScore = calculateAdjustedTrustScore(currentAnalysis.detailed_analysis || {});
-    const trustScore = adjustedScore || currentAnalysis.analysis.trust_score || 0;
-    const articleTitle = currentAnalysis.article.title || 'Article';
-    
-    const shareText = `TruthLens AI Analysis: "${articleTitle}" scored ${trustScore}/100 for trustworthiness. Check out the detailed analysis:`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: 'TruthLens AI Analysis',
-            text: shareText,
-            url: window.location.href
-        }).catch(err => {
-            console.log('Share cancelled:', err);
-        });
-    } else {
-        // Fallback: Copy link to clipboard
-        const url = window.location.href;
-        navigator.clipboard.writeText(`${shareText} ${url}`).then(() => {
-            showError('Analysis link copied to clipboard!');
-            setTimeout(hideError, 3000);
-        }).catch(() => {
-            showError('Sharing is not supported on this device');
-        });
-    }
-}
-
-// Toggle accordion function - MUST BE DEFINED BEFORE createServiceAccordionItem
-function toggleAccordion(serviceId, event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-    
-    // Save current scroll position
-    const currentScrollY = window.scrollY;
-    
-    const item = document.getElementById(`service-${serviceId}`);
-    const isActive = item.classList.contains('active');
-    
-    // Close all other items
-    document.querySelectorAll('.service-accordion-item').forEach(el => {
-        if (el.id !== `service-${serviceId}`) {
-            el.classList.remove('active');
-        }
-    });
-    
-    // Toggle current item
-    item.classList.toggle('active');
-    
-    // Restore scroll position
-    window.scrollTo(0, currentScrollY);
-    
-    // If opening, create/update visualizations after animation
-    if (!isActive) {
-        setTimeout(() => {
-            updateServiceVisualizations(serviceId);
-        }, 300);
-    }
-}
-
-// Make toggleAccordion function global so onclick can access it
-window.toggleAccordion = toggleAccordion;
-
-// Add shake animation
-const shakeStyle = document.createElement('style');
-shakeStyle.innerHTML = `
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-10px); }
-        75% { transform: translateX(10px); }
-    }
-    
-    /* Trust factor styles for enhanced display */
-    .trust-factor-detailed {
-        background: white;
-        border-radius: var(--radius);
-        padding: var(--space-md);
-        margin-bottom: var(--space-md);
-        box-shadow: var(--shadow-sm);
-        transition: all 0.3s ease;
-        opacity: 0;
-        animation: fadeInUp 0.6s forwards;
-    }
-    
-    .trust-factor-detailed:hover {
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
-    }
-    
-    .factor-main {
-        margin-bottom: var(--space-md);
-    }
-    
-    .factor-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--space-sm);
-    }
-    
-    .factor-info {
-        display: flex;
-        align-items: center;
-        gap: var(--space-sm);
-    }
-    
-    .factor-info i {
-        font-size: 1.25rem;
-    }
-    
-    .factor-name {
-        font-weight: 600;
-        font-size: 1rem;
-        color: var(--gray-900);
-    }
-    
-    .factor-score-display {
-        text-align: right;
-    }
-    
-    .factor-score-number {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--gray-900);
-    }
-    
-    .factor-score-label {
-        font-size: 0.75rem;
-        color: var(--gray-600);
-    }
-    
-    .factor-bar {
-        height: 8px;
-        background: var(--gray-200);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .factor-fill {
-        height: 100%;
-        transition: all 1s ease-out;
-        border-radius: 4px;
-    }
-    
-    .factor-analysis-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--space-sm);
-    }
-    
-    .analysis-box {
-        background: var(--gray-50);
-        border-radius: var(--radius-sm);
-        padding: var(--space-sm);
-        border-left: 3px solid var(--primary);
-    }
-    
-    .analysis-box-header {
-        display: flex;
-        align-items: center;
-        gap: var(--space-xs);
-        margin-bottom: var(--space-xs);
-    }
-    
-    .analysis-box-header i {
-        color: var(--primary);
-        font-size: 0.875rem;
-    }
-    
-    .analysis-box-header h5 {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        margin: 0;
-    }
-    
-    .analysis-box p {
-        font-size: 0.813rem;
-        color: var(--gray-700);
-        line-height: 1.5;
-        margin: 0;
-    }
-    
-    .score-high { color: var(--accent); }
-    .score-medium { color: var(--info); }
-    .score-low { color: var(--warning); }
-    .score-very-low { color: var(--danger); }
-    
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-`;
-document.head.appendChild(shakeStyle);
-
-// Console branding - UPDATED FOR 7 SERVICES
-console.log('%cTruthLens AI', 'font-size: 24px; font-weight: bold; color: #6366f1;');
-console.log('%cProfessional News Analysis', 'font-size: 14px; color: #6b7280;');
-console.log('%cPowered by 7 Specialized AI Services', 'font-size: 12px; color: #10b981;');
-console.log('%cType window.debugData in console after analysis to explore the data', 'font-size: 12px; color: #f59e0b');
-console.log('%cType window.rawResponse to see the raw API response', 'font-size: 12px; color: #f59e0b');// truthlens.js - Merged JavaScript for TruthLens AI
+// truthlens.js - Merged JavaScript for TruthLens AI
 // This file combines:
 // 1. Configuration and service definitions (from index.html)
 // 2. DataStructureMapper class (from index.html)
@@ -2025,7 +661,7 @@ class AnalysisComponents {
         }
         
         if (biasData.manipulation_tactics?.length > 0) {
-            findings.push(`${biasData.manipulation_tactics.length} manipulation tactics detected`);
+            findings.push(`${biasData.manipulation_tactics.length} manipulation techniques detected`);
         }
         
         if (biasData.loaded_phrases?.length > 0) {
@@ -3155,44 +1791,339 @@ function displayEnhancedTrustScore(analysis, fullData) {
     createEnhancedTrustGauge(score);
 }
 
-// Helper function to extract score from nested data
-function extractScore(data, fields, defaultValue = 0) {
-    if (!data || typeof data !== 'object') return defaultValue;
-    
-    for (const field of fields) {
-        const fieldParts = field.split('.');
-        let value = data;
-        
-        for (const part of fieldParts) {
-            if (value && typeof value === 'object' && part in value) {
-                value = value[part];
-            } else {
-                value = undefined;
-                break;
-            }
-        }
-        
-        if (value !== undefined && value !== null) {
-            const numValue = Number(value);
-            if (!isNaN(numValue)) {
-                return numValue;
-            }
-        }
+// ============================================================================
+// MISSING FUNCTIONS - Added to complete the file
+// ============================================================================
+
+// Animate trust score number
+function animateTrustScore(targetScore) {
+    const scoreEl = document.getElementById('trustScoreNumber');
+    if (!scoreEl) {
+        console.error('trustScoreNumber element not found');
+        return;
     }
     
-    return defaultValue;
+    let currentScore = 0;
+    const increment = targetScore / 50;
+    const interval = setInterval(() => {
+        currentScore += increment;
+        if (currentScore >= targetScore) {
+            currentScore = targetScore;
+            clearInterval(interval);
+        }
+        scoreEl.textContent = Math.round(currentScore);
+        scoreEl.style.color = getScoreColor(currentScore);
+    }, 20);
 }
 
-// Get trust level based on score
-function getTrustLevel(score) {
-    if (score >= 80) return 'Very High';
-    if (score >= 60) return 'High';
-    if (score >= 40) return 'Moderate';
-    if (score >= 20) return 'Low';
-    return 'Very Low';
+// Update trust level indicator
+function updateTrustLevelIndicator(score, level) {
+    const iconEl = document.getElementById('trustLevelIcon');
+    const textEl = document.getElementById('trustLevelText');
+    const indicatorEl = document.getElementById('trustLevelIndicator');
+    
+    if (!iconEl || !textEl || !indicatorEl) {
+        console.error('Trust level indicator elements not found');
+        return;
+    }
+    
+    // Set text
+    textEl.textContent = level;
+    
+    // Set color and icon based on score
+    if (score >= 80) {
+        iconEl.className = 'fas fa-check-circle trust-level-icon';
+        iconEl.style.color = 'var(--accent)';
+        indicatorEl.style.background = 'rgba(16, 185, 129, 0.1)';
+        indicatorEl.style.border = '2px solid var(--accent)';
+    } else if (score >= 60) {
+        iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+        iconEl.style.color = 'var(--info)';
+        indicatorEl.style.background = 'rgba(59, 130, 246, 0.1)';
+        indicatorEl.style.border = '2px solid var(--info)';
+    } else if (score >= 40) {
+        iconEl.className = 'fas fa-exclamation-triangle trust-level-icon';
+        iconEl.style.color = 'var(--warning)';
+        indicatorEl.style.background = 'rgba(245, 158, 11, 0.1)';
+        indicatorEl.style.border = '2px solid var(--warning)';
+    } else {
+        iconEl.className = 'fas fa-times-circle trust-level-icon';
+        iconEl.style.color = 'var(--danger)';
+        indicatorEl.style.background = 'rgba(239, 68, 68, 0.1)';
+        indicatorEl.style.border = '2px solid var(--danger)';
+    }
 }
 
-// Get contextual trust summary explanation
+// Create enhanced trust gauge
+function createEnhancedTrustGauge(score) {
+    const canvas = document.getElementById('trustGauge');
+    if (!canvas) {
+        console.error('trustGauge canvas element not found');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Ensure charts object exists
+    if (typeof charts === 'undefined') {
+        window.charts = {};
+    }
+    
+    if (charts.trustGauge) {
+        charts.trustGauge.destroy();
+    }
+    
+    // Create gradient based on score
+    const gradient = ctx.createLinearGradient(0, 0, 300, 0);
+    if (score >= 80) {
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(1, '#059669');
+    } else if (score >= 60) {
+        gradient.addColorStop(0, '#3b82f6');
+        gradient.addColorStop(1, '#2563eb');
+    } else if (score >= 40) {
+        gradient.addColorStop(0, '#f59e0b');
+        gradient.addColorStop(1, '#d97706');
+    } else {
+        gradient.addColorStop(0, '#ef4444');
+        gradient.addColorStop(1, '#dc2626');
+    }
+    
+    charts.trustGauge = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [score, 100 - score],
+                backgroundColor: [gradient, '#E5E7EB'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            circumference: 180,
+            rotation: -90,
+            cutout: '80%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        },
+        plugins: [{
+            id: 'text',
+            afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                const centerX = chart.width / 2;
+                const centerY = chart.height - 20;
+                
+                ctx.save();
+                
+                // Draw score number
+                ctx.font = 'bold 36px -apple-system, sans-serif';
+                ctx.fillStyle = gradient;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(score, centerX, centerY);
+                
+                // Draw /100
+                ctx.font = 'normal 16px -apple-system, sans-serif';
+                ctx.fillStyle = '#6b7280';
+                ctx.fillText('/100', centerX + 35, centerY);
+                
+                ctx.restore();
+            }
+        }]
+    });
+}
+
+// Create service accordion item
+function createServiceAccordionItem(service, serviceData, index) {
+    const item = document.createElement('div');
+    item.className = 'service-accordion-item';
+    item.id = `service-${service.id}`;
+    
+    // Add data state indicator
+    const hasData = serviceData && Object.keys(serviceData).length > 0;
+    const dataStateClass = hasData ? '' : 'no-data';
+    
+    // Extract preview data
+    const previewData = getServicePreviewData(service.id, serviceData);
+    
+    item.innerHTML = `
+        <div class="service-accordion-header" onclick="toggleAccordion('${service.id}', event)">
+            <div class="data-state-indicator ${dataStateClass}"></div>
+            <div class="service-header-content">
+                <div class="service-icon-wrapper">
+                    <i class="fas ${service.icon}"></i>
+                </div>
+                <div class="service-info">
+                    <h3 class="service-name">${service.name}</h3>
+                    <p class="service-description">${service.description}</p>
+                    <div class="service-preview">
+                        ${previewData.map(preview => `
+                            <div class="preview-item">
+                                <span class="preview-label">${preview.label}:</span>
+                                <span class="preview-value" style="color: ${preview.color || 'inherit'}">
+                                    ${preview.value}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            ${service.isPro && !isPro ? 
+                '<div class="pro-badge"><i class="fas fa-crown"></i> Pro</div>' : 
+                '<i class="fas fa-chevron-down accordion-icon"></i>'
+            }
+        </div>
+        <div class="service-accordion-content">
+            <div class="service-content-inner">
+                ${hasData ? 
+                    renderDetailedServiceContent(service.id, serviceData) : 
+                    '<div class="no-data-message">Service analysis unavailable for this article.</div>'
+                }
+            </div>
+        </div>
+    `;
+    
+    return item;
+}
+
+// Get service preview data
+function getServicePreviewData(serviceId, data) {
+    if (!data || Object.keys(data).length === 0) {
+        return [{ label: 'Status', value: 'Not Available', color: '#6b7280' }];
+    }
+    
+    switch (serviceId) {
+        case 'source_credibility':
+            const sourceScore = extractScore(data, ['credibility_score', 'score']);
+            const sourceName = data.source_name || data.name || 'Unknown';
+            return [
+                { label: 'Source', value: sourceName },
+                { label: 'Score', value: `${sourceScore}%`, color: getScoreColor(sourceScore) }
+            ];
+            
+        case 'author_analyzer':
+            const authorScore = extractScore(data, ['credibility_score', 'score']);
+            const authorName = data.author_name || data.name || 'Unknown';
+            const verified = data.verification_status?.verified ? '✓' : '✗';
+            return [
+                { label: 'Author', value: authorName },
+                { label: 'Verified', value: verified, color: verified === '✓' ? '#10b981' : '#ef4444' },
+                { label: 'Score', value: `${authorScore}%`, color: getScoreColor(authorScore) }
+            ];
+            
+        case 'bias_detector':
+            const biasScore = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
+            const objectivity = 100 - biasScore;
+            const biasLevel = data.bias_level || getBiasLevel(biasScore);
+            return [
+                { label: 'Bias Level', value: biasLevel, color: getBiasColor(biasScore) },
+                { label: 'Objectivity', value: `${objectivity}%`, color: getScoreColor(objectivity) }
+            ];
+            
+        case 'fact_checker':
+            const normalized = DataStructureMapper.normalizeFactCheckerData(data);
+            const accuracy = normalized.claims_checked > 0 ? 
+                Math.round((normalized.verified_count / normalized.claims_checked) * 100) : 0;
+            return [
+                { label: 'Claims Checked', value: normalized.claims_checked },
+                { label: 'Accuracy', value: `${accuracy}%`, color: getScoreColor(accuracy) }
+            ];
+            
+        case 'transparency_analyzer':
+            const transparencyScore = extractScore(data, ['transparency_score', 'score']);
+            const indicators = [
+                data.has_author !== false,
+                data.has_date !== false,
+                data.has_sources !== false
+            ].filter(Boolean).length;
+            return [
+                { label: 'Transparency', value: `${transparencyScore}%`, color: getScoreColor(transparencyScore) },
+                { label: 'Indicators', value: `${indicators}/3` }
+            ];
+            
+        case 'manipulation_detector':
+            const manipulationLevel = data.manipulation_level || data.level || 'Unknown';
+            const techniquesCount = data.techniques_count || 
+                (data.techniques && data.techniques.length) || 0;
+            return [
+                { label: 'Level', value: manipulationLevel, 
+                  color: manipulationLevel.toLowerCase() === 'low' || manipulationLevel.toLowerCase() === 'minimal' ? '#10b981' : 
+                         manipulationLevel.toLowerCase() === 'moderate' ? '#f59e0b' : '#ef4444' },
+                { label: 'Techniques', value: techniquesCount }
+            ];
+            
+        case 'content_analyzer':
+            const qualityScore = extractScore(data, ['quality_score', 'score']);
+            const readabilityScore = extractScore(data.readability || {}, ['score']);
+            return [
+                { label: 'Quality', value: `${qualityScore}%`, color: getScoreColor(qualityScore) },
+                { label: 'Readability', value: `${readabilityScore}%`, color: getScoreColor(readabilityScore) }
+            ];
+            
+        default:
+            return [{ label: 'Status', value: 'Analysis Complete' }];
+    }
+}
+
+// Update service visualizations
+function updateServiceVisualizations(serviceId) {
+    const serviceData = currentAnalysis?.detailed_analysis?.[serviceId] || {};
+    if (!serviceData || Object.keys(serviceData).length === 0) return;
+    
+    // Find all canvases in this service section
+    const canvases = document.querySelectorAll(`#service-${serviceId} canvas`);
+    canvases.forEach(canvas => {
+        const chartType = canvas.getAttribute('data-chart-type');
+        const chartData = canvas.getAttribute('data-chart-data');
+        if (chartType && chartData) {
+            try {
+                createServiceChart(canvas, chartType, JSON.parse(chartData));
+            } catch (e) {
+                console.error(`Failed to create chart for ${serviceId}:`, e);
+            }
+        }
+    });
+}
+
+// Create service chart
+function createServiceChart(canvas, type, data) {
+    const ctx = canvas.getContext('2d');
+    const chartId = canvas.id;
+    
+    // Ensure charts object exists
+    if (typeof charts === 'undefined') {
+        window.charts = {};
+    }
+    
+    // Destroy existing chart
+    if (charts[chartId]) {
+        charts[chartId].destroy();
+    }
+    
+    // Create new chart based on type
+    let config;
+    switch (type) {
+        case 'radar':
+            config = createRadarChartConfig(data);
+            break;
+        case 'polarArea':
+            config = createPolarAreaChartConfig(data);
+            break;
+        case 'bar':
+            config = createBarChartConfig(data);
+            break;
+        default:
+            console.error('Unknown chart type:', type);
+            return;
+    }
+    
+    charts[chartId] = new Chart(ctx, config);
+}
+
+// Get trust summary explanation
 function getTrustSummaryExplanation(score, level, analysis) {
     if (score >= 80) {
         return "This article demonstrates high credibility across all dimensions. The source is well-established, the author has verified credentials, minimal bias was detected, and factual claims have been verified. You can generally trust the information presented.";
@@ -3205,7 +2136,7 @@ function getTrustSummaryExplanation(score, level, analysis) {
     }
 }
 
-// Enhanced narrative explanations for each service
+// Get source credibility explanation
 function getSourceCredibilityExplanation(data) {
     if (!data || Object.keys(data).length === 0) return "Unable to verify source credibility";
     
@@ -3213,139 +2144,504 @@ function getSourceCredibilityExplanation(data) {
     const sourceName = data.source_name || data.name || "This publication";
     const rating = data.rating || data.credibility_level || getCredibilityLevel(score);
     
-    // More narrative explanations
     if (score >= 80) {
-        return `${sourceName} is a highly credible news source with ${rating} rating. They maintain strict editorial standards, employ professional fact-checkers, and have a long history of accurate reporting. Corrections are issued promptly when errors occur.`;
+        return `${sourceName} is a highly credible news source with ${rating} rating. They maintain strict editorial standards and have a strong track record.`;
     } else if (score >= 60) {
-        return `${sourceName} has a ${rating} credibility rating. While generally reliable, they've had occasional issues with accuracy or bias. Most content is trustworthy, but important claims should be verified with additional sources.`;
+        return `${sourceName} has a ${rating} credibility rating. Generally reliable but exercise some caution.`;
     } else if (score >= 40) {
-        return `${sourceName} has a ${rating} credibility rating with documented issues. They may mix factual reporting with opinion, have weak fact-checking processes, or show consistent bias. Exercise caution and verify all claims independently.`;
+        return `${sourceName} has a ${rating} credibility rating with documented issues. Verify claims independently.`;
     } else if (score > 0) {
-        return `${sourceName} is rated as having ${rating} credibility. This source has a poor track record for accuracy, may spread misinformation, or lacks basic journalistic standards. Information from this source should not be trusted without extensive verification.`;
+        return `${sourceName} is rated as having ${rating} credibility. Information should not be trusted without verification.`;
     } else {
-        return "This source could not be found in our database of known news publications. Without verification history, treat all claims with extreme caution and seek information from established news sources.";
+        return "This source could not be found in our database. Treat all claims with extreme caution.";
     }
 }
 
+// Get author credibility explanation
 function getAuthorCredibilityExplanation(data) {
     if (!data || Object.keys(data).length === 0) return "No author information available for verification";
     
     const score = extractScore(data, ['credibility_score', 'score']);
     const authorName = data.author_name || data.name || "The author";
-    const verified = data.verification_status?.verified;
-    
-    // Enhanced narrative with specific details
-    let explanation = "";
     
     if (score >= 80) {
-        explanation = `${authorName} is a highly credible journalist with verified credentials.`;
-        if (data.author_info?.position) {
-            explanation += ` They currently work as ${data.author_info.position}`;
-        }
-        if (data.professional_info?.years_experience) {
-            explanation += ` with ${data.professional_info.years_experience}+ years of experience`;
-        }
-        if (data.professional_info?.outlets?.length) {
-            explanation += `. Has published with ${data.professional_info.outlets.length} reputable news outlets`;
-        }
-        if (data.author_info?.expertise_areas?.length) {
-            explanation += ` and specializes in ${data.author_info.expertise_areas.join(', ')}`;
-        }
-        explanation += ". Their work consistently meets high journalistic standards.";
+        return `${authorName} is a highly credible journalist with verified credentials and extensive experience.`;
     } else if (score >= 60) {
-        explanation = `${authorName} has moderate credibility with some verified background in journalism.`;
-        if (data.professional_info?.outlets?.length) {
-            explanation += ` They've written for ${data.professional_info.outlets.length} publication${data.professional_info.outlets.length > 1 ? 's' : ''}`;
-        }
-        explanation += " Their experience appears legitimate, though limited information is available about their specific expertise in this topic area.";
+        return `${authorName} has moderate credibility with some verified background in journalism.`;
     } else if (score >= 40) {
-        explanation = `Limited information available about ${authorName}. `;
-        if (verified === false) {
-            explanation += "We could not verify their identity or professional credentials. ";
-        }
-        explanation += "This doesn't necessarily mean the reporting is inaccurate, but the lack of transparency about the author's background is concerning.";
+        return `Limited information available about ${authorName}. The lack of transparency is concerning.`;
     } else {
-        explanation = `${authorName} has no verifiable journalistic credentials or appears to be using a pseudonym. Without author accountability, this significantly reduces the article's credibility. Be especially cautious with claims that can't be independently verified.`;
+        return `${authorName} has no verifiable journalistic credentials. Be especially cautious with unverified claims.`;
     }
-    
-    return explanation;
 }
 
+// Get objectivity explanation
 function getObjectivityExplanation(data) {
     if (!data || Object.keys(data).length === 0) return "Bias analysis could not be completed";
     
     const biasScore = extractScore(data, ['overall_bias_score', 'bias_score'], 0);
     const objectivityScore = 100 - biasScore;
     
-    let explanation = "";
-    
     if (objectivityScore >= 80) {
-        explanation = "Excellent objectivity detected. The article presents facts without emotional manipulation, includes multiple viewpoints fairly, and avoids loaded language. ";
-        if (data.manipulation_tactics?.length === 0) {
-            explanation += "No manipulation tactics were found. ";
-        }
-        explanation += "This is straightforward news reporting that lets readers form their own opinions.";
+        return "Excellent objectivity detected. The article presents facts without emotional manipulation.";
     } else if (objectivityScore >= 60) {
-        explanation = "Generally objective reporting with some bias indicators. ";
-        if (data.dimensions?.political && extractScore(data.dimensions.political, ['score']) > 30) {
-            const lean = data.dimensions.political.lean || "one side";
-            explanation += `Shows slight preference for ${lean}. `;
-        }
-        if (data.loaded_phrases?.length > 0) {
-            explanation += `Found ${data.loaded_phrases.length} instances of emotionally charged language. `;
-        }
-        explanation += "The facts appear accurate but be aware of the subtle framing.";
+        return "Generally objective reporting with some bias indicators. Be aware of subtle framing.";
     } else if (objectivityScore >= 40) {
-        explanation = "Significant bias detected throughout the article. ";
-        if (data.manipulation_tactics?.length > 0) {
-            explanation += `Uses ${data.manipulation_tactics.length} manipulation techniques including ${data.manipulation_tactics.slice(0, 2).map(t => t.name || t.type).join(' and ')}. `;
-        }
-        explanation += "The article strongly promotes one perspective while dismissing others. Read critically and seek alternative viewpoints.";
+        return "Significant bias detected. The article strongly promotes one perspective.";
     } else {
-        explanation = "Extreme bias makes this more opinion/advocacy than news. ";
-        if (data.dimensions?.sensational && extractScore(data.dimensions.sensational, ['score']) > 70) {
-            explanation += "Heavy use of sensational language to provoke emotional responses. ";
-        }
-        explanation += "The article appears designed to persuade rather than inform. Not suitable as an objective news source.";
+        return "Extreme bias makes this more opinion than news. Not suitable as an objective source.";
     }
-    
-    return explanation;
 }
 
+// Get fact accuracy explanation
 function getFactAccuracyExplanation(factCheckerData) {
-    console.log('getFactAccuracyExplanation called with:', factCheckerData);
-    
-    if (!factCheckerData || Object.keys(factCheckerData).length === 0) return "Fact checking was not performed on this article";
+    if (!factCheckerData || Object.keys(factCheckerData).length === 0) {
+        return "Fact checking was not performed on this article";
+    }
     
     const normalized = DataStructureMapper.normalizeFactCheckerData(factCheckerData);
     const { claims_checked: total, verified_count: verified } = normalized;
     
     if (total === 0) {
-        return "No specific factual claims were found in this article to verify. This could indicate opinion-based content or general reporting without concrete claims.";
+        return "No specific factual claims were found to verify.";
     }
     
     const accuracy = Math.round((verified / total) * 100);
-    let explanation = `We analyzed ${total} factual claim${total > 1 ? 's' : ''} in this article. `;
     
     if (accuracy >= 80) {
-        explanation += `${verified} ${verified === 1 ? 'was' : 'were'} verified as accurate through trusted fact-checking databases and official sources. `;
-        if (total - verified > 0) {
-            explanation += `${total - verified} minor claim${total - verified > 1 ? 's' : ''} could not be fully verified but appear${total - verified === 1 ? 's' : ''} plausible. `;
-        }
-        explanation += "The article's factual foundation is solid and trustworthy.";
+        return `${verified} of ${total} factual claims verified as accurate. The article's facts are solid.`;
     } else if (accuracy >= 60) {
-        explanation += `${verified} ${verified === 1 ? 'was' : 'were'} confirmed as accurate, while ${total - verified} could not be verified. `;
-        explanation += "Some claims may be too recent, too specific, or lack available sources for verification. Exercise normal caution with unverified details.";
+        return `${verified} of ${total} claims verified. Some claims could not be confirmed.`;
     } else if (accuracy >= 40) {
-        explanation += `Only ${verified} ${verified === 1 ? 'was' : 'were'} verified as accurate. ${total - verified} claim${total - verified > 1 ? 's' : ''} either could not be confirmed or appear questionable. `;
-        explanation += "This raises concerns about the article's factual reliability. Cross-check important information before accepting or sharing.";
+        return `Only ${verified} of ${total} claims verified. Multiple unverified claims present.`;
     } else {
-        explanation += `Only ${verified} claim${verified !== 1 ? 's' : ''} could be verified. `;
-        if (factCheckerData.false_claims > 0) {
-            explanation += `${factCheckerData.false_claims} claim${factCheckerData.false_claims > 1 ? 's were' : ' was'} found to be false. `;
-        }
-        explanation += "This article contains significant factual errors or unverifiable information. Do not rely on it as a factual source.";
+        return `Major factual issues: only ${verified} of ${total} claims are accurate.`;
+    }
+}
+
+// Toggle accordion function - MUST BE DEFINED BEFORE createServiceAccordionItem
+function toggleAccordion(serviceId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
     
-    return explanation;
+    // Save current scroll position
+    const currentScrollY = window.scrollY;
+    
+    const item = document.getElementById(`service-${serviceId}`);
+    const isActive = item.classList.contains('active');
+    
+    // Close all other items
+    document.querySelectorAll('.service-accordion-item').forEach(el => {
+        if (el.id !== `service-${serviceId}`) {
+            el.classList.remove('active');
+        }
+    });
+    
+    // Toggle current item
+    item.classList.toggle('active');
+    
+    // Restore scroll position
+    window.scrollTo(0, currentScrollY);
+    
+    // If opening, create/update visualizations after animation
+    if (!isActive) {
+        setTimeout(() => {
+            updateServiceVisualizations(serviceId);
+        }, 300);
+    }
 }
+
+// Make toggleAccordion function global so onclick can access it
+window.toggleAccordion = toggleAccordion;
+
+// Enhanced PDF download
+async function downloadPDF() {
+    if (!currentAnalysis || !currentAnalysis.analysis || !currentAnalysis.article) {
+        showError('No analysis available to download');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yPosition = 20;
+        const lineHeight = 7;
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (2 * margin);
+        
+        // Helper function to add text with page break check
+        function addText(text, fontSize = 12, fontStyle = 'normal', indent = 0) {
+            doc.setFontSize(fontSize);
+            doc.setFont(undefined, fontStyle);
+            
+            const lines = doc.splitTextToSize(text, contentWidth - indent);
+            
+            lines.forEach(line => {
+                if (yPosition > pageHeight - 30) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                doc.text(line, margin + indent, yPosition);
+                yPosition += fontSize === 12 ? lineHeight : lineHeight + 2;
+            });
+        }
+        
+        // Title Page
+        doc.setFillColor(99, 102, 241);
+        doc.rect(0, 0, pageWidth, 60, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont(undefined, 'bold');
+        doc.text('TruthLens AI Analysis Report', pageWidth / 2, 30, { align: 'center' });
+        
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'normal');
+        doc.text('Professional News Verification', pageWidth / 2, 45, { align: 'center' });
+        
+        doc.setTextColor(0, 0, 0);
+        yPosition = 80;
+        
+        // Executive Summary
+        addText('EXECUTIVE SUMMARY', 18, 'bold');
+        yPosition += 5;
+        
+        addText(`URL: ${document.getElementById('urlInput').value}`, 12);
+        addText(`Analysis Date: ${new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}`, 12);
+        
+        yPosition += 10;
+        
+        // Trust Score Box
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, yPosition, contentWidth, 40, 'F');
+        
+        // Calculate adjusted trust score
+        const adjustedScore = calculateAdjustedTrustScore(currentAnalysis.detailed_analysis || {});
+        const displayScore = adjustedScore || currentAnalysis.analysis.trust_score || 0;
+        
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Overall Trust Score: ${displayScore}/100`, margin + 10, yPosition + 15);
+        
+        doc.setFontSize(14);
+        doc.text(`Trust Level: ${getTrustLevel(displayScore)}`, margin + 10, yPosition + 30);
+        
+        yPosition += 50;
+        
+        // Article Information
+        addText('ARTICLE INFORMATION', 16, 'bold');
+        yPosition += 5;
+        
+        addText(`Title: ${currentAnalysis.article.title || 'Unknown'}`, 12);
+        addText(`Author: ${currentAnalysis.article.author || 'Unknown'}`, 12);
+        addText(`Source: ${currentAnalysis.article.domain || 'Unknown'}`, 12);
+        addText(`Publication Date: ${formatDate(currentAnalysis.article.publish_date)}`, 12);
+        addText(`Word Count: ${currentAnalysis.article.word_count || 'Unknown'}`, 12);
+        
+        yPosition += 10;
+        
+        // Trust Score Analysis
+        addText('TRUST SCORE ANALYSIS', 16, 'bold');
+        yPosition += 5;
+        addText(getTrustSummaryExplanation(displayScore, getTrustLevel(displayScore), currentAnalysis.analysis), 12);
+        
+        yPosition += 10;
+        
+        // Component Scores
+        addText('TRUST COMPONENTS', 16, 'bold');
+        yPosition += 5;
+        
+        const detailedAnalysis = currentAnalysis.detailed_analysis || {};
+        const components = [
+            {
+                name: 'Source Credibility',
+                score: extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
+                explanation: getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
+            },
+            {
+                name: 'Author Credibility',
+                score: extractScore(detailedAnalysis.author_analyzer, ['credibility_score', 'score']),
+                explanation: getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
+            },
+            {
+                name: 'Objectivity Score',
+                score: 100 - extractScore(detailedAnalysis.bias_detector, ['overall_bias_score', 'bias_score'], 0),
+                explanation: getObjectivityExplanation(detailedAnalysis.bias_detector)
+            },
+            {
+                name: 'Fact Accuracy',
+                score: calculateFactAccuracy(detailedAnalysis.fact_checker),
+                explanation: getFactAccuracyExplanation(detailedAnalysis.fact_checker)
+            }
+        ];
+        
+        components.forEach(comp => {
+            addText(`${comp.name}: ${comp.score}%`, 12, 'bold');
+            addText(comp.explanation, 11, 'normal', 5);
+            yPosition += 3;
+        });
+        
+        // Key Findings
+        if (currentAnalysis.analysis.key_findings && currentAnalysis.analysis.key_findings.length > 0) {
+            yPosition += 10;
+            addText('KEY FINDINGS', 16, 'bold');
+            yPosition += 5;
+            
+            currentAnalysis.analysis.key_findings.forEach((finding, index) => {
+                const findingText = `${index + 1}. ${finding.text || finding.finding}`;
+                const severity = finding.severity === 'positive' ? '✓' : 
+                               finding.severity === 'high' ? '⚠' : '•';
+                addText(`${severity} ${findingText}`, 12, 'normal', 5);
+            });
+        }
+        
+        // New page for detailed analysis
+        doc.addPage();
+        yPosition = 20;
+        
+        addText('DETAILED ANALYSIS', 18, 'bold');
+        yPosition += 10;
+        
+        // Process each service
+        services.forEach(service => {
+            const serviceData = detailedAnalysis[service.id];
+            if (!serviceData || Object.keys(serviceData).length === 0) return;
+            
+            // Add page break if needed
+            if (yPosition > pageHeight - 80) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            // Service header
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPosition, contentWidth, 10, 'F');
+            addText(service.name.toUpperCase(), 14, 'bold');
+            yPosition += 5;
+            
+            // Service-specific content
+            const previewData = getServicePreviewData(service.id, serviceData);
+            previewData.forEach(item => {
+                addText(`${item.label}: ${item.value}`, 12);
+            });
+            
+            yPosition += 10;
+        });
+        
+        // Footer
+        doc.setFontSize(10);
+        doc.setTextColor(128, 128, 128);
+        const totalPages = doc.internal.getNumberOfPages();
+        
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.text(
+                `Page ${i} of ${totalPages} | Generated by TruthLens AI | ${new Date().toLocaleDateString()}`,
+                pageWidth / 2,
+                pageHeight - 10,
+                { align: 'center' }
+            );
+        }
+        
+        // Save the PDF
+        const fileName = `truthlens-analysis-${Date.now()}.pdf`;
+        doc.save(fileName);
+        
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        showError('Failed to generate PDF report. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Share results
+function shareResults() {
+    if (!currentAnalysis || !currentAnalysis.analysis) {
+        showError('No analysis available to share');
+        return;
+    }
+    
+    const adjustedScore = calculateAdjustedTrustScore(currentAnalysis.detailed_analysis || {});
+    const trustScore = adjustedScore || currentAnalysis.analysis.trust_score || 0;
+    const articleTitle = currentAnalysis.article.title || 'Article';
+    
+    const shareText = `TruthLens AI Analysis: "${articleTitle}" scored ${trustScore}/100 for trustworthiness. Check out the detailed analysis:`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'TruthLens AI Analysis',
+            text: shareText,
+            url: window.location.href
+        }).catch(err => {
+            console.log('Share cancelled:', err);
+        });
+    } else {
+        // Fallback: Copy link to clipboard
+        const url = window.location.href;
+        navigator.clipboard.writeText(`${shareText} ${url}`).then(() => {
+            showError('Analysis link copied to clipboard!');
+            setTimeout(hideError, 3000);
+        }).catch(() => {
+            showError('Sharing is not supported on this device');
+        });
+    }
+}
+
+// Add shake animation
+const shakeStyle = document.createElement('style');
+shakeStyle.innerHTML = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+    
+    /* Trust factor styles for enhanced display */
+    .trust-factor-detailed {
+        background: white;
+        border-radius: var(--radius);
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+        opacity: 0;
+        animation: fadeInUp 0.6s forwards;
+    }
+    
+    .trust-factor-detailed:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .factor-main {
+        margin-bottom: var(--space-md);
+    }
+    
+    .factor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-sm);
+    }
+    
+    .factor-info {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+    
+    .factor-info i {
+        font-size: 1.25rem;
+    }
+    
+    .factor-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--gray-900);
+    }
+    
+    .factor-score-display {
+        text-align: right;
+    }
+    
+    .factor-score-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+    
+    .factor-score-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+    }
+    
+    .factor-bar {
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .factor-fill {
+        height: 100%;
+        transition: all 1s ease-out;
+        border-radius: 4px;
+    }
+    
+    .factor-analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--space-sm);
+    }
+    
+    .analysis-box {
+        background: var(--gray-50);
+        border-radius: var(--radius-sm);
+        padding: var(--space-sm);
+        border-left: 3px solid var(--primary);
+    }
+    
+    .analysis-box-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        margin-bottom: var(--space-xs);
+    }
+    
+    .analysis-box-header i {
+        color: var(--primary);
+        font-size: 0.875rem;
+    }
+    
+    .analysis-box-header h5 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0;
+    }
+    
+    .analysis-box p {
+        font-size: 0.813rem;
+        color: var(--gray-700);
+        line-height: 1.5;
+        margin: 0;
+    }
+    
+    .score-high { color: var(--accent); }
+    .score-medium { color: var(--info); }
+    .score-low { color: var(--warning); }
+    .score-very-low { color: var(--danger); }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+document.head.appendChild(shakeStyle);
+
+// Console branding - UPDATED FOR 7 SERVICES
+console.log('%cTruthLens AI', 'font-size: 24px; font-weight: bold; color: #6366f1;');
+console.log('%cProfessional News Analysis', 'font-size: 14px; color: #6b7280;');
+console.log('%cPowered by 7 Specialized AI Services', 'font-size: 12px; color: #10b981;');
+console.log('%cType window.debugData in console after analysis to explore the data', 'font-size: 12px; color: #f59e0b');
+console.log('%cType window.rawResponse to see the raw API response', 'font-size: 12px; color: #f59e0b');
