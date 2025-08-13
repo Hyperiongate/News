@@ -1182,6 +1182,40 @@ function shareResults() {
     }
 }
 
+// Toggle accordion function - MUST BE DEFINED BEFORE createServiceAccordionItem
+function toggleAccordion(serviceId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    // Save current scroll position
+    const currentScrollY = window.scrollY;
+    
+    const item = document.getElementById(`service-${serviceId}`);
+    const isActive = item.classList.contains('active');
+    
+    // Close all other items
+    document.querySelectorAll('.service-accordion-item').forEach(el => {
+        if (el.id !== `service-${serviceId}`) {
+            el.classList.remove('active');
+        }
+    });
+    
+    // Toggle current item
+    item.classList.toggle('active');
+    
+    // Restore scroll position
+    window.scrollTo(0, currentScrollY);
+    
+    // If opening, create/update visualizations after animation
+    if (!isActive) {
+        setTimeout(() => {
+            updateServiceVisualizations(serviceId);
+        }, 300);
+    }
+}
+
 // Make toggleAccordion function global so onclick can access it
 window.toggleAccordion = toggleAccordion;
 
@@ -2439,37 +2473,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlInputWrapper = document.getElementById('urlInputWrapper');
     const textInputWrapper = document.getElementById('textInputWrapper');
     
-    modeBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const mode = this.getAttribute('data-mode');
-            
-            // Update active states
-            modeBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Toggle explanations
-            if (mode === 'url') {
-                urlExplanation.classList.add('active');
-                textExplanation.classList.remove('active');
-                urlInputWrapper.classList.add('active');
-                textInputWrapper.classList.remove('active');
-                truthLensApp.currentTab = 'url';
-            } else {
-                urlExplanation.classList.remove('active');
-                textExplanation.classList.add('active');
-                urlInputWrapper.classList.remove('active');
-                textInputWrapper.classList.add('active');
-                truthLensApp.currentTab = 'text';
-            }
+    if (modeBtns.length > 0) {
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const mode = this.getAttribute('data-mode');
+                
+                // Update active states
+                modeBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Toggle explanations
+                if (mode === 'url') {
+                    if (urlExplanation) urlExplanation.classList.add('active');
+                    if (textExplanation) textExplanation.classList.remove('active');
+                    if (urlInputWrapper) urlInputWrapper.classList.add('active');
+                    if (textInputWrapper) textInputWrapper.classList.remove('active');
+                    window.truthLensApp.currentTab = 'url';
+                } else {
+                    if (urlExplanation) urlExplanation.classList.remove('active');
+                    if (textExplanation) textExplanation.classList.add('active');
+                    if (urlInputWrapper) urlInputWrapper.classList.remove('active');
+                    if (textInputWrapper) textInputWrapper.classList.add('active');
+                    window.truthLensApp.currentTab = 'text';
+                }
+            });
         });
-    });
+    }
     
     // Reset button functionality
     const resetBtn = document.getElementById('resetBtn');
     const resetTextBtn = document.getElementById('resetTextBtn');
     
     function resetAnalysis() {
-        truthLensApp.resetAnalysis();
+        if (window.truthLensApp) {
+            window.truthLensApp.resetAnalysis();
+        }
     }
     
     if (resetBtn) resetBtn.addEventListener('click', resetAnalysis);
@@ -2478,25 +2516,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for URL input Enter key
     const urlInput = document.getElementById('urlInput');
     if (urlInput) {
+        console.log('URL input found, adding enter key listener');
         urlInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                console.log('Enter key pressed in URL input');
+                e.preventDefault();
                 analyzeArticle();
             }
         });
+    } else {
+        console.error('URL input not found!');
     }
     
     // Add click handler for analyze button
     const analyzeBtn = document.getElementById('analyzeBtn');
     if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', function() {
+        console.log('Analyze button found, adding click listener');
+        analyzeBtn.addEventListener('click', function(e) {
+            console.log('Analyze button clicked');
+            e.preventDefault();
             analyzeArticle();
         });
+    } else {
+        console.error('Analyze button not found!');
     }
     
     // Analyze text button
     const analyzeTextBtn = document.getElementById('analyzeTextBtn');
     if (analyzeTextBtn) {
-        analyzeTextBtn.addEventListener('click', function() {
+        analyzeTextBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             const text = document.getElementById('textInput').value.trim();
             if (!text) {
                 showError('Please paste article text to analyze');
@@ -2508,7 +2557,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add click handlers for example buttons
     document.querySelectorAll('.example-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             tryExample(this.getAttribute('data-url'));
         });
     });
@@ -2516,13 +2566,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add click handlers for download and share buttons
     const downloadBtn = document.getElementById('downloadPdfBtn');
     if (downloadBtn) {
-        downloadBtn.addEventListener('click', downloadPDF);
+        downloadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            downloadPDF();
+        });
     }
     
     const shareBtn = document.getElementById('shareResultsBtn');
     if (shareBtn) {
-        shareBtn.addEventListener('click', shareResults);
+        shareBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            shareResults();
+        });
     }
+    
+    console.log('TruthLens initialization complete');
 });
 
 // Main analysis function
