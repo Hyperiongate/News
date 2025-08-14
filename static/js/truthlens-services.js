@@ -826,7 +826,16 @@ const TruthLensServices = {
     
     explainBias(phrase) {
         // Provide generic explanations based on phrase patterns
-        const text = phrase.phrase || phrase;
+        let text = '';
+        if (typeof phrase === 'string') {
+            text = phrase;
+        } else if (phrase && typeof phrase.phrase === 'string') {
+            text = phrase.phrase;
+        } else if (phrase && typeof phrase.text === 'string') {
+            text = phrase.text;
+        } else {
+            return 'This phrase contains biased language that may influence reader perception.';
+        }
         
         if (text.includes('!') || text.toUpperCase() === text) {
             return 'Uses emotional punctuation or capitalization to manipulate reader emotions rather than present facts objectively.';
@@ -848,7 +857,21 @@ const TruthLensServices = {
         };
         
         phrases.forEach(phrase => {
-            const text = (phrase.phrase || phrase).toLowerCase();
+            // Ensure we have a string to work with
+            let text = '';
+            if (typeof phrase === 'string') {
+                text = phrase;
+            } else if (phrase && typeof phrase.phrase === 'string') {
+                text = phrase.phrase;
+            } else if (phrase && typeof phrase.text === 'string') {
+                text = phrase.text;
+            } else {
+                // Skip this phrase if we can't get a string from it
+                console.warn('Invalid phrase format:', phrase);
+                return;
+            }
+            
+            text = text.toLowerCase();
             if (text.match(/terrible|horrible|disaster|amazing|incredible/)) patterns.emotional++;
             if (text.match(/always|never|all|none|every|no one/)) patterns.absolute++;
             if (text.match(/clearly|obviously|undeniably|surely/)) patterns.assumptive++;
