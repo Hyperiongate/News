@@ -82,6 +82,7 @@ class TruthLensApp {
 
     init() {
         this.setupEventListeners();
+        this.setupTabSwitching();
         this.loadSampleData();
         console.log('TruthLens initialized');
     }
@@ -107,10 +108,26 @@ class TruthLensApp {
             });
         }
 
-        // Analyze button
+        // Analyze buttons
         const analyzeBtn = document.getElementById('analyzeBtn');
         if (analyzeBtn) {
             analyzeBtn.addEventListener('click', () => this.analyzeArticle());
+        }
+
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        if (analyzeTextBtn) {
+            analyzeTextBtn.addEventListener('click', () => this.analyzeArticle());
+        }
+
+        // Reset buttons
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetAnalysis());
+        }
+
+        const resetTextBtn = document.getElementById('resetTextBtn');
+        if (resetTextBtn) {
+            resetTextBtn.addEventListener('click', () => this.resetAnalysis());
         }
 
         // Download PDF button
@@ -135,6 +152,52 @@ class TruthLensApp {
                 }
             });
         });
+    }
+
+    setupTabSwitching() {
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.currentTarget.getAttribute('data-mode');
+                this.switchTab(mode);
+            });
+        });
+    }
+
+    switchTab(mode) {
+        this.currentTab = mode;
+        
+        // Update button states
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+        });
+        
+        // Update explanation texts
+        document.getElementById('urlExplanation').classList.toggle('active', mode === 'url');
+        document.getElementById('textExplanation').classList.toggle('active', mode === 'text');
+        
+        // Update input wrappers
+        document.getElementById('urlInputWrapper').classList.toggle('active', mode === 'url');
+        document.getElementById('textInputWrapper').classList.toggle('active', mode === 'text');
+    }
+
+    resetAnalysis() {
+        // Clear inputs
+        const urlInput = document.getElementById('urlInput');
+        const textInput = document.getElementById('textInput');
+        if (urlInput) urlInput.value = '';
+        if (textInput) textInput.value = '';
+        
+        // Hide results
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        
+        // Clear current analysis
+        this.currentAnalysis = null;
+        currentAnalysis = null;
+        window.currentAnalysis = null;
     }
 
     async analyzeArticle() {
@@ -180,14 +243,25 @@ class TruthLensApp {
                 body: JSON.stringify(payload),
             });
 
-            const data = await response.json();
+            const responseData = await response.json();
+            console.log('API Response:', responseData); // Debug log
 
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || `Server error: ${response.status}`);
+            if (!response.ok || !responseData.success) {
+                throw new Error(responseData.error?.message || responseData.error || `Server error: ${response.status}`);
             }
 
-            // Store the analysis
-            this.currentAnalysis = currentAnalysis = data;
+            // CRITICAL FIX: Extract the actual data from the response wrapper
+            const data = responseData.data;
+            
+            // Validate the data structure
+            if (!data || !data.analysis || !data.article) {
+                console.error('Invalid response structure:', responseData);
+                throw new Error('Invalid response format from server');
+            }
+
+            // Store the analysis - use the inner data object
+            this.currentAnalysis = data;
+            currentAnalysis = data;
             window.currentAnalysis = data; // For global access
 
             // Complete progress and show results
@@ -217,6 +291,13 @@ class TruthLensApp {
         const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) return;
 
+        // Validate data structure
+        if (!data || !data.analysis) {
+            console.error('Invalid data structure in displayResults:', data);
+            this.showError('Invalid analysis data received');
+            return;
+        }
+
         resultsSection.style.display = 'block';
         
         // Display enhanced trust score with explanation
@@ -238,6 +319,12 @@ class TruthLensApp {
     }
 
     displayEnhancedTrustScore(analysis, fullData) {
+        // Validate analysis object
+        if (!analysis) {
+            console.error('Analysis object is undefined');
+            return;
+        }
+
         const score = analysis.trust_score || 0;
         const level = analysis.trust_level || 'Unknown';
         
@@ -252,7 +339,9 @@ class TruthLensApp {
         
         // Update summary with detailed explanation
         const summaryEl = document.getElementById('trustSummary');
-        summaryEl.innerHTML = this.getTrustSummaryExplanation(score, level, fullData);
+        if (summaryEl) {
+            summaryEl.innerHTML = this.getTrustSummaryExplanation(score, level, fullData);
+        }
         
         // Display trust breakdown with explanations
         this.displayTrustBreakdown(fullData.detailed_analysis || {});
@@ -260,7 +349,7 @@ class TruthLensApp {
 
     getTrustSummaryExplanation(score, level, data) {
         let explanation = '';
-        const servicesUsed = data.services_used || [];
+        const servicesUsed = data.metadata?.services_used || [];
         
         if (score >= 80) {
             explanation = `<strong>High Credibility:</strong> This article demonstrates exceptional journalistic standards. `;
@@ -435,47 +524,30 @@ class TruthLensApp {
             }
         ];
 
-        const container = document.querySelector('.trust-breakdown');
+        const container = document.getElementById('trustBreakdown');
         if (container) {
-            container.innerHTML = components.map(comp => `
-                <div class="trust-component">
-                    <div class="component-header">
-                        <h4>${comp.name}</h4>
-                        <div class="component-score ${this.getScoreClass(comp.score)}">
-                            ${comp.score}%
+            container.innerHTML = components.map(comp => {
+                const type = this.getBreakdownType(comp.score);
+                return `
+                    <div class="breakdown-item breakdown-${type}">
+                        <div class="breakdown-header">
+                            <div class="breakdown-label">
+                                <div class="breakdown-icon">
+                                    <i class="fas ${comp.icon || 'fa-info-circle'}"></i>
+                                </div>
+                                ${comp.name}
+                            </div>
+                            <div class="breakdown-value">${comp.score}%</div>
+                        </div>
+                        <div class="breakdown-explanation">
+                            ${comp.whatThisMeans}
+                        </div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill" style="width: ${comp.score}%"></div>
                         </div>
                     </div>
-                    <div class="component-analysis">
-                        <div class="analysis-section">
-                            <div class="analysis-section-title">
-                                <i class="fas fa-search"></i>
-                                What We Checked
-                            </div>
-                            <div class="analysis-section-content">
-                                ${comp.whatWeChecked}
-                            </div>
-                        </div>
-                        <div class="analysis-section">
-                            <div class="analysis-section-title">
-                                <i class="fas fa-clipboard-list"></i>
-                                What We Found
-                            </div>
-                            <div class="analysis-section-content">
-                                ${comp.whatWeFound}
-                            </div>
-                        </div>
-                        <div class="analysis-section">
-                            <div class="analysis-section-title">
-                                <i class="fas fa-lightbulb"></i>
-                                What This Means
-                            </div>
-                            <div class="analysis-section-content">
-                                ${comp.whatThisMeans}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
     }
 
@@ -1470,7 +1542,7 @@ class TruthLensApp {
         
         addText(`Title: ${article.title || 'Untitled'}`, 12);
         addText(`Author: ${article.author || 'Unknown'}`, 12);
-        addText(`Source: ${article.source || 'Unknown'}`, 12);
+        addText(`Source: ${article.source || article.domain || 'Unknown'}`, 12);
         if (article.publish_date) {
             addText(`Published: ${new Date(article.publish_date).toLocaleDateString()}`, 12);
         }
@@ -1677,33 +1749,32 @@ class TruthLensApp {
         addText('What This Means:', 12, 'bold');
         addText(this.getContentAnalysisMeaning(data), 11);
     }
-addContentAnalysisToPDF(data, addText) {
-        addText('Content Metrics:', 12, 'bold');
-        if (data.reading_level) {
-            addText(`Reading Level: ${data.reading_level}`, 11);
-        }
-        if (data.flesch_score !== undefined) {
-            addText(`Readability Score: ${data.flesch_score} (${data.flesch_score > 60 ? 'Easy' : data.flesch_score > 30 ? 'Moderate' : 'Difficult'})`, 11);
-        }
-        if (data.ai_generated_probability !== undefined) {
-            addText(`AI-Generated Probability: ${Math.round(data.ai_generated_probability * 100)}%`, 11);
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getContentAnalysisMeaning(data), 11);
-    }
     
     // Progress Animation Methods
     showLoading() {
-        document.getElementById('loadingOverlay').classList.add('active');
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('active');
+        }
     }
 
     hideLoading() {
-        document.getElementById('loadingOverlay').classList.remove('active');
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
     }
 
     showError(message) {
-        window.showError(message);
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
     }
 
     resetProgress() {
@@ -1772,69 +1843,6 @@ addContentAnalysisToPDF(data, addText) {
         }
     }
 
-    displayTrustBreakdown(detailedAnalysis) {
-        const container = document.getElementById('trustBreakdown');
-        if (!container) return;
-
-        const components = [
-            {
-                name: 'Source Reputation',
-                value: this.extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
-                icon: 'fa-building',
-                explanation: this.getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
-            },
-            {
-                name: 'Author Credibility',
-                value: this.extractScore(detailedAnalysis.author_analyzer, ['credibility_score', 'score']),
-                icon: 'fa-user',
-                explanation: this.getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
-            },
-            {
-                name: 'Transparency',
-                value: this.extractScore(detailedAnalysis.transparency_analyzer, ['transparency_score', 'score']),
-                icon: 'fa-eye',
-                explanation: this.getTransparencyExplanation(detailedAnalysis.transparency_analyzer)
-            },
-            {
-                name: 'Objectivity',
-                value: detailedAnalysis.bias_detector ? 
-                    (100 - (detailedAnalysis.bias_detector.overall_bias_score || 0)) : 50,
-                icon: 'fa-balance-scale',
-                explanation: this.getObjectivityExplanation(detailedAnalysis.bias_detector)
-            }
-        ];
-
-        container.innerHTML = components.map(comp => {
-            const type = this.getBreakdownType(comp.value);
-            return `
-                <div class="breakdown-item breakdown-${type}">
-                    <div class="breakdown-header">
-                        <div class="breakdown-label">
-                            <div class="breakdown-icon">
-                                <i class="fas ${comp.icon}"></i>
-                            </div>
-                            ${comp.name}
-                        </div>
-                        <div class="breakdown-value">${comp.value}%</div>
-                    </div>
-                    <div class="breakdown-explanation">
-                        ${comp.explanation}
-                    </div>
-                    <div class="breakdown-bar">
-                        <div class="breakdown-fill" style="width: ${comp.value}%"></div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    getBreakdownType(score) {
-        if (score >= 70) return 'positive';
-        if (score >= 40) return 'neutral';
-        if (score >= 20) return 'warning';
-        return 'negative';
-    }
-
     displayArticleInfo(article, analysis) {
         const titleEl = document.getElementById('articleTitle');
         const metaEl = document.getElementById('articleMeta');
@@ -1855,11 +1863,11 @@ addContentAnalysisToPDF(data, addText) {
                 `);
             }
             
-            if (article.source) {
+            if (article.domain || article.source) {
                 metaItems.push(`
                     <div class="meta-item">
                         <i class="fas fa-globe"></i>
-                        ${article.source}
+                        ${article.domain || article.source}
                     </div>
                 `);
             }
@@ -1944,16 +1952,37 @@ addContentAnalysisToPDF(data, addText) {
 
     // Helper method to extract scores from nested data
     extractScore(data, fields, defaultValue = 50) {
-        return window.extractScore(data, fields, defaultValue);
+        if (!data || typeof data !== 'object') return defaultValue;
+        
+        for (const field of fields) {
+            if (data[field] !== undefined && data[field] !== null) {
+                const value = parseFloat(data[field]);
+                if (!isNaN(value)) return Math.round(value);
+            }
+        }
+        
+        return defaultValue;
     }
 
-    // Explanation methods that delegate to window functions
+    // Explanation methods
     getSourceCredibilityExplanation(data) {
-        return window.getSourceCredibilityExplanation(data);
+        if (!data) return "Source credibility could not be determined.";
+        
+        const score = this.extractScore(data, ['credibility_score', 'score']);
+        if (score >= 80) return "This source has excellent credibility with strong editorial standards.";
+        if (score >= 60) return "This source has good credibility but some minor concerns.";
+        if (score >= 40) return "This source has moderate credibility - verify important claims.";
+        return "This source has low credibility - be very cautious with information.";
     }
 
     getAuthorCredibilityExplanation(data) {
-        return window.getAuthorCredibilityExplanation(data);
+        if (!data) return "Author information could not be verified.";
+        
+        const score = this.extractScore(data, ['credibility_score', 'score']);
+        if (score >= 80) return "The author is a verified journalist with strong credentials.";
+        if (score >= 60) return "The author has some verified credentials.";
+        if (score >= 40) return "Limited information available about the author.";
+        return "Author credentials could not be verified.";
     }
 
     getTransparencyExplanation(data) {
@@ -1965,16 +1994,29 @@ addContentAnalysisToPDF(data, addText) {
     }
 
     getObjectivityExplanation(data) {
-        return window.getObjectivityExplanation(data);
+        if (!data) return "Objectivity could not be assessed.";
+        
+        const biasScore = data.overall_bias_score || 0;
+        const objectivity = 100 - biasScore;
+        
+        if (objectivity >= 80) return "Highly objective reporting with minimal bias.";
+        if (objectivity >= 60) return "Generally objective with some minor bias.";
+        if (objectivity >= 40) return "Moderate bias present - consider the perspective.";
+        return "Significant bias detected - seek alternative viewpoints.";
     }
 
-    getServicePreviewData(serviceId, data) {
-        // Implemented in the main method above
-        return [];
+    getBreakdownType(score) {
+        if (score >= 70) return 'positive';
+        if (score >= 40) return 'neutral';
+        if (score >= 20) return 'warning';
+        return 'negative';
     }
 
     getScoreColor(score) {
-        return window.getScoreColor(score);
+        if (score >= 80) return '#10b981';
+        if (score >= 60) return '#3b82f6';
+        if (score >= 40) return '#f59e0b';
+        return '#ef4444';
     }
 
     getScoreClass(score) {
@@ -1992,6 +2034,13 @@ addContentAnalysisToPDF(data, addText) {
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing TruthLens App...');
+    
+    // Check if AnalysisComponents is available
+    if (typeof AnalysisComponents === 'undefined') {
+        console.error('AnalysisComponents not found. Make sure truthlens-utils.js is loaded first.');
+        return;
+    }
+    
     window.truthLensApp = new TruthLensApp();
 });
 
