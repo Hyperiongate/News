@@ -850,14 +850,9 @@ class TruthLensApp {
                 ];
                 
             case 'fact_checker':
-                let verified = 0;
-                let total = 0;
-                
-                if (data.fact_checks && Array.isArray(data.fact_checks)) {
-                    total = data.fact_checks.length;
-                    verified = data.fact_checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
-                }
-                
+                const checks = data.fact_checks || [];
+                const total = checks.length;
+                const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
                 const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
                 return [
                     { label: 'Claims Checked', value: total },
