@@ -1677,3 +1677,323 @@ class TruthLensApp {
         addText('What This Means:', 12, 'bold');
         addText(this.getContentAnalysisMeaning(data), 11);
     }
+addContentAnalysisToPDF(data, addText) {
+        addText('Content Metrics:', 12, 'bold');
+        if (data.reading_level) {
+            addText(`Reading Level: ${data.reading_level}`, 11);
+        }
+        if (data.flesch_score !== undefined) {
+            addText(`Readability Score: ${data.flesch_score} (${data.flesch_score > 60 ? 'Easy' : data.flesch_score > 30 ? 'Moderate' : 'Difficult'})`, 11);
+        }
+        if (data.ai_generated_probability !== undefined) {
+            addText(`AI-Generated Probability: ${Math.round(data.ai_generated_probability * 100)}%`, 11);
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getContentAnalysisMeaning(data), 11);
+    }
+    
+    // Progress Animation Methods
+    showLoading() {
+        document.getElementById('loadingOverlay').classList.add('active');
+    }
+
+    hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    showError(message) {
+        window.showError(message);
+    }
+
+    resetProgress() {
+        // Reset any progress indicators if needed
+    }
+
+    startProgressAnimation() {
+        // Start progress animation if implemented
+    }
+
+    stopProgressAnimation() {
+        // Stop progress animation if implemented
+    }
+
+    completeProgress() {
+        // Complete progress animation if implemented
+    }
+
+    animateTrustScore(score) {
+        const scoreEl = document.getElementById('trustScoreNumber');
+        if (!scoreEl) return;
+
+        let current = 0;
+        const increment = score / 30;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= score) {
+                current = score;
+                clearInterval(timer);
+            }
+            scoreEl.textContent = Math.round(current);
+        }, 30);
+    }
+
+    updateTrustLevelIndicator(score, level) {
+        const indicatorEl = document.getElementById('trustLevelIndicator');
+        const iconEl = document.getElementById('trustLevelIcon');
+        const textEl = document.getElementById('trustLevelText');
+        
+        if (!indicatorEl || !iconEl || !textEl) return;
+
+        // Remove all level classes
+        indicatorEl.className = 'trust-level-indicator';
+        
+        // Add appropriate class and update text
+        if (score >= 80) {
+            indicatorEl.classList.add('level-very-high');
+            iconEl.className = 'fas fa-check-circle trust-level-icon';
+            textEl.textContent = 'Very High Credibility';
+        } else if (score >= 60) {
+            indicatorEl.classList.add('level-high');
+            iconEl.className = 'fas fa-check trust-level-icon';
+            textEl.textContent = 'High Credibility';
+        } else if (score >= 40) {
+            indicatorEl.classList.add('level-moderate');
+            iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+            textEl.textContent = 'Moderate Credibility';
+        } else if (score >= 20) {
+            indicatorEl.classList.add('level-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Low Credibility';
+        } else {
+            indicatorEl.classList.add('level-very-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Very Low Credibility';
+        }
+    }
+
+    displayTrustBreakdown(detailedAnalysis) {
+        const container = document.getElementById('trustBreakdown');
+        if (!container) return;
+
+        const components = [
+            {
+                name: 'Source Reputation',
+                value: this.extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
+                icon: 'fa-building',
+                explanation: this.getSourceCredibilityExplanation(detailedAnalysis.source_credibility)
+            },
+            {
+                name: 'Author Credibility',
+                value: this.extractScore(detailedAnalysis.author_analyzer, ['credibility_score', 'score']),
+                icon: 'fa-user',
+                explanation: this.getAuthorCredibilityExplanation(detailedAnalysis.author_analyzer)
+            },
+            {
+                name: 'Transparency',
+                value: this.extractScore(detailedAnalysis.transparency_analyzer, ['transparency_score', 'score']),
+                icon: 'fa-eye',
+                explanation: this.getTransparencyExplanation(detailedAnalysis.transparency_analyzer)
+            },
+            {
+                name: 'Objectivity',
+                value: detailedAnalysis.bias_detector ? 
+                    (100 - (detailedAnalysis.bias_detector.overall_bias_score || 0)) : 50,
+                icon: 'fa-balance-scale',
+                explanation: this.getObjectivityExplanation(detailedAnalysis.bias_detector)
+            }
+        ];
+
+        container.innerHTML = components.map(comp => {
+            const type = this.getBreakdownType(comp.value);
+            return `
+                <div class="breakdown-item breakdown-${type}">
+                    <div class="breakdown-header">
+                        <div class="breakdown-label">
+                            <div class="breakdown-icon">
+                                <i class="fas ${comp.icon}"></i>
+                            </div>
+                            ${comp.name}
+                        </div>
+                        <div class="breakdown-value">${comp.value}%</div>
+                    </div>
+                    <div class="breakdown-explanation">
+                        ${comp.explanation}
+                    </div>
+                    <div class="breakdown-bar">
+                        <div class="breakdown-fill" style="width: ${comp.value}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    getBreakdownType(score) {
+        if (score >= 70) return 'positive';
+        if (score >= 40) return 'neutral';
+        if (score >= 20) return 'warning';
+        return 'negative';
+    }
+
+    displayArticleInfo(article, analysis) {
+        const titleEl = document.getElementById('articleTitle');
+        const metaEl = document.getElementById('articleMeta');
+        
+        if (titleEl) {
+            titleEl.textContent = article.title || 'Untitled Article';
+        }
+        
+        if (metaEl) {
+            const metaItems = [];
+            
+            if (article.author) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-user"></i>
+                        ${article.author}
+                    </div>
+                `);
+            }
+            
+            if (article.source) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-globe"></i>
+                        ${article.source}
+                    </div>
+                `);
+            }
+            
+            if (article.publish_date) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        ${new Date(article.publish_date).toLocaleDateString()}
+                    </div>
+                `);
+            }
+            
+            metaEl.innerHTML = metaItems.join('');
+        }
+    }
+
+    toggleAccordion(serviceId) {
+        const item = document.getElementById(`service-${serviceId}`);
+        if (!item) return;
+
+        const wasActive = item.classList.contains('active');
+        
+        // Close all accordions
+        document.querySelectorAll('.service-accordion-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Open clicked accordion if it wasn't active
+        if (!wasActive) {
+            item.classList.add('active');
+            
+            // Initialize any charts in this service
+            setTimeout(() => {
+                this.initializeServiceCharts(serviceId);
+            }, 300);
+        }
+    }
+
+    initializeServiceCharts(serviceId) {
+        // Initialize charts based on service ID
+        switch(serviceId) {
+            case 'source_credibility':
+                // Initialize source credibility charts if needed
+                break;
+            case 'bias_detector':
+                // Initialize bias detection charts if needed
+                break;
+            // Add other services as needed
+        }
+    }
+
+    shareResults() {
+        if (!this.currentAnalysis) {
+            this.showError('No analysis results to share');
+            return;
+        }
+
+        const shareUrl = window.location.href;
+        const shareText = `Check out this news analysis: Trust Score ${this.currentAnalysis.analysis.trust_score}/100`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'TruthLens Analysis',
+                text: shareText,
+                url: shareUrl
+            }).catch(err => console.log('Error sharing:', err));
+        } else {
+            // Fallback to copying URL
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                this.showError('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    }
+
+    loadSampleData() {
+        // Load sample data for development/testing
+        console.log('Ready to analyze articles');
+    }
+
+    // Helper method to extract scores from nested data
+    extractScore(data, fields, defaultValue = 50) {
+        return window.extractScore(data, fields, defaultValue);
+    }
+
+    // Explanation methods that delegate to window functions
+    getSourceCredibilityExplanation(data) {
+        return window.getSourceCredibilityExplanation(data);
+    }
+
+    getAuthorCredibilityExplanation(data) {
+        return window.getAuthorCredibilityExplanation(data);
+    }
+
+    getTransparencyExplanation(data) {
+        const score = this.extractScore(data, ['transparency_score', 'score']);
+        if (score >= 80) return "Excellent transparency with proper sourcing and attribution.";
+        if (score >= 60) return "Good transparency but missing some attribution details.";
+        if (score >= 40) return "Limited transparency makes verification challenging.";
+        return "Poor transparency is a significant credibility concern.";
+    }
+
+    getObjectivityExplanation(data) {
+        return window.getObjectivityExplanation(data);
+    }
+
+    getServicePreviewData(serviceId, data) {
+        // Implemented in the main method above
+        return [];
+    }
+
+    getScoreColor(score) {
+        return window.getScoreColor(score);
+    }
+
+    getScoreClass(score) {
+        if (score >= 80) return 'high';
+        if (score >= 60) return 'medium';
+        if (score >= 40) return 'low';
+        return 'very-low';
+    }
+}
+
+// ============================================================================
+// SECTION 3: Initialization
+// ============================================================================
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing TruthLens App...');
+    window.truthLensApp = new TruthLensApp();
+});
+
+// Make app available globally
+window.TruthLensApp = TruthLensApp;
