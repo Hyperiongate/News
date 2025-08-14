@@ -1,4 +1,881 @@
-// Add method to inject enhanced styles
+renderLoadedPhrases(phrases) {
+        return phrases.slice(0, 5).map(phrase => `
+            <div class="loaded-phrase">
+                <span class="phrase-text">"${phrase.phrase || phrase}"</span>
+                <span class="phrase-severity severity-${phrase.severity || 'medium'}">${phrase.type || 'Biased Language'}</span>
+            </div>
+        `).join('');
+    }
+
+    getBiasDetectionMeaning(data) {
+        const biasScore = data.bias_score || data.score || 0;
+        let meaning = '';
+        
+        if (biasScore < 30) {
+            meaning = 'This article demonstrates strong objectivity with minimal bias. The language is neutral and perspectives are balanced.';
+        } else if (biasScore < 60) {
+            meaning = 'Moderate bias is present in the language and framing. While not severely slanted, be aware of the perspective being promoted.';
+        } else {
+            meaning = 'Significant bias detected throughout the article. The language is loaded and perspectives are one-sided. Seek alternative viewpoints.';
+        }
+        
+        return meaning;
+    }
+
+    getFactCheckerContent(data) {
+        const checks = data.fact_checks || [];
+        
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We identified ${checks.length} checkable claims in this article and verified them against fact-checking databases, 
+                        official sources, and scientific literature. Each claim was evaluated for accuracy and supporting evidence.
+                    </div>
+                </div>
+
+                ${checks.length > 0 ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-list-check"></i>
+                        Fact Check Results
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.renderFactCheckResults(checks)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getFactCheckerMeaning(data)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderFactCheckResults(claims) {
+        return claims.slice(0, 5).map(claim => {
+            const verdictClass = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'verified' : 
+                               claim.verdict === 'False' ? 'false' : 'unverified';
+            const icon = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'fa-check' : 
+                        claim.verdict === 'False' ? 'fa-times' : 'fa-question';
+            
+            return `
+                <div class="fact-check-item">
+                    <div class="claim-text">"${claim.claim}"</div>
+                    <div class="claim-verdict ${verdictClass}">
+                        <i class="fas ${icon}"></i> ${claim.verdict}
+                    </div>
+                    ${claim.explanation ? `<div class="claim-explanation">${claim.explanation}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    getFactCheckerMeaning(data) {
+        const checks = data.fact_checks || [];
+        const total = checks.length;
+        const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
+        
+        if (total === 0) {
+            return 'No specific factual claims were identified for verification in this article.';
+        }
+        
+        const accuracy = (verified / total) * 100;
+        let meaning = '';
+        
+        if (accuracy >= 80) {
+            meaning = `Excellent factual accuracy with ${verified} out of ${total} claims verified. The article is well-researched and factually reliable.`;
+        } else if (accuracy >= 60) {
+            meaning = `Good factual accuracy with ${verified} out of ${total} claims verified. Most information is accurate but some claims need verification.`;
+        } else if (accuracy >= 40) {
+            meaning = `Moderate accuracy with only ${verified} out of ${total} claims verified. Many statements lack supporting evidence.`;
+        } else {
+            meaning = `Poor factual accuracy with only ${verified} out of ${total} claims verified. Most claims are unsubstantiated or false.`;
+        }
+        
+        return meaning;
+    }
+
+    getTransparencyContent(data) {
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We examined the article for transparency indicators including source citations, author disclosure, 
+                        funding information, and conflict of interest statements. Transparency is crucial for assessing 
+                        potential biases and agendas.
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        Transparency Checklist
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.renderTransparencyChecklist(data)}
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getTransparencyMeaning(data)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTransparencyChecklist(data) {
+        const items = [
+            { label: 'Sources Cited', value: data.sources_cited },
+            { label: 'Author Disclosed', value: data.has_author },
+            { label: 'Direct Quotes', value: data.has_quotes }
+        ];
+        
+        return `
+            <div class="transparency-checklist">
+                ${items.map(item => `
+                    <div class="checklist-item">
+                        <span class="checklist-label">${item.label}</span>
+                        <span class="checklist-value ${item.value ? 'present' : 'missing'}">
+                            ${item.value ? '<i class="fas fa-check"></i> Present' : '<i class="fas fa-times"></i> Missing'}
+                        </span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    getManipulationContent(data) {
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We scanned for propaganda techniques, emotional manipulation, logical fallacies, and psychological tactics 
+                        designed to bypass critical thinking. This includes fear-mongering, false dichotomies, and appeal to emotions.
+                    </div>
+                </div>
+
+                ${data.propaganda_techniques && data.propaganda_techniques.length > 0 ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Manipulation Techniques Detected
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.renderManipulationTechniques(data.propaganda_techniques)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getManipulationMeaning(data)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderManipulationTechniques(techniques) {
+        return techniques.map(tech => `
+            <div class="manipulation-technique">
+                <div class="technique-name">${tech.name || tech}</div>
+                <div class="technique-description">${tech.description || ''}</div>
+            </div>
+        `).join('');
+    }
+
+    getManipulationMeaning(data) {
+        const level = data.manipulation_level || data.level || 'Unknown';
+        const count = data.tactic_count || 0;
+        
+        if (level === 'Low' || count === 0) {
+            return 'No significant manipulation tactics were detected. The article appears to present information straightforwardly without attempting to manipulate readers\' emotions or bypass critical thinking.';
+        }
+        
+        return `We detected ${count} manipulation technique${count !== 1 ? 's' : ''} in this article. These tactics are designed to influence your thinking through emotional appeal rather than factual argument. Read critically and focus on verifiable facts rather than emotional rhetoric.`;
+    }
+
+    getContentAnalysisContent(data) {
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We evaluated the writing quality, readability, structure, and professionalism of the content. 
+                        This includes grammar, coherence, evidence quality, and whether the content appears to be 
+                        AI-generated or plagiarized.
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Content Metrics
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.renderContentMetrics(data)}
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getContentAnalysisMeaning(data)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderContentMetrics(data) {
+        const metrics = [];
+        
+        if (data.quality_score !== undefined) {
+            metrics.push(`<div class="metric-item"><strong>Quality Score:</strong> ${data.quality_score}/100</div>`);
+        }
+        
+        if (data.readability?.level) {
+            metrics.push(`<div class="metric-item"><strong>Reading Level:</strong> ${data.readability.level}</div>`);
+        }
+        
+        if (data.readability?.score !== undefined) {
+            metrics.push(`<div class="metric-item"><strong>Readability Score:</strong> ${data.readability.score}</div>`);
+        }
+        
+        return metrics.join('');
+    }
+
+    getContentAnalysisMeaning(data) {
+        let meaning = '';
+        
+        if (data.readability?.level) {
+            const level = data.readability.level.toLowerCase();
+            if (level.includes('college') || level.includes('graduate')) {
+                meaning += 'This article is written at an advanced level, which may indicate thorough analysis but could be inaccessible to general readers. ';
+            } else if (level.includes('high school')) {
+                meaning += 'This article is written at an appropriate level for general audiences, balancing accessibility with substance. ';
+            } else {
+                meaning += 'This article is written at a basic level, which may oversimplify complex issues. ';
+            }
+        }
+        
+        if (data.quality_score !== undefined) {
+            if (data.quality_score >= 80) {
+                meaning += 'The writing quality is professional with good structure and clarity.';
+            } else if (data.quality_score >= 60) {
+                meaning += 'The writing quality is acceptable but has room for improvement.';
+            } else {
+                meaning += 'The writing quality is poor, which may indicate lack of editorial standards.';
+            }
+        }
+        
+        return meaning || 'Content analysis helps assess the professionalism and quality of the writing.';
+    }
+
+    // Enhanced PDF generation
+    async downloadPDF() {
+        if (!this.currentAnalysis || !this.currentAnalysis.analysis || !this.currentAnalysis.article) {
+            this.showError('No analysis available to download');
+            return;
+        }
+        
+        this.showLoading();
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Generate comprehensive PDF with all analysis details
+            this.generateComprehensivePDF(doc);
+            
+            // Save the PDF
+            const fileName = `truthlens-analysis-${Date.now()}.pdf`;
+            doc.save(fileName);
+            
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            this.showError('Failed to generate PDF report. Please try again.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    generateComprehensivePDF(doc) {
+        const { article, analysis, detailed_analysis } = this.currentAnalysis;
+        let yPosition = 20;
+        const lineHeight = 7;
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 20;
+        const contentWidth = pageWidth - (2 * margin);
+        
+        // Helper function to add text with page break check
+        const addText = (text, fontSize = 12, fontStyle = 'normal', indent = 0) => {
+            doc.setFontSize(fontSize);
+            doc.setFont(undefined, fontStyle);
+            
+            const lines = doc.splitTextToSize(text, contentWidth - indent);
+            
+            lines.forEach(line => {
+                if (yPosition > pageHeight - 30) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                doc.text(line, margin + indent, yPosition);
+                yPosition += fontSize === 12 ? lineHeight : lineHeight + 2;
+            });
+        };
+        
+        // Title Page
+        doc.setFillColor(99, 102, 241);
+        doc.rect(0, 0, pageWidth, 60, 'F');
+        doc.setTextColor(255, 255, 255);
+        addText('TruthLens AI Analysis Report', 24, 'bold');
+        yPosition += 10;
+        addText(new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }), 12);
+        
+        // Reset text color
+        doc.setTextColor(0, 0, 0);
+        yPosition = 80;
+        
+        // Article Information
+        addText('ARTICLE INFORMATION', 16, 'bold');
+        yPosition += 5;
+        
+        addText(`Title: ${article.title || 'Untitled'}`, 12);
+        addText(`Author: ${article.author || 'Unknown'}`, 12);
+        addText(`Source: ${article.domain || article.source || 'Unknown'}`, 12);
+        if (article.publish_date) {
+            addText(`Published: ${new Date(article.publish_date).toLocaleDateString()}`, 12);
+        }
+        
+        yPosition += 10;
+        
+        // Executive Summary
+        addText('EXECUTIVE SUMMARY', 16, 'bold');
+        yPosition += 5;
+        
+        const trustScore = analysis.trust_score || 0;
+        addText(`Overall Trust Score: ${trustScore}/100`, 14, 'bold');
+        addText(this.getTrustSummaryExplanation(trustScore, analysis.trust_level, this.currentAnalysis), 12);
+        
+        yPosition += 10;
+        
+        // Key Findings
+        let findings = [];
+        if (analysis.key_findings && Array.isArray(analysis.key_findings)) {
+            findings = analysis.key_findings.map(finding => ({
+                type: finding.severity === 'high' ? 'negative' : 
+                      finding.severity === 'low' ? 'positive' : 'warning',
+                title: finding.finding || finding.type || 'Finding',
+                explanation: finding.text || finding.message || ''
+            }));
+        } else {
+            findings = this.generateMeaningfulFindings(this.currentAnalysis);
+        }
+        
+        if (findings.length > 0) {
+            addText('KEY FINDINGS', 16, 'bold');
+            yPosition += 5;
+            
+            findings.forEach(finding => {
+                const icon = finding.type === 'positive' ? '✓' : 
+                           finding.type === 'negative' ? '✗' : '!';
+                addText(`${icon} ${finding.title}`, 12, 'bold');
+                addText(finding.explanation, 11, 'normal', 10);
+                yPosition += 3;
+            });
+        }
+        
+        // New page for detailed analysis
+        doc.addPage();
+        yPosition = 20;
+        
+        addText('DETAILED ANALYSIS', 18, 'bold');
+        yPosition += 10;
+        
+        // Process each service with meaningful content
+        services.forEach(service => {
+            const serviceData = detailed_analysis[service.id];
+            if (!serviceData || Object.keys(serviceData).length === 0) return;
+            
+            // Add page break if needed
+            if (yPosition > pageHeight - 80) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            // Service header with background
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPosition - 5, contentWidth, 15, 'F');
+            doc.setTextColor(0, 0, 0);
+            addText(service.name.toUpperCase(), 14, 'bold');
+            yPosition += 10;
+            
+            // Add meaningful analysis for each service
+            switch (service.id) {
+                case 'source_credibility':
+                    this.addSourceCredibilityToPDF(serviceData, addText);
+                    break;
+                case 'author_analyzer':
+                    this.addAuthorAnalysisToPDF(serviceData, addText);
+                    break;
+                case 'bias_detector':
+                    this.addBiasAnalysisToPDF(serviceData, addText);
+                    break;
+                case 'fact_checker':
+                    this.addFactCheckingToPDF(serviceData, addText);
+                    break;
+                case 'transparency_analyzer':
+                    this.addTransparencyAnalysisToPDF(serviceData, addText);
+                    break;
+                case 'manipulation_detector':
+                    this.addManipulationAnalysisToPDF(serviceData, addText);
+                    break;
+                case 'content_analyzer':
+                    this.addContentAnalysisToPDF(serviceData, addText);
+                    break;
+            }
+            
+            yPosition += 10;
+        });
+        
+        // Footer on all pages
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text(
+                `Page ${i} of ${totalPages} | Generated by TruthLens AI | ${new Date().toLocaleDateString()}`,
+                pageWidth / 2,
+                pageHeight - 10,
+                { align: 'center' }
+            );
+        }
+    }
+    
+    addSourceCredibilityToPDF(data, addText) {
+        addText('What We Found:', 12, 'bold');
+        addText(this.getSourceFindings(data), 11);
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getSourceMeaning(data), 11);
+        
+        if (data.credibility_score !== undefined) {
+            addText(`Credibility Score: ${data.credibility_score}/100`, 12, 'bold');
+        }
+    }
+    
+    addAuthorAnalysisToPDF(data, addText) {
+        addText('Author Profile:', 12, 'bold');
+        if (data.author_name) {
+            addText(`Name: ${data.author_name}`, 11);
+        }
+        if (data.verification_status?.verified !== undefined) {
+            addText(`Verification Status: ${data.verification_status.verified ? 'Verified Journalist' : 'Unverified'}`, 11);
+        }
+        if (data.author_score !== undefined) {
+            addText(`Credibility Score: ${data.author_score}`, 11);
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getAuthorMeaning(data), 11);
+    }
+    
+    addBiasAnalysisToPDF(data, addText) {
+        addText('Bias Indicators:', 12, 'bold');
+        addText(this.getBiasFindings(data), 11);
+        
+        if (data.loaded_phrases && data.loaded_phrases.length > 0) {
+            addText('Examples of Biased Language:', 12, 'bold');
+            data.loaded_phrases.slice(0, 3).forEach(phrase => {
+                addText(`• "${phrase.phrase || phrase}" (${phrase.type || 'Loaded Language'})`, 11);
+            });
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getBiasMeaning(data), 11);
+    }
+    
+    addFactCheckingToPDF(data, addText) {
+        const checks = data.fact_checks || [];
+        const total = checks.length;
+        const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
+        
+        addText(`Claims Analyzed: ${total}`, 12, 'bold');
+        addText(`Verified as Accurate: ${verified} (${total > 0 ? Math.round((verified/total)*100) : 0}%)`, 11);
+        
+        if (checks.length > 0) {
+            addText('Sample Claims:', 12, 'bold');
+            checks.slice(0, 3).forEach(claim => {
+                addText(`• "${claim.claim}"`, 11);
+                addText(`  Verdict: ${claim.verdict}`, 11);
+            });
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getFactCheckerMeaning(data), 11);
+    }
+    
+    addTransparencyAnalysisToPDF(data, addText) {
+        addText('Transparency Indicators:', 12, 'bold');
+        const items = [
+            `Sources Cited: ${data.sources_cited ? 'Yes' : 'No'}`,
+            `Author Disclosed: ${data.has_author ? 'Yes' : 'No'}`,
+            `Direct Quotes: ${data.has_quotes ? 'Yes' : 'No'}`
+        ];
+        items.forEach(item => addText(`• ${item}`, 11));
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getTransparencyMeaning(data), 11);
+    }
+    
+    addManipulationAnalysisToPDF(data, addText) {
+        const level = data.manipulation_level || 'Unknown';
+        const count = data.tactic_count || 0;
+        
+        addText(`Manipulation Level: ${level}`, 11);
+        addText(`Tactics Found: ${count}`, 11);
+        
+        if (data.propaganda_techniques && data.propaganda_techniques.length > 0) {
+            addText('Manipulation Techniques Found:', 12, 'bold');
+            data.propaganda_techniques.forEach(tech => {
+                addText(`• ${tech.name || tech}`, 11);
+            });
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getManipulationMeaning(data), 11);
+    }
+    
+    addContentAnalysisToPDF(data, addText) {
+        addText('Content Metrics:', 12, 'bold');
+        if (data.quality_score !== undefined) {
+            addText(`Quality Score: ${data.quality_score}/100`, 11);
+        }
+        if (data.readability?.level) {
+            addText(`Reading Level: ${data.readability.level}`, 11);
+        }
+        if (data.readability?.score !== undefined) {
+            addText(`Readability Score: ${data.readability.score}`, 11);
+        }
+        
+        addText('What This Means:', 12, 'bold');
+        addText(this.getContentAnalysisMeaning(data), 11);
+    }
+    
+    // Progress Animation Methods
+    showLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('active');
+        }
+    }
+
+    hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+    }
+
+    showError(message) {
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+    }
+
+    resetProgress() {
+        // Reset any progress indicators if needed
+    }
+
+    startProgressAnimation() {
+        // Start progress animation if implemented
+    }
+
+    stopProgressAnimation() {
+        // Stop progress animation if implemented
+    }
+
+    completeProgress() {
+        // Complete progress animation if implemented
+    }
+
+    animateTrustScore(score) {
+        const scoreEl = document.getElementById('trustScoreNumber');
+        if (!scoreEl) return;
+
+        let current = 0;
+        const increment = score / 30;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= score) {
+                current = score;
+                clearInterval(timer);
+            }
+            scoreEl.textContent = Math.round(current);
+        }, 30);
+    }
+
+    updateTrustLevelIndicator(score, level) {
+        const indicatorEl = document.getElementById('trustLevelIndicator');
+        const iconEl = document.getElementById('trustLevelIcon');
+        const textEl = document.getElementById('trustLevelText');
+        
+        if (!indicatorEl || !iconEl || !textEl) return;
+
+        // Remove all level classes
+        indicatorEl.className = 'trust-level-indicator';
+        
+        // Add appropriate class and update text
+        if (score >= 80) {
+            indicatorEl.classList.add('level-very-high');
+            iconEl.className = 'fas fa-check-circle trust-level-icon';
+            textEl.textContent = 'Very High Credibility';
+        } else if (score >= 60) {
+            indicatorEl.classList.add('level-high');
+            iconEl.className = 'fas fa-check trust-level-icon';
+            textEl.textContent = 'High Credibility';
+        } else if (score >= 40) {
+            indicatorEl.classList.add('level-moderate');
+            iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+            textEl.textContent = 'Moderate Credibility';
+        } else if (score >= 20) {
+            indicatorEl.classList.add('level-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Low Credibility';
+        } else {
+            indicatorEl.classList.add('level-very-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Very Low Credibility';
+        }
+    }
+
+    displayArticleInfo(article, analysis) {
+        const titleEl = document.getElementById('articleTitle');
+        const metaEl = document.getElementById('articleMeta');
+        
+        if (titleEl) {
+            titleEl.textContent = article.title || 'Untitled Article';
+        }
+        
+        if (metaEl) {
+            const metaItems = [];
+            
+            if (article.author) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-user"></i>
+                        ${article.author}
+                    </div>
+                `);
+            }
+            
+            if (article.domain || article.source) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-globe"></i>
+                        ${article.domain || article.source}
+                    </div>
+                `);
+            }
+            
+            if (article.publish_date) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        ${new Date(article.publish_date).toLocaleDateString()}
+                    </div>
+                `);
+            }
+            
+            metaEl.innerHTML = metaItems.join('');
+        }
+    }
+
+    toggleAccordion(serviceId) {
+        const item = document.getElementById(`service-${serviceId}`);
+        if (!item) return;
+
+        const wasActive = item.classList.contains('active');
+        
+        // Close all accordions
+        document.querySelectorAll('.service-accordion-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Open clicked accordion if it wasn't active
+        if (!wasActive) {
+            item.classList.add('active');
+            
+            // Initialize any charts in this service
+            setTimeout(() => {
+                this.initializeServiceCharts(serviceId);
+            }, 300);
+        }
+    }
+
+    initializeServiceCharts(serviceId) {
+        // Initialize charts based on service ID
+        switch(serviceId) {
+            case 'source_credibility':
+                // Initialize source credibility charts if needed
+                break;
+            case 'bias_detector':
+                // Initialize bias detection charts if needed
+                break;
+            // Add other services as needed
+        }
+    }
+
+    shareResults() {
+        if (!this.currentAnalysis) {
+            this.showError('No analysis results to share');
+            return;
+        }
+
+        const shareUrl = window.location.href;
+        const shareText = `Check out this news analysis: Trust Score ${this.currentAnalysis.analysis.trust_score}/100`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'TruthLens Analysis',
+                text: shareText,
+                url: shareUrl
+            }).catch(err => console.log('Error sharing:', err));
+        } else {
+            // Fallback to copying URL
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                this.showError('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    }
+
+    loadSampleData() {
+        // Load sample data for development/testing
+        console.log('Ready to analyze articles');
+    }
+
+    // Helper method to extract scores from nested data
+    extractScore(data, fields, defaultValue = 50) {
+        if (!data || typeof data !== 'object') return defaultValue;
+        
+        for (const field of fields) {
+            if (data[field] !== undefined && data[field] !== null) {
+                const value = parseFloat(data[field]);
+                if (!isNaN(value)) return Math.round(value);
+            }
+        }
+        
+        return defaultValue;
+    }
+
+    // Explanation methods
+    getSourceCredibilityExplanation(data) {
+        if (!data) return "Source credibility could not be determined.";
+        
+        const score = this.extractScore(data, ['credibility_score', 'score']);
+        if (score >= 80) return "This source has excellent credibility with strong editorial standards.";
+        if (score >= 60) return "This source has good credibility but some minor concerns.";
+        if (score >= 40) return "This source has moderate credibility - verify important claims.";
+        return "This source has low credibility - be very cautious with information.";
+    }
+
+    getAuthorCredibilityExplanation(data) {
+        if (!data) return "Author information could not be verified.";
+        
+        const score = this.extractScore(data, ['author_score', 'score']);
+        if (score >= 80) return "The author is a verified journalist with strong credentials.";
+        if (score >= 60) return "The author has some verified credentials.";
+        if (score >= 40) return "Limited information available about the author.";
+        return "Author credentials could not be verified.";
+    }
+
+    getTransparencyExplanation(data) {
+        const score = this.extractScore(data, ['transparency_score', 'score']);
+        if (score >= 80) return "Excellent transparency with proper sourcing and attribution.";
+        if (score >= 60) return "Good transparency but missing some attribution details.";
+        if (score >= 40) return "Limited transparency makes verification challenging.";
+        return "Poor transparency is a significant credibility concern.";
+    }
+
+    getObjectivityExplanation(data) {
+        if (!data) return "Objectivity could not be assessed.";
+        
+        const biasScore = data.bias_score || data.score || 0;
+        const objectivity = 100 - biasScore;
+        
+        if (objectivity >= 80) return "Highly objective reporting with minimal bias.";
+        if (objectivity >= 60) return "Generally objective with some minor bias.";
+        if (objectivity >= 40) return "Moderate bias present - consider the perspective.";
+        return "Significant bias detected - seek alternative viewpoints.";
+    }
+
+    getBreakdownType(score) {
+        if (score >= 70) return 'positive';
+        if (score >= 40) return 'neutral';
+        if (score >= 20) return 'warning';
+        return 'negative';
+    }
+
+    getScoreColor(score) {
+        if (score >= 80) return '#10b981';
+        if (score >= 60) return '#3b82f6';
+        if (score >= 40) return '#f59e0b';
+        return '#ef4444';
+    }
+
+    // Add method to inject enhanced styles
     injectEnhancedStyles() {
         const style = document.createElement('style');
         style.textContent = `
@@ -278,7 +1155,622 @@
             .comparison-score {
                 margin-left: auto;
             }
-            // truthlens-app.js - Enhanced with meaningful analysis explanations and proper PDF generation
+            
+            /* Percentile Info */
+            .percentile-info {
+                text-align: center;
+                padding: 15px;
+                background: #f0f9ff;
+                border-radius: 8px;
+                margin-top: 20px;
+                font-size: 0.9rem;
+            }
+            
+            /* Enhanced Meaning */
+            .enhanced-meaning {
+                margin: 20px 0;
+            }
+            
+            .meaning-summary {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                font-size: 1.1rem;
+            }
+            
+            .meaning-summary.positive {
+                background: #ecfdf5;
+                color: #065f46;
+            }
+            
+            .meaning-summary.moderate {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .meaning-summary.warning {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .meaning-summary.critical {
+                background: #fef2f2;
+                color: #991b1b;
+            }
+            
+            .trust-recommendations {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .trust-recommendations li {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                margin: 10px 0;
+                padding: 10px;
+                background: #f9fafb;
+                border-radius: 6px;
+            }
+            
+            .trust-recommendations i {
+                flex-shrink: 0;
+                margin-top: 2px;
+            }
+            
+            /* Bias Detection Styles */
+            .bias-spectrum-container {
+                margin: 20px 0;
+            }
+            
+            .objectivity-meter {
+                margin-bottom: 30px;
+            }
+            
+            .meter-labels {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                font-size: 0.875rem;
+                color: #6b7280;
+            }
+            
+            .meter-track {
+                height: 32px;
+                background: #f3f4f6;
+                border-radius: 16px;
+                overflow: hidden;
+                position: relative;
+            }
+            
+            .meter-fill {
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 10px;
+                position: relative;
+                transition: width 0.5s ease;
+            }
+            
+            .meter-marker {
+                background: white;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-weight: 600;
+                font-size: 0.875rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            /* Bias Dimensions */
+            .bias-dimensions {
+                background: #f9fafb;
+                padding: 20px;
+                border-radius: 8px;
+            }
+            
+            .bias-dimensions h5 {
+                margin: 0 0 15px;
+                color: #1f2937;
+            }
+            
+            .dimension-bars {
+                display: grid;
+                gap: 12px;
+            }
+            
+            .dimension-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+                font-size: 0.875rem;
+            }
+            
+            .dimension-name {
+                flex: 1;
+                font-weight: 500;
+            }
+            
+            .dimension-value {
+                font-weight: 600;
+                color: #6b7280;
+            }
+            
+            .dimension-track {
+                height: 8px;
+                background: #e5e7eb;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            
+            .dimension-fill {
+                height: 100%;
+                transition: width 0.3s ease;
+            }
+            
+            /* Loaded Phrase Cards */
+            .loaded-phrase-card {
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 12px;
+            }
+            
+            .phrase-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            
+            .phrase-number {
+                font-weight: 600;
+                color: #6b7280;
+            }
+            
+            .phrase-severity {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: white;
+            }
+            
+            .phrase-text {
+                font-size: 1.1rem;
+                font-style: italic;
+                color: #1f2937;
+                margin: 12px 0;
+                padding: 0 20px;
+                position: relative;
+            }
+            
+            .phrase-text i {
+                position: absolute;
+                color: #d1d5db;
+                font-size: 1.5rem;
+            }
+            
+            .phrase-text i:first-child {
+                left: 0;
+                top: -5px;
+            }
+            
+            .phrase-text i:last-child {
+                right: 0;
+                bottom: -5px;
+            }
+            
+            .phrase-analysis {
+                font-size: 0.875rem;
+                color: #6b7280;
+                margin: 8px 0;
+                line-height: 1.6;
+            }
+            
+            .neutral-alternative {
+                background: #f0f9ff;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.875rem;
+                margin-top: 8px;
+            }
+            
+            /* Pattern Grid */
+            .pattern-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 15px;
+                margin-top: 15px;
+            }
+            
+            .pattern-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 12px;
+                background: #fef3c7;
+                border-radius: 6px;
+                font-size: 0.875rem;
+            }
+            
+            .pattern-item i {
+                color: #d97706;
+                flex-shrink: 0;
+            }
+            
+            /* Source Distribution */
+            .source-breakdown {
+                margin: 20px 0;
+            }
+            
+            .source-summary {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            
+            .source-stat {
+                text-align: center;
+                padding: 15px;
+                background: #f9fafb;
+                border-radius: 8px;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+                font-weight: 700;
+                color: #6366f1;
+            }
+            
+            .stat-label {
+                font-size: 0.875rem;
+                color: #6b7280;
+                margin-top: 4px;
+            }
+            
+            .source-chart {
+                margin: 20px 0;
+            }
+            
+            .source-type-bar {
+                display: grid;
+                grid-template-columns: 150px 1fr 50px;
+                align-items: center;
+                gap: 10px;
+                margin: 8px 0;
+            }
+            
+            .source-type-label {
+                font-size: 0.875rem;
+                font-weight: 500;
+            }
+            
+            .source-type-track {
+                height: 20px;
+                background: #f3f4f6;
+                border-radius: 10px;
+                overflow: hidden;
+                position: relative;
+            }
+            
+            .source-type-fill {
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                color: white;
+                font-weight: 600;
+                font-size: 0.75rem;
+            }
+            
+            .source-percentage {
+                text-align: right;
+                font-size: 0.875rem;
+                color: #6b7280;
+            }
+            
+            /* Political Spectrum */
+            .political-analysis {
+                margin: 20px 0;
+            }
+            
+            .spectrum-container {
+                margin: 20px 0;
+            }
+            
+            .spectrum-labels {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                font-size: 0.75rem;
+                color: #6b7280;
+            }
+            
+            .spectrum-track {
+                height: 40px;
+                background: linear-gradient(to right, #3b82f6, #8b5cf6, #6b7280, #dc2626, #991b1b);
+                border-radius: 20px;
+                position: relative;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            .spectrum-marker {
+                position: absolute;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                transition: left 0.5s ease;
+            }
+            
+            .marker-dot {
+                width: 24px;
+                height: 24px;
+                background: white;
+                border: 3px solid #1f2937;
+                border-radius: 50%;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            
+            .marker-label {
+                position: absolute;
+                top: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1f2937;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            
+            .political-indicators {
+                background: #f9fafb;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+            
+            .political-indicators h5 {
+                margin: 0 0 15px;
+                color: #1f2937;
+            }
+            
+            .indicator-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .political-indicator {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 16px;
+                font-size: 0.875rem;
+            }
+            
+            /* Reading Strategy Box */
+            .reading-strategy-box,
+            .bias-impact-box {
+                background: #f0f9ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            
+            .reading-strategy-box h5,
+            .bias-impact-box h5 {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 15px;
+                color: #1e40af;
+            }
+            
+            .reading-strategy-box ul,
+            .bias-impact-box ul {
+                margin: 0;
+                padding-left: 20px;
+            }
+            
+            .reading-strategy-box li,
+            .bias-impact-box li {
+                margin: 8px 0;
+                line-height: 1.6;
+            }
+            
+            /* Assessment Boxes */
+            .assessment {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+            }
+            
+            .assessment.positive {
+                background: #ecfdf5;
+                color: #065f46;
+            }
+            
+            .assessment.moderate {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .assessment.warning {
+                background: #fef2f2;
+                color: #991b1b;
+            }
+            
+            /* Recommendation Box */
+            .recommendation-box {
+                background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            
+            .recommendation-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+                color: #1e40af;
+                margin-bottom: 15px;
+            }
+            
+            /* Section Intro */
+            .section-intro {
+                font-size: 0.9rem;
+                color: #6b7280;
+                margin-bottom: 20px;
+                font-style: italic;
+            }
+            
+            /* Language Patterns */
+            .language-patterns {
+                background: #fffbeb;
+                border: 1px solid #fcd34d;
+                border-radius: 8px;
+                padding: 20px;
+                margin-top: 20px;
+            }
+            
+            .language-patterns h5 {
+                margin: 0 0 15px;
+                color: #92400e;
+            }
+            
+            /* Framing Analysis */
+            .framing-details {
+                display: grid;
+                gap: 20px;
+            }
+            
+            .frame-item {
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 20px;
+            }
+            
+            .frame-item.warning {
+                background: #fef3c7;
+                border-color: #fbbf24;
+            }
+            
+            .frame-item h5 {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 10px;
+                color: #1f2937;
+            }
+            
+            .emphasis-comparison {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-top: 15px;
+            }
+            
+            .emphasized,
+            .deemphasized {
+                padding: 15px;
+                border-radius: 6px;
+            }
+            
+            .emphasized {
+                background: #fee2e2;
+            }
+            
+            .deemphasized {
+                background: #e0e7ff;
+            }
+            
+            .confidence-note {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px;
+                background: #f3f4f6;
+                border-radius: 6px;
+                font-size: 0.875rem;
+                color: #6b7280;
+                margin-top: 15px;
+            }
+            
+            /* Bias Level Indicators */
+            .bias-level {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 16px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                font-weight: 600;
+            }
+            
+            .bias-level.excellent {
+                background: #ecfdf5;
+                color: #065f46;
+            }
+            
+            .bias-level.good {
+                background: #eff6ff;
+                color: #1e40af;
+            }
+            
+            .bias-level.moderate {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            
+            .bias-level.severe {
+                background: #fef2f2;
+                color: #991b1b;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+} // This closes the TruthLensApp class
+
+// ============================================================================
+// SECTION 3: Initialization
+// ============================================================================
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing TruthLens App...');
+    
+    // Check if AnalysisComponents is available
+    if (typeof AnalysisComponents === 'undefined') {
+        console.error('AnalysisComponents not found. Make sure truthlens-utils.js is loaded first.');
+        return;
+    }
+    
+    window.truthLensApp = new TruthLensApp();
+});
+
+// Make app available globally
+window.TruthLensApp = TruthLensApp;// truthlens-app.js - Enhanced with meaningful analysis explanations and proper PDF generation
 // This file contains the main app class, initialization, and UI functions
 
 // ============================================================================
@@ -365,7 +1857,7 @@ class TruthLensApp {
         this.setupEventListeners();
         this.setupTabSwitching();
         this.loadSampleData();
-        this.injectEnhancedStyles(); // Add this line
+        this.injectEnhancedStyles();
         console.log('TruthLens initialized');
     }
 
@@ -1707,81 +3199,6 @@ class TruthLensApp {
         return meaning;
     }
 
-    getAuthorAnalysisContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We searched for ${data.author_name || 'the author'} across journalism databases, news archives, and professional networks. 
-                        We analyzed their publishing history, areas of expertise, and professional credentials.
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-user-circle"></i>
-                        Author Profile
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderAuthorProfile(data)}
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getAuthorAnalysisMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderAuthorProfile(data) {
-        let profile = '<div class="author-profile">';
-        
-        profile += `<div class="profile-item"><strong>Name:</strong> ${data.author_name || 'Unknown'}</div>`;
-        
-        if (data.author_score !== undefined) {
-            profile += `<div class="profile-item"><strong>Credibility Score:</strong> ${data.author_score}/100</div>`;
-        }
-        
-        if (data.verification_status?.verified !== undefined) {
-            profile += `<div class="profile-item"><strong>Verification:</strong> ${data.verification_status.verified ? 'Verified ✓' : 'Unverified'}</div>`;
-        }
-        
-        profile += '</div>';
-        return profile;
-    }
-
-    getAuthorAnalysisMeaning(data) {
-        if (!data.author_name) {
-            return 'We could not find information about this author in our journalism databases. This could mean they are new to journalism, write under a pseudonym, or may not be a professional journalist. Without author credentials, it\'s harder to assess the reliability of the reporting.';
-        }
-        
-        const score = data.author_score || data.score || 0;
-        let meaning = '';
-        
-        if (score >= 80) {
-            meaning = `${data.author_name} is an established journalist with verified credentials. Their track record suggests reliable and professional reporting.`;
-        } else if (score >= 60) {
-            meaning = `${data.author_name} has some journalism experience but limited public track record. Their reporting should be reliable but verify important claims.`;
-        } else if (score >= 40) {
-            meaning = `Limited information is available about ${data.author_name}'s journalism background. Exercise caution and cross-reference claims.`;
-        } else {
-            meaning = `We found very little professional journalism history for ${data.author_name}. This raises questions about editorial oversight and fact-checking.`;
-        }
-        
-        return meaning;
-    }
-
     getBiasDetectionContent(data) {
         const biasScore = data.bias_score || data.score || 0;
         const objectivityScore = 100 - biasScore;
@@ -2413,33 +3830,7 @@ class TruthLensApp {
         }
     }
 
-    renderLoadedPhrases(phrases) {
-        return phrases.slice(0, 5).map(phrase => `
-            <div class="loaded-phrase">
-                <span class="phrase-text">"${phrase.phrase || phrase}"</span>
-                <span class="phrase-severity severity-${phrase.severity || 'medium'}">${phrase.type || 'Biased Language'}</span>
-            </div>
-        `).join('');
-    }
-
-    getBiasDetectionMeaning(data) {
-        const biasScore = data.bias_score || data.score || 0;
-        let meaning = '';
-        
-        if (biasScore < 30) {
-            meaning = 'This article demonstrates strong objectivity with minimal bias. The language is neutral and perspectives are balanced.';
-        } else if (biasScore < 60) {
-            meaning = 'Moderate bias is present in the language and framing. While not severely slanted, be aware of the perspective being promoted.';
-        } else {
-            meaning = 'Significant bias detected throughout the article. The language is loaded and perspectives are one-sided. Seek alternative viewpoints.';
-        }
-        
-        return meaning;
-    }
-
-    getFactCheckerContent(data) {
-        const checks = data.fact_checks || [];
-        
+    getAuthorAnalysisContent(data) {
         return `
             <div class="service-analysis-structure">
                 <div class="analysis-section">
@@ -2448,102 +3839,18 @@ class TruthLensApp {
                         What We Analyzed
                     </div>
                     <div class="analysis-section-content">
-                        We identified ${checks.length} checkable claims in this article and verified them against fact-checking databases, 
-                        official sources, and scientific literature. Each claim was evaluated for accuracy and supporting evidence.
-                    </div>
-                </div>
-
-                ${checks.length > 0 ? `
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-list-check"></i>
-                        Fact Check Results
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderFactCheckResults(checks)}
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getFactCheckerMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderFactCheckResults(claims) {
-        return claims.slice(0, 5).map(claim => {
-            const verdictClass = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'verified' : 
-                               claim.verdict === 'False' ? 'false' : 'unverified';
-            const icon = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'fa-check' : 
-                        claim.verdict === 'False' ? 'fa-times' : 'fa-question';
-            
-            return `
-                <div class="fact-check-item">
-                    <div class="claim-text">"${claim.claim}"</div>
-                    <div class="claim-verdict ${verdictClass}">
-                        <i class="fas ${icon}"></i> ${claim.verdict}
-                    </div>
-                    ${claim.explanation ? `<div class="claim-explanation">${claim.explanation}</div>` : ''}
-                </div>
-            `;
-        }).join('');
-    }
-
-    getFactCheckerMeaning(data) {
-        const checks = data.fact_checks || [];
-        const total = checks.length;
-        const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
-        
-        if (total === 0) {
-            return 'No specific factual claims were identified for verification in this article.';
-        }
-        
-        const accuracy = (verified / total) * 100;
-        let meaning = '';
-        
-        if (accuracy >= 80) {
-            meaning = `Excellent factual accuracy with ${verified} out of ${total} claims verified. The article is well-researched and factually reliable.`;
-        } else if (accuracy >= 60) {
-            meaning = `Good factual accuracy with ${verified} out of ${total} claims verified. Most information is accurate but some claims need verification.`;
-        } else if (accuracy >= 40) {
-            meaning = `Moderate accuracy with only ${verified} out of ${total} claims verified. Many statements lack supporting evidence.`;
-        } else {
-            meaning = `Poor factual accuracy with only ${verified} out of ${total} claims verified. Most claims are unsubstantiated or false.`;
-        }
-        
-        return meaning;
-    }
-
-    getTransparencyContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We examined the article for transparency indicators including source citations, author disclosure, 
-                        funding information, and conflict of interest statements. Transparency is crucial for assessing 
-                        potential biases and agendas.
+                        We searched for ${data.author_name || 'the author'} across journalism databases, news archives, and professional networks. 
+                        We analyzed their publishing history, areas of expertise, and professional credentials.
                     </div>
                 </div>
 
                 <div class="analysis-section">
                     <div class="analysis-section-title">
-                        <i class="fas fa-clipboard-check"></i>
-                        Transparency Checklist
+                        <i class="fas fa-user-circle"></i>
+                        Author Profile
                     </div>
                     <div class="analysis-section-content">
-                        ${this.renderTransparencyChecklist(data)}
+                        ${this.renderAuthorProfile(data)}
                     </div>
                 </div>
 
@@ -2553,1356 +3860,43 @@ class TruthLensApp {
                         What This Means For You
                     </div>
                     <div class="analysis-section-content">
-                        ${this.getTransparencyMeaning(data)}
+                        ${this.getAuthorAnalysisMeaning(data)}
                     </div>
                 </div>
             </div>
         `;
     }
 
-    renderTransparencyChecklist(data) {
-        const items = [
-            { label: 'Sources Cited', value: data.sources_cited },
-            { label: 'Author Disclosed', value: data.has_author },
-            { label: 'Direct Quotes', value: data.has_quotes }
-        ];
+    renderAuthorProfile(data) {
+        let profile = '<div class="author-profile">';
         
-        return `
-            <div class="transparency-checklist">
-                ${items.map(item => `
-                    <div class="checklist-item">
-                        <span class="checklist-label">${item.label}</span>
-                        <span class="checklist-value ${item.value ? 'present' : 'missing'}">
-                            ${item.value ? '<i class="fas fa-check"></i> Present' : '<i class="fas fa-times"></i> Missing'}
-                        </span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    getManipulationContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We scanned for propaganda techniques, emotional manipulation, logical fallacies, and psychological tactics 
-                        designed to bypass critical thinking. This includes fear-mongering, false dichotomies, and appeal to emotions.
-                    </div>
-                </div>
-
-                ${data.propaganda_techniques && data.propaganda_techniques.length > 0 ? `
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Manipulation Techniques Detected
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderManipulationTechniques(data.propaganda_techniques)}
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getManipulationMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderManipulationTechniques(techniques) {
-        return techniques.map(tech => `
-            <div class="manipulation-technique">
-                <div class="technique-name">${tech.name || tech}</div>
-                <div class="technique-description">${tech.description || ''}</div>
-            </div>
-        `).join('');
-    }
-
-    getManipulationMeaning(data) {
-        const level = data.manipulation_level || data.level || 'Unknown';
-        const count = data.tactic_count || 0;
+        profile += `<div class="profile-item"><strong>Name:</strong> ${data.author_name || 'Unknown'}</div>`;
         
-        if (level === 'Low' || count === 0) {
-            return 'No significant manipulation tactics were detected. The article appears to present information straightforwardly without attempting to manipulate readers\' emotions or bypass critical thinking.';
-        }
-        
-        return `We detected ${count} manipulation technique${count !== 1 ? 's' : ''} in this article. These tactics are designed to influence your thinking through emotional appeal rather than factual argument. Read critically and focus on verifiable facts rather than emotional rhetoric.`;
-    }
-
-    getContentAnalysisContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We evaluated the writing quality, readability, structure, and professionalism of the content. 
-                        This includes grammar, coherence, evidence quality, and whether the content appears to be 
-                        AI-generated or plagiarized.
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-chart-bar"></i>
-                        Content Metrics
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderContentMetrics(data)}
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getContentAnalysisMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderContentMetrics(data) {
-        const metrics = [];
-        
-        if (data.quality_score !== undefined) {
-            metrics.push(`<div class="metric-item"><strong>Quality Score:</strong> ${data.quality_score}/100</div>`);
-        }
-        
-        if (data.readability?.level) {
-            metrics.push(`<div class="metric-item"><strong>Reading Level:</strong> ${data.readability.level}</div>`);
-        }
-        
-        if (data.readability?.score !== undefined) {
-            metrics.push(`<div class="metric-item"><strong>Readability Score:</strong> ${data.readability.score}</div>`);
-        }
-        
-        return metrics.join('');
-    }
-
-    getContentAnalysisMeaning(data) {
-        let meaning = '';
-        
-        if (data.readability?.level) {
-            const level = data.readability.level.toLowerCase();
-            if (level.includes('college') || level.includes('graduate')) {
-                meaning += 'This article is written at an advanced level, which may indicate thorough analysis but could be inaccessible to general readers. ';
-            } else if (level.includes('high school')) {
-                meaning += 'This article is written at an appropriate level for general audiences, balancing accessibility with substance. ';
-            } else {
-                meaning += 'This article is written at a basic level, which may oversimplify complex issues. ';
-            }
-        }
-        
-        if (data.quality_score !== undefined) {
-            if (data.quality_score >= 80) {
-                meaning += 'The writing quality is professional with good structure and clarity.';
-            } else if (data.quality_score >= 60) {
-                meaning += 'The writing quality is acceptable but has room for improvement.';
-            } else {
-                meaning += 'The writing quality is poor, which may indicate lack of editorial standards.';
-            }
-        }
-        
-        return meaning || 'Content analysis helps assess the professionalism and quality of the writing.';
-    }
-
-    // Enhanced PDF generation
-    async downloadPDF() {
-        if (!this.currentAnalysis || !this.currentAnalysis.analysis || !this.currentAnalysis.article) {
-            this.showError('No analysis available to download');
-            return;
-        }
-        
-        this.showLoading();
-        
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Generate comprehensive PDF with all analysis details
-            this.generateComprehensivePDF(doc);
-            
-            // Save the PDF
-            const fileName = `truthlens-analysis-${Date.now()}.pdf`;
-            doc.save(fileName);
-            
-        } catch (error) {
-            console.error('PDF generation error:', error);
-            this.showError('Failed to generate PDF report. Please try again.');
-        } finally {
-            this.hideLoading();
-        }
-    }
-
-    generateComprehensivePDF(doc) {
-        const { article, analysis, detailed_analysis } = this.currentAnalysis;
-        let yPosition = 20;
-        const lineHeight = 7;
-        const pageHeight = doc.internal.pageSize.height;
-        const pageWidth = doc.internal.pageSize.width;
-        const margin = 20;
-        const contentWidth = pageWidth - (2 * margin);
-        
-        // Helper function to add text with page break check
-        const addText = (text, fontSize = 12, fontStyle = 'normal', indent = 0) => {
-            doc.setFontSize(fontSize);
-            doc.setFont(undefined, fontStyle);
-            
-            const lines = doc.splitTextToSize(text, contentWidth - indent);
-            
-            lines.forEach(line => {
-                if (yPosition > pageHeight - 30) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-                doc.text(line, margin + indent, yPosition);
-                yPosition += fontSize === 12 ? lineHeight : lineHeight + 2;
-            });
-        };
-        
-        // Title Page
-        doc.setFillColor(99, 102, 241);
-        doc.rect(0, 0, pageWidth, 60, 'F');
-        doc.setTextColor(255, 255, 255);
-        addText('TruthLens AI Analysis Report', 24, 'bold');
-        yPosition += 10;
-        addText(new Date().toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        }), 12);
-        
-        // Reset text color
-        doc.setTextColor(0, 0, 0);
-        yPosition = 80;
-        
-        // Article Information
-        addText('ARTICLE INFORMATION', 16, 'bold');
-        yPosition += 5;
-        
-        addText(`Title: ${article.title || 'Untitled'}`, 12);
-        addText(`Author: ${article.author || 'Unknown'}`, 12);
-        addText(`Source: ${article.domain || article.source || 'Unknown'}`, 12);
-        if (article.publish_date) {
-            addText(`Published: ${new Date(article.publish_date).toLocaleDateString()}`, 12);
-        }
-        
-        yPosition += 10;
-        
-        // Executive Summary
-        addText('EXECUTIVE SUMMARY', 16, 'bold');
-        yPosition += 5;
-        
-        const trustScore = analysis.trust_score || 0;
-        addText(`Overall Trust Score: ${trustScore}/100`, 14, 'bold');
-        addText(this.getTrustSummaryExplanation(trustScore, analysis.trust_level, this.currentAnalysis), 12);
-        
-        yPosition += 10;
-        
-        // Key Findings
-        let findings = [];
-        if (analysis.key_findings && Array.isArray(analysis.key_findings)) {
-            findings = analysis.key_findings.map(finding => ({
-                type: finding.severity === 'high' ? 'negative' : 
-                      finding.severity === 'low' ? 'positive' : 'warning',
-                title: finding.finding || finding.type || 'Finding',
-                explanation: finding.text || finding.message || ''
-            }));
-        } else {
-            findings = this.generateMeaningfulFindings(this.currentAnalysis);
-        }
-        
-        if (findings.length > 0) {
-            addText('KEY FINDINGS', 16, 'bold');
-            yPosition += 5;
-            
-            findings.forEach(finding => {
-                const icon = finding.type === 'positive' ? '✓' : 
-                           finding.type === 'negative' ? '✗' : '!';
-                addText(`${icon} ${finding.title}`, 12, 'bold');
-                addText(finding.explanation, 11, 'normal', 10);
-                yPosition += 3;
-            });
-        }
-        
-        // New page for detailed analysis
-        doc.addPage();
-        yPosition = 20;
-        
-        addText('DETAILED ANALYSIS', 18, 'bold');
-        yPosition += 10;
-        
-        // Process each service with meaningful content
-        services.forEach(service => {
-            const serviceData = detailed_analysis[service.id];
-            if (!serviceData || Object.keys(serviceData).length === 0) return;
-            
-            // Add page break if needed
-            if (yPosition > pageHeight - 80) {
-                doc.addPage();
-                yPosition = 20;
-            }
-            
-            // Service header with background
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, yPosition - 5, contentWidth, 15, 'F');
-            doc.setTextColor(0, 0, 0);
-            addText(service.name.toUpperCase(), 14, 'bold');
-            yPosition += 10;
-            
-            // Add meaningful analysis for each service
-            switch (service.id) {
-                case 'source_credibility':
-                    this.addSourceCredibilityToPDF(serviceData, addText);
-                    break;
-                case 'author_analyzer':
-                    this.addAuthorAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'bias_detector':
-                    this.addBiasAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'fact_checker':
-                    this.addFactCheckingToPDF(serviceData, addText);
-                    break;
-                case 'transparency_analyzer':
-                    this.addTransparencyAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'manipulation_detector':
-                    this.addManipulationAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'content_analyzer':
-                    this.addContentAnalysisToPDF(serviceData, addText);
-                    break;
-            }
-            
-            yPosition += 10;
-        });
-        
-        // Footer on all pages
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            doc.setFontSize(10);
-            doc.setTextColor(128, 128, 128);
-            doc.text(
-                `Page ${i} of ${totalPages} | Generated by TruthLens AI | ${new Date().toLocaleDateString()}`,
-                pageWidth / 2,
-                pageHeight - 10,
-                { align: 'center' }
-            );
-        }
-    }
-    
-    addSourceCredibilityToPDF(data, addText) {
-        addText('What We Found:', 12, 'bold');
-        addText(this.getSourceFindings(data), 11);
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getSourceMeaning(data), 11);
-        
-        if (data.credibility_score !== undefined) {
-            addText(`Credibility Score: ${data.credibility_score}/100`, 12, 'bold');
-        }
-    }
-    
-    addAuthorAnalysisToPDF(data, addText) {
-        addText('Author Profile:', 12, 'bold');
-        if (data.author_name) {
-            addText(`Name: ${data.author_name}`, 11);
-        }
-        if (data.verification_status?.verified !== undefined) {
-            addText(`Verification Status: ${data.verification_status.verified ? 'Verified Journalist' : 'Unverified'}`, 11);
-        }
         if (data.author_score !== undefined) {
-            addText(`Credibility Score: ${data.author_score}`, 11);
+            profile += `<div class="profile-item"><strong>Credibility Score:</strong> ${data.author_score}/100</div>`;
         }
         
-        addText('What This Means:', 12, 'bold');
-        addText(this.getAuthorMeaning(data), 11);
-    }
-    
-    addBiasAnalysisToPDF(data, addText) {
-        addText('Bias Indicators:', 12, 'bold');
-        addText(this.getBiasFindings(data), 11);
-        
-        if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-            addText('Examples of Biased Language:', 12, 'bold');
-            data.loaded_phrases.slice(0, 3).forEach(phrase => {
-                addText(`• "${phrase.phrase || phrase}" (${phrase.type || 'Loaded Language'})`, 11);
-            });
+        if (data.verification_status?.verified !== undefined) {
+            profile += `<div class="profile-item"><strong>Verification:</strong> ${data.verification_status.verified ? 'Verified ✓' : 'Unverified'}</div>`;
         }
         
-        addText('What This Means:', 12, 'bold');
-        addText(this.getBiasMeaning(data), 11);
+        profile += '</div>';
+        return profile;
     }
-    
-    addFactCheckingToPDF(data, addText) {
-        const checks = data.fact_checks || [];
-        const total = checks.length;
-        const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
-        
-        addText(`Claims Analyzed: ${total}`, 12, 'bold');
-        addText(`Verified as Accurate: ${verified} (${total > 0 ? Math.round((verified/total)*100) : 0}%)`, 11);
-        
-        if (checks.length > 0) {
-            addText('Sample Claims:', 12, 'bold');
-            checks.slice(0, 3).forEach(claim => {
-                addText(`• "${claim.claim}"`, 11);
-                addText(`  Verdict: ${claim.verdict}`, 11);
-            });
+
+    getAuthorAnalysisMeaning(data) {
+        if (!data.author_name) {
+            return 'We could not find information about this author in our journalism databases. This could mean they are new to journalism, write under a pseudonym, or may not be a professional journalist. Without author credentials, it\'s harder to assess the reliability of the reporting.';
         }
         
-        addText('What This Means:', 12, 'bold');
-        addText(this.getFactCheckerMeaning(data), 11);
-    }
-    
-    addTransparencyAnalysisToPDF(data, addText) {
-        addText('Transparency Indicators:', 12, 'bold');
-        const items = [
-            `Sources Cited: ${data.sources_cited ? 'Yes' : 'No'}`,
-            `Author Disclosed: ${data.has_author ? 'Yes' : 'No'}`,
-            `Direct Quotes: ${data.has_quotes ? 'Yes' : 'No'}`
-        ];
-        items.forEach(item => addText(`• ${item}`, 11));
+        const score = data.author_score || data.score || 0;
+        let meaning = '';
         
-        addText('What This Means:', 12, 'bold');
-        addText(this.getTransparencyMeaning(data), 11);
-    }
-    
-    addManipulationAnalysisToPDF(data, addText) {
-        const level = data.manipulation_level || 'Unknown';
-        const count = data.tactic_count || 0;
-        
-        addText(`Manipulation Level: ${level}`, 11);
-        addText(`Tactics Found: ${count}`, 11);
-        
-        if (data.propaganda_techniques && data.propaganda_techniques.length > 0) {
-            addText('Manipulation Techniques Found:', 12, 'bold');
-            data.propaganda_techniques.forEach(tech => {
-                addText(`• ${tech.name || tech}`, 11);
-            });
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getManipulationMeaning(data), 11);
-    }
-    
-    addContentAnalysisToPDF(data, addText) {
-        addText('Content Metrics:', 12, 'bold');
-        if (data.quality_score !== undefined) {
-            addText(`Quality Score: ${data.quality_score}/100`, 11);
-        }
-        if (data.readability?.level) {
-            addText(`Reading Level: ${data.readability.level}`, 11);
-        }
-        if (data.readability?.score !== undefined) {
-            addText(`Readability Score: ${data.readability.score}`, 11);
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getContentAnalysisMeaning(data), 11);
-    }
-    
-    // Progress Animation Methods
-    showLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.add('active');
-        }
-    }
-
-    hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.remove('active');
-        }
-    }
-
-    showError(message) {
-        const errorEl = document.getElementById('errorMessage');
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.classList.add('active');
-            
-            setTimeout(() => {
-                errorEl.classList.remove('active');
-            }, 5000);
-        }
-    }
-
-    resetProgress() {
-        // Reset any progress indicators if needed
-    }
-
-    startProgressAnimation() {
-        // Start progress animation if implemented
-    }
-
-    stopProgressAnimation() {
-        // Stop progress animation if implemented
-    }
-
-    completeProgress() {
-        // Complete progress animation if implemented
-    }
-
-    animateTrustScore(score) {
-        const scoreEl = document.getElementById('trustScoreNumber');
-        if (!scoreEl) return;
-
-        let current = 0;
-        const increment = score / 30;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= score) {
-                current = score;
-                clearInterval(timer);
-            }
-            scoreEl.textContent = Math.round(current);
-        }, 30);
-    }
-
-    updateTrustLevelIndicator(score, level) {
-        const indicatorEl = document.getElementById('trustLevelIndicator');
-        const iconEl = document.getElementById('trustLevelIcon');
-        const textEl = document.getElementById('trustLevelText');
-        
-        if (!indicatorEl || !iconEl || !textEl) return;
-
-        // Remove all level classes
-        indicatorEl.className = 'trust-level-indicator';
-        
-        // Add appropriate class and update text
         if (score >= 80) {
-            indicatorEl.classList.add('level-very-high');
-            iconEl.className = 'fas fa-check-circle trust-level-icon';
-            textEl.textContent = 'Very High Credibility';
+            meaning = `${data.author_name} is an established journalist with verified credentials. Their track record suggests reliable and professional reporting.`;
         } else if (score >= 60) {
-            indicatorEl.classList.add('level-high');
-            iconEl.className = 'fas fa-check trust-level-icon';
-            textEl.textContent = 'High Credibility';
+            meaning = `${data.author_name} has some journalism experience but limited public track record. Their reporting should be reliable but verify important claims.`;
         } else if (score >= 40) {
-            indicatorEl.classList.add('level-moderate');
-            iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
-            textEl.textContent = 'Moderate Credibility';
-        } else if (score >= 20) {
-            indicatorEl.classList.add('level-low');
-            iconEl.className = 'fas fa-times-circle trust-level-icon';
-            textEl.textContent = 'Low Credibility';
+            meaning = `Limited information is available about ${data.author_name}'s journalism background. Exercise caution and cross-reference claims.`;
         } else {
-            indicatorEl.classList.add('level-very-low');
-            iconEl.className = 'fas fa-times-circle trust-level-icon';
-            textEl.textContent = 'Very Low Credibility';
-        }
-    }
-
-    displayArticleInfo(article, analysis) {
-        const titleEl = document.getElementById('articleTitle');
-        const metaEl = document.getElementById('articleMeta');
-        
-        if (titleEl) {
-            titleEl.textContent = article.title || 'Untitled Article';
-        }
-        
-        if (metaEl) {
-            const metaItems = [];
-            
-            if (article.author) {
-                metaItems.push(`
-                    <div class="meta-item">
-                        <i class="fas fa-user"></i>
-                        ${article.author}
-                    </div>
-                `);
-            }
-            
-            if (article.domain || article.source) {
-                metaItems.push(`
-                    <div class="meta-item">
-                        <i class="fas fa-globe"></i>
-                        ${article.domain || article.source}
-                    </div>
-                `);
-            }
-            
-            if (article.publish_date) {
-                metaItems.push(`
-                    <div class="meta-item">
-                        <i class="fas fa-calendar"></i>
-                        ${new Date(article.publish_date).toLocaleDateString()}
-                    </div>
-                `);
-            }
-            
-            metaEl.innerHTML = metaItems.join('');
-        }
-    }
-
-    toggleAccordion(serviceId) {
-        const item = document.getElementById(`service-${serviceId}`);
-        if (!item) return;
-
-        const wasActive = item.classList.contains('active');
-        
-        // Close all accordions
-        document.querySelectorAll('.service-accordion-item').forEach(el => {
-            el.classList.remove('active');
-        });
-        
-        // Open clicked accordion if it wasn't active
-        if (!wasActive) {
-            item.classList.add('active');
-            
-            // Initialize any charts in this service
-            setTimeout(() => {
-                this.initializeServiceCharts(serviceId);
-            }, 300);
-        }
-    }
-
-    initializeServiceCharts(serviceId) {
-        // Initialize charts based on service ID
-        switch(serviceId) {
-            case 'source_credibility':
-                // Initialize source credibility charts if needed
-                break;
-            case 'bias_detector':
-                // Initialize bias detection charts if needed
-                break;
-            // Add other services as needed
-        }
-    }
-
-    shareResults() {
-        if (!this.currentAnalysis) {
-            this.showError('No analysis results to share');
-            return;
-        }
-
-        const shareUrl = window.location.href;
-        const shareText = `Check out this news analysis: Trust Score ${this.currentAnalysis.analysis.trust_score}/100`;
-
-        if (navigator.share) {
-            navigator.share({
-                title: 'TruthLens Analysis',
-                text: shareText,
-                url: shareUrl
-            }).catch(err => console.log('Error sharing:', err));
-        } else {
-            // Fallback to copying URL
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                this.showError('Link copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-            });
-        }
-    }
-
-    loadSampleData() {
-        // Load sample data for development/testing
-        console.log('Ready to analyze articles');
-    }
-
-    // Helper method to extract scores from nested data
-    extractScore(data, fields, defaultValue = 50) {
-        if (!data || typeof data !== 'object') return defaultValue;
-        
-        for (const field of fields) {
-            if (data[field] !== undefined && data[field] !== null) {
-                const value = parseFloat(data[field]);
-                if (!isNaN(value)) return Math.round(value);
-            }
-        }
-        
-        return defaultValue;
-    }
-
-    // Explanation methods
-    getSourceCredibilityExplanation(data) {
-        if (!data) return "Source credibility could not be determined.";
-        
-        const score = this.extractScore(data, ['credibility_score', 'score']);
-        if (score >= 80) return "This source has excellent credibility with strong editorial standards.";
-        if (score >= 60) return "This source has good credibility but some minor concerns.";
-        if (score >= 40) return "This source has moderate credibility - verify important claims.";
-        return "This source has low credibility - be very cautious with information.";
-    }
-
-    getAuthorCredibilityExplanation(data) {
-        if (!data) return "Author information could not be verified.";
-        
-        const score = this.extractScore(data, ['author_score', 'score']);
-        if (score >= 80) return "The author is a verified journalist with strong credentials.";
-        if (score >= 60) return "The author has some verified credentials.";
-        if (score >= 40) return "Limited information available about the author.";
-        return "Author credentials could not be verified.";
-    }
-
-    getTransparencyExplanation(data) {
-        const score = this.extractScore(data, ['transparency_score', 'score']);
-        if (score >= 80) return "Excellent transparency with proper sourcing and attribution.";
-        if (score >= 60) return "Good transparency but missing some attribution details.";
-        if (score >= 40) return "Limited transparency makes verification challenging.";
-        return "Poor transparency is a significant credibility concern.";
-    }
-
-    getObjectivityExplanation(data) {
-        if (!data) return "Objectivity could not be assessed.";
-        
-        const biasScore = data.bias_score || data.score || 0;
-        const objectivity = 100 - biasScore;
-        
-        if (objectivity >= 80) return "Highly objective reporting with minimal bias.";
-        if (objectivity >= 60) return "Generally objective with some minor bias.";
-        if (objectivity >= 40) return "Moderate bias present - consider the perspective.";
-        return "Significant bias detected - seek alternative viewpoints.";
-    }
-
-    getBreakdownType(score) {
-        if (score >= 70) return 'positive';
-        if (score >= 40) return 'neutral';
-        if (score >= 20) return 'warning';
-        return 'negative';
-    }
-
-    getScoreColor(score) {
-        if (score >= 80) return '#10b981';
-        if (score >= 60) return '#3b82f6';
-        if (score >= 40) return '#f59e0b';
-        return '#ef4444';
-    }
-
-            
-            /* Percentile Info */
-            .percentile-info {
-                text-align: center;
-                padding: 15px;
-                background: #f0f9ff;
-                border-radius: 8px;
-                margin-top: 20px;
-                font-size: 0.9rem;
-            }
-            
-            /* Enhanced Meaning */
-            .enhanced-meaning {
-                margin: 20px 0;
-            }
-            
-            .meaning-summary {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 15px;
-                font-size: 1.1rem;
-            }
-            
-            .meaning-summary.positive {
-                background: #ecfdf5;
-                color: #065f46;
-            }
-            
-            .meaning-summary.moderate {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .meaning-summary.warning {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .meaning-summary.critical {
-                background: #fef2f2;
-                color: #991b1b;
-            }
-            
-            .trust-recommendations {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            
-            .trust-recommendations li {
-                display: flex;
-                align-items: flex-start;
-                gap: 10px;
-                margin: 10px 0;
-                padding: 10px;
-                background: #f9fafb;
-                border-radius: 6px;
-            }
-            
-            .trust-recommendations i {
-                flex-shrink: 0;
-                margin-top: 2px;
-            }
-            
-            /* Bias Detection Styles */
-            .bias-spectrum-container {
-                margin: 20px 0;
-            }
-            
-            .objectivity-meter {
-                margin-bottom: 30px;
-            }
-            
-            .meter-labels {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-                font-size: 0.875rem;
-                color: #6b7280;
-            }
-            
-            .meter-track {
-                height: 32px;
-                background: #f3f4f6;
-                border-radius: 16px;
-                overflow: hidden;
-                position: relative;
-            }
-            
-            .meter-fill {
-                height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                padding-right: 10px;
-                position: relative;
-                transition: width 0.5s ease;
-            }
-            
-            .meter-marker {
-                background: white;
-                padding: 4px 12px;
-                border-radius: 12px;
-                font-weight: 600;
-                font-size: 0.875rem;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            
-            /* Bias Dimensions */
-            .bias-dimensions {
-                background: #f9fafb;
-                padding: 20px;
-                border-radius: 8px;
-            }
-            
-            .bias-dimensions h5 {
-                margin: 0 0 15px;
-                color: #1f2937;
-            }
-            
-            .dimension-bars {
-                display: grid;
-                gap: 12px;
-            }
-            
-            .dimension-header {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 4px;
-                font-size: 0.875rem;
-            }
-            
-            .dimension-name {
-                flex: 1;
-                font-weight: 500;
-            }
-            
-            .dimension-value {
-                font-weight: 600;
-                color: #6b7280;
-            }
-            
-            .dimension-track {
-                height: 8px;
-                background: #e5e7eb;
-                border-radius: 4px;
-                overflow: hidden;
-            }
-            
-            .dimension-fill {
-                height: 100%;
-                transition: width 0.3s ease;
-            }
-            
-            /* Loaded Phrase Cards */
-            .loaded-phrase-card {
-                background: white;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 12px;
-            }
-            
-            .phrase-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-            }
-            
-            .phrase-number {
-                font-weight: 600;
-                color: #6b7280;
-            }
-            
-            .phrase-severity {
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                color: white;
-            }
-            
-            .phrase-text {
-                font-size: 1.1rem;
-                font-style: italic;
-                color: #1f2937;
-                margin: 12px 0;
-                padding: 0 20px;
-                position: relative;
-            }
-            
-            .phrase-text i {
-                position: absolute;
-                color: #d1d5db;
-                font-size: 1.5rem;
-            }
-            
-            .phrase-text i:first-child {
-                left: 0;
-                top: -5px;
-            }
-            
-            .phrase-text i:last-child {
-                right: 0;
-                bottom: -5px;
-            }
-            
-            .phrase-analysis {
-                font-size: 0.875rem;
-                color: #6b7280;
-                margin: 8px 0;
-                line-height: 1.6;
-            }
-            
-            .neutral-alternative {
-                background: #f0f9ff;
-                padding: 8px 12px;
-                border-radius: 6px;
-                font-size: 0.875rem;
-                margin-top: 8px;
-            }
-            
-            /* Pattern Grid */
-            .pattern-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 15px;
-                margin-top: 15px;
-            }
-            
-            .pattern-item {
-                display: flex;
-                align-items: flex-start;
-                gap: 10px;
-                padding: 12px;
-                background: #fef3c7;
-                border-radius: 6px;
-                font-size: 0.875rem;
-            }
-            
-            .pattern-item i {
-                color: #d97706;
-                flex-shrink: 0;
-            }
-            
-            /* Source Distribution */
-            .source-breakdown {
-                margin: 20px 0;
-            }
-            
-            .source-summary {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-                margin-bottom: 25px;
-            }
-            
-            .source-stat {
-                text-align: center;
-                padding: 15px;
-                background: #f9fafb;
-                border-radius: 8px;
-            }
-            
-            .stat-number {
-                font-size: 2rem;
-                font-weight: 700;
-                color: #6366f1;
-            }
-            
-            .stat-label {
-                font-size: 0.875rem;
-                color: #6b7280;
-                margin-top: 4px;
-            }
-            
-            .source-chart {
-                margin: 20px 0;
-            }
-            
-            .source-type-bar {
-                display: grid;
-                grid-template-columns: 150px 1fr 50px;
-                align-items: center;
-                gap: 10px;
-                margin: 8px 0;
-            }
-            
-            .source-type-label {
-                font-size: 0.875rem;
-                font-weight: 500;
-            }
-            
-            .source-type-track {
-                height: 20px;
-                background: #f3f4f6;
-                border-radius: 10px;
-                overflow: hidden;
-                position: relative;
-            }
-            
-            .source-type-fill {
-                height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                padding-right: 8px;
-                color: white;
-                font-weight: 600;
-                font-size: 0.75rem;
-            }
-            
-            .source-percentage {
-                text-align: right;
-                font-size: 0.875rem;
-                color: #6b7280;
-            }
-            
-            /* Political Spectrum */
-            .political-analysis {
-                margin: 20px 0;
-            }
-            
-            .spectrum-container {
-                margin: 20px 0;
-            }
-            
-            .spectrum-labels {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-                font-size: 0.75rem;
-                color: #6b7280;
-            }
-            
-            .spectrum-track {
-                height: 40px;
-                background: linear-gradient(to right, #3b82f6, #8b5cf6, #6b7280, #dc2626, #991b1b);
-                border-radius: 20px;
-                position: relative;
-                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-            }
-            
-            .spectrum-marker {
-                position: absolute;
-                top: 50%;
-                transform: translate(-50%, -50%);
-                transition: left 0.5s ease;
-            }
-            
-            .marker-dot {
-                width: 24px;
-                height: 24px;
-                background: white;
-                border: 3px solid #1f2937;
-                border-radius: 50%;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            }
-            
-            .marker-label {
-                position: absolute;
-                top: 30px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #1f2937;
-                color: white;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                white-space: nowrap;
-            }
-            
-            .political-indicators {
-                background: #f9fafb;
-                padding: 20px;
-                border-radius: 8px;
-                margin: 20px 0;
-            }
-            
-            .political-indicators h5 {
-                margin: 0 0 15px;
-                color: #1f2937;
-            }
-            
-            .indicator-grid {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-            
-            .political-indicator {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 6px 12px;
-                background: white;
-                border: 1px solid #e5e7eb;
-                border-radius: 16px;
-                font-size: 0.875rem;
-            }
-            
-            /* Reading Strategy Box */
-            .reading-strategy-box,
-            .bias-impact-box {
-                background: #f0f9ff;
-                border: 1px solid #bfdbfe;
-                border-radius: 8px;
-                padding: 20px;
-                margin: 20px 0;
-            }
-            
-            .reading-strategy-box h5,
-            .bias-impact-box h5 {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin: 0 0 15px;
-                color: #1e40af;
-            }
-            
-            .reading-strategy-box ul,
-            .bias-impact-box ul {
-                margin: 0;
-                padding-left: 20px;
-            }
-            
-            .reading-strategy-box li,
-            .bias-impact-box li {
-                margin: 8px 0;
-                line-height: 1.6;
-            }
-            
-            /* Assessment Boxes */
-            .assessment {
-                display: flex;
-                align-items: flex-start;
-                gap: 12px;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 15px 0;
-            }
-            
-            .assessment.positive {
-                background: #ecfdf5;
-                color: #065f46;
-            }
-            
-            .assessment.moderate {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .assessment.warning {
-                background: #fef2f2;
-                color: #991b1b;
-            }
-            
-            /* Recommendation Box */
-            .recommendation-box {
-                background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-                border: 1px solid #bfdbfe;
-                border-radius: 8px;
-                padding: 20px;
-                margin: 20px 0;
-            }
-            
-            .recommendation-title {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-weight: 600;
-                color: #1e40af;
-                margin-bottom: 15px;
-            }
-            
-            /* Section Intro */
-            .section-intro {
-                font-size: 0.9rem;
-                color: #6b7280;
-                margin-bottom: 20px;
-                font-style: italic;
-            }
-            
-            /* Language Patterns */
-            .language-patterns {
-                background: #fffbeb;
-                border: 1px solid #fcd34d;
-                border-radius: 8px;
-                padding: 20px;
-                margin-top: 20px;
-            }
-            
-            .language-patterns h5 {
-                margin: 0 0 15px;
-                color: #92400e;
-            }
-            
-            /* Framing Analysis */
-            .framing-details {
-                display: grid;
-                gap: 20px;
-            }
-            
-            .frame-item {
-                background: white;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 20px;
-            }
-            
-            .frame-item.warning {
-                background: #fef3c7;
-                border-color: #fbbf24;
-            }
-            
-            .frame-item h5 {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin: 0 0 10px;
-                color: #1f2937;
-            }
-            
-            .emphasis-comparison {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                margin-top: 15px;
-            }
-            
-            .emphasized,
-            .deemphasized {
-                padding: 15px;
-                border-radius: 6px;
-            }
-            
-            .emphasized {
-                background: #fee2e2;
-            }
-            
-            .deemphasized {
-                background: #e0e7ff;
-            }
-            
-            .confidence-note {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px;
-                background: #f3f4f6;
-                border-radius: 6px;
-                font-size: 0.875rem;
-                color: #6b7280;
-                margin-top: 15px;
-            }
-            
-            /* Bias Level Indicators */
-            .bias-level {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 12px 16px;
-                border-radius: 8px;
-                margin-bottom: 15px;
-                font-weight: 600;
-            }
-            
-            .bias-level.excellent {
-                background: #ecfdf5;
-                color: #065f46;
-            }
-            
-            .bias-level.good {
-                background: #eff6ff;
-                color: #1e40af;
-            }
-            
-            .bias-level.moderate {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .bias-level.severe {
-                background: #fef2f2;
-                color: #991b1b;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-} // This closes the TruthLensApp class
-
-// ============================================================================
-// SECTION 3: Initialization
-// ============================================================================
-
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing TruthLens App...');
-    
-    // Check if AnalysisComponents is available
-    if (typeof AnalysisComponents === 'undefined') {
-        console.error('AnalysisComponents not found. Make sure truthlens-utils.js is loaded first.');
-        return;
-    }
-    
-    window.truthLensApp = new TruthLensApp();
-});
-
-// Make app available globally
-window.TruthLensApp = TruthLensApp;
+            meaning = `We found very little professional journalism history for ${data.author_name}. This raises questions about editorial oversight and fact-checking.`;
