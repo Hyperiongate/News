@@ -8,7 +8,7 @@ import logging
 import uuid
 import mimetypes
 from functools import wraps
-from flask import Flask, request, render_template, g, send_from_directory
+from flask import Flask, request, render_template, g, send_from_directory, make_response
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -124,18 +124,38 @@ def index():
     return render_template('index.html')
 
 
-# Fix for JavaScript MIME type - serve JS files with correct content type
+# CRITICAL FIX: Serve JS files from /js/ path (as expected by HTML)
+@app.route('/js/<path:filename>')
+def serve_js_direct(filename):
+    """Serve JavaScript files with correct MIME type from /js/ path"""
+    try:
+        # Check if file exists in static/js directory
+        js_path = os.path.join(app.static_folder, 'js', filename)
+        if os.path.exists(js_path):
+            response = make_response(send_from_directory(os.path.join(app.static_folder, 'js'), filename))
+            response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            return response
+        else:
+            logger.error(f"JavaScript file not found: {filename}")
+            return "File not found", 404
+    except Exception as e:
+        logger.error(f"Error serving JS file {filename}: {str(e)}")
+        return "Internal server error", 500
+
+
+# Also keep the /static/js/ route for backwards compatibility
 @app.route('/static/js/<path:filename>')
 def serve_js(filename):
-    """Serve JavaScript files with correct MIME type"""
-    return send_from_directory('static/js', filename, mimetype='application/javascript')
-
-
-# Additional route if truthlens.js is served from root
-@app.route('/truthlens.js')
-def serve_truthlens():
-    """Serve truthlens.js with correct MIME type"""
-    return send_from_directory('static/js', 'truthlens.js', mimetype='application/javascript')
+    """Serve JavaScript files with correct MIME type from /static/js/ path"""
+    try:
+        response = make_response(send_from_directory(os.path.join(app.static_folder, 'js'), filename))
+        response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
+    except Exception as e:
+        logger.error(f"Error serving static JS file {filename}: {str(e)}")
+        return "Internal server error", 500
 
 
 # Serve favicon to avoid 404 errors
@@ -357,8 +377,10 @@ def validate_config():
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
+    # Log which path was not found
+    logger.warning(f"404 Not Found: {request.path}")
     return ResponseBuilder.error(
-        "Endpoint not found",
+        f"Endpoint not found: {request.path}",
         status_code=404,
         error_code="NOT_FOUND"
     )
@@ -367,6 +389,7 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors"""
+    logger.error(f"500 Internal Error: {str(error)}")
     return ResponseBuilder.error(
         "Internal server error",
         status_code=500,
@@ -392,6 +415,15 @@ if __name__ == '__main__':
     logger.info(f"Starting News Analyzer API on port {port}")
     logger.info(f"Environment: {Config.ENV}")
     logger.info(f"Services available: {config_status['enabled_services']}")
+    logger.info(f"Static folder: {app.static_folder}")
+    
+    # Debug: List files in static/js directory
+    js_dir = os.path.join(app.static_folder, 'js')
+    if os.path.exists(js_dir):
+        js_files = os.listdir(js_dir)
+        logger.info(f"JavaScript files in static/js: {js_files}")
+    else:
+        logger.warning(f"JavaScript directory not found: {js_dir}")
     
     # Run app
     app.run(
