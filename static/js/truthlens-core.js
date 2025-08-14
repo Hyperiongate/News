@@ -1,5 +1,5 @@
 // truthlens-core.js - Core Application Logic and API Communication
-// This file contains the main TruthLensApp class with core functionality
+// FIXED VERSION: Addresses all trust score calculation and service handling issues
 
 // ============================================================================
 // SECTION 1: Configuration and Constants
@@ -11,56 +11,63 @@ let isAnalyzing = false;
 let charts = {};
 let isPro = true; // For development, keep pro features open
 
-// Service definitions
+// Service definitions with proper weighting
 const services = [
     {
         id: 'source_credibility',
         name: 'Source Credibility',
         icon: 'fa-shield-alt',
         description: 'Evaluates the reliability and trustworthiness of the news source',
-        isPro: false
+        isPro: false,
+        weight: 0.25  // 25% of total score
     },
     {
         id: 'author_analyzer',
         name: 'Author Analysis',
         icon: 'fa-user-check',
         description: 'Analyzes author credentials and publishing history',
-        isPro: false
+        isPro: false,
+        weight: 0.20  // 20% of total score
     },
     {
         id: 'bias_detector',
         name: 'Bias Detection',
         icon: 'fa-balance-scale',
         description: 'Identifies political, ideological, and narrative biases',
-        isPro: true
+        isPro: true,
+        weight: 0.15  // 15% of total score
     },
     {
         id: 'fact_checker',
         name: 'Fact Verification',
         icon: 'fa-check-double',
         description: 'Verifies claims against trusted fact-checking databases',
-        isPro: true
+        isPro: true,
+        weight: 0.20  // 20% of total score
     },
     {
         id: 'transparency_analyzer',
         name: 'Transparency Analysis',
         icon: 'fa-eye',
         description: 'Evaluates source disclosure and funding transparency',
-        isPro: true
+        isPro: true,
+        weight: 0.10  // 10% of total score
     },
     {
         id: 'manipulation_detector',
         name: 'Manipulation Detection',
         icon: 'fa-mask',
         description: 'Detects emotional manipulation and propaganda techniques',
-        isPro: true
+        isPro: true,
+        weight: 0.10  // 10% of total score
     },
     {
         id: 'content_analyzer',
         name: 'Content Analysis',
         icon: 'fa-file-alt',
         description: 'Analyzes writing quality, structure, and coherence',
-        isPro: true
+        isPro: true,
+        weight: 0.05  // 5% of total score (not included in trust score but analyzed)
     }
 ];
 
@@ -100,7 +107,7 @@ class TruthLensApp {
         this.setupEventListeners();
         this.setupTabSwitching();
         this.loadSampleData();
-        console.log('TruthLens initialized');
+        console.log('TruthLens initialized with enhanced trust score calculation');
     }
 
     setupEventListeners() {
@@ -124,7 +131,7 @@ class TruthLensApp {
             });
         }
 
-        // Analyze buttons
+        // Analyze buttons - with null check
         const analyzeBtn = document.getElementById('analyzeBtn');
         if (analyzeBtn) {
             analyzeBtn.addEventListener('click', () => this.analyzeArticle());
@@ -158,7 +165,7 @@ class TruthLensApp {
             shareBtn.addEventListener('click', () => this.shareResults());
         }
 
-        // Example buttons for site blocking message
+        // Example buttons - removed site blocking message handlers
         document.querySelectorAll('.example-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const url = e.target.getAttribute('data-url');
@@ -262,25 +269,9 @@ class TruthLensApp {
 
             const responseData = await response.json();
             
-            // DETAILED DEBUG LOGGING
-            console.log('=== FULL API RESPONSE ===');
-            console.log('Response status:', response.status);
-            console.log('Response OK:', response.ok);
-            console.log('Full responseData:', JSON.stringify(responseData, null, 2));
+            // Debug logging
+            console.log('API Response:', responseData);
             
-            if (responseData.data) {
-                console.log('=== DATA OBJECT ===');
-                console.log('data keys:', Object.keys(responseData.data));
-                console.log('data.article:', responseData.data.article);
-                console.log('data.analysis:', responseData.data.analysis);
-                console.log('data.detailed_analysis keys:', responseData.data.detailed_analysis ? Object.keys(responseData.data.detailed_analysis) : 'undefined');
-            }
-            
-            if (responseData.metadata) {
-                console.log('=== METADATA ===');
-                console.log('metadata:', responseData.metadata);
-            }
-
             if (!response.ok || !responseData.success) {
                 throw new Error(responseData.error?.message || responseData.error || `Server error: ${response.status}`);
             }
@@ -304,17 +295,21 @@ class TruthLensApp {
                 throw new Error('Invalid response format from server - no article object');
             }
 
-            // Store the analysis - use the inner data object
+            // FIXED: Recalculate trust score based on available services
+            const recalculatedScore = this.calculateTrustScore(data.detailed_analysis);
+            if (recalculatedScore !== null) {
+                data.analysis.trust_score = recalculatedScore;
+                data.analysis.trust_level = this.getTrustLevel(recalculatedScore);
+                console.log('Recalculated trust score:', recalculatedScore);
+            }
+
+            // Store the analysis
             this.currentAnalysis = data;
             currentAnalysis = data;
             window.currentAnalysis = data;
             
-            // Also store metadata for later use
+            // Store metadata for later use
             this.currentMetadata = responseData.metadata || {};
-
-            console.log('=== STORED DATA ===');
-            console.log('this.currentAnalysis.analysis:', this.currentAnalysis.analysis);
-            console.log('Trust score:', this.currentAnalysis.analysis?.trust_score);
 
             // Complete progress and show results
             this.completeProgress();
@@ -326,17 +321,134 @@ class TruthLensApp {
         } catch (error) {
             console.error('Analysis error:', error);
             this.hideLoading();
-            
-            // Check if it's a site blocking error
-            if (error.message && error.message.includes('blocked')) {
-                this.showError('It looks like this site is blocking automated analysis. Please use the text option above and copy/paste the entire article to have it analyzed.');
-            } else {
-                this.showError(`Analysis failed: ${error.message}`);
-            }
+            this.showError(`Analysis failed: ${error.message}`);
         } finally {
             isAnalyzing = false;
             this.stopProgressAnimation();
         }
+    }
+
+    // FIXED: New method to calculate trust score based on available services
+    calculateTrustScore(detailedAnalysis) {
+        if (!detailedAnalysis || typeof detailedAnalysis !== 'object') {
+            return null;
+        }
+
+        let totalWeight = 0;
+        let weightedScore = 0;
+        const serviceScores = {};
+
+        // Define score extraction for each service
+        const scoreExtractors = {
+            source_credibility: (data) => {
+                const score = this.extractScore(data, ['credibility_score', 'score'], null);
+                return score !== null ? score : null;
+            },
+            author_analyzer: (data) => {
+                const score = this.extractScore(data, ['author_score', 'score', 'credibility_score'], null);
+                // If we have minimal data (just author name), don't penalize
+                if (score === null && data.author_name) {
+                    return 50; // Neutral score for unknown authors
+                }
+                return score;
+            },
+            bias_detector: (data) => {
+                const biasScore = this.extractScore(data, ['bias_score', 'score', 'overall_bias_score'], null);
+                // Convert bias to objectivity (lower bias = higher objectivity)
+                return biasScore !== null ? (100 - biasScore) : null;
+            },
+            fact_checker: (data) => {
+                if (data.fact_checks && Array.isArray(data.fact_checks)) {
+                    const total = data.fact_checks.length;
+                    if (total === 0) return 100; // No claims to check = no false claims
+                    const verified = data.fact_checks.filter(c => 
+                        c.verdict === 'True' || c.verdict === 'Verified' || c.verdict === 'true'
+                    ).length;
+                    return Math.round((verified / total) * 100);
+                }
+                return this.extractScore(data, ['accuracy_score', 'score'], null);
+            },
+            transparency_analyzer: (data) => {
+                return this.extractScore(data, ['transparency_score', 'score'], null);
+            },
+            manipulation_detector: (data) => {
+                const manipScore = this.extractScore(data, ['manipulation_score', 'score'], null);
+                if (manipScore !== null) {
+                    // Convert manipulation to integrity (lower manipulation = higher integrity)
+                    return 100 - manipScore;
+                }
+                // Check for manipulation level
+                if (data.manipulation_level) {
+                    const levels = { 'Low': 90, 'Minimal': 95, 'Moderate': 50, 'High': 20, 'Extreme': 10 };
+                    return levels[data.manipulation_level] || 50;
+                }
+                return null;
+            }
+        };
+
+        // Calculate scores for each service
+        services.forEach(service => {
+            // Skip content analyzer for trust score (it's informational only)
+            if (service.id === 'content_analyzer') {
+                return;
+            }
+
+            const serviceData = detailedAnalysis[service.id];
+            if (!serviceData || Object.keys(serviceData).length === 0) {
+                console.log(`Service ${service.id} has no data, skipping`);
+                return;
+            }
+
+            const extractor = scoreExtractors[service.id];
+            if (extractor) {
+                const score = extractor(serviceData);
+                if (score !== null && !isNaN(score)) {
+                    serviceScores[service.id] = score;
+                    weightedScore += score * service.weight;
+                    totalWeight += service.weight;
+                    console.log(`${service.id}: score=${score}, weight=${service.weight}`);
+                }
+            }
+        });
+
+        // If we have at least 2 services with scores, calculate weighted average
+        if (Object.keys(serviceScores).length >= 2 && totalWeight > 0) {
+            const finalScore = Math.round(weightedScore / totalWeight);
+            console.log('Service scores:', serviceScores);
+            console.log('Total weight:', totalWeight);
+            console.log('Final trust score:', finalScore);
+            return finalScore;
+        }
+
+        // If we only have source credibility, use it but cap at 75
+        if (serviceScores.source_credibility && Object.keys(serviceScores).length === 1) {
+            return Math.min(75, serviceScores.source_credibility);
+        }
+
+        return null;
+    }
+
+    // Helper method to extract scores from nested data
+    extractScore(data, fields, defaultValue = 50) {
+        if (!data || typeof data !== 'object') return defaultValue;
+        
+        for (const field of fields) {
+            if (data[field] !== undefined && data[field] !== null) {
+                const value = parseFloat(data[field]);
+                if (!isNaN(value)) return Math.round(value);
+            }
+        }
+        
+        return defaultValue;
+    }
+
+    // Get trust level based on score
+    getTrustLevel(score) {
+        if (score >= 80) return 'Very High';
+        if (score >= 60) return 'High';
+        if (score >= 40) return 'Moderate';
+        if (score >= 20) return 'Low';
+        return 'Very Low';
     }
 
     // Progress Animation Methods
@@ -367,38 +479,49 @@ class TruthLensApp {
     }
 
     resetProgress() {
-        // Reset any progress indicators if needed
+        // Reset progress indicators
+        const progressSteps = document.querySelectorAll('.progress-step');
+        progressSteps.forEach(step => {
+            step.classList.remove('active', 'complete');
+        });
     }
 
     startProgressAnimation() {
-        // Start progress animation if implemented
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.progress-step');
+        const totalSteps = steps.length;
+        
+        this.progressInterval = setInterval(() => {
+            if (currentStep < totalSteps) {
+                steps[currentStep].classList.add('active');
+                currentStep++;
+            } else {
+                // Keep cycling through steps
+                steps.forEach(step => step.classList.remove('active'));
+                currentStep = 0;
+            }
+        }, 500);
     }
 
     stopProgressAnimation() {
-        // Stop progress animation if implemented
+        if (this.progressInterval) {
+            clearInterval(this.progressInterval);
+            this.progressInterval = null;
+        }
     }
 
     completeProgress() {
-        // Complete progress animation if implemented
+        this.stopProgressAnimation();
+        const steps = document.querySelectorAll('.progress-step');
+        steps.forEach(step => {
+            step.classList.remove('active');
+            step.classList.add('complete');
+        });
     }
 
     loadSampleData() {
-        // Load sample data for development/testing
-        console.log('Ready to analyze articles');
-    }
-
-    // Helper method to extract scores from nested data
-    extractScore(data, fields, defaultValue = 50) {
-        if (!data || typeof data !== 'object') return defaultValue;
-        
-        for (const field of fields) {
-            if (data[field] !== undefined && data[field] !== null) {
-                const value = parseFloat(data[field]);
-                if (!isNaN(value)) return Math.round(value);
-            }
-        }
-        
-        return defaultValue;
+        // Ready to analyze articles
+        console.log('Ready to analyze articles with enhanced trust scoring');
     }
 }
 
@@ -431,4 +554,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Make app available globally
-window.TruthLensApp = TruthLensApp;Truthlens-core.js
+window.TruthLensApp = TruthLensApp;
