@@ -1712,3 +1712,300 @@ class TruthLensApp {
         addText('What This Means:', 12, 'bold');
         addText(this.getContentAnalysisMeaning(data), 11);
     }
+    
+    // Progress Animation Methods
+    showLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('active');
+        }
+    }
+
+    hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+    }
+
+    showError(message) {
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+    }
+
+    resetProgress() {
+        // Reset any progress indicators if needed
+    }
+
+    startProgressAnimation() {
+        // Start progress animation if implemented
+    }
+
+    stopProgressAnimation() {
+        // Stop progress animation if implemented
+    }
+
+    completeProgress() {
+        // Complete progress animation if implemented
+    }
+
+    animateTrustScore(score) {
+        const scoreEl = document.getElementById('trustScoreNumber');
+        if (!scoreEl) return;
+
+        let current = 0;
+        const increment = score / 30;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= score) {
+                current = score;
+                clearInterval(timer);
+            }
+            scoreEl.textContent = Math.round(current);
+        }, 30);
+    }
+
+    updateTrustLevelIndicator(score, level) {
+        const indicatorEl = document.getElementById('trustLevelIndicator');
+        const iconEl = document.getElementById('trustLevelIcon');
+        const textEl = document.getElementById('trustLevelText');
+        
+        if (!indicatorEl || !iconEl || !textEl) return;
+
+        // Remove all level classes
+        indicatorEl.className = 'trust-level-indicator';
+        
+        // Add appropriate class and update text
+        if (score >= 80) {
+            indicatorEl.classList.add('level-very-high');
+            iconEl.className = 'fas fa-check-circle trust-level-icon';
+            textEl.textContent = 'Very High Credibility';
+        } else if (score >= 60) {
+            indicatorEl.classList.add('level-high');
+            iconEl.className = 'fas fa-check trust-level-icon';
+            textEl.textContent = 'High Credibility';
+        } else if (score >= 40) {
+            indicatorEl.classList.add('level-moderate');
+            iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+            textEl.textContent = 'Moderate Credibility';
+        } else if (score >= 20) {
+            indicatorEl.classList.add('level-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Low Credibility';
+        } else {
+            indicatorEl.classList.add('level-very-low');
+            iconEl.className = 'fas fa-times-circle trust-level-icon';
+            textEl.textContent = 'Very Low Credibility';
+        }
+    }
+
+    displayArticleInfo(article, analysis) {
+        const titleEl = document.getElementById('articleTitle');
+        const metaEl = document.getElementById('articleMeta');
+        
+        if (titleEl) {
+            titleEl.textContent = article.title || 'Untitled Article';
+        }
+        
+        if (metaEl) {
+            const metaItems = [];
+            
+            if (article.author) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-user"></i>
+                        ${article.author}
+                    </div>
+                `);
+            }
+            
+            if (article.domain || article.source) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-globe"></i>
+                        ${article.domain || article.source}
+                    </div>
+                `);
+            }
+            
+            if (article.publish_date) {
+                metaItems.push(`
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        ${new Date(article.publish_date).toLocaleDateString()}
+                    </div>
+                `);
+            }
+            
+            metaEl.innerHTML = metaItems.join('');
+        }
+    }
+
+    toggleAccordion(serviceId) {
+        const item = document.getElementById(`service-${serviceId}`);
+        if (!item) return;
+
+        const wasActive = item.classList.contains('active');
+        
+        // Close all accordions
+        document.querySelectorAll('.service-accordion-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Open clicked accordion if it wasn't active
+        if (!wasActive) {
+            item.classList.add('active');
+            
+            // Initialize any charts in this service
+            setTimeout(() => {
+                this.initializeServiceCharts(serviceId);
+            }, 300);
+        }
+    }
+
+    initializeServiceCharts(serviceId) {
+        // Initialize charts based on service ID
+        switch(serviceId) {
+            case 'source_credibility':
+                // Initialize source credibility charts if needed
+                break;
+            case 'bias_detector':
+                // Initialize bias detection charts if needed
+                break;
+            // Add other services as needed
+        }
+    }
+
+    shareResults() {
+        if (!this.currentAnalysis) {
+            this.showError('No analysis results to share');
+            return;
+        }
+
+        const shareUrl = window.location.href;
+        const shareText = `Check out this news analysis: Trust Score ${this.currentAnalysis.analysis.trust_score}/100`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'TruthLens Analysis',
+                text: shareText,
+                url: shareUrl
+            }).catch(err => console.log('Error sharing:', err));
+        } else {
+            // Fallback to copying URL
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                this.showError('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    }
+
+    loadSampleData() {
+        // Load sample data for development/testing
+        console.log('Ready to analyze articles');
+    }
+
+    // Helper method to extract scores from nested data
+    extractScore(data, fields, defaultValue = 50) {
+        if (!data || typeof data !== 'object') return defaultValue;
+        
+        for (const field of fields) {
+            if (data[field] !== undefined && data[field] !== null) {
+                const value = parseFloat(data[field]);
+                if (!isNaN(value)) return Math.round(value);
+            }
+        }
+        
+        return defaultValue;
+    }
+
+    // Explanation methods
+    getSourceCredibilityExplanation(data) {
+        if (!data) return "Source credibility could not be determined.";
+        
+        const score = this.extractScore(data, ['credibility_score', 'score']);
+        if (score >= 80) return "This source has excellent credibility with strong editorial standards.";
+        if (score >= 60) return "This source has good credibility but some minor concerns.";
+        if (score >= 40) return "This source has moderate credibility - verify important claims.";
+        return "This source has low credibility - be very cautious with information.";
+    }
+
+    getAuthorCredibilityExplanation(data) {
+        if (!data) return "Author information could not be verified.";
+        
+        const score = this.extractScore(data, ['author_score', 'score']);
+        if (score >= 80) return "The author is a verified journalist with strong credentials.";
+        if (score >= 60) return "The author has some verified credentials.";
+        if (score >= 40) return "Limited information available about the author.";
+        return "Author credentials could not be verified.";
+    }
+
+    getTransparencyExplanation(data) {
+        const score = this.extractScore(data, ['transparency_score', 'score']);
+        if (score >= 80) return "Excellent transparency with proper sourcing and attribution.";
+        if (score >= 60) return "Good transparency but missing some attribution details.";
+        if (score >= 40) return "Limited transparency makes verification challenging.";
+        return "Poor transparency is a significant credibility concern.";
+    }
+
+    getObjectivityExplanation(data) {
+        if (!data) return "Objectivity could not be assessed.";
+        
+        const biasScore = data.bias_score || data.score || 0;
+        const objectivity = 100 - biasScore;
+        
+        if (objectivity >= 80) return "Highly objective reporting with minimal bias.";
+        if (objectivity >= 60) return "Generally objective with some minor bias.";
+        if (objectivity >= 40) return "Moderate bias present - consider the perspective.";
+        return "Significant bias detected - seek alternative viewpoints.";
+    }
+
+    getBreakdownType(score) {
+        if (score >= 70) return 'positive';
+        if (score >= 40) return 'neutral';
+        if (score >= 20) return 'warning';
+        return 'negative';
+    }
+
+    getScoreColor(score) {
+        if (score >= 80) return '#10b981';
+        if (score >= 60) return '#3b82f6';
+        if (score >= 40) return '#f59e0b';
+        return '#ef4444';
+    }
+
+    getScoreClass(score) {
+        if (score >= 80) return 'high';
+        if (score >= 60) return 'medium';
+        if (score >= 40) return 'low';
+        return 'very-low';
+    }
+} // This closes the TruthLensApp class
+
+// ============================================================================
+// SECTION 3: Initialization
+// ============================================================================
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing TruthLens App...');
+    
+    // Check if AnalysisComponents is available
+    if (typeof AnalysisComponents === 'undefined') {
+        console.error('AnalysisComponents not found. Make sure truthlens-utils.js is loaded first.');
+        return;
+    }
+    
+    window.truthLensApp = new TruthLensApp();
+});
+
+// Make app available globally
+window.TruthLensApp = TruthLensApp;
