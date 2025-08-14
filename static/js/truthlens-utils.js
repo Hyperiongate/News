@@ -1638,4 +1638,18 @@ function getFactAccuracyExplanation(factCheckerData) {
     const { claims_checked: total, verified_count: verified } = normalized;
     
     if (total === 0) {
-        return "No specific factual claims were found to
+        return "No specific factual claims were found to verify.";
+    }
+    
+    const accuracy = Math.round((verified / total) * 100);
+    
+    if (accuracy >= 80) {
+        return `${verified} of ${total} factual claims verified as accurate. The article's facts are solid.`;
+    } else if (accuracy >= 60) {
+        return `${verified} of ${total} claims verified. Some claims could not be confirmed.`;
+    } else if (accuracy >= 40) {
+        return `Only ${verified} of ${total} claims verified. Multiple unverified claims present.`;
+    } else {
+        return `Major factual issues: only ${verified} of ${total} claims are accurate.`;
+    }
+}
