@@ -8,7 +8,7 @@ import logging
 import uuid
 import mimetypes
 from functools import wraps
-from flask import Flask, request, render_template, g, send_from_directory, make_response
+from flask import Flask, request, render_template, g, send_from_directory, make_response, send_file
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -124,24 +124,38 @@ def index():
     return render_template('index.html')
 
 
-# CRITICAL FIX: Serve JS files from /js/ path (as expected by HTML)
+# CRITICAL FIX: Properly serve JS files from /js/ path
 @app.route('/js/<path:filename>')
 def serve_js_direct(filename):
     """Serve JavaScript files with correct MIME type from /js/ path"""
     try:
-        # Check if file exists in static/js directory
-        js_path = os.path.join(app.static_folder, 'js', filename)
-        if os.path.exists(js_path):
-            response = make_response(send_from_directory(os.path.join(app.static_folder, 'js'), filename))
-            response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-            response.headers['X-Content-Type-Options'] = 'nosniff'
-            return response
-        else:
-            logger.error(f"JavaScript file not found: {filename}")
-            return "File not found", 404
+        # Build the full path
+        js_dir = os.path.join(app.static_folder, 'js')
+        file_path = os.path.join(js_dir, filename)
+        
+        # Log the attempt
+        logger.info(f"Attempting to serve JS file: {filename}")
+        logger.info(f"Looking in: {file_path}")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            logger.error(f"JavaScript file not found: {file_path}")
+            return f"JavaScript file not found: {filename}", 404
+        
+        # Read the file and serve it with correct headers
+        with open(file_path, 'rb') as f:
+            js_content = f.read()
+            
+        response = make_response(js_content)
+        response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        
+        logger.info(f"Successfully served {filename} ({len(js_content)} bytes)")
+        return response
+        
     except Exception as e:
-        logger.error(f"Error serving JS file {filename}: {str(e)}")
-        return "Internal server error", 500
+        logger.error(f"Error serving JS file {filename}: {str(e)}", exc_info=True)
+        return f"Error loading JavaScript file: {str(e)}", 500
 
 
 # Also keep the /static/js/ route for backwards compatibility
@@ -149,9 +163,19 @@ def serve_js_direct(filename):
 def serve_js(filename):
     """Serve JavaScript files with correct MIME type from /static/js/ path"""
     try:
-        response = make_response(send_from_directory(os.path.join(app.static_folder, 'js'), filename))
+        js_dir = os.path.join(app.static_folder, 'js')
+        file_path = os.path.join(js_dir, filename)
+        
+        if not os.path.exists(file_path):
+            return f"JavaScript file not found: {filename}", 404
+            
+        with open(file_path, 'rb') as f:
+            js_content = f.read()
+            
+        response = make_response(js_content)
         response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        
         return response
     except Exception as e:
         logger.error(f"Error serving static JS file {filename}: {str(e)}")
@@ -163,8 +187,9 @@ def serve_js(filename):
 def favicon():
     """Serve favicon"""
     # If you have a favicon in static folder
-    if os.path.exists(os.path.join(app.static_folder, 'favicon.ico')):
-        return send_from_directory(app.static_folder, 'favicon.ico', mimetype='image/x-icon')
+    favicon_path = os.path.join(app.static_folder, 'favicon.ico')
+    if os.path.exists(favicon_path):
+        return send_file(favicon_path, mimetype='image/x-icon')
     # Otherwise return empty response
     return '', 204
 
@@ -407,6 +432,37 @@ def rate_limit_exceeded(error):
     )
 
 
+# Debug route to check file existence
+@app.route('/debug/files')
+def debug_files():
+    """Debug endpoint to check file structure"""
+    try:
+        static_dir = app.static_folder
+        js_dir = os.path.join(static_dir, 'js')
+        
+        files_info = {
+            'static_folder': static_dir,
+            'static_exists': os.path.exists(static_dir),
+            'js_dir': js_dir,
+            'js_exists': os.path.exists(js_dir),
+            'js_files': []
+        }
+        
+        if os.path.exists(js_dir):
+            for filename in os.listdir(js_dir):
+                filepath = os.path.join(js_dir, filename)
+                if os.path.isfile(filepath):
+                    files_info['js_files'].append({
+                        'name': filename,
+                        'size': os.path.getsize(filepath),
+                        'path': filepath
+                    })
+        
+        return ResponseBuilder.success(files_info)
+    except Exception as e:
+        return ResponseBuilder.error(str(e))
+
+
 if __name__ == '__main__':
     # Get port from environment
     port = int(os.environ.get('PORT', 5000))
@@ -422,6 +478,10 @@ if __name__ == '__main__':
     if os.path.exists(js_dir):
         js_files = os.listdir(js_dir)
         logger.info(f"JavaScript files in static/js: {js_files}")
+        for js_file in js_files:
+            file_path = os.path.join(js_dir, js_file)
+            file_size = os.path.getsize(file_path)
+            logger.info(f"  - {js_file}: {file_size} bytes")
     else:
         logger.warning(f"JavaScript directory not found: {js_dir}")
     
