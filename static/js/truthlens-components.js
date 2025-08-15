@@ -444,6 +444,595 @@ class AnalysisComponents {
         ];
 
         return factors.map((factor, index) => `
+            <div class="trust-factor-detailed" style="animation-delay: ${index * 0.1}s">
+                <!-- Main Score Section -->
+                <div class="factor-main">
+                    <div class="factor-header">
+                        <div class="factor-info">
+                            <i class="fas ${factor.icon}" style="color: ${factor.color}"></i>
+                            <span class="factor-name">${factor.name}</span>
+                        </div>
+                        <div class="factor-score-display">
+                            <span class="factor-score-number ${this.getScoreClass(factor.score)}">${factor.score}</span>
+                            <span class="factor-score-label">/ 100</span>
+                        </div>
+                    </div>
+                    <div class="factor-bar">
+                        <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
+                    </div>
+                </div>
+                
+                <!-- Detailed Analysis Section - ALWAYS VISIBLE -->
+                <div class="factor-analysis-grid">
+                    <div class="analysis-box what-we-did">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-search"></i>
+                            <h5>What We Analyzed</h5>
+                        </div>
+                        <p>${factor.whatWeDid}</p>
+                    </div>
+                    
+                    <div class="analysis-box what-we-found">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h5>Key Findings</h5>
+                        </div>
+                        <p>${factor.whatWeFound}</p>
+                    </div>
+                    
+                    <div class="analysis-box what-this-means">
+                        <div class="analysis-box-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <h5>What This Means</h5>
+                        </div>
+                        <p>${factor.whatThisMeans}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Detailed findings methods
+    getSourceFindings(sourceData) {
+        if (!sourceData) return 'Unable to verify source information.';
+        
+        const rating = sourceData.rating || 'Unknown';
+        const type = sourceData.type || 'Unknown';
+        const bias = sourceData.bias || 'Not assessed';
+        
+        let findings = `This is a ${type.toLowerCase()} with a "${rating}" credibility rating.`;
+        
+        if (bias && bias !== 'Unknown' && bias !== 'Not assessed') {
+            findings += ` The source has been identified as having a ${bias.toLowerCase()} bias.`;
+        }
+        
+        if (sourceData.factual_reporting) {
+            findings += ` Factual reporting is rated as ${sourceData.factual_reporting}.`;
+        }
+        
+        return findings;
+    }
+
+    getAuthorFindings(authorData) {
+        if (!authorData) return 'No author information was found, making verification impossible.';
+        
+        let findings = [];
+        
+        // Check for author name first
+        const authorName = authorData.author_name || authorData.name || 'Unknown author';
+        
+        if (authorData.verification_status?.verified) {
+            findings.push('Author identity has been verified');
+        } else if (authorData.verified === true) {
+            findings.push('Author identity has been verified');
+        } else {
+            findings.push('Author identity could not be verified');
+        }
+        
+        if (authorData.professional_info?.outlets?.length) {
+            findings.push(`has published with ${authorData.professional_info.outlets.length} news outlets`);
+        }
+        
+        if (authorData.professional_info?.years_experience) {
+            findings.push(`has ${authorData.professional_info.years_experience}+ years of experience`);
+        }
+        
+        if (authorData.professional_info?.current_position) {
+            findings.push(`currently works as ${authorData.professional_info.current_position}`);
+        }
+        
+        // Alternative data structure
+        if (authorData.position) {
+            findings.push(`currently works as ${authorData.position}`);
+        }
+        
+        if (authorData.articles_count) {
+            findings.push(`has published ${authorData.articles_count} articles`);
+        }
+        
+        return findings.length > 0 ? 
+            `${authorName}: ${findings.join(', ')}.` : 
+            `Limited professional information available about ${authorName}.`;
+    }
+
+    getTransparencyFindings(transparencyData) {
+        if (!transparencyData) return 'Transparency indicators could not be assessed.';
+        
+        const found = [];
+        const missing = [];
+        
+        if (transparencyData.has_author !== false) found.push('author attribution');
+        else missing.push('author attribution');
+        
+        if (transparencyData.has_date !== false) found.push('publication date');
+        else missing.push('publication date');
+        
+        if (transparencyData.has_sources !== false) found.push('source citations');
+        else missing.push('source citations');
+        
+        if (transparencyData.indicators?.includes('Contains direct quotes')) {
+            found.push('direct quotes from sources');
+        }
+        
+        let findings = '';
+        if (found.length > 0) {
+            findings += `The article includes: ${found.join(', ')}.`;
+        }
+        if (missing.length > 0) {
+            findings += ` Missing: ${missing.join(', ')}.`;
+        }
+        
+        return findings || 'Basic transparency requirements are met.';
+    }
+
+    getObjectivityFindings(biasData) {
+        if (!biasData) return 'Bias analysis could not be completed.';
+        
+        let findings = [];
+        
+        if (biasData.political_lean !== undefined && biasData.political_lean !== 0) {
+            const direction = biasData.political_lean > 0 ? 'right' : 'left';
+            const strength = Math.abs(biasData.political_lean) > 50 ? 'strong' : 'slight';
+            findings.push(`${strength} ${direction}-leaning political bias`);
+        }
+        
+        if (biasData.manipulation_tactics?.length > 0) {
+            findings.push(`${biasData.manipulation_tactics.length} manipulation techniques detected`);
+        }
+        
+        if (biasData.loaded_phrases?.length > 0) {
+            findings.push(`${biasData.loaded_phrases.length} instances of loaded language`);
+        }
+        
+        if (findings.length === 0) {
+            return 'The article maintains good objectivity with minimal bias indicators.';
+        }
+        
+        return `Analysis revealed: ${findings.join(', ')}.`;
+    }
+
+    // Meaning interpretation methods
+    getSourceMeaning(sourceData) {
+        const rating = sourceData?.rating || 'Unknown';
+        
+        const meanings = {
+            'High': 'You can generally trust information from this source. They have strong editorial standards and rarely publish false information.',
+            'Medium': 'This source is reasonably reliable but may occasionally have accuracy issues. Cross-check important claims.',
+            'Low': 'Be cautious with this source. They have a history of inaccuracies or strong bias. Verify all claims independently.',
+            'Very Low': 'This source frequently publishes false or misleading information. Do not rely on it for factual reporting.',
+            'Unknown': 'We couldn\'t verify this source\'s credibility. Treat with caution and verify claims through other sources.'
+        };
+        
+        return meanings[rating] || meanings['Unknown'];
+    }
+
+    getAuthorMeaning(authorData) {
+        const score = authorData?.credibility_score || 0;
+        
+        if (score >= 80) {
+            return 'This is a well-established journalist with verified credentials. Their work is generally trustworthy.';
+        } else if (score >= 60) {
+            return 'The author has some verifiable background in journalism. Their work appears legitimate but may benefit from additional verification.';
+        } else if (score >= 40) {
+            return 'Limited information about this author raises some concerns. Be more cautious and verify key claims.';
+        } else {
+            return 'The lack of author information significantly reduces accountability. Treat claims with extra skepticism.';
+        }
+    }
+
+    getTransparencyMeaning(transparencyData) {
+        const score = transparencyData?.transparency_score || 0;
+        
+        if (score >= 80) {
+            return 'Excellent transparency makes this article more trustworthy. You can trace claims back to their sources.';
+        } else if (score >= 60) {
+            return 'Good transparency overall, though some aspects could be clearer. Most claims can be verified.';
+        } else if (score >= 40) {
+            return 'Limited transparency makes verification difficult. You may need to research claims independently.';
+        } else {
+            return 'Poor transparency is a red flag. Without proper sourcing, claims should be treated skeptically.';
+        }
+    }
+
+    getObjectivityMeaning(biasData) {
+        const score = biasData?.objectivity_score || 50;
+        
+        if (score >= 80) {
+            return 'This article presents information objectively. You\'re getting facts with minimal spin.';
+        } else if (score >= 60) {
+            return 'Mostly objective reporting with some bias. Be aware of the perspective but the facts appear sound.';
+        } else if (score >= 40) {
+            return 'Significant bias detected. Read critically and consider what perspective is being promoted.';
+        } else {
+            return 'Heavy bias or manipulation detected. This is more opinion/advocacy than news reporting.';
+        }
+    }
+
+    // Utility Methods
+    getScoreClass(score) {
+        if (score >= 70) return 'score-high';
+        if (score >= 40) return 'score-medium';
+        return 'score-low';
+    }
+
+    getScoreColor(score) {
+        if (score >= 80) return '#10b981';
+        if (score >= 60) return '#3b82f6';
+        if (score >= 40) return '#f59e0b';
+        return '#ef4444';
+    }
+
+    getSourceScore(rating) {
+        const scores = {
+            'High': 90,
+            'Very High': 95,
+            'Medium': 60,
+            'Moderate': 60,
+            'Low': 30,
+            'Very Low': 10
+        };
+        return scores[rating] || 50;
+    }
+
+    createBiasVisualization(biasData) {
+        if (!biasData || !biasData.bias_visualization) return;
+        
+        const viz = biasData.bias_visualization;
+        if (viz.type === 'radar' && viz.dimensions) {
+            this.createRadarChart('biasChart', viz.dimensions);
+        }
+    }
+
+    createRadarChart(elementId, dimensions) {
+        const canvas = document.getElementById(elementId);
+        if (!canvas) return;
+        
+        // Destroy existing chart
+        if (this.charts[elementId]) {
+            this.charts[elementId].destroy();
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        const data = {
+            labels: dimensions.map(d => d.axis),
+            datasets: [{
+                label: 'Bias Profile',
+                data: dimensions.map(d => d.value),
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: dimensions.map(d => d.color || '#6366f1'),
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            }]
+        };
+        
+        this.charts[elementId] = new Chart(ctx, {
+            type: 'radar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            display: false
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dimension = dimensions[context.dataIndex];
+                                return `${dimension.label}: ${context.parsed.r}% - ${dimension.description}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ============================================================================
+// SECTION 4: Service Content Renderers
+// ============================================================================
+
+// Render detailed service content
+function renderDetailedServiceContent(serviceId, data) {
+    switch (serviceId) {
+        case 'source_credibility':
+            return renderSourceCredibility(data);
+        case 'author_analyzer':
+            return renderAuthorAnalysis(data);
+        case 'bias_detector':
+            return renderBiasDetection(data);
+        case 'fact_checker':
+            return renderFactChecker(data);
+        case 'transparency_analyzer':
+            return renderTransparency(data);
+        case 'manipulation_detector':
+            return renderManipulation(data);
+        case 'content_analyzer':
+            return renderContentAnalysis(data);
+        default:
+            return '<p>Analysis complete</p>';
+    }
+}
+
+// Service renderers
+function renderSourceCredibility(data) {
+    const score = extractScore(data, ['credibility_score', 'score']);
+    const level = data.credibility_level || data.level || getCredibilityLevel(score);
+    const sourceName = data.source_name || data.name || 'Unknown Source';
+    
+    let content = `
+        <div class="service-section">
+            <h4 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Credibility Metrics
+            </h4>
+            <div class="service-results">
+                <div class="result-item">
+                    <span class="result-label">Overall Score</span>
+                    <span class="result-value">${score}/100</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Credibility Level</span>
+                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                        ${level}
+                    </span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Source Name</span>
+                    <span class="result-value">${sourceName}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Additional sections based on available data
+    if (data.source_info || data.technical_analysis || data.editorial_info || data.findings) {
+        content += renderAdditionalSourceSections(data);
+    }
+    
+    return content;
+}
+
+function renderAdditionalSourceSections(data) {
+    let content = '';
+    
+    // Source info
+    const sourceInfo = data.source_info || data.source_details || data.details;
+    if (sourceInfo) {
+        content += `
+            <div class="service-section">
+                <h4 class="section-title">
+                    <i class="fas fa-building"></i>
+                    Publication Profile
+                </h4>
+                <div class="service-results">
+                    ${sourceInfo.type ? `
+                        <div class="result-item">
+                            <span class="result-label">Source Type</span>
+                            <span class="result-value">${sourceInfo.type}</span>
+                        </div>
+                    ` : ''}
+                    ${sourceInfo.bias ? `
+                        <div class="result-item">
+                            <span class="result-label">Known Political Bias</span>
+                            <span class="result-value">${sourceInfo.bias}</span>
+                        </div>
+                    ` : ''}
+                    ${sourceInfo.credibility_rating ? `
+                        <div class="result-item">
+                            <span class="result-label">Industry Rating</span>
+                            <span class="result-value">${sourceInfo.credibility_rating}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    return content;
+}
+
+function renderAuthorAnalysis(data) {
+    const authorName = data.author_name || data.name || 'Unknown Author';
+    const score = extractScore(data, ['credibility_score', 'score']);
+    const level = data.credibility_level || getCredibilityLevel(score);
+    
+    let content = `
+        <div class="service-section">
+            <h4 class="section-title">
+                <i class="fas fa-id-card"></i>
+                Author Profile
+            </h4>
+            <div class="service-results">
+                <div class="result-item">
+                    <span class="result-label">Name</span>
+                    <span class="result-value">${authorName}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Credibility Score</span>
+                    <span class="result-value">${score}/100</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Credibility Level</span>
+                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
+                        ${level}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Professional info
+    if (data.professional_info || data.author_info) {
+        const info = data.professional_info || data.author_info;
+        content += `
+            <div class="service-section">
+                <h4 class="section-title">
+                    <i class="fas fa-briefcase"></i>
+                    Professional Background
+                </h4>
+                <div class="service-results">
+                    ${info.position || info.current_position ? `
+                        <div class="result-item">
+                            <span class="result-label">Current Position</span>
+                            <span class="result-value">${info.position || info.current_position}</span>
+                        </div>
+                    ` : ''}
+                    ${info.years_experience ? `
+                        <div class="result-item">
+                            <span class="result-label">Years of Experience</span>
+                            <span class="result-value">${info.years_experience}+ years</span>
+                        </div>
+                    ` : ''}
+                    ${info.expertise_areas && info.expertise_areas.length > 0 ? `
+                        <div class="result-item">
+                            <span class="result-label">Expertise Areas</span>
+                            <span class="result-value">${info.expertise_areas.join(', ')}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Recent work
+    if (data.recent_articles && data.recent_articles.length > 0) {
+        content += `
+            <div class="service-section">
+                <h4 class="section-title">
+                    <i class="fas fa-newspaper"></i>
+                    Recent Articles
+                </h4>
+                <div class="recent-articles-list">
+                    ${data.recent_articles.slice(0, 5).map(article => `
+                        <div class="recent-article-item">
+                            <span class="article-title">${article.title || 'Untitled'}</span>
+                            <span class="article-date">${formatDate(article.date)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    return content;
+}
+
+function renderBiasDetection(data) {
+    const overallBias = extractScore(data, ['overall_bias_score', 'bias_score', 'overallBias'], 0);
+    const biasLevel = data.bias_level || data.level || getBiasLevel(overallBias);
+    const objectivityScore = 100 - overallBias;
+    
+    let content = `
+        <div class="service-section">
+            <h4 class="section-title">
+                <i class="fas fa-balance-scale"></i>
+                Overall Bias Assessment
+            </h4>
+            <div class="service-results">
+                <div class="result-item">
+                    <span class="result-label">Bias Score</span>
+                    <span class="result-value">${overallBias}/100</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Bias Level</span>
+                    <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
+                        ${biasLevel}
+                    </span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Objectivity Score</span>
+                    <span class="result-value">${objectivityScore}%</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Bias dimensions
+    const dimensions = data.dimensions || data.bias_dimensions || data.biases || data.dimension_scores;
+    if (dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0) {
+        content += renderBiasDimensions(dimensions);
+    }
+    
+    // Loaded phrases
+    if (data.loaded_phrases && data.loaded_phrases.length > 0) {
+        content += `
+            <div class="service-section">
+                <h4 class="section-title">
+                    <i class="fas fa-quote-right"></i>
+                    Loaded Language Examples
+                </h4>
+                <div class="loaded-phrases-list">
+                    ${data.loaded_phrases.slice(0, 5).map(phrase => `
+                        <div class="loaded-phrase-item">
+                            <span class="phrase-text">"${phrase.phrase || phrase}"</span>
+                            ${phrase.severity ? `<span class="phrase-severity severity-${phrase.severity.toLowerCase()}">${phrase.severity}</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    return content;
+}
+
+function renderBiasDimensions(dimensions) {
+    const chartId = `bias-chart-${Date.now()}`;
+    const chartData = {
+        labels: [],
+        values: []
+    };
+    
+    let content = `
+        <div class="service-section">
+            <h4 class="section-title">
+                <i class="fas fa-chart-bar"></i>
+                Bias Dimensions Analysis
+            </h4>
             <div class="dimension-list">
     `;
     
@@ -1066,593 +1655,39 @@ function getFactAccuracyExplanation(factCheckerData) {
 }
 
 // Make components available globally
-window.AnalysisComponents = AnalysisComponents; class="trust-factor-detailed" style="animation-delay: ${index * 0.1}s">
-                <!-- Main Score Section -->
-                <div class="factor-main">
-                    <div class="factor-header">
-                        <div class="factor-info">
-                            <i class="fas ${factor.icon}" style="color: ${factor.color}"></i>
-                            <span class="factor-name">${factor.name}</span>
-                        </div>
-                        <div class="factor-score-display">
-                            <span class="factor-score-number ${this.getScoreClass(factor.score)}">${factor.score}</span>
-                            <span class="factor-score-label">/ 100</span>
-                        </div>
-                    </div>
-                    <div class="factor-bar">
-                        <div class="factor-fill" style="width: ${factor.score}%; background: ${this.getScoreColor(factor.score)};"></div>
-                    </div>
-                </div>
-                
-                <!-- Detailed Analysis Section - ALWAYS VISIBLE -->
-                <div class="factor-analysis-grid">
-                    <div class="analysis-box what-we-did">
-                        <div class="analysis-box-header">
-                            <i class="fas fa-search"></i>
-                            <h5>What We Analyzed</h5>
-                        </div>
-                        <p>${factor.whatWeDid}</p>
-                    </div>
-                    
-                    <div class="analysis-box what-we-found">
-                        <div class="analysis-box-header">
-                            <i class="fas fa-clipboard-check"></i>
-                            <h5>Key Findings</h5>
-                        </div>
-                        <p>${factor.whatWeFound}</p>
-                    </div>
-                    
-                    <div class="analysis-box what-this-means">
-                        <div class="analysis-box-header">
-                            <i class="fas fa-lightbulb"></i>
-                            <h5>What This Means</h5>
-                        </div>
-                        <p>${factor.whatThisMeans}</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
+window.AnalysisComponents = AnalysisComponents;
+window.DataStructureMapper = DataStructureMapper;
 
-    // Detailed findings methods
-    getSourceFindings(sourceData) {
-        if (!sourceData) return 'Unable to verify source information.';
-        
-        const rating = sourceData.rating || 'Unknown';
-        const type = sourceData.type || 'Unknown';
-        const bias = sourceData.bias || 'Not assessed';
-        
-        let findings = `This is a ${type.toLowerCase()} with a "${rating}" credibility rating.`;
-        
-        if (bias && bias !== 'Unknown' && bias !== 'Not assessed') {
-            findings += ` The source has been identified as having a ${bias.toLowerCase()} bias.`;
-        }
-        
-        if (sourceData.factual_reporting) {
-            findings += ` Factual reporting is rated as ${sourceData.factual_reporting}.`;
-        }
-        
-        return findings;
-    }
-
-    getAuthorFindings(authorData) {
-        if (!authorData) return 'No author information was found, making verification impossible.';
-        
-        let findings = [];
-        
-        // Check for author name first
-        const authorName = authorData.author_name || authorData.name || 'Unknown author';
-        
-        if (authorData.verification_status?.verified) {
-            findings.push('Author identity has been verified');
-        } else if (authorData.verified === true) {
-            findings.push('Author identity has been verified');
-        } else {
-            findings.push('Author identity could not be verified');
-        }
-        
-        if (authorData.professional_info?.outlets?.length) {
-            findings.push(`has published with ${authorData.professional_info.outlets.length} news outlets`);
-        }
-        
-        if (authorData.professional_info?.years_experience) {
-            findings.push(`has ${authorData.professional_info.years_experience}+ years of experience`);
-        }
-        
-        if (authorData.professional_info?.current_position) {
-            findings.push(`currently works as ${authorData.professional_info.current_position}`);
-        }
-        
-        // Alternative data structure
-        if (authorData.position) {
-            findings.push(`currently works as ${authorData.position}`);
-        }
-        
-        if (authorData.articles_count) {
-            findings.push(`has published ${authorData.articles_count} articles`);
-        }
-        
-        return findings.length > 0 ? 
-            `${authorName}: ${findings.join(', ')}.` : 
-            `Limited professional information available about ${authorName}.`;
-    }
-
-    getTransparencyFindings(transparencyData) {
-        if (!transparencyData) return 'Transparency indicators could not be assessed.';
-        
-        const found = [];
-        const missing = [];
-        
-        if (transparencyData.has_author !== false) found.push('author attribution');
-        else missing.push('author attribution');
-        
-        if (transparencyData.has_date !== false) found.push('publication date');
-        else missing.push('publication date');
-        
-        if (transparencyData.has_sources !== false) found.push('source citations');
-        else missing.push('source citations');
-        
-        if (transparencyData.indicators?.includes('Contains direct quotes')) {
-            found.push('direct quotes from sources');
-        }
-        
-        let findings = '';
-        if (found.length > 0) {
-            findings += `The article includes: ${found.join(', ')}.`;
-        }
-        if (missing.length > 0) {
-            findings += ` Missing: ${missing.join(', ')}.`;
-        }
-        
-        return findings || 'Basic transparency requirements are met.';
-    }
-
-    getObjectivityFindings(biasData) {
-        if (!biasData) return 'Bias analysis could not be completed.';
-        
-        let findings = [];
-        
-        if (biasData.political_lean !== undefined && biasData.political_lean !== 0) {
-            const direction = biasData.political_lean > 0 ? 'right' : 'left';
-            const strength = Math.abs(biasData.political_lean) > 50 ? 'strong' : 'slight';
-            findings.push(`${strength} ${direction}-leaning political bias`);
-        }
-        
-        if (biasData.manipulation_tactics?.length > 0) {
-            findings.push(`${biasData.manipulation_tactics.length} manipulation techniques detected`);
-        }
-        
-        if (biasData.loaded_phrases?.length > 0) {
-            findings.push(`${biasData.loaded_phrases.length} instances of loaded language`);
-        }
-        
-        if (findings.length === 0) {
-            return 'The article maintains good objectivity with minimal bias indicators.';
-        }
-        
-        return `Analysis revealed: ${findings.join(', ')}.`;
-    }
-
-    // Meaning interpretation methods
-    getSourceMeaning(sourceData) {
-        const rating = sourceData?.rating || 'Unknown';
-        
-        const meanings = {
-            'High': 'You can generally trust information from this source. They have strong editorial standards and rarely publish false information.',
-            'Medium': 'This source is reasonably reliable but may occasionally have accuracy issues. Cross-check important claims.',
-            'Low': 'Be cautious with this source. They have a history of inaccuracies or strong bias. Verify all claims independently.',
-            'Very Low': 'This source frequently publishes false or misleading information. Do not rely on it for factual reporting.',
-            'Unknown': 'We couldn\'t verify this source\'s credibility. Treat with caution and verify claims through other sources.'
-        };
-        
-        return meanings[rating] || meanings['Unknown'];
-    }
-
-    getAuthorMeaning(authorData) {
-        const score = authorData?.credibility_score || 0;
-        
-        if (score >= 80) {
-            return 'This is a well-established journalist with verified credentials. Their work is generally trustworthy.';
-        } else if (score >= 60) {
-            return 'The author has some verifiable background in journalism. Their work appears legitimate but may benefit from additional verification.';
-        } else if (score >= 40) {
-            return 'Limited information about this author raises some concerns. Be more cautious and verify key claims.';
-        } else {
-            return 'The lack of author information significantly reduces accountability. Treat claims with extra skepticism.';
-        }
-    }
-
-    getTransparencyMeaning(transparencyData) {
-        const score = transparencyData?.transparency_score || 0;
-        
-        if (score >= 80) {
-            return 'Excellent transparency makes this article more trustworthy. You can trace claims back to their sources.';
-        } else if (score >= 60) {
-            return 'Good transparency overall, though some aspects could be clearer. Most claims can be verified.';
-        } else if (score >= 40) {
-            return 'Limited transparency makes verification difficult. You may need to research claims independently.';
-        } else {
-            return 'Poor transparency is a red flag. Without proper sourcing, claims should be treated skeptically.';
-        }
-    }
-
-    getObjectivityMeaning(biasData) {
-        const score = biasData?.objectivity_score || 50;
-        
-        if (score >= 80) {
-            return 'This article presents information objectively. You\'re getting facts with minimal spin.';
-        } else if (score >= 60) {
-            return 'Mostly objective reporting with some bias. Be aware of the perspective but the facts appear sound.';
-        } else if (score >= 40) {
-            return 'Significant bias detected. Read critically and consider what perspective is being promoted.';
-        } else {
-            return 'Heavy bias or manipulation detected. This is more opinion/advocacy than news reporting.';
-        }
-    }
-
-    // Utility Methods
-    getScoreClass(score) {
-        if (score >= 70) return 'score-high';
-        if (score >= 40) return 'score-medium';
-        return 'score-low';
-    }
-
-    getScoreColor(score) {
-        if (score >= 80) return '#10b981';
-        if (score >= 60) return '#3b82f6';
-        if (score >= 40) return '#f59e0b';
-        return '#ef4444';
-    }
-
-    getSourceScore(rating) {
-        const scores = {
-            'High': 90,
-            'Very High': 95,
-            'Medium': 60,
-            'Moderate': 60,
-            'Low': 30,
-            'Very Low': 10
-        };
-        return scores[rating] || 50;
-    }
-
-    createBiasVisualization(biasData) {
-        if (!biasData || !biasData.bias_visualization) return;
-        
-        const viz = biasData.bias_visualization;
-        if (viz.type === 'radar' && viz.dimensions) {
-            this.createRadarChart('biasChart', viz.dimensions);
-        }
-    }
-
-    createRadarChart(elementId, dimensions) {
-        const canvas = document.getElementById(elementId);
-        if (!canvas) return;
-        
-        // Destroy existing chart
-        if (this.charts[elementId]) {
-            this.charts[elementId].destroy();
-        }
-        
-        const ctx = canvas.getContext('2d');
-        
-        const data = {
-            labels: dimensions.map(d => d.axis),
-            datasets: [{
-                label: 'Bias Profile',
-                data: dimensions.map(d => d.value),
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 2,
-                pointBackgroundColor: dimensions.map(d => d.color || '#6366f1'),
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4
-            }]
-        };
-        
-        this.charts[elementId] = new Chart(ctx, {
-            type: 'radar',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            stepSize: 20,
-                            display: false
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const dimension = dimensions[context.dataIndex];
-                                return `${dimension.label}: ${context.parsed.r}% - ${dimension.description}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-// ============================================================================
-// SECTION 4: Service Content Renderers
-// ============================================================================
-
-// Render detailed service content
-function renderDetailedServiceContent(serviceId, data) {
-    switch (serviceId) {
-        case 'source_credibility':
-            return renderSourceCredibility(data);
-        case 'author_analyzer':
-            return renderAuthorAnalysis(data);
-        case 'bias_detector':
-            return renderBiasDetection(data);
-        case 'fact_checker':
-            return renderFactChecker(data);
-        case 'transparency_analyzer':
-            return renderTransparency(data);
-        case 'manipulation_detector':
-            return renderManipulation(data);
-        case 'content_analyzer':
-            return renderContentAnalysis(data);
-        default:
-            return '<p>Analysis complete</p>';
-    }
-}
-
-// Service renderers
-function renderSourceCredibility(data) {
-    const score = extractScore(data, ['credibility_score', 'score']);
-    const level = data.credibility_level || data.level || getCredibilityLevel(score);
-    const sourceName = data.source_name || data.name || 'Unknown Source';
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-chart-line"></i>
-                Credibility Metrics
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Overall Score</span>
-                    <span class="result-value">${score}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Level</span>
-                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        ${level}
-                    </span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Source Name</span>
-                    <span class="result-value">${sourceName}</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Additional sections based on available data
-    if (data.source_info || data.technical_analysis || data.editorial_info || data.findings) {
-        content += renderAdditionalSourceSections(data);
-    }
-    
-    return content;
-}
-
-function renderAdditionalSourceSections(data) {
-    let content = '';
-    
-    // Source info
-    const sourceInfo = data.source_info || data.source_details || data.details;
-    if (sourceInfo) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-building"></i>
-                    Publication Profile
-                </h4>
-                <div class="service-results">
-                    ${sourceInfo.type ? `
-                        <div class="result-item">
-                            <span class="result-label">Source Type</span>
-                            <span class="result-value">${sourceInfo.type}</span>
-                        </div>
-                    ` : ''}
-                    ${sourceInfo.bias ? `
-                        <div class="result-item">
-                            <span class="result-label">Known Political Bias</span>
-                            <span class="result-value">${sourceInfo.bias}</span>
-                        </div>
-                    ` : ''}
-                    ${sourceInfo.credibility_rating ? `
-                        <div class="result-item">
-                            <span class="result-label">Industry Rating</span>
-                            <span class="result-value">${sourceInfo.credibility_rating}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderAuthorAnalysis(data) {
-    const authorName = data.author_name || data.name || 'Unknown Author';
-    const score = extractScore(data, ['credibility_score', 'score']);
-    const level = data.credibility_level || getCredibilityLevel(score);
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-id-card"></i>
-                Author Profile
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Name</span>
-                    <span class="result-value">${authorName}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Score</span>
-                    <span class="result-value">${score}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Credibility Level</span>
-                    <span class="status-badge status-${score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'}">
-                        ${level}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Professional info
-    if (data.professional_info || data.author_info) {
-        const info = data.professional_info || data.author_info;
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-briefcase"></i>
-                    Professional Background
-                </h4>
-                <div class="service-results">
-                    ${info.position || info.current_position ? `
-                        <div class="result-item">
-                            <span class="result-label">Current Position</span>
-                            <span class="result-value">${info.position || info.current_position}</span>
-                        </div>
-                    ` : ''}
-                    ${info.years_experience ? `
-                        <div class="result-item">
-                            <span class="result-label">Years of Experience</span>
-                            <span class="result-value">${info.years_experience}+ years</span>
-                        </div>
-                    ` : ''}
-                    ${info.expertise_areas && info.expertise_areas.length > 0 ? `
-                        <div class="result-item">
-                            <span class="result-label">Expertise Areas</span>
-                            <span class="result-value">${info.expertise_areas.join(', ')}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-    
-    // Recent work
-    if (data.recent_articles && data.recent_articles.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-newspaper"></i>
-                    Recent Articles
-                </h4>
-                <div class="recent-articles-list">
-                    ${data.recent_articles.slice(0, 5).map(article => `
-                        <div class="recent-article-item">
-                            <span class="article-title">${article.title || 'Untitled'}</span>
-                            <span class="article-date">${formatDate(article.date)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderBiasDetection(data) {
-    const overallBias = extractScore(data, ['overall_bias_score', 'bias_score', 'overallBias'], 0);
-    const biasLevel = data.bias_level || data.level || getBiasLevel(overallBias);
-    const objectivityScore = 100 - overallBias;
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-balance-scale"></i>
-                Overall Bias Assessment
-            </h4>
-            <div class="service-results">
-                <div class="result-item">
-                    <span class="result-label">Bias Score</span>
-                    <span class="result-value">${overallBias}/100</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Bias Level</span>
-                    <span class="status-badge status-${overallBias <= 20 ? 'high' : overallBias <= 50 ? 'medium' : 'low'}">
-                        ${biasLevel}
-                    </span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Objectivity Score</span>
-                    <span class="result-value">${objectivityScore}%</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Bias dimensions
-    const dimensions = data.dimensions || data.bias_dimensions || data.biases || data.dimension_scores;
-    if (dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0) {
-        content += renderBiasDimensions(dimensions);
-    }
-    
-    // Loaded phrases
-    if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-        content += `
-            <div class="service-section">
-                <h4 class="section-title">
-                    <i class="fas fa-quote-right"></i>
-                    Loaded Language Examples
-                </h4>
-                <div class="loaded-phrases-list">
-                    ${data.loaded_phrases.slice(0, 5).map(phrase => `
-                        <div class="loaded-phrase-item">
-                            <span class="phrase-text">"${phrase.phrase || phrase}"</span>
-                            ${phrase.severity ? `<span class="phrase-severity severity-${phrase.severity.toLowerCase()}">${phrase.severity}</span>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    return content;
-}
-
-function renderBiasDimensions(dimensions) {
-    const chartId = `bias-chart-${Date.now()}`;
-    const chartData = {
-        labels: [],
-        values: []
-    };
-    
-    let content = `
-        <div class="service-section">
-            <h4 class="section-title">
-                <i class="fas fa-chart-bar"></i>
-                Bias Dimensions Analysis
-            </h4>
-            <div
+// Export all utility functions
+window.TruthLensUtils = {
+    isValidUrl,
+    showError,
+    hideError,
+    showLoading,
+    hideLoading,
+    hideResults,
+    getScoreColor,
+    getDimensionColor,
+    getBiasColor,
+    formatDate,
+    formatFactorName,
+    formatDimensionName,
+    formatStatus,
+    getCredibilityLevel,
+    getBiasLevel,
+    getTransparencyLevel,
+    escapeHtml,
+    extractScore,
+    getTrustLevel,
+    getBreakdownType,
+    measurePerformance,
+    renderDetailedServiceContent,
+    createRadarChartConfig,
+    createPolarAreaChartConfig,
+    createBarChartConfig,
+    getTrustSummaryExplanation,
+    getSourceCredibilityExplanation,
+    getAuthorCredibilityExplanation,
+    getObjectivityExplanation,
+    getFactAccuracyExplanation
+};
