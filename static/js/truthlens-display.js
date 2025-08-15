@@ -1,4 +1,4 @@
-// truthlens-display.js - Display and UI Rendering Methods
+// truthlens-display.js - Enhanced Display and UI Rendering Methods
 // This file contains all display-related methods for the TruthLensApp
 
 // ============================================================================
@@ -33,6 +33,9 @@ const TruthLensDisplay = {
         
         // Display service accordion with enhanced content
         this.displayEnhancedServiceAccordion(data);
+        
+        // Initialize accordion behavior
+        this.initializeAccordions();
         
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -77,16 +80,16 @@ const TruthLensDisplay = {
         const servicesUsed = this.currentMetadata?.services_used || [];
         
         if (score >= 80) {
-            explanation = `<strong>High Credibility:</strong> This article demonstrates exceptional journalistic standards. `;
+            explanation = `<strong style="color: #10b981;">High Credibility:</strong> This article demonstrates exceptional journalistic standards. `;
             explanation += `Our analysis of ${servicesUsed.length} key factors including source reputation, author credentials, and factual accuracy indicates this is a highly reliable source of information.`;
         } else if (score >= 60) {
-            explanation = `<strong>Moderate Credibility:</strong> This article shows reasonable journalistic standards with some areas of concern. `;
+            explanation = `<strong style="color: #3b82f6;">Moderate Credibility:</strong> This article shows reasonable journalistic standards with some areas of concern. `;
             explanation += `While the source is generally reputable, our analysis identified some issues that warrant careful consideration of the claims made.`;
         } else if (score >= 40) {
-            explanation = `<strong>Low Credibility:</strong> This article has significant credibility issues. `;
+            explanation = `<strong style="color: #f59e0b;">Low Credibility:</strong> This article has significant credibility issues. `;
             explanation += `Multiple red flags were identified including potential bias, unverified claims, or questionable sourcing. Verify information through additional sources.`;
         } else {
-            explanation = `<strong>Very Low Credibility:</strong> This article fails to meet basic journalistic standards. `;
+            explanation = `<strong style="color: #ef4444;">Very Low Credibility:</strong> This article fails to meet basic journalistic standards. `;
             explanation += `Major concerns were identified across multiple dimensions. Exercise extreme caution and seek alternative sources for any claims made.`;
         }
         
@@ -113,20 +116,26 @@ const TruthLensDisplay = {
         }
         
         if (findings.length > 0) {
-            let findingsHtml = '';
+            let findingsHtml = '<div class="findings-grid">';
             findings.forEach(finding => {
                 const icon = finding.type === 'positive' ? 'fa-check-circle' : 
                            finding.type === 'negative' ? 'fa-times-circle' : 'fa-exclamation-circle';
+                const color = finding.type === 'positive' ? '#10b981' : 
+                            finding.type === 'negative' ? '#ef4444' : '#f59e0b';
                 
                 findingsHtml += `
                     <div class="finding-item finding-${finding.type}">
-                        <i class="fas ${icon}"></i>
+                        <div class="finding-icon" style="color: ${color};">
+                            <i class="fas ${icon}"></i>
+                        </div>
                         <div class="finding-content">
-                            <strong>${finding.title}:</strong> ${finding.explanation}
+                            <strong class="finding-title">${finding.title}</strong>
+                            <p class="finding-explanation">${finding.explanation}</p>
                         </div>
                     </div>
                 `;
             });
+            findingsHtml += '</div>';
             findingsContainer.innerHTML = findingsHtml;
         } else {
             findingsContainer.innerHTML = `
@@ -240,6 +249,7 @@ const TruthLensDisplay = {
                 name: 'Source Reputation',
                 score: this.extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score']),
                 icon: 'fa-building',
+                color: '#6366f1',
                 whatWeChecked: 'Domain age, SSL certificates, editorial standards, correction policies, and industry reputation.',
                 whatWeFound: this.getSourceFindings(detailedAnalysis.source_credibility),
                 whatThisMeans: this.getSourceMeaning(detailedAnalysis.source_credibility)
@@ -248,6 +258,7 @@ const TruthLensDisplay = {
                 name: 'Author Credibility',
                 score: this.extractScore(detailedAnalysis.author_analyzer, ['author_score', 'score']),
                 icon: 'fa-user',
+                color: '#10b981',
                 whatWeChecked: 'Author identity verification, publishing history, expertise areas, and professional affiliations.',
                 whatWeFound: this.getAuthorFindings(detailedAnalysis.author_analyzer),
                 whatThisMeans: this.getAuthorMeaning(detailedAnalysis.author_analyzer)
@@ -256,6 +267,7 @@ const TruthLensDisplay = {
                 name: 'Transparency',
                 score: this.extractScore(detailedAnalysis.transparency_analyzer, ['transparency_score', 'score']),
                 icon: 'fa-eye',
+                color: '#f59e0b',
                 whatWeChecked: 'Source citations, funding disclosures, conflict of interest statements, and correction policies.',
                 whatWeFound: this.getTransparencyFindings(detailedAnalysis.transparency_analyzer),
                 whatThisMeans: this.getTransparencyMeaning(detailedAnalysis.transparency_analyzer)
@@ -265,6 +277,7 @@ const TruthLensDisplay = {
                 score: detailedAnalysis.bias_detector ? 
                     (100 - (detailedAnalysis.bias_detector.bias_score || detailedAnalysis.bias_detector.score || 0)) : 50,
                 icon: 'fa-balance-scale',
+                color: '#ef4444',
                 whatWeChecked: 'Language analysis for loaded terms, source diversity, perspective balance, and emotional manipulation.',
                 whatWeFound: this.getBiasFindings(detailedAnalysis.bias_detector),
                 whatThisMeans: this.getBiasMeaning(detailedAnalysis.bias_detector)
@@ -275,22 +288,23 @@ const TruthLensDisplay = {
         if (container) {
             container.innerHTML = components.map(comp => {
                 const type = this.getBreakdownType(comp.score);
+                const scoreColor = this.getScoreColor(comp.score);
                 return `
                     <div class="breakdown-item breakdown-${type}">
                         <div class="breakdown-header">
                             <div class="breakdown-label">
-                                <div class="breakdown-icon">
+                                <div class="breakdown-icon" style="background: ${comp.color};">
                                     <i class="fas ${comp.icon}"></i>
                                 </div>
-                                ${comp.name}
+                                <span class="breakdown-name">${comp.name}</span>
                             </div>
-                            <div class="breakdown-value">${comp.score}%</div>
+                            <div class="breakdown-value" style="color: ${scoreColor};">${comp.score}%</div>
                         </div>
                         <div class="breakdown-explanation">
                             ${comp.whatThisMeans}
                         </div>
                         <div class="breakdown-bar">
-                            <div class="breakdown-fill" style="width: ${comp.score}%"></div>
+                            <div class="breakdown-fill" style="width: ${comp.score}%; background: ${scoreColor};"></div>
                         </div>
                     </div>
                 `;
@@ -463,11 +477,15 @@ const TruthLensDisplay = {
         const hasData = serviceData && Object.keys(serviceData).length > 0;
         const expandedContent = this.getEnhancedServiceContent(service.id, serviceData);
         
+        // Color-code the service header based on performance
+        const serviceScore = this.getServiceScore(service.id, serviceData);
+        const scoreColor = this.getScoreColor(serviceScore);
+        
         item.innerHTML = `
-            <div class="service-accordion-header" onclick="window.truthLensApp.toggleAccordion('${service.id}')">
+            <div class="service-accordion-header" onclick="window.truthLensApp.toggleAccordion('${service.id}')" style="border-left: 4px solid ${scoreColor};">
                 <div class="service-header-content">
-                    <div class="service-icon-wrapper">
-                        <i class="fas ${service.icon}"></i>
+                    <div class="service-icon-wrapper" style="background: ${scoreColor}20;">
+                        <i class="fas ${service.icon}" style="color: ${scoreColor};"></i>
                     </div>
                     <div class="service-info">
                         <h3 class="service-name">${service.name}</h3>
@@ -488,6 +506,39 @@ const TruthLensDisplay = {
         `;
         
         return item;
+    },
+
+    getServiceScore(serviceId, data) {
+        if (!data || Object.keys(data).length === 0) return 0;
+        
+        switch (serviceId) {
+            case 'source_credibility':
+                return data.credibility_score || data.score || 0;
+            case 'author_analyzer':
+                return data.author_score || data.score || 0;
+            case 'bias_detector':
+                const biasScore = data.bias_score || data.score || 0;
+                return 100 - biasScore; // Convert to objectivity
+            case 'fact_checker':
+                if (data.fact_checks && Array.isArray(data.fact_checks)) {
+                    const total = data.fact_checks.length;
+                    if (total === 0) return 100;
+                    const verified = data.fact_checks.filter(c => 
+                        c.verdict === 'True' || c.verdict === 'Verified'
+                    ).length;
+                    return Math.round((verified / total) * 100);
+                }
+                return 0;
+            case 'transparency_analyzer':
+                return data.transparency_score || data.score || 0;
+            case 'manipulation_detector':
+                const manipScore = data.manipulation_score || data.score || 0;
+                return 100 - manipScore; // Convert to integrity
+            case 'content_analyzer':
+                return data.quality_score || data.score || 0;
+            default:
+                return 0;
+        }
     },
 
     getServicePreviewHTML(serviceId, data) {
@@ -585,7 +636,7 @@ const TruthLensDisplay = {
             if (article.author) {
                 metaItems.push(`
                     <div class="meta-item">
-                        <i class="fas fa-user"></i>
+                        <i class="fas fa-user" style="color: #6366f1;"></i>
                         ${article.author}
                     </div>
                 `);
@@ -594,7 +645,7 @@ const TruthLensDisplay = {
             if (article.domain || article.source) {
                 metaItems.push(`
                     <div class="meta-item">
-                        <i class="fas fa-globe"></i>
+                        <i class="fas fa-globe" style="color: #10b981;"></i>
                         ${article.domain || article.source}
                     </div>
                 `);
@@ -603,7 +654,7 @@ const TruthLensDisplay = {
             if (article.publish_date) {
                 metaItems.push(`
                     <div class="meta-item">
-                        <i class="fas fa-calendar"></i>
+                        <i class="fas fa-calendar" style="color: #f59e0b;"></i>
                         ${new Date(article.publish_date).toLocaleDateString()}
                     </div>
                 `);
@@ -613,20 +664,50 @@ const TruthLensDisplay = {
         }
     },
 
+    initializeAccordions() {
+        // Ensure all accordions expand downward
+        const accordionItems = document.querySelectorAll('.service-accordion-item');
+        accordionItems.forEach(item => {
+            const content = item.querySelector('.service-accordion-content');
+            if (content) {
+                content.style.maxHeight = '0px';
+                content.style.overflow = 'hidden';
+                content.style.transition = 'max-height 0.3s ease-out';
+            }
+        });
+    },
+
     toggleAccordion(serviceId) {
         const item = document.getElementById(`service-${serviceId}`);
         if (!item) return;
 
+        const content = item.querySelector('.service-accordion-content');
+        const icon = item.querySelector('.service-expand-icon');
         const wasActive = item.classList.contains('active');
         
         // Close all accordions
         document.querySelectorAll('.service-accordion-item').forEach(el => {
             el.classList.remove('active');
+            const elContent = el.querySelector('.service-accordion-content');
+            const elIcon = el.querySelector('.service-expand-icon');
+            if (elContent) {
+                elContent.style.maxHeight = '0px';
+            }
+            if (elIcon) {
+                elIcon.style.transform = 'rotate(0deg)';
+            }
         });
         
         // Open clicked accordion if it wasn't active
         if (!wasActive) {
             item.classList.add('active');
+            if (content) {
+                // Calculate the full height needed
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }
+            if (icon) {
+                icon.style.transform = 'rotate(180deg)';
+            }
             
             // Initialize any charts in this service
             setTimeout(() => {
@@ -637,12 +718,18 @@ const TruthLensDisplay = {
 
     initializeServiceCharts(serviceId) {
         // Initialize charts based on service ID
+        const serviceData = this.currentAnalysis?.detailed_analysis?.[serviceId];
+        if (!serviceData) return;
+        
         switch(serviceId) {
-            case 'source_credibility':
-                // Initialize source credibility charts if needed
-                break;
             case 'bias_detector':
-                // Initialize bias detection charts if needed
+                if (serviceData.dimensions && this.analysisComponents) {
+                    const chartId = `bias-chart-${serviceId}`;
+                    const canvas = document.getElementById(chartId);
+                    if (canvas) {
+                        this.analysisComponents.createBiasChart(chartId, serviceData.dimensions);
+                    }
+                }
                 break;
             // Add other services as needed
         }
@@ -674,27 +761,37 @@ const TruthLensDisplay = {
         // Remove all level classes
         indicatorEl.className = 'trust-level-indicator';
         
-        // Add appropriate class and update text
+        // Add appropriate class and update text with color
         if (score >= 80) {
             indicatorEl.classList.add('level-very-high');
             iconEl.className = 'fas fa-check-circle trust-level-icon';
+            iconEl.style.color = '#10b981';
             textEl.textContent = 'Very High Credibility';
+            textEl.style.color = '#10b981';
         } else if (score >= 60) {
             indicatorEl.classList.add('level-high');
             iconEl.className = 'fas fa-check trust-level-icon';
+            iconEl.style.color = '#3b82f6';
             textEl.textContent = 'High Credibility';
+            textEl.style.color = '#3b82f6';
         } else if (score >= 40) {
             indicatorEl.classList.add('level-moderate');
             iconEl.className = 'fas fa-exclamation-circle trust-level-icon';
+            iconEl.style.color = '#f59e0b';
             textEl.textContent = 'Moderate Credibility';
+            textEl.style.color = '#f59e0b';
         } else if (score >= 20) {
             indicatorEl.classList.add('level-low');
             iconEl.className = 'fas fa-times-circle trust-level-icon';
+            iconEl.style.color = '#ef4444';
             textEl.textContent = 'Low Credibility';
+            textEl.style.color = '#ef4444';
         } else {
             indicatorEl.classList.add('level-very-low');
             iconEl.className = 'fas fa-times-circle trust-level-icon';
+            iconEl.style.color = '#dc2626';
             textEl.textContent = 'Very Low Credibility';
+            textEl.style.color = '#dc2626';
         }
     },
 
