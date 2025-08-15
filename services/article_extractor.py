@@ -1602,4 +1602,6 @@ class ArticleExtractor(BaseAnalyzer):
                 logger.error(f"Extraction failed for {url}: {error_msg}")
                 return self.get_error_result(error_msg)
                 
-        except Exception as
+        except Exception as e:
+            logger.error(f"Article extraction from URL failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
