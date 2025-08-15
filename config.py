@@ -183,6 +183,34 @@ class Config:
         }
     }
     
+    # Pipeline Stage Mapping - CRITICAL FOR PIPELINE TO FIND SERVICES
+    PIPELINE_STAGES = {
+        'extraction': ['article_extractor'],  # Article extraction stage
+        'analysis': [  # Analysis stage includes all other services
+            'source_credibility',
+            'author_analyzer', 
+            'bias_detector',
+            'fact_checker',
+            'transparency_analyzer',
+            'manipulation_detector',
+            'content_analyzer',
+            'plagiarism_detector'
+        ]
+    }
+    
+    # Service to Stage Mapping (reverse mapping for convenience)
+    SERVICE_TO_STAGE = {
+        'article_extractor': 'extraction',
+        'source_credibility': 'analysis',
+        'author_analyzer': 'analysis',
+        'bias_detector': 'analysis',
+        'fact_checker': 'analysis',
+        'transparency_analyzer': 'analysis',
+        'manipulation_detector': 'analysis',
+        'content_analyzer': 'analysis',
+        'plagiarism_detector': 'analysis'
+    }
+    
     # Trust Score Weights
     TRUST_SCORE_WEIGHTS = {
         'source_credibility': 0.30,
@@ -260,6 +288,16 @@ class Config:
             for name, config in cls.SERVICES.items() 
             if config.enabled
         }
+    
+    @classmethod
+    def get_services_for_stage(cls, stage: str) -> list:
+        """Get all services that belong to a specific pipeline stage"""
+        return cls.PIPELINE_STAGES.get(stage, [])
+    
+    @classmethod
+    def get_stage_for_service(cls, service_name: str) -> Optional[str]:
+        """Get the pipeline stage that a service belongs to"""
+        return cls.SERVICE_TO_STAGE.get(service_name)
     
     @classmethod
     def get_api_key(cls, key_name: str) -> Optional[str]:
@@ -343,6 +381,13 @@ class Config:
                 status['warnings'].append(
                     'Dynamic requirements enabled - pipeline will adjust minimum required services'
                 )
+        
+        # Validate pipeline stages mapping
+        for stage, services in cls.PIPELINE_STAGES.items():
+            for service in services:
+                if service not in cls.SERVICES:
+                    status['errors'].append(f"Pipeline stage '{stage}' references unknown service '{service}'")
+                    status['valid'] = False
         
         return status
 
