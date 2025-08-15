@@ -220,6 +220,16 @@ class ManipulationDetector(BaseAnalyzer):
             severity_order = {'high': 0, 'medium': 1, 'low': 2}
             all_tactics.sort(key=lambda x: severity_order.get(x.get('severity', 'low'), 3))
             
+            # Generate findings for UI
+            findings = []
+            for tactic in all_tactics[:5]:  # Top 5 tactics
+                findings.append({
+                    'type': 'manipulation',
+                    'severity': tactic.get('severity', 'medium'),
+                    'text': f"{tactic['name']}: {tactic.get('description', '')}",
+                    'finding': tactic['name']
+                })
+            
             # Generate summary
             summary = self._generate_summary(manipulation_score, level, all_tactics)
             
@@ -229,6 +239,7 @@ class ManipulationDetector(BaseAnalyzer):
                 'data': {
                     'score': manipulation_score,
                     'level': level,
+                    'findings': findings,
                     'assessment': assessment,
                     'summary': summary,
                     'tactics_found': all_tactics[:10],  # Top 10 tactics
@@ -445,3 +456,22 @@ class ManipulationDetector(BaseAnalyzer):
         else:
             high_severity = sum(1 for t in tactics if t.get('severity') == 'high')
             return f"High manipulation level (score: {score}%). {len(tactics)} tactics found including {high_severity} severe issues. Significant bias or propaganda present."
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Propaganda technique detection',
+                'Logical fallacy identification',
+                'Emotional manipulation analysis',
+                'Clickbait detection',
+                'Fear mongering identification',
+                'Ad hominem detection',
+                'False dichotomy recognition',
+                'Manipulation scoring'
+            ],
+            'patterns_loaded': len(self.manipulation_patterns),
+            'propaganda_types': len(self.propaganda_techniques)
+        })
+        return info
