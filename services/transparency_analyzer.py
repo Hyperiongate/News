@@ -184,6 +184,28 @@ class TransparencyAnalyzer(BaseAnalyzer):
                 level = 'Very Low'
                 assessment = 'Lacks basic transparency standards'
             
+            # Generate findings for UI
+            findings = []
+            
+            # Add positive findings
+            if transparency_score >= 65:
+                findings.append({
+                    'type': 'transparency',
+                    'severity': 'positive',
+                    'text': f'Good transparency practices: {", ".join(indicators[:2])}',
+                    'finding': 'Strong transparency'
+                })
+            
+            # Add negative findings
+            if missing_elements:
+                severity = 'high' if len(missing_elements) > 3 else 'medium'
+                findings.append({
+                    'type': 'transparency',
+                    'severity': severity,
+                    'text': f'Missing: {", ".join(missing_elements[:2])}',
+                    'finding': 'Transparency issues'
+                })
+            
             # Generate recommendations
             recommendations = self._generate_recommendations(missing_elements, transparency_score)
             
@@ -193,7 +215,9 @@ class TransparencyAnalyzer(BaseAnalyzer):
                 'data': {
                     'score': transparency_score,
                     'level': level,
+                    'findings': findings,
                     'assessment': assessment,
+                    'summary': f"Transparency score: {transparency_score}%. {assessment}",
                     'indicators': indicators,
                     'missing_elements': missing_elements,
                     'disclosures': disclosures,
@@ -245,3 +269,22 @@ class TransparencyAnalyzer(BaseAnalyzer):
             recommendations.append('Consider adding disclosure statements about funding or conflicts')
         
         return recommendations
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Author attribution checking',
+                'Source citation analysis',
+                'Direct quote detection',
+                'Data source verification',
+                'Disclosure statement identification',
+                'Contact information detection',
+                'Methodology transparency',
+                'External reference tracking'
+            ],
+            'transparency_elements': 8,
+            'scoring_range': '0-100'
+        })
+        return info
