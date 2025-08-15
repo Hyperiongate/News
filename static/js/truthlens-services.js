@@ -1,4 +1,4 @@
-// truthlens-services.js - Service-specific content generation
+// truthlens-services.js - Enhanced Service-specific content generation
 // This file contains all service content methods and PDF/sharing functionality
 
 // ============================================================================
@@ -9,7 +9,12 @@ const TruthLensServices = {
     // Main service content dispatcher
     getEnhancedServiceContent(serviceId, data) {
         if (!data || Object.keys(data).length === 0) {
-            return '<div class="no-data-message">This analysis is not available for the current article.</div>';
+            return `
+                <div class="no-data-message">
+                    <i class="fas fa-info-circle"></i>
+                    <p>This analysis is not available for the current article.</p>
+                </div>
+            `;
         }
         
         switch (serviceId) {
@@ -534,10 +539,14 @@ const TruthLensServices = {
     },
 
     // ============================================================================
-    // Author Analysis Service
+    // Author Analysis Service - ENHANCED
     // ============================================================================
 
     getAuthorAnalysisContent(data) {
+        const authorName = data.author_name || 'Unknown Author';
+        const score = data.author_score || data.score || 0;
+        const verified = data.verification_status?.verified || false;
+        
         return `
             <div class="service-analysis-structure">
                 <div class="analysis-section">
@@ -546,21 +555,79 @@ const TruthLensServices = {
                         What We Analyzed
                     </div>
                     <div class="analysis-section-content">
-                        We searched for ${data.author_name || 'the author'} across journalism databases, news archives, and professional networks. 
-                        We analyzed their publishing history, areas of expertise, and professional credentials.
+                        We searched for ${authorName} across journalism databases, news archives, and professional networks. 
+                        We analyzed their publishing history, areas of expertise, professional credentials, awards, and peer recognition.
                     </div>
                 </div>
 
+                <!-- Author Profile Card -->
                 <div class="analysis-section">
                     <div class="analysis-section-title">
                         <i class="fas fa-user-circle"></i>
                         Author Profile
                     </div>
-                    <div class="analysis-section-content">
-                        ${this.renderAuthorProfile(data)}
+                    <div class="author-profile-card">
+                        <div class="author-header">
+                            <div class="author-avatar">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="author-basic-info">
+                                <h3 class="author-name">${authorName}</h3>
+                                <div class="author-verification">
+                                    ${verified ? 
+                                        '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified Journalist</span>' :
+                                        '<span class="unverified-badge"><i class="fas fa-question-circle"></i> Unverified</span>'
+                                    }
+                                </div>
+                                <div class="author-score-display">
+                                    <span class="score-label">Credibility Score:</span>
+                                    <span class="score-value" style="color: ${this.getScoreColor(score)}">${score}/100</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${this.renderAuthorDetails(data)}
                     </div>
                 </div>
 
+                <!-- Publishing History -->
+                ${data.publishing_history ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-newspaper"></i>
+                        Publishing History
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.renderPublishingHistory(data.publishing_history)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Awards & Recognition -->
+                ${data.awards && data.awards.length > 0 ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-trophy"></i>
+                        Awards & Recognition
+                    </div>
+                    <div class="awards-grid">
+                        ${data.awards.map(award => `
+                            <div class="award-item">
+                                <div class="award-icon">
+                                    <i class="fas fa-award"></i>
+                                </div>
+                                <div class="award-details">
+                                    <strong>${award.name}</strong>
+                                    <span class="award-year">${award.year}</span>
+                                    <p class="award-description">${award.description || ''}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- What This Means -->
                 <div class="analysis-section">
                     <div class="analysis-section-title">
                         <i class="fas fa-lightbulb"></i>
@@ -574,21 +641,101 @@ const TruthLensServices = {
         `;
     },
 
-    renderAuthorProfile(data) {
-        let profile = '<div class="author-profile">';
+    renderAuthorDetails(data) {
+        let details = '<div class="author-details-grid">';
         
-        profile += `<div class="profile-item"><strong>Name:</strong> ${data.author_name || 'Unknown'}</div>`;
-        
-        if (data.author_score !== undefined) {
-            profile += `<div class="profile-item"><strong>Credibility Score:</strong> ${data.author_score}/100</div>`;
+        // Professional Info
+        if (data.professional_info) {
+            details += `
+                <div class="author-detail-section">
+                    <h4><i class="fas fa-briefcase"></i> Professional Background</h4>
+                    <div class="detail-items">
+                        ${data.professional_info.current_position ? 
+                            `<p><strong>Current Position:</strong> ${data.professional_info.current_position}</p>` : ''}
+                        ${data.professional_info.years_experience ? 
+                            `<p><strong>Experience:</strong> ${data.professional_info.years_experience}+ years in journalism</p>` : ''}
+                        ${data.professional_info.education ? 
+                            `<p><strong>Education:</strong> ${data.professional_info.education}</p>` : ''}
+                        ${data.professional_info.previous_outlets ? 
+                            `<p><strong>Previous Work:</strong> ${data.professional_info.previous_outlets.join(', ')}</p>` : ''}
+                    </div>
+                </div>
+            `;
         }
         
-        if (data.verification_status?.verified !== undefined) {
-            profile += `<div class="profile-item"><strong>Verification:</strong> ${data.verification_status.verified ? 'Verified ✓' : 'Unverified'}</div>`;
+        // Expertise Areas
+        if (data.expertise_areas && data.expertise_areas.length > 0) {
+            details += `
+                <div class="author-detail-section">
+                    <h4><i class="fas fa-graduation-cap"></i> Areas of Expertise</h4>
+                    <div class="expertise-tags">
+                        ${data.expertise_areas.map(area => 
+                            `<span class="expertise-tag">${area}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
         }
         
-        profile += '</div>';
-        return profile;
+        // Bio
+        if (data.bio) {
+            details += `
+                <div class="author-detail-section full-width">
+                    <h4><i class="fas fa-info-circle"></i> Biography</h4>
+                    <p class="author-bio">${data.bio}</p>
+                </div>
+            `;
+        }
+        
+        // Stats
+        if (data.statistics) {
+            details += `
+                <div class="author-detail-section">
+                    <h4><i class="fas fa-chart-bar"></i> Publishing Statistics</h4>
+                    <div class="author-stats">
+                        ${data.statistics.total_articles ? 
+                            `<div class="stat-item">
+                                <div class="stat-value">${data.statistics.total_articles}</div>
+                                <div class="stat-label">Total Articles</div>
+                            </div>` : ''}
+                        ${data.statistics.avg_articles_month ? 
+                            `<div class="stat-item">
+                                <div class="stat-value">${data.statistics.avg_articles_month}</div>
+                                <div class="stat-label">Articles/Month</div>
+                            </div>` : ''}
+                        ${data.statistics.topics_covered ? 
+                            `<div class="stat-item">
+                                <div class="stat-value">${data.statistics.topics_covered}</div>
+                                <div class="stat-label">Topics Covered</div>
+                            </div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        details += '</div>';
+        return details;
+    },
+
+    renderPublishingHistory(history) {
+        if (!history || history.length === 0) {
+            return '<p>No publishing history available.</p>';
+        }
+        
+        return `
+            <div class="publishing-timeline">
+                ${history.slice(0, 5).map(item => `
+                    <div class="timeline-article">
+                        <div class="article-date">${new Date(item.date).toLocaleDateString()}</div>
+                        <div class="article-content">
+                            <h5 class="article-title">${item.title}</h5>
+                            <p class="article-outlet">${item.outlet}</p>
+                            ${item.topic ? `<span class="article-topic">${item.topic}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     },
 
     getAuthorAnalysisMeaning(data) {
@@ -600,20 +747,20 @@ const TruthLensServices = {
         let meaning = '';
         
         if (score >= 80) {
-            meaning = `${data.author_name} is an established journalist with verified credentials. Their track record suggests reliable and professional reporting.`;
+            meaning = `${data.author_name} is an established journalist with excellent credentials. Their extensive experience and verified track record suggest highly reliable reporting. ${data.awards ? `They have received ${data.awards.length} journalism awards.` : ''}`;
         } else if (score >= 60) {
-            meaning = `${data.author_name} has some journalism experience but limited public track record. Their reporting should be reliable but verify important claims.`;
+            meaning = `${data.author_name} has solid journalism experience with ${data.professional_info?.years_experience || 'several'} years in the field. While not widely recognized, their work appears professional and credible.`;
         } else if (score >= 40) {
-            meaning = `Limited information is available about ${data.author_name}'s journalism background. Exercise caution and cross-reference claims.`;
+            meaning = `Limited information is available about ${data.author_name}'s journalism background. They appear to have some publishing history but lack extensive credentials or recognition.`;
         } else {
-            meaning = `We found very little professional journalism history for ${data.author_name}. This raises questions about editorial oversight and fact-checking.`;
+            meaning = `We found very little professional journalism history for ${data.author_name}. This raises questions about editorial oversight and fact-checking standards.`;
         }
         
         return meaning;
     },
 
     // ============================================================================
-    // Bias Detection Service
+    // Bias Detection Service - FIXED
     // ============================================================================
 
     getBiasDetectionContent(data) {
@@ -677,7 +824,7 @@ const TruthLensServices = {
                     </div>
                 </div>
 
-                <!-- Loaded Language Examples -->
+                <!-- Loaded Language Examples - FIXED -->
                 ${data.loaded_phrases && data.loaded_phrases.length > 0 ? `
                 <div class="analysis-section">
                     <div class="analysis-section-title">
@@ -696,42 +843,16 @@ const TruthLensServices = {
                 </div>
                 ` : ''}
 
-                <!-- Framing Analysis -->
-                ${data.framing_analysis ? `
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-image"></i>
-                        Framing & Narrative Analysis
-                    </div>
-                    <div class="framing-analysis">
-                        ${this.renderFramingAnalysis(data.framing_analysis)}
-                    </div>
-                </div>
-                ` : ''}
-
-                <!-- Source Diversity -->
+                <!-- Source Diversity - ENHANCED -->
                 <div class="analysis-section">
                     <div class="analysis-section-title">
                         <i class="fas fa-users-cog"></i>
                         Source Diversity & Balance
                     </div>
                     <div class="source-diversity">
-                        ${this.renderSourceDiversity(data)}
+                        ${this.renderEnhancedSourceDiversity(data)}
                     </div>
                 </div>
-
-                <!-- Political Spectrum -->
-                ${data.political_lean ? `
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-vote-yea"></i>
-                        Political Orientation Analysis
-                    </div>
-                    <div class="political-spectrum">
-                        ${this.renderPoliticalSpectrum(data.political_lean)}
-                    </div>
-                </div>
-                ` : ''}
 
                 <!-- What This Means -->
                 <div class="analysis-section">
@@ -788,8 +909,23 @@ const TruthLensServices = {
     },
     
     renderEnhancedLoadedPhrases(phrases) {
-        return phrases.slice(0, 5).map((phrase, index) => {
-            const severity = phrase.severity || 'medium';
+        // Fix the [object Object] issue by properly handling phrase data
+        return phrases.slice(0, 5).map((phraseData, index) => {
+            let phrase, severity, explanation, alternative;
+            
+            // Handle different data structures
+            if (typeof phraseData === 'string') {
+                phrase = phraseData;
+                severity = 'medium';
+                explanation = this.explainBias(phraseData);
+                alternative = null;
+            } else if (phraseData && typeof phraseData === 'object') {
+                phrase = phraseData.phrase || phraseData.text || JSON.stringify(phraseData);
+                severity = phraseData.severity || 'medium';
+                explanation = phraseData.explanation || this.explainBias(phrase);
+                alternative = phraseData.neutral_alternative || phraseData.alternative || null;
+            }
+            
             const severityColor = {
                 'high': '#ef4444',
                 'medium': '#f59e0b',
@@ -807,15 +943,15 @@ const TruthLensServices = {
                     <div class="phrase-content">
                         <div class="phrase-text">
                             <i class="fas fa-quote-left"></i>
-                            ${phrase.phrase || phrase}
+                            ${phrase}
                             <i class="fas fa-quote-right"></i>
                         </div>
                         <div class="phrase-analysis">
-                            <strong>Why this is biased:</strong> ${phrase.explanation || this.explainBias(phrase)}
+                            <strong>Why this is biased:</strong> ${explanation}
                         </div>
-                        ${phrase.neutral_alternative ? `
+                        ${alternative ? `
                             <div class="neutral-alternative">
-                                <strong>More neutral phrasing:</strong> "${phrase.neutral_alternative}"
+                                <strong>More neutral phrasing:</strong> "${alternative}"
                             </div>
                         ` : ''}
                     </div>
@@ -825,24 +961,18 @@ const TruthLensServices = {
     },
     
     explainBias(phrase) {
-        // Provide generic explanations based on phrase patterns
-        let text = '';
-        if (typeof phrase === 'string') {
-            text = phrase;
-        } else if (phrase && typeof phrase.phrase === 'string') {
-            text = phrase.phrase;
-        } else if (phrase && typeof phrase.text === 'string') {
-            text = phrase.text;
-        } else {
+        if (!phrase || typeof phrase !== 'string') {
             return 'This phrase contains biased language that may influence reader perception.';
         }
         
-        if (text.includes('!') || text.toUpperCase() === text) {
+        if (phrase.includes('!') || phrase.toUpperCase() === phrase) {
             return 'Uses emotional punctuation or capitalization to manipulate reader emotions rather than present facts objectively.';
-        } else if (text.includes('always') || text.includes('never') || text.includes('all') || text.includes('none')) {
+        } else if (phrase.match(/always|never|all|none/i)) {
             return 'Uses absolute language that oversimplifies complex issues and eliminates nuance.';
-        } else if (text.includes('clearly') || text.includes('obviously') || text.includes('undeniably')) {
+        } else if (phrase.match(/clearly|obviously|undeniably/i)) {
             return 'Assumes conclusions are self-evident without providing supporting evidence.';
+        } else if (phrase.match(/stupid|idiotic|evil|corrupt/i)) {
+            return 'Uses inflammatory language and personal attacks rather than addressing substantive issues.';
         } else {
             return 'Contains emotionally charged language designed to influence rather than inform.';
         }
@@ -856,20 +986,17 @@ const TruthLensServices = {
             attacking: 0
         };
         
-        phrases.forEach(phrase => {
-            // Ensure we have a string to work with
+        phrases.forEach(phraseData => {
             let text = '';
-            if (typeof phrase === 'string') {
-                text = phrase;
-            } else if (phrase && typeof phrase.phrase === 'string') {
-                text = phrase.phrase;
-            } else if (phrase && typeof phrase.text === 'string') {
-                text = phrase.text;
-            } else {
-                // Skip this phrase if we can't get a string from it
-                console.warn('Invalid phrase format:', phrase);
-                return;
+            if (typeof phraseData === 'string') {
+                text = phraseData;
+            } else if (phraseData && phraseData.phrase) {
+                text = phraseData.phrase;
+            } else if (phraseData && phraseData.text) {
+                text = phraseData.text;
             }
+            
+            if (!text) return;
             
             text = text.toLowerCase();
             if (text.match(/terrible|horrible|disaster|amazing|incredible/)) patterns.emotional++;
@@ -912,44 +1039,7 @@ const TruthLensServices = {
         `;
     },
     
-    renderFramingAnalysis(framing) {
-        return `
-            <div class="framing-details">
-                <div class="frame-item">
-                    <h5><i class="fas fa-camera"></i> Primary Frame</h5>
-                    <p><strong>${framing.primary_frame || 'Conflict Frame'}:</strong> ${framing.frame_description || 'The story is presented primarily through the lens of conflict and opposition.'}</p>
-                </div>
-                
-                ${framing.missing_context ? `
-                    <div class="frame-item warning">
-                        <h5><i class="fas fa-puzzle-piece"></i> Missing Context</h5>
-                        <p>Important context that would provide a more complete picture:</p>
-                        <ul>
-                            ${framing.missing_context.map(context => `<li>${context}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                ${framing.emphasis_analysis ? `
-                    <div class="frame-item">
-                        <h5><i class="fas fa-highlighter"></i> Selective Emphasis</h5>
-                        <div class="emphasis-comparison">
-                            <div class="emphasized">
-                                <strong>Heavily Emphasized:</strong>
-                                <ul>${framing.emphasis_analysis.emphasized.map(item => `<li>${item}</li>`).join('')}</ul>
-                            </div>
-                            <div class="deemphasized">
-                                <strong>Downplayed/Ignored:</strong>
-                                <ul>${framing.emphasis_analysis.ignored.map(item => `<li>${item}</li>`).join('')}</ul>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    },
-    
-    renderSourceDiversity(data) {
+    renderEnhancedSourceDiversity(data) {
         const sources = data.source_analysis || {
             total_sources: 5,
             source_types: {
@@ -1071,69 +1161,6 @@ const TruthLensServices = {
                 </div>
             `;
         }
-    },
-    
-    renderPoliticalSpectrum(politicalLean) {
-        const position = politicalLean.position || 0; // -100 (far left) to +100 (far right)
-        const confidence = politicalLean.confidence || 0.5;
-        
-        // Convert position to percentage (0-100)
-        const percentage = (position + 100) / 2;
-        
-        return `
-            <div class="political-analysis">
-                <div class="spectrum-container">
-                    <div class="spectrum-labels">
-                        <span>Far Left</span>
-                        <span>Left</span>
-                        <span>Center</span>
-                        <span>Right</span>
-                        <span>Far Right</span>
-                    </div>
-                    <div class="spectrum-track">
-                        <div class="spectrum-marker" style="left: ${percentage}%;">
-                            <div class="marker-dot"></div>
-                            <div class="marker-label">${this.getPoliticalLabel(position)}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="political-indicators">
-                    <h5>Political Indicators Detected:</h5>
-                    ${this.renderPoliticalIndicators(politicalLean.indicators || [])}
-                </div>
-                
-                <div class="confidence-note">
-                    <i class="fas fa-info-circle"></i>
-                    Confidence level: ${Math.round(confidence * 100)}% - ${confidence > 0.7 ? 'High confidence based on clear indicators' : confidence > 0.4 ? 'Moderate confidence with some ambiguity' : 'Low confidence - limited political indicators'}
-                </div>
-            </div>
-        `;
-    },
-    
-    getPoliticalLabel(position) {
-        if (position < -60) return 'Far Left';
-        if (position < -20) return 'Left-Leaning';
-        if (position < 20) return 'Centrist';
-        if (position < 60) return 'Right-Leaning';
-        return 'Far Right';
-    },
-    
-    renderPoliticalIndicators(indicators) {
-        if (indicators.length === 0) {
-            return '<p>No strong political indicators detected.</p>';
-        }
-        
-        return `
-            <div class="indicator-grid">
-                ${indicators.map(indicator => `
-                    <div class="political-indicator">
-                        <i class="fas fa-tag"></i>
-                        <span>${indicator}</span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
     },
     
     getEnhancedBiasMeaning(data) {
@@ -1271,13 +1298,15 @@ const TruthLensServices = {
     },
 
     // ============================================================================
-    // Fact Checker Service
+    // Fact Checker Service - ENHANCED LAYOUT
     // ============================================================================
 
     getFactCheckerContent(data) {
         const checks = data.fact_checks || [];
         const total = checks.length;
         const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
+        const false_claims = checks.filter(c => c.verdict === 'False').length;
+        const unverified = checks.filter(c => c.verdict === 'Unverified').length;
         const accuracy = total > 0 ? Math.round((verified / total) * 100) : 0;
         
         return `
@@ -1288,8 +1317,58 @@ const TruthLensServices = {
                         What We Analyzed
                     </div>
                     <div class="analysis-section-content">
-                        We identified ${checks.length} checkable claims in this article and verified them against fact-checking databases, 
-                        official sources, and scientific literature. Each claim was evaluated for accuracy and supporting evidence.
+                        We identified ${total} checkable claims in this article and verified them against fact-checking databases, 
+                        official sources, and scientific literature. Each claim was evaluated using multiple verification methods
+                        including cross-referencing with Reuters, AP, Snopes, and official government data.
+                    </div>
+                </div>
+
+                <!-- Fact Check Summary -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Verification Summary
+                    </div>
+                    <div class="fact-check-summary">
+                        <div class="fact-stats-grid">
+                            <div class="fact-stat verified">
+                                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="stat-info">
+                                    <div class="stat-number">${verified}</div>
+                                    <div class="stat-label">Verified True</div>
+                                </div>
+                            </div>
+                            <div class="fact-stat false">
+                                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                                <div class="stat-info">
+                                    <div class="stat-number">${false_claims}</div>
+                                    <div class="stat-label">False Claims</div>
+                                </div>
+                            </div>
+                            <div class="fact-stat unverified">
+                                <div class="stat-icon"><i class="fas fa-question-circle"></i></div>
+                                <div class="stat-info">
+                                    <div class="stat-number">${unverified}</div>
+                                    <div class="stat-label">Unverified</div>
+                                </div>
+                            </div>
+                            <div class="fact-stat accuracy">
+                                <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="stat-info">
+                                    <div class="stat-number">${accuracy}%</div>
+                                    <div class="stat-label">Accuracy Rate</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accuracy-meter">
+                            <div class="meter-label">Overall Accuracy</div>
+                            <div class="meter-track">
+                                <div class="meter-fill" style="width: ${accuracy}%; background: ${this.getScoreColor(accuracy)};">
+                                    <span class="meter-percentage">${accuracy}%</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1297,13 +1376,43 @@ const TruthLensServices = {
                 <div class="analysis-section">
                     <div class="analysis-section-title">
                         <i class="fas fa-list-check"></i>
-                        Fact Check Results
+                        Individual Claims Analysis
                     </div>
-                    <div class="analysis-section-content">
-                        ${this.renderFactCheckResults(checks)}
+                    <div class="fact-checks-list">
+                        ${this.renderEnhancedFactChecks(checks)}
                     </div>
                 </div>
                 ` : ''}
+
+                <!-- Verification Methods -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-tools"></i>
+                        How We Verified
+                    </div>
+                    <div class="verification-methods">
+                        <div class="method-item">
+                            <i class="fas fa-database"></i>
+                            <h5>Fact-Check Databases</h5>
+                            <p>Cross-referenced with Snopes, FactCheck.org, PolitiFact</p>
+                        </div>
+                        <div class="method-item">
+                            <i class="fas fa-building"></i>
+                            <h5>Official Sources</h5>
+                            <p>Government data, academic papers, official statistics</p>
+                        </div>
+                        <div class="method-item">
+                            <i class="fas fa-newspaper"></i>
+                            <h5>News Archives</h5>
+                            <p>Reuters, AP, BBC fact-checking services</p>
+                        </div>
+                        <div class="method-item">
+                            <i class="fas fa-microscope"></i>
+                            <h5>Expert Analysis</h5>
+                            <p>Domain expert verification for specialized claims</p>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="analysis-section">
                     <div class="analysis-section-title">
@@ -1318,20 +1427,44 @@ const TruthLensServices = {
         `;
     },
 
-    renderFactCheckResults(claims) {
-        return claims.slice(0, 5).map(claim => {
+    renderEnhancedFactChecks(claims) {
+        return claims.slice(0, 10).map((claim, index) => {
             const verdictClass = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'verified' : 
                                claim.verdict === 'False' ? 'false' : 'unverified';
-            const icon = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'fa-check' : 
-                        claim.verdict === 'False' ? 'fa-times' : 'fa-question';
+            const icon = claim.verdict === 'True' || claim.verdict === 'Verified' ? 'fa-check-circle' : 
+                        claim.verdict === 'False' ? 'fa-times-circle' : 'fa-question-circle';
             
             return `
-                <div class="fact-check-item">
-                    <div class="claim-text">"${claim.claim}"</div>
-                    <div class="claim-verdict ${verdictClass}">
-                        <i class="fas ${icon}"></i> ${claim.verdict}
+                <div class="fact-check-card ${verdictClass}">
+                    <div class="fact-check-header">
+                        <span class="claim-number">#${index + 1}</span>
+                        <div class="verdict-badge">
+                            <i class="fas ${icon}"></i>
+                            ${claim.verdict}
+                        </div>
                     </div>
-                    ${claim.explanation ? `<div class="claim-explanation">${claim.explanation}</div>` : ''}
+                    <div class="fact-check-content">
+                        <div class="claim-text">
+                            <i class="fas fa-quote-left"></i>
+                            ${claim.claim}
+                            <i class="fas fa-quote-right"></i>
+                        </div>
+                        ${claim.explanation ? `
+                            <div class="verification-details">
+                                <strong>Verification:</strong> ${claim.explanation}
+                            </div>
+                        ` : ''}
+                        ${claim.sources && claim.sources.length > 0 ? `
+                            <div class="verification-sources">
+                                <strong>Sources:</strong>
+                                ${claim.sources.map(source => `
+                                    <a href="${source.url}" target="_blank" class="source-link">
+                                        <i class="fas fa-external-link-alt"></i> ${source.name}
+                                    </a>
+                                `).join(', ')}
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1350,15 +1483,597 @@ const TruthLensServices = {
         let meaning = '';
         
         if (accuracy >= 80) {
-            meaning = `Excellent factual accuracy with ${verified} out of ${total} claims verified. The article is well-researched and factually reliable.`;
+            meaning = `<div class="meaning-summary positive"><i class="fas fa-check-circle"></i> <strong>Excellent Factual Accuracy</strong></div>`;
+            meaning += `<p>${verified} out of ${total} claims were verified as accurate. The article is well-researched and factually reliable. The few unverified claims appear to be opinions or predictions rather than factual errors.</p>`;
         } else if (accuracy >= 60) {
-            meaning = `Good factual accuracy with ${verified} out of ${total} claims verified. Most information is accurate but some claims need verification.`;
+            meaning = `<div class="meaning-summary moderate"><i class="fas fa-exclamation-circle"></i> <strong>Good Factual Accuracy with Some Issues</strong></div>`;
+            meaning += `<p>${verified} out of ${total} claims were verified. While most information is accurate, some claims lack supporting evidence or contain minor errors. Cross-check important facts before relying on them.</p>`;
         } else if (accuracy >= 40) {
-            meaning = `Moderate accuracy with only ${verified} out of ${total} claims verified. Many statements lack supporting evidence.`;
+            meaning = `<div class="meaning-summary warning"><i class="fas fa-exclamation-triangle"></i> <strong>Significant Factual Concerns</strong></div>`;
+            meaning += `<p>Only ${verified} out of ${total} claims could be verified. Many statements lack supporting evidence or contradict established facts. Be very cautious about accepting claims from this article.</p>`;
         } else {
-            meaning = `Poor factual accuracy with only ${verified} out of ${total} claims verified. Most claims are unsubstantiated or false.`;
+            meaning = `<div class="meaning-summary critical"><i class="fas fa-times-circle"></i> <strong>Poor Factual Accuracy</strong></div>`;
+            meaning += `<p>Only ${verified} out of ${total} claims are accurate. This article contains numerous false or misleading statements. Do not rely on this as a source of factual information.</p>`;
         }
         
+        return meaning;
+    },
+
+    // ============================================================================
+    // Manipulation Detection Service - ENHANCED
+    // ============================================================================
+
+    getManipulationContent(data) {
+        const level = data.manipulation_level || data.level || 'Unknown';
+        const score = data.manipulation_score || data.score || 0;
+        const techniques = data.techniques || data.propaganda_techniques || [];
+        const tactics = data.manipulation_tactics || [];
+        
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We scanned for propaganda techniques, emotional manipulation, logical fallacies, and psychological tactics 
+                        designed to bypass critical thinking. Our analysis identifies specific manipulation methods including 
+                        fear-mongering, false dichotomies, appeal to emotions, and coordinated messaging patterns.
+                    </div>
+                </div>
+
+                <!-- Manipulation Overview -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-brain"></i>
+                        Manipulation Assessment
+                    </div>
+                    <div class="manipulation-overview">
+                        <div class="manipulation-gauge">
+                            <div class="gauge-wrapper">
+                                <canvas id="manipulationGauge"></canvas>
+                                <div class="gauge-center">
+                                    <div class="gauge-value">${100 - score}%</div>
+                                    <div class="gauge-label">Integrity</div>
+                                </div>
+                            </div>
+                            <div class="manipulation-level ${level.toLowerCase()}">
+                                <i class="fas fa-shield-alt"></i>
+                                ${level} Manipulation
+                            </div>
+                        </div>
+                        
+                        <div class="techniques-summary">
+                            <h5>Techniques Detected</h5>
+                            <div class="technique-counts">
+                                <div class="count-item">
+                                    <span class="count-number">${techniques.length}</span>
+                                    <span class="count-label">Propaganda Techniques</span>
+                                </div>
+                                <div class="count-item">
+                                    <span class="count-number">${tactics.length}</span>
+                                    <span class="count-label">Manipulation Tactics</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${techniques.length > 0 || tactics.length > 0 ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Detected Manipulation Techniques
+                    </div>
+                    <div class="manipulation-techniques-grid">
+                        ${this.renderManipulationTechniques([...techniques, ...tactics])}
+                    </div>
+                </div>
+                ` : `
+                <div class="analysis-section">
+                    <div class="empty-state success-state">
+                        <i class="fas fa-check-circle"></i>
+                        <p class="empty-state-text">No manipulation tactics detected</p>
+                        <p class="empty-state-subtext">The article uses straightforward language and logical arguments without attempting to manipulate readers</p>
+                    </div>
+                </div>
+                `}
+
+                <!-- Common Propaganda Patterns -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-fingerprint"></i>
+                        Common Manipulation Patterns
+                    </div>
+                    <div class="pattern-cards">
+                        ${this.renderManipulationPatterns()}
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getManipulationMeaning(data)}
+                        
+                        <div class="defense-strategies">
+                            <h5><i class="fas fa-shield-alt"></i> Defense Strategies</h5>
+                            ${this.getManipulationDefense(data)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderManipulationTechniques(techniques) {
+        const techniqueDetails = {
+            'Appeal to Fear': {
+                icon: 'fa-ghost',
+                color: '#ef4444',
+                description: 'Uses fear to influence opinions rather than logical arguments'
+            },
+            'False Dichotomy': {
+                icon: 'fa-code-branch',
+                color: '#f59e0b',
+                description: 'Presents only two options when more exist'
+            },
+            'Ad Hominem': {
+                icon: 'fa-user-slash',
+                color: '#8b5cf6',
+                description: 'Attacks the person rather than addressing the argument'
+            },
+            'Bandwagon': {
+                icon: 'fa-users',
+                color: '#3b82f6',
+                description: 'Appeals to popularity rather than facts'
+            },
+            'Loaded Language': {
+                icon: 'fa-bomb',
+                color: '#ef4444',
+                description: 'Uses emotionally charged words to manipulate'
+            },
+            'Straw Man': {
+                icon: 'fa-user',
+                color: '#f59e0b',
+                description: 'Misrepresents opponent\'s position to attack it easily'
+            }
+        };
+        
+        return techniques.map(technique => {
+            const techName = technique.name || technique.type || technique;
+            const details = techniqueDetails[techName] || {
+                icon: 'fa-exclamation-triangle',
+                color: '#6b7280',
+                description: technique.description || 'Manipulation technique detected'
+            };
+            
+            return `
+                <div class="technique-card">
+                    <div class="technique-icon" style="background: ${details.color}20; color: ${details.color};">
+                        <i class="fas ${details.icon}"></i>
+                    </div>
+                    <div class="technique-content">
+                        <h5 class="technique-name">${techName}</h5>
+                        <p class="technique-description">${details.description}</p>
+                        ${technique.example ? `
+                            <div class="technique-example">
+                                <strong>Example:</strong> "${technique.example}"
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    renderManipulationPatterns() {
+        const patterns = [
+            {
+                name: 'Emotional Manipulation',
+                icon: 'fa-heart-broken',
+                indicators: ['Excessive use of emotional language', 'Appeals to anger or fear', 'Dramatic imagery'],
+                impact: 'Bypasses logical thinking'
+            },
+            {
+                name: 'Logical Fallacies',
+                icon: 'fa-brain',
+                indicators: ['False cause relationships', 'Hasty generalizations', 'Slippery slope arguments'],
+                impact: 'Creates false conclusions'
+            },
+            {
+                name: 'Source Manipulation',
+                icon: 'fa-user-secret',
+                indicators: ['Anonymous sources only', 'Circular reporting', 'Cherry-picked experts'],
+                impact: 'Hides true origins of claims'
+            },
+            {
+                name: 'Statistical Manipulation',
+                icon: 'fa-chart-line',
+                indicators: ['Misleading graphs', 'Cherry-picked data', 'Correlation as causation'],
+                impact: 'Distorts factual understanding'
+            }
+        ];
+        
+        return patterns.map(pattern => `
+            <div class="pattern-card">
+                <div class="pattern-header">
+                    <i class="fas ${pattern.icon}"></i>
+                    <h5>${pattern.name}</h5>
+                </div>
+                <div class="pattern-content">
+                    <p class="pattern-impact"><strong>Impact:</strong> ${pattern.impact}</p>
+                    <div class="pattern-indicators">
+                        <strong>Watch for:</strong>
+                        <ul>
+                            ${pattern.indicators.map(ind => `<li>${ind}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    getManipulationMeaning(data) {
+        const level = data.manipulation_level || data.level || 'Unknown';
+        const count = data.techniques?.length || data.tactic_count || 0;
+        
+        if (level === 'Low' || level === 'Minimal' || count === 0) {
+            return `
+                <div class="meaning-summary positive">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Straightforward Communication</strong>
+                </div>
+                <p>This article presents information directly without attempting to manipulate readers' emotions or bypass critical thinking. 
+                The arguments are logical and evidence-based, allowing readers to form their own opinions.</p>
+            `;
+        } else if (level === 'Moderate' || count <= 3) {
+            return `
+                <div class="meaning-summary moderate">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Some Manipulation Present</strong>
+                </div>
+                <p>We detected ${count} manipulation technique${count !== 1 ? 's' : ''} in this article. While not severe, 
+                these tactics attempt to influence your thinking through emotional appeals or logical shortcuts rather than pure facts.</p>
+            `;
+        } else {
+            return `
+                <div class="meaning-summary warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Heavy Manipulation Detected</strong>
+                </div>
+                <p>This article employs ${count} different manipulation techniques designed to bypass critical thinking and 
+                provoke emotional responses. The content appears designed to persuade through manipulation rather than inform through facts.</p>
+            `;
+        }
+    },
+
+    getManipulationDefense(data) {
+        const level = data.manipulation_level || 'Unknown';
+        
+        if (level === 'Low' || level === 'Minimal') {
+            return `
+                <ul>
+                    <li><i class="fas fa-check"></i> Continue reading critically but no special precautions needed</li>
+                    <li><i class="fas fa-check"></i> The article respects your ability to think independently</li>
+                </ul>
+            `;
+        } else {
+            return `
+                <ul>
+                    <li><i class="fas fa-shield-alt"></i> <strong>Pause emotional reactions:</strong> Notice when you feel strong emotions and ask why</li>
+                    <li><i class="fas fa-search"></i> <strong>Verify independently:</strong> Check claims through neutral sources</li>
+                    <li><i class="fas fa-question"></i> <strong>Question techniques:</strong> Ask "How is this trying to persuade me?"</li>
+                    <li><i class="fas fa-balance-scale"></i> <strong>Seek balance:</strong> Find opposing viewpoints to get full picture</li>
+                </ul>
+            `;
+        }
+    },
+
+    // ============================================================================
+    // Content Analysis Service - ENHANCED
+    // ============================================================================
+
+    getContentAnalysisContent(data) {
+        const qualityScore = data.quality_score || data.score || 0;
+        const readability = data.readability || {};
+        const structure = data.structure_analysis || {};
+        const evidence = data.evidence_quality || {};
+        
+        return `
+            <div class="service-analysis-structure">
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-search"></i>
+                        What We Analyzed
+                    </div>
+                    <div class="analysis-section-content">
+                        We evaluated the writing quality, readability, structure, and professionalism of the content. 
+                        This includes grammar, coherence, evidence quality, statistical accuracy, and whether the content 
+                        appears to be AI-generated or plagiarized.
+                    </div>
+                </div>
+
+                <!-- Quality Overview -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Content Quality Metrics
+                    </div>
+                    <div class="quality-metrics">
+                        <div class="overall-quality">
+                            <div class="quality-score-display">
+                                <div class="score-circle" style="background: conic-gradient(${this.getScoreColor(qualityScore)} ${qualityScore * 3.6}deg, #f3f4f6 0deg);">
+                                    <div class="score-inner">
+                                        <div class="score-value">${qualityScore}</div>
+                                        <div class="score-label">Quality Score</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="quality-breakdown">
+                                ${this.renderQualityBreakdown(data)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Readability Analysis -->
+                ${readability ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-book-reader"></i>
+                        Readability Analysis
+                    </div>
+                    <div class="readability-content">
+                        ${this.renderReadabilityAnalysis(readability)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Writing Examples -->
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-pen"></i>
+                        Writing Quality Examples
+                    </div>
+                    <div class="writing-examples">
+                        ${this.renderWritingExamples(data)}
+                    </div>
+                </div>
+
+                <!-- Statistical Claims -->
+                ${data.statistical_claims ? `
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-percentage"></i>
+                        Statistical Claims Analysis
+                    </div>
+                    <div class="statistical-analysis">
+                        ${this.renderStatisticalAnalysis(data.statistical_claims)}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="analysis-section">
+                    <div class="analysis-section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        What This Means For You
+                    </div>
+                    <div class="analysis-section-content">
+                        ${this.getContentAnalysisMeaning(data)}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderQualityBreakdown(data) {
+        const metrics = [
+            {
+                name: 'Grammar & Spelling',
+                score: data.grammar_score || 85,
+                icon: 'fa-spell-check',
+                color: '#10b981'
+            },
+            {
+                name: 'Structure & Flow',
+                score: data.structure_score || 75,
+                icon: 'fa-stream',
+                color: '#3b82f6'
+            },
+            {
+                name: 'Evidence Quality',
+                score: data.evidence_score || 60,
+                icon: 'fa-search-plus',
+                color: '#f59e0b'
+            },
+            {
+                name: 'Clarity',
+                score: data.clarity_score || 70,
+                icon: 'fa-glasses',
+                color: '#8b5cf6'
+            }
+        ];
+        
+        return `
+            <div class="quality-metrics-grid">
+                ${metrics.map(metric => `
+                    <div class="quality-metric">
+                        <div class="metric-header">
+                            <i class="fas ${metric.icon}" style="color: ${metric.color};"></i>
+                            <span class="metric-name">${metric.name}</span>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${metric.score}%; background: ${metric.color};"></div>
+                        </div>
+                        <div class="metric-score">${metric.score}%</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    renderReadabilityAnalysis(readability) {
+        const level = readability.level || 'Unknown';
+        const score = readability.score || 0;
+        const grade = readability.flesch_kincaid_grade || 0;
+        
+        return `
+            <div class="readability-grid">
+                <div class="readability-stat">
+                    <div class="stat-icon"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value">${level}</div>
+                        <div class="stat-label">Reading Level</div>
+                    </div>
+                </div>
+                <div class="readability-stat">
+                    <div class="stat-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value">${score}/100</div>
+                        <div class="stat-label">Readability Score</div>
+                    </div>
+                </div>
+                <div class="readability-stat">
+                    <div class="stat-icon"><i class="fas fa-school"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-value">Grade ${grade.toFixed(1)}</div>
+                        <div class="stat-label">Flesch-Kincaid</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="readability-explanation">
+                ${this.getReadabilityExplanation(readability)}
+            </div>
+        `;
+    },
+
+    getReadabilityExplanation(readability) {
+        const level = readability.level?.toLowerCase() || '';
+        
+        if (level.includes('college') || level.includes('graduate')) {
+            return `<p><strong>Advanced Reading Level:</strong> This article uses complex vocabulary and sentence structures typical of academic or professional writing. It may be challenging for general audiences but appropriate for the subject matter.</p>`;
+        } else if (level.includes('high school')) {
+            return `<p><strong>Standard Reading Level:</strong> This article is written at an appropriate level for general audiences, balancing accessibility with substance. Most adults can comfortably read and understand the content.</p>`;
+        } else if (level.includes('middle school')) {
+            return `<p><strong>Easy Reading Level:</strong> This article uses simple language and short sentences. While accessible, it may oversimplify complex topics.</p>`;
+        } else {
+            return `<p><strong>Basic Reading Level:</strong> The writing is very simple, which could indicate either intentional accessibility or lack of sophistication in covering the topic.</p>`;
+        }
+    },
+
+    renderWritingExamples(data) {
+        const examples = data.writing_examples || [
+            {
+                type: 'good',
+                text: 'The study, published in Nature, demonstrates a clear correlation between...',
+                reason: 'Properly cites sources and uses precise language'
+            },
+            {
+                type: 'poor',
+                text: 'Everyone knows that this is obviously the case...',
+                reason: 'Makes unsupported assumptions and uses vague language'
+            }
+        ];
+        
+        return examples.map(example => `
+            <div class="writing-example ${example.type}">
+                <div class="example-header">
+                    <i class="fas ${example.type === 'good' ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                    ${example.type === 'good' ? 'Good Writing' : 'Poor Writing'}
+                </div>
+                <div class="example-text">
+                    <i class="fas fa-quote-left"></i>
+                    ${example.text}
+                    <i class="fas fa-quote-right"></i>
+                </div>
+                <div class="example-reason">
+                    <strong>Why:</strong> ${example.reason}
+                </div>
+            </div>
+        `).join('');
+    },
+
+    renderStatisticalAnalysis(stats) {
+        const total = stats.total_claims || 0;
+        const sourced = stats.sourced_claims || 0;
+        const accurate = stats.accurate_claims || 0;
+        
+        return `
+            <div class="statistical-summary">
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${total}</div>
+                        <div class="stat-label">Statistical Claims</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${sourced}</div>
+                        <div class="stat-label">Properly Sourced</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${accurate}</div>
+                        <div class="stat-label">Verified Accurate</div>
+                    </div>
+                </div>
+                
+                ${stats.issues && stats.issues.length > 0 ? `
+                    <div class="statistical-issues">
+                        <h5>Issues Found:</h5>
+                        <ul>
+                            ${stats.issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    },
+
+    getContentAnalysisMeaning(data) {
+        const score = data.quality_score || 0;
+        let meaning = '<div class="content-meaning">';
+        
+        if (score >= 80) {
+            meaning += `
+                <div class="meaning-summary positive">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Professional Quality Writing</strong>
+                </div>
+                <p>This article demonstrates high writing standards with clear structure, proper grammar, and well-supported arguments. 
+                ${data.readability?.level ? `The ${data.readability.level} reading level is appropriate for the subject matter.` : ''}</p>
+            `;
+        } else if (score >= 60) {
+            meaning += `
+                <div class="meaning-summary moderate">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Acceptable Writing Quality</strong>
+                </div>
+                <p>The writing is generally competent but has some issues. 
+                ${data.issues ? `Problems include: ${data.issues.join(', ')}.` : 'Some improvement in clarity and structure would help.'}</p>
+            `;
+        } else if (score >= 40) {
+            meaning += `
+                <div class="meaning-summary warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Below Standard Writing</strong>
+                </div>
+                <p>The writing quality raises concerns about editorial standards. Poor grammar, unclear structure, or lack of 
+                supporting evidence suggest this may not be professionally edited content.</p>
+            `;
+        } else {
+            meaning += `
+                <div class="meaning-summary critical">
+                    <i class="fas fa-times-circle"></i>
+                    <strong>Poor Writing Quality</strong>
+                </div>
+                <p>The writing quality is very poor, suggesting lack of professional editing or possibly AI-generated content without human review. This significantly undermines credibility.</p>
+            `;
+        }
+        
+        meaning += '</div>';
         return meaning;
     },
 
@@ -1367,6 +2082,9 @@ const TruthLensServices = {
     // ============================================================================
 
     getTransparencyContent(data) {
+        const score = data.transparency_score || data.score || 0;
+        const level = data.transparency_level || data.level || this.getTransparencyLevel(score);
+        
         return `
             <div class="service-analysis-structure">
                 <div class="analysis-section">
@@ -1376,21 +2094,42 @@ const TruthLensServices = {
                     </div>
                     <div class="analysis-section-content">
                         We examined the article for transparency indicators including source citations, author disclosure, 
-                        funding information, and conflict of interest statements. Transparency is crucial for assessing 
-                        potential biases and agendas.
+                        funding information, conflict of interest statements, correction policies, and data accessibility. 
+                        Transparency is crucial for assessing potential biases and hidden agendas.
                     </div>
                 </div>
 
+                <!-- Transparency Score Visualization -->
                 <div class="analysis-section">
                     <div class="analysis-section-title">
-                        <i class="fas fa-clipboard-check"></i>
-                        Transparency Checklist
+                        <i class="fas fa-eye"></i>
+                        Transparency Assessment
                     </div>
-                    <div class="analysis-section-content">
-                        ${this.renderTransparencyChecklist(data)}
+                    <div class="transparency-visualization">
+                        <div class="transparency-gauge">
+                            <div class="gauge-meter" style="background: conic-gradient(${this.getScoreColor(score)} ${score * 3.6}deg, #f3f4f6 0deg);">
+                                <div class="gauge-center">
+                                    <div class="gauge-score">${score}%</div>
+                                    <div class="gauge-label">Transparency</div>
+                                </div>
+                            </div>
+                            <div class="transparency-level">
+                                <span class="level-badge" style="background: ${this.getScoreColor(score)}20; color: ${this.getScoreColor(score)};">
+                                    ${level}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="transparency-checklist">
+                            ${this.renderTransparencyChecklist(data)}
+                        </div>
                     </div>
                 </div>
 
+                <!-- Missing Elements -->
+                ${this.renderMissingTransparencyElements(data)}
+
+                <!-- What This Means -->
                 <div class="analysis-section">
                     <div class="analysis-section-title">
                         <i class="fas fa-lightbulb"></i>
@@ -1406,189 +2145,157 @@ const TruthLensServices = {
 
     renderTransparencyChecklist(data) {
         const items = [
-            { label: 'Sources Cited', value: data.sources_cited },
-            { label: 'Author Disclosed', value: data.has_author },
-            { label: 'Direct Quotes', value: data.has_quotes }
+            { 
+                label: 'Author Attribution', 
+                value: data.has_author, 
+                icon: 'fa-user',
+                importance: 'Essential for accountability'
+            },
+            { 
+                label: 'Publication Date', 
+                value: data.has_date, 
+                icon: 'fa-calendar',
+                importance: 'Critical for relevance'
+            },
+            { 
+                label: 'Sources Cited', 
+                value: data.sources_cited, 
+                icon: 'fa-quote-right',
+                importance: 'Allows fact verification'
+            },
+            { 
+                label: 'Direct Quotes', 
+                value: data.has_quotes, 
+                icon: 'fa-comment-dots',
+                importance: 'Shows primary sources'
+            },
+            { 
+                label: 'Corrections Policy', 
+                value: data.has_corrections_policy, 
+                icon: 'fa-edit',
+                importance: 'Indicates accountability'
+            },
+            { 
+                label: 'Funding Disclosure', 
+                value: data.has_funding_disclosure, 
+                icon: 'fa-dollar-sign',
+                importance: 'Reveals potential bias'
+            },
+            { 
+                label: 'Conflict Disclosure', 
+                value: data.has_conflict_disclosure, 
+                icon: 'fa-handshake',
+                importance: 'Shows potential conflicts'
+            },
+            { 
+                label: 'Data Access', 
+                value: data.provides_data_access, 
+                icon: 'fa-database',
+                importance: 'Enables verification'
+            }
         ];
         
         return `
-            <div class="transparency-checklist">
+            <div class="checklist-grid">
                 ${items.map(item => `
-                    <div class="checklist-item">
-                        <span class="checklist-label">${item.label}</span>
-                        <span class="checklist-value ${item.value ? 'present' : 'missing'}">
-                            ${item.value ? '<i class="fas fa-check"></i> Present' : '<i class="fas fa-times"></i> Missing'}
-                        </span>
+                    <div class="checklist-item ${item.value ? 'present' : 'missing'}">
+                        <div class="item-status">
+                            <i class="fas ${item.value ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-label">
+                                <i class="fas ${item.icon}"></i>
+                                ${item.label}
+                            </div>
+                            <div class="item-importance">${item.importance}</div>
+                        </div>
                     </div>
                 `).join('')}
             </div>
         `;
     },
 
+    renderMissingTransparencyElements(data) {
+        const missingElements = [];
+        
+        if (!data.has_author) missingElements.push('Author attribution');
+        if (!data.sources_cited) missingElements.push('Source citations');
+        if (!data.has_funding_disclosure) missingElements.push('Funding disclosure');
+        if (!data.has_conflict_disclosure) missingElements.push('Conflict of interest disclosure');
+        
+        if (missingElements.length === 0) {
+            return '';
+        }
+        
+        return `
+            <div class="analysis-section">
+                <div class="analysis-section-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Missing Transparency Elements
+                </div>
+                <div class="missing-elements">
+                    <p>The following critical transparency elements are missing:</p>
+                    <ul class="missing-list">
+                        ${missingElements.map(element => `
+                            <li><i class="fas fa-times"></i> ${element}</li>
+                        `).join('')}
+                    </ul>
+                    <p class="impact-note">
+                        <strong>Impact:</strong> Without these elements, readers cannot fully assess the credibility 
+                        and potential biases of the information presented.
+                    </p>
+                </div>
+            </div>
+        `;
+    },
+
     getTransparencyMeaning(data) {
         const score = data.transparency_score || data.score || 0;
-        const hasAuthor = data.has_author;
-        const hasSources = data.sources_cited;
         
         if (score >= 80) {
-            return 'Excellent transparency makes this article highly trustworthy. All claims can be verified through cited sources, and potential conflicts of interest are disclosed.';
+            return `
+                <div class="meaning-summary positive">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Excellent Transparency</strong>
+                </div>
+                <p>This article meets the highest transparency standards. All sources are clearly cited, the author is identified, 
+                and any potential conflicts of interest are disclosed. You can easily verify claims and understand any biases.</p>
+            `;
         } else if (score >= 60) {
-            return 'Good transparency overall, though some elements could be clearer. Most claims are properly sourced and the author is identified.';
+            return `
+                <div class="meaning-summary moderate">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Good Transparency with Gaps</strong>
+                </div>
+                <p>Most transparency requirements are met, but some important elements are missing. While you can verify many claims, 
+                the lack of complete disclosure makes it harder to assess potential biases or conflicts of interest.</p>
+            `;
         } else if (score >= 40) {
-            return 'Limited transparency raises concerns. Key information like sources or author credentials are missing, making verification difficult.';
+            return `
+                <div class="meaning-summary warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Limited Transparency</strong>
+                </div>
+                <p>Significant transparency issues make it difficult to verify claims or understand potential biases. 
+                The lack of source citations, author information, or disclosure statements should raise red flags.</p>
+            `;
         } else {
-            return 'Poor transparency is a major red flag. Without proper attribution and sourcing, this article\'s claims cannot be independently verified.';
+            return `
+                <div class="meaning-summary critical">
+                    <i class="fas fa-times-circle"></i>
+                    <strong>Opaque - Major Transparency Failures</strong>
+                </div>
+                <p>This article fails basic transparency standards. Without proper attribution, sources, or disclosures, 
+                it's impossible to verify claims or identify hidden agendas. Treat all information with extreme skepticism.</p>
+            `;
         }
     },
 
-    // ============================================================================
-    // Manipulation Detection Service
-    // ============================================================================
-
-    getManipulationContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We scanned for propaganda techniques, emotional manipulation, logical fallacies, and psychological tactics 
-                        designed to bypass critical thinking. This includes fear-mongering, false dichotomies, and appeal to emotions.
-                    </div>
-                </div>
-
-                ${data.propaganda_techniques && data.propaganda_techniques.length > 0 ? `
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Manipulation Techniques Detected
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderManipulationTechniques(data.propaganda_techniques)}
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getManipulationMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
-    renderManipulationTechniques(techniques) {
-        return techniques.map(tech => `
-            <div class="manipulation-technique">
-                <div class="technique-name">${tech.name || tech}</div>
-                <div class="technique-description">${tech.description || ''}</div>
-            </div>
-        `).join('');
-    },
-
-    getManipulationMeaning(data) {
-        const level = data.manipulation_level || data.level || 'Unknown';
-        const count = data.tactic_count || 0;
-        
-        if (level === 'Low' || count === 0) {
-            return 'No significant manipulation tactics were detected. The article appears to present information straightforwardly without attempting to manipulate readers\' emotions or bypass critical thinking.';
-        }
-        
-        return `We detected ${count} manipulation technique${count !== 1 ? 's' : ''} in this article. These tactics are designed to influence your thinking through emotional appeal rather than factual argument. Read critically and focus on verifiable facts rather than emotional rhetoric.`;
-    },
-
-    // ============================================================================
-    // Content Analysis Service
-    // ============================================================================
-
-    getContentAnalysisContent(data) {
-        return `
-            <div class="service-analysis-structure">
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-search"></i>
-                        What We Analyzed
-                    </div>
-                    <div class="analysis-section-content">
-                        We evaluated the writing quality, readability, structure, and professionalism of the content. 
-                        This includes grammar, coherence, evidence quality, and whether the content appears to be 
-                        AI-generated or plagiarized.
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-chart-bar"></i>
-                        Content Metrics
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.renderContentMetrics(data)}
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <div class="analysis-section-title">
-                        <i class="fas fa-lightbulb"></i>
-                        What This Means For You
-                    </div>
-                    <div class="analysis-section-content">
-                        ${this.getContentAnalysisMeaning(data)}
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
-    renderContentMetrics(data) {
-        const metrics = [];
-        
-        if (data.quality_score !== undefined) {
-            metrics.push(`<div class="metric-item"><strong>Quality Score:</strong> ${data.quality_score}/100</div>`);
-        }
-        
-        if (data.readability?.level) {
-            metrics.push(`<div class="metric-item"><strong>Reading Level:</strong> ${data.readability.level}</div>`);
-        }
-        
-        if (data.readability?.score !== undefined) {
-            metrics.push(`<div class="metric-item"><strong>Readability Score:</strong> ${data.readability.score}</div>`);
-        }
-        
-        return metrics.join('');
-    },
-
-    getContentAnalysisMeaning(data) {
-        let meaning = '';
-        
-        if (data.readability?.level) {
-            const level = data.readability.level.toLowerCase();
-            if (level.includes('college') || level.includes('graduate')) {
-                meaning += 'This article is written at an advanced level, which may indicate thorough analysis but could be inaccessible to general readers. ';
-            } else if (level.includes('high school')) {
-                meaning += 'This article is written at an appropriate level for general audiences, balancing accessibility with substance. ';
-            } else {
-                meaning += 'This article is written at a basic level, which may oversimplify complex issues. ';
-            }
-        }
-        
-        if (data.quality_score !== undefined) {
-            if (data.quality_score >= 80) {
-                meaning += 'The writing quality is professional with good structure and clarity.';
-            } else if (data.quality_score >= 60) {
-                meaning += 'The writing quality is acceptable but has room for improvement.';
-            } else {
-                meaning += 'The writing quality is poor, which may indicate lack of editorial standards.';
-            }
-        }
-        
-        return meaning || 'Content analysis helps assess the professionalism and quality of the writing.';
+    getTransparencyLevel(score) {
+        if (score >= 80) return 'Highly Transparent';
+        if (score >= 60) return 'Transparent';
+        if (score >= 40) return 'Partially Transparent';
+        return 'Low Transparency';
     },
 
     // ============================================================================
@@ -1740,29 +2447,7 @@ const TruthLensServices = {
             yPosition += 10;
             
             // Add meaningful analysis for each service
-            switch (service.id) {
-                case 'source_credibility':
-                    this.addSourceCredibilityToPDF(serviceData, addText);
-                    break;
-                case 'author_analyzer':
-                    this.addAuthorAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'bias_detector':
-                    this.addBiasAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'fact_checker':
-                    this.addFactCheckingToPDF(serviceData, addText);
-                    break;
-                case 'transparency_analyzer':
-                    this.addTransparencyAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'manipulation_detector':
-                    this.addManipulationAnalysisToPDF(serviceData, addText);
-                    break;
-                case 'content_analyzer':
-                    this.addContentAnalysisToPDF(serviceData, addText);
-                    break;
-            }
+            this.addServiceAnalysisToPDF(service.id, serviceData, addText);
             
             yPosition += 10;
         });
@@ -1782,114 +2467,64 @@ const TruthLensServices = {
         }
     },
     
-    addSourceCredibilityToPDF(data, addText) {
-        addText('What We Found:', 12, 'bold');
-        addText(this.getSourceFindings(data), 11);
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getSourceMeaning(data), 11);
-        
-        if (data.credibility_score !== undefined) {
-            addText(`Credibility Score: ${data.credibility_score}/100`, 12, 'bold');
+    addServiceAnalysisToPDF(serviceId, data, addText) {
+        switch (serviceId) {
+            case 'source_credibility':
+                addText('Credibility Assessment:', 12, 'bold');
+                addText(`Score: ${data.credibility_score || 0}/100`, 11);
+                addText(`Source: ${data.source_name || 'Unknown'}`, 11);
+                if (data.domain_age_days) {
+                    addText(`Domain Age: ${Math.floor(data.domain_age_days / 365)} years`, 11);
+                }
+                break;
+                
+            case 'author_analyzer':
+                addText('Author Profile:', 12, 'bold');
+                addText(`Name: ${data.author_name || 'Unknown'}`, 11);
+                addText(`Credibility Score: ${data.author_score || 0}`, 11);
+                addText(`Verification: ${data.verification_status?.verified ? 'Verified' : 'Unverified'}`, 11);
+                break;
+                
+            case 'bias_detector':
+                addText('Bias Analysis:', 12, 'bold');
+                const biasScore = data.bias_score || 0;
+                addText(`Bias Score: ${biasScore}%`, 11);
+                addText(`Objectivity: ${100 - biasScore}%`, 11);
+                if (data.loaded_phrases && data.loaded_phrases.length > 0) {
+                    addText(`Loaded Phrases: ${data.loaded_phrases.length} detected`, 11);
+                }
+                break;
+                
+            case 'fact_checker':
+                const checks = data.fact_checks || [];
+                const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
+                addText('Fact Checking:', 12, 'bold');
+                addText(`Claims Analyzed: ${checks.length}`, 11);
+                addText(`Verified: ${verified}`, 11);
+                addText(`Accuracy: ${checks.length > 0 ? Math.round((verified/checks.length)*100) : 0}%`, 11);
+                break;
+                
+            case 'transparency_analyzer':
+                addText('Transparency:', 12, 'bold');
+                addText(`Score: ${data.transparency_score || 0}%`, 11);
+                addText(`Author Disclosed: ${data.has_author ? 'Yes' : 'No'}`, 11);
+                addText(`Sources Cited: ${data.sources_cited ? 'Yes' : 'No'}`, 11);
+                break;
+                
+            case 'manipulation_detector':
+                addText('Manipulation Detection:', 12, 'bold');
+                addText(`Level: ${data.manipulation_level || 'Unknown'}`, 11);
+                addText(`Techniques Found: ${data.techniques?.length || 0}`, 11);
+                break;
+                
+            case 'content_analyzer':
+                addText('Content Quality:', 12, 'bold');
+                addText(`Quality Score: ${data.quality_score || 0}/100`, 11);
+                if (data.readability) {
+                    addText(`Reading Level: ${data.readability.level || 'Unknown'}`, 11);
+                }
+                break;
         }
-    },
-    
-    addAuthorAnalysisToPDF(data, addText) {
-        addText('Author Profile:', 12, 'bold');
-        if (data.author_name) {
-            addText(`Name: ${data.author_name}`, 11);
-        }
-        if (data.verification_status?.verified !== undefined) {
-            addText(`Verification Status: ${data.verification_status.verified ? 'Verified Journalist' : 'Unverified'}`, 11);
-        }
-        if (data.author_score !== undefined) {
-            addText(`Credibility Score: ${data.author_score}`, 11);
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getAuthorMeaning(data), 11);
-    },
-    
-    addBiasAnalysisToPDF(data, addText) {
-        addText('Bias Indicators:', 12, 'bold');
-        addText(this.getBiasFindings(data), 11);
-        
-        if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-            addText('Examples of Biased Language:', 12, 'bold');
-            data.loaded_phrases.slice(0, 3).forEach(phrase => {
-                addText(`• "${phrase.phrase || phrase}" (${phrase.type || 'Loaded Language'})`, 11);
-            });
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getBiasMeaning(data), 11);
-    },
-    
-    addFactCheckingToPDF(data, addText) {
-        const checks = data.fact_checks || [];
-        const total = checks.length;
-        const verified = checks.filter(c => c.verdict === 'True' || c.verdict === 'Verified').length;
-        
-        addText(`Claims Analyzed: ${total}`, 12, 'bold');
-        addText(`Verified as Accurate: ${verified} (${total > 0 ? Math.round((verified/total)*100) : 0}%)`, 11);
-        
-        if (checks.length > 0) {
-            addText('Sample Claims:', 12, 'bold');
-            checks.slice(0, 3).forEach(claim => {
-                addText(`• "${claim.claim}"`, 11);
-                addText(`  Verdict: ${claim.verdict}`, 11);
-            });
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getFactCheckerMeaning(data), 11);
-    },
-    
-    addTransparencyAnalysisToPDF(data, addText) {
-        addText('Transparency Indicators:', 12, 'bold');
-        const items = [
-            `Sources Cited: ${data.sources_cited ? 'Yes' : 'No'}`,
-            `Author Disclosed: ${data.has_author ? 'Yes' : 'No'}`,
-            `Direct Quotes: ${data.has_quotes ? 'Yes' : 'No'}`
-        ];
-        items.forEach(item => addText(`• ${item}`, 11));
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getTransparencyMeaning(data), 11);
-    },
-    
-    addManipulationAnalysisToPDF(data, addText) {
-        const level = data.manipulation_level || 'Unknown';
-        const count = data.tactic_count || 0;
-        
-        addText(`Manipulation Level: ${level}`, 11);
-        addText(`Tactics Found: ${count}`, 11);
-        
-        if (data.propaganda_techniques && data.propaganda_techniques.length > 0) {
-            addText('Manipulation Techniques Found:', 12, 'bold');
-            data.propaganda_techniques.forEach(tech => {
-                addText(`• ${tech.name || tech}`, 11);
-            });
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getManipulationMeaning(data), 11);
-    },
-    
-    addContentAnalysisToPDF(data, addText) {
-        addText('Content Metrics:', 12, 'bold');
-        if (data.quality_score !== undefined) {
-            addText(`Quality Score: ${data.quality_score}/100`, 11);
-        }
-        if (data.readability?.level) {
-            addText(`Reading Level: ${data.readability.level}`, 11);
-        }
-        if (data.readability?.score !== undefined) {
-            addText(`Readability Score: ${data.readability.score}`, 11);
-        }
-        
-        addText('What This Means:', 12, 'bold');
-        addText(this.getContentAnalysisMeaning(data), 11);
     },
 
     // ============================================================================
@@ -1921,152 +2556,12 @@ const TruthLensServices = {
         }
     },
 
-    // Add injected styles method
-    injectEnhancedStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            /* Enhanced Service Content Styles */
-            .service-analysis-structure {
-                padding: 20px;
-            }
-            
-            .analysis-methods {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-top: 20px;
-            }
-            
-            .method-card {
-                background: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 15px;
-                text-align: center;
-            }
-            
-            .method-card i {
-                font-size: 2rem;
-                color: #6366f1;
-                margin-bottom: 10px;
-            }
-            
-            .method-card h5 {
-                margin: 10px 0 5px;
-                font-size: 0.9rem;
-                font-weight: 600;
-            }
-            
-            .method-card p {
-                font-size: 0.8rem;
-                color: #6b7280;
-                margin: 0;
-            }
-            
-            /* Trust Score Visualization */
-            .trust-score-visual {
-                display: grid;
-                grid-template-columns: 200px 1fr;
-                gap: 30px;
-                align-items: center;
-                margin: 20px 0;
-            }
-            
-            .score-gauge-container {
-                display: flex;
-                justify-content: center;
-            }
-            
-            .score-gauge {
-                width: 150px;
-                height: 150px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-            }
-            
-            .score-gauge-inner {
-                width: 120px;
-                height: 120px;
-                background: white;
-                border-radius: 50%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-            }
-            
-            .score-number {
-                font-size: 2.5rem;
-                font-weight: 700;
-                color: #1f2937;
-            }
-            
-            .score-label {
-                font-size: 0.75rem;
-                color: #6b7280;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            
-            .trust-indicators {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 12px;
-            }
-            
-            .trust-indicator {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px;
-                background: #f9fafb;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-            }
-            
-            .trust-indicator.excellent {
-                border-color: #10b981;
-                background: #ecfdf5;
-            }
-            
-            .trust-indicator.good {
-                border-color: #3b82f6;
-                background: #eff6ff;
-            }
-            
-            .trust-indicator.warning {
-                border-color: #f59e0b;
-                background: #fffbeb;
-            }
-            
-            .trust-indicator.critical {
-                border-color: #ef4444;
-                background: #fef2f2;
-            }
-            
-            .indicator-content {
-                flex: 1;
-            }
-            
-            .indicator-label {
-                font-size: 0.75rem;
-                color: #6b7280;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            
-            .indicator-value {
-                font-weight: 600;
-                color: #1f2937;
-            }
-            
-            /* Additional styles continue... */
-        `;
-        document.head.appendChild(style);
+    // Utility method
+    getScoreColor(score) {
+        if (score >= 80) return '#10b981';
+        if (score >= 60) return '#3b82f6';
+        if (score >= 40) return '#f59e0b';
+        return '#ef4444';
     }
 };
 
