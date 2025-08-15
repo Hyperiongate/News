@@ -4,7 +4,6 @@ Clean implementation using pipeline and service registry
 """
 import logging
 from typing import Dict, Any, Optional
-
 from config import Config
 from services.analysis_pipeline import AnalysisPipeline
 from services.service_registry import service_registry
@@ -25,28 +24,28 @@ class NewsAnalyzer:
         
         logger.info(f"NewsAnalyzer initialized with {self.service_status['summary']['total_available']} available services")
     
-    def analyze(self, content: str, content_type: str = 'url', is_pro: bool = False) -> Dict[str, Any]:
+    def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
         Perform comprehensive analysis on news content
         
         Args:
             content: URL or text to analyze
             content_type: 'url' or 'text'
-            is_pro: Whether to use premium features
+            pro_mode: Whether to use premium features (changed from is_pro to match app.py)
             
         Returns:
             Standardized analysis results
         """
         try:
-            logger.info(f"Starting analysis - type: {content_type}, pro: {is_pro}")
+            logger.info(f"Starting analysis - type: {content_type}, pro: {pro_mode}")
             
             # Set options based on pro status
             options = {
-                'is_pro': is_pro,
-                'include_fact_checking': is_pro,
-                'include_ai_summary': is_pro and Config.OPENAI_API_KEY,
-                'include_manipulation_detection': is_pro,
-                'detailed_bias_analysis': is_pro
+                'is_pro': pro_mode,
+                'include_fact_checking': pro_mode,
+                'include_ai_summary': pro_mode and Config.OPENAI_API_KEY,
+                'include_manipulation_detection': pro_mode,
+                'detailed_bias_analysis': pro_mode
             }
             
             # FIXED: Always use sync pipeline since all our services are sync
@@ -56,8 +55,8 @@ class NewsAnalyzer:
             
             # Add service metadata
             results['services_available'] = self.service_status['summary']['total_available']
-            results['is_pro'] = is_pro
-            results['analysis_mode'] = 'premium' if is_pro else 'basic'
+            results['is_pro'] = pro_mode
+            results['analysis_mode'] = 'premium' if pro_mode else 'basic'
             
             # Log completion
             logger.info(f"Analysis completed - success: {results.get('success')}, "
@@ -74,7 +73,7 @@ class NewsAnalyzer:
                 'trust_score': 50,
                 'trust_level': 'Unknown',
                 'services_available': self.service_status['summary']['total_available'],
-                'is_pro': is_pro,
+                'is_pro': pro_mode,
                 'analysis_mode': 'error'
             }
     
