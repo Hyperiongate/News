@@ -4,6 +4,7 @@ Enhanced Article Extraction Service
 Extracts article content from URLs or raw text with support for live news pages
 """
 
+import json
 import re
 import time
 import logging
