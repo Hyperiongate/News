@@ -1,491 +1,343 @@
 """
-News Analyzer API (Refactored)
-Clean architecture with standardized responses and proper error handling
+News Analyzer API
+Main Flask application for analyzing news articles
 """
 import os
-import time
+import sys
 import logging
-import uuid
-import mimetypes
-from functools import wraps
-from flask import Flask, request, render_template, g, send_from_directory, make_response, send_file
+import json
+import traceback
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+import uuid
+from datetime import datetime
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config
 from services.news_analyzer import NewsAnalyzer
-from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
-from services.service_registry import service_registry
-
-# Fix MIME types for JavaScript files
-mimetypes.add_type('application/javascript', '.js')
-mimetypes.add_type('text/javascript', '.js')
+from services.response_builder import ResponseBuilder
 
 # Configure logging
 logging.basicConfig(
     level=Config.LOGGING['level'],
     format=Config.LOGGING['format'],
-    filename=Config.LOGGING['file']
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
+
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
-app = Flask(__name__, 
-            static_folder='static',
-            static_url_path='/static')
-
-# Configuration
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = Config.SECRET_KEY
-app.config['JSON_SORT_KEYS'] = False
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = Config.DEBUG
 
-# CORS configuration
-CORS(app, origins=['*'])
-
-# Rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=[f"{Config.RATE_LIMITS['requests_per_minute']} per minute"]
-)
+# Configure CORS
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["*"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Initialize services
-try:
-    news_analyzer = NewsAnalyzer()
-    logger.info("NewsAnalyzer initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize NewsAnalyzer: {e}")
-    news_analyzer = None
+news_analyzer = NewsAnalyzer()
+response_builder = ResponseBuilder()
 
-# Validate configuration on startup
-config_status = Config.validate()
-if not config_status['valid']:
-    logger.error(f"Configuration errors: {config_status['errors']}")
-if config_status['warnings']:
-    logger.warning(f"Configuration warnings: {config_status['warnings']}")
-
-
-# Middleware
+# Request tracking
 @app.before_request
 def before_request():
-    """Set up request context"""
-    g.start_time = time.time()
-    g.request_id = str(uuid.uuid4())
+    """Log incoming requests"""
+    request.id = str(uuid.uuid4())
+    request.start_time = datetime.now()
     
-    # Set for ResponseBuilder
-    ResponseBuilder._start_time = g.start_time
-    ResponseBuilder._request_id = g.request_id
+    # Log request details
+    logger.info(f"Request {request.id}: {request.method} {request.path}")
     
-    # Log request
-    logger.info(f"Request {g.request_id}: {request.method} {request.path}")
-
+    if request.method == 'POST' and request.is_json:
+        # Log POST data (be careful with sensitive data in production)
+        data = request.get_json()
+        if data:
+            # Truncate long content for logging
+            log_data = data.copy()
+            if 'content' in log_data and len(str(log_data['content'])) > 100:
+                log_data['content'] = str(log_data['content'])[:100] + '...'
+            logger.debug(f"Request {request.id} data: {log_data}")
 
 @app.after_request
 def after_request(response):
-    """Log response and add headers"""
-    if hasattr(g, 'start_time'):
-        elapsed = time.time() - g.start_time
-        response.headers['X-Response-Time'] = f"{elapsed:.3f}"
-        
-    if hasattr(g, 'request_id'):
-        response.headers['X-Request-ID'] = g.request_id
-        
-    # Security headers
+    """Log response details"""
+    if hasattr(request, 'id') and hasattr(request, 'start_time'):
+        duration = (datetime.now() - request.start_time).total_seconds()
+        logger.info(f"Response {request.id}: {response.status_code} ({duration:.3f}s)")
+    
+    # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     
-    # Log response
-    logger.info(f"Response {getattr(g, 'request_id', 'unknown')}: "
-               f"{response.status_code} ({elapsed:.3f}s)")
-    
     return response
 
+# Error handlers
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle bad request errors"""
+    return response_builder.build_error_response("Bad Request", 400)
 
-def require_analyzer(f):
-    """Decorator to ensure analyzer is available"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not news_analyzer:
-            return ResponseBuilder.error(
-                "Analysis service is temporarily unavailable",
-                status_code=503,
-                error_code="SERVICE_UNAVAILABLE"
-            )
-        return f(*args, **kwargs)
-    return decorated_function
+@app.errorhandler(404)
+def not_found(error):
+    """Handle not found errors"""
+    return response_builder.build_error_response("Resource not found", 404)
 
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle internal server errors"""
+    logger.error(f"Internal server error: {error}", exc_info=True)
+    return response_builder.build_error_response("Internal server error", 500)
 
 # Routes
 @app.route('/')
 def index():
-    """Serve the main page"""
-    return render_template('index.html')
+    """Serve the main application page"""
+    return send_from_directory(app.static_folder, 'index.html')
 
-
-# CRITICAL FIX: Properly serve JS files from /js/ path
-@app.route('/js/<path:filename>')
-def serve_js_direct(filename):
-    """Serve JavaScript files with correct MIME type from /js/ path"""
-    try:
-        # Build the full path
-        js_dir = os.path.join(app.static_folder, 'js')
-        file_path = os.path.join(js_dir, filename)
-        
-        # Log the attempt
-        logger.info(f"Attempting to serve JS file: {filename}")
-        logger.info(f"Looking in: {file_path}")
-        
-        # Check if file exists
-        if not os.path.exists(file_path):
-            logger.error(f"JavaScript file not found: {file_path}")
-            return f"JavaScript file not found: {filename}", 404
-        
-        # Read the file and serve it with correct headers
-        with open(file_path, 'rb') as f:
-            js_content = f.read()
-            
-        response = make_response(js_content)
-        response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        
-        logger.info(f"Successfully served {filename} ({len(js_content)} bytes)")
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error serving JS file {filename}: {str(e)}", exc_info=True)
-        return f"Error loading JavaScript file: {str(e)}", 500
-
-
-# Also keep the /static/js/ route for backwards compatibility
-@app.route('/static/js/<path:filename>')
-def serve_js(filename):
-    """Serve JavaScript files with correct MIME type from /static/js/ path"""
-    try:
-        js_dir = os.path.join(app.static_folder, 'js')
-        file_path = os.path.join(js_dir, filename)
-        
-        if not os.path.exists(file_path):
-            return f"JavaScript file not found: {filename}", 404
-            
-        with open(file_path, 'rb') as f:
-            js_content = f.read()
-            
-        response = make_response(js_content)
-        response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        
-        return response
-    except Exception as e:
-        logger.error(f"Error serving static JS file {filename}: {str(e)}")
-        return "Internal server error", 500
-
-
-# Serve favicon to avoid 404 errors
-@app.route('/favicon.ico')
-def favicon():
-    """Serve favicon"""
-    # If you have a favicon in static folder
-    favicon_path = os.path.join(app.static_folder, 'favicon.ico')
-    if os.path.exists(favicon_path):
-        return send_file(favicon_path, mimetype='image/x-icon')
-    # Otherwise return empty response
-    return '', 204
-
-
-@app.route('/api/health')
+@app.route('/health')
 def health():
     """Health check endpoint"""
-    health_data = {
-        'status': 'healthy' if news_analyzer else 'degraded',
-        'version': '2.0',
-        'environment': Config.ENV,
-        'services': service_registry.get_service_status()['summary'] if news_analyzer else {}
-    }
-    
-    status_code = 200 if news_analyzer else 503
-    return ResponseBuilder.success(health_data, status_code=status_code)
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat()
+    })
 
+@app.route('/api/status')
+def status():
+    """Get system status"""
+    try:
+        # Get configuration validation
+        config_status = Config.validate()
+        
+        # Get service status from analyzer
+        service_status = news_analyzer.get_service_status()
+        
+        return jsonify({
+            'status': 'operational' if config_status['valid'] else 'degraded',
+            'config': config_status,
+            'services': service_status,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Status check failed: {e}")
+        return response_builder.build_error_response("Status check failed", 500)
 
 @app.route('/api/analyze', methods=['POST'])
-@require_analyzer
-@limiter.limit(f"{Config.RATE_LIMITS['requests_per_hour']} per hour")
 def analyze():
     """
-    Main analysis endpoint
-    Accepts: { "url": "https://..." } or { "text": "article content..." }
-    Returns: Standardized analysis response
+    Analyze a news article
+    
+    Expected JSON payload:
+    {
+        "url": "https://example.com/article" OR "text": "Article content...",
+        "type": "url" or "text",
+        "options": {
+            "pro_mode": true/false
+        }
+    }
     """
     try:
-        # Parse request
+        # Validate request
+        if not request.is_json:
+            return response_builder.build_error_response("Content-Type must be application/json", 400)
+        
         data = request.get_json()
-        if not data:
-            return ResponseBuilder.error(
-                "No data provided",
-                status_code=400,
-                error_code="MISSING_DATA"
-            )
         
-        # Validate input
-        url = data.get('url')
-        text = data.get('text')
+        # Extract parameters
+        content = data.get('url') or data.get('text') or data.get('content')
+        content_type = data.get('type', 'url')
+        options = data.get('options', {})
         
-        if not url and not text:
-            return ResponseBuilder.error(
-                "Either 'url' or 'text' is required",
-                status_code=400,
-                error_code="MISSING_INPUT"
-            )
+        # Basic validation
+        if not content:
+            return response_builder.build_error_response("Missing 'url' or 'text' field", 400)
         
-        if url and text:
-            return ResponseBuilder.error(
-                "Provide either 'url' or 'text', not both",
-                status_code=400,
-                error_code="INVALID_INPUT"
-            )
+        if content_type not in ['url', 'text']:
+            return response_builder.build_error_response("Invalid type. Must be 'url' or 'text'", 400)
         
-        # Determine content and type
-        if url:
-            content = url
-            content_type = 'url'
-            
-            # Basic URL validation
-            if not url.startswith(('http://', 'https://')):
-                return ResponseBuilder.error(
-                    "Invalid URL format. URL must start with http:// or https://",
-                    status_code=400,
-                    error_code="INVALID_URL"
-                )
-        else:
-            content = text
-            content_type = 'text'
-            
-            # Basic text validation
-            if len(text.strip()) < 100:
-                return ResponseBuilder.error(
-                    "Text too short. Please provide at least 100 characters",
-                    status_code=400,
-                    error_code="TEXT_TOO_SHORT"
-                )
-            
-            if len(text) > 50000:
-                return ResponseBuilder.error(
-                    "Text too long. Maximum 50,000 characters",
-                    status_code=400,
-                    error_code="TEXT_TOO_LONG"
-                )
-        
-        # Check pro status
-        is_pro = data.get('is_pro', False)
-        
-        # Log analysis start
-        logger.info(f"Starting analysis: type={content_type}, pro={is_pro}, "
-                   f"content_length={len(content)}")
+        # Log analysis request
+        logger.info(f"Starting analysis: type={content_type}, pro={options.get('pro_mode', False)}, content_length={len(str(content))}")
         
         # Perform analysis
-        start_time = time.time()
-        results = news_analyzer.analyze(content, content_type, is_pro)
-        processing_time = time.time() - start_time
-        
-        # Check if analysis succeeded
-        if not results.get('success'):
-            return ResponseBuilder.error(
-                results.get('error', 'Analysis failed'),
-                status_code=400,
-                error_code="ANALYSIS_FAILED",
-                details=results.get('errors')
-            )
+        result = news_analyzer.analyze(
+            content=content,
+            content_type=content_type,
+            pro_mode=options.get('pro_mode', False)
+        )
         
         # Build response
-        article_data = results.get('article', {})
-        
-        # FIX: Use 'successful_services' instead of 'services_succeeded'
-        # The pipeline stores the list of successful service names in 'successful_services'
-        # but stores the count in 'services_succeeded'
-        pipeline_metadata = results.get('pipeline_metadata', {})
-        services_used = pipeline_metadata.get('successful_services', [])
-        
-        # Ensure services_used is a list
-        if not isinstance(services_used, list):
-            logger.warning(f"services_used is not a list: {type(services_used)}")
-            services_used = []
-        
-        return AnalysisResponseBuilder.build_analysis_response(
-            analysis_results=results,
-            article_data=article_data,
-            processing_time=processing_time,
-            services_used=services_used
-        )
-        
-    except Exception as e:
-        logger.error(f"Analysis endpoint error: {str(e)}", exc_info=True)
-        return ResponseBuilder.error(
-            e,
-            status_code=500,
-            error_code="INTERNAL_ERROR"
-        )
-
-
-@app.route('/api/services/status')
-def services_status():
-    """Get status of all analysis services"""
-    try:
-        if not news_analyzer:
-            return ResponseBuilder.error(
-                "Service registry not available",
-                status_code=503,
-                error_code="SERVICE_UNAVAILABLE"
-            )
-        
-        status = news_analyzer.get_service_status()
-        return ResponseBuilder.success(
-            status,
-            message="Service status retrieved successfully"
-        )
-        
-    except Exception as e:
-        logger.error(f"Service status error: {str(e)}", exc_info=True)
-        return ResponseBuilder.error(e, status_code=500)
-
-
-@app.route('/api/services/reload', methods=['POST'])
-@require_analyzer
-def reload_services():
-    """Reload failed services"""
-    try:
-        # Optional: Add authentication check here
-        auth_token = request.headers.get('Authorization')
-        if auth_token != f"Bearer {Config.SECRET_KEY}":
-            return ResponseBuilder.error(
-                "Unauthorized",
-                status_code=401,
-                error_code="UNAUTHORIZED"
-            )
-        
-        result = news_analyzer.reload_services()
-        
-        return ResponseBuilder.success(
-            result,
-            message=f"Reloaded {len(result['reloaded'])} services"
-        )
-        
-    except Exception as e:
-        logger.error(f"Service reload error: {str(e)}", exc_info=True)
-        return ResponseBuilder.error(e, status_code=500)
-
-
-@app.route('/api/config/validate')
-def validate_config():
-    """Validate current configuration"""
-    try:
-        validation = Config.validate()
-        
-        if validation['valid']:
-            return ResponseBuilder.success(
-                validation,
-                message="Configuration is valid"
-            )
+        if result.get('success', False):
+            return response_builder.build_success_response(result)
         else:
-            return ResponseBuilder.partial_success(
-                {'warnings': validation['warnings']},
-                validation['errors'],
-                message="Configuration has errors"
-            )
+            # Extract error message
+            error_msg = result.get('error', 'Analysis failed')
+            return response_builder.build_error_response(error_msg, 400)
             
+    except ValueError as e:
+        logger.warning(f"Validation error: {e}")
+        return response_builder.build_error_response(str(e), 400)
     except Exception as e:
-        logger.error(f"Config validation error: {str(e)}", exc_info=True)
-        return ResponseBuilder.error(e, status_code=500)
+        logger.error(f"Analysis failed: {e}", exc_info=True)
+        return response_builder.build_error_response("Analysis failed due to an internal error", 500)
 
-
-# Error handlers
-@app.errorhandler(404)
-def not_found(error):
-    """Handle 404 errors"""
-    # Log which path was not found
-    logger.warning(f"404 Not Found: {request.path}")
-    return ResponseBuilder.error(
-        f"Endpoint not found: {request.path}",
-        status_code=404,
-        error_code="NOT_FOUND"
-    )
-
-
-@app.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    logger.error(f"500 Internal Error: {str(error)}")
-    return ResponseBuilder.error(
-        "Internal server error",
-        status_code=500,
-        error_code="INTERNAL_ERROR"
-    )
-
-
-@app.errorhandler(429)
-def rate_limit_exceeded(error):
-    """Handle rate limit errors"""
-    return ResponseBuilder.error(
-        "Rate limit exceeded. Please try again later",
-        status_code=429,
-        error_code="RATE_LIMIT_EXCEEDED"
-    )
-
-
-# Debug route to check file existence
-@app.route('/debug/files')
-def debug_files():
-    """Debug endpoint to check file structure"""
+@app.route('/api/services')
+def services():
+    """Get available services and their status"""
     try:
-        static_dir = app.static_folder
-        js_dir = os.path.join(static_dir, 'js')
-        
-        files_info = {
-            'static_folder': static_dir,
-            'static_exists': os.path.exists(static_dir),
-            'js_dir': js_dir,
-            'js_exists': os.path.exists(js_dir),
-            'js_files': []
+        service_status = news_analyzer.get_service_status()
+        return jsonify({
+            'services': service_status,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Service status check failed: {e}")
+        return response_builder.build_error_response("Service status check failed", 500)
+
+@app.route('/api/config')
+def config():
+    """Get public configuration"""
+    try:
+        # Only return non-sensitive configuration
+        public_config = {
+            'pipeline': {
+                'max_timeout': Config.PIPELINE['max_total_timeout'],
+                'parallel_processing': Config.PIPELINE['parallel_processing'],
+                'min_required_services': Config.PIPELINE['min_required_services']
+            },
+            'services': {
+                name: {
+                    'enabled': config.enabled,
+                    'timeout': config.timeout
+                }
+                for name, config in Config.SERVICES.items()
+            },
+            'trust_score_weights': Config.TRUST_SCORE_WEIGHTS
         }
         
-        if os.path.exists(js_dir):
-            for filename in os.listdir(js_dir):
-                filepath = os.path.join(js_dir, filename)
-                if os.path.isfile(filepath):
-                    files_info['js_files'].append({
-                        'name': filename,
-                        'size': os.path.getsize(filepath),
-                        'path': filepath
-                    })
-        
-        return ResponseBuilder.success(files_info)
+        return jsonify(public_config)
     except Exception as e:
-        return ResponseBuilder.error(str(e))
+        logger.error(f"Config endpoint failed: {e}")
+        return response_builder.build_error_response("Config retrieval failed", 500)
 
+@app.route('/api/debug/services', methods=['GET'])
+def debug_services():
+    """Debug endpoint to check service status"""
+    try:
+        from services.service_registry import service_registry
+        from services.analysis_pipeline import pipeline
+        from config import Config
+        
+        # Get service registry status
+        registry_status = service_registry.get_service_status()
+        
+        # Check article_extractor specifically
+        article_extractor = service_registry.get_service('article_extractor')
+        article_extractor_info = None
+        if article_extractor:
+            article_extractor_info = {
+                'found': True,
+                'is_available': article_extractor.is_available,
+                'service_name': getattr(article_extractor, 'service_name', 'MISSING'),
+                'class_name': article_extractor.__class__.__name__
+            }
+        else:
+            article_extractor_info = {'found': False}
+        
+        # Check pipeline stages
+        stages_info = []
+        for stage in pipeline.stages:
+            # Get available services for this stage
+            available_services = [
+                s for s in stage.services 
+                if service_registry.get_service(s) and service_registry.get_service(s).is_available
+            ]
+            stages_info.append({
+                'name': stage.name,
+                'configured_services': stage.services,
+                'available_services': available_services,
+                'required': stage.required
+            })
+        
+        # Check config
+        config_info = {
+            'article_extractor_enabled': Config.is_service_enabled('article_extractor'),
+            'services_configured': list(Config.SERVICES.keys()),
+            'pipeline_stages': getattr(Config, 'PIPELINE_STAGES', 'NOT FOUND'),
+            'service_to_stage': getattr(Config, 'SERVICE_TO_STAGE', 'NOT FOUND')
+        }
+        
+        debug_info = {
+            'registry_status': registry_status,
+            'article_extractor': article_extractor_info,
+            'pipeline_stages': stages_info,
+            'config': config_info,
+            'all_registered_services': list(service_registry.services.keys()),
+            'all_async_services': list(service_registry.async_services.keys()),
+            'failed_services': service_registry.failed_services
+        }
+        
+        return jsonify(debug_info), 200
+        
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {e}", exc_info=True)
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+# Serve static files (JS, CSS, etc.)
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    # Security check - prevent directory traversal
+    if '..' in path or path.startswith('/'):
+        return response_builder.build_error_response("Invalid path", 400)
+    
+    # Special handling for JS files
+    if path.startswith('js/'):
+        file_path = os.path.join(app.static_folder, path)
+        logger.info(f"Attempting to serve JS file: {path.split('/')[-1]}")
+        logger.info(f"Looking in: {file_path}")
+        
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            logger.info(f"Successfully served {path.split('/')[-1]} ({file_size} bytes)")
+            return send_from_directory(app.static_folder, path)
+        else:
+            logger.error(f"JS file not found: {file_path}")
+            return response_builder.build_error_response("File not found", 404)
+    
+    # Try to serve the file
+    try:
+        return send_from_directory(app.static_folder, path)
+    except Exception as e:
+        logger.debug(f"Static file not found: {path}")
+        return response_builder.build_error_response("File not found", 404)
 
 if __name__ == '__main__':
-    # Get port from environment
+    # Validate configuration on startup
+    config_status = Config.validate()
+    if not config_status['valid']:
+        logger.error(f"Configuration errors: {config_status['errors']}")
+        sys.exit(1)
+    
+    if config_status['warnings']:
+        for warning in config_status['warnings']:
+            logger.warning(f"Configuration warning: {warning}")
+    
+    # Log startup information
+    logger.info(f"Starting News Analyzer API in {Config.ENV} mode")
+    logger.info(f"Enabled services: {config_status['enabled_services']}")
+    
+    # Run the application
     port = int(os.environ.get('PORT', 5000))
-    
-    # Start message
-    logger.info(f"Starting News Analyzer API on port {port}")
-    logger.info(f"Environment: {Config.ENV}")
-    logger.info(f"Services available: {config_status['enabled_services']}")
-    logger.info(f"Static folder: {app.static_folder}")
-    
-    # Debug: List files in static/js directory
-    js_dir = os.path.join(app.static_folder, 'js')
-    if os.path.exists(js_dir):
-        js_files = os.listdir(js_dir)
-        logger.info(f"JavaScript files in static/js: {js_files}")
-        for js_file in js_files:
-            file_path = os.path.join(js_dir, js_file)
-            file_size = os.path.getsize(file_path)
-            logger.info(f"  - {js_file}: {file_size} bytes")
-    else:
-        logger.warning(f"JavaScript directory not found: {js_dir}")
-    
-    # Run app
     app.run(
         host='0.0.0.0',
         port=port,
