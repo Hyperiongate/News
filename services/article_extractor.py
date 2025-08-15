@@ -635,186 +635,354 @@ class LegacyArticleExtractor:
         return None
     
     def _extract_author(self, soup: BeautifulSoup) -> Optional[str]:
-        """Enhanced author extraction with NBC News support"""
-        # NBC News specific selectors
-        nbc_selectors = [
-            # NBC News author formats
+        """Universal author extraction with extensive fallbacks"""
+        logger.info("Starting author extraction...")
+        
+        # Track what we've tried for debugging
+        attempts = []
+        
+        # 1. JSON-LD structured data (most reliable)
+        try:
+            scripts = soup.find_all('script', {'type': 'application/ld+json'})
+            for script in scripts:
+                try:
+                    data = json.loads(script.string)
+                    author = self._extract_author_from_json_ld(data)
+                    if author:
+                        logger.info(f"Found author in JSON-LD: {author}")
+                        return author
+                except:
+                    continue
+            attempts.append("JSON-LD")
+        except:
+            pass
+        
+        # 2. Meta tags (comprehensive list)
+        meta_selectors = [
+            {'name': 'author'},
+            {'property': 'author'},
+            {'property': 'article:author'},
+            {'property': 'og:article:author'},
+            {'name': 'byl'},
+            {'name': 'DC.creator'},
+            {'name': 'DC.Creator'},
+            {'name': 'citation_author'},
+            {'name': 'twitter:creator'},
+            {'property': 'twitter:creator'},
+            {'name': 'sailthru.author'},
+            {'name': 'parsely-author'},
+            {'itemprop': 'author'},
+            {'name': 'article.author'},
+            {'name': 'author_name'},
+            {'property': 'dcsext.author'},
+            {'name': 'cXenseParse:author'},
+        ]
+        
+        for selector in meta_selectors:
+            try:
+                meta = soup.find('meta', selector)
+                if meta and meta.get('content'):
+                    author = self._clean_author_name(meta['content'])
+                    if author and self._validate_author_name(author):
+                        logger.info(f"Found author in meta tag {selector}: {author}")
+                        return author
+            except:
+                continue
+        attempts.append("Meta tags")
+        
+        # 3. Common byline selectors (expanded list)
+        byline_selectors = [
+            # Specific class names
             {'class': 'byline-name'},
+            {'class': 'byline__name'},
+            {'class': 'byline-author'},
+            {'class': 'by-author'},
             {'class': 'author-name'},
+            {'class': 'author__name'},
             {'class': 'article-author'},
-            {'class': re.compile(r'author', re.I)},
+            {'class': 'article__author'},
+            {'class': 'story-byline'},
+            {'class': 'content-author'},
+            {'class': 'post-author'},
+            {'class': 'entry-author'},
+            {'class': 'writer'},
+            {'class': 'journalist'},
+            {'class': 'reporter'},
+            {'class': 'contributor'},
+            {'class': 'by'},
+            {'class': 'byline'},
+            {'class': 'author'},
+            # ID selectors
+            {'id': 'author'},
+            {'id': 'byline'},
+            {'id': 'article-author'},
+            # Regex patterns for classes
+            {'class': re.compile(r'byline', re.I)},
+            {'class': re.compile(r'author(?!.*share)(?!.*follow)', re.I)},
+            {'class': re.compile(r'writer', re.I)},
+            {'class': re.compile(r'by-line', re.I)},
+            {'class': re.compile(r'artikel__author', re.I)},  # International
+            # Data attributes
+            {'data-author': True},
+            {'data-byline': True},
+            # Microdata
             {'itemprop': 'author'},
+            {'itemprop': 'creator'},
             {'rel': 'author'},
-            # NBC News JSON-LD data
-            {'type': 'application/ld+json'},
         ]
         
-        # Try NBC-specific selectors first
-        for selector in nbc_selectors:
+        # Try each selector with multiple tag types
+        for selector in byline_selectors:
+            for tag in ['span', 'div', 'p', 'a', 'address', 'cite', 'h3', 'h4', 'h5', 'strong']:
+                try:
+                    # Handle data attributes specially
+                    if any(key.startswith('data-') for key in selector.keys()):
+                        elements = soup.find_all(tag)
+                        for elem in elements:
+                            for attr, value in selector.items():
+                                if elem.get(attr):
+                                    author = self._extract_text_from_element(elem)
+                                    if author and self._validate_author_name(author):
+                                        logger.info(f"Found author in {tag} with {attr}: {author}")
+                                        return author
+                    else:
+                        elem = soup.find(tag, selector)
+                        if elem:
+                            author = self._extract_text_from_element(elem)
+                            if author and self._validate_author_name(author):
+                                logger.info(f"Found author in {tag} with selector {selector}: {author}")
+                                return author
+                except:
+                    continue
+        attempts.append("Byline selectors")
+        
+        # 4. Look for author in specific page sections
+        section_selectors = [
+            {'class': re.compile(r'article[_-]?header', re.I)},
+            {'class': re.compile(r'article[_-]?meta', re.I)},
+            {'class': re.compile(r'post[_-]?meta', re.I)},
+            {'class': re.compile(r'entry[_-]?meta', re.I)},
+            {'class': re.compile(r'article[_-]?info', re.I)},
+            {'class': re.compile(r'story[_-]?meta', re.I)},
+            {'id': re.compile(r'article[_-]?header', re.I)},
+            {'role': 'article'},
+            'header',
+            'article',
+        ]
+        
+        for selector in section_selectors:
             try:
-                if selector.get('type') == 'application/ld+json':
-                    # Extract from JSON-LD structured data
-                    scripts = soup.find_all('script', {'type': 'application/ld+json'})
-                    for script in scripts:
-                        try:
-                            import json
-                            data = json.loads(script.string)
-                            
-                            # Handle different JSON-LD formats
-                            if isinstance(data, dict):
-                                # Check for author in different locations
-                                if 'author' in data:
-                                    author_data = data['author']
-                                    if isinstance(author_data, dict) and 'name' in author_data:
-                                        return author_data['name'].strip()
-                                    elif isinstance(author_data, str):
-                                        return author_data.strip()
-                                    elif isinstance(author_data, list) and author_data:
-                                        # Multiple authors - take first one
-                                        first_author = author_data[0]
-                                        if isinstance(first_author, dict) and 'name' in first_author:
-                                            return first_author['name'].strip()
-                                
-                                # NewsArticle schema
-                                if data.get('@type') == 'NewsArticle' and 'author' in data:
-                                    author = data['author']
-                                    if isinstance(author, dict) and 'name' in author:
-                                        return author['name'].strip()
-                                
-                            elif isinstance(data, list):
-                                # Handle array of structured data
-                                for item in data:
-                                    if isinstance(item, dict) and 'author' in item:
-                                        author = item['author']
-                                        if isinstance(author, dict) and 'name' in author:
-                                            return author['name'].strip()
-                                        elif isinstance(author, str):
-                                            return author.strip()
-                        except:
-                            continue
+                if isinstance(selector, str):
+                    section = soup.find(selector)
                 else:
-                    # Try regular selectors
-                    elem = soup.find(['span', 'div', 'p', 'a'], selector)
-                    if elem:
-                        author_text = elem.get_text(strip=True)
-                        # Clean up common prefixes
-                        author_text = re.sub(r'^(By|by|BY)\s+', '', author_text)
-                        author_text = re.sub(r'^(Written by|Reported by)\s+', '', author_text, flags=re.I)
-                        
-                        # Skip if it's clearly not an author name
-                        if author_text and not any(skip in author_text.lower() for skip in 
-                            ['subscribe', 'follow', 'share', 'comment', 'published', 'updated']):
-                            
-                            # Extract just the name if there's additional text
-                            # Handle "John Doe, NBC News" format
-                            if ',' in author_text:
-                                author_text = author_text.split(',')[0].strip()
-                            
-                            # Handle "John Doe and Jane Smith" format
-                            if ' and ' in author_text.lower():
-                                # Just take the first author
-                                author_text = author_text.split(' and ')[0].strip()
-                            
-                            return author_text
+                    section = soup.find(['div', 'header', 'section'], selector)
+                
+                if section:
+                    # Look for author within this section
+                    author_elem = section.find(['span', 'div', 'p', 'a'], 
+                                             class_=re.compile(r'author|byline|writer', re.I))
+                    if author_elem:
+                        author = self._extract_text_from_element(author_elem)
+                        if author and self._validate_author_name(author):
+                            logger.info(f"Found author in section {selector}: {author}")
+                            return author
+                    
+                    # Look for "By Name" pattern in section text
+                    section_text = section.get_text()
+                    by_match = re.search(r'\bBy\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3})', section_text)
+                    if by_match:
+                        author = by_match.group(1).strip()
+                        if self._validate_author_name(author):
+                            logger.info(f"Found author in section text: {author}")
+                            return author
             except:
                 continue
+        attempts.append("Section search")
         
-        # General meta tag strategies
-        meta_strategies = [
-            lambda: soup.find('meta', {'name': 'author'})['content'],
-            lambda: soup.find('meta', {'property': 'article:author'})['content'],
-            lambda: soup.find('meta', {'name': 'byl'})['content'],  # Some sites use 'byl' for byline
-            lambda: soup.find('meta', {'property': 'og:article:author'})['content'],
-            lambda: soup.find('meta', {'name': 'twitter:creator'})['content'],
-            lambda: soup.find('meta', {'name': 'sailthru.author'})['content'],
-            lambda: soup.find('meta', {'name': 'parsely-author'})['content'],
-        ]
-        
-        for strategy in meta_strategies:
-            try:
-                author = strategy()
-                if author:
-                    # Clean up author name
-                    author = re.sub(r'^(By|by|BY)\s+', '', author)
-                    author = author.strip()
-                    
-                    # Handle Twitter handles
-                    if author.startswith('@'):
-                        continue  # Skip Twitter handles
-                    
+        # 5. Link with rel="author"
+        try:
+            author_link = soup.find('a', {'rel': 'author'})
+            if author_link:
+                author = self._clean_author_name(author_link.get_text(strip=True))
+                if author and self._validate_author_name(author):
+                    logger.info(f"Found author in rel=author link: {author}")
                     return author
-            except:
-                continue
+        except:
+            pass
+        attempts.append("Author link")
         
-        # General content selectors with broader search
-        content_selectors = [
-            # Byline patterns
-            {'class': re.compile(r'byline|by-line|author|writer|reporter|journalist', re.I)},
-            {'id': re.compile(r'byline|by-line|author|writer', re.I)},
-            {'itemprop': 'author'},
-            {'rel': 'author'},
-            # Schema.org microdata
-            {'itemtype': re.compile(r'schema.org/Person', re.I)},
+        # 6. Schema.org microdata
+        try:
+            person_elem = soup.find(attrs={'itemtype': re.compile(r'schema\.org/Person', re.I)})
+            if person_elem:
+                name_elem = person_elem.find(attrs={'itemprop': 'name'})
+                if name_elem:
+                    author = self._clean_author_name(name_elem.get_text(strip=True))
+                    if author and self._validate_author_name(author):
+                        logger.info(f"Found author in schema.org: {author}")
+                        return author
+        except:
+            pass
+        attempts.append("Schema.org")
+        
+        # 7. "By Name" text pattern search (last resort)
+        try:
+            # Look for text nodes containing "By "
+            by_pattern = re.compile(r'\b(?:By|by|BY)\s+([A-Z][a-zA-Z]+(?:\s+(?:and|&)\s+[A-Z][a-zA-Z]+)?(?:\s+[A-Z][a-zA-Z]+){0,3})')
+            
+            # Search in all text
+            for text in soup.find_all(text=True):
+                if text.parent.name not in ['script', 'style', 'meta']:
+                    match = by_pattern.search(text)
+                    if match:
+                        author = match.group(1).strip()
+                        # Extra validation for pattern matches
+                        if (self._validate_author_name(author) and 
+                            len(author.split()) <= 5 and
+                            not any(word.lower() in ['the', 'staff', 'team', 'editor'] for word in author.split())):
+                            logger.info(f"Found author in text pattern: {author}")
+                            return author
+        except:
+            pass
+        attempts.append("Text pattern")
+        
+        # 8. Check WordPress-style author URLs
+        try:
+            author_url = soup.find('a', href=re.compile(r'/author/|/profile/|/people/', re.I))
+            if author_url and author_url.get_text(strip=True):
+                author = self._clean_author_name(author_url.get_text(strip=True))
+                if author and self._validate_author_name(author):
+                    logger.info(f"Found author in author URL: {author}")
+                    return author
+        except:
+            pass
+        attempts.append("Author URL")
+        
+        logger.info(f"No author found. Attempted: {', '.join(attempts)}")
+        return None
+    
+    def _extract_author_from_json_ld(self, data: Any) -> Optional[str]:
+        """Extract author from JSON-LD data structure"""
+        if isinstance(data, dict):
+            # Direct author field
+            if 'author' in data:
+                author_data = data['author']
+                if isinstance(author_data, str):
+                    return self._clean_author_name(author_data)
+                elif isinstance(author_data, dict):
+                    # Try different name fields
+                    for name_field in ['name', 'Name', 'fullName', 'displayName']:
+                        if name_field in author_data:
+                            return self._clean_author_name(author_data[name_field])
+                elif isinstance(author_data, list) and author_data:
+                    # Multiple authors - take first
+                    first_author = author_data[0]
+                    if isinstance(first_author, str):
+                        return self._clean_author_name(first_author)
+                    elif isinstance(first_author, dict):
+                        for name_field in ['name', 'Name', 'fullName', 'displayName']:
+                            if name_field in first_author:
+                                return self._clean_author_name(first_author[name_field])
+            
+            # Check nested structures
+            if '@graph' in data and isinstance(data['@graph'], list):
+                for item in data['@graph']:
+                    author = self._extract_author_from_json_ld(item)
+                    if author:
+                        return author
+            
+            # Check if this is a Person object
+            if data.get('@type') == 'Person' and 'name' in data:
+                return self._clean_author_name(data['name'])
+                
+        elif isinstance(data, list):
+            # Check each item in the list
+            for item in data:
+                author = self._extract_author_from_json_ld(item)
+                if author:
+                    return author
+        
+        return None
+    
+    def _extract_text_from_element(self, elem) -> Optional[str]:
+        """Extract and clean text from an element"""
+        if not elem:
+            return None
+        
+        # First try to get text without children
+        text = elem.get_text(strip=True)
+        
+        # If the element has nested structure, try to get just the name
+        name_elem = elem.find(['span', 'a'], class_=re.compile(r'name|author-name', re.I))
+        if name_elem:
+            text = name_elem.get_text(strip=True)
+        
+        return self._clean_author_name(text)
+    
+    def _clean_author_name(self, author: str) -> Optional[str]:
+        """Clean and normalize author name"""
+        if not author:
+            return None
+        
+        # Remove common prefixes
+        author = re.sub(r'^(By|by|BY|Written by|Reported by|Author:|Posted by|Published by)\s+', '', author, flags=re.I)
+        
+        # Remove common suffixes
+        author = re.sub(r'\s*[\|\-,]\s*(Reporter|Writer|Journalist|Correspondent|Editor|Staff|Contributor).*$', '', author, flags=re.I)
+        author = re.sub(r'\s*[\|\-,]\s*\w+\s*(News|Times|Post|Journal|Magazine).*$', '', author, flags=re.I)
+        
+        # Remove email addresses
+        author = re.sub(r'\s*[\(\[]?[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[\)\]]?', '', author)
+        
+        # Remove social media handles
+        author = re.sub(r'\s*@[\w]+', '', author)
+        
+        # Remove extra whitespace
+        author = re.sub(r'\s+', ' ', author).strip()
+        
+        # Remove parenthetical additions
+        author = re.sub(r'\s*\([^)]*\)', '', author)
+        
+        return author if author else None
+    
+    def _validate_author_name(self, author: str) -> bool:
+        """Validate that the extracted text is likely an author name"""
+        if not author:
+            return False
+        
+        # Check length
+        if len(author) < 3 or len(author) > 100:
+            return False
+        
+        # Check word count (most names are 2-5 words)
+        word_count = len(author.split())
+        if word_count < 1 or word_count > 6:
+            return False
+        
+        # Skip common non-author values
+        skip_values = [
+            'staff', 'editor', 'admin', 'administrator', 'newsroom', 'team',
+            'correspondent', 'reporter', 'writer', 'journalist', 'contributor',
+            'guest', 'anonymous', 'unknown', 'author', 'by', 'posted',
+            'associated press', 'reuters', 'ap', 'afp', 'bloomberg',
+            'follow', 'share', 'subscribe', 'comment', 'more stories',
+            'related articles', 'read more', 'click here', 'advertisement'
         ]
         
-        for selector in content_selectors:
-            try:
-                # Try different tag types
-                for tag in ['span', 'div', 'p', 'a', 'address']:
-                    elem = soup.find(tag, selector)
-                    if elem:
-                        # Handle nested structures
-                        # Look for name within author element
-                        name_elem = elem.find(['span', 'a'], class_=re.compile(r'name|author-name', re.I))
-                        if name_elem:
-                            author_text = name_elem.get_text(strip=True)
-                        else:
-                            author_text = elem.get_text(strip=True)
-                        
-                        # Clean up
-                        author_text = re.sub(r'^(By|by|BY)\s+', '', author_text)
-                        author_text = re.sub(r'\s+', ' ', author_text)  # Normalize whitespace
-                        
-                        # Validate it looks like a name
-                        if (author_text and 
-                            len(author_text.split()) <= 5 and  # Reasonable name length
-                            not any(skip in author_text.lower() for skip in 
-                                ['subscribe', 'follow', 'share', 'comment', 'published', 
-                                 'updated', 'read more', 'click here'])):
-                            
-                            # Remove common suffixes
-                            author_text = re.sub(r'\s*\|.*$', '', author_text)  # Remove "| NBC News"
-                            author_text = re.sub(r'\s*,\s*\w+\s*News.*$', '', author_text, flags=re.I)
-                            
-                            return author_text.strip()
-            except:
-                continue
+        author_lower = author.lower()
+        if any(skip in author_lower for skip in skip_values):
+            return False
         
-        # Last resort: Look for "By [Name]" pattern in the article
-        try:
-            # Search in article header area
-            header_area = soup.find(['header', 'div'], class_=re.compile(r'article-header|story-header', re.I))
-            if header_area:
-                text = header_area.get_text()
-                by_match = re.search(r'\bBy\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})', text)
-                if by_match:
-                    return by_match.group(1).strip()
-        except:
-            pass
+        # Check if it contains at least one uppercase letter (names usually do)
+        if not any(c.isupper() for c in author):
+            return False
         
-        # NBC News fallback: Check specific text patterns
-        try:
-            # Look for byline text patterns
-            for elem in soup.find_all(text=re.compile(r'^By\s+[A-Z]', re.I)):
-                if elem.parent and elem.parent.name not in ['script', 'style']:
-                    match = re.match(r'^By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})', elem.strip())
-                    if match:
-                        return match.group(1).strip()
-        except:
-            pass
+        # Check for reasonable character set (letters, spaces, hyphens, apostrophes)
+        if not re.match(r"^[A-Za-z\s\-'.]+$", author):
+            return False
         
-        logger.info("No author found using any strategy")
-        return None
+        # Looks like a valid name
+        return True
     
     def _extract_date(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract publish date"""
