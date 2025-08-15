@@ -243,129 +243,6 @@ class LegacyArticleExtractor:
                     logger.warning(f"{method_name} failed: {last_error}")
                     
             except Exception as e:
-            logger.error(f"Article extraction from URL failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
-    def _extract_from_text(self, text: str) -> Dict[str, Any]:
-        """Extract/analyze raw text and return standardized response"""
-        try:
-            logger.info("Starting text extraction")
-            
-            if self._legacy:
-                # Use legacy method if available
-                result = self._legacy.extract_from_text(text)
-            else:
-                # Fallback to basic text analysis
-                result = self._basic_text_extraction(text)
-            
-            # Return standardized service response with data wrapped
-            response = {
-                'service': self.service_name,
-                'success': True,
-                'data': {
-                    'title': result.get('title', 'Text Analysis'),
-                    'text': result.get('text', text),
-                    'author': result.get('author'),
-                    'publish_date': result.get('publish_date'),
-                    'url': result.get('url'),
-                    'domain': result.get('domain', 'text-input'),
-                    'word_count': result.get('word_count', len(text.split())),
-                    'extraction_metadata': {'method': 'text_analysis'}
-                }
-            }
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Text extraction failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
-    def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
-        """Basic URL extraction fallback"""
-        try:
-            response = requests.get(url, timeout=10, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Extract basic information
-            title = soup.find('title')
-            title = title.get_text(strip=True) if title else 'Untitled'
-            
-            # Try to find main content
-            content = None
-            for tag in ['article', 'main', 'div']:
-                element = soup.find(tag)
-                if element:
-                    paragraphs = element.find_all('p')
-                    if paragraphs:
-                        content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
-                        break
-            
-            if not content:
-                # Fallback to all paragraphs
-                paragraphs = soup.find_all('p')
-                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs[:20])  # Limit to 20 paragraphs
-            
-            word_count = len(content.split()) if content else 0
-            logger.info(f"Basic extraction completed: {word_count} words extracted")
-            
-            return {
-                'success': True,
-                'title': title,
-                'text': content or 'Content extraction failed',
-                'url': url,
-                'domain': urlparse(url).netloc,
-                'word_count': word_count,
-                'extraction_metadata': {
-                    'method': 'basic_fallback'
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Basic extraction failed: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': f'Basic extraction failed: {str(e)}'
-            }
-    
-    def _basic_text_extraction(self, text: str) -> Dict[str, Any]:
-        """Basic text analysis fallback"""
-        lines = text.strip().split('\n')
-        title = lines[0][:100] if lines else 'Text Analysis'
-        
-        return {
-            'success': True,
-            'title': title,
-            'text': text,
-            'domain': 'text-input',
-            'word_count': len(text.split())
-        }
-    
-    def extract_article(self, url: str) -> Dict[str, Any]:
-        """Legacy compatibility method"""
-        return self.analyze({'url': url})
-    
-    def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
-        info = super().get_service_info()
-        info.update({
-            'extraction_methods': {
-                'enhanced_requests': True,
-                'cloudscraper': CLOUDSCRAPER_AVAILABLE,
-                'curl_cffi': CURL_CFFI_AVAILABLE,
-                'selenium': SELENIUM_AVAILABLE,
-                'playwright': PLAYWRIGHT_AVAILABLE,
-                'cookies': True,
-                'proxy': True,
-                'emergency_fallback': True
-            },
-            'supports_live_news': True,
-            'supports_text_input': True
-        })
-        return info e:
                 last_error = str(e)
                 logger.warning(f"{method_name} exception: {last_error}")
         
@@ -1605,3 +1482,124 @@ class ArticleExtractor(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Article extraction from URL failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
+    
+    def _extract_from_text(self, text: str) -> Dict[str, Any]:
+        """Extract/analyze raw text and return standardized response"""
+        try:
+            logger.info("Starting text extraction")
+            
+            if self._legacy:
+                # Use legacy method if available
+                result = self._legacy.extract_from_text(text)
+            else:
+                # Fallback to basic text analysis
+                result = self._basic_text_extraction(text)
+            
+            # Return standardized service response with data wrapped
+            response = {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    'title': result.get('title', 'Text Analysis'),
+                    'text': result.get('text', text),
+                    'author': result.get('author'),
+                    'publish_date': result.get('publish_date'),
+                    'url': result.get('url'),
+                    'domain': result.get('domain', 'text-input'),
+                    'word_count': result.get('word_count', len(text.split())),
+                    'extraction_metadata': {'method': 'text_analysis'}
+                }
+            }
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Text extraction failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
+    
+    def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
+        """Basic URL extraction fallback"""
+        try:
+            response = requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Extract basic information
+            title = soup.find('title')
+            title = title.get_text(strip=True) if title else 'Untitled'
+            
+            # Try to find main content
+            content = None
+            for tag in ['article', 'main', 'div']:
+                element = soup.find(tag)
+                if element:
+                    paragraphs = element.find_all('p')
+                    if paragraphs:
+                        content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
+                        break
+            
+            if not content:
+                # Fallback to all paragraphs
+                paragraphs = soup.find_all('p')
+                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs[:20])  # Limit to 20 paragraphs
+            
+            word_count = len(content.split()) if content else 0
+            logger.info(f"Basic extraction completed: {word_count} words extracted")
+            
+            return {
+                'success': True,
+                'title': title,
+                'text': content or 'Content extraction failed',
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'word_count': word_count,
+                'extraction_metadata': {
+                    'method': 'basic_fallback'
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Basic extraction failed: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Basic extraction failed: {str(e)}'
+            }
+    
+    def _basic_text_extraction(self, text: str) -> Dict[str, Any]:
+        """Basic text analysis fallback"""
+        lines = text.strip().split('\n')
+        title = lines[0][:100] if lines else 'Text Analysis'
+        
+        return {
+            'success': True,
+            'title': title,
+            'text': text,
+            'domain': 'text-input',
+            'word_count': len(text.split())
+        }
+    
+    def extract_article(self, url: str) -> Dict[str, Any]:
+        """Legacy compatibility method"""
+        return self.analyze({'url': url})
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'extraction_methods': {
+                'enhanced_requests': True,
+                'cloudscraper': CLOUDSCRAPER_AVAILABLE,
+                'curl_cffi': CURL_CFFI_AVAILABLE,
+                'selenium': SELENIUM_AVAILABLE,
+                'playwright': PLAYWRIGHT_AVAILABLE,
+                'cookies': True,
+                'proxy': True,
+                'emergency_fallback': True
+            },
+            'supports_live_news': True,
+            'supports_text_input': True
+        })
+        return info
