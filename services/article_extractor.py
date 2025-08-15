@@ -15,6 +15,7 @@ from urllib.parse import urlparse, urljoin
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import random
+import os
 
 from services.base_analyzer import BaseAnalyzer
 
@@ -42,6 +43,7 @@ try:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.options import Options
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
@@ -127,11 +129,15 @@ class LegacyArticleExtractor:
         
         # Configuration
         self.timeout = 15
+        self.browser_timeout = 30
         self.min_content_length = 100
         self.min_paragraphs = 3
         self.min_words_per_paragraph = 10
+        
+        # Track which methods have been tried for better error messaging
+        self.methods_tried = []
     
-    def _get_headers(self, referer: Optional[str] = None) -> Dict[str, str]:
+    def _get_headers(self, referer: Optional[str] = None, use_chrome: bool = False) -> Dict[str, str]:
         """Get randomized headers"""
         static_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -139,7 +145,7 @@ class LegacyArticleExtractor:
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         ]
         
-        if self.ua:
+        if self.ua and not use_chrome:
             try:
                 user_agent = self.ua.random
             except:
@@ -160,6 +166,9 @@ class LegacyArticleExtractor:
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
             'Cache-Control': 'max-age=0',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
         }
         
         if referer:
@@ -173,6 +182,9 @@ class LegacyArticleExtractor:
         start_time = time.time()
         logger.info(f"Starting extraction for URL: {url}")
         
+        # Reset methods tried for this extraction
+        self.methods_tried = []
+        
         # Parse domain for circuit breaker
         domain = urlparse(url).netloc
         
@@ -180,28 +192,38 @@ class LegacyArticleExtractor:
         if self.circuit_breaker.is_blocked(domain):
             last_error = self.circuit_breaker.get_last_error(domain)
             logger.warning(f"Domain {domain} is circuit-broken. Last error: {last_error}")
-            return {
-                'success': False,
-                'error': f'Domain temporarily blocked due to repeated failures: {last_error}',
-                'extraction_metadata': {
-                    'circuit_breaker': True,
-                    'domain': domain
-                }
-            }
+            return self._create_user_friendly_error(url, domain, f'Domain temporarily blocked due to repeated failures: {last_error}')
         
-        # Try extraction methods in order
-        methods = [
-            ('quick_extract', self._quick_extract),
-            ('cloudscraper_extract', self._cloudscraper_extract) if self.cloudscraper_session else None,
-        ]
+        # Build list of extraction methods to try
+        methods = []
         
-        # Filter out None methods
-        methods = [m for m in methods if m is not None]
+        # Quick methods first (fast, but may be blocked)
+        methods.append(('enhanced_requests', self._enhanced_requests_extract))
+        
+        if CLOUDSCRAPER_AVAILABLE:
+            methods.append(('cloudscraper', self._cloudscraper_extract))
+        
+        if CURL_CFFI_AVAILABLE:
+            methods.append(('curl_cffi', self._curl_cffi_extract))
+        
+        # Cookie-based extraction
+        methods.append(('cookies', self._cookies_extract))
+        
+        # Browser automation methods (slower but more reliable)
+        if SELENIUM_AVAILABLE:
+            methods.append(('selenium', self._selenium_extract))
+        
+        if PLAYWRIGHT_AVAILABLE:
+            methods.append(('playwright', self._playwright_extract))
+        
+        # Proxy as last resort
+        methods.append(('proxy', self._proxy_extract))
         
         last_error = None
         for method_name, method_func in methods:
             try:
                 logger.info(f"Trying {method_name} for {url}")
+                self.methods_tried.append(method_name)
                 result = method_func(url)
                 
                 if result.get('success'):
@@ -212,6 +234,7 @@ class LegacyArticleExtractor:
                     result['extraction_metadata'] = result.get('extraction_metadata', {})
                     result['extraction_metadata']['duration'] = time.time() - start_time
                     result['extraction_metadata']['method'] = method_name
+                    result['extraction_metadata']['methods_tried'] = self.methods_tried
                     
                     logger.info(f"Successfully extracted {result.get('word_count', 0)} words using {method_name}")
                     return result
@@ -230,33 +253,50 @@ class LegacyArticleExtractor:
         logger.info("All extraction methods failed, trying emergency fallback")
         emergency_result = self._emergency_fallback_extraction(url)
         if emergency_result.get('success'):
+            emergency_result['extraction_metadata']['methods_tried'] = self.methods_tried + ['emergency_fallback']
             return emergency_result
         
-        error_msg = f"All extraction methods failed. Last error: {last_error}"
-        logger.error(f"{error_msg} for {url}")
+        # Complete failure - return user-friendly error
+        return self._create_user_friendly_error(url, domain, last_error)
+    
+    def _create_user_friendly_error(self, url: str, domain: str, last_error: str) -> Dict[str, Any]:
+        """Create a user-friendly error message when all extraction methods fail"""
+        methods_summary = f"Tried {len(self.methods_tried)} extraction methods"
+        
+        user_message = (
+            f"Unable to extract article from {domain}.\n\n"
+            f"This website may be blocking automated access. "
+            f"You can try using the 'Text' option instead:\n"
+            f"1. Copy the article text from your browser\n"
+            f"2. Select 'Text' instead of 'URL'\n"
+            f"3. Paste the article content\n\n"
+            f"Technical details: {methods_summary}"
+        )
         
         return {
             'success': False,
-            'error': error_msg,
+            'error': user_message,
             'url': url,
             'domain': domain,
             'extraction_metadata': {
                 'all_methods_failed': True,
-                'duration': time.time() - start_time
+                'methods_tried': self.methods_tried,
+                'last_technical_error': last_error,
+                'suggestion': 'use_text_option'
             }
         }
     
-    def _quick_extract(self, url: str) -> Dict[str, Any]:
-        """Quick extraction using requests"""
+    def _enhanced_requests_extract(self, url: str) -> Dict[str, Any]:
+        """Enhanced extraction using requests with better headers"""
         try:
-            headers = self._get_headers()
+            headers = self._get_headers(use_chrome=True)
             response = self.session.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             
             return self._parse_content(response.text, url)
             
         except Exception as e:
-            logger.error(f"Quick extract failed: {e}")
+            logger.error(f"Enhanced requests extract failed: {e}")
             return {'success': False, 'error': str(e)}
     
     def _cloudscraper_extract(self, url: str) -> Dict[str, Any]:
@@ -269,6 +309,199 @@ class LegacyArticleExtractor:
             
         except Exception as e:
             logger.error(f"Cloudscraper extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _curl_cffi_extract(self, url: str) -> Dict[str, Any]:
+        """Extract using curl_cffi which mimics real browser TLS fingerprints"""
+        try:
+            headers = self._get_headers()
+            response = curl_requests.get(
+                url, 
+                headers=headers, 
+                timeout=self.timeout,
+                impersonate="chrome110"  # Impersonate Chrome browser
+            )
+            response.raise_for_status()
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            logger.error(f"Curl-cffi extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _cookies_extract(self, url: str) -> Dict[str, Any]:
+        """Extract using requests with common cookie configurations"""
+        try:
+            # Create new session with cookies
+            session = requests.Session()
+            
+            # Add common cookies that might help bypass restrictions
+            cookies = {
+                'consent': 'yes',
+                'gdpr': '1',
+                'cookies_accepted': '1',
+                'adult_confirmed': '1',
+            }
+            
+            headers = self._get_headers(use_chrome=True)
+            
+            # First visit to get initial cookies
+            session.get(url, headers=headers, timeout=5)
+            
+            # Add our cookies
+            for key, value in cookies.items():
+                session.cookies.set(key, value, domain=urlparse(url).netloc)
+            
+            # Try again with cookies
+            response = session.get(url, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            logger.error(f"Cookies extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _selenium_extract(self, url: str) -> Dict[str, Any]:
+        """Selenium-based extraction for JavaScript-heavy sites"""
+        if not SELENIUM_AVAILABLE:
+            return {'success': False, 'error': 'Selenium not available'}
+        
+        driver = None
+        try:
+            options = Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument(f'user-agent={self._get_headers()["User-Agent"]}')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            options.add_argument('--disable-gpu')
+            options.add_argument('--window-size=1920,1080')
+            
+            driver = webdriver.Chrome(options=options)
+            
+            # Execute script to mask automation
+            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            driver.set_page_load_timeout(self.browser_timeout)
+            driver.get(url)
+            
+            # Wait for content to load
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "article"))
+                )
+            except:
+                # Try alternative wait
+                time.sleep(3)
+            
+            # Scroll to trigger lazy loading
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+            time.sleep(1)
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1)
+            
+            # Get page source
+            html = driver.page_source
+            
+            return self._parse_content(html, url)
+            
+        except Exception as e:
+            logger.error(f"Selenium extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+    
+    def _playwright_extract(self, url: str) -> Dict[str, Any]:
+        """Playwright-based extraction - modern alternative to Selenium"""
+        if not PLAYWRIGHT_AVAILABLE:
+            return {'success': False, 'error': 'Playwright not available'}
+        
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--disable-blink-features=AutomationControlled']
+                )
+                
+                context = browser.new_context(
+                    viewport={'width': 1920, 'height': 1080},
+                    user_agent=self._get_headers()["User-Agent"]
+                )
+                
+                # Add script to mask automation
+                context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                
+                page = context.new_page()
+                page.goto(url, timeout=self.browser_timeout * 1000)
+                
+                # Wait for content
+                try:
+                    page.wait_for_selector('article', timeout=10000)
+                except:
+                    page.wait_for_timeout(3000)
+                
+                # Scroll to load lazy content
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight/2)")
+                page.wait_for_timeout(1000)
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1000)
+                
+                html = page.content()
+                browser.close()
+                
+                return self._parse_content(html, url)
+                
+        except Exception as e:
+            logger.error(f"Playwright extract failed: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _proxy_extract(self, url: str) -> Dict[str, Any]:
+        """Extract using proxy rotation as last resort"""
+        try:
+            # Try to use free proxy services (note: these are unreliable)
+            proxy_options = [
+                None,  # First try without proxy
+                {'http': 'http://proxy.server:3128', 'https': 'http://proxy.server:3128'},
+            ]
+            
+            # Check if we have proxy environment variables
+            if os.environ.get('HTTP_PROXY'):
+                proxy_options.append({
+                    'http': os.environ.get('HTTP_PROXY'),
+                    'https': os.environ.get('HTTPS_PROXY', os.environ.get('HTTP_PROXY'))
+                })
+            
+            headers = self._get_headers()
+            
+            for proxies in proxy_options:
+                try:
+                    response = requests.get(
+                        url,
+                        headers=headers,
+                        proxies=proxies,
+                        timeout=self.timeout,
+                        verify=False  # Disable SSL verification for proxy
+                    )
+                    response.raise_for_status()
+                    
+                    result = self._parse_content(response.text, url)
+                    if result.get('success'):
+                        return result
+                        
+                except:
+                    continue
+            
+            return {'success': False, 'error': 'All proxy attempts failed'}
+            
+        except Exception as e:
+            logger.error(f"Proxy extract failed: {e}")
             return {'success': False, 'error': str(e)}
     
     def _emergency_fallback_extraction(self, url: str) -> Dict[str, Any]:
@@ -1264,98 +1497,4 @@ class ArticleExtractor(BaseAnalyzer):
             logger.info("Starting text extraction")
             
             if self._legacy:
-                # Use legacy method if available
-                result = self._legacy.extract_from_text(text)
-            else:
-                # Fallback to basic text analysis
-                result = self._basic_text_extraction(text)
-            
-            # Return standardized service response with data wrapped
-            response = {
-                'service': self.service_name,
-                'success': True,
-                'data': {
-                    'title': result.get('title', 'Text Analysis'),
-                    'text': result.get('text', text),
-                    'author': result.get('author'),
-                    'publish_date': result.get('publish_date'),
-                    'url': result.get('url'),
-                    'domain': result.get('domain', 'text-input'),
-                    'word_count': result.get('word_count', len(text.split())),
-                    'extraction_metadata': {'method': 'text_analysis'}
-                }
-            }
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Text extraction failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
-    def _basic_url_extraction(self, url: str) -> Dict[str, Any]:
-        """Basic URL extraction fallback"""
-        try:
-            response = requests.get(url, timeout=10, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Extract basic information
-            title = soup.find('title')
-            title = title.get_text(strip=True) if title else 'Untitled'
-            
-            # Try to find main content
-            content = None
-            for tag in ['article', 'main', 'div']:
-                element = soup.find(tag)
-                if element:
-                    paragraphs = element.find_all('p')
-                    if paragraphs:
-                        content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
-                        break
-            
-            if not content:
-                # Fallback to all paragraphs
-                paragraphs = soup.find_all('p')
-                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs[:20])  # Limit to 20 paragraphs
-            
-            word_count = len(content.split()) if content else 0
-            logger.info(f"Basic extraction completed: {word_count} words extracted")
-            
-            return {
-                'success': True,
-                'title': title,
-                'text': content or 'Content extraction failed',
-                'url': url,
-                'domain': urlparse(url).netloc,
-                'word_count': word_count,
-                'extraction_metadata': {
-                    'method': 'basic_fallback'
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Basic extraction failed: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': f'Basic extraction failed: {str(e)}'
-            }
-    
-    def _basic_text_extraction(self, text: str) -> Dict[str, Any]:
-        """Basic text analysis fallback"""
-        lines = text.strip().split('\n')
-        title = lines[0][:100] if lines else 'Text Analysis'
-        
-        return {
-            'success': True,
-            'title': title,
-            'text': text,
-            'domain': 'text-input',
-            'word_count': len(text.split())
-        }
-    
-    def extract_article(self, url: str) -> Dict[str, Any]:
-        """Legacy compatibility method"""
-        return self.analyze({'url': url})
+                # Use legacy method if
