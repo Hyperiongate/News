@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config
 from services.news_analyzer import NewsAnalyzer
-from services.response_builder import ResponseBuilder
+from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['SECRET_KEY'] = Config.SECRET_KEY
 
 # Configure CORS
@@ -45,7 +45,6 @@ CORS(app, resources={
 
 # Initialize services
 news_analyzer = NewsAnalyzer()
-response_builder = ResponseBuilder()
 
 # Request tracking
 @app.before_request
@@ -53,6 +52,10 @@ def before_request():
     """Log incoming requests"""
     request.id = str(uuid.uuid4())
     request.start_time = datetime.now()
+    
+    # Set request ID for response builder
+    ResponseBuilder._request_id = request.id
+    ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
     
     # Log request details
     logger.info(f"Request {request.id}: {request.method} {request.path}")
@@ -85,24 +88,47 @@ def after_request(response):
 @app.errorhandler(400)
 def bad_request(error):
     """Handle bad request errors"""
-    return response_builder.build_error_response("Bad Request", 400)
+    response, status_code = ResponseBuilder.error("Bad Request", 400)
+    return response, status_code
 
 @app.errorhandler(404)
 def not_found(error):
     """Handle not found errors"""
-    return response_builder.build_error_response("Resource not found", 404)
+    response, status_code = ResponseBuilder.error("Resource not found", 404)
+    return response, status_code
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle internal server errors"""
     logger.error(f"Internal server error: {error}", exc_info=True)
-    return response_builder.build_error_response("Internal server error", 500)
+    response, status_code = ResponseBuilder.error("Internal server error", 500)
+    return response, status_code
 
 # Routes
 @app.route('/')
 def index():
     """Serve the main application page"""
-    return send_from_directory(app.static_folder, 'index.html')
+    try:
+        # First try static folder
+        index_path = os.path.join(app.static_folder, 'index.html')
+        if os.path.exists(index_path):
+            return send_from_directory(app.static_folder, 'index.html')
+        
+        # Then try templates folder
+        if app.template_folder:
+            template_path = os.path.join(app.template_folder, 'index.html')
+            if os.path.exists(template_path):
+                return send_from_directory(app.template_folder, 'index.html')
+        
+        # If not found, return error
+        logger.error(f"index.html not found in {app.static_folder} or {app.template_folder}")
+        response, status_code = ResponseBuilder.error("Main page not found", 404)
+        return response, status_code
+        
+    except Exception as e:
+        logger.error(f"Error serving index: {e}", exc_info=True)
+        response, status_code = ResponseBuilder.error("Error loading main page", 500)
+        return response, status_code
 
 @app.route('/health')
 def health():
@@ -130,7 +156,8 @@ def status():
         })
     except Exception as e:
         logger.error(f"Status check failed: {e}")
-        return response_builder.build_error_response("Status check failed", 500)
+        response, status_code = ResponseBuilder.error("Status check failed", 500)
+        return response, status_code
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -149,7 +176,8 @@ def analyze():
     try:
         # Validate request
         if not request.is_json:
-            return response_builder.build_error_response("Content-Type must be application/json", 400)
+            response, status_code = ResponseBuilder.error("Content-Type must be application/json", 400)
+            return response, status_code
         
         data = request.get_json()
         
@@ -160,10 +188,12 @@ def analyze():
         
         # Basic validation
         if not content:
-            return response_builder.build_error_response("Missing 'url' or 'text' field", 400)
+            response, status_code = ResponseBuilder.error("Missing 'url' or 'text' field", 400)
+            return response, status_code
         
         if content_type not in ['url', 'text']:
-            return response_builder.build_error_response("Invalid type. Must be 'url' or 'text'", 400)
+            response, status_code = ResponseBuilder.error("Invalid type. Must be 'url' or 'text'", 400)
+            return response, status_code
         
         # Log analysis request
         logger.info(f"Starting analysis: type={content_type}, pro={options.get('pro_mode', False)}, content_length={len(str(content))}")
@@ -175,20 +205,34 @@ def analyze():
             pro_mode=options.get('pro_mode', False)
         )
         
-        # Build response
+        # Build response based on success/failure
         if result.get('success', False):
-            return response_builder.build_success_response(result)
+            # Extract necessary data for AnalysisResponseBuilder
+            article_data = result.get('article', {})
+            processing_time = result.get('pipeline_metadata', {}).get('total_time', 0)
+            services_used = list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys())
+            
+            # Use AnalysisResponseBuilder for successful analysis
+            return AnalysisResponseBuilder.build_analysis_response(
+                analysis_results=result,
+                article_data=article_data,
+                processing_time=processing_time,
+                services_used=services_used
+            )
         else:
             # Extract error message
             error_msg = result.get('error', 'Analysis failed')
-            return response_builder.build_error_response(error_msg, 400)
+            response, status_code = ResponseBuilder.error(error_msg, 400)
+            return response, status_code
             
     except ValueError as e:
         logger.warning(f"Validation error: {e}")
-        return response_builder.build_error_response(str(e), 400)
+        response, status_code = ResponseBuilder.error(str(e), 400)
+        return response, status_code
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)
-        return response_builder.build_error_response("Analysis failed due to an internal error", 500)
+        response, status_code = ResponseBuilder.error("Analysis failed due to an internal error", 500)
+        return response, status_code
 
 @app.route('/api/services')
 def services():
@@ -201,7 +245,8 @@ def services():
         })
     except Exception as e:
         logger.error(f"Service status check failed: {e}")
-        return response_builder.build_error_response("Service status check failed", 500)
+        response, status_code = ResponseBuilder.error("Service status check failed", 500)
+        return response, status_code
 
 @app.route('/api/config')
 def config():
@@ -227,7 +272,8 @@ def config():
         return jsonify(public_config)
     except Exception as e:
         logger.error(f"Config endpoint failed: {e}")
-        return response_builder.build_error_response("Config retrieval failed", 500)
+        response, status_code = ResponseBuilder.error("Config retrieval failed", 500)
+        return response, status_code
 
 @app.route('/api/debug/services', methods=['GET'])
 def debug_services():
@@ -298,7 +344,8 @@ def serve_static(path):
     """Serve static files"""
     # Security check - prevent directory traversal
     if '..' in path or path.startswith('/'):
-        return response_builder.build_error_response("Invalid path", 400)
+        response, status_code = ResponseBuilder.error("Invalid path", 400)
+        return response, status_code
     
     # Special handling for JS files
     if path.startswith('js/'):
@@ -312,14 +359,19 @@ def serve_static(path):
             return send_from_directory(app.static_folder, path)
         else:
             logger.error(f"JS file not found: {file_path}")
-            return response_builder.build_error_response("File not found", 404)
+            response, status_code = ResponseBuilder.error("File not found", 404)
+            return response, status_code
     
     # Try to serve the file
     try:
         return send_from_directory(app.static_folder, path)
     except Exception as e:
         logger.debug(f"Static file not found: {path}")
-        return response_builder.build_error_response("File not found", 404)
+        # Don't return error for common missing files
+        if path in ['favicon.ico', 'robots.txt']:
+            return '', 404
+        response, status_code = ResponseBuilder.error("File not found", 404)
+        return response, status_code
 
 if __name__ == '__main__':
     # Validate configuration on startup
