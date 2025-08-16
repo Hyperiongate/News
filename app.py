@@ -1,19 +1,4 @@
-@app.route('/api/test')
-def test_endpoint():
-    """Simple test endpoint to verify new code is deployed"""
-    return jsonify({
-        'status': 'ok',
-        'message': 'Debug-enhanced app is running',
-        'timestamp': datetime.now().isoformat(),
-        'debug_routes': [
-            '/api/debug/info',
-            '/api/debug/services', 
-            '/api/debug/test-analyze',
-            '/api/debug/clear'
-        ]
-    })
-
-@app.route('/api/status"""
+"""
 News Analyzer API - Fixed with proper static file serving and enhanced debugging
 Main Flask application for analyzing news articles
 """
@@ -215,9 +200,7 @@ def index():
         response, status_code = ResponseBuilder.error("Error loading main page", 500)
         return response, status_code
 
-# ============================================================================
 # TRUTHLENS STATIC FILE ROUTES WITH CORRECT MIME TYPES
-# ============================================================================
 
 @app.route('/truthlens-core.js')
 def serve_truthlens_core():
@@ -300,9 +283,7 @@ def serve_css_file(filename):
         logger.error(f"Error serving {filename}: {str(e)}")
         return f"/* Error loading {filename}: {str(e)} */", 500
 
-# ============================================================================
 # ORIGINAL API ROUTES
-# ============================================================================
 
 @app.route('/health')
 def health():
@@ -310,21 +291,6 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/api/test')
-def test_endpoint():
-    """Simple test endpoint to verify new code is deployed"""
-    return jsonify({
-        'status': 'ok',
-        'message': 'Debug-enhanced app is running',
-        'timestamp': datetime.now().isoformat(),
-        'debug_routes': [
-            '/api/debug/info',
-            '/api/debug/services', 
-            '/api/debug/test-analyze',
-            '/api/debug/clear'
-        ]
     })
 
 @app.route('/api/status')
@@ -355,6 +321,21 @@ def status():
         logger.error(f"Status check failed: {e}")
         response, status_code = ResponseBuilder.error("Status check failed", 500)
         return response, status_code
+
+@app.route('/api/test')
+def test_endpoint():
+    """Simple test endpoint to verify new code is deployed"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Debug-enhanced app is running',
+        'timestamp': datetime.now().isoformat(),
+        'debug_routes': [
+            '/api/debug/info',
+            '/api/debug/services', 
+            '/api/debug/test-analyze',
+            '/api/debug/clear'
+        ]
+    })
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -511,9 +492,7 @@ def config():
         response, status_code = ResponseBuilder.error("Config retrieval failed", 500)
         return response, status_code
 
-# ============================================================================
 # ENHANCED DEBUG ENDPOINTS
-# ============================================================================
 
 @app.route('/api/debug/info', methods=['GET'])
 def debug_full_info():
@@ -628,7 +607,7 @@ def debug_services():
                 'has_extract': hasattr(service, 'extract') if name == 'article_extractor' else False
             }
         
-        debug_info = {
+        debug_data = {
             'registry_status': registry_status,
             'article_extractor': article_extractor_info,
             'pipeline_stages': stages_info,
@@ -640,7 +619,7 @@ def debug_services():
             'initialization_errors': debug_info.get('initialization_log', [])
         }
         
-        return jsonify(debug_info), 200
+        return jsonify(debug_data), 200
         
     except Exception as e:
         logger.error(f"Debug endpoint error: {e}", exc_info=True)
