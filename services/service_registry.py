@@ -318,5 +318,15 @@ class ServiceRegistry:
 
 
 # Global service registry instance - now with lazy initialization
-service_registry = ServiceRegistry()
-logger.info("Global service registry created (not yet initialized)")
+_service_registry = None
+
+def get_service_registry():
+    """Get or create the global service registry instance"""
+    global _service_registry
+    if _service_registry is None:
+        _service_registry = ServiceRegistry()
+        logger.info("Global service registry created (not yet initialized)")
+    return _service_registry
+
+# For backward compatibility, also create a global instance
+service_registry = get_service_registry()
