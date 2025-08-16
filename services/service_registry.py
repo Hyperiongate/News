@@ -47,17 +47,6 @@ class ServiceRegistry:
         """Initialize all configured services"""
         logger.info("Initializing service registry...")
         
-        # First, ensure all service modules are imported
-        # This prevents the circular import issue
-        for service_name, (module_name, class_name) in self.SERVICE_MAPPING.items():
-            try:
-                # Just import the module, don't instantiate yet
-                importlib.import_module(module_name)
-                logger.debug(f"Pre-imported module: {module_name}")
-            except ImportError as e:
-                logger.error(f"Failed to pre-import {module_name}: {e}")
-        
-        # Now instantiate the services
         for service_name, (module_name, class_name) in self.SERVICE_MAPPING.items():
             # Check if service is enabled in config
             if not Config.is_service_enabled(service_name):
@@ -65,7 +54,7 @@ class ServiceRegistry:
                 continue
                 
             try:
-                # Dynamic import (module should already be loaded)
+                # Dynamic import
                 module = importlib.import_module(module_name)
                 service_class = getattr(module, class_name)
                 
@@ -328,17 +317,6 @@ class ServiceRegistry:
         return False
 
 
-# Create the global instance
-# This is safe now because we use lazy initialization
-_service_registry_instance = None
-
-def get_service_registry():
-    """Get or create the singleton service registry"""
-    global _service_registry_instance
-    if _service_registry_instance is None:
-        _service_registry_instance = ServiceRegistry()
-        logger.info("Created service registry instance")
-    return _service_registry_instance
-
-# For backward compatibility
-service_registry = get_service_registry()
+# Global service registry instance - now with lazy initialization
+service_registry = ServiceRegistry()
+logger.info("Global service registry created (not yet initialized)")
