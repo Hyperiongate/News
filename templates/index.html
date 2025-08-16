@@ -812,6 +812,12 @@
             font-size: 0.875rem;
         }
 
+        .findings-grid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
         .finding-item {
             display: flex;
             align-items: flex-start;
@@ -821,9 +827,24 @@
             font-size: 0.813rem;
         }
 
-        .finding-item i {
+        .finding-icon {
             margin-top: 0.125rem;
             flex-shrink: 0;
+        }
+
+        .finding-content {
+            flex: 1;
+        }
+
+        .finding-title {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.125rem;
+        }
+
+        .finding-explanation {
+            color: var(--gray-600);
+            font-size: 0.75rem;
         }
 
         .finding-positive i { color: var(--accent); }
@@ -1446,6 +1467,90 @@
         .data-state-indicator.partial-data {
             background: #F59E0B;
         }
+
+        /* Additional styles for other UI elements */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: var(--space-xs) 0;
+            font-size: 0.813rem;
+        }
+
+        .checklist-pass { color: var(--accent); }
+        .checklist-fail { color: var(--danger); }
+
+        .recent-article-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.813rem;
+        }
+
+        .recent-article-item:last-child {
+            border-bottom: none;
+        }
+
+        .article-title {
+            flex: 1;
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+
+        .article-date {
+            color: var(--gray-500);
+            font-size: 0.75rem;
+        }
+
+        .loaded-phrase-item {
+            padding: var(--space-xs);
+            background: var(--gray-50);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--space-xs);
+            font-size: 0.813rem;
+            font-style: italic;
+            color: var(--gray-700);
+        }
+
+        .example-btn {
+            padding: 0.25rem 0.625rem;
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--gray-700);
+        }
+
+        .example-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--gray-50);
+        }
+
+        .no-data-message {
+            text-align: center;
+            padding: var(--space-lg);
+            color: var(--gray-500);
+        }
+
+        .no-data-message i {
+            font-size: 2rem;
+            margin-bottom: var(--space-sm);
+            display: block;
+            opacity: 0.5;
+        }
+
+        .success-state {
+            color: var(--accent);
+        }
+
+        .success-state i {
+            color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -1671,8 +1776,7 @@
         </div>
     </main>
 
-    <!-- Load the JavaScript -->
- 
+    <!-- Load the JavaScript files in the correct order -->
     <script src="truthlens-core.js"></script>
     <script src="truthlens-display.js"></script>
     <script src="truthlens-services.js"></script>
