@@ -6,10 +6,6 @@ import logging
 from typing import Dict, Any, Optional
 from config import Config
 
-# Import from services package to ensure proper initialization order
-import services
-from services import pipeline, service_registry
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,8 +17,12 @@ class NewsAnalyzer:
     
     def __init__(self):
         """Initialize analyzer with pipeline"""
-        # Use the already-created pipeline instance
-        self.pipeline = pipeline
+        # Import here to avoid circular imports at module level
+        from services.analysis_pipeline import get_pipeline
+        from services.service_registry import service_registry
+        
+        self.pipeline = get_pipeline()
+        self.service_registry = service_registry
         self.service_status = service_registry.get_service_status()
         
         logger.info(f"NewsAnalyzer initialized with {self.service_status['summary']['total_available']} available services")
@@ -82,20 +82,20 @@ class NewsAnalyzer:
     
     def get_service_status(self) -> Dict[str, Any]:
         """Get current status of all services"""
-        return service_registry.get_service_status()
+        return self.service_registry.get_service_status()
     
     def reload_services(self) -> Dict[str, Any]:
         """Reload all services and return new status"""
         # Reload failed services
-        failed_services = service_registry.failed_services.copy()
+        failed_services = self.service_registry.failed_services.copy()
         reloaded = []
         
         for service_name in failed_services:
-            if service_registry.reload_service(service_name):
+            if self.service_registry.reload_service(service_name):
                 reloaded.append(service_name)
         
         # Update status
-        self.service_status = service_registry.get_service_status()
+        self.service_status = self.service_registry.get_service_status()
         
         return {
             'reloaded': reloaded,
