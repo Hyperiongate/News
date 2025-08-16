@@ -1,5 +1,5 @@
 """
-News Analyzer API - Fixed with proper static file serving
+News Analyzer API - Fixed with proper static file serving and enhanced debugging
 Main Flask application for analyzing news articles
 """
 import os
@@ -11,6 +11,7 @@ from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import uuid
 from datetime import datetime
+import time
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,10 +20,10 @@ from config import Config
 from services.news_analyzer import NewsAnalyzer
 from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
 
-# Configure logging
+# Configure logging with enhanced debugging
 logging.basicConfig(
     level=Config.LOGGING['level'],
-    format=Config.LOGGING['format'],
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout)
     ]
@@ -43,13 +44,23 @@ CORS(app, resources={
     }
 })
 
-# Initialize services
+# Initialize services with debug logging
+logger.info("=== INITIALIZING NEWS ANALYZER ===")
 news_analyzer = NewsAnalyzer()
+logger.info("=== NEWS ANALYZER INITIALIZED ===")
+
+# Debug tracking
+debug_info = {
+    'requests': {},
+    'errors': [],
+    'service_calls': [],
+    'initialization_log': []
+}
 
 # Request tracking
 @app.before_request
 def before_request():
-    """Log incoming requests"""
+    """Log incoming requests with enhanced debugging"""
     request.id = str(uuid.uuid4())
     request.start_time = datetime.now()
     
@@ -57,8 +68,18 @@ def before_request():
     ResponseBuilder._request_id = request.id
     ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
     
+    # Store request info for debugging
+    debug_info['requests'][request.id] = {
+        'method': request.method,
+        'path': request.path,
+        'start_time': request.start_time.isoformat(),
+        'headers': dict(request.headers),
+        'remote_addr': request.remote_addr
+    }
+    
     # Log request details
     logger.info(f"Request {request.id}: {request.method} {request.path}")
+    logger.debug(f"Request {request.id} headers: {dict(request.headers)}")
     
     if request.method == 'POST' and request.is_json:
         # Log POST data (be careful with sensitive data in production)
@@ -69,39 +90,81 @@ def before_request():
             if 'content' in log_data and len(str(log_data['content'])) > 100:
                 log_data['content'] = str(log_data['content'])[:100] + '...'
             logger.debug(f"Request {request.id} data: {log_data}")
+            debug_info['requests'][request.id]['data'] = log_data
 
 @app.after_request
 def after_request(response):
-    """Log response details"""
+    """Log response details with enhanced debugging"""
     if hasattr(request, 'id') and hasattr(request, 'start_time'):
         duration = (datetime.now() - request.start_time).total_seconds()
+        
+        # Update debug info
+        if request.id in debug_info['requests']:
+            debug_info['requests'][request.id]['response_code'] = response.status_code
+            debug_info['requests'][request.id]['duration'] = duration
+            debug_info['requests'][request.id]['end_time'] = datetime.now().isoformat()
+        
         logger.info(f"Response {request.id}: {response.status_code} ({duration:.3f}s)")
+        
+        # Log response headers for debugging
+        logger.debug(f"Response {request.id} headers: {dict(response.headers)}")
     
     # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     
+    # Add debug header in development
+    if Config.DEBUG:
+        response.headers['X-Request-ID'] = getattr(request, 'id', 'unknown')
+    
     return response
 
-# Error handlers
+# Error handlers with enhanced debugging
 @app.errorhandler(400)
 def bad_request(error):
     """Handle bad request errors"""
+    logger.warning(f"Bad request: {error}")
+    debug_info['errors'].append({
+        'timestamp': datetime.now().isoformat(),
+        'type': 'bad_request',
+        'error': str(error),
+        'request_id': getattr(request, 'id', 'unknown')
+    })
     response, status_code = ResponseBuilder.error("Bad Request", 400)
     return response, status_code
 
 @app.errorhandler(404)
 def not_found(error):
     """Handle not found errors"""
+    logger.warning(f"Not found: {request.path}")
+    debug_info['errors'].append({
+        'timestamp': datetime.now().isoformat(),
+        'type': 'not_found',
+        'path': request.path,
+        'error': str(error),
+        'request_id': getattr(request, 'id', 'unknown')
+    })
     response, status_code = ResponseBuilder.error("Resource not found", 404)
     return response, status_code
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle internal server errors"""
-    logger.error(f"Internal server error: {error}", exc_info=True)
-    response, status_code = ResponseBuilder.error("Internal server error", 500)
+    error_id = str(uuid.uuid4())
+    logger.error(f"Internal server error {error_id}: {error}", exc_info=True)
+    
+    # Store detailed error info
+    debug_info['errors'].append({
+        'timestamp': datetime.now().isoformat(),
+        'type': 'internal_error',
+        'error_id': error_id,
+        'error': str(error),
+        'traceback': traceback.format_exc(),
+        'request_id': getattr(request, 'id', 'unknown')
+    })
+    
+    response, status_code = ResponseBuilder.error(f"Internal server error (Error ID: {error_id})", 500)
     return response, status_code
 
 # Routes
@@ -112,12 +175,14 @@ def index():
         # First try static folder
         index_path = os.path.join(app.static_folder, 'index.html')
         if os.path.exists(index_path):
+            logger.debug(f"Serving index.html from static folder: {index_path}")
             return send_from_directory(app.static_folder, 'index.html')
         
         # Then try templates folder
         if app.template_folder:
             template_path = os.path.join(app.template_folder, 'index.html')
             if os.path.exists(template_path):
+                logger.debug(f"Serving index.html from templates folder: {template_path}")
                 return send_from_directory(app.template_folder, 'index.html')
         
         # If not found, return error
@@ -229,7 +294,7 @@ def health():
 
 @app.route('/api/status')
 def status():
-    """Get system status"""
+    """Get system status with debugging info"""
     try:
         # Get configuration validation
         config_status = Config.validate()
@@ -237,10 +302,18 @@ def status():
         # Get service status from analyzer
         service_status = news_analyzer.get_service_status()
         
+        # Add debug info
+        debug_status = {
+            'total_requests': len(debug_info['requests']),
+            'recent_errors': len(debug_info['errors']),
+            'active_services': sum(1 for s in service_status.values() if s.get('available', False))
+        }
+        
         return jsonify({
             'status': 'operational' if config_status['valid'] else 'degraded',
             'config': config_status,
             'services': service_status,
+            'debug': debug_status,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -251,7 +324,7 @@ def status():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Analyze a news article
+    Analyze a news article with enhanced debugging
     
     Expected JSON payload:
     {
@@ -263,6 +336,9 @@ def analyze():
     }
     """
     try:
+        # Start timing
+        analysis_start = time.time()
+        
         # Validate request
         if not request.is_json:
             response, status_code = ResponseBuilder.error("Content-Type must be application/json", 400)
@@ -287,12 +363,36 @@ def analyze():
         # Log analysis request
         logger.info(f"Starting analysis: type={content_type}, pro={options.get('pro_mode', False)}, content_length={len(str(content))}")
         
-        # Perform analysis
+        # Track service call
+        service_call_id = str(uuid.uuid4())
+        debug_info['service_calls'].append({
+            'id': service_call_id,
+            'timestamp': datetime.now().isoformat(),
+            'request_id': request.id,
+            'type': 'analyze',
+            'content_type': content_type,
+            'options': options
+        })
+        
+        # Perform analysis with detailed logging
+        logger.debug(f"Calling news_analyzer.analyze with content_type={content_type}")
         result = news_analyzer.analyze(
             content=content,
             content_type=content_type,
             pro_mode=options.get('pro_mode', False)
         )
+        
+        # Log analysis completion
+        analysis_duration = time.time() - analysis_start
+        logger.info(f"Analysis completed in {analysis_duration:.3f}s, success={result.get('success', False)}")
+        
+        # Update service call tracking
+        for call in debug_info['service_calls']:
+            if call['id'] == service_call_id:
+                call['duration'] = analysis_duration
+                call['success'] = result.get('success', False)
+                if not result.get('success', False):
+                    call['error'] = result.get('error', 'Unknown error')
         
         # Build response based on success/failure
         if result.get('success', False):
@@ -300,6 +400,9 @@ def analyze():
             article_data = result.get('article', {})
             processing_time = result.get('pipeline_metadata', {}).get('total_time', 0)
             services_used = list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys())
+            
+            # Log successful services
+            logger.debug(f"Services used: {services_used}")
             
             # Use AnalysisResponseBuilder for successful analysis
             return AnalysisResponseBuilder.build_analysis_response(
@@ -311,6 +414,14 @@ def analyze():
         else:
             # Extract error message
             error_msg = result.get('error', 'Analysis failed')
+            logger.error(f"Analysis failed: {error_msg}")
+            
+            # Log failed stages if available
+            if 'pipeline_metadata' in result:
+                failed_stages = result['pipeline_metadata'].get('failed_stages', {})
+                if failed_stages:
+                    logger.error(f"Failed stages: {failed_stages}")
+            
             response, status_code = ResponseBuilder.error(error_msg, 400)
             return response, status_code
             
@@ -364,13 +475,50 @@ def config():
         response, status_code = ResponseBuilder.error("Config retrieval failed", 500)
         return response, status_code
 
+# ============================================================================
+# ENHANCED DEBUG ENDPOINTS
+# ============================================================================
+
+@app.route('/api/debug/info', methods=['GET'])
+def debug_full_info():
+    """Get comprehensive debug information"""
+    try:
+        # Clean up old requests (keep last 100)
+        if len(debug_info['requests']) > 100:
+            sorted_requests = sorted(debug_info['requests'].items(), 
+                                   key=lambda x: x[1].get('start_time', ''), 
+                                   reverse=True)
+            debug_info['requests'] = dict(sorted_requests[:100])
+        
+        # Keep last 50 errors
+        if len(debug_info['errors']) > 50:
+            debug_info['errors'] = debug_info['errors'][-50:]
+        
+        # Keep last 100 service calls
+        if len(debug_info['service_calls']) > 100:
+            debug_info['service_calls'] = debug_info['service_calls'][-100:]
+        
+        return jsonify({
+            'requests': debug_info['requests'],
+            'errors': debug_info['errors'],
+            'service_calls': debug_info['service_calls'],
+            'initialization_log': debug_info['initialization_log'],
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Debug info endpoint error: {e}", exc_info=True)
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
 @app.route('/api/debug/services', methods=['GET'])
 def debug_services():
-    """Debug endpoint to check service status"""
+    """Debug endpoint to check service status with detailed info"""
     try:
         from services.service_registry import service_registry
         from services.analysis_pipeline import pipeline
         from config import Config
+        
+        logger.debug("=== DEBUG SERVICES ENDPOINT ===")
         
         # Get service registry status
         registry_status = service_registry.get_service_status()
@@ -383,7 +531,12 @@ def debug_services():
                 'found': True,
                 'is_available': article_extractor.is_available,
                 'service_name': getattr(article_extractor, 'service_name', 'MISSING'),
-                'class_name': article_extractor.__class__.__name__
+                'class_name': article_extractor.__class__.__name__,
+                'attributes': {
+                    'has_extract_method': hasattr(article_extractor, 'extract'),
+                    'has_analyze_method': hasattr(article_extractor, 'analyze'),
+                    '_available': getattr(article_extractor, '_available', 'MISSING')
+                }
             }
         else:
             article_extractor_info = {'found': False}
@@ -392,14 +545,30 @@ def debug_services():
         stages_info = []
         for stage in pipeline.stages:
             # Get available services for this stage
-            available_services = [
-                s for s in stage.services 
-                if service_registry.get_service(s) and service_registry.get_service(s).is_available
-            ]
+            available_services = []
+            unavailable_services = []
+            
+            for service_name in stage.services:
+                service = service_registry.get_service(service_name)
+                if service:
+                    if service.is_available:
+                        available_services.append(service_name)
+                    else:
+                        unavailable_services.append({
+                            'name': service_name,
+                            'reason': 'is_available returned False'
+                        })
+                else:
+                    unavailable_services.append({
+                        'name': service_name,
+                        'reason': 'Not found in registry'
+                    })
+            
             stages_info.append({
                 'name': stage.name,
                 'configured_services': stage.services,
                 'available_services': available_services,
+                'unavailable_services': unavailable_services,
                 'required': stage.required
             })
         
@@ -411,14 +580,26 @@ def debug_services():
             'service_to_stage': getattr(Config, 'SERVICE_TO_STAGE', 'NOT FOUND')
         }
         
+        # Get all registered services details
+        all_services_details = {}
+        for name, service in service_registry.services.items():
+            all_services_details[name] = {
+                'class_name': service.__class__.__name__,
+                'is_available': service.is_available,
+                'has_analyze': hasattr(service, 'analyze'),
+                'has_extract': hasattr(service, 'extract') if name == 'article_extractor' else False
+            }
+        
         debug_info = {
             'registry_status': registry_status,
             'article_extractor': article_extractor_info,
             'pipeline_stages': stages_info,
             'config': config_info,
+            'all_services_details': all_services_details,
             'all_registered_services': list(service_registry.services.keys()),
             'all_async_services': list(service_registry.async_services.keys()),
-            'failed_services': service_registry.failed_services
+            'failed_services': service_registry.failed_services,
+            'initialization_errors': debug_info.get('initialization_log', [])
         }
         
         return jsonify(debug_info), 200
@@ -426,6 +607,77 @@ def debug_services():
     except Exception as e:
         logger.error(f"Debug endpoint error: {e}", exc_info=True)
         return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+@app.route('/api/debug/test-analyze', methods=['POST'])
+def debug_test_analyze():
+    """Test analysis with detailed debugging output"""
+    try:
+        data = request.get_json() or {}
+        test_url = data.get('url', 'https://www.example.com/test-article')
+        
+        logger.info(f"=== DEBUG TEST ANALYZE: {test_url} ===")
+        
+        # Track each step
+        steps = []
+        
+        # Step 1: Check service availability
+        steps.append({
+            'step': 'Check Services',
+            'timestamp': datetime.now().isoformat(),
+            'services': news_analyzer.get_service_status()
+        })
+        
+        # Step 2: Try to analyze
+        try:
+            result = news_analyzer.analyze(
+                content=test_url,
+                content_type='url',
+                pro_mode=False
+            )
+            
+            steps.append({
+                'step': 'Analysis Complete',
+                'timestamp': datetime.now().isoformat(),
+                'success': result.get('success', False),
+                'services_used': list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys()),
+                'failed_stages': result.get('pipeline_metadata', {}).get('failed_stages', {})
+            })
+            
+        except Exception as e:
+            steps.append({
+                'step': 'Analysis Failed',
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e),
+                'traceback': traceback.format_exc()
+            })
+            result = {'success': False, 'error': str(e)}
+        
+        return jsonify({
+            'test_url': test_url,
+            'result': result,
+            'debug_steps': steps,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Debug test analyze error: {e}", exc_info=True)
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+@app.route('/api/debug/clear', methods=['POST'])
+def debug_clear():
+    """Clear debug information"""
+    try:
+        debug_info['requests'].clear()
+        debug_info['errors'].clear()
+        debug_info['service_calls'].clear()
+        
+        return jsonify({
+            'status': 'cleared',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Enhanced static file serving with proper MIME types
 @app.route('/<path:path>')
@@ -494,6 +746,29 @@ def serve_static(path):
         response, status_code = ResponseBuilder.error("Error serving file", 500)
         return response, status_code
 
+# Startup initialization tracking
+def track_initialization():
+    """Track service initialization for debugging"""
+    try:
+        from services.service_registry import service_registry
+        
+        debug_info['initialization_log'].append({
+            'timestamp': datetime.now().isoformat(),
+            'event': 'startup',
+            'services_loaded': list(service_registry.services.keys()),
+            'services_available': [
+                name for name, service in service_registry.services.items() 
+                if service.is_available
+            ],
+            'failed_services': service_registry.failed_services
+        })
+    except Exception as e:
+        debug_info['initialization_log'].append({
+            'timestamp': datetime.now().isoformat(),
+            'event': 'startup_error',
+            'error': str(e)
+        })
+
 if __name__ == '__main__':
     # Validate configuration on startup
     config_status = Config.validate()
@@ -505,9 +780,13 @@ if __name__ == '__main__':
         for warning in config_status['warnings']:
             logger.warning(f"Configuration warning: {warning}")
     
+    # Track initialization
+    track_initialization()
+    
     # Log startup information
     logger.info(f"Starting News Analyzer API in {Config.ENV} mode")
     logger.info(f"Enabled services: {config_status['enabled_services']}")
+    logger.info(f"Debug endpoints available: /api/debug/info, /api/debug/services, /api/debug/test-analyze")
     
     # Run the application
     port = int(os.environ.get('PORT', 5000))
