@@ -105,12 +105,12 @@ class AnalysisPipeline:
         self.config = Config.PIPELINE
         self._service_registry = None  # Lazy load the registry
         
-    @property
-    def service_registry(self):
+    def _get_service_registry(self):
         """Lazy load service registry to avoid circular imports"""
         if self._service_registry is None:
-            from services.service_registry import service_registry
-            self._service_registry = service_registry
+            # Import here to avoid circular dependency
+            from services.service_registry import get_service_registry
+            self._service_registry = get_service_registry()
         return self._service_registry
         
     def _calculate_dynamic_min_required(self) -> int:
@@ -118,7 +118,8 @@ class AnalysisPipeline:
         Calculate minimum required services dynamically based on what's available
         """
         # Get service availability
-        service_status = self.service_registry.get_service_status()
+        registry = self._get_service_registry()
+        service_status = registry.get_service_status()
         total_available = service_status['summary']['total_available']
         
         # Dynamic calculation:
@@ -163,8 +164,9 @@ class AnalysisPipeline:
         
         # Calculate dynamic minimum required services
         min_required = self._calculate_dynamic_min_required()
+        registry = self._get_service_registry()
         context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = self.service_registry.get_service_status()['summary']['total_available']
+        context.metadata['total_available_services'] = registry.get_service_status()['summary']['total_available']
         
         logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
                    f"requiring minimum {min_required} successful results")
@@ -233,8 +235,9 @@ class AnalysisPipeline:
         
         # Calculate dynamic minimum required services
         min_required = self._calculate_dynamic_min_required()
+        registry = self._get_service_registry()
         context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = self.service_registry.get_service_status()['summary']['total_available']
+        context.metadata['total_available_services'] = registry.get_service_status()['summary']['total_available']
         
         logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
                    f"requiring minimum {min_required} successful results")
@@ -278,10 +281,12 @@ class AnalysisPipeline:
         logger.info(f"Running stage: {stage.name}")
         stage_start = time.time()
         
+        registry = self._get_service_registry()
+        
         # Get available services for this stage
         available_services = [
             s for s in stage.services 
-            if self.service_registry.get_service(s) and self.service_registry.get_service(s).is_available
+            if registry.get_service(s) and registry.get_service(s).is_available
         ]
         
         if not available_services:
@@ -300,7 +305,7 @@ class AnalysisPipeline:
             # Run in parallel
             tasks = []
             for service_name in available_services:
-                task = self.service_registry.analyze_with_service_async(service_name, service_data)
+                task = registry.analyze_with_service_async(service_name, service_data)
                 tasks.append(task)
             
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -314,7 +319,7 @@ class AnalysisPipeline:
             # Run sequentially
             for service_name in available_services:
                 try:
-                    result = await self.service_registry.analyze_with_service_async(service_name, service_data)
+                    result = await registry.analyze_with_service_async(service_name, service_data)
                     context.add_result(service_name, result)
                 except Exception as e:
                     context.add_error(service_name, str(e), stage.name)
@@ -328,10 +333,12 @@ class AnalysisPipeline:
         logger.info(f"Running stage: {stage.name}")
         stage_start = time.time()
         
+        registry = self._get_service_registry()
+        
         # Get available services for this stage
         available_services = [
             s for s in stage.services 
-            if self.service_registry.get_service(s) and self.service_registry.get_service(s).is_available
+            if registry.get_service(s) and registry.get_service(s).is_available
         ]
         
         if not available_services:
@@ -348,14 +355,14 @@ class AnalysisPipeline:
         # Run services
         if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
             # Run in parallel using ThreadPoolExecutor
-            results = self.service_registry.analyze_parallel(available_services, service_data)
+            results = registry.analyze_parallel(available_services, service_data)
             for service_name, result in results.items():
                 context.add_result(service_name, result)
         else:
             # Run sequentially
             for service_name in available_services:
                 try:
-                    result = self.service_registry.analyze_with_service(service_name, service_data)
+                    result = registry.analyze_with_service(service_name, service_data)
                     context.add_result(service_name, result)
                 except Exception as e:
                     logger.error(f"Service {service_name} threw exception: {e}", exc_info=True)
@@ -572,5 +579,16 @@ class AnalysisPipeline:
         return summary
 
 
-# Create a singleton instance - but don't access service_registry yet
-pipeline = AnalysisPipeline()
+# Create singleton instance factory
+_pipeline_instance = None
+
+def get_pipeline():
+    """Get or create the singleton pipeline instance"""
+    global _pipeline_instance
+    if _pipeline_instance is None:
+        _pipeline_instance = AnalysisPipeline()
+        logger.info("Created pipeline instance")
+    return _pipeline_instance
+
+# For backward compatibility - create a variable named 'pipeline'
+pipeline = get_pipeline()
