@@ -36,39 +36,68 @@ class ServiceRegistry:
         self.async_services: Dict[str, AsyncBaseAnalyzer] = {}
         self.failed_services: Dict[str, str] = {}
         self._initialized = False
+        logger.info("ServiceRegistry created but not initialized yet")
         
     def _ensure_initialized(self):
         """Ensure services are initialized before use"""
         if not self._initialized:
+            logger.info("First access to ServiceRegistry - initializing services now")
             self._initialize_services()
             self._initialized = True
         
     def _initialize_services(self):
         """Initialize all configured services"""
-        logger.info("Initializing service registry...")
+        logger.info("=" * 80)
+        logger.info("STARTING SERVICE REGISTRY INITIALIZATION")
+        logger.info("=" * 80)
+        
+        # First, try to import all service modules to ensure they're loaded
+        logger.info("Phase 1: Pre-importing all service modules...")
+        for service_name, (module_name, class_name) in self.SERVICE_MAPPING.items():
+            try:
+                logger.info(f"Pre-importing {module_name}...")
+                importlib.import_module(module_name)
+                logger.info(f"✓ Successfully pre-imported {module_name}")
+            except Exception as e:
+                logger.error(f"✗ Failed to pre-import {module_name}: {e}")
+        
+        logger.info("\nPhase 2: Instantiating services...")
         
         for service_name, (module_name, class_name) in self.SERVICE_MAPPING.items():
+            logger.info(f"\n--- Processing {service_name} ---")
+            
             # Check if service is enabled in config
             if not Config.is_service_enabled(service_name):
                 logger.info(f"Service {service_name} is disabled in configuration")
                 continue
                 
             try:
-                # Dynamic import
+                # Import the module
+                logger.info(f"Importing module {module_name}...")
                 module = importlib.import_module(module_name)
+                
+                # Get the class
+                logger.info(f"Getting class {class_name} from module...")
+                if not hasattr(module, class_name):
+                    raise AttributeError(f"Module {module_name} has no class {class_name}")
                 service_class = getattr(module, class_name)
                 
                 # Instantiate service
+                logger.info(f"Instantiating {class_name}...")
                 service_instance = service_class()
+                logger.info(f"✓ Successfully instantiated {class_name}")
                 
                 # Check if it's properly inherited from BaseAnalyzer
                 if not isinstance(service_instance, (BaseAnalyzer, AsyncBaseAnalyzer)):
-                    logger.error(f"Service {service_name} does not inherit from BaseAnalyzer")
+                    logger.error(f"✗ Service {service_name} does not inherit from BaseAnalyzer")
                     self.failed_services[service_name] = "Invalid service class"
                     continue
                 
                 # Check if service is available
-                if not service_instance.is_available:
+                is_available = service_instance.is_available
+                logger.info(f"Service {service_name} availability: {is_available}")
+                
+                if not is_available:
                     logger.warning(f"Service {service_name} initialized but not available")
                     self.failed_services[service_name] = "Service not available"
                     # Still register it so we can check availability later
@@ -76,23 +105,28 @@ class ServiceRegistry:
                 # Register based on type
                 if isinstance(service_instance, AsyncBaseAnalyzer):
                     self.async_services[service_name] = service_instance
-                    logger.info(f"Registered async service: {service_name}")
+                    logger.info(f"✓ Registered async service: {service_name}")
                 else:
                     self.services[service_name] = service_instance
-                    logger.info(f"Registered service: {service_name}")
+                    logger.info(f"✓ Registered sync service: {service_name}")
                     
             except ImportError as e:
-                logger.error(f"Failed to import {service_name}: {e}")
+                logger.error(f"✗ Failed to import {service_name}: {e}")
                 self.failed_services[service_name] = f"Import error: {str(e)}"
             except AttributeError as e:
-                logger.error(f"Class {class_name} not found in {module_name}: {e}")
+                logger.error(f"✗ Class {class_name} not found in {module_name}: {e}")
                 self.failed_services[service_name] = f"Class not found: {str(e)}"
             except Exception as e:
-                logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
+                logger.error(f"✗ Failed to initialize {service_name}: {e}", exc_info=True)
                 self.failed_services[service_name] = f"Initialization error: {str(e)}"
         
-        logger.info(f"Service registry initialized: {len(self.services)} sync services, "
-                   f"{len(self.async_services)} async services, {len(self.failed_services)} failed")
+        logger.info("\n" + "=" * 80)
+        logger.info(f"SERVICE REGISTRY INITIALIZATION COMPLETE")
+        logger.info(f"Sync services registered: {len(self.services)}")
+        logger.info(f"Async services registered: {len(self.async_services)}")
+        logger.info(f"Failed services: {len(self.failed_services)}")
+        logger.info(f"Available services: {list(self.services.keys()) + list(self.async_services.keys())}")
+        logger.info("=" * 80 + "\n")
     
     def get_service(self, service_name: str) -> Optional[BaseAnalyzer]:
         """Get a service by name"""
@@ -324,8 +358,8 @@ def get_service_registry():
     """Get or create the global service registry instance"""
     global _service_registry
     if _service_registry is None:
+        logger.info("Creating global service registry instance")
         _service_registry = ServiceRegistry()
-        logger.info("Global service registry created (not yet initialized)")
     return _service_registry
 
 # For backward compatibility, also create a global instance
