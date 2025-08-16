@@ -1,5 +1,5 @@
 """
-News Analyzer API
+News Analyzer API - Fixed with proper static file serving
 Main Flask application for analyzing news articles
 """
 import os
@@ -7,7 +7,7 @@ import sys
 import logging
 import json
 import traceback
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import uuid
 from datetime import datetime
@@ -129,6 +129,95 @@ def index():
         logger.error(f"Error serving index: {e}", exc_info=True)
         response, status_code = ResponseBuilder.error("Error loading main page", 500)
         return response, status_code
+
+# ============================================================================
+# TRUTHLENS STATIC FILE ROUTES WITH CORRECT MIME TYPES
+# ============================================================================
+
+@app.route('/truthlens-core.js')
+def serve_truthlens_core():
+    """Serve TruthLens core JavaScript with correct MIME type"""
+    return serve_js_file('truthlens-core.js')
+
+@app.route('/truthlens-display.js')
+def serve_truthlens_display():
+    """Serve TruthLens display JavaScript with correct MIME type"""
+    return serve_js_file('truthlens-display.js')
+
+@app.route('/truthlens-services.js')
+def serve_truthlens_services():
+    """Serve TruthLens services JavaScript with correct MIME type"""
+    return serve_js_file('truthlens-services.js')
+
+@app.route('/truthlens-styles.css')
+def serve_truthlens_styles():
+    """Serve TruthLens CSS with correct MIME type"""
+    return serve_css_file('truthlens-styles.css')
+
+def serve_js_file(filename):
+    """Helper to serve JavaScript files with correct MIME type"""
+    try:
+        # Check multiple locations
+        locations = [
+            os.path.join(app.static_folder, filename),
+            os.path.join(app.static_folder, 'js', filename),
+            os.path.join('.', filename),
+            os.path.join('static', filename),
+            os.path.join('static', 'js', filename)
+        ]
+        
+        for location in locations:
+            if os.path.exists(location):
+                logger.info(f"Serving {filename} from {location}")
+                with open(location, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                response = make_response(content)
+                response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+                return response
+        
+        logger.error(f"JavaScript file {filename} not found in any location")
+        logger.error(f"Searched locations: {locations}")
+        return f"// Error: {filename} not found", 404
+        
+    except Exception as e:
+        logger.error(f"Error serving {filename}: {str(e)}")
+        return f"// Error loading {filename}: {str(e)}", 500
+
+def serve_css_file(filename):
+    """Helper to serve CSS files with correct MIME type"""
+    try:
+        # Check multiple locations
+        locations = [
+            os.path.join(app.static_folder, filename),
+            os.path.join(app.static_folder, 'css', filename),
+            os.path.join('.', filename),
+            os.path.join('static', filename),
+            os.path.join('static', 'css', filename)
+        ]
+        
+        for location in locations:
+            if os.path.exists(location):
+                logger.info(f"Serving {filename} from {location}")
+                with open(location, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                response = make_response(content)
+                response.headers['Content-Type'] = 'text/css; charset=utf-8'
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+                return response
+        
+        logger.error(f"CSS file {filename} not found in any location")
+        return "/* Error: file not found */", 404
+        
+    except Exception as e:
+        logger.error(f"Error serving {filename}: {str(e)}")
+        return f"/* Error loading {filename}: {str(e)} */", 500
+
+# ============================================================================
+# ORIGINAL API ROUTES
+# ============================================================================
 
 @app.route('/health')
 def health():
@@ -338,39 +427,71 @@ def debug_services():
         logger.error(f"Debug endpoint error: {e}", exc_info=True)
         return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
-# Serve static files (JS, CSS, etc.)
+# Enhanced static file serving with proper MIME types
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serve static files"""
+    """Serve static files with correct MIME types"""
     # Security check - prevent directory traversal
     if '..' in path or path.startswith('/'):
         response, status_code = ResponseBuilder.error("Invalid path", 400)
         return response, status_code
     
-    # Special handling for JS files
-    if path.startswith('js/'):
-        file_path = os.path.join(app.static_folder, path)
-        logger.info(f"Attempting to serve JS file: {path.split('/')[-1]}")
-        logger.info(f"Looking in: {file_path}")
-        
-        if os.path.exists(file_path):
-            file_size = os.path.getsize(file_path)
-            logger.info(f"Successfully served {path.split('/')[-1]} ({file_size} bytes)")
-            return send_from_directory(app.static_folder, path)
-        else:
-            logger.error(f"JS file not found: {file_path}")
-            response, status_code = ResponseBuilder.error("File not found", 404)
-            return response, status_code
+    # Determine MIME type based on file extension
+    mime_types = {
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.html': 'text/html',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon'
+    }
     
-    # Try to serve the file
+    # Get file extension
+    _, ext = os.path.splitext(path)
+    mime_type = mime_types.get(ext.lower(), 'application/octet-stream')
+    
+    # Try to find and serve the file
     try:
-        return send_from_directory(app.static_folder, path)
-    except Exception as e:
+        # Check multiple possible locations
+        possible_paths = [
+            os.path.join(app.static_folder, path),
+            os.path.join('.', path),
+            path
+        ]
+        
+        # Special handling for JS files that might be in a js/ subdirectory
+        if ext == '.js' and not path.startswith('js/'):
+            possible_paths.append(os.path.join(app.static_folder, 'js', path))
+        
+        for file_path in possible_paths:
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                logger.info(f"Serving {path} from {file_path} with MIME type {mime_type}")
+                
+                # Read file and create response with correct MIME type
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                
+                response = make_response(content)
+                response.headers['Content-Type'] = f'{mime_type}; charset=utf-8' if mime_type.startswith('text/') or mime_type == 'application/javascript' else mime_type
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+                
+                return response
+        
+        # File not found
         logger.debug(f"Static file not found: {path}")
         # Don't return error for common missing files
         if path in ['favicon.ico', 'robots.txt']:
             return '', 404
         response, status_code = ResponseBuilder.error("File not found", 404)
+        return response, status_code
+        
+    except Exception as e:
+        logger.error(f"Error serving static file {path}: {e}")
+        response, status_code = ResponseBuilder.error("Error serving file", 500)
         return response, status_code
 
 if __name__ == '__main__':
