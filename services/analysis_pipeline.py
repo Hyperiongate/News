@@ -10,8 +10,6 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config import Config
-from services.service_registry import service_registry
-from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -105,13 +103,22 @@ class AnalysisPipeline:
     def __init__(self, stages: Optional[List[PipelineStage]] = None):
         self.stages = stages or self.DEFAULT_STAGES
         self.config = Config.PIPELINE
+        self._service_registry = None  # Lazy load the registry
+        
+    @property
+    def service_registry(self):
+        """Lazy load service registry to avoid circular imports"""
+        if self._service_registry is None:
+            from services.service_registry import service_registry
+            self._service_registry = service_registry
+        return self._service_registry
         
     def _calculate_dynamic_min_required(self) -> int:
         """
         Calculate minimum required services dynamically based on what's available
         """
         # Get service availability
-        service_status = service_registry.get_service_status()
+        service_status = self.service_registry.get_service_status()
         total_available = service_status['summary']['total_available']
         
         # Dynamic calculation:
@@ -157,7 +164,7 @@ class AnalysisPipeline:
         # Calculate dynamic minimum required services
         min_required = self._calculate_dynamic_min_required()
         context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = service_registry.get_service_status()['summary']['total_available']
+        context.metadata['total_available_services'] = self.service_registry.get_service_status()['summary']['total_available']
         
         logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
                    f"requiring minimum {min_required} successful results")
@@ -227,7 +234,7 @@ class AnalysisPipeline:
         # Calculate dynamic minimum required services
         min_required = self._calculate_dynamic_min_required()
         context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = service_registry.get_service_status()['summary']['total_available']
+        context.metadata['total_available_services'] = self.service_registry.get_service_status()['summary']['total_available']
         
         logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
                    f"requiring minimum {min_required} successful results")
@@ -274,7 +281,7 @@ class AnalysisPipeline:
         # Get available services for this stage
         available_services = [
             s for s in stage.services 
-            if service_registry.get_service(s) and service_registry.get_service(s).is_available
+            if self.service_registry.get_service(s) and self.service_registry.get_service(s).is_available
         ]
         
         if not available_services:
@@ -293,7 +300,7 @@ class AnalysisPipeline:
             # Run in parallel
             tasks = []
             for service_name in available_services:
-                task = service_registry.analyze_with_service_async(service_name, service_data)
+                task = self.service_registry.analyze_with_service_async(service_name, service_data)
                 tasks.append(task)
             
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -307,7 +314,7 @@ class AnalysisPipeline:
             # Run sequentially
             for service_name in available_services:
                 try:
-                    result = await service_registry.analyze_with_service_async(service_name, service_data)
+                    result = await self.service_registry.analyze_with_service_async(service_name, service_data)
                     context.add_result(service_name, result)
                 except Exception as e:
                     context.add_error(service_name, str(e), stage.name)
@@ -324,7 +331,7 @@ class AnalysisPipeline:
         # Get available services for this stage
         available_services = [
             s for s in stage.services 
-            if service_registry.get_service(s) and service_registry.get_service(s).is_available
+            if self.service_registry.get_service(s) and self.service_registry.get_service(s).is_available
         ]
         
         if not available_services:
@@ -341,14 +348,14 @@ class AnalysisPipeline:
         # Run services
         if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
             # Run in parallel using ThreadPoolExecutor
-            results = service_registry.analyze_parallel(available_services, service_data)
+            results = self.service_registry.analyze_parallel(available_services, service_data)
             for service_name, result in results.items():
                 context.add_result(service_name, result)
         else:
             # Run sequentially
             for service_name in available_services:
                 try:
-                    result = service_registry.analyze_with_service(service_name, service_data)
+                    result = self.service_registry.analyze_with_service(service_name, service_data)
                     context.add_result(service_name, result)
                 except Exception as e:
                     logger.error(f"Service {service_name} threw exception: {e}", exc_info=True)
@@ -565,5 +572,5 @@ class AnalysisPipeline:
         return summary
 
 
-# Create a singleton instance
+# Create a singleton instance - but don't access service_registry yet
 pipeline = AnalysisPipeline()
