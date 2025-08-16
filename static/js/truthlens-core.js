@@ -6,13 +6,70 @@ const CONFIG = {
     API_ENDPOINT: '/api/analyze',
     isPro: true,
     services: [
-        { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', weight: 0.25, isPro: false },
-        { id: 'author_analyzer', name: 'Author Analysis', icon: 'fa-user-check', weight: 0.20, isPro: false },
-        { id: 'bias_detector', name: 'Bias Detection', icon: 'fa-balance-scale', weight: 0.15, isPro: true },
-        { id: 'fact_checker', name: 'Fact Verification', icon: 'fa-check-double', weight: 0.20, isPro: true },
-        { id: 'transparency_analyzer', name: 'Transparency Analysis', icon: 'fa-eye', weight: 0.10, isPro: true },
-        { id: 'manipulation_detector', name: 'Manipulation Detection', icon: 'fa-mask', weight: 0.10, isPro: true },
-        { id: 'content_analyzer', name: 'Content Analysis', icon: 'fa-file-alt', weight: 0.05, isPro: true }
+        { 
+            id: 'source_credibility', 
+            name: 'Source Credibility', 
+            icon: 'fa-shield-alt', 
+            weight: 0.25, 
+            isPro: false,
+            description: 'Evaluates the reliability and trustworthiness of the news source'
+        },
+        { 
+            id: 'author_analyzer', 
+            name: 'Author Analysis', 
+            icon: 'fa-user-check', 
+            weight: 0.20, 
+            isPro: false,
+            description: 'Analyzes author credentials and publishing history'
+        },
+        { 
+            id: 'bias_detector', 
+            name: 'Bias Detection', 
+            icon: 'fa-balance-scale', 
+            weight: 0.15, 
+            isPro: true,
+            description: 'Detects political, ideological, and other forms of bias'
+        },
+        { 
+            id: 'fact_checker', 
+            name: 'Fact Verification', 
+            icon: 'fa-check-double', 
+            weight: 0.20, 
+            isPro: true,
+            description: 'Verifies claims and statements against reliable sources'
+        },
+        { 
+            id: 'transparency_analyzer', 
+            name: 'Transparency Analysis', 
+            icon: 'fa-eye', 
+            weight: 0.10, 
+            isPro: true,
+            description: 'Evaluates disclosure of sources, funding, and conflicts of interest'
+        },
+        { 
+            id: 'manipulation_detector', 
+            name: 'Manipulation Detection', 
+            icon: 'fa-mask', 
+            weight: 0.10, 
+            isPro: true,
+            description: 'Identifies manipulation tactics and propaganda techniques'
+        },
+        { 
+            id: 'content_analyzer', 
+            name: 'Content Analysis', 
+            icon: 'fa-file-alt', 
+            weight: 0.05, 
+            isPro: true,
+            description: 'Analyzes writing quality, readability, and content structure'
+        },
+        { 
+            id: 'plagiarism_detector', 
+            name: 'Plagiarism Detection', 
+            icon: 'fa-copy', 
+            weight: 0.05, 
+            isPro: true,
+            description: 'Checks for copied content and proper attribution'
+        }
     ]
 };
 
@@ -28,47 +85,105 @@ class TruthLensApp {
         };
         
         this.utils = new TruthLensUtils();
-        this.display = new TruthLensDisplay(this);
-        this.services = new TruthLensServices(this);
+        this.display = null; // Will be initialized after TruthLensDisplay is defined
+        this.services = null; // Will be initialized after TruthLensServices is defined
         
         this.init();
     }
 
     init() {
+        // Wait for other classes to be defined
+        if (typeof TruthLensDisplay !== 'undefined') {
+            this.display = new TruthLensDisplay(this);
+        }
+        if (typeof TruthLensServices !== 'undefined') {
+            this.services = new TruthLensServices(this);
+        }
+        
         this.setupEventListeners();
         console.log('TruthLens initialized');
     }
 
     setupEventListeners() {
         // URL/Text input handlers
-        document.getElementById('urlInput')?.addEventListener('keypress', e => {
-            if (e.key === 'Enter') this.analyzeArticle();
-        });
+        const urlInput = document.getElementById('urlInput');
+        if (urlInput) {
+            urlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    window.truthLensApp.analyzeArticle();
+                }
+            });
+        }
         
-        document.getElementById('textInput')?.addEventListener('keypress', e => {
-            if (e.key === 'Enter' && e.ctrlKey) this.analyzeArticle();
-        });
+        const textInput = document.getElementById('textInput');
+        if (textInput) {
+            textInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    window.truthLensApp.analyzeArticle();
+                }
+            });
+        }
         
         // Button handlers
-        document.getElementById('analyzeBtn')?.addEventListener('click', () => this.analyzeArticle());
-        document.getElementById('analyzeTextBtn')?.addEventListener('click', () => this.analyzeArticle());
-        document.getElementById('resetBtn')?.addEventListener('click', () => this.resetAnalysis());
-        document.getElementById('resetTextBtn')?.addEventListener('click', () => this.resetAnalysis());
-        document.getElementById('downloadPdfBtn')?.addEventListener('click', () => this.downloadPDF());
-        document.getElementById('shareResultsBtn')?.addEventListener('click', () => this.shareResults());
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        if (analyzeBtn) {
+            analyzeBtn.addEventListener('click', function() {
+                window.truthLensApp.analyzeArticle();
+            });
+        }
+        
+        const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        if (analyzeTextBtn) {
+            analyzeTextBtn.addEventListener('click', function() {
+                window.truthLensApp.analyzeArticle();
+            });
+        }
+        
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                window.truthLensApp.resetAnalysis();
+            });
+        }
+        
+        const resetTextBtn = document.getElementById('resetTextBtn');
+        if (resetTextBtn) {
+            resetTextBtn.addEventListener('click', function() {
+                window.truthLensApp.resetAnalysis();
+            });
+        }
+        
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        if (downloadPdfBtn) {
+            downloadPdfBtn.addEventListener('click', function() {
+                window.truthLensApp.downloadPDF();
+            });
+        }
+        
+        const shareResultsBtn = document.getElementById('shareResultsBtn');
+        if (shareResultsBtn) {
+            shareResultsBtn.addEventListener('click', function() {
+                window.truthLensApp.shareResults();
+            });
+        }
         
         // Tab switching
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', e => this.switchTab(e.currentTarget.getAttribute('data-mode')));
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        modeBtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                const mode = e.currentTarget.getAttribute('data-mode');
+                window.truthLensApp.switchTab(mode);
+            });
         });
         
         // Example buttons
-        document.querySelectorAll('.example-btn').forEach(btn => {
-            btn.addEventListener('click', e => {
+        const exampleBtns = document.querySelectorAll('.example-btn');
+        exampleBtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
                 const url = e.target.getAttribute('data-url');
                 if (url) {
                     document.getElementById('urlInput').value = url;
-                    this.analyzeArticle();
+                    window.truthLensApp.analyzeArticle();
                 }
             });
         });
@@ -77,21 +192,47 @@ class TruthLensApp {
     switchTab(mode) {
         this.state.currentTab = mode;
         
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        modeBtns.forEach(function(btn) {
+            if (btn.getAttribute('data-mode') === mode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
         });
         
-        ['url', 'text'].forEach(type => {
+        ['url', 'text'].forEach(function(type) {
             const isActive = type === mode;
-            document.getElementById(`${type}Explanation`)?.classList.toggle('active', isActive);
-            document.getElementById(`${type}InputWrapper`)?.classList.toggle('active', isActive);
+            const explanationEl = document.getElementById(type + 'Explanation');
+            const inputWrapperEl = document.getElementById(type + 'InputWrapper');
+            
+            if (explanationEl) {
+                if (isActive) {
+                    explanationEl.classList.add('active');
+                } else {
+                    explanationEl.classList.remove('active');
+                }
+            }
+            
+            if (inputWrapperEl) {
+                if (isActive) {
+                    inputWrapperEl.classList.add('active');
+                } else {
+                    inputWrapperEl.classList.remove('active');
+                }
+            }
         });
     }
 
     resetAnalysis() {
-        document.getElementById('urlInput').value = '';
-        document.getElementById('textInput').value = '';
-        document.getElementById('resultsSection').style.display = 'none';
+        const urlInput = document.getElementById('urlInput');
+        const textInput = document.getElementById('textInput');
+        const resultsSection = document.getElementById('resultsSection');
+        
+        if (urlInput) urlInput.value = '';
+        if (textInput) textInput.value = '';
+        if (resultsSection) resultsSection.style.display = 'none';
+        
         this.state.currentAnalysis = null;
         this.state.currentMetadata = null;
     }
@@ -99,9 +240,15 @@ class TruthLensApp {
     async analyzeArticle() {
         if (this.state.isAnalyzing) return;
 
-        const input = this.state.currentTab === 'url' 
-            ? document.getElementById('urlInput')?.value?.trim()
-            : document.getElementById('textInput')?.value?.trim();
+        const urlInput = document.getElementById('urlInput');
+        const textInput = document.getElementById('textInput');
+        
+        let input;
+        if (this.state.currentTab === 'url' && urlInput) {
+            input = urlInput.value.trim();
+        } else if (textInput) {
+            input = textInput.value.trim();
+        }
             
         if (!input) {
             this.utils.showError('Please enter content to analyze');
@@ -125,7 +272,7 @@ class TruthLensApp {
             const responseData = await response.json();
             
             if (!response.ok || !responseData.success) {
-                throw new Error(responseData.error?.message || 'Analysis failed');
+                throw new Error(responseData.error && responseData.error.message || 'Analysis failed');
             }
 
             const data = responseData.data;
@@ -140,9 +287,12 @@ class TruthLensApp {
             this.state.currentAnalysis = data;
             this.state.currentMetadata = responseData.metadata || {};
 
-            setTimeout(() => {
-                this.utils.hideLoading();
-                this.display.showResults(data);
+            const self = this;
+            setTimeout(function() {
+                self.utils.hideLoading();
+                if (self.display) {
+                    self.display.showResults(data);
+                }
             }, 1000);
 
         } catch (error) {
@@ -161,13 +311,13 @@ class TruthLensApp {
         let weightedScore = 0;
         const serviceScores = {};
 
-        CONFIG.services.forEach(service => {
-            if (service.id === 'content_analyzer') return;
+        CONFIG.services.forEach(function(service) {
+            if (service.id === 'content_analyzer' || service.id === 'plagiarism_detector') return;
 
             const serviceData = detailedAnalysis[service.id];
             if (!serviceData || Object.keys(serviceData).length === 0) return;
 
-            const score = this.extractServiceScore(service.id, serviceData);
+            const score = window.truthLensApp.extractServiceScore(service.id, serviceData);
             if (score !== null) {
                 serviceScores[service.id] = score;
                 weightedScore += score * service.weight;
@@ -184,29 +334,33 @@ class TruthLensApp {
 
     extractServiceScore(serviceId, data) {
         const extractors = {
-            source_credibility: d => this.utils.extractScore(d, ['credibility_score', 'score']),
-            author_analyzer: d => {
-                const score = this.utils.extractScore(d, ['author_score', 'score', 'credibility_score']);
+            source_credibility: function(d) {
+                return window.truthLensApp.utils.extractScore(d, ['credibility_score', 'score']);
+            },
+            author_analyzer: function(d) {
+                const score = window.truthLensApp.utils.extractScore(d, ['author_score', 'score', 'credibility_score']);
                 return score !== null ? score : (d.author_name ? 50 : null);
             },
-            bias_detector: d => {
-                const bias = this.utils.extractScore(d, ['bias_score', 'score', 'overall_bias_score']);
+            bias_detector: function(d) {
+                const bias = window.truthLensApp.utils.extractScore(d, ['bias_score', 'score', 'overall_bias_score']);
                 return bias !== null ? (100 - bias) : null;
             },
-            fact_checker: d => {
+            fact_checker: function(d) {
                 if (d.fact_checks && Array.isArray(d.fact_checks)) {
                     const total = d.fact_checks.length;
                     if (total === 0) return 100;
-                    const verified = d.fact_checks.filter(c => 
-                        ['True', 'Verified', 'true'].includes(c.verdict)
-                    ).length;
+                    const verified = d.fact_checks.filter(function(c) {
+                        return ['True', 'Verified', 'true'].indexOf(c.verdict) !== -1;
+                    }).length;
                     return Math.round((verified / total) * 100);
                 }
-                return this.utils.extractScore(d, ['accuracy_score', 'score']);
+                return window.truthLensApp.utils.extractScore(d, ['accuracy_score', 'score']);
             },
-            transparency_analyzer: d => this.utils.extractScore(d, ['transparency_score', 'score']),
-            manipulation_detector: d => {
-                const manipScore = this.utils.extractScore(d, ['manipulation_score', 'score']);
+            transparency_analyzer: function(d) {
+                return window.truthLensApp.utils.extractScore(d, ['transparency_score', 'score']);
+            },
+            manipulation_detector: function(d) {
+                const manipScore = window.truthLensApp.utils.extractScore(d, ['manipulation_score', 'score']);
                 if (manipScore !== null) return 100 - manipScore;
                 
                 const levelScores = { 'Low': 90, 'Minimal': 95, 'Moderate': 50, 'High': 20, 'Extreme': 10 };
@@ -214,11 +368,12 @@ class TruthLensApp {
             }
         };
 
-        return extractors[serviceId]?.(data) || null;
+        const extractor = extractors[serviceId];
+        return extractor ? extractor(data) : null;
     }
 
     toggleAccordion(serviceId) {
-        const item = document.getElementById(`service-${serviceId}`);
+        const item = document.getElementById('service-' + serviceId);
         if (!item) return;
 
         const content = item.querySelector('.service-accordion-content');
@@ -226,17 +381,20 @@ class TruthLensApp {
         const wasActive = item.classList.contains('active');
         
         // Close all
-        document.querySelectorAll('.service-accordion-item').forEach(el => {
+        const allItems = document.querySelectorAll('.service-accordion-item');
+        allItems.forEach(function(el) {
             el.classList.remove('active');
-            el.querySelector('.service-accordion-content').style.maxHeight = '0px';
-            el.querySelector('.service-expand-icon')?.style.transform = 'rotate(0deg)';
+            const elContent = el.querySelector('.service-accordion-content');
+            const elIcon = el.querySelector('.service-expand-icon');
+            if (elContent) elContent.style.maxHeight = '0px';
+            if (elIcon) elIcon.style.transform = 'rotate(0deg)';
         });
         
         // Open clicked if it wasn't active
         if (!wasActive) {
             item.classList.add('active');
-            content.style.maxHeight = content.scrollHeight + 'px';
-            icon?.style.transform = 'rotate(180deg)';
+            if (content) content.style.maxHeight = content.scrollHeight + 'px';
+            if (icon) icon.style.transform = 'rotate(180deg)';
         }
     }
 
@@ -249,11 +407,18 @@ class TruthLensApp {
         this.utils.showLoading();
         
         try {
-            const { jsPDF } = window.jspdf;
+            const jsPDF = window.jspdf && window.jspdf.jsPDF;
+            if (!jsPDF) {
+                throw new Error('PDF library not loaded');
+            }
+            
             const doc = new jsPDF();
             
-            this.services.generatePDF(doc, this.state.currentAnalysis, this.state.currentMetadata);
-            doc.save(`truthlens-analysis-${Date.now()}.pdf`);
+            if (this.services) {
+                this.services.generatePDF(doc, this.state.currentAnalysis, this.state.currentMetadata);
+            }
+            
+            doc.save('truthlens-analysis-' + Date.now() + '.pdf');
             
         } catch (error) {
             console.error('PDF generation error:', error);
@@ -269,17 +434,21 @@ class TruthLensApp {
             return;
         }
 
-        const shareText = `Check out this news analysis: Trust Score ${this.state.currentAnalysis.analysis.trust_score}/100`;
+        const shareText = 'Check out this news analysis: Trust Score ' + 
+                         this.state.currentAnalysis.analysis.trust_score + '/100';
 
         if (navigator.share) {
             navigator.share({
                 title: 'TruthLens Analysis',
                 text: shareText,
                 url: window.location.href
-            }).catch(err => console.log('Error sharing:', err));
+            }).catch(function(err) {
+                console.log('Error sharing:', err);
+            });
         } else {
-            navigator.clipboard.writeText(window.location.href).then(() => {
-                this.utils.showError('Link copied to clipboard!');
+            const self = this;
+            navigator.clipboard.writeText(window.location.href).then(function() {
+                self.utils.showError('Link copied to clipboard!');
             });
         }
     }
@@ -300,34 +469,47 @@ class TruthLensUtils {
         };
         
         let displayMessage = message;
-        for (const [pattern, friendly] of Object.entries(errorMap)) {
-            if (message.toLowerCase().includes(pattern)) {
-                displayMessage = friendly;
+        for (const pattern in errorMap) {
+            if (message.toLowerCase().indexOf(pattern) !== -1) {
+                displayMessage = errorMap[pattern];
                 break;
             }
         }
         
         errorEl.textContent = displayMessage;
         errorEl.classList.add('active');
-        setTimeout(() => this.hideError(), 10000);
+        setTimeout(function() {
+            window.truthLensApp.utils.hideError();
+        }, 10000);
     }
 
     hideError() {
-        document.getElementById('errorMessage')?.classList.remove('active');
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.classList.remove('active');
+        }
     }
 
     showLoading() {
-        document.getElementById('loadingOverlay')?.classList.add('active');
+        const loadingEl = document.getElementById('loadingOverlay');
+        if (loadingEl) {
+            loadingEl.classList.add('active');
+        }
     }
 
     hideLoading() {
-        document.getElementById('loadingOverlay')?.classList.remove('active');
+        const loadingEl = document.getElementById('loadingOverlay');
+        if (loadingEl) {
+            loadingEl.classList.remove('active');
+        }
     }
 
-    extractScore(data, fields, defaultValue = 0) {
+    extractScore(data, fields, defaultValue) {
+        if (defaultValue === undefined) defaultValue = 0;
         if (!data || typeof data !== 'object') return defaultValue;
         
-        for (const field of fields) {
+        for (let i = 0; i < fields.length; i++) {
+            const field = fields[i];
             const value = parseFloat(data[field]);
             if (!isNaN(value)) return Math.round(value);
         }
@@ -359,6 +541,16 @@ class TruthLensUtils {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     window.truthLensApp = new TruthLensApp();
+    
+    // Re-initialize if other scripts load later
+    setTimeout(function() {
+        if (window.truthLensApp && !window.truthLensApp.display && typeof TruthLensDisplay !== 'undefined') {
+            window.truthLensApp.display = new TruthLensDisplay(window.truthLensApp);
+        }
+        if (window.truthLensApp && !window.truthLensApp.services && typeof TruthLensServices !== 'undefined') {
+            window.truthLensApp.services = new TruthLensServices(window.truthLensApp);
+        }
+    }, 100);
 });
