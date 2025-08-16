@@ -49,7 +49,7 @@ logger.info("=== INITIALIZING NEWS ANALYZER ===")
 news_analyzer = NewsAnalyzer()
 logger.info("=== NEWS ANALYZER INITIALIZED ===")
 
-# Debug tracking
+# Debug tracking - make it global so it's accessible everywhere
 debug_info = {
     'requests': {},
     'errors': [],
@@ -61,6 +61,7 @@ debug_info = {
 @app.before_request
 def before_request():
     """Log incoming requests with enhanced debugging"""
+    global debug_info
     request.id = str(uuid.uuid4())
     request.start_time = datetime.now()
     
@@ -95,6 +96,7 @@ def before_request():
 @app.after_request
 def after_request(response):
     """Log response details with enhanced debugging"""
+    global debug_info
     if hasattr(request, 'id') and hasattr(request, 'start_time'):
         duration = (datetime.now() - request.start_time).total_seconds()
         
@@ -124,6 +126,7 @@ def after_request(response):
 @app.errorhandler(400)
 def bad_request(error):
     """Handle bad request errors"""
+    global debug_info
     logger.warning(f"Bad request: {error}")
     debug_info['errors'].append({
         'timestamp': datetime.now().isoformat(),
@@ -137,6 +140,7 @@ def bad_request(error):
 @app.errorhandler(404)
 def not_found(error):
     """Handle not found errors"""
+    global debug_info
     logger.warning(f"Not found: {request.path}")
     debug_info['errors'].append({
         'timestamp': datetime.now().isoformat(),
@@ -151,6 +155,7 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     """Handle internal server errors"""
+    global debug_info
     error_id = str(uuid.uuid4())
     logger.error(f"Internal server error {error_id}: {error}", exc_info=True)
     
@@ -335,6 +340,7 @@ def analyze():
         }
     }
     """
+    global debug_info
     try:
         # Start timing
         analysis_start = time.time()
@@ -482,6 +488,7 @@ def config():
 @app.route('/api/debug/info', methods=['GET'])
 def debug_full_info():
     """Get comprehensive debug information"""
+    global debug_info
     try:
         # Clean up old requests (keep last 100)
         if len(debug_info['requests']) > 100:
@@ -513,6 +520,7 @@ def debug_full_info():
 @app.route('/api/debug/services', methods=['GET'])
 def debug_services():
     """Debug endpoint to check service status with detailed info"""
+    global debug_info
     try:
         from services.service_registry import service_registry
         from services.analysis_pipeline import pipeline
@@ -666,6 +674,7 @@ def debug_test_analyze():
 @app.route('/api/debug/clear', methods=['POST'])
 def debug_clear():
     """Clear debug information"""
+    global debug_info
     try:
         debug_info['requests'].clear()
         debug_info['errors'].clear()
@@ -749,6 +758,7 @@ def serve_static(path):
 # Startup initialization tracking
 def track_initialization():
     """Track service initialization for debugging"""
+    global debug_info
     try:
         from services.service_registry import service_registry
         
