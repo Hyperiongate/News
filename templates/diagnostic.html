@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 10px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        input {
+            width: 70%;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 10px 20px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TruthLens API Diagnostic Tool</h1>
+        <p>This tool will help diagnose what's happening with the API response.</p>
+        
+        <div>
+            <input type="url" id="testUrl" placeholder="Enter a news URL to test..." value="https://www.bbc.com/news">
+            <button onclick="testAPI()">Test API</button>
+        </div>
+        
+        <div id="output" class="output" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            const url = document.getElementById('testUrl').value.trim();
+            
+            if (!url) {
+                output.innerHTML = '<span class="error">Please enter a URL</span>';
+                output.style.display = 'block';
+                return;
+            }
+            
+            output.style.display = 'block';
+            output.innerHTML = '<span class="loading">Testing API...</span>\n\n';
+            
+            // Log request details
+            output.innerHTML += 'REQUEST DETAILS:\n';
+            output.innerHTML += '================\n';
+            output.innerHTML += 'URL: ' + url + '\n';
+            output.innerHTML += 'Endpoint: /api/analyze\n';
+            output.innerHTML += 'Method: POST\n';
+            output.innerHTML += 'Payload: ' + JSON.stringify({ url: url, is_pro: true }, null, 2) + '\n\n';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        is_pro: true
+                    })
+                });
+                
+                const elapsed = Date.now() - startTime;
+                
+                output.innerHTML += 'RESPONSE DETAILS:\n';
+                output.innerHTML += '================\n';
+                output.innerHTML += 'Status: ' + response.status + ' ' + response.statusText + '\n';
+                output.innerHTML += 'Time: ' + elapsed + 'ms\n';
+                output.innerHTML += 'Headers:\n';
+                
+                // Log response headers
+                for (let [key, value] of response.headers) {
+                    output.innerHTML += '  ' + key + ': ' + value + '\n';
+                }
+                
+                output.innerHTML += '\nRESPONSE BODY:\n';
+                output.innerHTML += '================\n';
+                
+                const responseText = await response.text();
+                output.innerHTML += 'Raw Response: ' + responseText + '\n\n';
+                
+                // Try to parse as JSON
+                try {
+                    const responseData = JSON.parse(responseText);
+                    output.innerHTML += 'Parsed JSON:\n';
+                    output.innerHTML += JSON.stringify(responseData, null, 2) + '\n\n';
+                    
+                    // Check response structure
+                    output.innerHTML += 'RESPONSE ANALYSIS:\n';
+                    output.innerHTML += '==================\n';
+                    output.innerHTML += 'Success field: ' + (responseData.success ? '<span class="success">true</span>' : '<span class="error">false</span>') + '\n';
+                    output.innerHTML += 'Has data field: ' + (responseData.data ? '<span class="success">yes</span>' : '<span class="error">no</span>') + '\n';
+                    output.innerHTML += 'Has error field: ' + (responseData.error ? '<span class="error">yes</span>' : '<span class="success">no</span>') + '\n';
+                    
+                    if (responseData.error) {
+                        output.innerHTML += '\nERROR DETAILS:\n';
+                        output.innerHTML += JSON.stringify(responseData.error, null, 2) + '\n';
+                    }
+                    
+                    if (responseData.data) {
+                        output.innerHTML += '\nDATA STRUCTURE:\n';
+                        output.innerHTML += 'Has article: ' + (responseData.data.article ? 'yes' : 'no') + '\n';
+                        output.innerHTML += 'Has analysis: ' + (responseData.data.analysis ? 'yes' : 'no') + '\n';
+                        output.innerHTML += 'Has detailed_analysis: ' + (responseData.data.detailed_analysis ? 'yes' : 'no') + '\n';
+                        
+                        if (responseData.data.analysis) {
+                            output.innerHTML += '\nANALYSIS DETAILS:\n';
+                            output.innerHTML += 'Trust score: ' + (responseData.data.analysis.trust_score || 'missing') + '\n';
+                            output.innerHTML += 'Trust level: ' + (responseData.data.analysis.trust_level || 'missing') + '\n';
+                        }
+                        
+                        if (responseData.data.detailed_analysis) {
+                            output.innerHTML += '\nSERVICES FOUND:\n';
+                            const services = Object.keys(responseData.data.detailed_analysis);
+                            services.forEach(service => {
+                                const serviceData = responseData.data.detailed_analysis[service];
+                                const hasData = serviceData && Object.keys(serviceData).length > 0;
+                                output.innerHTML += '- ' + service + ': ' + (hasData ? 'has data' : 'empty') + '\n';
+                            });
+                        }
+                    }
+                    
+                } catch (parseError) {
+                    output.innerHTML += '<span class="error">Failed to parse response as JSON: ' + parseError.message + '</span>\n';
+                }
+                
+            } catch (error) {
+                output.innerHTML += '\n<span class="error">REQUEST ERROR:\n';
+                output.innerHTML += '==============\n';
+                output.innerHTML += 'Error: ' + error.message + '\n';
+                output.innerHTML += 'Stack: ' + error.stack + '</span>\n';
+            }
+        }
+        
+        // Test on load with default URL
+        window.onload = function() {
+            // You can uncomment this to auto-test on load
+            // testAPI();
+        };
+    </script>
+</body>
+</html>
