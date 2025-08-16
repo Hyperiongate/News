@@ -5,8 +5,10 @@ Clean implementation using pipeline and service registry
 import logging
 from typing import Dict, Any, Optional
 from config import Config
-from services.analysis_pipeline import AnalysisPipeline
-from services.service_registry import service_registry
+
+# Import from services package to ensure proper initialization order
+import services
+from services import pipeline, service_registry
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,8 @@ class NewsAnalyzer:
     
     def __init__(self):
         """Initialize analyzer with pipeline"""
-        self.pipeline = AnalysisPipeline()
+        # Use the already-created pipeline instance
+        self.pipeline = pipeline
         self.service_status = service_registry.get_service_status()
         
         logger.info(f"NewsAnalyzer initialized with {self.service_status['summary']['total_available']} available services")
