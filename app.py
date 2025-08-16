@@ -1,4 +1,19 @@
-"""
+@app.route('/api/test')
+def test_endpoint():
+    """Simple test endpoint to verify new code is deployed"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Debug-enhanced app is running',
+        'timestamp': datetime.now().isoformat(),
+        'debug_routes': [
+            '/api/debug/info',
+            '/api/debug/services', 
+            '/api/debug/test-analyze',
+            '/api/debug/clear'
+        ]
+    })
+
+@app.route('/api/status"""
 News Analyzer API - Fixed with proper static file serving and enhanced debugging
 Main Flask application for analyzing news articles
 """
@@ -295,6 +310,21 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/test')
+def test_endpoint():
+    """Simple test endpoint to verify new code is deployed"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Debug-enhanced app is running',
+        'timestamp': datetime.now().isoformat(),
+        'debug_routes': [
+            '/api/debug/info',
+            '/api/debug/services', 
+            '/api/debug/test-analyze',
+            '/api/debug/clear'
+        ]
     })
 
 @app.route('/api/status')
