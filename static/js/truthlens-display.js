@@ -212,7 +212,8 @@ class TruthLensDisplay {
             },
             {
                 name: 'Author Credibility',
-                score: this.app.utils.extractScore(detailedAnalysis.author_analyzer, ['author_score', 'score']),
+                // FIXED: Include credibility_score in the fields to check
+                score: this.app.utils.extractScore(detailedAnalysis.author_analyzer, ['author_score', 'credibility_score', 'score']),
                 icon: 'fa-user',
                 color: '#10b981',
                 meaning: this.getAuthorMeaning(detailedAnalysis.author_analyzer)
@@ -272,7 +273,8 @@ class TruthLensDisplay {
 
     getAuthorMeaning(data) {
         if (!data || !data.author_name) return 'Without author information, credibility cannot be fully assessed.';
-        const score = data.author_score || data.score || 0;
+        // FIXED: Check credibility_score as well
+        const score = data.author_score || data.credibility_score || data.score || 0;
         
         if (score >= 80) return 'Verified journalist with strong credentials.';
         if (score >= 60) return 'Some journalism experience but limited verification.';
@@ -382,7 +384,8 @@ class TruthLensDisplay {
             case 'source_credibility':
                 return data.credibility_score || data.score || 0;
             case 'author_analyzer':
-                return data.author_score || data.score || 0;
+                // FIXED: Check credibility_score which is what the backend returns
+                return data.author_score || data.credibility_score || data.score || 0;
             case 'bias_detector':
                 return 100 - (data.bias_score || data.score || 0);
             case 'fact_checker':
@@ -418,7 +421,8 @@ class TruthLensDisplay {
             },
             author_analyzer: function() {
                 const name = data.author_name || 'Unknown';
-                const score = data.author_score || data.score || 0;
+                // FIXED: Check credibility_score as well
+                const score = data.author_score || data.credibility_score || data.score || 0;
                 return name + ' - Score: <strong>' + score + '/100</strong>';
             },
             bias_detector: function() {
