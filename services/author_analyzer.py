@@ -1,7 +1,6 @@
 """
-Author Analyzer Service - ENHANCED VISUAL VERSION WITH BIO
+Author Analyzer Service - ENHANCED VISUAL VERSION
 Creates rich, educational, and visually engaging author credibility analysis
-Now includes author bio and photo capabilities
 """
 
 import os
@@ -114,11 +113,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                     'educational_insights': educational_insights,
                     'author_badge': author_level,
                     
-                    # NEW: Bio and photo data
-                    'author_bio': author_profile.get('bio', ''),
-                    'author_photo': author_profile.get('photo', ''),
-                    'author_links': author_profile.get('links', {}),
-                    
                     # Backward compatibility
                     'credibility_score': credibility_score,
                     'author_name': author,
@@ -131,8 +125,7 @@ class AuthorAnalyzer(BaseAnalyzer):
                         'expertise_areas': author_profile.get('expertise_areas', []),
                         'publications': author_profile.get('publications', []),
                         'trust_indicators': author_profile.get('trust_indicators', {}),
-                        'visual_elements': author_profile.get('visual_elements', {}),
-                        'bio_source': author_profile.get('bio_source', '')
+                        'visual_elements': author_profile.get('visual_elements', {})
                     }
                 },
                 'metadata': {
@@ -154,7 +147,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             'data_sources': []
         }
         
-        # Check journalist database first (includes bios)
+        # Check journalist database first
         db_info = self._check_journalist_database(author)
         if db_info:
             profile.update(db_info)
@@ -166,14 +159,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             if article_history:
                 profile.update(self._analyze_article_history(article_history))
                 profile['data_sources'].append('news_api')
-        
-        # NEW: Try to fetch additional author info if not in database
-        if not profile.get('bio') and not profile.get('photo'):
-            external_info = self._fetch_external_author_info(author, data.get('domain'))
-            if external_info:
-                profile.update(external_info)
-                if external_info.get('bio') or external_info.get('photo'):
-                    profile['data_sources'].append('external_search')
         
         # Generate visual elements
         profile['visual_elements'] = self._generate_visual_elements(profile)
@@ -196,9 +181,9 @@ class AuthorAnalyzer(BaseAnalyzer):
         return profile
     
     def _initialize_enhanced_journalist_database(self) -> Dict[str, Any]:
-        """Enhanced database with visual elements, rich profiles, and bios"""
+        """Enhanced database with visual elements and rich profiles"""
         return {
-            # Pulitzer Prize Winners with visual badges and bios
+            # Pulitzer Prize Winners with visual badges
             'maggie haberman': {
                 'verified': True,
                 'credibility': 95,
@@ -207,8 +192,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Pulitzer Prize 2018', 'White House Correspondents Award'],
                 'years_experience': 20,
                 'badge': '🏆',
-                'bio': 'Maggie Haberman is a senior political correspondent and Pulitzer Prize-winning journalist covering the White House and Donald Trump. She has broken numerous stories about American politics and is known for her deep sourcing within political circles.',
-                'photo': 'https://static01.nyt.com/images/2018/09/19/multimedia/author-maggie-haberman/author-maggie-haberman-thumbLarge.png',
                 'visual_credibility': {
                     'color': 'gold',
                     'icon': 'trophy',
@@ -219,10 +202,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                     'decades_experience': True,
                     'major_publication': True,
                     'verified_identity': True
-                },
-                'links': {
-                    'twitter': '@maggieNYT',
-                    'publication': 'https://www.nytimes.com/by/maggie-haberman'
                 }
             },
             'david fahrenthold': {
@@ -233,37 +212,10 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Pulitzer Prize 2017'],
                 'years_experience': 20,
                 'badge': '🏆',
-                'bio': 'David Fahrenthold is an investigative reporter who won the 2017 Pulitzer Prize for National Reporting for his coverage of Donald Trump\'s charitable giving. He is known for his innovative use of social media in investigative reporting.',
                 'visual_credibility': {
                     'color': 'gold',
                     'icon': 'trophy',
                     'description': 'Pulitzer Prize Winner'
-                }
-            },
-            
-            # Climate and Environment Journalists
-            'freddie clayton': {
-                'verified': True,
-                'credibility': 88,
-                'organization': 'Freelance',
-                'expertise': ['Climate', 'Environment', 'Public Health', 'Investigative'],
-                'awards': ['Editors\' Forum of Namibia Journalist of the Year'],
-                'years_experience': 10,
-                'badge': '🌍',
-                'bio': 'Freddie Clayton is an award-winning journalist covering climate, environment and public health. He specialises in investigative, on-the-ground reporting on marginalised and vulnerable communities, working alongside local journalists whenever possible. His work has been supported by the Pulitzer Center on Crisis Reporting and published in The Guardian, Al Jazeera, The Economist, and Nature.',
-                'visual_credibility': {
-                    'color': 'green',
-                    'icon': 'globe',
-                    'description': 'Environmental Journalist'
-                },
-                'trust_factors': {
-                    'award_winner': True,
-                    'major_publications': True,
-                    'pulitzer_center_support': True,
-                    'on_ground_reporting': True
-                },
-                'links': {
-                    'portfolio': 'https://muckrack.com/freddie-clayton'
                 }
             },
             
@@ -276,7 +228,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Pulitzer Prize 2002', 'Gerald Loeb Award'],
                 'years_experience': 30,
                 'badge': '💼',
-                'bio': 'Gretchen Morgenson is a senior financial reporter who won the Pulitzer Prize for her "trenchant and incisive" coverage of Wall Street. She specializes in executive compensation, corporate governance, and financial markets.',
                 'visual_credibility': {
                     'color': 'blue',
                     'icon': 'chart-line',
@@ -291,7 +242,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Pulitzer Prize finalist', 'Theranos Investigation'],
                 'years_experience': 20,
                 'badge': '🔍',
-                'bio': 'John Carreyrou is an investigative journalist best known for exposing the Theranos fraud. His reporting led to federal criminal charges and his book "Bad Blood" became a bestseller.',
                 'visual_credibility': {
                     'color': 'purple',
                     'icon': 'microscope',
@@ -308,8 +258,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Pulitzer Prize 2021', 'National Magazine Award'],
                 'years_experience': 15,
                 'badge': '🔬',
-                'bio': 'Ed Yong is a science journalist who won the Pulitzer Prize for Explanatory Reporting for his coverage of the COVID-19 pandemic. He specializes in making complex scientific topics accessible to general audiences.',
-                'photo': 'https://cdn.theatlantic.com/thumbor/p-V7Bv5N5FlEuDxPzPxX7OQmPKc=/0x385:3000x2250/960x540/media/img/mt/2018/06/GettyImages_543365630/original.jpg',
                 'visual_credibility': {
                     'color': 'green',
                     'icon': 'dna',
@@ -324,7 +272,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'awards': ['Andrew Carnegie Fellow'],
                 'years_experience': 15,
                 'badge': '💻',
-                'bio': 'Zeynep Tufekci is a sociologist and writer focusing on the social implications of new technologies and social media. She provided prescient analysis during the COVID-19 pandemic.',
                 'visual_credibility': {
                     'color': 'cyan',
                     'icon': 'network',
@@ -332,166 +279,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 }
             }
         }
-    
-    def _fetch_external_author_info(self, author: str, domain: Optional[str]) -> Dict[str, Any]:
-        """Try to fetch author bio and photo from external sources"""
-        info = {}
-        
-        try:
-            # Method 1: Try to find author page on the publication's website
-            if domain:
-                author_page_info = self._search_publication_author_page(author, domain)
-                if author_page_info:
-                    info.update(author_page_info)
-            
-            # Method 2: Search for author on journalism platforms (simulated)
-            # In a real implementation, this could search Muck Rack, LinkedIn, etc.
-            platform_info = self._search_journalism_platforms(author)
-            if platform_info:
-                info.update(platform_info)
-            
-            # Method 3: Extract from recent articles if available
-            if not info.get('bio'):
-                article_bio = self._extract_bio_from_articles(author)
-                if article_bio:
-                    info['bio'] = article_bio
-                    info['bio_source'] = 'article_bylines'
-            
-        except Exception as e:
-            logger.error(f"Error fetching external author info: {e}")
-        
-        return info
-    
-    def _search_publication_author_page(self, author: str, domain: str) -> Optional[Dict[str, Any]]:
-        """Search for author page on publication website"""
-        # This is a simplified implementation
-        # In production, this would actually crawl author pages
-        
-        # Common author page patterns
-        author_slug = author.lower().replace(' ', '-')
-        common_patterns = [
-            f"/author/{author_slug}",
-            f"/contributors/{author_slug}",
-            f"/by/{author_slug}",
-            f"/staff/{author_slug}"
-        ]
-        
-        # For now, return None as we don't want to actually scrape
-        # In production, this would check these URLs and extract bio/photo
-        return None
-    
-    def _search_journalism_platforms(self, author: str) -> Optional[Dict[str, Any]]:
-        """Search for author on journalism platforms"""
-        # This is where we could integrate with:
-        # - Muck Rack API
-        # - LinkedIn API
-        # - Twitter API
-        # - Press association databases
-        
-        # For now, return None
-        return None
-    
-    def _extract_bio_from_articles(self, author: str) -> Optional[str]:
-        """Extract author bio from article bylines"""
-        # Many articles include a short author bio at the end
-        # This would analyze recent articles for bio text
-        
-        # Placeholder - in production would analyze article HTML
-        return None
-    
-    def _generate_visual_findings(self, profile: Dict[str, Any], score: int) -> List[Dict[str, Any]]:
-        """Generate visually rich findings"""
-        findings = []
-        
-        # Positive findings
-        if profile.get('verified'):
-            findings.append({
-                'type': 'author',
-                'severity': 'positive',
-                'text': f"✓ Verified journalist with established credibility",
-                'finding': 'Verified Author',
-                'visual': {'icon': 'shield-check', 'color': 'green'}
-            })
-        
-        if profile.get('years_experience', 0) >= 10:
-            findings.append({
-                'type': 'author',
-                'severity': 'positive',
-                'text': f"⭐ {profile['years_experience']} years of journalism experience",
-                'finding': 'Veteran Journalist',
-                'visual': {'icon': 'star', 'color': 'gold'}
-            })
-        
-        # Expertise finding
-        if profile.get('expertise_areas'):
-            top_area = profile['expertise_areas'][0]
-            findings.append({
-                'type': 'author',
-                'severity': 'positive',
-                'text': f"🎯 Specialist in {top_area['topic']} ({top_area['article_count']} articles)",
-                'finding': 'Subject Expert',
-                'visual': {'icon': 'target', 'color': 'blue'}
-            })
-        
-        # Award finding
-        if profile.get('awards'):
-            findings.append({
-                'type': 'author',
-                'severity': 'positive',
-                'text': f"🏆 {profile['awards'][0]}",
-                'finding': 'Award-Winning Journalist',
-                'visual': {'icon': 'trophy', 'color': 'gold'}
-            })
-        
-        # Bio finding
-        if profile.get('bio'):
-            findings.append({
-                'type': 'author',
-                'severity': 'info',
-                'text': f"ℹ️ Professional bio available",
-                'finding': 'Author Background',
-                'visual': {'icon': 'info-circle', 'color': 'blue'}
-            })
-        
-        # Neutral/negative findings
-        if not profile.get('verified') and score < 60:
-            findings.append({
-                'type': 'author',
-                'severity': 'medium',
-                'text': 'ℹ️ Limited verification data available',
-                'finding': 'Unverified Author',
-                'visual': {'icon': 'info', 'color': 'orange'}
-            })
-        
-        return findings[:5]  # Limit to 5 most relevant findings
-    
-    def _generate_engaging_summary(self, profile: Dict[str, Any], score: int) -> str:
-        """Generate an engaging, educational summary"""
-        name = profile['display_name']
-        
-        # Check if we have a bio to include
-        bio_snippet = ""
-        if profile.get('bio'):
-            # Take first sentence of bio
-            bio_first = profile['bio'].split('.')[0] + '.'
-            if len(bio_first) < 100:
-                bio_snippet = f" {bio_first}"
-        
-        if score >= 80:
-            if profile.get('awards'):
-                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {profile.get('years_experience', 'many')} years with recognized excellence in {profile.get('expertise_areas', [{}])[0].get('topic', 'journalism')}.{bio_snippet}"
-            else:
-                return f"{name} is a highly credible journalist (score: {score}%) with {profile.get('years_experience', 'extensive')} years of experience. They've established themselves as a trusted voice in {profile.get('expertise_areas', [{}])[0].get('topic', 'their field')}.{bio_snippet}"
-        elif score >= 60:
-            return f"{name} is an established journalist (score: {score}%) with {profile.get('years_experience', 'several')} years of experience. They regularly cover {profile.get('expertise_areas', [{}])[0].get('topic', 'various topics')} with growing expertise.{bio_snippet}"
-        else:
-            if profile.get('years_experience', 0) < 3:
-                return f"{name} appears to be an emerging journalist (score: {score}%). While they have limited track record, everyone starts somewhere. Look for additional credibility indicators in their reporting."
-            else:
-                return f"{name} has a moderate credibility score ({score}%). Limited information is available about their journalism background. Consider evaluating their sources and fact-checking their claims."
-    
-    # All other methods remain exactly the same...
-    # [REST OF THE FILE CONTINUES UNCHANGED FROM THE ORIGINAL]
     
     def _initialize_enhanced_publication_scores(self) -> Dict[str, Any]:
         """Publication scores with visual trust indicators"""
@@ -551,27 +338,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'trust_color': '#ed1c24',
                 'icon': 'book',
                 'description': 'Ideas & Culture Magazine'
-            },
-            'The Economist': {
-                'score': 87,
-                'tier': 'Elite', 
-                'trust_color': '#e3120b',
-                'icon': 'chart',
-                'description': 'International News & Analysis'
-            },
-            'Al Jazeera': {
-                'score': 82,
-                'tier': 'Premium',
-                'trust_color': '#ff8200',
-                'icon': 'globe',
-                'description': 'Global News Network'
-            },
-            'Nature': {
-                'score': 94,
-                'tier': 'Elite',
-                'trust_color': '#e60000',
-                'icon': 'flask',
-                'description': 'Leading Science Journal'
             }
         }
     
@@ -584,8 +350,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'Health': '🏥',
             'Business': '💼',
             'Climate': '🌍',
-            'Environment': '🌱',
-            'Public Health': '🏥',
             'Education': '🎓',
             'Sports': '⚽',
             'Culture': '🎭',
@@ -879,6 +643,69 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'description': 'New voice in journalism'
             }
     
+    def _generate_visual_findings(self, profile: Dict[str, Any], score: int) -> List[Dict[str, Any]]:
+        """Generate visually rich findings"""
+        findings = []
+        
+        # Positive findings
+        if profile.get('verified'):
+            findings.append({
+                'type': 'author',
+                'severity': 'positive',
+                'text': f"✓ Verified journalist with established credibility",
+                'finding': 'Verified Author',
+                'visual': {'icon': 'shield-check', 'color': 'green'}
+            })
+        
+        if profile.get('years_experience', 0) >= 10:
+            findings.append({
+                'type': 'author',
+                'severity': 'positive',
+                'text': f"⭐ {profile['years_experience']} years of journalism experience",
+                'finding': 'Veteran Journalist',
+                'visual': {'icon': 'star', 'color': 'gold'}
+            })
+        
+        # Expertise finding
+        if profile.get('expertise_areas'):
+            top_area = profile['expertise_areas'][0]
+            findings.append({
+                'type': 'author',
+                'severity': 'positive',
+                'text': f"🎯 Specialist in {top_area['topic']} ({top_area['article_count']} articles)",
+                'finding': 'Subject Expert',
+                'visual': {'icon': 'target', 'color': 'blue'}
+            })
+        
+        # Neutral/negative findings
+        if not profile.get('verified') and score < 60:
+            findings.append({
+                'type': 'author',
+                'severity': 'medium',
+                'text': 'ℹ️ Limited verification data available',
+                'finding': 'Unverified Author',
+                'visual': {'icon': 'info', 'color': 'orange'}
+            })
+        
+        return findings[:4]  # Limit to 4 most relevant findings
+    
+    def _generate_engaging_summary(self, profile: Dict[str, Any], score: int) -> str:
+        """Generate an engaging, educational summary"""
+        name = profile['display_name']
+        
+        if score >= 80:
+            if profile.get('awards'):
+                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {profile.get('years_experience', 'many')} years with recognized excellence in {profile.get('expertise_areas', [{}])[0].get('topic', 'journalism')}."
+            else:
+                return f"{name} is a highly credible journalist (score: {score}%) with {profile.get('years_experience', 'extensive')} years of experience. They've established themselves as a trusted voice in {profile.get('expertise_areas', [{}])[0].get('topic', 'their field')}."
+        elif score >= 60:
+            return f"{name} is an established journalist (score: {score}%) with {profile.get('years_experience', 'several')} years of experience. They regularly cover {profile.get('expertise_areas', [{}])[0].get('topic', 'various topics')} with growing expertise."
+        else:
+            if profile.get('years_experience', 0) < 3:
+                return f"{name} appears to be an emerging journalist (score: {score}%). While they have limited track record, everyone starts somewhere. Look for additional credibility indicators in their reporting."
+            else:
+                return f"{name} has a moderate credibility score ({score}%). Limited information is available about their journalism background. Consider evaluating their sources and fact-checking their claims."
+    
     def _handle_anonymous_author(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle anonymous or staff authors with educational context"""
         return {
@@ -1154,10 +981,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             'Business': ['business', 'economy', 'market', 'finance', 'company', 'corporate', 'stock'],
             'Health': ['health', 'medical', 'doctor', 'hospital', 'disease', 'treatment', 'covid'],
             'Climate': ['climate', 'environment', 'warming', 'carbon', 'renewable', 'sustainability'],
-            'Environment': ['environment', 'conservation', 'wildlife', 'pollution', 'ecosystem'],
-            'Public Health': ['public health', 'epidemic', 'pandemic', 'healthcare', 'sanitation'],
-            'Science': ['science', 'research', 'study', 'scientist', 'discovery', 'experiment'],
-            'Investigative': ['investigation', 'expose', 'uncover', 'reveal', 'corruption', 'scandal']
+            'Science': ['science', 'research', 'study', 'scientist', 'discovery', 'experiment']
         }
         
         for topic, keywords in topic_keywords.items():
