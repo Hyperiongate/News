@@ -219,62 +219,94 @@ class AnalysisResponseBuilder(ResponseBuilder):
         logger.info("=" * 80)
         
         # CRITICAL FIX: The analysis_results contains ALL pipeline results including service results
-        # We need to separate out the service results from the metadata
+        # Service results are stored directly with their service names as keys
         
         # Extract service results from the analysis_results
         service_results = {}
         metadata_fields = ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 
                           'errors', 'article', 'services_available', 'is_pro', 'analysis_mode']
         
-        # Separate service results from metadata
+        # Check all keys in analysis_results
         for key, value in analysis_results.items():
-            if key not in metadata_fields and isinstance(value, dict) and 'service' in value:
-                # This is a service result
-                service_results[key] = value
-                logger.info(f"Found service result: {key}")
+            # If it's not a metadata field and it's a dict, it's likely a service result
+            if key not in metadata_fields and isinstance(value, dict):
+                # Additional check: service results should have 'success' field
+                if 'success' in value or 'data' in value or key in services_used:
+                    service_results[key] = value
+                    logger.info(f"Found service result: {key} (has success: {'success' in value})")
         
         logger.info(f"Extracted {len(service_results)} service results")
         
         # Now build the detailed_analysis section with actual data
         detailed_analysis = {}
         
+        # Process each service that was used
         for service_name in services_used:
-            if service_name in service_results:
+            logger.info(f"Processing service: {service_name}")
+            
+            # Try to find the service result
+            result = None
+            
+            # First check if it's directly in analysis_results
+            if service_name in analysis_results:
+                result = analysis_results[service_name]
+                logger.info(f"Found {service_name} in analysis_results directly")
+            # Then check service_results
+            elif service_name in service_results:
                 result = service_results[service_name]
-                
+                logger.info(f"Found {service_name} in extracted service_results")
+            
+            if result:
                 # Extract the actual data from the service result
                 if result.get('success', False):
                     # If the service has a 'data' field, use it
                     if 'data' in result and isinstance(result['data'], dict):
                         detailed_analysis[service_name] = result['data']
-                        logger.info(f"Added {service_name} data from 'data' field")
+                        logger.info(f"Added {service_name} data from 'data' field: {list(result['data'].keys())}")
                     else:
                         # Otherwise, extract relevant fields (exclude metadata)
                         service_data = {}
-                        exclude_fields = ['service', 'success', 'available', 'timestamp', 'error']
+                        exclude_fields = ['service', 'success', 'available', 'timestamp', 'error', 'message']
+                        
                         for k, v in result.items():
                             if k not in exclude_fields:
                                 service_data[k] = v
                         
                         if service_data:
                             detailed_analysis[service_name] = service_data
-                            logger.info(f"Added {service_name} data from result fields")
+                            logger.info(f"Added {service_name} data from result fields: {list(service_data.keys())}")
                         else:
-                            detailed_analysis[service_name] = {}
-                            logger.warning(f"No data found for {service_name}")
+                            # If no data found, include the whole result (minus excluded fields)
+                            detailed_analysis[service_name] = {k: v for k, v in result.items() 
+                                                              if k not in exclude_fields}
+                            logger.warning(f"No specific data found for {service_name}, including all fields")
                 else:
-                    # Service failed
-                    detailed_analysis[service_name] = {}
-                    logger.warning(f"Service {service_name} failed")
+                    # Service failed - check if there's partial data
+                    if 'data' in result:
+                        detailed_analysis[service_name] = result['data']
+                        logger.warning(f"Service {service_name} failed but has data")
+                    else:
+                        detailed_analysis[service_name] = {}
+                        logger.warning(f"Service {service_name} failed with no data")
             else:
                 # Service result not found
                 detailed_analysis[service_name] = {}
-                logger.warning(f"No result found for service {service_name}")
+                logger.error(f"No result found for service {service_name}")
+                logger.error(f"Available keys in analysis_results: {list(analysis_results.keys())}")
         
         # Log what we're putting in detailed_analysis
+        logger.info("=" * 50)
         logger.info("Final detailed_analysis structure:")
         for service, data in detailed_analysis.items():
             logger.info(f"  {service}: {list(data.keys()) if data else 'empty'}")
+            # Log first few fields of each service for debugging
+            if data:
+                for key in list(data.keys())[:3]:
+                    logger.info(f"    - {key}: {type(data[key]).__name__}")
+        logger.info("=" * 50)
+        
+        # Extract key findings from the detailed analysis
+        key_findings = AnalysisResponseBuilder._extract_key_findings(detailed_analysis)
         
         # Structure the response data
         data = {
@@ -291,7 +323,7 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'trust_score': analysis_results.get('trust_score', 50),
                 'trust_level': analysis_results.get('trust_level', 'Unknown'),
                 'summary': analysis_results.get('summary'),
-                'key_findings': AnalysisResponseBuilder._extract_key_findings(detailed_analysis)
+                'key_findings': key_findings
             },
             # Use the properly extracted service data
             'detailed_analysis': detailed_analysis
@@ -305,6 +337,15 @@ class AnalysisResponseBuilder(ResponseBuilder):
             'analysis_timestamp': datetime.utcnow().isoformat() + 'Z',
             'cache_key': AnalysisResponseBuilder._generate_cache_key(article_data)
         }
+        
+        # Final logging before response
+        logger.info("=" * 80)
+        logger.info("FINAL RESPONSE STRUCTURE:")
+        logger.info(f"Article: {list(data['article'].keys())}")
+        logger.info(f"Analysis: {list(data['analysis'].keys())}")
+        logger.info(f"Detailed Analysis Services: {list(data['detailed_analysis'].keys())}")
+        logger.info(f"Metadata: {list(metadata.keys())}")
+        logger.info("=" * 80)
         
         return ResponseBuilder.success(
             data=data,
@@ -378,16 +419,22 @@ class AnalysisResponseBuilder(ResponseBuilder):
         
         # Fact checking finding
         facts = analysis_results.get('fact_checker', {})
-        if facts and facts.get('claims_checked'):
-            verified = facts.get('verified_count', 0)
-            total = facts.get('claims_checked', 0)
-            if total > 0:
-                percentage = (verified / total) * 100
+        if facts:
+            # Try different possible field names
+            claims_checked = facts.get('claims_checked') or facts.get('total_claims') or 0
+            verified_count = facts.get('verified_count') or facts.get('verified_facts') or 0
+            
+            # Also check if verified_facts is a list
+            if isinstance(facts.get('verified_facts'), list):
+                verified_count = len(facts.get('verified_facts', []))
+            
+            if claims_checked > 0:
+                percentage = (verified_count / claims_checked) * 100
                 severity = 'high' if percentage < 50 else 'low' if percentage > 80 else 'medium'
                 findings.append({
                     'type': 'fact_checking',
                     'severity': severity,
-                    'text': f"{verified}/{total} claims verified ({percentage:.0f}%)",
+                    'text': f"{verified_count}/{claims_checked} claims verified ({percentage:.0f}%)",
                     'finding': f"{percentage:.0f}% of claims verified"
                 })
         
