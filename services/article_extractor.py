@@ -220,6 +220,8 @@ class LegacyArticleExtractor:
         methods.append(('proxy', self._proxy_extract))
         
         last_error = None
+        html_content = None  # CRITICAL: Store HTML for author analysis
+        
         for method_name, method_func in methods:
             try:
                 logger.info(f"Trying {method_name} for {url}")
@@ -230,13 +232,24 @@ class LegacyArticleExtractor:
                     # Record success
                     self.circuit_breaker.record_success(domain)
                     
+                    # CRITICAL: Store HTML content if available
+                    if 'html' in result:
+                        html_content = result['html']
+                    elif 'extraction_metadata' in result and 'html' in result['extraction_metadata']:
+                        html_content = result['extraction_metadata']['html']
+                    
                     # Add timing info
                     result['extraction_metadata'] = result.get('extraction_metadata', {})
                     result['extraction_metadata']['duration'] = time.time() - start_time
                     result['extraction_metadata']['method'] = method_name
                     result['extraction_metadata']['methods_tried'] = self.methods_tried
                     
-                    logger.info(f"Successfully extracted {result.get('word_count', 0)} words using {method_name}")
+                    # CRITICAL: Ensure HTML is stored
+                    if html_content:
+                        result['extraction_metadata']['html'] = html_content
+                        result['html'] = html_content
+                    
+                    logger.info(f"Successfully extracted {result.get('word_count', 0)} words using {method_name}, has_html: {html_content is not None}")
                     return result
                 else:
                     last_error = result.get('error', 'Unknown error')
@@ -293,7 +306,17 @@ class LegacyArticleExtractor:
             response = self.session.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             
-            return self._parse_content(response.text, url)
+            # CRITICAL: Pass HTML content
+            result = self._parse_content(response.text, url)
+            
+            # Ensure HTML is stored
+            if result.get('success') and response.text:
+                result['html'] = response.text
+                if 'extraction_metadata' not in result:
+                    result['extraction_metadata'] = {}
+                result['extraction_metadata']['html'] = response.text
+            
+            return result
             
         except Exception as e:
             logger.error(f"Enhanced requests extract failed: {e}")
@@ -305,7 +328,16 @@ class LegacyArticleExtractor:
             response = self.cloudscraper_session.get(url, timeout=self.timeout)
             response.raise_for_status()
             
-            return self._parse_content(response.text, url)
+            result = self._parse_content(response.text, url)
+            
+            # Ensure HTML is stored
+            if result.get('success') and response.text:
+                result['html'] = response.text
+                if 'extraction_metadata' not in result:
+                    result['extraction_metadata'] = {}
+                result['extraction_metadata']['html'] = response.text
+            
+            return result
             
         except Exception as e:
             logger.error(f"Cloudscraper extract failed: {e}")
@@ -323,7 +355,16 @@ class LegacyArticleExtractor:
             )
             response.raise_for_status()
             
-            return self._parse_content(response.text, url)
+            result = self._parse_content(response.text, url)
+            
+            # Ensure HTML is stored
+            if result.get('success') and response.text:
+                result['html'] = response.text
+                if 'extraction_metadata' not in result:
+                    result['extraction_metadata'] = {}
+                result['extraction_metadata']['html'] = response.text
+            
+            return result
             
         except Exception as e:
             logger.error(f"Curl-cffi extract failed: {e}")
@@ -356,7 +397,16 @@ class LegacyArticleExtractor:
             response = session.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             
-            return self._parse_content(response.text, url)
+            result = self._parse_content(response.text, url)
+            
+            # Ensure HTML is stored
+            if result.get('success') and response.text:
+                result['html'] = response.text
+                if 'extraction_metadata' not in result:
+                    result['extraction_metadata'] = {}
+                result['extraction_metadata']['html'] = response.text
+            
+            return result
             
         except Exception as e:
             logger.error(f"Cookies extract failed: {e}")
@@ -406,7 +456,16 @@ class LegacyArticleExtractor:
             # Get page source
             html = driver.page_source
             
-            return self._parse_content(html, url)
+            result = self._parse_content(html, url)
+            
+            # Ensure HTML is stored
+            if result.get('success'):
+                result['html'] = html
+                if 'extraction_metadata' not in result:
+                    result['extraction_metadata'] = {}
+                result['extraction_metadata']['html'] = html
+            
+            return result
             
         except Exception as e:
             logger.error(f"Selenium extract failed: {e}")
@@ -456,7 +515,16 @@ class LegacyArticleExtractor:
                 html = page.content()
                 browser.close()
                 
-                return self._parse_content(html, url)
+                result = self._parse_content(html, url)
+                
+                # Ensure HTML is stored
+                if result.get('success'):
+                    result['html'] = html
+                    if 'extraction_metadata' not in result:
+                        result['extraction_metadata'] = {}
+                    result['extraction_metadata']['html'] = html
+                
+                return result
                 
         except Exception as e:
             logger.error(f"Playwright extract failed: {e}")
@@ -492,6 +560,14 @@ class LegacyArticleExtractor:
                     response.raise_for_status()
                     
                     result = self._parse_content(response.text, url)
+                    
+                    # Ensure HTML is stored
+                    if result.get('success') and response.text:
+                        result['html'] = response.text
+                        if 'extraction_metadata' not in result:
+                            result['extraction_metadata'] = {}
+                        result['extraction_metadata']['html'] = response.text
+                    
                     if result.get('success'):
                         return result
                         
@@ -550,7 +626,8 @@ class LegacyArticleExtractor:
                 'extraction_metadata': {
                     'method': 'emergency_fallback',
                     'used_metadata_only': True
-                }
+                },
+                'html': response.text  # Store HTML even in fallback
             }
             
         except Exception as e:
@@ -604,6 +681,9 @@ class LegacyArticleExtractor:
                 if update_count > 0:
                     content = f"[LIVE NEWS FEED - {update_count} updates extracted]\n\n{content}"
             
+            # CRITICAL: Store HTML for author analyzer
+            extraction_metadata['html'] = html
+            
             return {
                 'success': True,
                 'title': title,
@@ -617,7 +697,9 @@ class LegacyArticleExtractor:
                 'keywords': keywords,
                 'word_count': word_count,
                 'extraction_metadata': extraction_metadata,
-                'extracted_at': datetime.now().isoformat()
+                'extracted_at': datetime.now().isoformat(),
+                # CRITICAL: Also store at top level
+                'html': html
             }
             
         except Exception as e:
@@ -1448,6 +1530,28 @@ class ArticleExtractor(BaseAnalyzer):
             
             # Check if extraction succeeded
             if result.get('success'):
+                # CRITICAL FIX: Store HTML content for author analyzer
+                html_content = None
+                
+                # Try to get HTML from result
+                if 'html' in result:
+                    html_content = result['html']
+                elif 'extraction_metadata' in result and 'html' in result['extraction_metadata']:
+                    html_content = result['extraction_metadata']['html']
+                
+                # If no HTML but we have URL, fetch it separately for author analysis
+                if not html_content and url:
+                    try:
+                        logger.info(f"Fetching HTML separately for author analysis: {url}")
+                        response = requests.get(url, timeout=10, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        })
+                        if response.ok:
+                            html_content = response.text
+                            logger.info(f"Successfully fetched HTML, length: {len(html_content)}")
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch HTML separately: {e}")
+                
                 # Return standardized service response with data wrapped
                 response = {
                     'service': self.service_name,
@@ -1464,14 +1568,17 @@ class ArticleExtractor(BaseAnalyzer):
                         'keywords': result.get('keywords', []),
                         'word_count': result.get('word_count', 0),
                         'extraction_metadata': result.get('extraction_metadata', {}),
-                        'extracted_at': result.get('extracted_at')
+                        'extracted_at': result.get('extracted_at'),
+                        # CRITICAL: Add HTML content for author analyzer
+                        'html': html_content
                     },
                     'metadata': {
                         'extraction_method': result.get('extraction_metadata', {}).get('method', 'unknown'),
-                        'duration': result.get('extraction_metadata', {}).get('duration', 0)
+                        'duration': result.get('extraction_metadata', {}).get('duration', 0),
+                        'has_html': html_content is not None
                     }
                 }
-                logger.info(f"Returning successful extraction response for {url}")
+                logger.info(f"Returning successful extraction response for {url}, has_html: {html_content is not None}")
                 return response
             else:
                 # Return error in standard format
@@ -1507,7 +1614,8 @@ class ArticleExtractor(BaseAnalyzer):
                     'url': result.get('url'),
                     'domain': result.get('domain', 'text-input'),
                     'word_count': result.get('word_count', len(text.split())),
-                    'extraction_metadata': {'method': 'text_analysis'}
+                    'extraction_metadata': {'method': 'text_analysis'},
+                    'html': None  # No HTML for text input
                 }
             }
             
@@ -1525,7 +1633,8 @@ class ArticleExtractor(BaseAnalyzer):
             })
             response.raise_for_status()
             
-            soup = BeautifulSoup(response.text, 'html.parser')
+            html_content = response.text
+            soup = BeautifulSoup(html_content, 'html.parser')
             
             # Extract basic information
             title = soup.find('title')
@@ -1558,7 +1667,8 @@ class ArticleExtractor(BaseAnalyzer):
                 'word_count': word_count,
                 'extraction_metadata': {
                     'method': 'basic_fallback'
-                }
+                },
+                'html': html_content  # Store HTML for author analyzer
             }
             
         except Exception as e:
