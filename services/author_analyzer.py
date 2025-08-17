@@ -88,6 +88,9 @@ class AuthorAnalyzer(BaseAnalyzer):
             # Calculate enhanced credibility score
             credibility_score = self._calculate_visual_credibility_score(author_profile)
             
+            # Store score in profile for use by other methods
+            author_profile['credibility_score'] = credibility_score
+            
             # Determine author level with visual badge
             author_level = self._determine_author_level(author_profile)
             
@@ -469,10 +472,10 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
             
             for area in profile['expertise_areas'][:3]:
-                icon = self.expertise_icons.get(area['topic'], '📰')
+                icon = self.expertise_icons.get(area.get('topic', 'Unknown'), '📰')
                 expertise_chapter['content'].append({
                     'type': 'expertise',
-                    'text': f"{icon} {area['topic']}: {area['article_count']} articles over {area['years']} years",
+                    'text': f"{icon} {area.get('topic', 'Unknown')}: {area.get('article_count', 0)} articles over {area.get('years', 1)} years",
                     'impact': 'positive'
                 })
             
@@ -600,9 +603,6 @@ class AuthorAnalyzer(BaseAnalyzer):
         # Calculate percentage
         final_score = int((score / max_score) * 100)
         
-        # Store the score in profile for later use
-        profile['credibility_score'] = min(100, final_score)
-        
         return min(100, final_score)
     
     def _determine_author_level(self, profile: Dict[str, Any]) -> Dict[str, Any]:
@@ -670,8 +670,9 @@ class AuthorAnalyzer(BaseAnalyzer):
             })
         
         # Expertise finding
-        if profile.get('expertise_areas'):
-            top_area = profile['expertise_areas'][0]
+        expertise_areas = profile.get('expertise_areas', [])
+        if expertise_areas:
+            top_area = expertise_areas[0]
             findings.append({
                 'type': 'author',
                 'severity': 'positive',
@@ -696,13 +697,17 @@ class AuthorAnalyzer(BaseAnalyzer):
         """Generate an engaging, educational summary"""
         name = profile['display_name']
         
+        # Safely get expertise area
+        expertise_areas = profile.get('expertise_areas', [])
+        top_expertise = expertise_areas[0].get('topic', 'journalism') if expertise_areas else 'their field'
+        
         if score >= 80:
             if profile.get('awards'):
-                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {profile.get('years_experience', 'many')} years with recognized excellence in {profile.get('expertise_areas', [{}])[0].get('topic', 'journalism')}."
+                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {profile.get('years_experience', 'many')} years with recognized excellence in {top_expertise}."
             else:
-                return f"{name} is a highly credible journalist (score: {score}%) with {profile.get('years_experience', 'extensive')} years of experience. They've established themselves as a trusted voice in {profile.get('expertise_areas', [{}])[0].get('topic', 'their field')}."
+                return f"{name} is a highly credible journalist (score: {score}%) with {profile.get('years_experience', 'extensive')} years of experience. They've established themselves as a trusted voice in {top_expertise}."
         elif score >= 60:
-            return f"{name} is an established journalist (score: {score}%) with {profile.get('years_experience', 'several')} years of experience. They regularly cover {profile.get('expertise_areas', [{}])[0].get('topic', 'various topics')} with growing expertise."
+            return f"{name} is an established journalist (score: {score}%) with {profile.get('years_experience', 'several')} years of experience. They regularly cover {top_expertise} with growing expertise."
         else:
             if profile.get('years_experience', 0) < 3:
                 return f"{name} appears to be an emerging journalist (score: {score}%). While they have limited track record, everyone starts somewhere. Look for additional credibility indicators in their reporting."
@@ -752,10 +757,17 @@ class AuthorAnalyzer(BaseAnalyzer):
     def _calculate_publication_score(self, profile: Dict[str, Any]) -> int:
         """Calculate score based on publication quality"""
         score = 0
-        for pub in profile.get('publications', []):
+        publications = profile.get('publications', [])
+        
+        if not publications:
+            return 50  # Default score if no publications
+        
+        for pub in publications:
             pub_info = self.publication_scores.get(pub['name'], {})
             score += pub_info.get('score', 50)
-        return min(100, score // max(1, len(profile.get('publications', [1]))))
+        
+        # Calculate average score
+        return min(100, score // len(publications))
     
     def _calculate_consistency_score(self, profile: Dict[str, Any]) -> int:
         """Calculate consistency score"""
@@ -788,10 +800,11 @@ class AuthorAnalyzer(BaseAnalyzer):
             
             # Add expertise development
             for area in profile.get('expertise_areas', [])[:2]:
+                topic = area.get('topic', 'Unknown')
                 timeline.append({
                     'year': start_year + area.get('years', 1),
-                    'event': f'Began covering {area["topic"]}',
-                    'icon': self.expertise_icons.get(area['topic'], '📰'),
+                    'event': f'Began covering {topic}',
+                    'icon': self.expertise_icons.get(topic, '📰'),
                     'impact': 'positive'
                 })
             
@@ -866,8 +879,9 @@ class AuthorAnalyzer(BaseAnalyzer):
             parts.append(f"with {years} years in the field")
         
         # Expertise
-        if profile.get('expertise_areas'):
-            top_area = profile['expertise_areas'][0]['topic']
+        expertise_areas = profile.get('expertise_areas', [])
+        if expertise_areas:
+            top_area = expertise_areas[0].get('topic', 'journalism')
             parts.append(f"specializing in {top_area}")
         
         # Awards
@@ -963,12 +977,18 @@ class AuthorAnalyzer(BaseAnalyzer):
         
         # Calculate years of experience
         if analysis['timeline']:
-            oldest = min(analysis['timeline'])
-            newest = max(analysis['timeline'])
-            oldest_date = datetime.fromisoformat(oldest.replace('Z', '+00:00'))
-            newest_date = datetime.fromisoformat(newest.replace('Z', '+00:00'))
-            years = (newest_date - oldest_date).days / 365.25
-            analysis['years_experience'] = max(1, int(years))
+            try:
+                oldest = min(analysis['timeline'])
+                newest = max(analysis['timeline'])
+                # Handle different date formats
+                if isinstance(oldest, str):
+                    oldest_date = datetime.fromisoformat(oldest.replace('Z', '+00:00'))
+                    newest_date = datetime.fromisoformat(newest.replace('Z', '+00:00'))
+                    years = (newest_date - oldest_date).days / 365.25
+                    analysis['years_experience'] = max(1, int(years))
+            except Exception as e:
+                logger.warning(f"Error parsing article dates: {e}")
+                # Fallback to no experience data
         
         return analysis
     
@@ -1070,16 +1090,16 @@ class AuthorAnalyzer(BaseAnalyzer):
             'trust_badges': self._assign_badges(profile),
             'expertise_icons': [
                 {
-                    'topic': area['topic'],
-                    'icon': self.expertise_icons.get(area['topic'], '📰'),
-                    'count': area['article_count']
+                    'topic': area.get('topic', 'Unknown'),
+                    'icon': self.expertise_icons.get(area.get('topic', 'Unknown'), '📰'),
+                    'count': area.get('article_count', 0)
                 }
                 for area in profile.get('expertise_areas', [])[:3]
             ],
             'publication_logos': [
                 {
-                    'name': pub['name'],
-                    'color': self.publication_scores.get(pub['name'], {}).get('trust_color', '#666')
+                    'name': pub.get('name', 'Unknown'),
+                    'color': self.publication_scores.get(pub.get('name', 'Unknown'), {}).get('trust_color', '#666')
                 }
                 for pub in profile.get('publications', [])[:3]
             ]
