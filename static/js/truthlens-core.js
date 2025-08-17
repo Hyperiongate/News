@@ -338,7 +338,8 @@ class TruthLensApp {
                 return window.truthLensApp.utils.extractScore(d, ['credibility_score', 'score']);
             },
             author_analyzer: function(d) {
-                const score = window.truthLensApp.utils.extractScore(d, ['author_score', 'score', 'credibility_score']);
+                // FIXED: Check credibility_score which is what the backend actually returns
+                const score = window.truthLensApp.utils.extractScore(d, ['author_score', 'credibility_score', 'score']);
                 return score !== null ? score : (d.author_name ? 50 : null);
             },
             bias_detector: function(d) {
@@ -505,13 +506,15 @@ class TruthLensUtils {
     }
 
     extractScore(data, fields, defaultValue) {
-        if (defaultValue === undefined) defaultValue = 0;
+        if (defaultValue === undefined) defaultValue = null;
         if (!data || typeof data !== 'object') return defaultValue;
         
         for (let i = 0; i < fields.length; i++) {
             const field = fields[i];
-            const value = parseFloat(data[field]);
-            if (!isNaN(value)) return Math.round(value);
+            if (data.hasOwnProperty(field) && data[field] !== null && data[field] !== undefined) {
+                const value = parseFloat(data[field]);
+                if (!isNaN(value)) return Math.round(value);
+            }
         }
         
         return defaultValue;
