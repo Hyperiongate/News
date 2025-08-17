@@ -71,12 +71,15 @@ class TruthLensServices {
         return content;
     }
 
-    // Author Analysis Renderer
+    // Author Analysis Renderer - FIXED VERSION
     renderAuthorAnalysis(data) {
+        console.log('renderAuthorAnalysis - Received data:', data);
+        
         const authorName = data.author_name || 'Unknown Author';
-        const score = data.author_score || data.score || 0;
+        const score = data.author_score || data.credibility_score || data.score || 0;
         const verified = data.verified || (data.verification_status && data.verification_status.verified) || false;
         
+        // Main author profile section
         let content = this.renderSection('Author Profile', 'fa-id-card', 
             this.renderMetric('Name', authorName) +
             this.renderMetric('Credibility Score', score + '/100') +
@@ -85,7 +88,51 @@ class TruthLensServices {
                 verified ? 'status-high' : 'status-low')
         );
         
-        // Professional info
+        // Check for author_info object (nested structure)
+        if (data.author_info && typeof data.author_info === 'object') {
+            let infoContent = '';
+            
+            // Bio
+            if (data.author_info.bio) {
+                infoContent += '<div class="result-item" style="flex-direction: column; align-items: flex-start;">' +
+                    '<span class="result-label">Biography</span>' +
+                    '<span class="result-value" style="font-weight: normal; line-height: 1.5; margin-top: 0.25rem;">' + 
+                    data.author_info.bio + '</span>' +
+                    '</div>';
+            }
+            
+            // Position
+            if (data.author_info.position) {
+                infoContent += this.renderMetric('Current Position', data.author_info.position);
+            }
+            
+            // Experience
+            if (data.author_info.experience || data.author_info.years_experience) {
+                const exp = data.author_info.experience || data.author_info.years_experience;
+                infoContent += this.renderMetric('Experience', 
+                    typeof exp === 'number' ? exp + '+ years' : exp);
+            }
+            
+            // Expertise
+            if (data.author_info.expertise) {
+                if (Array.isArray(data.author_info.expertise)) {
+                    infoContent += this.renderMetric('Expertise Areas', data.author_info.expertise.join(', '));
+                } else {
+                    infoContent += this.renderMetric('Expertise', data.author_info.expertise);
+                }
+            }
+            
+            // Publications
+            if (data.author_info.publications) {
+                infoContent += this.renderMetric('Publications', data.author_info.publications);
+            }
+            
+            if (infoContent) {
+                content += this.renderSection('Author Information', 'fa-user', infoContent);
+            }
+        }
+        
+        // Professional info (alternative structure)
         if (data.professional_info) {
             const info = data.professional_info;
             let profContent = '';
@@ -103,6 +150,16 @@ class TruthLensServices {
             }
         }
         
+        // Analysis findings
+        if (data.findings && Array.isArray(data.findings)) {
+            let findingsHtml = '<ul style="margin: 0; padding-left: 1.5rem; color: var(--gray-700);">';
+            data.findings.forEach(function(finding) {
+                findingsHtml += '<li style="margin-bottom: 0.25rem;">' + finding + '</li>';
+            });
+            findingsHtml += '</ul>';
+            content += this.renderSection('Key Findings', 'fa-search', findingsHtml);
+        }
+        
         // Recent articles
         if (data.recent_articles && data.recent_articles.length > 0) {
             let articlesHtml = '';
@@ -113,6 +170,14 @@ class TruthLensServices {
                     '</div>';
             });
             content += this.renderSection('Recent Articles', 'fa-newspaper', articlesHtml);
+        }
+        
+        // If we still have very little content, add a note
+        if (!data.author_info && !data.professional_info && !data.findings && !data.recent_articles) {
+            content += this.renderSection('Limited Information', 'fa-exclamation-triangle', 
+                '<p style="color: var(--gray-600); font-style: italic;">Limited author information is available for this article. ' +
+                'This may affect the reliability assessment.</p>'
+            );
         }
         
         return content;
@@ -463,8 +528,17 @@ class TruthLensServices {
             },
             author_analyzer: function() {
                 addText('Author: ' + (data.author_name || 'Unknown'));
-                addText('Credibility Score: ' + (data.author_score || 0) + '/100');
+                addText('Credibility Score: ' + (data.author_score || data.credibility_score || 0) + '/100');
                 addText('Verified: ' + (data.verified ? 'Yes' : 'No'));
+                // Add author info if available
+                if (data.author_info) {
+                    if (data.author_info.bio) {
+                        addText('Bio: ' + data.author_info.bio);
+                    }
+                    if (data.author_info.position) {
+                        addText('Position: ' + data.author_info.position);
+                    }
+                }
             },
             bias_detector: function() {
                 const bias = data.bias_score || 0;
