@@ -384,15 +384,26 @@ class AnalysisResponseBuilder(ResponseBuilder):
                 'finding': f"Source credibility: {level}"
             })
         
-        # Author finding
+        # Author finding - FIXED to check credibility_score
         author = analysis_results.get('author_analyzer', {})
-        if author and author.get('credibility_level'):
-            findings.append({
-                'type': 'author',
-                'severity': 'high' if author.get('credibility_level') in ['Very Low', 'Low'] else 'medium',
-                'text': f"Author credibility: {author.get('credibility_level')}",
-                'finding': f"Author has {author.get('credibility_level')} credibility"
-            })
+        if author:
+            # Check both author_score and credibility_score
+            score = author.get('author_score') or author.get('credibility_score')
+            if score is not None:
+                level = 'Very Low' if score < 20 else 'Low' if score < 40 else 'Moderate' if score < 60 else 'High' if score < 80 else 'Very High'
+                findings.append({
+                    'type': 'author',
+                    'severity': 'high' if level in ['Very Low', 'Low'] else 'medium' if level == 'Moderate' else 'low',
+                    'text': f"Author credibility: {level} (score: {score}/100)",
+                    'finding': f"Author has {level} credibility"
+                })
+            elif author.get('author_name'):
+                findings.append({
+                    'type': 'author',
+                    'severity': 'medium',
+                    'text': 'Author identified but credibility could not be verified',
+                    'finding': 'Unverified author credibility'
+                })
         
         # Bias finding
         bias = analysis_results.get('bias_detector', {})
