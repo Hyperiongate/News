@@ -10,13 +10,13 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from .base_service import BaseService, AnalysisError
+from .base_analyzer import BaseAnalyzer, AnalysisError
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 
-class AuthorAnalyzer(BaseService):
+class AuthorAnalyzer(BaseAnalyzer):
     """Enhanced author analysis service that follows bio links"""
     
     def __init__(self):
