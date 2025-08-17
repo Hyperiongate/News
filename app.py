@@ -415,11 +415,21 @@ def analyze():
         if result.get('success', False):
             # Extract necessary data for AnalysisResponseBuilder
             article_data = result.get('article', {})
-            processing_time = result.get('pipeline_metadata', {}).get('total_time', 0)
-            services_used = list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys())
             
-            # Log successful services
-            logger.debug(f"Services used: {services_used}")
+            # CRITICAL FIX: Get the actual list of successful services
+            # The pipeline stores this in pipeline_metadata.successful_services
+            pipeline_metadata = result.get('pipeline_metadata', {})
+            services_used = pipeline_metadata.get('successful_services', [])
+            
+            # Get total processing time - it's stored as 'total_duration' not 'total_time'
+            processing_time = pipeline_metadata.get('total_duration', 0)
+            
+            # Log what we found
+            logger.info(f"=== CRITICAL DATA FLOW DEBUG ===")
+            logger.info(f"Pipeline metadata keys: {list(pipeline_metadata.keys())}")
+            logger.info(f"Services used: {services_used}")
+            logger.info(f"Processing time: {processing_time}")
+            logger.info(f"Result contains these service results: {[k for k in result.keys() if k not in ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 'errors', 'article']]}")
             
             # Use AnalysisResponseBuilder for successful analysis
             return AnalysisResponseBuilder.build_analysis_response(
