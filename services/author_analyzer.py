@@ -100,7 +100,8 @@ class AuthorAnalyzer(BaseAnalyzer):
             # Generate engaging summary
             summary = self._generate_engaging_summary(author_profile, credibility_score)
             
-            return {
+            # Build the response
+            response = {
                 'service': self.service_name,
                 'success': True,
                 'score': credibility_score,
@@ -160,6 +161,16 @@ class AuthorAnalyzer(BaseAnalyzer):
                 }
             }
             
+            # Log the response for debugging
+            logger.info(f"Author analysis response structure:")
+            logger.info(f"  - author_name: {response.get('author_name')}")
+            logger.info(f"  - credibility_score: {response.get('credibility_score')}")
+            logger.info(f"  - author_info.bio: {response.get('author_info', {}).get('bio', 'None')}")
+            logger.info(f"  - author_info.position: {response.get('author_info', {}).get('position', 'None')}")
+            logger.info(f"  - findings count: {len(response.get('findings', []))}")
+            
+            return response
+            
         except Exception as e:
             logger.error(f"Enhanced author analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
@@ -169,7 +180,11 @@ class AuthorAnalyzer(BaseAnalyzer):
         profile = {
             'name': author,
             'display_name': self._format_author_name(author),
-            'data_sources': []
+            'data_sources': [],
+            'years_experience': 0,
+            'verified': False,
+            'expertise': [],
+            'awards': []
         }
         
         # Check journalist database first
@@ -198,19 +213,42 @@ class AuthorAnalyzer(BaseAnalyzer):
         if self.news_api_key:
             article_history = self._fetch_article_history(author)
             if article_history:
-                profile.update(self._analyze_article_history(article_history))
+                history_analysis = self._analyze_article_history(article_history)
+                profile.update(history_analysis)
                 profile['data_sources'].append('news_api')
+                
+                # If we got publications from NewsAPI, generate a bio
+                if not profile.get('bio') and profile.get('publications'):
+                    top_pub = list(profile['publications'].keys())[0] if profile['publications'] else None
+                    if top_pub:
+                        years = profile.get('years_experience', 0)
+                        if years > 0:
+                            profile['bio'] = f"{author} is a journalist who has been writing for {years} years, with work appearing in {top_pub}."
+                        else:
+                            profile['bio'] = f"{author} is a journalist whose work has appeared in {top_pub}."
         
-        # If no bio yet, create a basic one
+        # If still no bio, create a basic one based on what we know
         if not profile.get('bio'):
-            if profile.get('years_experience', 0) > 0:
-                profile['bio'] = f"{author} is a journalist with {profile['years_experience']} years of experience."
+            domain = data.get('domain', '')
+            if domain:
+                # Clean domain name for bio
+                domain_name = domain.replace('www.', '').split('.')[0].title()
+                profile['bio'] = f"{author} is a journalist contributing to {domain_name}."
             else:
                 profile['bio'] = f"{author} is the credited author of this article."
         
         # Set position from organization if available
-        if not profile.get('position') and profile.get('organization'):
-            profile['position'] = f"Journalist at {profile['organization']}"
+        if not profile.get('position'):
+            if profile.get('organization'):
+                profile['position'] = f"Journalist at {profile['organization']}"
+            elif profile.get('publications') and len(profile['publications']) > 0:
+                top_pub = list(profile['publications'].keys())[0]
+                profile['position'] = f"Contributor at {top_pub}"
+            elif data.get('domain'):
+                domain_name = data['domain'].replace('www.', '').split('.')[0].title()
+                profile['position'] = f"Writer at {domain_name}"
+            else:
+                profile['position'] = "Independent Journalist"
         
         # Generate visual elements
         profile['visual_elements'] = self._generate_visual_elements(profile)
@@ -699,6 +737,32 @@ class AuthorAnalyzer(BaseAnalyzer):
         """Generate visually rich findings"""
         findings = []
         
+        # Always add at least one finding about the score
+        if score >= 70:
+            findings.append({
+                'type': 'author',
+                'severity': 'positive',
+                'text': f"✓ High credibility score ({score}%) indicates reliable authorship",
+                'finding': 'High Credibility',
+                'visual': {'icon': 'check-circle', 'color': 'green'}
+            })
+        elif score >= 40:
+            findings.append({
+                'type': 'author',
+                'severity': 'neutral',
+                'text': f"ℹ️ Moderate credibility score ({score}%) - verify claims independently",
+                'finding': 'Moderate Credibility',
+                'visual': {'icon': 'info-circle', 'color': 'blue'}
+            })
+        else:
+            findings.append({
+                'type': 'author',
+                'severity': 'medium',
+                'text': f"⚠️ Low credibility score ({score}%) - exercise caution",
+                'finding': 'Low Credibility',
+                'visual': {'icon': 'exclamation-triangle', 'color': 'orange'}
+            })
+        
         # Positive findings
         if profile.get('verified'):
             findings.append({
@@ -717,6 +781,14 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'finding': 'Veteran Journalist',
                 'visual': {'icon': 'star', 'color': 'gold'}
             })
+        elif profile.get('years_experience', 0) >= 5:
+            findings.append({
+                'type': 'author',
+                'severity': 'positive',
+                'text': f"✓ {profile['years_experience']} years of journalism experience",
+                'finding': 'Experienced Journalist',
+                'visual': {'icon': 'check', 'color': 'green'}
+            })
         
         # Expertise finding
         expertise_areas = profile.get('expertise_areas', [])
@@ -730,14 +802,37 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'visual': {'icon': 'target', 'color': 'blue'}
             })
         
-        # Neutral/negative findings
-        if not profile.get('verified') and score < 60:
+        # Publication finding
+        publications = profile.get('publications', [])
+        if publications:
+            pub_names = [pub['name'] for pub in publications[:2]]
             findings.append({
                 'type': 'author',
-                'severity': 'medium',
-                'text': 'ℹ️ Limited verification data available',
-                'finding': 'Unverified Author',
-                'visual': {'icon': 'info', 'color': 'orange'}
+                'severity': 'neutral',
+                'text': f"📰 Published in: {', '.join(pub_names)}",
+                'finding': 'Publication History',
+                'visual': {'icon': 'newspaper', 'color': 'gray'}
+            })
+        
+        # Neutral/negative findings
+        if not profile.get('verified') and score < 60:
+            if not any(f['finding'] == 'Low Credibility' for f in findings):
+                findings.append({
+                    'type': 'author',
+                    'severity': 'medium',
+                    'text': 'ℹ️ Limited verification data available',
+                    'finding': 'Unverified Author',
+                    'visual': {'icon': 'info', 'color': 'orange'}
+                })
+        
+        # Always ensure we have at least 2 findings
+        if len(findings) < 2:
+            findings.append({
+                'type': 'author',
+                'severity': 'neutral',
+                'text': '📝 Author credibility assessment based on available data',
+                'finding': 'Assessment Complete',
+                'visual': {'icon': 'clipboard-check', 'color': 'blue'}
             })
         
         return findings[:4]  # Limit to 4 most relevant findings
@@ -745,23 +840,37 @@ class AuthorAnalyzer(BaseAnalyzer):
     def _generate_engaging_summary(self, profile: Dict[str, Any], score: int) -> str:
         """Generate an engaging, educational summary"""
         name = profile['display_name']
+        domain = profile.get('domain', '')
         
         # Safely get expertise area
         expertise_areas = profile.get('expertise_areas', [])
-        top_expertise = expertise_areas[0].get('topic', 'journalism') if expertise_areas else 'their field'
+        top_expertise = expertise_areas[0].get('topic', 'journalism') if expertise_areas else None
+        
+        # Get years of experience
+        years = profile.get('years_experience', 0)
         
         if score >= 80:
             if profile.get('awards'):
-                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {profile.get('years_experience', 'many')} years with recognized excellence in {top_expertise}."
+                return f"{name} is an award-winning journalist with exceptional credibility (score: {score}%). Their distinguished career spans {years if years > 0 else 'many'} years with recognized excellence in {top_expertise or 'journalism'}."
+            elif years >= 10:
+                return f"{name} is a highly credible veteran journalist (score: {score}%) with {years} years of experience. They've established themselves as a trusted voice in {top_expertise or 'their field'}."
             else:
-                return f"{name} is a highly credible journalist (score: {score}%) with {profile.get('years_experience', 'extensive')} years of experience. They've established themselves as a trusted voice in {top_expertise}."
+                return f"{name} demonstrates high credibility (score: {score}%) as a journalist. Their work shows professional standards and reliable reporting practices."
         elif score >= 60:
-            return f"{name} is an established journalist (score: {score}%) with {profile.get('years_experience', 'several')} years of experience. They regularly cover {top_expertise} with growing expertise."
-        else:
-            if profile.get('years_experience', 0) < 3:
-                return f"{name} appears to be an emerging journalist (score: {score}%). While they have limited track record, everyone starts somewhere. Look for additional credibility indicators in their reporting."
+            if years >= 5:
+                return f"{name} is an established journalist (score: {score}%) with {years} years of experience. They regularly cover {top_expertise or 'various topics'} with growing expertise."
             else:
-                return f"{name} has a moderate credibility score ({score}%). Limited information is available about their journalism background. Consider evaluating their sources and fact-checking their claims."
+                return f"{name} shows good credibility (score: {score}%) as a journalist. While their track record is still developing, their work demonstrates professional reporting standards."
+        elif score >= 40:
+            if years > 0:
+                return f"{name} has a moderate credibility score ({score}%) with {years} years in journalism. Consider verifying key claims through additional sources."
+            else:
+                return f"{name} has a moderate credibility score ({score}%). Limited information is available about their journalism background. Consider evaluating their sources and fact-checking claims."
+        else:
+            if profile.get('verified') == False and not profile.get('data_sources'):
+                return f"{name} could not be verified in our journalism databases (score: {score}%). This may indicate a new journalist, pseudonym, or non-professional contributor. Exercise caution and verify all claims independently."
+            else:
+                return f"{name} has a low credibility score ({score}%). Very limited professional journalism history was found. Be cautious about accepting information at face value."
     
     def _handle_anonymous_author(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle anonymous or staff authors with educational context"""
