@@ -10,7 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from .base_analyzer import BaseAnalyzer, AnalysisError
+from .base_analyzer import BaseAnalyzer
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -20,14 +20,13 @@ class AuthorAnalyzer(BaseAnalyzer):
     """Enhanced author analysis service that follows bio links"""
     
     def __init__(self):
-        super().__init__()
-        self.service_name = 'author_analyzer'
-        self._check_availability()
+        super().__init__('author_analyzer')
+        # Note: _check_availability is called by parent __init__
         
     def _check_availability(self) -> bool:
         """Check if service is available"""
-        self._available = Config.is_service_enabled(self.service_name)
-        return self._available
+        # Service is always available as it doesn't require external APIs
+        return Config.is_service_enabled(self.service_name)
     
     def _extract_author_url(self, soup: BeautifulSoup, author_name: str, article_url: str) -> Optional[str]:
         """Extract author bio URL from the article"""
@@ -307,17 +306,17 @@ class AuthorAnalyzer(BaseAnalyzer):
             author_name = data.get('author', '').strip()
             
             if not author_name or author_name.lower() in ['unknown', 'staff', 'admin', 'editor']:
-                return self._create_response(
-                    success=True,
-                    data={
-                        'author_name': author_name or 'Unknown',
-                        'credibility_score': 0,
-                        'verified': False,
-                        'author_info': {
-                            'message': 'No identifiable author found'
-                        }
+                return {
+                    'service': self.service_name,
+                    'success': True,
+                    'timestamp': datetime.now().isoformat(),
+                    'author_name': author_name or 'Unknown',
+                    'credibility_score': 0,
+                    'verified': False,
+                    'author_info': {
+                        'message': 'No identifiable author found'
                     }
-                )
+                }
             
             # Initialize author data
             author_data = {
@@ -400,27 +399,13 @@ class AuthorAnalyzer(BaseAnalyzer):
                     
                     author_data['author_info']['bio'] = 'Limited author information available'
             
-            return self._create_response(success=True, data=author_data)
+            return {
+                'service': self.service_name,
+                'success': True,
+                'timestamp': datetime.now().isoformat(),
+                **author_data
+            }
             
         except Exception as e:
             logger.error(f"Author analysis failed: {e}")
-            return self._create_response(
-                success=False,
-                error=str(e)
-            )
-    
-    def _create_response(self, success: bool, data: Optional[Dict[str, Any]] = None, 
-                        error: Optional[str] = None) -> Dict[str, Any]:
-        """Create standardized response"""
-        response = {
-            'service': self.service_name,
-            'success': success,
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        if success and data:
-            response.update(data)
-        elif error:
-            response['error'] = error
-            
-        return response
+            return self.get_error_result(str(e))
