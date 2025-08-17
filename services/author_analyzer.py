@@ -103,34 +103,56 @@ class AuthorAnalyzer(BaseAnalyzer):
             return {
                 'service': self.service_name,
                 'success': True,
-                'data': {
-                    'score': credibility_score,
-                    'level': author_level['label'],
-                    'findings': findings,
-                    'summary': summary,
-                    
-                    # Enhanced visual data
+                'score': credibility_score,
+                'level': author_level['label'],
+                'findings': findings,
+                'summary': summary,
+                
+                # Direct fields for UI compatibility
+                'credibility_score': credibility_score,
+                'author_name': author,
+                'author_score': credibility_score,
+                'credibility_level': author_level['label'],
+                
+                # Verification status for UI
+                'verification_status': author_profile.get('verification_status', {}),
+                'verified': author_profile.get('verified', False),
+                
+                # Author info for UI display
+                'author_info': {
+                    'bio': author_profile.get('bio', f"{author} is the credited author of this article."),
+                    'position': author_profile.get('position'),
+                    'outlets': [pub['name'] for pub in author_profile.get('publications', [])],
+                    'years_experience': author_profile.get('years_experience', 0),
+                    'expertise_areas': [area['topic'] for area in author_profile.get('expertise_areas', [])],
+                    'awards': author_profile.get('awards', []),
+                    'verified': author_profile.get('verified', False),
+                    'current_position': author_profile.get('position')
+                },
+                
+                # Professional info for alternative UI paths
+                'professional_info': {
+                    'current_position': author_profile.get('position'),
+                    'outlets': [pub['name'] for pub in author_profile.get('publications', [])],
+                    'years_experience': author_profile.get('years_experience', 0)
+                },
+                
+                # Additional details
+                'publication_context': {
+                    'domain': data.get('domain'),
+                    'publications': author_profile.get('publications', [])
+                },
+                
+                # Enhanced visual data (keeping for future use)
+                'visual_data': {
                     'author_profile': author_profile,
                     'credibility_story': credibility_story,
                     'trust_visualization': trust_visualization,
                     'educational_insights': educational_insights,
-                    'author_badge': author_level,
-                    
-                    # Backward compatibility
-                    'credibility_score': credibility_score,
-                    'author_name': author,
-                    'verification_status': author_profile.get('verification_status', {}),
-                    
-                    # Rich details
-                    'details': {
-                        'years_experience': author_profile.get('years_experience', 0),
-                        'article_count': author_profile.get('total_articles', 0),
-                        'expertise_areas': author_profile.get('expertise_areas', []),
-                        'publications': author_profile.get('publications', []),
-                        'trust_indicators': author_profile.get('trust_indicators', {}),
-                        'visual_elements': author_profile.get('visual_elements', {})
-                    }
+                    'author_badge': author_level
                 },
+                
+                # Metadata
                 'metadata': {
                     'processing_time': time.time() - start_time,
                     'data_sources': author_profile.get('data_sources', []),
@@ -155,6 +177,22 @@ class AuthorAnalyzer(BaseAnalyzer):
         if db_info:
             profile.update(db_info)
             profile['data_sources'].append('journalist_database')
+            
+            # Generate bio from database info if not present
+            if not profile.get('bio') and db_info.get('organization'):
+                org = db_info['organization']
+                expertise = db_info.get('expertise', [])
+                awards = db_info.get('awards', [])
+                
+                bio_parts = [f"{author} is a journalist at {org}"]
+                
+                if expertise:
+                    bio_parts.append(f"specializing in {', '.join(expertise[:2])}")
+                
+                if awards:
+                    bio_parts.append(f"and recipient of the {awards[0]}")
+                
+                profile['bio'] = '. '.join(bio_parts) + '.'
         
         # Fetch article history from NewsAPI
         if self.news_api_key:
@@ -162,6 +200,17 @@ class AuthorAnalyzer(BaseAnalyzer):
             if article_history:
                 profile.update(self._analyze_article_history(article_history))
                 profile['data_sources'].append('news_api')
+        
+        # If no bio yet, create a basic one
+        if not profile.get('bio'):
+            if profile.get('years_experience', 0) > 0:
+                profile['bio'] = f"{author} is a journalist with {profile['years_experience']} years of experience."
+            else:
+                profile['bio'] = f"{author} is the credited author of this article."
+        
+        # Set position from organization if available
+        if not profile.get('position') and profile.get('organization'):
+            profile['position'] = f"Journalist at {profile['organization']}"
         
         # Generate visual elements
         profile['visual_elements'] = self._generate_visual_elements(profile)
@@ -719,26 +768,52 @@ class AuthorAnalyzer(BaseAnalyzer):
         return {
             'service': self.service_name,
             'success': True,
-            'data': {
-                'score': 20,
-                'level': 'Anonymous',
-                'findings': [{
-                    'type': 'author',
-                    'severity': 'high',
-                    'text': '⚠️ No author attribution provided',
-                    'finding': 'Anonymous Article',
-                    'visual': {'icon': 'alert', 'color': 'red'}
-                }],
-                'summary': 'This article lacks author attribution, making it impossible to verify the writer\'s credibility or expertise.',
+            'score': 20,
+            'level': 'Anonymous',
+            'findings': [{
+                'type': 'author',
+                'severity': 'high',
+                'text': '⚠️ No author attribution provided',
+                'finding': 'Anonymous Article',
+                'visual': {'icon': 'alert', 'color': 'red'}
+            }],
+            'summary': 'This article lacks author attribution, making it impossible to verify the writer\'s credibility or expertise.',
+            
+            # Direct fields for UI compatibility
+            'credibility_score': 20,
+            'author_name': 'Unknown',
+            'author_score': 20,
+            'credibility_level': 'Anonymous',
+            
+            # Verification status
+            'verification_status': {'verified': False, 'anonymous': True},
+            'verified': False,
+            
+            # Author info for UI
+            'author_info': {
+                'bio': 'No author information available',
+                'verified': False
+            },
+            
+            # Professional info
+            'professional_info': {},
+            
+            # Educational insights
+            'educational_insights': [{
+                'type': 'learn',
+                'icon': '💡',
+                'title': 'Why Bylines Matter',
+                'content': 'Author bylines create accountability. Anonymous articles should be evaluated extra carefully, checking sources and cross-referencing claims.'
+            }],
+            
+            # Visual data (for future use)
+            'visual_data': {
                 'educational_insights': [{
                     'type': 'learn',
                     'icon': '💡',
                     'title': 'Why Bylines Matter',
                     'content': 'Author bylines create accountability. Anonymous articles should be evaluated extra carefully, checking sources and cross-referencing claims.'
-                }],
-                'credibility_score': 20,
-                'author_name': 'Unknown',
-                'verification_status': {'verified': False, 'anonymous': True}
+                }]
             }
         }
     
