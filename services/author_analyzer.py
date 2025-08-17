@@ -600,6 +600,9 @@ class AuthorAnalyzer(BaseAnalyzer):
         # Calculate percentage
         final_score = int((score / max_score) * 100)
         
+        # Store the score in profile for later use
+        profile['credibility_score'] = min(100, final_score)
+        
         return min(100, final_score)
     
     def _determine_author_level(self, profile: Dict[str, Any]) -> Dict[str, Any]:
