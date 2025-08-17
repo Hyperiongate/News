@@ -390,10 +390,19 @@ class AnalysisPipeline:
                     if 'data' in extraction and isinstance(extraction['data'], dict):
                         # Preferred format: extract data from the 'data' field
                         data.update(extraction['data'])
+                        
+                        # CRITICAL FIX: Get HTML from the article extractor
+                        # The article extractor should have saved the raw HTML
+                        if 'html' in extraction['data']:
+                            data['html'] = extraction['data']['html']
+                        # Also check if it's in extraction_metadata
+                        elif 'extraction_metadata' in extraction['data'] and 'html' in extraction['data']['extraction_metadata']:
+                            data['html'] = extraction['data']['extraction_metadata']['html']
+                            
                     else:
                         # Legacy format: extract article fields from top level
                         article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
-                                        'domain', 'description', 'image', 'keywords', 'word_count']
+                                        'domain', 'description', 'image', 'keywords', 'word_count', 'html']
                         for field in article_fields:
                             if field in extraction:
                                 data[field] = extraction[field]
