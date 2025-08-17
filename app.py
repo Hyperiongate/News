@@ -666,8 +666,8 @@ def debug_test_analyze():
                 'step': 'Analysis Complete',
                 'timestamp': datetime.now().isoformat(),
                 'success': result.get('success', False),
-                'services_used': list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys()),
-                'failed_stages': result.get('pipeline_metadata', {}).get('failed_stages', {})
+                'services_used': list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys()) if result.get('pipeline_metadata') else [],
+                'failed_stages': result.get('pipeline_metadata', {}).get('failed_stages', {}) if result.get('pipeline_metadata') else {}
             })
             
         except Exception as e:
