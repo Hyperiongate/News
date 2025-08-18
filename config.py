@@ -51,7 +51,7 @@ class Config:
     FRED_API_KEY = os.getenv('FRED_API_KEY')
     MEDIASTACK_API_KEY = os.getenv('MEDIASTACK_API_KEY')
     
-    # Service Configurations - ONLY INCLUDE EXISTING SERVICES
+    # Service Configurations
     SERVICES = {
         'article_extractor': ServiceConfig(
             enabled=True,
@@ -142,63 +142,72 @@ class Config:
             timeout=15,
             max_retries=2,
             options={
-                'readability_analysis': True,
+                'readability_metrics': True,
                 'structure_analysis': True,
                 'evidence_quality': True,
                 'statistical_verification': True,
-                'generate_summary': bool(OPENAI_API_KEY),
-                'media_content_ratio': True
+                'media_ratio_analysis': True
             }
         ),
         'plagiarism_detector': ServiceConfig(
             enabled=bool(COPYLEAKS_API_KEY or COPYSCAPE_API_KEY),
-            timeout=60,
+            timeout=45,
             max_retries=2,
             api_key=COPYLEAKS_API_KEY or COPYSCAPE_API_KEY,
             options={
-                'use_copyleaks': bool(COPYLEAKS_API_KEY),
-                'use_copyscape': bool(COPYSCAPE_API_KEY),
-                'highlight_matches': True,
-                'similarity_threshold': 0.3
+                'min_match_length': 15,
+                'check_quotes': False,
+                'ignore_common_phrases': True,
+                'detailed_report': True
+            }
+        ),
+        'openai_enhancer': ServiceConfig(
+            enabled=bool(OPENAI_API_KEY),
+            timeout=30,
+            max_retries=2,
+            api_key=OPENAI_API_KEY,
+            options={
+                'model': 'gpt-4-turbo-preview',
+                'generate_summary': True,
+                'extract_claims': True,
+                'analyze_bias': True,
+                'suggest_fact_checks': True,
+                'generate_questions': True,
+                'overall_assessment': True,
+                'max_tokens': 2000,
+                'temperature': 0.3
             }
         )
     }
     
-    # Analysis Pipeline Settings
+    # Pipeline Configuration
     PIPELINE = {
-        'max_total_timeout': 120,  # 2 minutes max for entire analysis
+        'stages': ['extraction', 'analysis', 'enhancement'],
         'parallel_processing': True,
-        'continue_on_error': True,
-        'min_required_services': 3,  # Will be overridden by dynamic calculation
-        'dynamic_requirements': True,  # Enable dynamic minimum calculation
-        'cache_results': True,
-        'cache_ttl': 3600,  # 1 hour
+        'max_workers': 5,
+        'max_total_timeout': 120,  # 2 minutes
+        'min_required_services': 3,  # Minimum services for valid analysis
         'retry_failed_services': True,
-        'max_retry_attempts': 2,
-        'progressive_loading': True,  # Show results as they complete
-        'quality_thresholds': {
-            'minimum_text_length': 200,
-            'minimum_extraction_quality': 0.3,
-            'minimum_service_confidence': 0.5
-        }
+        'continue_on_error': True
     }
     
-    # Pipeline Stage Mapping - CRITICAL FOR PIPELINE TO FIND SERVICES
+    # Define which services belong to which pipeline stage
     PIPELINE_STAGES = {
-        'extraction': ['article_extractor'],  # Article extraction stage
-        'analysis': [  # Analysis stage includes all other services
+        'extraction': ['article_extractor'],
+        'analysis': [
             'source_credibility',
-            'author_analyzer', 
+            'author_analyzer',
             'bias_detector',
             'fact_checker',
             'transparency_analyzer',
             'manipulation_detector',
             'content_analyzer',
             'plagiarism_detector'
-        ]
+        ],
+        'enhancement': ['openai_enhancer']  # NEW - OpenAI runs in enhancement stage
     }
     
-    # Service to Stage Mapping (reverse mapping for convenience)
+    # Service to stage mapping (reverse lookup)
     SERVICE_TO_STAGE = {
         'article_extractor': 'extraction',
         'source_credibility': 'analysis',
@@ -208,7 +217,8 @@ class Config:
         'transparency_analyzer': 'analysis',
         'manipulation_detector': 'analysis',
         'content_analyzer': 'analysis',
-        'plagiarism_detector': 'analysis'
+        'plagiarism_detector': 'analysis',
+        'openai_enhancer': 'enhancement'  # NEW
     }
     
     # Trust Score Weights
@@ -343,58 +353,28 @@ class Config:
         api_key_checks = {
             'fact_checker': ['GOOGLE_FACT_CHECK_API_KEY', 'GOOGLE_FACTCHECK_API_KEY'],
             'plagiarism_detector': ['COPYLEAKS_API_KEY', 'COPYSCAPE_API_KEY'],
-            'article_extractor': ['SCRAPERAPI_KEY', 'SCRAPINGBEE_API_KEY']
+            'article_extractor': ['SCRAPERAPI_KEY', 'SCRAPINGBEE_API_KEY'],
+            'openai_enhancer': ['OPENAI_API_KEY']  # NEW
         }
         
         for service, key_names in api_key_checks.items():
             if cls.is_service_enabled(service):
-                found = False
+                found_key = False
                 for key_name in key_names:
-                    if cls.get_api_key(key_name):
-                        status['api_keys_found'].append(key_name)
-                        found = True
+                    if os.getenv(key_name):
+                        status['api_keys_found'].append(f"{service}: {key_name}")
+                        found_key = True
                         break
-                if not found:
-                    status['warnings'].append(f'{service} enabled but no API key found')
+                
+                if not found_key:
+                    status['warnings'].append(f"{service} enabled but no API key found")
                     status['api_keys_missing'].extend(key_names)
         
-        # Validate trust score weights sum to 1.0
-        weight_sum = sum(cls.TRUST_SCORE_WEIGHTS.values())
-        if abs(weight_sum - 1.0) > 0.01:
-            status['warnings'].append(f'Trust score weights sum to {weight_sum}, not 1.0')
-        
-        # Check service dependencies
-        if cls.is_service_enabled('content_analyzer'):
-            content_config = cls.get_service_config('content_analyzer')
-            if content_config.options.get('generate_summary') and not cls.OPENAI_API_KEY:
-                status['warnings'].append('Summary generation enabled but OPENAI_API_KEY not set')
-        
         # Check pipeline configuration
-        if cls.PIPELINE.get('min_required_services', 0) > len(status['enabled_services']):
-            if not cls.PIPELINE.get('dynamic_requirements', True):
-                status['errors'].append(
-                    f"Pipeline requires {cls.PIPELINE['min_required_services']} services "
-                    f"but only {len(status['enabled_services'])} are enabled"
-                )
-                status['valid'] = False
-            else:
-                status['warnings'].append(
-                    'Dynamic requirements enabled - pipeline will adjust minimum required services'
-                )
-        
-        # Validate pipeline stages mapping
-        for stage, services in cls.PIPELINE_STAGES.items():
-            for service in services:
-                if service not in cls.SERVICES:
-                    status['errors'].append(f"Pipeline stage '{stage}' references unknown service '{service}'")
-                    status['valid'] = False
+        if cls.PIPELINE['min_required_services'] > len(cls.get_all_enabled_services()):
+            status['warnings'].append(
+                f"Pipeline requires {cls.PIPELINE['min_required_services']} services "
+                f"but only {len(cls.get_all_enabled_services())} are enabled"
+            )
         
         return status
-
-
-# Initialize logging based on configuration
-logging.basicConfig(
-    level=Config.LOGGING['level'],
-    format=Config.LOGGING['format'],
-    filename=Config.LOGGING['file']
-)
