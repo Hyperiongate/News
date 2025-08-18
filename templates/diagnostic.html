@@ -23,179 +23,183 @@
             border-bottom: 2px solid #6366f1;
             padding-bottom: 10px;
         }
-        input, button {
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 16px;
-        }
-        input {
-            width: 70%;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-        }
-        button {
-            background: #6366f1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 10px 20px;
-        }
-        button:hover {
-            background: #4f46e5;
-        }
-        .output {
-            margin-top: 20px;
-            padding: 20px;
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
             background: #f8f9fa;
             border-radius: 5px;
             border: 1px solid #dee2e6;
-            white-space: pre-wrap;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .file-list {
+            margin: 10px 0;
+        }
+        .file-list li {
+            margin: 5px 0;
             font-family: monospace;
-            font-size: 14px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        .error {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        .success {
-            color: #28a745;
-            font-weight: bold;
-        }
-        .loading {
-            color: #007bff;
-            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>TruthLens API Diagnostic Tool</h1>
-        <p>This tool will help diagnose what's happening with the API response.</p>
+        <h1>TruthLens CSS Diagnostic</h1>
         
-        <div>
-            <input type="url" id="testUrl" placeholder="Enter a news URL to test..." value="https://www.bbc.com/news">
-            <button onclick="testAPI()">Test API</button>
+        <div class="test-section">
+            <h2>CSS File Loading Test</h2>
+            <p>Testing which CSS files are loading correctly:</p>
+            <ul class="file-list">
+                <li>/static/css/styles.css: <span id="styles-status" class="status">Testing...</span></li>
+                <li>/static/css/animations.css: <span id="animations-status" class="status">Testing...</span></li>
+                <li>/static/css/truthlens-enhanced.css: <span id="enhanced-status" class="status">Testing...</span></li>
+            </ul>
         </div>
-        
-        <div id="output" class="output" style="display: none;"></div>
+
+        <div class="test-section">
+            <h2>External Resources</h2>
+            <ul class="file-list">
+                <li>Font Awesome: <span id="fa-status" class="status">Testing...</span></li>
+                <li>Google Fonts: <span id="fonts-status" class="status">Testing...</span></li>
+                <li>Chart.js: <span id="chart-status" class="status">Testing...</span></li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>JavaScript Console Errors</h2>
+            <pre id="console-errors">Checking for JavaScript errors...</pre>
+        </div>
+
+        <div class="test-section">
+            <h2>CSS Variables Test</h2>
+            <p>Testing if CSS variables are defined:</p>
+            <pre id="css-vars">Testing CSS variables...</pre>
+        </div>
+
+        <div class="test-section">
+            <h2>Network Requests</h2>
+            <pre id="network-log">Monitoring network requests...</pre>
+        </div>
     </div>
 
     <script>
-        async function testAPI() {
-            const output = document.getElementById('output');
-            const url = document.getElementById('testUrl').value.trim();
-            
-            if (!url) {
-                output.innerHTML = '<span class="error">Please enter a URL</span>';
-                output.style.display = 'block';
-                return;
-            }
-            
-            output.style.display = 'block';
-            output.innerHTML = '<span class="loading">Testing API...</span>\n\n';
-            
-            // Log request details
-            output.innerHTML += 'REQUEST DETAILS:\n';
-            output.innerHTML += '================\n';
-            output.innerHTML += 'URL: ' + url + '\n';
-            output.innerHTML += 'Endpoint: /api/analyze\n';
-            output.innerHTML += 'Method: POST\n';
-            output.innerHTML += 'Payload: ' + JSON.stringify({ url: url, is_pro: true }, null, 2) + '\n\n';
-            
+        // Test CSS file loading
+        async function testCSSFile(url, statusId) {
             try {
-                const startTime = Date.now();
+                const response = await fetch(url);
+                const status = document.getElementById(statusId);
                 
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        is_pro: true
-                    })
-                });
-                
-                const elapsed = Date.now() - startTime;
-                
-                output.innerHTML += 'RESPONSE DETAILS:\n';
-                output.innerHTML += '================\n';
-                output.innerHTML += 'Status: ' + response.status + ' ' + response.statusText + '\n';
-                output.innerHTML += 'Time: ' + elapsed + 'ms\n';
-                output.innerHTML += 'Headers:\n';
-                
-                // Log response headers
-                for (let [key, value] of response.headers) {
-                    output.innerHTML += '  ' + key + ': ' + value + '\n';
-                }
-                
-                output.innerHTML += '\nRESPONSE BODY:\n';
-                output.innerHTML += '================\n';
-                
-                const responseText = await response.text();
-                output.innerHTML += 'Raw Response: ' + responseText + '\n\n';
-                
-                // Try to parse as JSON
-                try {
-                    const responseData = JSON.parse(responseText);
-                    output.innerHTML += 'Parsed JSON:\n';
-                    output.innerHTML += JSON.stringify(responseData, null, 2) + '\n\n';
-                    
-                    // Check response structure
-                    output.innerHTML += 'RESPONSE ANALYSIS:\n';
-                    output.innerHTML += '==================\n';
-                    output.innerHTML += 'Success field: ' + (responseData.success ? '<span class="success">true</span>' : '<span class="error">false</span>') + '\n';
-                    output.innerHTML += 'Has data field: ' + (responseData.data ? '<span class="success">yes</span>' : '<span class="error">no</span>') + '\n';
-                    output.innerHTML += 'Has error field: ' + (responseData.error ? '<span class="error">yes</span>' : '<span class="success">no</span>') + '\n';
-                    
-                    if (responseData.error) {
-                        output.innerHTML += '\nERROR DETAILS:\n';
-                        output.innerHTML += JSON.stringify(responseData.error, null, 2) + '\n';
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text.includes(':root') || text.includes('body')) {
+                        status.textContent = 'Loaded OK';
+                        status.className = 'status success';
+                    } else {
+                        status.textContent = 'Empty/Invalid';
+                        status.className = 'status warning';
                     }
-                    
-                    if (responseData.data) {
-                        output.innerHTML += '\nDATA STRUCTURE:\n';
-                        output.innerHTML += 'Has article: ' + (responseData.data.article ? 'yes' : 'no') + '\n';
-                        output.innerHTML += 'Has analysis: ' + (responseData.data.analysis ? 'yes' : 'no') + '\n';
-                        output.innerHTML += 'Has detailed_analysis: ' + (responseData.data.detailed_analysis ? 'yes' : 'no') + '\n';
-                        
-                        if (responseData.data.analysis) {
-                            output.innerHTML += '\nANALYSIS DETAILS:\n';
-                            output.innerHTML += 'Trust score: ' + (responseData.data.analysis.trust_score || 'missing') + '\n';
-                            output.innerHTML += 'Trust level: ' + (responseData.data.analysis.trust_level || 'missing') + '\n';
-                        }
-                        
-                        if (responseData.data.detailed_analysis) {
-                            output.innerHTML += '\nSERVICES FOUND:\n';
-                            const services = Object.keys(responseData.data.detailed_analysis);
-                            services.forEach(service => {
-                                const serviceData = responseData.data.detailed_analysis[service];
-                                const hasData = serviceData && Object.keys(serviceData).length > 0;
-                                output.innerHTML += '- ' + service + ': ' + (hasData ? 'has data' : 'empty') + '\n';
-                            });
-                        }
-                    }
-                    
-                } catch (parseError) {
-                    output.innerHTML += '<span class="error">Failed to parse response as JSON: ' + parseError.message + '</span>\n';
+                } else {
+                    status.textContent = `Error ${response.status}`;
+                    status.className = 'status error';
                 }
-                
             } catch (error) {
-                output.innerHTML += '\n<span class="error">REQUEST ERROR:\n';
-                output.innerHTML += '==============\n';
-                output.innerHTML += 'Error: ' + error.message + '\n';
-                output.innerHTML += 'Stack: ' + error.stack + '</span>\n';
+                document.getElementById(statusId).textContent = 'Failed to load';
+                document.getElementById(statusId).className = 'status error';
             }
         }
-        
-        // Test on load with default URL
-        window.onload = function() {
-            // You can uncomment this to auto-test on load
-            // testAPI();
+
+        // Test external resources
+        function testExternalResource(testFunc, statusId) {
+            try {
+                if (testFunc()) {
+                    document.getElementById(statusId).textContent = 'Loaded';
+                    document.getElementById(statusId).className = 'status success';
+                } else {
+                    document.getElementById(statusId).textContent = 'Not loaded';
+                    document.getElementById(statusId).className = 'status error';
+                }
+            } catch (error) {
+                document.getElementById(statusId).textContent = 'Error';
+                document.getElementById(statusId).className = 'status error';
+            }
+        }
+
+        // Capture console errors
+        const errors = [];
+        window.addEventListener('error', (e) => {
+            errors.push(`${e.message} at ${e.filename}:${e.lineno}:${e.colno}`);
+            document.getElementById('console-errors').textContent = errors.join('\n') || 'No errors detected';
+        });
+
+        // Test CSS variables
+        function testCSSVariables() {
+            const root = document.documentElement;
+            const computedStyle = getComputedStyle(root);
+            const variables = [
+                '--primary',
+                '--primary-dark',
+                '--gray-50',
+                '--space-md',
+                '--radius'
+            ];
+            
+            const results = variables.map(varName => {
+                const value = computedStyle.getPropertyValue(varName);
+                return `${varName}: ${value || 'NOT DEFINED'}`;
+            });
+            
+            document.getElementById('css-vars').textContent = results.join('\n');
+        }
+
+        // Monitor network requests
+        const networkLog = [];
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            networkLog.push(`FETCH: ${args[0]}`);
+            updateNetworkLog();
+            return originalFetch.apply(this, args);
         };
+
+        function updateNetworkLog() {
+            document.getElementById('network-log').textContent = networkLog.join('\n') || 'No requests logged';
+        }
+
+        // Run tests
+        window.addEventListener('load', () => {
+            // Test CSS files
+            testCSSFile('/static/css/styles.css', 'styles-status');
+            testCSSFile('/static/css/animations.css', 'animations-status');
+            testCSSFile('/static/css/truthlens-enhanced.css', 'enhanced-status');
+            
+            // Test external resources
+            testExternalResource(() => typeof Chart !== 'undefined', 'chart-status');
+            testExternalResource(() => document.querySelector('[class*="fa-"]'), 'fa-status');
+            testExternalResource(() => document.fonts.check('1em Inter'), 'fonts-status');
+            
+            // Test CSS variables
+            setTimeout(testCSSVariables, 1000);
+            
+            // Update console errors
+            setTimeout(() => {
+                if (errors.length === 0) {
+                    document.getElementById('console-errors').textContent = 'No JavaScript errors detected';
+                }
+            }, 2000);
+        });
     </script>
 </body>
 </html>
