@@ -3,614 +3,492 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI - Professional News Verification Platform</title>
-    
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
-    
-    <!-- Your CSS Files -->
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="/static/css/animations.css">
-    <link rel="stylesheet" href="/static/css/truthlens-enhanced.css">
+    <title>TruthLens AI - News Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6366f1;
+        }
+
+        .main-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="url"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        input[type="url"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #6366f1;
+            border: 2px solid #6366f1;
+        }
+
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .error-message {
+            display: none;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .trust-score {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .trust-score.high { color: #10b981; }
+        .trust-score.medium { color: #f59e0b; }
+        .trust-score.low { color: #ef4444; }
+
+        .service-result {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .service-result h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .service-result p {
+            color: #666;
+            margin: 0;
+        }
+
+        .examples {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .example-link {
+            color: #6366f1;
+            text-decoration: none;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        .example-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-
-    <!-- Header -->
-    <header class="header">
+    <header>
         <div class="header-content">
-            <div class="logo-section">
-                <div class="logo">
-                    <div class="logo-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="logo-text">
-                        <h1>TruthLens AI</h1>
-                        <p>Professional News Verification</p>
-                    </div>
-                </div>
-                <span class="pro-badge">PRO</span>
-            </div>
+            <div class="logo">TruthLens AI</div>
+            <span style="background: #fbbf24; color: #333; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">PRO</span>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="hero-content">
-            <h1 class="hero-title">Advanced AI-Powered News Analysis</h1>
-            <p class="hero-subtitle">
-                Verify news articles with our comprehensive suite of 8 specialized AI services.
-                Get detailed insights on credibility, bias, manipulation, and more.
-            </p>
-            
-            <!-- Service Pills -->
-            <div class="service-pills">
-                <div class="service-pill">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Source Credibility</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-user-check"></i>
-                    <span>Author Analysis</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-balance-scale"></i>
-                    <span>Bias Detection</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-check-double"></i>
-                    <span>Fact Verification</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-eye"></i>
-                    <span>Transparency</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-mask"></i>
-                    <span>Manipulation</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Content Analysis</span>
-                </div>
-                <div class="service-pill">
-                    <i class="fas fa-copy"></i>
-                    <span>Plagiarism Check</span>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div class="container">
+        <div class="main-card">
+            <h1>Analyze News Articles</h1>
+            <p class="subtitle">Get AI-powered insights on credibility, bias, and trustworthiness</p>
 
-    <!-- Input Section -->
-    <section class="input-section">
-        <div class="input-container">
-            <!-- Input Mode Toggle -->
-            <div class="input-mode-toggle">
-                <button class="mode-btn active" data-mode="url">
-                    <i class="fas fa-link"></i>
-                    Analyze URL
-                </button>
-                <button class="mode-btn" data-mode="text">
-                    <i class="fas fa-file-alt"></i>
-                    Analyze Text
-                </button>
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('url')">Analyze URL</button>
+                <button class="tab" onclick="switchTab('text')">Analyze Text</button>
             </div>
 
-            <!-- URL Input -->
-            <div id="urlInputWrapper" class="input-wrapper active">
-                <div class="input-explanation" id="urlExplanation">
-                    <p>Enter a news article URL to analyze its credibility and trustworthiness.</p>
-                </div>
-                
+            <div id="url-tab" class="tab-content active">
                 <div class="input-group">
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        placeholder="https://example.com/news-article" 
-                        class="url-input"
-                        autocomplete="url"
-                    >
-                    <button id="analyzeBtn" class="analyze-button">
-                        <i class="fas fa-search"></i>
-                        <span>Analyze Article</span>
-                    </button>
+                    <label for="urlInput">News Article URL</label>
+                    <input type="url" id="urlInput" placeholder="https://example.com/article">
                 </div>
-
-                <!-- Example URLs -->
-                <div class="examples-section">
-                    <p class="examples-label">Try an example:</p>
-                    <div class="example-buttons">
-                        <button class="example-btn" data-url="https://www.bbc.com/news/world-us-canada-68562045">
-                            BBC News
-                        </button>
-                        <button class="example-btn" data-url="https://www.reuters.com/technology/artificial-intelligence/">
-                            Reuters Tech
-                        </button>
-                        <button class="example-btn" data-url="https://apnews.com/article/climate-change-global-warming">
-                            AP Climate
-                        </button>
-                    </div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="analyzeURL()">Analyze Article</button>
+                    <button class="btn-secondary" onclick="resetForm()">Clear</button>
+                </div>
+                <div class="examples">
+                    Try an example: 
+                    <a class="example-link" onclick="setExample('https://www.bbc.com/news/world-us-canada-68562045')">BBC News</a>
+                    <a class="example-link" onclick="setExample('https://www.reuters.com/technology/')">Reuters</a>
                 </div>
             </div>
 
-            <!-- Text Input -->
-            <div id="textInputWrapper" class="input-wrapper">
-                <div class="input-explanation" id="textExplanation">
-                    <p>Paste article text directly for analysis (minimum 100 words).</p>
+            <div id="text-tab" class="tab-content">
+                <div class="input-group">
+                    <label for="textInput">Article Text</label>
+                    <textarea id="textInput" placeholder="Paste your article text here..."></textarea>
                 </div>
-                
-                <div class="text-input-group">
-                    <textarea 
-                        id="textInput" 
-                        placeholder="Paste your article text here..."
-                        class="text-input"
-                        rows="8"
-                    ></textarea>
-                    <div class="text-actions">
-                        <span class="word-count" id="wordCount">0 words</span>
-                        <button id="analyzeTextBtn" class="analyze-button">
-                            <i class="fas fa-search"></i>
-                            <span>Analyze Text</span>
-                        </button>
-                    </div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="analyzeText()">Analyze Text</button>
+                    <button class="btn-secondary" onclick="resetForm()">Clear</button>
                 </div>
             </div>
 
-            <!-- Error Message -->
-            <div class="error-message" id="errorMessage"></div>
+            <div id="errorMessage" class="error-message"></div>
         </div>
-    </section>
 
-    <!-- Results Section -->
-    <section class="results-section" id="resultsSection" style="display: none;">
-        <!-- Trust Score Summary -->
-        <div class="trust-score-section">
-            <div class="trust-score-content">
-                <div class="trust-gauge-container">
-                    <canvas id="trustScoreGauge"></canvas>
-                    <div class="trust-score-label">
-                        <span class="score-value" id="trustScoreValue">0</span>
-                        <span class="score-suffix">%</span>
-                    </div>
-                </div>
-                
-                <div class="trust-details">
-                    <h2 class="trust-title">Overall Trust Score</h2>
-                    <p class="trust-level" id="trustLevel">Analyzing...</p>
-                    <div class="trust-breakdown" id="trustBreakdown">
-                        <!-- Populated by JavaScript -->
-                    </div>
-                </div>
+        <div id="loading" class="main-card loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px;">Analyzing article...</p>
+        </div>
+
+        <div id="results" class="results">
+            <div class="result-card">
+                <h2 style="text-align: center;">Trust Score</h2>
+                <div id="trustScore" class="trust-score">--</div>
+                <p id="trustLevel" style="text-align: center; color: #666;"></p>
+            </div>
+
+            <div class="result-card">
+                <h2>Analysis Results</h2>
+                <div id="serviceResults"></div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-secondary" onclick="resetForm()">Analyze Another Article</button>
             </div>
         </div>
+    </div>
 
-        <!-- Key Findings -->
-        <div class="key-findings-section" id="keyFindings">
-            <!-- Populated by JavaScript -->
-        </div>
-
-        <!-- Article Metadata -->
-        <div class="article-metadata" id="articleMetadata">
-            <!-- Populated by JavaScript -->
-        </div>
-
-        <!-- Analysis Services -->
-        <div class="analysis-services" id="analysisServices">
-            <!-- Populated by JavaScript -->
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="results-actions">
-            <button class="action-btn primary" id="downloadPdfBtn">
-                <i class="fas fa-download"></i>
-                Download Report
-            </button>
-            <button class="action-btn secondary" id="shareResultsBtn">
-                <i class="fas fa-share"></i>
-                Share Results
-            </button>
-        </div>
-    </section>
-
-    <!-- Premium Features -->
-    <section class="premium-features">
-        <div class="features-content">
-            <h2>Why Choose TruthLens PRO?</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <i class="fas fa-bolt"></i>
-                    <h3>Real-time Analysis</h3>
-                    <p>Get instant results with our advanced AI processing</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-brain"></i>
-                    <h3>8 AI Services</h3>
-                    <p>Comprehensive analysis from multiple specialized models</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Detailed Reports</h3>
-                    <p>Export professional PDF reports with all findings</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-database"></i>
-                    <h3>Fact Database</h3>
-                    <p>Cross-reference with trusted fact-checking sources</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p>&copy; 2024 TruthLens AI. Professional news verification powered by advanced AI.</p>
-        </div>
-    </footer>
-
-    <!-- JavaScript -->
     <script>
-        // Application state
-        let currentAnalysis = null;
-        let isAnalyzing = false;
+        let currentTab = 'url';
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            updateWordCount();
-        });
-
-        // Setup all event listeners
-        function setupEventListeners() {
-            // Analyze buttons
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
             
-            if (analyzeBtn) {
-                analyzeBtn.addEventListener('click', analyzeArticle);
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            hideError();
+        }
+
+        function setExample(url) {
+            document.getElementById('urlInput').value = url;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('show');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            hideError();
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showResults(data) {
+            hideLoading();
+            
+            // Display trust score
+            const score = data.analysis.trust_score || 0;
+            const scoreEl = document.getElementById('trustScore');
+            scoreEl.textContent = score + '%';
+            
+            // Color code based on score
+            if (score >= 70) {
+                scoreEl.className = 'trust-score high';
+            } else if (score >= 40) {
+                scoreEl.className = 'trust-score medium';
+            } else {
+                scoreEl.className = 'trust-score low';
             }
             
-            if (analyzeTextBtn) {
-                analyzeTextBtn.addEventListener('click', analyzeArticle);
-            }
-
-            // Enter key handling
-            const urlInput = document.getElementById('urlInput');
-            if (urlInput) {
-                urlInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        analyzeArticle();
+            // Display trust level
+            document.getElementById('trustLevel').textContent = data.analysis.trust_level || 'Unknown';
+            
+            // Display service results
+            const servicesEl = document.getElementById('serviceResults');
+            servicesEl.innerHTML = '';
+            
+            if (data.detailed_analysis) {
+                Object.entries(data.detailed_analysis).forEach(([service, result]) => {
+                    if (result && Object.keys(result).length > 0) {
+                        const serviceDiv = document.createElement('div');
+                        serviceDiv.className = 'service-result';
+                        
+                        const serviceName = service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        const score = result.score || result.trust_score || 'N/A';
+                        const summary = result.summary || result.description || 'Analysis complete';
+                        
+                        serviceDiv.innerHTML = `
+                            <h3>${serviceName} (Score: ${score})</h3>
+                            <p>${summary}</p>
+                        `;
+                        
+                        servicesEl.appendChild(serviceDiv);
                     }
                 });
             }
-
-            // Mode toggle buttons
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    switchInputMode(this.getAttribute('data-mode'));
-                });
-            });
-
-            // Example buttons
-            document.querySelectorAll('.example-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const url = this.getAttribute('data-url');
-                    document.getElementById('urlInput').value = url;
-                    analyzeArticle();
-                });
-            });
-
-            // Text input word count
-            const textInput = document.getElementById('textInput');
-            if (textInput) {
-                textInput.addEventListener('input', updateWordCount);
-            }
-
-            // Download and share buttons
-            const downloadBtn = document.getElementById('downloadPdfBtn');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', downloadPDF);
-            }
-
-            const shareBtn = document.getElementById('shareResultsBtn');
-            if (shareBtn) {
-                shareBtn.addEventListener('click', shareResults);
-            }
-        }
-
-        // Switch between URL and text input modes
-        function switchInputMode(mode) {
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
-            });
-
-            const urlWrapper = document.getElementById('urlInputWrapper');
-            const textWrapper = document.getElementById('textInputWrapper');
-
-            if (mode === 'url') {
-                urlWrapper.classList.add('active');
-                textWrapper.classList.remove('active');
-            } else {
-                urlWrapper.classList.remove('active');
-                textWrapper.classList.add('active');
-            }
-        }
-
-        // Update word count for text input
-        function updateWordCount() {
-            const textInput = document.getElementById('textInput');
-            const wordCount = document.getElementById('wordCount');
             
-            if (textInput && wordCount) {
-                const text = textInput.value.trim();
-                const words = text ? text.split(/\s+/).length : 0;
-                wordCount.textContent = `${words} words`;
-            }
+            document.getElementById('results').classList.add('show');
         }
 
-        // Main analysis function
-        async function analyzeArticle() {
-            if (isAnalyzing) return;
-
-            // Get current mode
-            const isUrlMode = document.querySelector('.mode-btn[data-mode="url"]').classList.contains('active');
+        async function analyzeURL() {
+            const url = document.getElementById('urlInput').value.trim();
             
-            // Get input value
-            let input, payload;
-            if (isUrlMode) {
-                const urlInput = document.getElementById('urlInput');
-                input = urlInput ? urlInput.value.trim() : '';
-                
-                // Validate URL
-                if (!input) {
-                    showError('Please enter a URL to analyze');
-                    return;
-                }
-                
-                if (!isValidUrl(input)) {
-                    showError('Please enter a valid URL');
-                    return;
-                }
-                
-                payload = { url: input };
-            } else {
-                const textInput = document.getElementById('textInput');
-                input = textInput ? textInput.value.trim() : '';
-                
-                // Validate text
-                if (!input) {
-                    showError('Please enter text to analyze');
-                    return;
-                }
-                
-                const wordCount = input.split(/\s+/).length;
-                if (wordCount < 100) {
-                    showError('Please enter at least 100 words for accurate analysis');
-                    return;
-                }
-                
-                payload = { text: input };
+            if (!url) {
+                showError('Please enter a URL');
+                return;
             }
+            
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                showError('Please enter a valid URL starting with http:// or https://');
+                return;
+            }
+            
+            await performAnalysis({ url: url, is_pro: true });
+        }
 
-            // Start analysis
-            isAnalyzing = true;
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value.trim();
+            
+            if (!text) {
+                showError('Please enter some text');
+                return;
+            }
+            
+            if (text.split(' ').length < 50) {
+                showError('Please enter at least 50 words for accurate analysis');
+                return;
+            }
+            
+            await performAnalysis({ text: text, is_pro: true });
+        }
+
+        async function performAnalysis(payload) {
             showLoading();
-            hideError();
-
+            
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(payload)
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (response.ok && data.success) {
-                    currentAnalysis = data.data;
-                    displayResults(data.data);
+                    showResults(data.data);
                 } else {
-                    showError(data.error || 'Analysis failed. Please try again.');
+                    hideLoading();
+                    showError(data.error?.message || 'Analysis failed');
                 }
             } catch (error) {
-                console.error('Analysis error:', error);
-                showError('Network error. Please check your connection and try again.');
-            } finally {
-                isAnalyzing = false;
                 hideLoading();
+                showError('Network error. Please try again.');
+                console.error('Analysis error:', error);
             }
         }
 
-        // Validate URL
-        function isValidUrl(string) {
-            try {
-                new URL(string);
-                return true;
-            } catch (_) {
-                return false;
-            }
-        }
-
-        // Display results
-        function displayResults(data) {
-            // Show results section
-            document.getElementById('resultsSection').style.display = 'block';
-            
-            // Update trust score
-            updateTrustScore(data.trust_score, data.trust_level);
-            
-            // Update key findings
-            updateKeyFindings(data);
-            
-            // Update metadata
-            updateMetadata(data.metadata);
-            
-            // Update service results
-            updateServices(data.services);
-            
-            // Scroll to results
-            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Update trust score display
-        function updateTrustScore(score, level) {
-            // Update text values
-            document.getElementById('trustScoreValue').textContent = score;
-            document.getElementById('trustLevel').textContent = level;
-            
-            // Update gauge (placeholder - would use Chart.js)
-            const gauge = document.getElementById('trustScoreGauge');
-            if (gauge) {
-                // This would be replaced with actual Chart.js implementation
-                gauge.style.background = getScoreColor(score);
-            }
-            
-            // Update breakdown
-            const breakdown = document.getElementById('trustBreakdown');
-            breakdown.innerHTML = `
-                <div class="trust-indicator">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Based on ${Object.keys(currentAnalysis.services).length} analysis services</span>
-                </div>
-            `;
-        }
-
-        // Get color based on score
-        function getScoreColor(score) {
-            if (score >= 80) return '#10B981';
-            if (score >= 60) return '#3B82F6';
-            if (score >= 40) return '#F59E0B';
-            if (score >= 20) return '#EF4444';
-            return '#991B1B';
-        }
-
-        // Update key findings
-        function updateKeyFindings(data) {
-            const findings = document.getElementById('keyFindings');
-            
-            // This would be populated based on service results
-            findings.innerHTML = `
-                <h3>Key Findings</h3>
-                <div class="findings-grid">
-                    <div class="finding-card positive">
-                        <i class="fas fa-check-circle"></i>
-                        <p>Credible source with established reputation</p>
-                    </div>
-                    <div class="finding-card warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Some bias detected in content presentation</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Update metadata
-        function updateMetadata(metadata) {
-            const metadataEl = document.getElementById('articleMetadata');
-            
-            if (metadata && metadata.title) {
-                metadataEl.innerHTML = `
-                    <h3>Article Information</h3>
-                    <div class="metadata-grid">
-                        <div class="metadata-item">
-                            <span class="label">Title:</span>
-                            <span class="value">${metadata.title || 'N/A'}</span>
-                        </div>
-                        <div class="metadata-item">
-                            <span class="label">Publisher:</span>
-                            <span class="value">${metadata.publisher || 'N/A'}</span>
-                        </div>
-                        <div class="metadata-item">
-                            <span class="label">Date:</span>
-                            <span class="value">${metadata.publish_date || 'N/A'}</span>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        // Update services
-        function updateServices(services) {
-            const servicesEl = document.getElementById('analysisServices');
-            
-            servicesEl.innerHTML = '<h3>Detailed Analysis</h3>';
-            
-            // Create service cards
-            Object.entries(services).forEach(([serviceId, result]) => {
-                const serviceCard = createServiceCard(serviceId, result);
-                servicesEl.appendChild(serviceCard);
-            });
-        }
-
-        // Create service card
-        function createServiceCard(serviceId, result) {
-            const card = document.createElement('div');
-            card.className = 'service-card';
-            
-            const serviceName = serviceId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            
-            card.innerHTML = `
-                <div class="service-header">
-                    <h4>${serviceName}</h4>
-                    <span class="service-score">${result.score || 0}/100</span>
-                </div>
-                <div class="service-content">
-                    <p>${result.summary || 'Analysis complete'}</p>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        // Show loading state
-        function showLoading() {
-            document.getElementById('loadingOverlay').classList.add('active');
-        }
-
-        // Hide loading state
-        function hideLoading() {
-            document.getElementById('loadingOverlay').classList.remove('active');
-        }
-
-        // Show error message
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.classList.add('active');
-        }
-
-        // Hide error message
-        function hideError() {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.classList.remove('active');
-        }
-
-        // Download PDF report
-        function downloadPDF() {
-            if (!currentAnalysis) return;
-            
-            // This would be implemented with jsPDF
-            alert('PDF download feature coming soon!');
-        }
-
-        // Share results
-        function shareResults() {
-            if (!currentAnalysis) return;
-            
-            // This would implement sharing functionality
-            alert('Share feature coming soon!');
+        function resetForm() {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('textInput').value = '';
+            document.getElementById('results').classList.remove('show');
+            hideError();
         }
     </script>
 </body>
