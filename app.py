@@ -7,7 +7,7 @@ import sys
 import logging
 import json
 import traceback
-from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask import Flask, request, jsonify, send_from_directory, make_response, render_template
 from flask_cors import CORS
 import uuid
 from datetime import datetime
@@ -177,26 +177,22 @@ def internal_error(error):
 def index():
     """Serve the main application page"""
     try:
-        # First try static folder
-        index_path = os.path.join(app.static_folder, 'index.html')
-        if os.path.exists(index_path):
-            logger.debug(f"Serving index.html from static folder: {index_path}")
-            return send_from_directory(app.static_folder, 'index.html')
-        
-        # Then try templates folder
-        if app.template_folder:
-            template_path = os.path.join(app.template_folder, 'index.html')
-            if os.path.exists(template_path):
-                logger.debug(f"Serving index.html from templates folder: {template_path}")
-                return send_from_directory(app.template_folder, 'index.html')
-        
-        # If not found, return error
-        logger.error(f"index.html not found in {app.static_folder} or {app.template_folder}")
-        response, status_code = ResponseBuilder.error("Main page not found", 404)
-        return response, status_code
+        # Use Flask's render_template for templates folder
+        from flask import render_template
+        logger.debug(f"Rendering index.html from templates folder")
+        return render_template('index.html')
         
     except Exception as e:
         logger.error(f"Error serving index: {e}", exc_info=True)
+        # Try static folder as fallback
+        try:
+            index_path = os.path.join(app.static_folder, 'index.html')
+            if os.path.exists(index_path):
+                logger.debug(f"Serving index.html from static folder: {index_path}")
+                return send_from_directory(app.static_folder, 'index.html')
+        except:
+            pass
+        
         response, status_code = ResponseBuilder.error("Error loading main page", 500)
         return response, status_code
 
