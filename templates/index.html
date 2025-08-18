@@ -52,7 +52,7 @@
                 Verify news articles with our comprehensive suite of 8 specialized AI services.
                 Get detailed insights on credibility, bias, manipulation, and more.
             </p>
-
+            
             <!-- Service Pills -->
             <div class="service-pills">
                 <div class="service-pill">
@@ -69,15 +69,15 @@
                 </div>
                 <div class="service-pill">
                     <i class="fas fa-check-double"></i>
-                    <span>Fact Checking</span>
+                    <span>Fact Verification</span>
                 </div>
                 <div class="service-pill">
                     <i class="fas fa-eye"></i>
-                    <span>Transparency Analysis</span>
+                    <span>Transparency</span>
                 </div>
                 <div class="service-pill">
                     <i class="fas fa-mask"></i>
-                    <span>Manipulation Detection</span>
+                    <span>Manipulation</span>
                 </div>
                 <div class="service-pill">
                     <i class="fas fa-file-alt"></i>
@@ -85,187 +85,533 @@
                 </div>
                 <div class="service-pill">
                     <i class="fas fa-copy"></i>
-                    <span>Plagiarism Detection</span>
-                </div>
-            </div>
-
-            <!-- Input Section -->
-            <div class="input-container">
-                <!-- Input Mode Toggle -->
-                <div class="input-mode-toggle">
-                    <button class="mode-btn active" data-mode="url">
-                        <i class="fas fa-link"></i>
-                        URL Mode
-                    </button>
-                    <button class="mode-btn" data-mode="text">
-                        <i class="fas fa-file-text"></i>
-                        Text Mode
-                    </button>
-                </div>
-                
-                <!-- Mode Explanation -->
-                <div class="mode-explanation">
-                    <div id="urlExplanation" class="explanation-text active">
-                        <i class="fas fa-info-circle"></i>
-                        Enter the URL of a news article. We'll automatically extract and analyze the content.
-                    </div>
-                    <div id="textExplanation" class="explanation-text">
-                        <i class="fas fa-lightbulb"></i>
-                        If the website blocks our analyzer, copy and paste the entire article text here instead.
-                    </div>
-                </div>
-                
-                <!-- URL Input -->
-                <div id="urlInputWrapper" class="input-wrapper active">
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        class="url-input" 
-                        placeholder="Enter a news article URL to analyze..."
-                        autocomplete="off"
-                    >
-                    <button id="analyzeBtn" class="analyze-button">
-                        <i class="fas fa-search"></i>
-                        Analyze Article
-                    </button>
-                    <button id="resetBtn" class="reset-button">
-                        <i class="fas fa-redo"></i>
-                        Reset
-                    </button>
-                </div>
-                
-                <!-- Text Input (hidden by default) -->
-                <div id="textInputWrapper" class="input-wrapper text-wrapper">
-                    <textarea 
-                        id="textInput" 
-                        class="text-input" 
-                        placeholder="Paste the full article text here..."
-                        rows="6"
-                    ></textarea>
-                    <div class="text-controls">
-                        <button id="analyzeTextBtn" class="analyze-button">
-                            <i class="fas fa-search"></i>
-                            Analyze Text
-                        </button>
-                        <button id="resetTextBtn" class="reset-button">
-                            <i class="fas fa-redo"></i>
-                            Reset
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="errorMessage" class="error-message"></div>
-                
-                <!-- Example URLs for testing -->
-                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--gray-100); border-radius: var(--radius); text-align: center;">
-                    <p style="color: var(--gray-700); font-size: 0.813rem; margin-bottom: 0.375rem;">
-                        <strong>Note:</strong> Some sites like Washington Post block automated analysis. Try these instead:
-                    </p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: center; margin-top: 0.375rem;">
-                        <button class="example-btn" data-url="https://www.cnn.com">CNN</button>
-                        <button class="example-btn" data-url="https://www.bbc.com/news">BBC News</button>
-                        <button class="example-btn" data-url="https://www.reuters.com">Reuters</button>
-                        <button class="example-btn" data-url="https://www.npr.org">NPR</button>
-                        <button class="example-btn" data-url="https://www.theguardian.com">The Guardian</button>
-                    </div>
+                    <span>Plagiarism Check</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Results Section -->
-        <div id="resultsSection" class="results-section">
-            <!-- Enhanced Trust Score Section -->
-            <div class="trust-score-section">
-                <div class="trust-score-header">
-                    <div>
-                        <h2>Overall Trust Score Analysis</h2>
-                    </div>
-                    <div class="download-section">
-                        <button class="download-button" id="downloadPdfBtn">
-                            <i class="fas fa-file-pdf"></i>
-                            Download Report
-                        </button>
-                        <button class="download-button" id="shareResultsBtn">
-                            <i class="fas fa-share-alt"></i>
-                            Share
-                        </button>
-                    </div>
-                </div>
-                <div class="trust-score-content">
-                    <div class="trust-gauge-container">
-                        <div class="trust-gauge-visual">
-                            <canvas id="trustGauge"></canvas>
-                            <div class="trust-score-value">
-                                <span id="trustScoreNumber" class="trust-score-number">0</span>
-                                <span class="trust-score-label">out of 100</span>
-                            </div>
-                        </div>
-                        <div id="trustLevelIndicator" class="trust-level-indicator">
-                            <i id="trustLevelIcon" class="fas fa-circle trust-level-icon"></i>
-                            <span id="trustLevelText" class="trust-level-text">Analyzing...</span>
-                        </div>
-                    </div>
-                    <div class="trust-score-details">
-                        <h2>What This Score Means</h2>
-                        <p id="trustSummary" class="trust-summary"></p>
-                        
-                        <div class="what-we-analyzed">
-                            <div class="what-we-analyzed-title">
-                                <i class="fas fa-search"></i>
-                                What We Analyzed
-                            </div>
-                            <div class="what-we-analyzed-content">
-                                We examined 8 critical dimensions of this article including the credibility of the source and author, 
-                                potential biases, factual accuracy, transparency of information, manipulation techniques, 
-                                content quality, and originality. Each component contributes to the overall trust score.
-                            </div>
-                        </div>
+    <!-- Input Section -->
+    <section class="input-section">
+        <div class="input-container">
+            <!-- Input Mode Toggle -->
+            <div class="input-mode-toggle">
+                <button class="mode-btn active" data-mode="url">
+                    <i class="fas fa-link"></i>
+                    Analyze URL
+                </button>
+                <button class="mode-btn" data-mode="text">
+                    <i class="fas fa-file-alt"></i>
+                    Analyze Text
+                </button>
+            </div>
 
-                        <div id="trustBreakdown" class="trust-breakdown"></div>
+            <!-- URL Input -->
+            <div id="urlInputWrapper" class="input-wrapper active">
+                <div class="input-explanation" id="urlExplanation">
+                    <p>Enter a news article URL to analyze its credibility and trustworthiness.</p>
+                </div>
+                
+                <div class="input-group">
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        placeholder="https://example.com/news-article" 
+                        class="url-input"
+                        autocomplete="url"
+                    >
+                    <button id="analyzeBtn" class="analyze-button">
+                        <i class="fas fa-search"></i>
+                        <span>Analyze Article</span>
+                    </button>
+                </div>
+
+                <!-- Example URLs -->
+                <div class="examples-section">
+                    <p class="examples-label">Try an example:</p>
+                    <div class="example-buttons">
+                        <button class="example-btn" data-url="https://www.bbc.com/news/world-us-canada-68562045">
+                            BBC News
+                        </button>
+                        <button class="example-btn" data-url="https://www.reuters.com/technology/artificial-intelligence/">
+                            Reuters Tech
+                        </button>
+                        <button class="example-btn" data-url="https://apnews.com/article/climate-change-global-warming">
+                            AP Climate
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Article Info Section -->
-            <div class="article-info-section">
-                <div class="article-header">
-                    <h3 id="articleTitle" class="article-title"></h3>
-                    <div id="articleMeta" class="article-meta"></div>
+            <!-- Text Input -->
+            <div id="textInputWrapper" class="input-wrapper">
+                <div class="input-explanation" id="textExplanation">
+                    <p>Paste article text directly for analysis (minimum 100 words).</p>
                 </div>
-                <div id="keyFindings" class="key-findings"></div>
+                
+                <div class="text-input-group">
+                    <textarea 
+                        id="textInput" 
+                        placeholder="Paste your article text here..."
+                        class="text-input"
+                        rows="8"
+                    ></textarea>
+                    <div class="text-actions">
+                        <span class="word-count" id="wordCount">0 words</span>
+                        <button id="analyzeTextBtn" class="analyze-button">
+                            <i class="fas fa-search"></i>
+                            <span>Analyze Text</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Services Accordion -->
-            <div id="servicesAccordion" class="services-accordion"></div>
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage"></div>
         </div>
-    </main>
+    </section>
 
-    <!-- Load JavaScript Files - FIXED PATHS -->
-    <script src="/static/js/truthlens-core.js"></script>
-    <script src="/static/js/truthlens-display.js"></script>
-    <script src="/static/js/truthlens-services.js"></script>
-    
-    <style>
-        /* Additional styles for elements not in your CSS files */
-        .example-btn {
-            padding: 0.25rem 0.625rem;
-            background: white;
-            border: 1px solid #D1D5DB;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #374151;
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" style="display: none;">
+        <!-- Trust Score Summary -->
+        <div class="trust-score-section">
+            <div class="trust-score-content">
+                <div class="trust-gauge-container">
+                    <canvas id="trustScoreGauge"></canvas>
+                    <div class="trust-score-label">
+                        <span class="score-value" id="trustScoreValue">0</span>
+                        <span class="score-suffix">%</span>
+                    </div>
+                </div>
+                
+                <div class="trust-details">
+                    <h2 class="trust-title">Overall Trust Score</h2>
+                    <p class="trust-level" id="trustLevel">Analyzing...</p>
+                    <div class="trust-breakdown" id="trustBreakdown">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Findings -->
+        <div class="key-findings-section" id="keyFindings">
+            <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Article Metadata -->
+        <div class="article-metadata" id="articleMetadata">
+            <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Analysis Services -->
+        <div class="analysis-services" id="analysisServices">
+            <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="results-actions">
+            <button class="action-btn primary" id="downloadPdfBtn">
+                <i class="fas fa-download"></i>
+                Download Report
+            </button>
+            <button class="action-btn secondary" id="shareResultsBtn">
+                <i class="fas fa-share"></i>
+                Share Results
+            </button>
+        </div>
+    </section>
+
+    <!-- Premium Features -->
+    <section class="premium-features">
+        <div class="features-content">
+            <h2>Why Choose TruthLens PRO?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Real-time Analysis</h3>
+                    <p>Get instant results with our advanced AI processing</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-brain"></i>
+                    <h3>8 AI Services</h3>
+                    <p>Comprehensive analysis from multiple specialized models</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Detailed Reports</h3>
+                    <p>Export professional PDF reports with all findings</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-database"></i>
+                    <h3>Fact Database</h3>
+                    <p>Cross-reference with trusted fact-checking sources</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 TruthLens AI. Professional news verification powered by advanced AI.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Application state
+        let currentAnalysis = null;
+        let isAnalyzing = false;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateWordCount();
+        });
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Analyze buttons
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const analyzeTextBtn = document.getElementById('analyzeTextBtn');
+            
+            if (analyzeBtn) {
+                analyzeBtn.addEventListener('click', analyzeArticle);
+            }
+            
+            if (analyzeTextBtn) {
+                analyzeTextBtn.addEventListener('click', analyzeArticle);
+            }
+
+            // Enter key handling
+            const urlInput = document.getElementById('urlInput');
+            if (urlInput) {
+                urlInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        analyzeArticle();
+                    }
+                });
+            }
+
+            // Mode toggle buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchInputMode(this.getAttribute('data-mode'));
+                });
+            });
+
+            // Example buttons
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const url = this.getAttribute('data-url');
+                    document.getElementById('urlInput').value = url;
+                    analyzeArticle();
+                });
+            });
+
+            // Text input word count
+            const textInput = document.getElementById('textInput');
+            if (textInput) {
+                textInput.addEventListener('input', updateWordCount);
+            }
+
+            // Download and share buttons
+            const downloadBtn = document.getElementById('downloadPdfBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', downloadPDF);
+            }
+
+            const shareBtn = document.getElementById('shareResultsBtn');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', shareResults);
+            }
         }
-        
-        .example-btn:hover {
-            border-color: #6366F1;
-            color: #6366F1;
-            background: #F9FAFB;
+
+        // Switch between URL and text input modes
+        function switchInputMode(mode) {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+            });
+
+            const urlWrapper = document.getElementById('urlInputWrapper');
+            const textWrapper = document.getElementById('textInputWrapper');
+
+            if (mode === 'url') {
+                urlWrapper.classList.add('active');
+                textWrapper.classList.remove('active');
+            } else {
+                urlWrapper.classList.remove('active');
+                textWrapper.classList.add('active');
+            }
         }
-    </style>
+
+        // Update word count for text input
+        function updateWordCount() {
+            const textInput = document.getElementById('textInput');
+            const wordCount = document.getElementById('wordCount');
+            
+            if (textInput && wordCount) {
+                const text = textInput.value.trim();
+                const words = text ? text.split(/\s+/).length : 0;
+                wordCount.textContent = `${words} words`;
+            }
+        }
+
+        // Main analysis function
+        async function analyzeArticle() {
+            if (isAnalyzing) return;
+
+            // Get current mode
+            const isUrlMode = document.querySelector('.mode-btn[data-mode="url"]').classList.contains('active');
+            
+            // Get input value
+            let input, payload;
+            if (isUrlMode) {
+                const urlInput = document.getElementById('urlInput');
+                input = urlInput ? urlInput.value.trim() : '';
+                
+                // Validate URL
+                if (!input) {
+                    showError('Please enter a URL to analyze');
+                    return;
+                }
+                
+                if (!isValidUrl(input)) {
+                    showError('Please enter a valid URL');
+                    return;
+                }
+                
+                payload = { url: input };
+            } else {
+                const textInput = document.getElementById('textInput');
+                input = textInput ? textInput.value.trim() : '';
+                
+                // Validate text
+                if (!input) {
+                    showError('Please enter text to analyze');
+                    return;
+                }
+                
+                const wordCount = input.split(/\s+/).length;
+                if (wordCount < 100) {
+                    showError('Please enter at least 100 words for accurate analysis');
+                    return;
+                }
+                
+                payload = { text: input };
+            }
+
+            // Start analysis
+            isAnalyzing = true;
+            showLoading();
+            hideError();
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    currentAnalysis = data.data;
+                    displayResults(data.data);
+                } else {
+                    showError(data.error || 'Analysis failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showError('Network error. Please check your connection and try again.');
+            } finally {
+                isAnalyzing = false;
+                hideLoading();
+            }
+        }
+
+        // Validate URL
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            // Show results section
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Update trust score
+            updateTrustScore(data.trust_score, data.trust_level);
+            
+            // Update key findings
+            updateKeyFindings(data);
+            
+            // Update metadata
+            updateMetadata(data.metadata);
+            
+            // Update service results
+            updateServices(data.services);
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Update trust score display
+        function updateTrustScore(score, level) {
+            // Update text values
+            document.getElementById('trustScoreValue').textContent = score;
+            document.getElementById('trustLevel').textContent = level;
+            
+            // Update gauge (placeholder - would use Chart.js)
+            const gauge = document.getElementById('trustScoreGauge');
+            if (gauge) {
+                // This would be replaced with actual Chart.js implementation
+                gauge.style.background = getScoreColor(score);
+            }
+            
+            // Update breakdown
+            const breakdown = document.getElementById('trustBreakdown');
+            breakdown.innerHTML = `
+                <div class="trust-indicator">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Based on ${Object.keys(currentAnalysis.services).length} analysis services</span>
+                </div>
+            `;
+        }
+
+        // Get color based on score
+        function getScoreColor(score) {
+            if (score >= 80) return '#10B981';
+            if (score >= 60) return '#3B82F6';
+            if (score >= 40) return '#F59E0B';
+            if (score >= 20) return '#EF4444';
+            return '#991B1B';
+        }
+
+        // Update key findings
+        function updateKeyFindings(data) {
+            const findings = document.getElementById('keyFindings');
+            
+            // This would be populated based on service results
+            findings.innerHTML = `
+                <h3>Key Findings</h3>
+                <div class="findings-grid">
+                    <div class="finding-card positive">
+                        <i class="fas fa-check-circle"></i>
+                        <p>Credible source with established reputation</p>
+                    </div>
+                    <div class="finding-card warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Some bias detected in content presentation</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update metadata
+        function updateMetadata(metadata) {
+            const metadataEl = document.getElementById('articleMetadata');
+            
+            if (metadata && metadata.title) {
+                metadataEl.innerHTML = `
+                    <h3>Article Information</h3>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <span class="label">Title:</span>
+                            <span class="value">${metadata.title || 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="label">Publisher:</span>
+                            <span class="value">${metadata.publisher || 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="label">Date:</span>
+                            <span class="value">${metadata.publish_date || 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Update services
+        function updateServices(services) {
+            const servicesEl = document.getElementById('analysisServices');
+            
+            servicesEl.innerHTML = '<h3>Detailed Analysis</h3>';
+            
+            // Create service cards
+            Object.entries(services).forEach(([serviceId, result]) => {
+                const serviceCard = createServiceCard(serviceId, result);
+                servicesEl.appendChild(serviceCard);
+            });
+        }
+
+        // Create service card
+        function createServiceCard(serviceId, result) {
+            const card = document.createElement('div');
+            card.className = 'service-card';
+            
+            const serviceName = serviceId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            card.innerHTML = `
+                <div class="service-header">
+                    <h4>${serviceName}</h4>
+                    <span class="service-score">${result.score || 0}/100</span>
+                </div>
+                <div class="service-content">
+                    <p>${result.summary || 'Analysis complete'}</p>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Show loading state
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+        }
+
+        // Hide error message
+        function hideError() {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.classList.remove('active');
+        }
+
+        // Download PDF report
+        function downloadPDF() {
+            if (!currentAnalysis) return;
+            
+            // This would be implemented with jsPDF
+            alert('PDF download feature coming soon!');
+        }
+
+        // Share results
+        function shareResults() {
+            if (!currentAnalysis) return;
+            
+            // This would implement sharing functionality
+            alert('Share feature coming soon!');
+        }
+    </script>
 </body>
 </html>
