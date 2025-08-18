@@ -42,12 +42,12 @@ class SourceCredibility(BaseAnalyzer):
         # API key for NewsAPI (optional enhancement)
         self.news_api_key = Config.NEWS_API_KEY or Config.NEWSAPI_KEY
         
-        # Session for web requests with proper timeout
+        # Session for web requests
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        self.session.timeout = 10  # Default timeout
+        # Note: timeout must be passed to individual requests, not session
         
         # Initialize comprehensive source database
         self.source_database = self._initialize_source_database()
@@ -707,7 +707,7 @@ class SourceCredibility(BaseAnalyzer):
             
             # SSL finding
             ssl_info = tech.get('ssl', {})
-            if ssl_info.get('valid') is False:
+            if ssl_info.get('valid', None) is False:
                 findings.append({
                     'type': 'no_ssl',
                     'text': 'No valid SSL certificate',
