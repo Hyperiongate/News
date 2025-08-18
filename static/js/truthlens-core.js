@@ -277,7 +277,7 @@ class TruthLensApp {
 
             const data = responseData.data;
             
-            // Recalculate trust score
+            // FIXED: Recalculate trust score with proper bounds checking
             const recalculatedScore = this.calculateTrustScore(data.detailed_analysis);
             if (recalculatedScore !== null) {
                 data.analysis.trust_score = recalculatedScore;
@@ -311,60 +311,89 @@ class TruthLensApp {
         let weightedScore = 0;
         const serviceScores = {};
 
-        CONFIG.services.forEach(function(service) {
-            if (service.id === 'content_analyzer' || service.id === 'plagiarism_detector') return;
+        // FIXED: Only include services that should contribute to trust score
+        const scoringServices = CONFIG.services.filter(function(service) {
+            // Exclude services that don't directly affect trust score
+            return service.id !== 'content_analyzer' && service.id !== 'plagiarism_detector';
+        });
 
+        scoringServices.forEach(function(service) {
             const serviceData = detailedAnalysis[service.id];
             if (!serviceData || Object.keys(serviceData).length === 0) return;
 
             const score = window.truthLensApp.extractServiceScore(service.id, serviceData);
-            if (score !== null) {
+            if (score !== null && score !== undefined) {
                 serviceScores[service.id] = score;
                 weightedScore += score * service.weight;
                 totalWeight += service.weight;
             }
         });
 
+        // Calculate final score only if we have enough data
         if (Object.keys(serviceScores).length >= 2 && totalWeight > 0) {
-            return Math.round(weightedScore / totalWeight);
+            const rawScore = weightedScore / totalWeight;
+            // FIXED: Ensure score is within 0-100 bounds
+            return Math.round(Math.min(100, Math.max(0, rawScore)));
         }
 
-        return serviceScores.source_credibility ? Math.min(75, serviceScores.source_credibility) : null;
+        // Fallback to source credibility if available
+        if (serviceScores.source_credibility) {
+            return Math.min(100, Math.max(0, serviceScores.source_credibility));
+        }
+
+        return null;
     }
 
     extractServiceScore(serviceId, data) {
         const extractors = {
             source_credibility: function(d) {
-                return window.truthLensApp.utils.extractScore(d, ['credibility_score', 'score']);
+                const score = window.truthLensApp.utils.extractScore(d, ['credibility_score', 'score']);
+                return score !== null ? Math.min(100, Math.max(0, score)) : null;
             },
             author_analyzer: function(d) {
                 // FIXED: Check credibility_score which is what the backend actually returns
                 const score = window.truthLensApp.utils.extractScore(d, ['author_score', 'credibility_score', 'score']);
-                return score !== null ? score : (d.author_name ? 50 : null);
+                if (score !== null) return Math.min(100, Math.max(0, score));
+                // If no score but author exists, give partial credit
+                return d.author_name ? 50 : null;
             },
             bias_detector: function(d) {
                 const bias = window.truthLensApp.utils.extractScore(d, ['bias_score', 'score', 'overall_bias_score']);
-                return bias !== null ? (100 - bias) : null;
+                // Convert bias to objectivity score (inverse)
+                return bias !== null ? Math.min(100, Math.max(0, 100 - bias)) : null;
             },
             fact_checker: function(d) {
-                if (d.fact_checks && Array.isArray(d.fact_checks)) {
+                // Handle array of fact checks
+                if (d.fact_checks && Array.isArray(d.fact_checks) && d.fact_checks.length > 0) {
                     const total = d.fact_checks.length;
-                    if (total === 0) return 100;
                     const verified = d.fact_checks.filter(function(c) {
-                        return ['True', 'Verified', 'true'].indexOf(c.verdict) !== -1;
+                        return ['True', 'Verified', 'true', 'verified'].indexOf(c.verdict) !== -1;
                     }).length;
                     return Math.round((verified / total) * 100);
                 }
-                return window.truthLensApp.utils.extractScore(d, ['accuracy_score', 'score']);
+                // Fallback to accuracy score
+                const score = window.truthLensApp.utils.extractScore(d, ['accuracy_score', 'score']);
+                return score !== null ? Math.min(100, Math.max(0, score)) : null;
             },
             transparency_analyzer: function(d) {
-                return window.truthLensApp.utils.extractScore(d, ['transparency_score', 'score']);
+                const score = window.truthLensApp.utils.extractScore(d, ['transparency_score', 'score']);
+                return score !== null ? Math.min(100, Math.max(0, score)) : null;
             },
             manipulation_detector: function(d) {
                 const manipScore = window.truthLensApp.utils.extractScore(d, ['manipulation_score', 'score']);
-                if (manipScore !== null) return 100 - manipScore;
+                if (manipScore !== null) {
+                    // Convert manipulation to trustworthiness (inverse)
+                    return Math.min(100, Math.max(0, 100 - manipScore));
+                }
                 
-                const levelScores = { 'Low': 90, 'Minimal': 95, 'Moderate': 50, 'High': 20, 'Extreme': 10 };
+                // Handle level-based scoring
+                const levelScores = { 
+                    'Low': 90, 
+                    'Minimal': 95, 
+                    'Moderate': 50, 
+                    'High': 20, 
+                    'Extreme': 10 
+                };
                 return levelScores[d.manipulation_level] || null;
             }
         };
@@ -381,21 +410,25 @@ class TruthLensApp {
         const icon = item.querySelector('.service-expand-icon');
         const wasActive = item.classList.contains('active');
         
-        // Close all
+        // Close all accordions
         const allItems = document.querySelectorAll('.service-accordion-item');
         allItems.forEach(function(el) {
             el.classList.remove('active');
             const elContent = el.querySelector('.service-accordion-content');
             const elIcon = el.querySelector('.service-expand-icon');
             if (elContent) elContent.style.maxHeight = '0px';
-            if (elIcon) elIcon.style.transform = 'rotate(0deg)';
+            if (elIcon) elIcon.style.transform = 'translateY(-50%) rotate(0deg)';
         });
         
-        // Open clicked if it wasn't active
+        // Open clicked accordion if it wasn't active
         if (!wasActive) {
             item.classList.add('active');
-            if (content) content.style.maxHeight = content.scrollHeight + 'px';
-            if (icon) icon.style.transform = 'rotate(180deg)';
+            if (content) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }
+            if (icon) {
+                icon.style.transform = 'translateY(-50%) rotate(180deg)';
+            }
         }
     }
 
@@ -466,12 +499,15 @@ class TruthLensUtils {
             'timeout': 'Request timed out. Please try again.',
             '403': 'Access denied. This website blocks automated analysis.',
             '404': 'Article not found. Please check the URL.',
-            '500': 'Server error. Please try again later.'
+            '500': 'Server error. Please try again later.',
+            'extraction methods failed': 'Unable to extract article content. Try using Text Mode instead.',
+            'Invalid URL': 'Please enter a valid news article URL starting with http:// or https://',
+            'No domain': 'Could not determine the source domain from the URL.'
         };
         
         let displayMessage = message;
         for (const pattern in errorMap) {
-            if (message.toLowerCase().indexOf(pattern) !== -1) {
+            if (message.toLowerCase().indexOf(pattern.toLowerCase()) !== -1) {
                 displayMessage = errorMap[pattern];
                 break;
             }
@@ -513,7 +549,10 @@ class TruthLensUtils {
             const field = fields[i];
             if (data.hasOwnProperty(field) && data[field] !== null && data[field] !== undefined) {
                 const value = parseFloat(data[field]);
-                if (!isNaN(value)) return Math.round(value);
+                if (!isNaN(value)) {
+                    // FIXED: Ensure extracted scores are within bounds
+                    return Math.round(Math.min(100, Math.max(0, value)));
+                }
             }
         }
         
@@ -521,6 +560,9 @@ class TruthLensUtils {
     }
 
     getScoreColor(score) {
+        // Ensure score is within bounds
+        score = Math.min(100, Math.max(0, score));
+        
         if (score >= 80) return '#10b981';
         if (score >= 60) return '#3b82f6';
         if (score >= 40) return '#f59e0b';
@@ -528,6 +570,9 @@ class TruthLensUtils {
     }
 
     getTrustLevel(score) {
+        // Ensure score is within bounds
+        score = Math.min(100, Math.max(0, score));
+        
         if (score >= 80) return 'Very High';
         if (score >= 60) return 'High';
         if (score >= 40) return 'Moderate';
@@ -537,9 +582,18 @@ class TruthLensUtils {
 
     formatDate(dateString) {
         if (!dateString) return 'Unknown';
-        return new Date(dateString).toLocaleDateString('en-US', { 
-            year: 'numeric', month: 'long', day: 'numeric' 
-        });
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Unknown';
+            
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        } catch (e) {
+            return 'Unknown';
+        }
     }
 }
 
