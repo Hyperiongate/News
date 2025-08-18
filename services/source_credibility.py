@@ -12,9 +12,16 @@ import socket
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
-import whois
 import requests
 from bs4 import BeautifulSoup
+
+# Handle whois import gracefully
+try:
+    import whois
+    WHOIS_AVAILABLE = True
+except ImportError:
+    WHOIS_AVAILABLE = False
+    logging.warning("python-whois not installed. Domain age checking will be limited.")
 
 from config import Config
 from services.base_analyzer import BaseAnalyzer
@@ -35,11 +42,12 @@ class SourceCredibility(BaseAnalyzer):
         # API key for NewsAPI (optional enhancement)
         self.news_api_key = Config.NEWS_API_KEY or Config.NEWSAPI_KEY
         
-        # Session for web requests
+        # Session for web requests with proper timeout
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'NewsAnalyzer/1.0 (Source Credibility Service)'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
+        self.session.timeout = 10  # Default timeout
         
         # Initialize comprehensive source database
         self.source_database = self._initialize_source_database()
@@ -71,6 +79,10 @@ class SourceCredibility(BaseAnalyzer):
             if not domain:
                 return self.get_error_result("No domain or URL provided")
             
+            # Validate domain format
+            if not self._is_valid_domain(domain):
+                return self.get_error_result(f"Invalid domain format: {domain}")
+            
             # Check if we should do technical analysis
             check_technical = data.get('check_technical', True)
             
@@ -86,6 +98,18 @@ class SourceCredibility(BaseAnalyzer):
             
             # Generate summary
             summary = self._generate_summary(analysis, credibility_score)
+            
+            # Prepare technical analysis data with safe defaults
+            technical_data = {}
+            if 'technical' in analysis:
+                tech = analysis['technical']
+                technical_data = {
+                    'age_years': tech.get('age_years'),
+                    'age_credibility': tech.get('age_credibility', 'unknown'),
+                    'ssl': tech.get('ssl', {}),
+                    'registrar': tech.get('registrar'),
+                    'structure': tech.get('structure', {})
+                }
             
             return {
                 'service': self.service_name,
@@ -105,7 +129,7 @@ class SourceCredibility(BaseAnalyzer):
                         'description': analysis['database_info']['description'],
                         'in_database': analysis['in_database']
                     },
-                    'technical_analysis': analysis.get('technical', {}),
+                    'technical_analysis': technical_data,
                     'reputation_analysis': analysis.get('reputation', {}),
                     'transparency_indicators': analysis.get('transparency', {}),
                     'historical_context': analysis.get('history', {})
@@ -120,6 +144,14 @@ class SourceCredibility(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Source credibility analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
+    
+    def _is_valid_domain(self, domain: str) -> bool:
+        """Validate domain format"""
+        # Basic domain validation pattern
+        domain_pattern = re.compile(
+            r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$'
+        )
+        return bool(domain_pattern.match(domain))
     
     def _analyze_source_comprehensive(self, domain: str, check_technical: bool) -> Dict[str, Any]:
         """Perform comprehensive source analysis"""
@@ -147,23 +179,28 @@ class SourceCredibility(BaseAnalyzer):
         # 2. Technical analysis (if enabled)
         if check_technical:
             try:
+                technical_results = {}
+                
                 # Domain age and registration
-                domain_info = self._analyze_domain(domain)
-                analysis['technical'] = domain_info
-                if domain_info.get('age_days'):
-                    analysis['data_sources'].append('domain_registration')
+                if WHOIS_AVAILABLE:
+                    domain_info = self._analyze_domain(domain)
+                    technical_results.update(domain_info)
+                    if domain_info.get('age_days'):
+                        analysis['data_sources'].append('domain_registration')
                 
                 # SSL certificate
                 ssl_info = self._check_ssl(domain)
-                analysis['technical']['ssl'] = ssl_info
+                technical_results['ssl'] = ssl_info
                 if ssl_info.get('valid'):
                     analysis['data_sources'].append('ssl_certificate')
                 
                 # Website structure
                 structure_info = self._analyze_website_structure(domain)
-                analysis['technical']['structure'] = structure_info
+                technical_results['structure'] = structure_info
                 if structure_info.get('has_about_page'):
                     analysis['data_sources'].append('website_analysis')
+                
+                analysis['technical'] = technical_results
                     
             except Exception as e:
                 logger.warning(f"Technical analysis failed for {domain}: {e}")
@@ -202,7 +239,7 @@ class SourceCredibility(BaseAnalyzer):
         
         # Check subdomain matches (e.g., abcnews.go.com)
         for db_domain in self.source_database:
-            if clean_domain.endswith(db_domain) or db_domain.endswith(clean_domain):
+            if clean_domain.endswith('.' + db_domain) or db_domain.endswith('.' + clean_domain):
                 info = self.source_database[db_domain].copy()
                 info['description'] = self._get_credibility_description(info['credibility'])
                 return info
@@ -217,18 +254,26 @@ class SourceCredibility(BaseAnalyzer):
     
     def _analyze_domain(self, domain: str) -> Dict[str, Any]:
         """Analyze domain registration and age"""
+        if not WHOIS_AVAILABLE:
+            return {
+                'registered': False,
+                'error': 'WHOIS module not available'
+            }
+            
         try:
             # Get WHOIS information
             w = whois.whois(domain)
             
-            # Calculate domain age
-            creation_date = w.creation_date
-            if isinstance(creation_date, list):
-                creation_date = creation_date[0]
+            # Handle various whois response formats
+            creation_date = None
+            if hasattr(w, 'creation_date'):
+                creation_date = w.creation_date
+                if isinstance(creation_date, list) and creation_date:
+                    creation_date = creation_date[0]
             
             age_days = None
             age_years = None
-            if creation_date:
+            if creation_date and isinstance(creation_date, datetime):
                 age = datetime.now() - creation_date
                 age_days = age.days
                 age_years = age_days / 365.25
@@ -238,7 +283,7 @@ class SourceCredibility(BaseAnalyzer):
                 'creation_date': creation_date.isoformat() if creation_date else None,
                 'age_days': age_days,
                 'age_years': round(age_years, 1) if age_years else None,
-                'registrar': w.registrar if hasattr(w, 'registrar') else None,
+                'registrar': getattr(w, 'registrar', None),
                 'age_credibility': self._assess_age_credibility(age_days)
             }
             
@@ -274,20 +319,34 @@ class SourceCredibility(BaseAnalyzer):
                 with context.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert = ssock.getpeercert()
                     
-                    # Extract certificate info
-                    issued_to = dict(x[0] for x in cert['subject'])
-                    issuer = dict(x[0] for x in cert['issuer'])
+                    # Extract certificate info safely
+                    issued_to = dict(x[0] for x in cert.get('subject', []))
+                    issuer = dict(x[0] for x in cert.get('issuer', []))
                     
-                    # Check validity dates
-                    not_before = datetime.strptime(cert['notBefore'], '%b %d %H:%M:%S %Y %Z')
-                    not_after = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
+                    # Parse dates more safely
+                    not_before = cert.get('notBefore', '')
+                    not_after = cert.get('notAfter', '')
+                    
+                    # Handle different date formats
+                    try:
+                        # Try parsing with timezone
+                        not_after_dt = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
+                    except ValueError:
+                        try:
+                            # Try without timezone
+                            not_after_dt = datetime.strptime(not_after.replace(' GMT', ''), '%b %d %H:%M:%S %Y')
+                        except ValueError:
+                            # Fallback to current time + 90 days
+                            not_after_dt = datetime.now() + timedelta(days=90)
+                    
+                    days_until_expiry = (not_after_dt - datetime.now()).days
                     
                     return {
                         'valid': True,
                         'issued_to': issued_to.get('commonName', domain),
                         'issuer': issuer.get('organizationName', 'Unknown'),
-                        'expires': not_after.isoformat(),
-                        'days_until_expiry': (not_after - datetime.now()).days,
+                        'expires': not_after_dt.isoformat(),
+                        'days_until_expiry': days_until_expiry,
                         'is_trusted_issuer': self._is_trusted_issuer(issuer.get('organizationName', ''))
                     }
                     
@@ -303,57 +362,82 @@ class SourceCredibility(BaseAnalyzer):
         trusted_issuers = [
             'DigiCert', 'Let\'s Encrypt', 'Comodo', 'GeoTrust',
             'GlobalSign', 'GoDaddy', 'Symantec', 'Thawte',
-            'RapidSSL', 'Sectigo', 'Entrust', 'VeriSign'
+            'RapidSSL', 'Sectigo', 'Entrust', 'VeriSign',
+            'Amazon', 'Google Trust Services', 'Cloudflare'
         ]
         
-        return any(trusted in issuer for trusted in trusted_issuers)
+        issuer_lower = issuer.lower()
+        return any(trusted.lower() in issuer_lower for trusted in trusted_issuers)
     
     def _analyze_website_structure(self, domain: str) -> Dict[str, Any]:
         """Analyze website structure for credibility indicators"""
         try:
             # Check main pages
             pages_to_check = {
-                'about': ['about', 'about-us', 'who-we-are'],
-                'contact': ['contact', 'contact-us'],
-                'privacy': ['privacy', 'privacy-policy'],
-                'terms': ['terms', 'terms-of-service', 'terms-of-use']
+                'about': ['about', 'about-us', 'who-we-are', 'mission'],
+                'contact': ['contact', 'contact-us', 'reach-us'],
+                'privacy': ['privacy', 'privacy-policy', 'privacy-statement'],
+                'terms': ['terms', 'terms-of-service', 'terms-of-use', 'tos']
             }
             
             found_pages = {}
             base_url = f"https://{domain}"
             
-            # Check homepage first
-            response = self.session.get(base_url, timeout=10)
-            response.raise_for_status()
+            # Make request with timeout
+            try:
+                response = self.session.get(base_url, timeout=10, allow_redirects=True)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                logger.debug(f"Failed to fetch {base_url}: {e}")
+                return {'error': 'Could not access website'}
             
-            soup = BeautifulSoup(response.text, 'html.parser')
+            # Parse with BeautifulSoup
+            try:
+                soup = BeautifulSoup(response.text, 'html.parser')
+            except Exception as e:
+                logger.debug(f"Failed to parse HTML: {e}")
+                return {'error': 'Could not parse website content'}
             
             # Look for important pages in navigation
             for page_type, paths in pages_to_check.items():
                 found = False
                 for path in paths:
-                    # Check links
-                    if soup.find('a', href=re.compile(f'/{path}', re.I)):
+                    # Check links (case insensitive)
+                    links = soup.find_all('a', href=re.compile(f'/{path}(?:/|$|\\?|#)', re.I))
+                    if links:
                         found = True
                         break
                 found_pages[f'has_{page_type}_page'] = found
             
             # Check for author/editorial info
-            found_pages['has_authors'] = bool(
-                soup.find(text=re.compile(r'(author|writer|journalist|reporter)', re.I))
+            author_patterns = [
+                r'author|writer|journalist|reporter|editor|by\s+\w+',
+                r'written\s+by|published\s+by|staff'
+            ]
+            found_pages['has_authors'] = any(
+                soup.find(text=re.compile(pattern, re.I)) 
+                for pattern in author_patterns
             )
             
             # Check for dates/timestamps
-            found_pages['has_dates'] = bool(
-                soup.find(text=re.compile(r'\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}|published|updated', re.I))
+            date_patterns = [
+                r'\d{4}-\d{2}-\d{2}',
+                r'\d{1,2}/\d{1,2}/\d{4}',
+                r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}',
+                r'published|updated|posted'
+            ]
+            found_pages['has_dates'] = any(
+                soup.find(text=re.compile(pattern, re.I))
+                for pattern in date_patterns
             )
             
             # Check for social media links
-            social_media = ['twitter', 'facebook', 'linkedin', 'youtube']
-            found_pages['social_media_links'] = sum(
-                1 for sm in social_media 
-                if soup.find('a', href=re.compile(sm, re.I))
-            )
+            social_media = ['twitter.com', 'facebook.com', 'linkedin.com', 'youtube.com', 'instagram.com']
+            social_links = 0
+            for sm in social_media:
+                if soup.find('a', href=re.compile(sm, re.I)):
+                    social_links += 1
+            found_pages['social_media_links'] = social_links
             
             return found_pages
             
@@ -385,16 +469,20 @@ class SourceCredibility(BaseAnalyzer):
                 
                 if response.status_code == 200:
                     data = response.json()
-                    reputation['mentions_found'] = data.get('totalResults', 0) > 0
-                    reputation['mention_count'] = data.get('totalResults', 0)
-                    reputation['recent_coverage'] = reputation['mention_count'] > 5
+                    total_results = data.get('totalResults', 0)
+                    reputation['mentions_found'] = total_results > 0
+                    reputation['mention_count'] = total_results
+                    reputation['recent_coverage'] = total_results > 5
                     
                     # Analyze who's mentioning them
                     if data.get('articles'):
-                        sources = [a.get('source', {}).get('name', '') for a in data['articles'][:20]]
+                        sources = [
+                            article.get('source', {}).get('name', '') 
+                            for article in data.get('articles', [])[:20]
+                        ]
                         reputable_mentions = sum(
                             1 for s in sources 
-                            if any(rep in s.lower() for rep in ['reuters', 'ap', 'bbc', 'npr'])
+                            if any(rep in s.lower() for rep in ['reuters', 'ap', 'bbc', 'npr', 'guardian'])
                         )
                         reputation['reputable_mentions'] = reputable_mentions
                         
@@ -404,7 +492,7 @@ class SourceCredibility(BaseAnalyzer):
         # Fallback assessment based on domain
         if not reputation['mentions_found']:
             # Well-known domains get benefit of doubt
-            well_known = ['cnn', 'bbc', 'reuters', 'ap', 'npr', 'wsj', 'nytimes']
+            well_known = ['cnn', 'bbc', 'reuters', 'ap', 'npr', 'wsj', 'nytimes', 'guardian']
             if any(wk in domain.lower() for wk in well_known):
                 reputation['assumed_reputable'] = True
         
@@ -464,7 +552,7 @@ class SourceCredibility(BaseAnalyzer):
             history['issue_description'] = self._get_issue_description(db_info)
         
         # Check if it's a known satire/fake news site
-        fake_indicators = ['satire', 'fake', 'hoax', 'parody']
+        fake_indicators = ['satire', 'fake', 'hoax', 'parody', 'onion']
         if any(indicator in domain.lower() for indicator in fake_indicators):
             history['potential_satire'] = True
         
@@ -473,12 +561,15 @@ class SourceCredibility(BaseAnalyzer):
             'rt.com': 'Russian state media',
             'sputniknews.com': 'Russian state media',
             'xinhuanet.com': 'Chinese state media',
-            'presstv.ir': 'Iranian state media'
+            'presstv.ir': 'Iranian state media',
+            'telesurtv.net': 'Venezuelan state media',
+            'cgtn.com': 'Chinese state media'
         }
         
-        if domain in state_media:
+        clean_domain = domain.lower().replace('www.', '')
+        if clean_domain in state_media:
             history['state_media'] = True
-            history['state_affiliation'] = state_media[domain]
+            history['state_affiliation'] = state_media[clean_domain]
         
         return history
     
@@ -486,7 +577,7 @@ class SourceCredibility(BaseAnalyzer):
         """Calculate overall credibility score"""
         score = 50  # Base score
         
-        # Database credibility (most important)
+        # Database credibility (most important - 40 points range)
         db_cred = analysis['database_info']['credibility']
         if db_cred == 'High':
             score = 85
@@ -500,50 +591,60 @@ class SourceCredibility(BaseAnalyzer):
         # Adjust based on technical factors (if available)
         tech = analysis.get('technical', {})
         
-        # Domain age
-        if tech.get('age_years'):
-            if tech['age_years'] >= 5:
+        # Domain age (up to +/-10 points)
+        if tech.get('age_years') is not None:
+            if tech['age_years'] >= 10:
+                score += 10
+            elif tech['age_years'] >= 5:
                 score += 5
             elif tech['age_years'] >= 2:
                 score += 3
             elif tech['age_years'] < 0.5:
                 score -= 10
+            elif tech['age_years'] < 1:
+                score -= 5
         
-        # SSL certificate
-        if tech.get('ssl', {}).get('valid'):
+        # SSL certificate (up to +/-7 points)
+        ssl_info = tech.get('ssl', {})
+        if ssl_info.get('valid'):
             score += 5
-            if tech['ssl'].get('is_trusted_issuer'):
+            if ssl_info.get('is_trusted_issuer'):
                 score += 2
-        else:
+        elif ssl_info.get('valid') is False:
             score -= 5
         
-        # Website structure
+        # Website structure (up to +10 points)
         structure = tech.get('structure', {})
-        if structure.get('has_about_page') and structure.get('has_contact_page'):
-            score += 5
-        if structure.get('has_authors'):
-            score += 5
+        if structure:
+            if structure.get('has_about_page') and structure.get('has_contact_page'):
+                score += 5
+            if structure.get('has_authors'):
+                score += 5
         
-        # Reputation
+        # Reputation (up to +10 points)
         rep = analysis.get('reputation', {})
         if rep.get('reputable_mentions', 0) >= 3:
             score += 10
         elif rep.get('mention_count', 0) > 10:
             score += 5
         
-        # Transparency
+        # Transparency (up to +/-5 points)
         trans = analysis.get('transparency', {})
         if trans.get('score', 0) >= 80:
             score += 5
         elif trans.get('score', 0) < 40:
             score -= 5
         
-        # Historical issues
-        if analysis.get('history', {}).get('known_issues'):
+        # Historical issues (negative adjustments)
+        history = analysis.get('history', {})
+        if history.get('known_issues'):
             score -= 10
-        if analysis.get('history', {}).get('state_media'):
+        if history.get('state_media'):
             score -= 15
+        if history.get('potential_satire'):
+            score -= 20
         
+        # Ensure score is within bounds
         return max(0, min(100, score))
     
     def _get_credibility_level(self, score: int) -> str:
@@ -586,34 +687,37 @@ class SourceCredibility(BaseAnalyzer):
         
         # Technical findings
         tech = analysis.get('technical', {})
-        if tech.get('age_years'):
-            if tech['age_years'] < 1:
+        if tech and not tech.get('error'):
+            # Domain age
+            if tech.get('age_years') is not None:
+                if tech['age_years'] < 1:
+                    findings.append({
+                        'type': 'new_domain',
+                        'text': f"Domain is only {tech['age_years']:.1f} years old",
+                        'severity': 'high',
+                        'explanation': 'New domains have less established credibility'
+                    })
+                elif tech['age_years'] > 10:
+                    findings.append({
+                        'type': 'established_domain',
+                        'text': f"Well-established domain ({tech['age_years']:.0f} years)",
+                        'severity': 'positive',
+                        'explanation': 'Long-standing web presence indicates stability'
+                    })
+            
+            # SSL finding
+            ssl_info = tech.get('ssl', {})
+            if ssl_info.get('valid') is False:
                 findings.append({
-                    'type': 'new_domain',
-                    'text': f"Domain is only {tech['age_years']:.1f} years old",
+                    'type': 'no_ssl',
+                    'text': 'No valid SSL certificate',
                     'severity': 'high',
-                    'explanation': 'New domains have less established credibility'
+                    'explanation': 'Secure sites should have valid HTTPS encryption'
                 })
-            elif tech['age_years'] > 10:
-                findings.append({
-                    'type': 'established_domain',
-                    'text': f"Well-established domain ({tech['age_years']:.0f} years)",
-                    'severity': 'positive',
-                    'explanation': 'Long-standing web presence indicates stability'
-                })
-        
-        # SSL finding
-        if not tech.get('ssl', {}).get('valid'):
-            findings.append({
-                'type': 'no_ssl',
-                'text': 'No valid SSL certificate',
-                'severity': 'high',
-                'explanation': 'Secure sites should have valid HTTPS encryption'
-            })
         
         # Transparency finding
         trans = analysis.get('transparency', {})
-        if trans.get('score', 0) < 40:
+        if trans.get('score', 100) < 40:
             findings.append({
                 'type': 'low_transparency',
                 'text': 'Limited transparency indicators',
@@ -631,7 +735,19 @@ class SourceCredibility(BaseAnalyzer):
                 'explanation': 'Content may reflect government perspectives'
             })
         
-        return findings[:5]  # Top 5 findings
+        if history.get('potential_satire'):
+            findings.append({
+                'type': 'satire_warning',
+                'text': 'Possible satire or parody site',
+                'severity': 'high',
+                'explanation': 'Content may be intentionally false for humor'
+            })
+        
+        # Sort by severity and return top 5
+        severity_order = {'high': 0, 'medium': 1, 'positive': 2}
+        findings.sort(key=lambda x: severity_order.get(x['severity'], 3))
+        
+        return findings[:5]
     
     def _generate_summary(self, analysis: Dict[str, Any], score: int) -> str:
         """Generate human-readable summary"""
@@ -660,7 +776,7 @@ class SourceCredibility(BaseAnalyzer):
             details.append(f"{bias.lower()} political bias")
         
         tech = analysis.get('technical', {})
-        if tech.get('age_years'):
+        if tech.get('age_years') is not None:
             if tech['age_years'] >= 5:
                 details.append("well-established")
             elif tech['age_years'] < 1:
@@ -681,16 +797,27 @@ class SourceCredibility(BaseAnalyzer):
         """Extract domain from input data"""
         
         # Direct domain
-        if 'domain' in data:
-            return data['domain'].lower().replace('www.', '')
+        if 'domain' in data and data['domain']:
+            domain = data['domain'].lower().strip()
+            # Remove protocol if present
+            domain = re.sub(r'^https?://', '', domain)
+            # Remove path if present
+            domain = domain.split('/')[0]
+            # Remove www
+            domain = domain.replace('www.', '')
+            return domain
         
         # Extract from URL
-        if 'url' in data:
+        if 'url' in data and data['url']:
             try:
                 parsed = urlparse(data['url'])
-                return parsed.netloc.lower().replace('www.', '')
-            except:
-                pass
+                if parsed.netloc:
+                    domain = parsed.netloc.lower()
+                    # Remove www
+                    domain = domain.replace('www.', '')
+                    return domain
+            except Exception as e:
+                logger.debug(f"Failed to parse URL: {e}")
         
         return None
     
@@ -700,18 +827,25 @@ class SourceCredibility(BaseAnalyzer):
         # Check database first
         clean_domain = domain.lower().replace('www.', '')
         
-        # Exact match
-        if clean_domain in self.source_database:
-            return self._domain_to_name(clean_domain)
+        # Use the name map
+        name = self._domain_to_name(clean_domain)
+        if name != clean_domain:
+            return name
         
-        # Subdomain match
+        # Check for subdomain matches
         for db_domain in self.source_database:
-            if clean_domain.endswith(db_domain) or db_domain.endswith(clean_domain):
+            if clean_domain.endswith('.' + db_domain):
                 return self._domain_to_name(db_domain)
         
         # Generate from domain
         name = domain.replace('www.', '')
-        name = name.split('.')[0]  # Remove TLD
+        # Remove common TLDs
+        for tld in ['.com', '.org', '.net', '.co.uk', '.co', '.io', '.news', '.tv']:
+            if name.endswith(tld):
+                name = name[:-len(tld)]
+                break
+        
+        # Convert to title case
         name = name.replace('-', ' ').replace('_', ' ')
         return name.title()
     
@@ -756,10 +890,15 @@ class SourceCredibility(BaseAnalyzer):
             'motherjones.com': 'Mother Jones',
             'breitbart.com': 'Breitbart',
             'dailywire.com': 'The Daily Wire',
-            'infowars.com': 'InfoWars'
+            'infowars.com': 'InfoWars',
+            'rt.com': 'RT (Russia Today)',
+            'aljazeera.com': 'Al Jazeera',
+            'dw.com': 'Deutsche Welle',
+            'france24.com': 'France 24',
+            'scmp.com': 'South China Morning Post'
         }
         
-        return name_map.get(domain, domain.split('.')[0].title())
+        return name_map.get(domain, domain)
     
     def _get_credibility_description(self, credibility: str) -> str:
         """Get description for credibility level"""
@@ -775,15 +914,17 @@ class SourceCredibility(BaseAnalyzer):
     def _get_issue_description(self, db_info: Dict[str, Any]) -> str:
         """Get description of known issues"""
         
-        if db_info['type'] == 'Conspiracy':
+        source_type = db_info.get('type', '')
+        
+        if source_type == 'Conspiracy':
             return 'Known for promoting conspiracy theories and unverified claims'
-        elif db_info['type'] == 'Fake News':
+        elif source_type == 'Fake News':
             return 'Identified as a source of fabricated or false news'
-        elif db_info['type'] == 'Satire/Fake':
+        elif source_type == 'Satire/Fake':
             return 'Satirical content that may be mistaken for real news'
-        elif db_info['type'] == 'State Media':
+        elif source_type == 'State Media':
             return 'State-controlled media that may reflect government propaganda'
-        elif db_info['bias'] in ['Far-Left', 'Far-Right']:
+        elif db_info.get('bias') in ['Far-Left', 'Far-Right']:
             return f"Extreme {db_info['bias'].lower()} bias significantly affects reporting"
         else:
             return 'Known issues with reliability or accuracy'
@@ -793,7 +934,11 @@ class SourceCredibility(BaseAnalyzer):
         if cache_key in self.cache:
             cached_time, result = self.cache[cache_key]
             if time.time() - cached_time < self.cache_ttl:
+                logger.debug(f"Using cached result for {cache_key}")
                 return result.copy()
+            else:
+                # Remove expired cache
+                del self.cache[cache_key]
         return None
     
     def _cache_result(self, cache_key: str, result: Dict[str, Any]):
@@ -884,6 +1029,8 @@ class SourceCredibility(BaseAnalyzer):
             'beforeitsnews.com': {'credibility': 'Very Low', 'bias': 'Far-Right', 'type': 'Conspiracy'},
             'yournewswire.com': {'credibility': 'Very Low', 'bias': 'Mixed', 'type': 'Fake News'},
             'worldnewsdailyreport.com': {'credibility': 'Very Low', 'bias': 'Mixed', 'type': 'Satire/Fake'},
+            'theonion.com': {'credibility': 'Very Low', 'bias': 'Mixed', 'type': 'Satire/Fake'},
+            'babylonbee.com': {'credibility': 'Very Low', 'bias': 'Right', 'type': 'Satire/Fake'},
             
             # International
             'dw.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Public Media'},
@@ -891,7 +1038,9 @@ class SourceCredibility(BaseAnalyzer):
             'aljazeera.com': {'credibility': 'Medium', 'bias': 'Center-Left', 'type': 'International'},
             'scmp.com': {'credibility': 'Medium', 'bias': 'Center', 'type': 'International'},
             'globeandmail.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Newspaper'},
-            'cbc.ca': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Public Media'}
+            'cbc.ca': {'credibility': 'High', 'bias': 'Center-Left', 'type': 'Public Media'},
+            'xinhuanet.com': {'credibility': 'Low', 'bias': 'Pro-China', 'type': 'State Media'},
+            'presstv.ir': {'credibility': 'Low', 'bias': 'Pro-Iran', 'type': 'State Media'}
         }
     
     def get_service_info(self) -> Dict[str, Any]:
@@ -910,13 +1059,14 @@ class SourceCredibility(BaseAnalyzer):
             ],
             'sources_in_database': len(self.source_database),
             'technical_checks': [
-                'WHOIS lookup',
+                'WHOIS lookup' if WHOIS_AVAILABLE else 'WHOIS lookup (not available)',
                 'SSL verification',
                 'Website crawling',
                 'News API integration'
             ],
             'api_status': {
-                'news_api': 'active' if self.news_api_key else 'not configured'
+                'news_api': 'active' if self.news_api_key else 'not configured',
+                'whois': 'available' if WHOIS_AVAILABLE else 'not installed'
             }
         })
         return info
