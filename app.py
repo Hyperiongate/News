@@ -178,22 +178,33 @@ def index():
     """Serve the main application page"""
     try:
         # Use Flask's render_template for templates folder
-        from flask import render_template
         logger.debug(f"Rendering index.html from templates folder")
         return render_template('index.html')
         
+    except FileNotFoundError as e:
+        logger.error(f"Template not found: {e}")
+        response, status_code = ResponseBuilder.error("Template index.html not found in templates folder", 404)
+        return response, status_code
+        
     except Exception as e:
-        logger.error(f"Error serving index: {e}", exc_info=True)
+        logger.error(f"Error rendering template: {e}", exc_info=True)
+        
         # Try static folder as fallback
         try:
-            index_path = os.path.join(app.static_folder, 'index.html')
-            if os.path.exists(index_path):
-                logger.debug(f"Serving index.html from static folder: {index_path}")
-                return send_from_directory(app.static_folder, 'index.html')
-        except:
-            pass
+            if app.static_folder:
+                index_path = os.path.join(app.static_folder, 'index.html')
+                if os.path.exists(index_path):
+                    logger.debug(f"Serving index.html from static folder as fallback: {index_path}")
+                    return send_from_directory(app.static_folder, 'index.html')
+        except Exception as static_error:
+            logger.error(f"Static fallback also failed: {static_error}")
         
-        response, status_code = ResponseBuilder.error("Error loading main page", 500)
+        # Return more specific error message
+        error_msg = str(e)
+        if 'TemplateNotFound' in error_msg:
+            response, status_code = ResponseBuilder.error("Template index.html not found", 404)
+        else:
+            response, status_code = ResponseBuilder.error(f"Error loading main page: {error_msg}", 500)
         return response, status_code
 
 # TRUTHLENS STATIC FILE ROUTES WITH CORRECT MIME TYPES
