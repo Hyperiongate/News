@@ -68,16 +68,13 @@ class TruthLensDisplay {
         const metadata = this.app.state.currentMetadata || {};
         const servicesUsed = metadata.services_used || [];
         
-        // FIXED: Extract source name from the correct location
+        // The source name is successfully found in the source_credibility service
+        // So let's get it from there directly
         let sourceName = 'Unknown Source';
-        if (data.article && data.article.source) {
-            sourceName = data.article.source;
-        } else if (data.article && data.article.domain) {
-            sourceName = data.article.domain;
-        } else if (data.detailed_analysis && data.detailed_analysis.source_credibility) {
-            sourceName = data.detailed_analysis.source_credibility.source_name || 
-                        data.detailed_analysis.source_credibility.domain || 
-                        'Unknown Source';
+        
+        // Get it directly from where we know it exists - source_credibility service
+        if (data.detailed_analysis && data.detailed_analysis.source_credibility && data.detailed_analysis.source_credibility.source_name) {
+            sourceName = data.detailed_analysis.source_credibility.source_name;
         }
         
         let summary = '<strong>Source:</strong> ' + sourceName + '<br><br>';
