@@ -29,6 +29,7 @@ class ServiceRegistry:
         'manipulation_detector': ('services.manipulation_detector', 'ManipulationDetector'),
         'content_analyzer': ('services.content_analyzer', 'ContentAnalyzer'),
         'plagiarism_detector': ('services.plagiarism_detector', 'PlagiarismDetector'),
+        'openai_enhancer': ('services.openai_enhancer', 'OpenAIEnhancer'),  # NEW LINE ADDED
     }
     
     def __init__(self):
@@ -96,7 +97,7 @@ class ServiceRegistry:
                 # Check if service is available
                 is_available = service_instance.is_available
                 logger.info(f"Service {service_name} availability: {is_available}")
-                
+        
                 if not is_available:
                     logger.warning(f"Service {service_name} initialized but not available")
                     self.failed_services[service_name] = "Service not available"
@@ -193,116 +194,53 @@ class ServiceRegistry:
         self._ensure_initialized()
         service = self.async_services.get(service_name)
         if not service:
-            return {
-                'service': service_name,
-                'success': False,  # Always include success field
-                'error': 'Service not found or not async',
-                'available': False
-            }
+            raise ValueError(f"Async service '{service_name}' not found")
         
         if not service.is_available:
-            return service.get_default_result()
+            return {
+                'success': False,
+                'service': service_name,
+                'error': f"Service '{service_name}' is not available"
+            }
         
         try:
-            return await service.analyze_with_timeout(data)
+            result = await service.analyze(data)
+            return result
         except Exception as e:
-            logger.error(f"Async service {service_name} failed: {e}")
-            return service.get_error_result(str(e))
+            logger.error(f"Error in async service {service_name}: {e}", exc_info=True)
+            return {
+                'success': False,
+                'service': service_name,
+                'error': str(e)
+            }
     
     def analyze_with_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Run analysis with sync service"""
         self._ensure_initialized()
         service = self.services.get(service_name)
-        
         if not service:
-            # Check if it's an async service
+            # Check if it's accidentally an async service
             if service_name in self.async_services:
-                # Run async service in sync context
-                return asyncio.run(self.analyze_with_service_async(service_name, data))
-            
-            return {
-                'service': service_name,
-                'success': False,  # Always include success field
-                'error': 'Service not found',
-                'available': False
-            }
+                raise ValueError(f"Service '{service_name}' is async. Use analyze_with_service_async()")
+            raise ValueError(f"Service '{service_name}' not found")
         
         if not service.is_available:
-            return service.get_default_result()
+            return {
+                'success': False,
+                'service': service_name,
+                'error': f"Service '{service_name}' is not available"
+            }
         
         try:
             result = service.analyze(data)
-            # Ensure success field is present
-            if 'success' not in result:
-                logger.warning(f"Service {service_name} result missing 'success' field, adding it")
-                result['success'] = 'error' not in result
             return result
         except Exception as e:
-            logger.error(f"Service {service_name} failed: {e}", exc_info=True)
-            return service.get_error_result(str(e))
-    
-    def analyze_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        """
-        Run multiple services in parallel
-        
-        Args:
-            services: List of service names to run
-            data: Data to analyze
-            
-        Returns:
-            Dictionary mapping service names to their results
-        """
-        self._ensure_initialized()
-        results = {}
-        
-        # Separate sync and async services
-        sync_services = [s for s in services if s in self.services]
-        async_services = [s for s in services if s in self.async_services]
-        
-        # Run sync services in thread pool
-        if sync_services:
-            with ThreadPoolExecutor(max_workers=len(sync_services)) as executor:
-                futures = {
-                    executor.submit(self.analyze_with_service, service, data): service
-                    for service in sync_services
-                }
-                
-                for future in futures:
-                    service_name = futures[future]
-                    try:
-                        results[service_name] = future.result()
-                    except Exception as e:
-                        logger.error(f"Service {service_name} failed in parallel execution: {e}")
-                        results[service_name] = {
-                            'service': service_name,
-                            'success': False,  # Always include success field
-                            'error': str(e),
-                            'available': False
-                        }
-        
-        # Run async services
-        if async_services:
-            async def run_async_services():
-                tasks = [
-                    self.analyze_with_service_async(service, data)
-                    for service in async_services
-                ]
-                return await asyncio.gather(*tasks, return_exceptions=True)
-            
-            async_results = asyncio.run(run_async_services())
-            
-            for service_name, result in zip(async_services, async_results):
-                if isinstance(result, Exception):
-                    results[service_name] = {
-                        'service': service_name,
-                        'success': False,  # Always include success field
-                        'error': str(result),
-                        'available': False
-                    }
-                else:
-                    results[service_name] = result
-        
-        return results
+            logger.error(f"Error in service {service_name}: {e}", exc_info=True)
+            return {
+                'success': False,
+                'service': service_name,
+                'error': str(e)
+            }
     
     def reload_service(self, service_name: str) -> bool:
         """
