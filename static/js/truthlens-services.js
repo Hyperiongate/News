@@ -25,50 +25,213 @@ class TruthLensServices {
         return renderer ? renderer(data) : '<p>Service renderer not found.</p>';
     }
 
-    // Source Credibility Renderer
+    // FIXED: Enhanced Source Credibility Renderer with Professional Layout
     renderSourceCredibility(data) {
         const score = data.credibility_score || data.score || 0;
         const sourceName = data.source_name || 'Unknown Source';
+        const level = data.credibility_level || data.level || this.getCredibilityLevel(score);
+        const domain = data.domain || 'Unknown Domain';
         
-        let content = this.renderSection('Credibility Metrics', 'fa-chart-line', 
-            this.renderMetric('Overall Score', score + '/100') +
-            this.renderMetric('Credibility Level', data.credibility_level || this.getCredibilityLevel(score), 
-                this.getStatusClass(score)) +
-            this.renderMetric('Source Name', sourceName)
+        // Main credibility card with enhanced styling
+        let content = '<div class="source-credibility-main">';
+        
+        // Score and Source Name Section
+        content += this.renderSection('Credibility Assessment', 'fa-shield-alt', 
+            '<div class="credibility-score-display">' +
+                '<div class="score-circle" style="background: ' + this.getScoreGradient(score) + ';">' +
+                    '<div class="score-inner">' +
+                        '<span class="score-number">' + score + '</span>' +
+                        '<span class="score-label">out of 100</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="score-details">' +
+                    this.renderMetric('<i class="fas fa-building"></i> Source Name', sourceName) +
+                    this.renderMetric('<i class="fas fa-signal"></i> Credibility Level', level, this.getStatusClass(score)) +
+                    this.renderMetric('<i class="fas fa-globe"></i> Domain', domain) +
+                '</div>' +
+            '</div>'
         );
         
-        // Technical info
-        if (data.technical_analysis || data.domain_age_days !== undefined) {
-            let techContent = '';
-            if (data.technical_analysis && data.technical_analysis.has_ssl !== undefined) {
-                techContent += this.renderMetric('SSL Certificate', data.technical_analysis.has_ssl ? '✓ Secure' : '✗ Not Secure');
-            }
-            if (data.domain_age_days !== undefined) {
-                techContent += this.renderMetric('Domain Age', this.formatDomainAge(data.domain_age_days));
-            }
-            if (techContent) {
-                content += this.renderSection('Technical Analysis', 'fa-shield-alt', techContent);
-            }
-        }
-        
-        // Source info
+        // Source Information Section
         if (data.source_info) {
-            let sourceContent = '';
+            let sourceInfoContent = '<div class="source-info-grid">';
+            
             if (data.source_info.type) {
-                sourceContent += this.renderMetric('Source Type', data.source_info.type);
+                sourceInfoContent += '<div class="source-info-item">' +
+                    '<div class="source-info-header"><i class="fas fa-tag"></i> Source Type</div>' +
+                    '<div class="source-info-content">' + data.source_info.type + '</div>' +
+                    '</div>';
             }
+            
             if (data.source_info.bias) {
-                sourceContent += this.renderMetric('Known Bias', data.source_info.bias);
+                sourceInfoContent += '<div class="source-info-item">' +
+                    '<div class="source-info-header"><i class="fas fa-balance-scale"></i> Known Bias</div>' +
+                    '<div class="source-info-content">' + data.source_info.bias + '</div>' +
+                    '</div>';
             }
+            
             if (data.source_info.credibility_rating) {
-                sourceContent += this.renderMetric('Industry Rating', data.source_info.credibility_rating);
+                sourceInfoContent += '<div class="source-info-item">' +
+                    '<div class="source-info-header"><i class="fas fa-star"></i> Industry Rating</div>' +
+                    '<div class="source-info-content">' + data.source_info.credibility_rating + '</div>' +
+                    '</div>';
             }
-            if (sourceContent) {
-                content += this.renderSection('Source Information', 'fa-building', sourceContent);
+            
+            if (data.source_info.description) {
+                sourceInfoContent += '<div class="source-info-item" style="grid-column: span 2;">' +
+                    '<div class="source-info-header"><i class="fas fa-info-circle"></i> About This Source</div>' +
+                    '<div class="source-info-content">' + data.source_info.description + '</div>' +
+                    '</div>';
             }
+            
+            sourceInfoContent += '</div>';
+            content += this.renderSection('Source Information', 'fa-newspaper', sourceInfoContent);
         }
         
+        // Technical Analysis Section
+        if (data.technical_analysis || data.domain_age_days !== undefined) {
+            let techContent = '<div class="technical-grid">';
+            
+            // SSL Certificate
+            if (data.technical_analysis && data.technical_analysis.has_ssl !== undefined) {
+                const sslSecure = data.technical_analysis.has_ssl;
+                techContent += '<div class="technical-item">' +
+                    '<div class="technical-icon ' + (sslSecure ? 'technical-secure' : 'technical-insecure') + '">' +
+                    '<i class="fas ' + (sslSecure ? 'fa-lock' : 'fa-lock-open') + '"></i>' +
+                    '</div>' +
+                    '<div class="technical-label">SSL Certificate</div>' +
+                    '<div class="technical-value ' + (sslSecure ? 'technical-secure' : 'technical-insecure') + '">' +
+                    (sslSecure ? 'Secure' : 'Not Secure') +
+                    '</div>' +
+                    '</div>';
+            }
+            
+            // Domain Age
+            if (data.domain_age_days !== undefined) {
+                const ageDisplay = this.formatDomainAge(data.domain_age_days);
+                const isEstablished = data.domain_age_days > 365;
+                techContent += '<div class="technical-item">' +
+                    '<div class="technical-icon ' + (isEstablished ? 'technical-secure' : 'technical-insecure') + '">' +
+                    '<i class="fas fa-calendar-check"></i>' +
+                    '</div>' +
+                    '<div class="technical-label">Domain Age</div>' +
+                    '<div class="technical-value">' + ageDisplay + '</div>' +
+                    '</div>';
+            }
+            
+            // Additional technical checks
+            if (data.technical_analysis) {
+                if (data.technical_analysis.dns_valid !== undefined) {
+                    techContent += '<div class="technical-item">' +
+                        '<div class="technical-icon ' + (data.technical_analysis.dns_valid ? 'technical-secure' : 'technical-insecure') + '">' +
+                        '<i class="fas fa-server"></i>' +
+                        '</div>' +
+                        '<div class="technical-label">DNS Status</div>' +
+                        '<div class="technical-value">' + (data.technical_analysis.dns_valid ? 'Valid' : 'Invalid') + '</div>' +
+                        '</div>';
+                }
+                
+                if (data.technical_analysis.robots_txt !== undefined) {
+                    techContent += '<div class="technical-item">' +
+                        '<div class="technical-icon technical-secure">' +
+                        '<i class="fas fa-robot"></i>' +
+                        '</div>' +
+                        '<div class="technical-label">Robots.txt</div>' +
+                        '<div class="technical-value">' + (data.technical_analysis.robots_txt ? 'Present' : 'Missing') + '</div>' +
+                        '</div>';
+                }
+            }
+            
+            techContent += '</div>';
+            content += this.renderSection('Technical Analysis', 'fa-cog', techContent);
+        }
+        
+        // Transparency Indicators
+        if (data.transparency_indicators) {
+            let transContent = '<div class="checklist-grid">';
+            const indicators = [
+                { key: 'has_about_page', label: 'About Page', icon: 'fa-address-card' },
+                { key: 'has_contact_page', label: 'Contact Information', icon: 'fa-envelope' },
+                { key: 'has_privacy_policy', label: 'Privacy Policy', icon: 'fa-user-shield' },
+                { key: 'has_terms', label: 'Terms of Service', icon: 'fa-file-contract' },
+                { key: 'has_authors', label: 'Author Information', icon: 'fa-users' },
+                { key: 'has_dates', label: 'Publication Dates', icon: 'fa-calendar' }
+            ];
+            
+            indicators.forEach(function(indicator) {
+                if (data.transparency_indicators[indicator.key] !== undefined) {
+                    const hasIt = data.transparency_indicators[indicator.key];
+                    transContent += '<div class="checklist-item checklist-' + (hasIt ? 'pass' : 'fail') + '">' +
+                        '<i class="fas ' + (hasIt ? 'fa-check' : 'fa-times') + '"></i>' +
+                        '<i class="fas ' + indicator.icon + '" style="margin: 0 0.5rem; color: var(--gray-600);"></i>' +
+                        '<span>' + indicator.label + '</span>' +
+                        '</div>';
+                }
+            });
+            
+            transContent += '</div>';
+            content += this.renderSection('Transparency Checklist', 'fa-list-check', transContent);
+        }
+        
+        // Key Findings
+        if (data.findings && data.findings.length > 0) {
+            let findingsContent = '<div class="findings-list">';
+            data.findings.forEach(function(finding) {
+                const severity = finding.severity || 'medium';
+                const severityIcon = severity === 'high' ? 'fa-exclamation-circle' : 
+                                   severity === 'positive' ? 'fa-check-circle' : 'fa-info-circle';
+                const severityClass = severity === 'high' ? 'finding-negative' : 
+                                    severity === 'positive' ? 'finding-positive' : 'finding-warning';
+                
+                findingsContent += '<div class="finding-item ' + severityClass + '">' +
+                    '<div class="finding-icon"><i class="fas ' + severityIcon + '"></i></div>' +
+                    '<div class="finding-content">' +
+                        '<strong class="finding-title">' + (finding.text || finding.finding) + '</strong>' +
+                        (finding.explanation ? '<p class="finding-explanation">' + finding.explanation + '</p>' : '') +
+                    '</div>' +
+                    '</div>';
+            });
+            findingsContent += '</div>';
+            content += this.renderSection('Key Findings', 'fa-search', findingsContent);
+        }
+        
+        // Summary explanation
+        const summaryText = this.getCredibilitySummary(score, data);
+        content += '<div class="info-box">' +
+            '<div class="info-box-title">' +
+            '<i class="fas fa-lightbulb"></i>' +
+            'What This Means' +
+            '</div>' +
+            '<div class="info-box-content">' + summaryText + '</div>' +
+            '</div>';
+        
+        content += '</div>';
         return content;
+    }
+
+    // Helper method for credibility summary
+    getCredibilitySummary(score, data) {
+        const sourceName = data.source_name || 'This source';
+        
+        if (score >= 80) {
+            return sourceName + ' is a highly credible news source with strong journalistic standards, transparent practices, and a solid reputation. Information from this source is generally reliable and well-vetted.';
+        } else if (score >= 60) {
+            return sourceName + ' demonstrates reasonable credibility with generally good journalistic practices. While mostly reliable, some caution is advised when consuming content from this source.';
+        } else if (score >= 40) {
+            return sourceName + ' shows moderate credibility concerns. The source may lack transparency or have occasional issues with accuracy. Verify important information through additional sources.';
+        } else if (score >= 20) {
+            return sourceName + ' has significant credibility issues including poor transparency, questionable practices, or a history of misinformation. Exercise caution and seek alternative sources.';
+        } else {
+            return sourceName + ' lacks basic credibility indicators and fails to meet journalistic standards. Content from this source should not be considered reliable without extensive verification.';
+        }
+    }
+
+    // Helper method for score gradient
+    getScoreGradient(score) {
+        if (score >= 80) return 'linear-gradient(135deg, #10B981, #059669)';
+        if (score >= 60) return 'linear-gradient(135deg, #3B82F6, #2563EB)';
+        if (score >= 40) return 'linear-gradient(135deg, #F59E0B, #D97706)';
+        return 'linear-gradient(135deg, #EF4444, #DC2626)';
     }
 
     // Author Analysis Renderer - FIXED VERSION
