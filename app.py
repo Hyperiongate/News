@@ -116,6 +116,14 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/diagnostic')
+def diagnostic():
+    """Diagnostic page for CSS issues"""
+    try:
+        return render_template('diagnostic.html')
+    except Exception as e:
+        return f"Diagnostic page error: {str(e)}", 500
+
 @app.route('/api/status')
 def status():
     """Get system status"""
