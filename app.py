@@ -450,6 +450,10 @@ def transform_analysis_result(result):
     Transform the analysis result to match frontend expectations
     This is the CRITICAL function that ensures data flows properly
     """
+    # Log the incoming result structure for debugging
+    logger.debug(f"=== TRANSFORM INPUT ===")
+    logger.debug(f"Result keys: {list(result.keys())}")
+    
     # Extract base data
     article_data = result.get('article', {})
     pipeline_metadata = result.get('pipeline_metadata', {})
@@ -485,33 +489,55 @@ def transform_analysis_result(result):
         'services': {}
     }
     
-    # Map each service result to the services object
-    service_mapping = {
-        'fact_checker': 'fact_checker',
-        'author_analyzer': 'author_analyzer',
-        'bias_detector': 'bias_detector',
-        'source_credibility': 'source_credibility',
-        'transparency_analyzer': 'transparency_analyzer',
-        'manipulation_detector': 'manipulation_detector',
-        'content_analyzer': 'content_analyzer'
-    }
+    # Service names to check for in the result
+    service_names = [
+        'fact_checker',
+        'author_analyzer', 
+        'bias_detector',
+        'source_credibility',
+        'transparency_analyzer',
+        'manipulation_detector',
+        'content_analyzer'
+    ]
     
-    # Extract service results from the main result object
-    for backend_key, frontend_key in service_mapping.items():
-        if backend_key in result:
-            service_data = result[backend_key]
-            
-            # Ensure service data has required fields
-            if isinstance(service_data, dict) and service_data.get('success', False):
-                transformed['services'][frontend_key] = {
+    # Extract service results from the result object
+    # Services might be at top level or nested in a 'services' key
+    services_data = result.get('services', {})
+    
+    for service_name in service_names:
+        # Check multiple possible locations for service data
+        service_data = None
+        
+        # First check if it's a top-level key
+        if service_name in result:
+            service_data = result[service_name]
+        # Then check if it's in services object
+        elif service_name in services_data:
+            service_data = services_data[service_name]
+        # Also check with underscores replaced by hyphens
+        elif service_name.replace('_', '-') in result:
+            service_data = result[service_name.replace('_', '-')]
+        
+        if service_data and isinstance(service_data, dict):
+            # Handle different possible structures
+            # Some services might have success/data/metadata structure
+            if 'success' in service_data and service_data['success']:
+                transformed['services'][service_name] = {
                     'success': True,
                     'timestamp': service_data.get('timestamp', datetime.now().isoformat()),
-                    'data': service_data.get('data', {}),
+                    'data': service_data.get('data', service_data),
                     'metadata': service_data.get('metadata', {})
                 }
-                
-                # Log successful service data transfer
-                logger.debug(f"Added {frontend_key} to services with data keys: {list(service_data.get('data', {}).keys())}")
+            # Others might have the data directly
+            elif any(key in service_data for key in ['score', 'results', 'analysis', 'findings']):
+                transformed['services'][service_name] = {
+                    'success': True,
+                    'timestamp': service_data.get('timestamp', datetime.now().isoformat()),
+                    'data': service_data,
+                    'metadata': {}
+                }
+            
+            logger.debug(f"Added {service_name} to services")
     
     # Add metadata
     transformed['metadata'] = {
@@ -522,32 +548,52 @@ def transform_analysis_result(result):
         'errors': result.get('errors', [])
     }
     
-    # Add trust breakdown
+    # Add trust breakdown based on available services
     trust_components = {}
-    for service_name in transformed['services']:
-        service_data = transformed['services'][service_name]['data']
+    
+    for service_name, service_result in transformed['services'].items():
+        service_data = service_result.get('data', {})
         
-        # Extract score from each service
+        # Extract scores based on service type
         if service_name == 'fact_checker':
-            trust_components['fact_accuracy'] = service_data.get('accuracy_score', 50)
+            # Look for various possible score fields
+            score = (service_data.get('accuracy_score') or 
+                    service_data.get('fact_score') or 
+                    service_data.get('score') or 50)
+            trust_components['fact_accuracy'] = score
+            
         elif service_name == 'author_analyzer':
-            trust_components['author_credibility'] = service_data.get('credibility_score', 50)
+            score = (service_data.get('credibility_score') or 
+                    service_data.get('author_score') or 
+                    service_data.get('score') or 50)
+            trust_components['author_credibility'] = score
+            
         elif service_name == 'bias_detector':
-            # Invert bias score for trust (less bias = more trust)
-            bias_score = service_data.get('bias_score', 50)
+            # Bias score needs to be inverted for trust
+            bias_score = (service_data.get('bias_score') or 
+                         service_data.get('score') or 50)
             trust_components['objectivity'] = max(0, 100 - bias_score)
+            
         elif service_name == 'source_credibility':
-            trust_components['source_reputation'] = service_data.get('credibility_score', 50)
+            score = (service_data.get('credibility_score') or 
+                    service_data.get('reputation_score') or 
+                    service_data.get('score') or 50)
+            trust_components['source_reputation'] = score
+            
         elif service_name == 'transparency_analyzer':
-            trust_components['transparency'] = service_data.get('transparency_score', 50)
+            score = (service_data.get('transparency_score') or 
+                    service_data.get('score') or 50)
+            trust_components['transparency'] = score
+            
         elif service_name == 'manipulation_detector':
-            # Invert manipulation score (less manipulation = more trust)
-            manip_score = service_data.get('manipulation_score', 50)
+            # Manipulation score needs to be inverted
+            manip_score = (service_data.get('manipulation_score') or 
+                          service_data.get('score') or 50)
             trust_components['authenticity'] = max(0, 100 - manip_score)
     
     transformed['trust_breakdown'] = trust_components
     
-    # Calculate overall metrics
+    # Calculate overall metrics if we have components
     if trust_components:
         transformed['overall_metrics'] = {
             'average_trust': sum(trust_components.values()) / len(trust_components),
@@ -555,6 +601,11 @@ def transform_analysis_result(result):
             'highest_score': max(trust_components.values()),
             'components_analyzed': len(trust_components)
         }
+    
+    # Log the output
+    logger.debug(f"=== TRANSFORM OUTPUT ===")
+    logger.debug(f"Services included: {list(transformed['services'].keys())}")
+    logger.debug(f"Trust components: {list(trust_components.keys())}")
     
     return transformed
 
@@ -639,7 +690,6 @@ def debug_services():
     global debug_info
     try:
         from services.service_registry import service_registry
-        from services.analysis_pipeline import AnalysisPipeline
         from config import Config
         
         logger.debug("=== DEBUG SERVICES ENDPOINT ===")
@@ -647,8 +697,49 @@ def debug_services():
         # Get service registry status
         registry_status = service_registry.get_service_status()
         
-        # Get pipeline instance
-        pipeline = AnalysisPipeline()
+        # Try to get pipeline info
+        pipeline_info = None
+        try:
+            from services.analysis_pipeline import AnalysisPipeline
+            pipeline = AnalysisPipeline()
+            
+            # Get pipeline stages info
+            stages_info = []
+            for stage in pipeline.stages:
+                # Get available services for this stage
+                available_services = []
+                unavailable_services = []
+                
+                for service_name in stage.services:
+                    service = service_registry.get_service(service_name)
+                    if service:
+                        if service.is_available:
+                            available_services.append(service_name)
+                        else:
+                            unavailable_services.append({
+                                'name': service_name,
+                                'reason': 'is_available returned False'
+                            })
+                    else:
+                        unavailable_services.append({
+                            'name': service_name,
+                            'reason': 'Not found in registry'
+                        })
+                
+                stages_info.append({
+                    'name': stage.name,
+                    'configured_services': stage.services,
+                    'available_services': available_services,
+                    'unavailable_services': unavailable_services,
+                    'required': stage.required
+                })
+            
+            pipeline_info = {
+                'stages': stages_info,
+                'total_stages': len(stages_info)
+            }
+        except Exception as e:
+            pipeline_info = {'error': str(e)}
         
         # Check article_extractor specifically
         article_extractor = service_registry.get_service('article_extractor')
@@ -667,37 +758,6 @@ def debug_services():
             }
         else:
             article_extractor_info = {'found': False}
-        
-        # Check pipeline stages
-        stages_info = []
-        for stage in pipeline.stages:
-            # Get available services for this stage
-            available_services = []
-            unavailable_services = []
-            
-            for service_name in stage.services:
-                service = service_registry.get_service(service_name)
-                if service:
-                    if service.is_available:
-                        available_services.append(service_name)
-                    else:
-                        unavailable_services.append({
-                            'name': service_name,
-                            'reason': 'is_available returned False'
-                        })
-                else:
-                    unavailable_services.append({
-                        'name': service_name,
-                        'reason': 'Not found in registry'
-                    })
-            
-            stages_info.append({
-                'name': stage.name,
-                'configured_services': stage.services,
-                'available_services': available_services,
-                'unavailable_services': unavailable_services,
-                'required': stage.required
-            })
         
         # Check config
         config_info = {
@@ -720,7 +780,7 @@ def debug_services():
         debug_data = {
             'registry_status': registry_status,
             'article_extractor': article_extractor_info,
-            'pipeline_stages': stages_info,
+            'pipeline': pipeline_info,
             'config': config_info,
             'all_services_details': all_services_details,
             'all_registered_services': list(service_registry.services.keys()),
@@ -761,6 +821,9 @@ def debug_test_analyze():
                 content_type='url',
                 pro_mode=False
             )
+            
+            # Log raw result structure
+            logger.debug(f"Raw result keys: {list(result.keys())}")
             
             # Transform the result
             if result.get('success', False):
