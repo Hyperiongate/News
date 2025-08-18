@@ -1,5 +1,5 @@
 """
-News Analyzer API - Fixed with proper static file serving and enhanced debugging
+News Analyzer API - Fixed with proper data flow from backend to frontend
 Main Flask application for analyzing news articles
 """
 import os
@@ -327,7 +327,7 @@ def test_endpoint():
     """Simple test endpoint to verify new code is deployed"""
     return jsonify({
         'status': 'ok',
-        'message': 'Debug-enhanced app is running',
+        'message': 'Debug-enhanced app with proper data flow is running',
         'timestamp': datetime.now().isoformat(),
         'debug_routes': [
             '/api/debug/info',
@@ -340,7 +340,7 @@ def test_endpoint():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Analyze a news article with enhanced debugging
+    Analyze a news article with enhanced debugging and proper data flow
     
     Expected JSON payload:
     {
@@ -413,31 +413,15 @@ def analyze():
         
         # Build response based on success/failure
         if result.get('success', False):
-            # Extract necessary data for AnalysisResponseBuilder
-            article_data = result.get('article', {})
+            # CRITICAL FIX: Transform the result to include service data properly
+            transformed_result = transform_analysis_result(result)
             
-            # CRITICAL FIX: Get the actual list of successful services
-            # The pipeline stores this in pipeline_metadata.successful_services
-            pipeline_metadata = result.get('pipeline_metadata', {})
-            services_used = pipeline_metadata.get('successful_services', [])
+            # Log what we're sending to frontend
+            logger.info(f"=== SENDING TO FRONTEND ===")
+            logger.info(f"Trust score: {transformed_result.get('trust_score')}")
+            logger.info(f"Services included: {list(transformed_result.get('services', {}).keys())}")
             
-            # Get total processing time - it's stored as 'total_duration' not 'total_time'
-            processing_time = pipeline_metadata.get('total_duration', 0)
-            
-            # Log what we found
-            logger.info(f"=== CRITICAL DATA FLOW DEBUG ===")
-            logger.info(f"Pipeline metadata keys: {list(pipeline_metadata.keys())}")
-            logger.info(f"Services used: {services_used}")
-            logger.info(f"Processing time: {processing_time}")
-            logger.info(f"Result contains these service results: {[k for k in result.keys() if k not in ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 'errors', 'article']]}")
-            
-            # Use AnalysisResponseBuilder for successful analysis
-            return AnalysisResponseBuilder.build_analysis_response(
-                analysis_results=result,
-                article_data=article_data,
-                processing_time=processing_time,
-                services_used=services_used
-            )
+            return jsonify(transformed_result)
         else:
             # Extract error message
             error_msg = result.get('error', 'Analysis failed')
@@ -460,6 +444,119 @@ def analyze():
         logger.error(f"Analysis failed: {e}", exc_info=True)
         response, status_code = ResponseBuilder.error("Analysis failed due to an internal error", 500)
         return response, status_code
+
+def transform_analysis_result(result):
+    """
+    Transform the analysis result to match frontend expectations
+    This is the CRITICAL function that ensures data flows properly
+    """
+    # Extract base data
+    article_data = result.get('article', {})
+    pipeline_metadata = result.get('pipeline_metadata', {})
+    
+    # Build the transformed response
+    transformed = {
+        'success': True,
+        'status': 'completed',
+        'timestamp': datetime.now().isoformat(),
+        
+        # Trust score and level
+        'trust_score': result.get('trust_score', 50),
+        'trust_level': result.get('trust_level', 'Unknown'),
+        
+        # Article information
+        'article': {
+            'url': article_data.get('url', ''),
+            'title': article_data.get('title', 'Untitled'),
+            'author': article_data.get('author', 'Unknown'),
+            'publish_date': article_data.get('publish_date', ''),
+            'domain': article_data.get('domain', ''),
+            'content': article_data.get('content', ''),
+            'excerpt': article_data.get('excerpt', ''),
+            'word_count': article_data.get('word_count', 0),
+            'reading_time': article_data.get('reading_time', 0)
+        },
+        
+        # Summary and recommendations
+        'summary': result.get('summary', {}),
+        'recommendations': result.get('recommendations', []),
+        
+        # CRITICAL: Service results mapped to frontend structure
+        'services': {}
+    }
+    
+    # Map each service result to the services object
+    service_mapping = {
+        'fact_checker': 'fact_checker',
+        'author_analyzer': 'author_analyzer',
+        'bias_detector': 'bias_detector',
+        'source_credibility': 'source_credibility',
+        'transparency_analyzer': 'transparency_analyzer',
+        'manipulation_detector': 'manipulation_detector',
+        'content_analyzer': 'content_analyzer'
+    }
+    
+    # Extract service results from the main result object
+    for backend_key, frontend_key in service_mapping.items():
+        if backend_key in result:
+            service_data = result[backend_key]
+            
+            # Ensure service data has required fields
+            if isinstance(service_data, dict) and service_data.get('success', False):
+                transformed['services'][frontend_key] = {
+                    'success': True,
+                    'timestamp': service_data.get('timestamp', datetime.now().isoformat()),
+                    'data': service_data.get('data', {}),
+                    'metadata': service_data.get('metadata', {})
+                }
+                
+                # Log successful service data transfer
+                logger.debug(f"Added {frontend_key} to services with data keys: {list(service_data.get('data', {}).keys())}")
+    
+    # Add metadata
+    transformed['metadata'] = {
+        'processing_time': pipeline_metadata.get('total_duration', 0),
+        'services_used': list(transformed['services'].keys()),
+        'successful_services': len(transformed['services']),
+        'pipeline_stages': pipeline_metadata.get('stages_completed', {}),
+        'errors': result.get('errors', [])
+    }
+    
+    # Add trust breakdown
+    trust_components = {}
+    for service_name in transformed['services']:
+        service_data = transformed['services'][service_name]['data']
+        
+        # Extract score from each service
+        if service_name == 'fact_checker':
+            trust_components['fact_accuracy'] = service_data.get('accuracy_score', 50)
+        elif service_name == 'author_analyzer':
+            trust_components['author_credibility'] = service_data.get('credibility_score', 50)
+        elif service_name == 'bias_detector':
+            # Invert bias score for trust (less bias = more trust)
+            bias_score = service_data.get('bias_score', 50)
+            trust_components['objectivity'] = max(0, 100 - bias_score)
+        elif service_name == 'source_credibility':
+            trust_components['source_reputation'] = service_data.get('credibility_score', 50)
+        elif service_name == 'transparency_analyzer':
+            trust_components['transparency'] = service_data.get('transparency_score', 50)
+        elif service_name == 'manipulation_detector':
+            # Invert manipulation score (less manipulation = more trust)
+            manip_score = service_data.get('manipulation_score', 50)
+            trust_components['authenticity'] = max(0, 100 - manip_score)
+    
+    transformed['trust_breakdown'] = trust_components
+    
+    # Calculate overall metrics
+    if trust_components:
+        transformed['overall_metrics'] = {
+            'average_trust': sum(trust_components.values()) / len(trust_components),
+            'lowest_score': min(trust_components.values()),
+            'highest_score': max(trust_components.values()),
+            'components_analyzed': len(trust_components)
+        }
+    
+    return transformed
 
 @app.route('/api/services')
 def services():
@@ -542,13 +639,16 @@ def debug_services():
     global debug_info
     try:
         from services.service_registry import service_registry
-        from services.analysis_pipeline import pipeline
+        from services.analysis_pipeline import AnalysisPipeline
         from config import Config
         
         logger.debug("=== DEBUG SERVICES ENDPOINT ===")
         
         # Get service registry status
         registry_status = service_registry.get_service_status()
+        
+        # Get pipeline instance
+        pipeline = AnalysisPipeline()
         
         # Check article_extractor specifically
         article_extractor = service_registry.get_service('article_extractor')
@@ -640,7 +740,7 @@ def debug_test_analyze():
     """Test analysis with detailed debugging output"""
     try:
         data = request.get_json() or {}
-        test_url = data.get('url', 'https://www.example.com/test-article')
+        test_url = data.get('url', 'https://www.bbc.com/news/world-us-canada-12345678')
         
         logger.info(f"=== DEBUG TEST ANALYZE: {test_url} ===")
         
@@ -662,26 +762,41 @@ def debug_test_analyze():
                 pro_mode=False
             )
             
-            steps.append({
-                'step': 'Analysis Complete',
-                'timestamp': datetime.now().isoformat(),
-                'success': result.get('success', False),
-                'services_used': list(result.get('pipeline_metadata', {}).get('stages_completed', {}).keys()) if result.get('pipeline_metadata') else [],
-                'failed_stages': result.get('pipeline_metadata', {}).get('failed_stages', {}) if result.get('pipeline_metadata') else {}
-            })
+            # Transform the result
+            if result.get('success', False):
+                transformed_result = transform_analysis_result(result)
+                
+                steps.append({
+                    'step': 'Analysis Complete',
+                    'timestamp': datetime.now().isoformat(),
+                    'success': True,
+                    'services_in_result': list(transformed_result.get('services', {}).keys()),
+                    'trust_score': transformed_result.get('trust_score'),
+                    'trust_components': transformed_result.get('trust_breakdown', {})
+                })
+                
+                final_result = transformed_result
+            else:
+                steps.append({
+                    'step': 'Analysis Failed',
+                    'timestamp': datetime.now().isoformat(),
+                    'success': False,
+                    'error': result.get('error', 'Unknown error')
+                })
+                final_result = result
             
         except Exception as e:
             steps.append({
-                'step': 'Analysis Failed',
+                'step': 'Analysis Exception',
                 'timestamp': datetime.now().isoformat(),
                 'error': str(e),
                 'traceback': traceback.format_exc()
             })
-            result = {'success': False, 'error': str(e)}
+            final_result = {'success': False, 'error': str(e)}
         
         return jsonify({
             'test_url': test_url,
-            'result': result,
+            'result': final_result,
             'debug_steps': steps,
             'timestamp': datetime.now().isoformat()
         }), 200
