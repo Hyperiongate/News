@@ -722,7 +722,7 @@ body {
     display: block;
 }
 
-/* Analysis Grid - Compact */
+/* Analysis Grid - UPDATED TO 2 COLUMNS */
 .analysis-header {
     display: flex;
     justify-content: space-between;
@@ -754,9 +754,10 @@ body {
     color: white;
 }
 
+/* UPDATED: Fixed 2-column grid layout */
 .analysis-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--space-lg);
 }
 
@@ -1211,6 +1212,7 @@ body {
         grid-template-columns: 1fr;
     }
     
+    /* UPDATED: Single column on mobile */
     .analysis-grid {
         grid-template-columns: 1fr;
     }
@@ -1249,5 +1251,12 @@ body {
     
     .premium-features-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Tablet view - also 2 columns for better consistency */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .analysis-grid {
+        gap: var(--space-md);
     }
 }
