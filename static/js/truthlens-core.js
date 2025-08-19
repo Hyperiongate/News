@@ -1,7 +1,7 @@
 // truthlens-core.js - Consolidated Core Application Logic
-// FIXED VERSION - Corrects API payload format issue
+// FIXED VERSION - Includes improved accordion functionality and complete service configuration
 
-// Global configuration
+// Global configuration with all 8 services properly defined
 const CONFIG = {
     API_ENDPOINT: '/api/analyze',
     isPro: true,
@@ -449,6 +449,7 @@ class TruthLensApp {
         return extractor ? extractor(data) : null;
     }
 
+    // FIXED: Enhanced toggleAccordion function to prevent scrolling issues
     toggleAccordion(serviceId) {
         const item = document.getElementById('service-' + serviceId);
         if (!item) return;
@@ -456,6 +457,10 @@ class TruthLensApp {
         const content = item.querySelector('.service-accordion-content');
         const icon = item.querySelector('.service-expand-icon');
         const wasActive = item.classList.contains('active');
+        
+        // Store current scroll position
+        const scrollY = window.scrollY;
+        const itemTop = item.getBoundingClientRect().top + scrollY;
         
         // Close all accordions
         const allItems = document.querySelectorAll('.service-accordion-item');
@@ -471,11 +476,30 @@ class TruthLensApp {
         if (!wasActive) {
             item.classList.add('active');
             if (content) {
+                // Set maxHeight to scrollHeight for smooth animation
                 content.style.maxHeight = content.scrollHeight + 'px';
+                
+                // After animation, ensure the item header is visible
+                setTimeout(function() {
+                    const headerHeight = item.querySelector('.service-accordion-header').offsetHeight;
+                    const viewportHeight = window.innerHeight;
+                    const currentItemTop = item.getBoundingClientRect().top;
+                    
+                    // Only scroll if the item is partially out of view
+                    if (currentItemTop < 20 || currentItemTop > viewportHeight - 100) {
+                        window.scrollTo({
+                            top: itemTop - 20, // 20px padding from top
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 300); // Wait for animation
             }
             if (icon) {
                 icon.style.transform = 'translateY(-50%) rotate(180deg)';
             }
+        } else {
+            // If closing, maintain scroll position
+            window.scrollTo(0, scrollY);
         }
     }
 
