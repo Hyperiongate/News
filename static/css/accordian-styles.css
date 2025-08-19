@@ -1,0 +1,192 @@
+/* Enhanced Accordion Styles for TruthLens */
+
+/* Prevent layout shift during animation */
+.services-section {
+    position: relative;
+}
+
+/* Service accordion container */
+.service-accordion-item {
+    margin-bottom: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    background: white;
+    transition: box-shadow 0.3s ease;
+}
+
+.service-accordion-item:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Accordion header */
+.service-accordion-header {
+    padding: 1.25rem;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+}
+
+/* Content area with improved animation */
+.service-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: max-height;
+}
+
+/* Active state */
+.service-accordion-item.active .service-accordion-content {
+    max-height: 2000px; /* Adjust based on your content needs */
+}
+
+/* Smooth icon rotation */
+.service-expand-icon {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.3s ease;
+    will-change: transform;
+    color: var(--gray-400);
+}
+
+.service-accordion-item.active .service-expand-icon {
+    transform: translateY(-50%) rotate(180deg);
+    color: var(--primary);
+}
+
+/* Inner content padding */
+.service-content-inner {
+    padding: 0 1.25rem 1.25rem;
+}
+
+/* Service icon wrapper */
+.service-icon-wrapper {
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--gray-100);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.service-icon-wrapper i {
+    font-size: 1.25rem;
+    color: var(--primary);
+}
+
+/* Service info */
+.service-info {
+    flex: 1;
+    margin-right: 2rem;
+}
+
+.service-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: var(--gray-900);
+}
+
+.service-description {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin: 0 0 0.5rem 0;
+}
+
+.service-preview {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+/* Preview items */
+.preview-item {
+    display: inline-block;
+    margin-right: 1rem;
+}
+
+.preview-label {
+    color: var(--gray-500);
+}
+
+.preview-value {
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+/* Data state indicator */
+.data-state-indicator {
+    position: absolute;
+    left: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 1.5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.service-accordion-item.active .data-state-indicator {
+    opacity: 1;
+}
+
+.data-state-indicator.no-data {
+    background: var(--gray-300);
+}
+
+/* PRO lock badge */
+.pro-lock-badge {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.25rem 0.75rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.pro-lock-badge i {
+    font-size: 0.625rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+    .service-accordion-header {
+        padding: 1rem;
+    }
+    
+    .service-content-inner {
+        padding: 0 1rem 1rem;
+    }
+    
+    .service-info {
+        margin-right: 1rem;
+    }
+    
+    .service-name {
+        font-size: 1rem;
+    }
+    
+    .service-description {
+        font-size: 0.8125rem;
+    }
+    
+    .preview-item {
+        display: block;
+        margin-right: 0;
+    }
+}
