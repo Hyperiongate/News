@@ -63,7 +63,7 @@
         }
 
         /* ============================================
-           HEADER & NAVIGATION
+           HEADER - COMPACT
            ============================================ */
         .header {
             background: var(--white);
@@ -71,14 +71,12 @@
             position: sticky;
             top: 0;
             z-index: 1000;
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
         }
 
         .header-content {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 1rem 2rem;
+            padding: 0.75rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -87,135 +85,97 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             font-family: var(--font-display);
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             background: var(--gradient-primary);
             border-radius: 0.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.25rem;
-            box-shadow: var(--shadow);
+            font-size: 1rem;
         }
 
         .pro-badge {
             background: var(--gradient-premium);
             color: var(--dark);
-            padding: 0.375rem 1rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 2rem;
-            font-size: 0.75rem;
+            font-size: 0.625rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         /* ============================================
-           HERO SECTION
+           HERO SECTION - COMPACT
            ============================================ */
         .hero {
             background: var(--white);
-            padding: 3rem 0 2rem;
+            padding: 1.5rem 0 1rem;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
-            opacity: 0.05;
-            animation: pulse 20s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
         }
 
         .hero-content {
             max-width: 900px;
             margin: 0 auto;
             padding: 0 2rem;
-            position: relative;
-            z-index: 1;
         }
 
         .hero h1 {
             font-family: var(--font-display);
-            font-size: 3rem;
+            font-size: 2rem;
             font-weight: 700;
             background: var(--gradient-dark);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-            line-height: 1.2;
+            margin-bottom: 0.5rem;
         }
 
         .hero-subtitle {
-            font-size: 1.25rem;
+            font-size: 1rem;
             color: var(--gray-600);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .feature-pills {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
+            gap: 0.5rem;
             justify-content: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .feature-pill {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
             background: var(--gray-100);
             border-radius: 2rem;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             color: var(--gray-700);
-            transition: all 0.3s ease;
         }
 
         .feature-pill i {
             color: var(--primary);
-        }
-
-        .feature-pill:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .feature-pill:hover i {
-            color: white;
+            font-size: 0.875rem;
         }
 
         /* ============================================
-           INPUT SECTION
+           INPUT SECTION - COMPACT SINGLE BOX
            ============================================ */
         .input-section {
-            max-width: 800px;
-            margin: -2rem auto 3rem;
+            max-width: 700px;
+            margin: -1rem auto 2rem;
             padding: 0 2rem;
             position: relative;
             z-index: 10;
@@ -224,7 +184,7 @@
         .input-card {
             background: var(--white);
             border-radius: 1rem;
-            padding: 2rem;
+            padding: 1.5rem;
             box-shadow: var(--shadow-xl);
             border: 1px solid var(--gray-200);
         }
@@ -234,23 +194,24 @@
             background: var(--gray-100);
             border-radius: 0.5rem;
             padding: 0.25rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .mode-btn {
             flex: 1;
-            padding: 0.75rem 1.5rem;
+            padding: 0.5rem 1rem;
             background: transparent;
             border: none;
             border-radius: 0.375rem;
             font-weight: 600;
+            font-size: 0.875rem;
             color: var(--gray-600);
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.375rem;
         }
 
         .mode-btn.active {
@@ -265,10 +226,10 @@
 
         .input-field {
             width: 100%;
-            padding: 1rem 1.25rem;
+            padding: 0.875rem 1rem;
             border: 2px solid var(--gray-200);
             border-radius: 0.75rem;
-            font-size: 1rem;
+            font-size: 0.9375rem;
             transition: all 0.3s ease;
             background: var(--gray-50);
         }
@@ -277,34 +238,32 @@
             outline: none;
             border-color: var(--primary);
             background: var(--white);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         textarea.input-field {
-            min-height: 120px;
+            min-height: 100px;
             resize: vertical;
             font-family: inherit;
         }
 
         .input-actions {
             display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
+            gap: 0.75rem;
+            margin-top: 1rem;
         }
 
         .btn {
-            padding: 0.875rem 2rem;
+            padding: 0.625rem 1.5rem;
             border: none;
             border-radius: 0.75rem;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.875rem;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            position: relative;
-            overflow: hidden;
         }
 
         .btn-primary {
@@ -314,69 +273,446 @@
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
         }
 
         .btn-secondary {
             background: var(--white);
             color: var(--primary);
             border: 2px solid var(--gray-200);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary);
-            background: var(--gray-50);
-        }
-
-        /* Ripple effect */
-        .btn::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn:active::after {
-            width: 300px;
-            height: 300px;
+            padding: 0.5rem 1rem;
         }
 
         .example-links {
             text-align: center;
-            margin-top: 1rem;
-            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            font-size: 0.75rem;
             color: var(--gray-500);
         }
 
         .example-btn {
             color: var(--primary);
             text-decoration: none;
-            margin: 0 0.5rem;
+            margin: 0 0.375rem;
             cursor: pointer;
-            transition: all 0.3s ease;
         }
 
         .example-btn:hover {
-            color: var(--primary-dark);
             text-decoration: underline;
         }
 
         /* ============================================
-           LOADING OVERLAY
+           RESULTS SECTION - COMPACT LAYOUT
            ============================================ */
+        .results-section {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        /* Trust Score Summary - Side by Side Layout */
+        .trust-summary-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Compact Trust Score Card */
+        .trust-score-card {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .trust-gauge-container {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            margin: 0 auto 1rem;
+        }
+
+        #trustGauge {
+            width: 100%;
+            height: 100%;
+        }
+
+        .trust-score-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -30%);
+            text-align: center;
+        }
+
+        #trustScoreNumber {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+            line-height: 1;
+        }
+
+        .trust-score-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .trust-level-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+        }
+
+        .trust-level-icon {
+            font-size: 1rem;
+        }
+
+        #trustLevelText {
+            font-weight: 600;
+        }
+
+        /* Conversational Summary Card */
+        .conversational-summary-card {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .summary-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        #trustSummary {
+            color: var(--gray-600);
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .key-points {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .key-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .key-point i {
+            margin-top: 0.125rem;
+            font-size: 0.75rem;
+        }
+
+        .key-point.positive i { color: var(--secondary); }
+        .key-point.warning i { color: var(--warning); }
+        .key-point.negative i { color: var(--danger); }
+
+        /* Article Info Bar - Compact */
+        .article-info-bar {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        #articleTitle {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .article-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            color: var(--gray-600);
+            font-size: 0.75rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .meta-item i {
+            color: var(--primary);
+            font-size: 0.875rem;
+        }
+
+        /* Trust Breakdown - Compact with Explanation */
+        .trust-breakdown-section {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .section-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header i {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .breakdown-explanation {
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.813rem;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .breakdown-item {
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .breakdown-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--dark);
+        }
+
+        .breakdown-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+        }
+
+        .breakdown-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .breakdown-explanation {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .breakdown-bar {
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .breakdown-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease-out;
+        }
+
+        /* Service Accordion - Compact with Colored Borders */
+        .services-section {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-accordion-item {
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        /* Different colored borders for each service */
+        .service-accordion-item[data-service="source_credibility"] {
+            border-color: var(--primary);
+        }
+
+        .service-accordion-item[data-service="author_analyzer"] {
+            border-color: var(--secondary);
+        }
+
+        .service-accordion-item[data-service="bias_detector"] {
+            border-color: var(--warning);
+        }
+
+        .service-accordion-item[data-service="fact_checker"] {
+            border-color: var(--info);
+        }
+
+        .service-accordion-item[data-service="transparency_analyzer"] {
+            border-color: #8b5cf6;
+        }
+
+        .service-accordion-item[data-service="manipulation_detector"] {
+            border-color: var(--danger);
+        }
+
+        .service-accordion-item[data-service="content_analyzer"] {
+            border-color: #06b6d4;
+        }
+
+        .service-accordion-item[data-service="plagiarism_detector"] {
+            border-color: #ec4899;
+        }
+
+        .service-accordion-header {
+            padding: 1rem 1.25rem;
+            background: var(--gray-50);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .service-accordion-item.active .service-accordion-header {
+            background: var(--white);
+        }
+
+        .service-header-content {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex: 1;
+        }
+
+        .service-icon-wrapper {
+            width: 36px;
+            height: 36px;
+            background: var(--white);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            margin-bottom: 0.125rem;
+            color: var(--dark);
+        }
+
+        .service-preview {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        .service-expand-icon {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+            color: var(--gray-400);
+        }
+
+        .service-accordion-item.active .service-expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .service-accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            background: var(--white);
+        }
+
+        .service-accordion-item.active .service-accordion-content {
+            max-height: 1000px;
+        }
+
+        .service-content-inner {
+            padding: 1rem 1.25rem 1.25rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        /* Compact Service Content */
+        .service-section {
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 0.75rem;
+        }
+
+        .service-results {
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-size: 0.813rem;
+        }
+
+        /* Loading Overlay - Compact */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -395,19 +731,14 @@
             display: flex;
         }
 
-        .loading-content {
-            text-align: center;
-        }
-
         .loading-spinner {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 2rem;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
             position: relative;
         }
 
-        .loading-spinner::before,
-        .loading-spinner::after {
+        .loading-spinner::before {
             content: '';
             position: absolute;
             top: 0;
@@ -415,17 +746,9 @@
             right: 0;
             bottom: 0;
             border-radius: 50%;
-            border: 3px solid transparent;
-        }
-
-        .loading-spinner::before {
+            border: 3px solid var(--gray-200);
             border-top-color: var(--primary);
             animation: spin 1s linear infinite;
-        }
-
-        .loading-spinner::after {
-            border-bottom-color: var(--secondary);
-            animation: spin 1.5s linear infinite reverse;
         }
 
         @keyframes spin {
@@ -433,606 +756,34 @@
         }
 
         .loading-text {
-            font-size: 1.125rem;
+            font-size: 1rem;
             color: var(--gray-600);
             font-weight: 500;
         }
 
-        .loading-steps {
-            margin-top: 1rem;
-            font-size: 0.875rem;
-            color: var(--gray-500);
-        }
-
-        /* ============================================
-           RESULTS SECTION
-           ============================================ */
-        .results-section {
-            display: none;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem 4rem;
-        }
-
-        .results-section.active {
-            display: block;
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Trust Score Card */
-        .trust-score-card {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 3rem;
-            box-shadow: var(--shadow-xl);
-            text-align: center;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .trust-score-header {
-            margin-bottom: 2rem;
-        }
-
-        .trust-score-header h2 {
-            font-family: var(--font-display);
-            font-size: 2rem;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .trust-gauge-container {
-            position: relative;
-            width: 280px;
-            height: 140px;
-            margin: 0 auto 2rem;
-        }
-
-        #trustGauge {
-            width: 100%;
-            height: 100%;
-        }
-
-        .trust-score-display {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -20%);
-            text-align: center;
-        }
-
-        #trustScoreNumber {
-            font-size: 4rem;
-            font-weight: 800;
-            font-family: var(--font-display);
-            line-height: 1;
-        }
-
-        .trust-score-label {
-            font-size: 0.875rem;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .trust-level-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            background: var(--gray-100);
-            border-radius: 2rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .trust-level-icon {
-            font-size: 1.25rem;
-        }
-
-        #trustLevelText {
-            font-weight: 600;
-            font-size: 1.125rem;
-        }
-
-        #trustSummary {
-            max-width: 600px;
-            margin: 0 auto;
-            color: var(--gray-600);
-            line-height: 1.8;
-        }
-
-        /* Article Info Bar */
-        .article-info-bar {
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        #articleTitle {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 0.75rem;
-        }
-
-        .article-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            color: var(--gray-600);
-            font-size: 0.875rem;
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .meta-item i {
-            color: var(--primary);
-        }
-
-        /* Key Findings */
-        .key-findings-section {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .key-findings-header {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .key-findings-header i {
-            color: var(--primary);
-        }
-
-        .findings-grid {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .finding-item {
-            display: flex;
-            gap: 1rem;
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            border: 1px solid var(--gray-200);
-            transition: all 0.3s ease;
-        }
-
-        .finding-item:hover {
-            transform: translateX(4px);
-            border-color: var(--primary-light);
-        }
-
-        .finding-icon {
-            flex-shrink: 0;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            font-size: 1.25rem;
-        }
-
-        .finding-positive .finding-icon {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--secondary);
-        }
-
-        .finding-negative .finding-icon {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        .finding-warning .finding-icon {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-title {
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-explanation {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            line-height: 1.5;
-        }
-
-        /* Trust Breakdown */
-        .trust-breakdown-section {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .section-header {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .section-header i {
-            color: var(--primary);
-        }
-
-        .breakdown-grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .breakdown-item {
-            padding: 1.25rem;
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .breakdown-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .breakdown-label {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .breakdown-icon {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .breakdown-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .breakdown-explanation {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            margin-bottom: 0.75rem;
-            line-height: 1.5;
-        }
-
-        .breakdown-bar {
-            height: 8px;
-            background: var(--gray-200);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .breakdown-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 1s ease-out;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .breakdown-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                rgba(255,255,255,0) 0%, 
-                rgba(255,255,255,0.3) 50%, 
-                rgba(255,255,255,0) 100%);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Service Accordion */
-        .services-section {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .service-accordion-item {
-            border: 1px solid var(--gray-200);
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .service-accordion-item:hover {
-            border-color: var(--primary-light);
-            box-shadow: var(--shadow);
-        }
-
-        .service-accordion-header {
-            padding: 1.5rem;
-            background: var(--gray-50);
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-        }
-
-        .service-accordion-item.active .service-accordion-header {
-            background: var(--primary);
-            color: white;
-        }
-
-        .service-header-content {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex: 1;
-        }
-
-        .service-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            background: var(--white);
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .service-accordion-item.active .service-icon-wrapper {
-            color: var(--primary);
-        }
-
-        .service-info {
-            flex: 1;
-        }
-
-        .service-name {
-            font-weight: 600;
-            font-size: 1.125rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .service-description {
-            font-size: 0.875rem;
-            opacity: 0.8;
-        }
-
-        .service-accordion-item.active .service-description {
-            opacity: 0.9;
-        }
-
-        .service-preview {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .preview-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-right: 1rem;
-        }
-
-        .preview-label {
-            opacity: 0.7;
-        }
-
-        .preview-value {
-            font-weight: 600;
-        }
-
-        .service-expand-icon {
-            font-size: 1.25rem;
-            transition: transform 0.3s ease;
-            color: var(--gray-500);
-        }
-
-        .service-accordion-item.active .service-expand-icon {
-            transform: rotate(180deg);
-            color: white;
-        }
-
-        .pro-lock-badge {
-            position: absolute;
-            top: 1rem;
-            right: 3.5rem;
-            background: var(--gradient-premium);
-            color: var(--dark);
-            padding: 0.25rem 0.75rem;
-            border-radius: 2rem;
-            font-size: 0.625rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .data-state-indicator {
-            position: absolute;
-            top: 50%;
-            right: 1rem;
-            transform: translateY(-50%);
-            width: 8px;
-            height: 8px;
-            background: var(--secondary);
-            border-radius: 50%;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-        }
-
-        .data-state-indicator.no-data {
-            background: var(--gray-400);
-            box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2);
-        }
-
-        .service-accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease;
-            background: var(--white);
-        }
-
-        .service-accordion-item.active .service-accordion-content {
-            max-height: 2000px;
-        }
-
-        .service-content-inner {
-            padding: 2rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        /* Service Content Styles */
-        .service-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .service-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .section-title {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--dark);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 1.125rem;
-        }
-
-        .section-title i {
-            color: var(--primary);
-            font-size: 1rem;
-        }
-
-        .service-results {
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            padding: 1rem;
-        }
-
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            font-weight: 500;
-            color: var(--gray-600);
-        }
-
-        .result-value {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-high {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--secondary);
-        }
-
-        .status-medium {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .status-low {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        /* Action Buttons */
+        /* Results Actions - Compact */
         .results-actions {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             justify-content: center;
-            margin-top: 3rem;
+            margin-top: 2rem;
         }
 
-        /* Error Message */
+        /* Error Message - Compact */
         .error-message {
             position: fixed;
-            top: 2rem;
-            right: 2rem;
+            top: 1rem;
+            right: 1rem;
             background: var(--danger);
             color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
             box-shadow: var(--shadow-xl);
             display: none;
             align-items: center;
-            gap: 0.75rem;
-            max-width: 400px;
-            animation: slideIn 0.3s ease-out;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            max-width: 350px;
             z-index: 10000;
         }
 
@@ -1040,42 +791,14 @@
             display: flex;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-            }
-            to {
-                transform: translateX(0);
-            }
-        }
-
-        /* Info Box */
-        .info-box {
-            background: var(--gray-50);
-            border: 1px solid var(--primary-light);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .info-box-title {
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .info-box-content {
-            color: var(--gray-700);
-            line-height: 1.6;
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
+            .trust-summary-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .breakdown-grid {
+                grid-template-columns: 1fr;
             }
             
             .header-content,
@@ -1084,26 +807,6 @@
             .results-section {
                 padding-left: 1rem;
                 padding-right: 1rem;
-            }
-            
-            .trust-gauge-container {
-                width: 240px;
-                height: 120px;
-            }
-            
-            #trustScoreNumber {
-                font-size: 3rem;
-            }
-            
-            .article-meta {
-                gap: 1rem;
-                font-size: 0.813rem;
-            }
-            
-            .service-icon-wrapper {
-                width: 40px;
-                height: 40px;
-                font-size: 1.25rem;
             }
         }
     </style>
@@ -1120,7 +823,7 @@
             </div>
             <div class="pro-badge">
                 <i class="fas fa-crown"></i>
-                <span>PRO</span>
+                PRO
             </div>
         </div>
     </header>
@@ -1202,12 +905,12 @@
             </div>
 
             <!-- Text Mode -->
-            <div id="textExplanation" class="explanation">
-                <div id="textInputWrapper" class="input-wrapper">
+            <div id="textExplanation" class="explanation" style="display: none;">
+                <div id="textInputWrapper" class="input-wrapper" style="display: none;">
                     <textarea id="textInput" 
                               class="input-field" 
                               placeholder="Paste your article text here for analysis..."
-                              rows="6"></textarea>
+                              rows="5"></textarea>
                     <div class="input-actions">
                         <button id="analyzeTextBtn" class="btn btn-primary" onclick="truthLensApp.analyzeArticle()">
                             <i class="fas fa-search"></i>
@@ -1224,26 +927,32 @@
 
     <!-- Results Section -->
     <section id="resultsSection" class="results-section">
-        <!-- Trust Score Card -->
-        <div class="trust-score-card">
-            <div class="trust-score-header">
-                <h2>Credibility Analysis Complete</h2>
-            </div>
-            
-            <div class="trust-gauge-container">
-                <canvas id="trustGauge"></canvas>
-                <div class="trust-score-display">
-                    <div id="trustScoreNumber">--</div>
-                    <div class="trust-score-label">Trust Score</div>
+        <!-- Trust Score Summary - Side by Side -->
+        <div class="trust-summary-container">
+            <!-- Compact Trust Score Card -->
+            <div class="trust-score-card">
+                <div class="trust-gauge-container">
+                    <canvas id="trustGauge"></canvas>
+                    <div class="trust-score-display">
+                        <div id="trustScoreNumber">--</div>
+                        <div class="trust-score-label">Trust Score</div>
+                    </div>
+                </div>
+
+                <div id="trustLevelIndicator" class="trust-level-indicator">
+                    <i id="trustLevelIcon" class="fas fa-shield-alt trust-level-icon"></i>
+                    <span id="trustLevelText">Analyzing...</span>
                 </div>
             </div>
 
-            <div id="trustLevelIndicator" class="trust-level-indicator">
-                <i id="trustLevelIcon" class="fas fa-shield-alt trust-level-icon"></i>
-                <span id="trustLevelText">Analyzing...</span>
+            <!-- Conversational Summary Card -->
+            <div class="conversational-summary-card">
+                <h2 class="summary-header">What We Found</h2>
+                <div id="trustSummary"></div>
+                <div class="key-points" id="keyPoints">
+                    <!-- Key points will be dynamically inserted here -->
+                </div>
             </div>
-
-            <div id="trustSummary"></div>
         </div>
 
         <!-- Article Info -->
@@ -1252,21 +961,19 @@
             <div id="articleMeta" class="article-meta"></div>
         </div>
 
-        <!-- Key Findings -->
-        <div class="key-findings-section">
-            <div id="keyFindings"></div>
-        </div>
-
-        <!-- Trust Breakdown -->
+        <!-- Trust Breakdown with Explanation -->
         <div class="trust-breakdown-section">
             <h3 class="section-header">
                 <i class="fas fa-chart-pie"></i>
-                Trust Score Breakdown
+                How We Calculate the Trust Score
             </h3>
+            <div class="breakdown-explanation">
+                The trust score is calculated by analyzing 4 key components. Each component is weighted based on its importance to overall credibility. Source reputation (30%), Author credibility (25%), Transparency (25%), and Objectivity (20%) combine to create your final score.
+            </div>
             <div id="trustBreakdown" class="breakdown-grid"></div>
         </div>
 
-        <!-- Detailed Service Analysis -->
+        <!-- Detailed Service Analysis with Colored Borders -->
         <div class="services-section">
             <h3 class="section-header">
                 <i class="fas fa-microscope"></i>
@@ -1293,9 +1000,6 @@
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <div class="loading-text">Analyzing article with AI...</div>
-            <div class="loading-steps">
-                <div id="loadingStep">Extracting article content...</div>
-            </div>
         </div>
     </div>
 
@@ -1306,11 +1010,192 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/truthlens-core.js"></script>
-    <script src="/static/js/truthlens-display.js"></script>
-    <script src="/static/js/truthlens-services.js"></script>
-    
-    <!-- Optional: jsPDF for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // Mock JavaScript to show the toggle functionality
+        const truthLensApp = {
+            switchTab: function(mode) {
+                // Update buttons
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+                
+                // Toggle input fields
+                if (mode === 'url') {
+                    document.getElementById('urlExplanation').style.display = 'block';
+                    document.getElementById('urlInputWrapper').style.display = 'block';
+                    document.getElementById('textExplanation').style.display = 'none';
+                    document.getElementById('textInputWrapper').style.display = 'none';
+                } else {
+                    document.getElementById('urlExplanation').style.display = 'none';
+                    document.getElementById('urlInputWrapper').style.display = 'none';
+                    document.getElementById('textExplanation').style.display = 'block';
+                    document.getElementById('textInputWrapper').style.display = 'block';
+                }
+            },
+            
+            analyzeArticle: function() {
+                // Show results for demo
+                document.getElementById('resultsSection').classList.add('active');
+                document.getElementById('loadingOverlay').classList.add('active');
+                
+                // Simulate loading
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    
+                    // Update trust score
+                    document.getElementById('trustScoreNumber').textContent = '72';
+                    document.getElementById('trustLevelText').textContent = 'High Credibility';
+                    
+                    // Update summary
+                    document.getElementById('trustSummary').innerHTML = `
+                        <strong>BBC News</strong> demonstrates strong journalistic standards with this article. 
+                        Our AI analysis found reliable sourcing, balanced reporting, and transparent authorship. 
+                        While the content shows slight political context, it maintains professional objectivity.
+                    `;
+                    
+                    // Add key points
+                    document.getElementById('keyPoints').innerHTML = `
+                        <div class="key-point positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Verified source with strong reputation</span>
+                        </div>
+                        <div class="key-point positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Author has established credibility</span>
+                        </div>
+                        <div class="key-point warning">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Minor political bias detected (left-leaning)</span>
+                        </div>
+                        <div class="key-point positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>All major claims fact-checked successfully</span>
+                        </div>
+                    `;
+                    
+                    // Update article info
+                    document.getElementById('articleTitle').textContent = 'Breaking: Major Climate Agreement Reached at UN Summit';
+                    document.getElementById('articleMeta').innerHTML = `
+                        <div class="meta-item">
+                            <i class="fas fa-building"></i>
+                            <span>BBC News</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-user"></i>
+                            <span>Jane Smith</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>March 15, 2024</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>5 min read</span>
+                        </div>
+                    `;
+                    
+                    // Update breakdown
+                    document.getElementById('trustBreakdown').innerHTML = `
+                        <div class="breakdown-item">
+                            <div class="breakdown-header">
+                                <div class="breakdown-label">
+                                    <div class="breakdown-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <span>Source Reputation</span>
+                                </div>
+                                <div class="breakdown-value" style="color: var(--secondary);">85%</div>
+                            </div>
+                            <div class="breakdown-explanation">
+                                BBC News is a well-established news organization with strong editorial standards
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" style="width: 85%; background: var(--primary);"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-header">
+                                <div class="breakdown-label">
+                                    <div class="breakdown-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--secondary);">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <span>Author Credibility</span>
+                                </div>
+                                <div class="breakdown-value" style="color: var(--secondary);">78%</div>
+                            </div>
+                            <div class="breakdown-explanation">
+                                Experienced journalist with 10+ years covering environmental topics
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" style="width: 78%; background: var(--secondary);"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-header">
+                                <div class="breakdown-label">
+                                    <div class="breakdown-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                    <span>Transparency</span>
+                                </div>
+                                <div class="breakdown-value" style="color: var(--warning);">70%</div>
+                            </div>
+                            <div class="breakdown-explanation">
+                                Clear sourcing and disclosure, minor gaps in methodology explanation
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" style="width: 70%; background: #8b5cf6;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="breakdown-item">
+                            <div class="breakdown-header">
+                                <div class="breakdown-label">
+                                    <div class="breakdown-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                        <i class="fas fa-balance-scale"></i>
+                                    </div>
+                                    <span>Objectivity</span>
+                                </div>
+                                <div class="breakdown-value" style="color: var(--warning);">65%</div>
+                            </div>
+                            <div class="breakdown-explanation">
+                                Mostly balanced with slight left-leaning perspective on policy recommendations
+                            </div>
+                            <div class="breakdown-bar">
+                                <div class="breakdown-fill" style="width: 65%; background: var(--warning);"></div>
+                            </div>
+                        </div>
+                    `;
+                }, 2000);
+            },
+            
+            resetAnalysis: function() {
+                document.getElementById('resultsSection').classList.remove('active');
+                document.getElementById('urlInput').value = '';
+                document.getElementById('textInput').value = '';
+            },
+            
+            downloadPDF: function() {
+                alert('PDF download functionality would be implemented here');
+            },
+            
+            shareResults: function() {
+                alert('Share functionality would be implemented here');
+            }
+        };
+        
+        // Example link functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.getElementById('urlInput').value = this.getAttribute('data-url');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
