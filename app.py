@@ -182,7 +182,7 @@ def analyze():
                 message="Analysis completed successfully",
                 metadata={
                     'processing_time': result.get('pipeline_metadata', {}).get('total_duration', 0),
-                    'services_used': list(result.get('services', {}).keys())
+                    'services_used': list(transformed_result.get('detailed_analysis', {}).keys())
                 }
             )
         else:
@@ -201,28 +201,181 @@ def analyze():
 
 def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
     """Transform backend result to match frontend expectations"""
-    # Extract services data
-    services = result.get('services', {})
+    
+    # Debug logging
+    logger.info(f"Transforming result with keys: {list(result.keys())}")
+    
+    # Extract all service results
+    services = {}
+    metadata_services = []
+    
+    # The pipeline returns service results directly in the result dict
+    service_names = [
+        'article_extractor', 'source_credibility', 'author_analyzer',
+        'bias_detector', 'fact_checker', 'transparency_analyzer',
+        'manipulation_detector', 'content_analyzer'
+    ]
+    
+    for service_name in service_names:
+        if service_name in result and isinstance(result[service_name], dict):
+            # Check if it's a valid service result (has 'success' field)
+            service_result = result[service_name]
+            if 'success' in service_result and service_result.get('success'):
+                # Extract the data field if it exists, otherwise use the whole result
+                if 'data' in service_result:
+                    services[service_name] = service_result['data']
+                else:
+                    # Remove metadata fields for cleaner output
+                    cleaned_result = {
+                        k: v for k, v in service_result.items()
+                        if k not in ['service', 'success', 'timestamp', 'available']
+                    }
+                    services[service_name] = cleaned_result
+                
+                metadata_services.append(service_name)
+                logger.info(f"Found successful service: {service_name}")
+    
+    logger.info(f"Total services found: {len(services)}")
+    logger.info(f"Services used: {metadata_services}")
+    
+    # Extract article metadata from article_extractor if available
+    article_data = {}
+    if 'article' in result:
+        article_data = result['article']
+    elif 'article_extractor' in result and result['article_extractor'].get('success'):
+        # Extract from article_extractor service result
+        extractor_data = result['article_extractor']
+        if 'data' in extractor_data:
+            article_data = extractor_data['data']
+        else:
+            # Legacy format - extract relevant fields
+            article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
+                           'domain', 'description', 'image', 'keywords', 'word_count', 
+                           'source', 'language']
+            for field in article_fields:
+                if field in extractor_data:
+                    article_data[field] = extractor_data[field]
     
     # Build the expected structure
     transformed = {
         'analysis': {
             'trust_score': result.get('trust_score', 0),
             'trust_level': result.get('trust_level', 'unknown'),
-            'summary': result.get('summary', {}),
-            'timestamp': datetime.now().isoformat()
+            'summary': result.get('summary', 'Analysis completed'),
+            'timestamp': datetime.now().isoformat(),
+            'key_findings': extract_key_findings(services)
         },
-        'article': result.get('metadata', {}),
+        'article': article_data,
         'detailed_analysis': services,
         'metadata': {
-            'services_available': result.get('services_available', 0),
+            'services_available': result.get('pipeline_metadata', {}).get('total_available_services', 0),
             'is_pro': result.get('is_pro', False),
-            'analysis_mode': result.get('analysis_mode', 'basic'),
+            'analysis_mode': 'premium' if result.get('is_pro', False) else 'basic',
             'processing_time': result.get('pipeline_metadata', {}).get('total_duration', 0)
         }
     }
     
     return transformed
+
+def extract_key_findings(services: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract key findings from service results"""
+    findings = []
+    
+    # Source credibility finding
+    if 'source_credibility' in services:
+        source = services['source_credibility']
+        score = source.get('credibility_score', source.get('score', 0))
+        if score < 50:
+            findings.append({
+                'type': 'negative',
+                'finding': 'Low source credibility',
+                'text': f"Source credibility score: {score}/100",
+                'severity': 'high'
+            })
+        elif score >= 80:
+            findings.append({
+                'type': 'positive',
+                'finding': 'High source credibility',
+                'text': f"Source credibility score: {score}/100",
+                'severity': 'low'
+            })
+    
+    # Bias detection finding
+    if 'bias_detector' in services:
+        bias = services['bias_detector']
+        bias_score = bias.get('bias_score', bias.get('score', 0))
+        if bias_score > 60:
+            findings.append({
+                'type': 'negative',
+                'finding': 'High bias detected',
+                'text': f"Bias score: {bias_score}%",
+                'severity': 'high'
+            })
+        elif bias_score < 30:
+            findings.append({
+                'type': 'positive',
+                'finding': 'Low bias detected',
+                'text': f"Bias score: {bias_score}%",
+                'severity': 'low'
+            })
+    
+    # Fact checking finding
+    if 'fact_checker' in services:
+        facts = services['fact_checker']
+        if 'fact_checks' in facts and isinstance(facts['fact_checks'], list):
+            total = len(facts['fact_checks'])
+            verified = sum(1 for f in facts['fact_checks'] 
+                         if f.get('verdict') in ['True', 'Verified', 'true', 'verified'])
+            if total > 0:
+                accuracy = int((verified / total) * 100)
+                if accuracy < 50:
+                    findings.append({
+                        'type': 'negative',
+                        'finding': 'Low fact accuracy',
+                        'text': f"Only {verified}/{total} claims verified ({accuracy}%)",
+                        'severity': 'high'
+                    })
+                elif accuracy >= 80:
+                    findings.append({
+                        'type': 'positive',
+                        'finding': 'High fact accuracy',
+                        'text': f"{verified}/{total} claims verified ({accuracy}%)",
+                        'severity': 'low'
+                    })
+    
+    # Author credibility finding
+    if 'author_analyzer' in services:
+        author = services['author_analyzer']
+        if author.get('author_name'):
+            score = author.get('credibility_score', author.get('author_score', 0))
+            if score > 0:
+                if score < 40:
+                    findings.append({
+                        'type': 'warning',
+                        'finding': 'Limited author credibility',
+                        'text': f"Author {author['author_name']} has credibility score: {score}/100",
+                        'severity': 'medium'
+                    })
+                elif score >= 70:
+                    findings.append({
+                        'type': 'positive',
+                        'finding': 'Credible author',
+                        'text': f"Author {author['author_name']} has credibility score: {score}/100",
+                        'severity': 'low'
+                    })
+        else:
+            findings.append({
+                'type': 'warning',
+                'finding': 'No author information',
+                'text': 'Article lacks author attribution',
+                'severity': 'medium'
+            })
+    
+    # Sort findings by severity (high first)
+    severity_order = {'high': 0, 'medium': 1, 'low': 2}
+    findings.sort(key=lambda f: severity_order.get(f.get('severity', 'medium'), 1))
+    
+    return findings[:5]  # Return top 5 findings
 
 # DEBUG ROUTES
 
