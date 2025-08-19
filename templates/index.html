@@ -1441,6 +1441,21 @@
                 }, 2000);
             },
             
+            toggleAccordion: function(header) {
+                const item = header.parentElement;
+                const wasActive = item.classList.contains('active');
+                
+                // Close all accordion items
+                document.querySelectorAll('.service-accordion-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // Open clicked item if it wasn't already active
+                if (!wasActive) {
+                    item.classList.add('active');
+                }
+            },
+            
             resetAnalysis: function() {
                 document.getElementById('resultsSection').classList.remove('active');
                 document.getElementById('urlInput').value = '';
@@ -1456,13 +1471,32 @@
             }
         };
         
-        // Example link functionality
+        // Example link functionality and accordion functionality
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.example-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     document.getElementById('urlInput').value = this.getAttribute('data-url');
                 });
+            });
+            
+            // Add click handlers to accordion headers
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.service-accordion-header')) {
+                    const header = e.target.closest('.service-accordion-header');
+                    const item = header.parentElement;
+                    const wasActive = item.classList.contains('active');
+                    
+                    // Close all accordion items
+                    document.querySelectorAll('.service-accordion-item').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    
+                    // Open clicked item if it wasn't already active
+                    if (!wasActive) {
+                        item.classList.add('active');
+                    }
+                }
             });
         });
     </script>
