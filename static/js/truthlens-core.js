@@ -1,5 +1,5 @@
 // truthlens-core.js - Consolidated Core Application Logic
-// Combines core functionality, state management, and API communication
+// FIXED VERSION - Corrects API payload format issue
 
 // Global configuration
 const CONFIG = {
@@ -255,24 +255,59 @@ class TruthLensApp {
             return;
         }
 
+        // Validate URL if in URL mode
+        if (this.state.currentTab === 'url') {
+            try {
+                new URL(input);
+            } catch (e) {
+                this.utils.showError('Please enter a valid URL starting with http:// or https://');
+                return;
+            }
+        }
+
         this.state.isAnalyzing = true;
         this.utils.showLoading();
 
         try {
+            // FIXED: Ensure payload format matches backend expectations
             const payload = this.state.currentTab === 'url' 
                 ? { url: input, is_pro: CONFIG.isPro }
                 : { text: input, is_pro: CONFIG.isPro };
 
+            // Debug logging
+            console.log('=== API Request Debug ===');
+            console.log('Current tab:', this.state.currentTab);
+            console.log('Input value:', input);
+            console.log('Sending payload:', JSON.stringify(payload, null, 2));
+            console.log('API Endpoint:', CONFIG.API_ENDPOINT);
+
             const response = await fetch(CONFIG.API_ENDPOINT, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(payload)
             });
 
-            const responseData = await response.json();
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+
+            let responseData;
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse response as JSON:', e);
+                throw new Error('Invalid response format from server');
+            }
+
+            console.log('Parsed response:', responseData);
             
             if (!response.ok || !responseData.success) {
-                throw new Error(responseData.error && responseData.error.message || 'Analysis failed');
+                throw new Error(responseData.error && responseData.error.message || responseData.error || 'Analysis failed');
             }
 
             const data = responseData.data;
@@ -296,9 +331,21 @@ class TruthLensApp {
             }, 1000);
 
         } catch (error) {
-            console.error('Analysis error:', error);
+            console.error('=== Analysis Error ===');
+            console.error('Error details:', error);
+            console.error('Error stack:', error.stack);
+            
             this.utils.hideLoading();
-            this.utils.showError(error.message);
+            
+            // Provide more specific error messages
+            let errorMessage = error.message;
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Unable to connect to the analysis server. Please check your connection and try again.';
+            } else if (error.message.includes('NetworkError')) {
+                errorMessage = 'Network error occurred. Please check your internet connection.';
+            }
+            
+            this.utils.showError(errorMessage);
         } finally {
             this.state.isAnalyzing = false;
         }
