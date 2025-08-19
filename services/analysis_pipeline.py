@@ -352,12 +352,29 @@ class AnalysisPipeline:
         # Prepare data for services
         service_data = self._prepare_service_data(stage, context)
         
-        # Run services
+        # FIXED: Replace analyze_parallel with manual parallel execution
         if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
             # Run in parallel using ThreadPoolExecutor
-            results = registry.analyze_parallel(available_services, service_data)
-            for service_name, result in results.items():
-                context.add_result(service_name, result)
+            with ThreadPoolExecutor(max_workers=min(len(available_services), 4)) as executor:
+                # Submit all tasks
+                future_to_service = {}
+                for service_name in available_services:
+                    future = executor.submit(
+                        registry.analyze_with_service,
+                        service_name,
+                        service_data
+                    )
+                    future_to_service[future] = service_name
+                
+                # Collect results
+                for future in as_completed(future_to_service):
+                    service_name = future_to_service[future]
+                    try:
+                        result = future.result(timeout=30)  # 30 second timeout per service
+                        context.add_result(service_name, result)
+                    except Exception as e:
+                        logger.error(f"Service {service_name} failed: {e}", exc_info=True)
+                        context.add_error(service_name, str(e), stage.name)
         else:
             # Run sequentially
             for service_name in available_services:
