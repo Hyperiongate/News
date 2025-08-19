@@ -1,6 +1,6 @@
 """
-FILE: services/plagiarism_detector.py
-PURPOSE: Plagiarism detection service with Copyleaks and Copyscape integration
+Plagiarism Detection Service - FIXED VERSION
+Fixes the initialization error by properly setting attributes before calling super().__init__
 """
 
 import logging
@@ -20,27 +20,30 @@ class PlagiarismDetector(BaseAnalyzer):
     """Plagiarism detection service that inherits from BaseAnalyzer"""
     
     def __init__(self):
-        super().__init__('plagiarism_detector')
-        
+        # FIXED: Set these attributes BEFORE calling super().__init__
         # API configurations
         self.copyleaks_api_key = Config.COPYLEAKS_API_KEY
         self.copyleaks_email = Config.COPYLEAKS_EMAIL
         self.copyscape_api_key = Config.COPYSCAPE_API_KEY
         self.copyscape_username = Config.COPYSCAPE_USERNAME
         
+        # Check which APIs are available BEFORE calling super().__init__
+        self.copyleaks_available = bool(self.copyleaks_api_key and self.copyleaks_email)
+        self.copyscape_available = bool(self.copyscape_api_key and self.copyscape_username)
+        
+        # Now call super().__init__ which will call _check_availability()
+        super().__init__('plagiarism_detector')
+        
         # API endpoints
         self.copyleaks_base_url = "https://api.copyleaks.com/v3"
         self.copyscape_base_url = "https://www.copyscape.com/api/"
-        
-        # Check which APIs are available
-        self.copyleaks_available = bool(self.copyleaks_api_key and self.copyleaks_email)
-        self.copyscape_available = bool(self.copyscape_api_key and self.copyscape_username)
         
         logger.info(f"PlagiarismDetector initialized - Copyleaks: {self.copyleaks_available}, "
                    f"Copyscape: {self.copyscape_available}")
     
     def _check_availability(self) -> bool:
         """Check if at least one plagiarism API is available"""
+        # This method is called by BaseAnalyzer.__init__, so copyleaks_available and copyscape_available must be set first
         return self.copyleaks_available or self.copyscape_available
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -283,134 +286,101 @@ class PlagiarismDetector(BaseAnalyzer):
         )
         
         return {
-            'service': self.service_name,
             'success': True,
-            'data': {
-                'originality_score': originality_score,
-                'plagiarism_percentage': plagiarism_percentage,
-                'severity': severity,
-                'interpretation': interpretation,
-                'total_matches_found': len(matches),
-                'matches': processed_matches,
-                'detailed_analysis': detailed_analysis,
-                'recommendations': self._generate_recommendations(plagiarism_percentage, matches),
-                'api_used': api_used,
-                'check_summary': {
-                    'is_original': originality_score >= 80,
-                    'requires_review': plagiarism_percentage >= 25,
-                    'likely_plagiarized': plagiarism_percentage >= 50
-                }
-            },
-            'metadata': {
-                'api_service': api_used,
-                'check_timestamp': time.time(),
-                'word_count': len(result.get('text', '').split()) if 'text' in result else 0
-            }
+            'service': self.service_name,
+            'originality_score': originality_score,
+            'plagiarism_percentage': plagiarism_percentage,
+            'severity': severity,
+            'interpretation': interpretation,
+            'total_matches_found': len(matches),
+            'matches': processed_matches,
+            'detailed_analysis': detailed_analysis,
+            'api_used': api_used,
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
         }
     
     def _determine_match_type(self, percentage: float) -> str:
         """Determine the type of match based on percentage"""
         if percentage < 5:
-            return "Incidental - Common phrases"
+            return "Minor - Common phrases"
         elif percentage < 15:
-            return "Minor - Possible citation needed"
+            return "Moderate - Potential citation needed"
         elif percentage < 30:
-            return "Moderate - Review required"
-        elif percentage < 50:
-            return "Substantial - Likely plagiarism"
+            return "Significant - Review required"
         else:
-            return "Extensive - Clear plagiarism"
+            return "Major - Likely plagiarism"
     
     def _generate_detailed_analysis(self, originality: float, plagiarism: float, 
-                                   matches: List[Dict]) -> Dict[str, Any]:
+                                  matches: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Generate detailed plagiarism analysis"""
         analysis = {
-            'summary': '',
-            'match_patterns': [],
-            'risk_assessment': '',
-            'citation_check': ''
+            'summary': self._generate_summary(originality, plagiarism),
+            'risk_factors': [],
+            'recommendations': []
         }
         
-        # Summary
-        if originality >= 90:
-            analysis['summary'] = "The content appears to be highly original with minimal matches to existing sources."
-        elif originality >= 75:
-            analysis['summary'] = "The content is largely original with some common phrases or properly cited material."
-        elif originality >= 50:
-            analysis['summary'] = "Significant portions match existing sources. Careful review recommended."
-        else:
-            analysis['summary'] = "Extensive matching content detected. High likelihood of plagiarism."
+        # Identify risk factors
+        if plagiarism > 10:
+            analysis['risk_factors'].append("Significant text overlap detected")
         
-        # Match patterns
-        if matches:
-            academic_matches = sum(1 for m in matches if '.edu' in m.get('source_url', ''))
-            news_matches = sum(1 for m in matches if any(domain in m.get('source_url', '') 
-                                                         for domain in ['.com', '.org', '.net']))
-            
-            if academic_matches > 0:
-                analysis['match_patterns'].append(f"{academic_matches} matches from academic sources")
-            if news_matches > 0:
-                analysis['match_patterns'].append(f"{news_matches} matches from news/web sources")
+        if any(m['match_percentage'] > 20 for m in matches):
+            analysis['risk_factors'].append("Large continuous text segments match other sources")
         
-        # Risk assessment
+        if len(matches) > 3:
+            analysis['risk_factors'].append("Multiple sources with similar content found")
+        
+        # Generate recommendations
         if plagiarism < 10:
-            analysis['risk_assessment'] = "Low risk - Content appears original"
+            analysis['recommendations'].append("Content appears original, no action needed")
         elif plagiarism < 25:
-            analysis['risk_assessment'] = "Medium risk - Some matching content that may need attribution"
+            analysis['recommendations'].append("Review matched sections for proper citations")
+            analysis['recommendations'].append("Consider paraphrasing common phrases")
         else:
-            analysis['risk_assessment'] = "High risk - Substantial matching content found"
-        
-        # Citation check
-        analysis['citation_check'] = "Review matched sections to ensure proper attribution and quotation marks are used."
+            analysis['recommendations'].append("Urgent: Review all matched content")
+            analysis['recommendations'].append("Add proper citations or rewrite sections")
+            analysis['recommendations'].append("Consider running additional plagiarism checks")
         
         return analysis
     
-    def _generate_recommendations(self, plagiarism_percentage: float, 
-                                matches: List[Dict]) -> List[str]:
-        """Generate recommendations based on plagiarism results"""
-        recommendations = []
-        
-        if plagiarism_percentage < 10:
-            recommendations.append("Content appears original. No immediate action required.")
+    def _generate_summary(self, originality: float, plagiarism: float) -> str:
+        """Generate a summary of the plagiarism check"""
+        if originality >= 90:
+            return (f"Excellent originality score of {originality}%. "
+                   "The content appears to be unique with minimal matches to existing sources.")
+        elif originality >= 75:
+            return (f"Good originality score of {originality}%. "
+                   "Some common phrases or properly cited content detected.")
+        elif originality >= 50:
+            return (f"Moderate originality score of {originality}%. "
+                   f"Approximately {plagiarism}% of content matches other sources.")
         else:
-            if plagiarism_percentage >= 10:
-                recommendations.append("Review matched sections and add proper citations where needed.")
-            
-            if plagiarism_percentage >= 25:
-                recommendations.append("Rewrite sections with high match percentages in your own words.")
-                recommendations.append("Ensure all quotes are properly marked and attributed.")
-            
-            if plagiarism_percentage >= 50:
-                recommendations.append("Substantial rewriting required to ensure originality.")
-                recommendations.append("Consider running another check after revisions.")
-            
-            # Specific recommendations based on match types
-            high_percentage_matches = [m for m in matches if m.get('match_percentage', 0) > 20]
-            if high_percentage_matches:
-                recommendations.append(f"Focus on rewriting {len(high_percentage_matches)} sections with high match rates.")
-        
-        return recommendations[:5]  # Return top 5 recommendations
+            return (f"Low originality score of {originality}%. "
+                   f"Significant portions ({plagiarism}%) match existing sources.")
     
-    # Helper method for content highlighting
-    def get_highlighted_text(self, text: str, matches: List[Dict]) -> str:
-        """
-        Get text with plagiarized sections highlighted
-        This would be used by frontend to show which parts are plagiarized
-        """
-        # This is a placeholder - actual implementation would need to:
-        # 1. Get exact positions of matched text from API
-        # 2. Mark those sections with special tags
-        # 3. Return marked-up text
-        
-        highlighted = text
-        
-        # Simple demonstration - wrap suspected sections
-        for match in matches:
-            if 'snippet' in match and match['snippet'] in text:
-                highlighted = highlighted.replace(
-                    match['snippet'],
-                    f"<mark class='plagiarism-highlight' data-match-percentage='{match.get('match_percentage', 0)}'>"
-                    f"{match['snippet']}</mark>"
-                )
-        
-        return highlighted
+    def get_default_result(self) -> Dict[str, Any]:
+        """Return default result when service is unavailable"""
+        return {
+            'success': False,
+            'service': self.service_name,
+            'error': 'Plagiarism detection service not available',
+            'originality_score': None,
+            'plagiarism_percentage': None,
+            'severity': 'Unknown',
+            'interpretation': 'Unable to perform plagiarism check',
+            'matches': [],
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    
+    def get_error_result(self, error_message: str) -> Dict[str, Any]:
+        """Return error result"""
+        return {
+            'success': False,
+            'service': self.service_name,
+            'error': error_message,
+            'originality_score': None,
+            'plagiarism_percentage': None,
+            'severity': 'Error',
+            'interpretation': 'Analysis failed due to an error',
+            'matches': [],
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
