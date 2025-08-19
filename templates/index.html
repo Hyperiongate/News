@@ -3,8 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI - News Analyzer</title>
+    <title>TruthLens AI - Advanced News Credibility Analysis</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
+        /* ============================================
+           CSS VARIABLES & RESET
+           ============================================ */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
+            
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            --gradient-premium: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            --gradient-dark: linear-gradient(135deg, var(--dark) 0%, #111827 100%);
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            
+            --radius: 0.75rem;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,484 +55,1262 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            font-family: var(--font-sans);
+            background: var(--gray-50);
+            color: var(--dark);
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            background: white;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* ============================================
+           HEADER & NAVIGATION
+           ============================================ */
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
         }
 
         .header-content {
-            max-width: 800px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #6366f1;
-        }
-
-        .main-card {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        input[type="url"],
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            font-family: inherit;
-        }
-
-        input[type="url"]:focus,
-        textarea:focus {
-            outline: none;
-            border-color: #6366f1;
-        }
-
-        textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        .button-group {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
         }
 
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: var(--shadow);
+        }
+
+        .pro-badge {
+            background: var(--gradient-premium);
+            color: var(--dark);
+            padding: 0.375rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .btn-primary {
-            background: #6366f1;
+        /* ============================================
+           HERO SECTION
+           ============================================ */
+        .hero {
+            background: var(--white);
+            padding: 3rem 0 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
+            opacity: 0.05;
+            animation: pulse 20s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            background: var(--gradient-dark);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+        }
+
+        .feature-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .feature-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            transition: all 0.3s ease;
+        }
+
+        .feature-pill i {
+            color: var(--primary);
+        }
+
+        .feature-pill:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .feature-pill:hover i {
             color: white;
         }
 
+        /* ============================================
+           INPUT SECTION
+           ============================================ */
+        .input-section {
+            max-width: 800px;
+            margin: -2rem auto 3rem;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .input-card {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+        }
+
+        .mode-toggle {
+            display: flex;
+            background: var(--gray-100);
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .mode-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--gray-50);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            flex: 1;
+        }
+
         .btn-primary:hover {
-            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
         .btn-primary:disabled {
-            background: #9ca3af;
+            opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
 
         .btn-secondary {
-            background: white;
-            color: #6366f1;
-            border: 2px solid #6366f1;
+            background: var(--white);
+            color: var(--primary);
+            border: 2px solid var(--gray-200);
         }
 
         .btn-secondary:hover {
-            background: #f3f4f6;
+            border-color: var(--primary);
+            background: var(--gray-50);
         }
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            border-bottom: 2px solid transparent;
-            font-size: 16px;
-            font-weight: 600;
-            color: #666;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            color: #6366f1;
-            border-bottom-color: #6366f1;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .error-message {
-            display: none;
-            background: #fee2e2;
-            border: 1px solid #fca5a5;
-            color: #991b1b;
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 10px;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f4f6;
-            border-top-color: #6366f1;
+        /* Ripple effect */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
             border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        .example-links {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .example-btn {
+            color: var(--primary);
+            text-decoration: none;
+            margin: 0 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        /* ============================================
+           LOADING OVERLAY
+           ============================================ */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .loading-spinner::before,
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            border: 3px solid transparent;
+        }
+
+        .loading-spinner::before {
+            border-top-color: var(--primary);
             animation: spin 1s linear infinite;
+        }
+
+        .loading-spinner::after {
+            border-bottom-color: var(--secondary);
+            animation: spin 1.5s linear infinite reverse;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .results {
+        .loading-text {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .loading-steps {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        /* ============================================
+           RESULTS SECTION
+           ============================================ */
+        .results-section {
             display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
         }
 
-        .results.show {
+        .results-section.active {
             display: block;
+            animation: fadeIn 0.6s ease-out;
         }
 
-        .result-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .trust-score {
-            font-size: 48px;
-            font-weight: bold;
+        /* Trust Score Card */
+        .trust-score-card {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-xl);
             text-align: center;
-            margin: 20px 0;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .trust-score.high { color: #10b981; }
-        .trust-score.medium { color: #f59e0b; }
-        .trust-score.low { color: #ef4444; }
-
-        .service-result {
-            background: #f9fafb;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 10px;
+        .trust-score-header {
+            margin-bottom: 2rem;
         }
 
-        .service-result h3 {
-            font-size: 18px;
-            margin-bottom: 5px;
-            color: #333;
+        .trust-score-header h2 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
         }
 
-        .service-result p {
-            color: #666;
-            margin: 0;
+        .trust-gauge-container {
+            position: relative;
+            width: 280px;
+            height: 140px;
+            margin: 0 auto 2rem;
         }
 
-        .examples {
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
+        #trustGauge {
+            width: 100%;
+            height: 100%;
         }
 
-        .example-link {
-            color: #6366f1;
-            text-decoration: none;
-            margin: 0 10px;
+        .trust-score-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -20%);
+            text-align: center;
+        }
+
+        #trustScoreNumber {
+            font-size: 4rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+            line-height: 1;
+        }
+
+        .trust-score-label {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .trust-level-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--gray-100);
+            border-radius: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .trust-level-icon {
+            font-size: 1.25rem;
+        }
+
+        #trustLevelText {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        #trustSummary {
+            max-width: 600px;
+            margin: 0 auto;
+            color: var(--gray-600);
+            line-height: 1.8;
+        }
+
+        /* Article Info Bar */
+        .article-info-bar {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        #articleTitle {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .article-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-item i {
+            color: var(--primary);
+        }
+
+        /* Key Findings */
+        .key-findings-section {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .key-findings-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .key-findings-header i {
+            color: var(--primary);
+        }
+
+        .findings-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .finding-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+
+        .finding-item:hover {
+            transform: translateX(4px);
+            border-color: var(--primary-light);
+        }
+
+        .finding-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .finding-positive .finding-icon {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
+        }
+
+        .finding-negative .finding-icon {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .finding-warning .finding-icon {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .finding-content {
+            flex: 1;
+        }
+
+        .finding-title {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .finding-explanation {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        /* Trust Breakdown */
+        .trust-breakdown-section {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-header i {
+            color: var(--primary);
+        }
+
+        .breakdown-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .breakdown-item {
+            padding: 1.25rem;
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .breakdown-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .breakdown-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .breakdown-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .breakdown-explanation {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .breakdown-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .breakdown-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breakdown-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0) 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Service Accordion */
+        .services-section {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-accordion-item {
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .service-accordion-item:hover {
+            border-color: var(--primary-light);
+            box-shadow: var(--shadow);
+        }
+
+        .service-accordion-header {
+            padding: 1.5rem;
+            background: var(--gray-50);
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
         }
 
-        .example-link:hover {
-            text-decoration: underline;
+        .service-accordion-item.active .service-accordion-header {
+            background: var(--primary);
+            color: white;
+        }
+
+        .service-header-content {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex: 1;
+        }
+
+        .service-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            background: var(--white);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .service-accordion-item.active .service-icon-wrapper {
+            color: var(--primary);
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .service-description {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .service-accordion-item.active .service-description {
+            opacity: 0.9;
+        }
+
+        .service-preview {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .preview-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+
+        .preview-label {
+            opacity: 0.7;
+        }
+
+        .preview-value {
+            font-weight: 600;
+        }
+
+        .service-expand-icon {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+            color: var(--gray-500);
+        }
+
+        .service-accordion-item.active .service-expand-icon {
+            transform: rotate(180deg);
+            color: white;
+        }
+
+        .pro-lock-badge {
+            position: absolute;
+            top: 1rem;
+            right: 3.5rem;
+            background: var(--gradient-premium);
+            color: var(--dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.625rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .data-state-indicator {
+            position: absolute;
+            top: 50%;
+            right: 1rem;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--secondary);
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        .data-state-indicator.no-data {
+            background: var(--gray-400);
+            box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2);
+        }
+
+        .service-accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            background: var(--white);
+        }
+
+        .service-accordion-item.active .service-accordion-content {
+            max-height: 2000px;
+        }
+
+        .service-content-inner {
+            padding: 2rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        /* Service Content Styles */
+        .service-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .service-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.125rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .service-results {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            color: var(--gray-600);
+        }
+
+        .result-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-high {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
+        }
+
+        .status-medium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .status-low {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Action Buttons */
+        .results-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+
+        /* Error Message */
+        .error-message {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--danger);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-xl);
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+            z-index: 10000;
+        }
+
+        .error-message.active {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        /* Info Box */
+        .info-box {
+            background: var(--gray-50);
+            border: 1px solid var(--primary-light);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .info-box-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-box-content {
+            color: var(--gray-700);
+            line-height: 1.6;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .header-content,
+            .hero-content,
+            .input-section,
+            .results-section {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .trust-gauge-container {
+                width: 240px;
+                height: 120px;
+            }
+            
+            #trustScoreNumber {
+                font-size: 3rem;
+            }
+            
+            .article-meta {
+                gap: 1rem;
+                font-size: 0.813rem;
+            }
+            
+            .service-icon-wrapper {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
+    <!-- Header -->
+    <header class="header">
         <div class="header-content">
-            <div class="logo">TruthLens AI</div>
-            <span style="background: #fbbf24; color: #333; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">PRO</span>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <span>TruthLens AI</span>
+            </div>
+            <div class="pro-badge">
+                <i class="fas fa-crown"></i>
+                <span>PRO</span>
+            </div>
         </div>
     </header>
 
-    <div class="container">
-        <div class="main-card">
-            <h1>Analyze News Articles</h1>
-            <p class="subtitle">Get AI-powered insights on credibility, bias, and trustworthiness</p>
-
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('url')">Analyze URL</button>
-                <button class="tab" onclick="switchTab('text')">Analyze Text</button>
-            </div>
-
-            <div id="url-tab" class="tab-content active">
-                <div class="input-group">
-                    <label for="urlInput">News Article URL</label>
-                    <input type="url" id="urlInput" placeholder="https://example.com/article">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>AI-Powered News Credibility Analysis</h1>
+            <p class="hero-subtitle">
+                Uncover bias, verify facts, and assess trustworthiness with advanced AI
+            </p>
+            <div class="feature-pills">
+                <div class="feature-pill">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Source Verification</span>
                 </div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="analyzeURL()">Analyze Article</button>
-                    <button class="btn-secondary" onclick="resetForm()">Clear</button>
+                <div class="feature-pill">
+                    <i class="fas fa-user-check"></i>
+                    <span>Author Analysis</span>
                 </div>
-                <div class="examples">
-                    Try an example: 
-                    <a class="example-link" onclick="setExample('https://www.bbc.com/news/world-us-canada-68562045')">BBC News</a>
-                    <a class="example-link" onclick="setExample('https://www.reuters.com/technology/')">Reuters</a>
+                <div class="feature-pill">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Bias Detection</span>
                 </div>
-            </div>
-
-            <div id="text-tab" class="tab-content">
-                <div class="input-group">
-                    <label for="textInput">Article Text</label>
-                    <textarea id="textInput" placeholder="Paste your article text here..."></textarea>
+                <div class="feature-pill">
+                    <i class="fas fa-check-double"></i>
+                    <span>Fact Checking</span>
                 </div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="analyzeText()">Analyze Text</button>
-                    <button class="btn-secondary" onclick="resetForm()">Clear</button>
+                <div class="feature-pill">
+                    <i class="fas fa-mask"></i>
+                    <span>Manipulation Detection</span>
+                </div>
+                <div class="feature-pill">
+                    <i class="fas fa-eye"></i>
+                    <span>Transparency Analysis</span>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <div id="errorMessage" class="error-message"></div>
+    <!-- Input Section -->
+    <section class="input-section">
+        <div class="input-card">
+            <div class="mode-toggle">
+                <button class="mode-btn active" data-mode="url" onclick="truthLensApp.switchTab('url')">
+                    <i class="fas fa-link"></i>
+                    <span>Analyze URL</span>
+                </button>
+                <button class="mode-btn" data-mode="text" onclick="truthLensApp.switchTab('text')">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Analyze Text</span>
+                </button>
+            </div>
+
+            <!-- URL Mode -->
+            <div id="urlExplanation" class="explanation active">
+                <div id="urlInputWrapper" class="input-wrapper active">
+                    <input type="url" 
+                           id="urlInput" 
+                           class="input-field" 
+                           placeholder="Enter news article URL (e.g., https://example.com/article)"
+                           autocomplete="url">
+                    <div class="input-actions">
+                        <button id="analyzeBtn" class="btn btn-primary" onclick="truthLensApp.analyzeArticle()">
+                            <i class="fas fa-search"></i>
+                            <span>Analyze Article</span>
+                        </button>
+                        <button id="resetBtn" class="btn btn-secondary" onclick="truthLensApp.resetAnalysis()">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                    <div class="example-links">
+                        Try an example:
+                        <a class="example-btn" data-url="https://www.bbc.com/news/world-us-canada-68562045">BBC News</a> •
+                        <a class="example-btn" data-url="https://www.reuters.com/technology/">Reuters</a> •
+                        <a class="example-btn" data-url="https://www.cnn.com/">CNN</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Mode -->
+            <div id="textExplanation" class="explanation">
+                <div id="textInputWrapper" class="input-wrapper">
+                    <textarea id="textInput" 
+                              class="input-field" 
+                              placeholder="Paste your article text here for analysis..."
+                              rows="6"></textarea>
+                    <div class="input-actions">
+                        <button id="analyzeTextBtn" class="btn btn-primary" onclick="truthLensApp.analyzeArticle()">
+                            <i class="fas fa-search"></i>
+                            <span>Analyze Text</span>
+                        </button>
+                        <button id="resetTextBtn" class="btn btn-secondary" onclick="truthLensApp.resetAnalysis()">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="resultsSection" class="results-section">
+        <!-- Trust Score Card -->
+        <div class="trust-score-card">
+            <div class="trust-score-header">
+                <h2>Credibility Analysis Complete</h2>
+            </div>
+            
+            <div class="trust-gauge-container">
+                <canvas id="trustGauge"></canvas>
+                <div class="trust-score-display">
+                    <div id="trustScoreNumber">--</div>
+                    <div class="trust-score-label">Trust Score</div>
+                </div>
+            </div>
+
+            <div id="trustLevelIndicator" class="trust-level-indicator">
+                <i id="trustLevelIcon" class="fas fa-shield-alt trust-level-icon"></i>
+                <span id="trustLevelText">Analyzing...</span>
+            </div>
+
+            <div id="trustSummary"></div>
         </div>
 
-        <div id="loading" class="main-card loading">
-            <div class="spinner"></div>
-            <p style="margin-top: 20px;">Analyzing article...</p>
+        <!-- Article Info -->
+        <div class="article-info-bar">
+            <h3 id="articleTitle">Loading article information...</h3>
+            <div id="articleMeta" class="article-meta"></div>
         </div>
 
-        <div id="results" class="results">
-            <div class="result-card">
-                <h2 style="text-align: center;">Trust Score</h2>
-                <div id="trustScore" class="trust-score">--</div>
-                <p id="trustLevel" style="text-align: center; color: #666;"></p>
-            </div>
+        <!-- Key Findings -->
+        <div class="key-findings-section">
+            <div id="keyFindings"></div>
+        </div>
 
-            <div class="result-card">
-                <h2>Analysis Results</h2>
-                <div id="serviceResults"></div>
-            </div>
+        <!-- Trust Breakdown -->
+        <div class="trust-breakdown-section">
+            <h3 class="section-header">
+                <i class="fas fa-chart-pie"></i>
+                Trust Score Breakdown
+            </h3>
+            <div id="trustBreakdown" class="breakdown-grid"></div>
+        </div>
 
-            <div class="button-group">
-                <button class="btn-secondary" onclick="resetForm()">Analyze Another Article</button>
+        <!-- Detailed Service Analysis -->
+        <div class="services-section">
+            <h3 class="section-header">
+                <i class="fas fa-microscope"></i>
+                Detailed Analysis
+            </h3>
+            <div id="servicesAccordion"></div>
+        </div>
+
+        <!-- Results Actions -->
+        <div class="results-actions">
+            <button id="downloadPdfBtn" class="btn btn-primary" onclick="truthLensApp.downloadPDF()">
+                <i class="fas fa-download"></i>
+                <span>Download Report</span>
+            </button>
+            <button id="shareResultsBtn" class="btn btn-secondary" onclick="truthLensApp.shareResults()">
+                <i class="fas fa-share-alt"></i>
+                <span>Share Results</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Analyzing article with AI...</div>
+            <div class="loading-steps">
+                <div id="loadingStep">Extracting article content...</div>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentTab = 'url';
+    <!-- Error Message -->
+    <div id="errorMessage" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorText"></span>
+    </div>
 
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(`${tab}-tab`).classList.add('active');
-            hideError();
-        }
-
-        function setExample(url) {
-            document.getElementById('urlInput').value = url;
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.classList.add('show');
-        }
-
-        function hideError() {
-            document.getElementById('errorMessage').classList.remove('show');
-        }
-
-        function showLoading() {
-            document.getElementById('loading').classList.add('show');
-            document.getElementById('results').classList.remove('show');
-            hideError();
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').classList.remove('show');
-        }
-
-        function showResults(data) {
-            hideLoading();
-            
-            // Display trust score
-            const score = data.analysis.trust_score || 0;
-            const scoreEl = document.getElementById('trustScore');
-            scoreEl.textContent = score + '%';
-            
-            // Color code based on score
-            if (score >= 70) {
-                scoreEl.className = 'trust-score high';
-            } else if (score >= 40) {
-                scoreEl.className = 'trust-score medium';
-            } else {
-                scoreEl.className = 'trust-score low';
-            }
-            
-            // Display trust level
-            document.getElementById('trustLevel').textContent = data.analysis.trust_level || 'Unknown';
-            
-            // Display service results
-            const servicesEl = document.getElementById('serviceResults');
-            servicesEl.innerHTML = '';
-            
-            if (data.detailed_analysis) {
-                Object.entries(data.detailed_analysis).forEach(([service, result]) => {
-                    if (result && Object.keys(result).length > 0) {
-                        const serviceDiv = document.createElement('div');
-                        serviceDiv.className = 'service-result';
-                        
-                        const serviceName = service.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        const score = result.score || result.trust_score || 'N/A';
-                        const summary = result.summary || result.description || 'Analysis complete';
-                        
-                        serviceDiv.innerHTML = `
-                            <h3>${serviceName} (Score: ${score})</h3>
-                            <p>${summary}</p>
-                        `;
-                        
-                        servicesEl.appendChild(serviceDiv);
-                    }
-                });
-            }
-            
-            document.getElementById('results').classList.add('show');
-        }
-
-        async function analyzeURL() {
-            const url = document.getElementById('urlInput').value.trim();
-            
-            if (!url) {
-                showError('Please enter a URL');
-                return;
-            }
-            
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                showError('Please enter a valid URL starting with http:// or https://');
-                return;
-            }
-            
-            await performAnalysis({ url: url, is_pro: true });
-        }
-
-        async function analyzeText() {
-            const text = document.getElementById('textInput').value.trim();
-            
-            if (!text) {
-                showError('Please enter some text');
-                return;
-            }
-            
-            if (text.split(' ').length < 50) {
-                showError('Please enter at least 50 words for accurate analysis');
-                return;
-            }
-            
-            await performAnalysis({ text: text, is_pro: true });
-        }
-
-        async function performAnalysis(payload) {
-            showLoading();
-            
-            try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    showResults(data.data);
-                } else {
-                    hideLoading();
-                    showError(data.error?.message || 'Analysis failed');
-                }
-            } catch (error) {
-                hideLoading();
-                showError('Network error. Please try again.');
-                console.error('Analysis error:', error);
-            }
-        }
-
-        function resetForm() {
-            document.getElementById('urlInput').value = '';
-            document.getElementById('textInput').value = '';
-            document.getElementById('results').classList.remove('show');
-            hideError();
-        }
-    </script>
+    <!-- Scripts -->
+    <script src="/static/js/truthlens-core.js"></script>
+    <script src="/static/js/truthlens-display.js"></script>
+    <script src="/static/js/truthlens-services.js"></script>
+    
+    <!-- Optional: jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
 </html>
