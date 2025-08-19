@@ -331,6 +331,25 @@
             padding: 1.5rem;
             box-shadow: var(--shadow-lg);
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trust-score-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
+            opacity: 0.1;
+            animation: rotateBg 20s linear infinite;
+        }
+
+        @keyframes rotateBg {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .trust-gauge-container {
@@ -358,6 +377,20 @@
             font-weight: 800;
             font-family: var(--font-display);
             line-height: 1;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
+            animation: scoreGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes scoreGlow {
+            from {
+                filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
+            }
+            to {
+                filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.5));
+            }
         }
 
         .trust-score-label {
