@@ -561,6 +561,62 @@ def debug_test_analyze():
         logger.error(f"Test analysis error: {e}", exc_info=True)
         return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
+@app.route('/api/debug/openai')
+def debug_openai():
+    """Debug endpoint specifically for OpenAI service"""
+    try:
+        from services.service_registry import get_service_registry
+        registry = get_service_registry()
+        
+        # Basic info
+        openai_info = {
+            'api_key_set': bool(Config.OPENAI_API_KEY),
+            'api_key_length': len(Config.OPENAI_API_KEY) if Config.OPENAI_API_KEY else 0,
+            'service_enabled_in_config': Config.is_service_enabled('openai_enhancer'),
+        }
+        
+        # Registry status
+        status = registry.get_service_status()
+        if 'openai_enhancer' in status['services']:
+            openai_info['registry_status'] = status['services']['openai_enhancer']
+        else:
+            openai_info['registry_status'] = 'Not in registry'
+            if 'openai_enhancer' in status.get('failed_services', {}):
+                openai_info['failure_reason'] = status['failed_services']['openai_enhancer']
+        
+        # Test the service
+        service = registry.get_service('openai_enhancer')
+        if service:
+            openai_info['service_available'] = service.is_available
+            
+            # Try a minimal test
+            if service.is_available:
+                test_result = service.analyze({
+                    'title': 'Debug Test',
+                    'text': 'Testing OpenAI service availability.',
+                    'author': 'Debug',
+                    'source': 'Debug'
+                })
+                openai_info['test_success'] = test_result.get('success', False)
+                if not test_result.get('success'):
+                    openai_info['test_error'] = test_result.get('error')
+        else:
+            openai_info['service_available'] = False
+        
+        return jsonify({
+            'status': 'debug',
+            'openai_service': openai_info,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"OpenAI debug error: {e}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 # STATIC FILE SERVING
 
 @app.route('/static/<path:path>')
@@ -654,7 +710,7 @@ if __name__ == '__main__':
     # Log startup information
     logger.info(f"Starting News Analyzer API in {Config.ENV} mode")
     logger.info(f"Enabled services: {config_status['enabled_services']}")
-    logger.info(f"Debug endpoints available: /api/debug/info, /api/debug/services, /api/debug/test-analyze")
+    logger.info(f"Debug endpoints available: /api/debug/info, /api/debug/services, /api/debug/test-analyze, /api/debug/openai")
     
     # Run the application
     port = int(os.environ.get('PORT', 5000))
