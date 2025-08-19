@@ -1263,6 +1263,181 @@
                             </div>
                         </div>
                     `;
+                    
+                    // Add service accordion items
+                    document.getElementById('servicesAccordion').innerHTML = `
+                        <div class="service-accordion-item" data-service="source_credibility">
+                            <div class="service-accordion-header" onclick="truthLensApp.toggleAccordion(this)">
+                                <div class="service-header-content">
+                                    <div class="service-icon-wrapper">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <div class="service-info">
+                                        <div class="service-name">Source Credibility</div>
+                                        <div class="service-preview">Score: 85% • Established news organization</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-down service-expand-icon"></i>
+                            </div>
+                            <div class="service-accordion-content">
+                                <div class="service-content-inner">
+                                    <div class="service-section">
+                                        <h4 class="section-title">
+                                            <i class="fas fa-shield-alt"></i>
+                                            Credibility Assessment
+                                        </h4>
+                                        <div class="service-results">
+                                            <div class="result-item">
+                                                <span class="result-label">Overall Credibility</span>
+                                                <span class="status-badge status-high">High</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Years Established</span>
+                                                <span class="result-value">102 years</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Awards & Recognition</span>
+                                                <span class="result-value">Multiple Pulitzer Prizes</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="service-section">
+                                        <h4 class="section-title">
+                                            <i class="fas fa-chart-line"></i>
+                                            Historical Accuracy
+                                        </h4>
+                                        <div class="service-results">
+                                            <div class="result-item">
+                                                <span class="result-label">Fact-Check Record</span>
+                                                <span class="result-value">94% accurate</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Corrections Policy</span>
+                                                <span class="status-badge status-high">Transparent</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="service-accordion-item" data-service="author_analyzer">
+                            <div class="service-accordion-header" onclick="truthLensApp.toggleAccordion(this)">
+                                <div class="service-header-content">
+                                    <div class="service-icon-wrapper">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div class="service-info">
+                                        <div class="service-name">Author Analysis</div>
+                                        <div class="service-preview">Score: 78% • Environmental journalist</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-down service-expand-icon"></i>
+                            </div>
+                            <div class="service-accordion-content">
+                                <div class="service-content-inner">
+                                    <div class="service-section">
+                                        <h4 class="section-title">
+                                            <i class="fas fa-user-check"></i>
+                                            Author Profile
+                                        </h4>
+                                        <div class="service-results">
+                                            <div class="result-item">
+                                                <span class="result-label">Experience</span>
+                                                <span class="result-value">12 years</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Expertise</span>
+                                                <span class="result-value">Climate & Environment</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Articles Published</span>
+                                                <span class="result-value">450+</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="service-accordion-item" data-service="bias_detector">
+                            <div class="service-accordion-header" onclick="truthLensApp.toggleAccordion(this)">
+                                <div class="service-header-content">
+                                    <div class="service-icon-wrapper">
+                                        <i class="fas fa-balance-scale"></i>
+                                    </div>
+                                    <div class="service-info">
+                                        <div class="service-name">Bias Detection</div>
+                                        <div class="service-preview">Slight left-leaning • 65% balanced</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-down service-expand-icon"></i>
+                            </div>
+                            <div class="service-accordion-content">
+                                <div class="service-content-inner">
+                                    <div class="service-section">
+                                        <h4 class="section-title">
+                                            <i class="fas fa-chart-bar"></i>
+                                            Bias Analysis
+                                        </h4>
+                                        <div class="service-results">
+                                            <div class="result-item">
+                                                <span class="result-label">Political Lean</span>
+                                                <span class="status-badge status-medium">Slight Left</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Emotional Language</span>
+                                                <span class="result-value">12% of content</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">Opinion vs Fact</span>
+                                                <span class="result-value">85% factual</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="service-accordion-item" data-service="fact_checker">
+                            <div class="service-accordion-header" onclick="truthLensApp.toggleAccordion(this)">
+                                <div class="service-header-content">
+                                    <div class="service-icon-wrapper">
+                                        <i class="fas fa-check-double"></i>
+                                    </div>
+                                    <div class="service-info">
+                                        <div class="service-name">Fact Checking</div>
+                                        <div class="service-preview">8 of 9 claims verified</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-down service-expand-icon"></i>
+                            </div>
+                            <div class="service-accordion-content">
+                                <div class="service-content-inner">
+                                    <div class="service-section">
+                                        <h4 class="section-title">
+                                            <i class="fas fa-tasks"></i>
+                                            Claims Verified
+                                        </h4>
+                                        <div class="service-results">
+                                            <div class="result-item">
+                                                <span class="result-label">"195 nations agreed"</span>
+                                                <span class="status-badge status-high">Verified</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">"$100 billion financing"</span>
+                                                <span class="status-badge status-high">Verified</span>
+                                            </div>
+                                            <div class="result-item">
+                                                <span class="result-label">"2030 deadline"</span>
+                                                <span class="status-badge status-medium">Partially True</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 }, 2000);
             },
             
