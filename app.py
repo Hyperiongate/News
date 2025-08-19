@@ -96,6 +96,139 @@ def after_request(response):
     
     return response
 
+# Data cleaning functions
+def clean_service_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean service data by removing corrupted fields"""
+    cleaned = {}
+    
+    for key, value in data.items():
+        # Skip HTML field if it contains corrupted data
+        if key == 'html' and isinstance(value, str):
+            if contains_corrupted_data(value):
+                logger.warning(f"Skipping corrupted HTML field")
+                continue
+        
+        # Recursively clean nested dictionaries
+        if isinstance(value, dict):
+            cleaned[key] = clean_service_data(value)
+        # Clean lists
+        elif isinstance(value, list):
+            cleaned[key] = [clean_value(item) for item in value]
+        else:
+            cleaned_value = clean_value(value)
+            if cleaned_value is not None:
+                cleaned[key] = cleaned_value
+    
+    return cleaned
+
+def clean_article_data(article: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean article data specifically"""
+    cleaned = {}
+    
+    # Define safe fields that should be preserved
+    safe_fields = [
+        'title', 'author', 'publish_date', 'url', 'domain', 
+        'description', 'image', 'keywords', 'word_count', 
+        'source', 'language', 'extraction_metadata'
+    ]
+    
+    for field in safe_fields:
+        if field in article:
+            value = article[field]
+            # Special handling for extraction_metadata
+            if field == 'extraction_metadata' and isinstance(value, dict):
+                cleaned[field] = {k: v for k, v in value.items() if k != 'html'}
+            else:
+                cleaned_value = clean_value(value)
+                if cleaned_value is not None:
+                    cleaned[field] = cleaned_value
+    
+    # Handle text field specially - truncate if corrupted
+    if 'text' in article:
+        text = article['text']
+        if isinstance(text, str):
+            if contains_corrupted_data(text):
+                # Try to extract any clean portion
+                clean_portion = extract_clean_text(text)
+                if clean_portion:
+                    cleaned['text'] = clean_portion
+                else:
+                    cleaned['text'] = "Article text could not be extracted properly."
+            else:
+                cleaned['text'] = text
+    
+    # Ensure we have at least basic fields
+    if 'title' not in cleaned or not cleaned.get('title'):
+        cleaned['title'] = 'Unknown Title'
+    
+    if 'domain' not in cleaned and 'url' in cleaned:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(cleaned['url'])
+            cleaned['domain'] = parsed.netloc
+        except:
+            pass
+    
+    return cleaned
+
+def clean_value(value: Any) -> Any:
+    """Clean individual values"""
+    if isinstance(value, str):
+        if contains_corrupted_data(value):
+            # For short strings, return None
+            if len(value) < 100:
+                return None
+            # For longer strings, try to extract clean portion
+            clean_portion = extract_clean_text(value)
+            return clean_portion if clean_portion else None
+        return value
+    elif isinstance(value, (int, float, bool)):
+        return value
+    elif isinstance(value, dict):
+        return clean_service_data(value)
+    elif isinstance(value, list):
+        return [clean_value(item) for item in value if clean_value(item) is not None]
+    else:
+        return value
+
+def contains_corrupted_data(text: str) -> bool:
+    """Check if text contains corrupted data indicators"""
+    if not isinstance(text, str):
+        return False
+    
+    # Check for replacement character which indicates encoding issues
+    if '\ufffd' in text:
+        return True
+    
+    # Check for excessive non-printable characters
+    non_printable_count = sum(1 for char in text if ord(char) < 32 and char not in '\n\r\t')
+    if len(text) > 0 and non_printable_count / len(text) > 0.1:  # More than 10% non-printable
+        return True
+    
+    return False
+
+def extract_clean_text(text: str) -> Optional[str]:
+    """Try to extract clean portions of text"""
+    if not text:
+        return None
+    
+    # Split by common delimiters and find clean segments
+    segments = text.split('\n')
+    clean_segments = []
+    
+    for segment in segments:
+        if segment and not contains_corrupted_data(segment):
+            clean_segments.append(segment.strip())
+    
+    # If we found clean segments, join them
+    if clean_segments:
+        result = '\n'.join(clean_segments)
+        # Only return if we have meaningful content
+        if len(result) > 50:  # At least 50 characters
+            return result
+    
+    return None
+
 # MAIN ROUTES
 
 @app.route('/')
@@ -223,14 +356,14 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
             if 'success' in service_result and service_result.get('success'):
                 # Extract the data field if it exists, otherwise use the whole result
                 if 'data' in service_result:
-                    services[service_name] = service_result['data']
+                    services[service_name] = clean_service_data(service_result['data'])
                 else:
                     # Remove metadata fields for cleaner output
                     cleaned_result = {
                         k: v for k, v in service_result.items()
                         if k not in ['service', 'success', 'timestamp', 'available']
                     }
-                    services[service_name] = cleaned_result
+                    services[service_name] = clean_service_data(cleaned_result)
                 
                 metadata_services.append(service_name)
                 logger.info(f"Found successful service: {service_name}")
@@ -241,20 +374,22 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
     # Extract article metadata from article_extractor if available
     article_data = {}
     if 'article' in result:
-        article_data = result['article']
+        article_data = clean_article_data(result['article'])
     elif 'article_extractor' in result and result['article_extractor'].get('success'):
         # Extract from article_extractor service result
         extractor_data = result['article_extractor']
         if 'data' in extractor_data:
-            article_data = extractor_data['data']
+            article_data = clean_article_data(extractor_data['data'])
         else:
             # Legacy format - extract relevant fields
             article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
                            'domain', 'description', 'image', 'keywords', 'word_count', 
                            'source', 'language']
+            temp_article = {}
             for field in article_fields:
                 if field in extractor_data:
-                    article_data[field] = extractor_data[field]
+                    temp_article[field] = extractor_data[field]
+            article_data = clean_article_data(temp_article)
     
     # Build the expected structure
     transformed = {
