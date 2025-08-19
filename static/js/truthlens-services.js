@@ -234,7 +234,7 @@ class TruthLensServices {
         return 'linear-gradient(135deg, #EF4444, #DC2626)';
     }
 
-    // Author Analysis Renderer - FIXED VERSION
+    // Enhanced Author Analysis Renderer
     renderAuthorAnalysis(data) {
         console.log('renderAuthorAnalysis - Received data:', data);
         
@@ -242,107 +242,286 @@ class TruthLensServices {
         const score = data.author_score || data.credibility_score || data.score || 0;
         const verified = data.verified || (data.verification_status && data.verification_status.verified) || false;
         
-        // Main author profile section
-        let content = this.renderSection('Author Profile', 'fa-id-card', 
-            this.renderMetric('Name', authorName) +
-            this.renderMetric('Credibility Score', score + '/100') +
-            this.renderMetric('Verification Status', 
-                verified ? 'Verified' : 'Unverified',
-                verified ? 'status-high' : 'status-low')
-        );
+        // Enhanced content with dense layout
+        let content = '<div class="author-analysis-enhanced">';
         
-        // Check for author_info object (nested structure)
-        if (data.author_info && typeof data.author_info === 'object') {
-            let infoContent = '';
+        // Author Profile Card - Compact Summary
+        content += '<div class="author-profile-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(129, 140, 248, 0.03) 100%); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem;">';
+        content += '<div style="display: flex; align-items: center; gap: 1rem;">';
+        
+        // Author Avatar
+        const initials = authorName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        content += '<div style="width: 60px; height: 60px; background: ' + this.getScoreGradient(score) + '; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.25rem; flex-shrink: 0;">' + initials + '</div>';
+        
+        // Author Info
+        content += '<div style="flex: 1;">';
+        content += '<h3 style="margin: 0 0 0.25rem 0; font-size: 1.125rem; font-weight: 700; color: var(--dark);">' + authorName + '</h3>';
+        content += '<div style="display: flex; gap: 1rem; flex-wrap: wrap;">';
+        content += '<div style="display: flex; align-items: center; gap: 0.25rem;">';
+        content += '<span style="font-size: 1.25rem; font-weight: 700; color: ' + this.app.utils.getScoreColor(score) + ';">' + score + '</span>';
+        content += '<span style="font-size: 0.75rem; color: var(--gray-600);">/100 credibility</span>';
+        content += '</div>';
+        
+        // Verification Badge
+        if (verified) {
+            content += '<div style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 1rem; font-size: 0.75rem; color: var(--secondary); font-weight: 600;">';
+            content += '<i class="fas fa-check-circle"></i> Verified';
+            content += '</div>';
+        } else {
+            content += '<div style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; background: rgba(156, 163, 175, 0.1); border-radius: 1rem; font-size: 0.75rem; color: var(--gray-600); font-weight: 600;">';
+            content += '<i class="fas fa-question-circle"></i> Unverified';
+            content += '</div>';
+        }
+        content += '</div>';
+        content += '</div>';
+        content += '</div>';
+        content += '</div>';
+        
+        // Quick Stats Grid
+        if (data.author_info || data.professional_info || data.metrics) {
+            content += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">';
             
-            // Bio
-            if (data.author_info.bio) {
-                infoContent += '<div class="result-item" style="flex-direction: column; align-items: flex-start;">' +
-                    '<span class="result-label">Biography</span>' +
-                    '<span class="result-value" style="font-weight: normal; line-height: 1.5; margin-top: 0.25rem;">' + 
-                    data.author_info.bio + '</span>' +
-                    '</div>';
+            // Articles Published
+            if (data.metrics && data.metrics.article_count) {
+                content += '<div style="background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">';
+                content += '<div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">' + data.metrics.article_count + '</div>';
+                content += '<div style="font-size: 0.75rem; color: var(--gray-600);">Articles</div>';
+                content += '</div>';
             }
             
-            // Position
-            if (data.author_info.position) {
-                infoContent += this.renderMetric('Current Position', data.author_info.position);
+            // Years Experience
+            const experience = data.author_info?.experience || data.author_info?.years_experience || 
+                              data.professional_info?.years_experience || null;
+            if (experience) {
+                content += '<div style="background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">';
+                content += '<div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">' + 
+                          (typeof experience === 'number' ? experience + '+' : experience) + '</div>';
+                content += '<div style="font-size: 0.75rem; color: var(--gray-600);">Years Exp.</div>';
+                content += '</div>';
             }
             
-            // Experience
-            if (data.author_info.experience || data.author_info.years_experience) {
-                const exp = data.author_info.experience || data.author_info.years_experience;
-                infoContent += this.renderMetric('Experience', 
-                    typeof exp === 'number' ? exp + '+ years' : exp);
+            // Accuracy Rate
+            if (data.metrics && data.metrics.accuracy_rate) {
+                content += '<div style="background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">';
+                content += '<div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary);">' + 
+                          Math.round(data.metrics.accuracy_rate) + '%</div>';
+                content += '<div style="font-size: 0.75rem; color: var(--gray-600);">Accuracy</div>';
+                content += '</div>';
             }
             
-            // Expertise
-            if (data.author_info.expertise) {
-                if (Array.isArray(data.author_info.expertise)) {
-                    infoContent += this.renderMetric('Expertise Areas', data.author_info.expertise.join(', '));
-                } else {
-                    infoContent += this.renderMetric('Expertise', data.author_info.expertise);
+            // Awards/Recognition
+            if (data.metrics && data.metrics.awards_count) {
+                content += '<div style="background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">';
+                content += '<div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">' + 
+                          data.metrics.awards_count + '</div>';
+                content += '<div style="font-size: 0.75rem; color: var(--gray-600);">Awards</div>';
+                content += '</div>';
+            }
+            
+            content += '</div>';
+        }
+        
+        // Professional Information
+        if (data.author_info || data.professional_info) {
+            const info = data.author_info || data.professional_info;
+            let profContent = '<div style="display: grid; gap: 0.75rem;">';
+            
+            // Current Position
+            const position = info.position || info.current_position || data.current_position;
+            if (position) {
+                profContent += '<div style="display: flex; align-items: start; gap: 0.75rem;">';
+                profContent += '<i class="fas fa-building" style="color: var(--primary); margin-top: 0.25rem;"></i>';
+                profContent += '<div>';
+                profContent += '<div style="font-weight: 600; color: var(--dark); font-size: 0.875rem;">Current Position</div>';
+                profContent += '<div style="color: var(--gray-600); font-size: 0.813rem;">' + position + '</div>';
+                profContent += '</div>';
+                profContent += '</div>';
+            }
+            
+            // Biography
+            if (info.bio) {
+                profContent += '<div style="display: flex; align-items: start; gap: 0.75rem;">';
+                profContent += '<i class="fas fa-user" style="color: var(--primary); margin-top: 0.25rem;"></i>';
+                profContent += '<div>';
+                profContent += '<div style="font-weight: 600; color: var(--dark); font-size: 0.875rem;">Biography</div>';
+                profContent += '<div style="color: var(--gray-600); font-size: 0.813rem; line-height: 1.5;">' + info.bio + '</div>';
+                profContent += '</div>';
+                profContent += '</div>';
+            }
+            
+            // Expertise Areas
+            const expertise = info.expertise || info.expertise_areas || data.expertise_areas;
+            if (expertise) {
+                profContent += '<div style="display: flex; align-items: start; gap: 0.75rem;">';
+                profContent += '<i class="fas fa-tags" style="color: var(--primary); margin-top: 0.25rem;"></i>';
+                profContent += '<div>';
+                profContent += '<div style="font-weight: 600; color: var(--dark); font-size: 0.875rem; margin-bottom: 0.5rem;">Areas of Expertise</div>';
+                profContent += '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">';
+                
+                const expertiseList = Array.isArray(expertise) ? expertise : expertise.split(',');
+                expertiseList.forEach(function(area) {
+                    profContent += '<span style="padding: 0.25rem 0.625rem; background: var(--white); border: 1px solid var(--gray-200); border-radius: 0.375rem; font-size: 0.75rem; color: var(--gray-700);">' + 
+                              area.trim() + '</span>';
+                });
+                
+                profContent += '</div>';
+                profContent += '</div>';
+                profContent += '</div>';
+            }
+            
+            // Social/Contact Info
+            if (info.social_links || info.contact || info.website) {
+                profContent += '<div style="display: flex; align-items: start; gap: 0.75rem;">';
+                profContent += '<i class="fas fa-link" style="color: var(--primary); margin-top: 0.25rem;"></i>';
+                profContent += '<div>';
+                profContent += '<div style="font-weight: 600; color: var(--dark); font-size: 0.875rem; margin-bottom: 0.25rem;">Online Presence</div>';
+                profContent += '<div style="display: flex; gap: 0.75rem;">';
+                
+                if (info.website) {
+                    profContent += '<a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.813rem;"><i class="fas fa-globe"></i> Website</a>';
                 }
+                if (info.twitter) {
+                    profContent += '<a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.813rem;"><i class="fab fa-twitter"></i> Twitter</a>';
+                }
+                if (info.linkedin) {
+                    profContent += '<a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.813rem;"><i class="fab fa-linkedin"></i> LinkedIn</a>';
+                }
+                
+                profContent += '</div>';
+                profContent += '</div>';
+                profContent += '</div>';
             }
             
-            // Publications
-            if (data.author_info.publications) {
-                infoContent += this.renderMetric('Publications', data.author_info.publications);
-            }
+            profContent += '</div>';
+            content += this.renderSection('Professional Background', 'fa-briefcase', profContent);
+        }
+        
+        // Publishing History
+        if (data.recent_articles && data.recent_articles.length > 0) {
+            let articlesHtml = '<div style="overflow-x: auto;">';
+            articlesHtml += '<table style="width: 100%; font-size: 0.813rem;">';
+            articlesHtml += '<thead>';
+            articlesHtml += '<tr style="border-bottom: 1px solid var(--gray-200);">';
+            articlesHtml += '<th style="text-align: left; padding: 0.5rem; font-weight: 600; color: var(--gray-700);">Recent Articles</th>';
+            articlesHtml += '<th style="text-align: right; padding: 0.5rem; font-weight: 600; color: var(--gray-700);">Date</th>';
+            articlesHtml += '<th style="text-align: center; padding: 0.5rem; font-weight: 600; color: var(--gray-700);">Score</th>';
+            articlesHtml += '</tr>';
+            articlesHtml += '</thead>';
+            articlesHtml += '<tbody>';
             
-            if (infoContent) {
-                content += this.renderSection('Author Information', 'fa-user', infoContent);
-            }
-        }
-        
-        // Professional info (alternative structure)
-        if (data.professional_info) {
-            const info = data.professional_info;
-            let profContent = '';
-            if (info.position || info.current_position) {
-                profContent += this.renderMetric('Current Position', info.position || info.current_position);
-            }
-            if (info.years_experience) {
-                profContent += this.renderMetric('Years of Experience', info.years_experience + '+ years');
-            }
-            if (info.expertise_areas && info.expertise_areas.length > 0) {
-                profContent += this.renderMetric('Expertise Areas', info.expertise_areas.join(', '));
-            }
-            if (profContent) {
-                content += this.renderSection('Professional Background', 'fa-briefcase', profContent);
-            }
-        }
-        
-        // Analysis findings
-        if (data.findings && Array.isArray(data.findings)) {
-            let findingsHtml = '<ul style="margin: 0; padding-left: 1.5rem; color: var(--gray-700);">';
-            data.findings.forEach(function(finding) {
-                findingsHtml += '<li style="margin-bottom: 0.25rem;">' + finding + '</li>';
+            data.recent_articles.slice(0, 5).forEach(function(article) {
+                articlesHtml += '<tr style="border-bottom: 1px solid var(--gray-100);">';
+                articlesHtml += '<td style="padding: 0.5rem;">' + (article.title || 'Untitled') + '</td>';
+                articlesHtml += '<td style="padding: 0.5rem; text-align: right; color: var(--gray-600);">' + 
+                               window.truthLensApp.utils.formatDate(article.date) + '</td>';
+                articlesHtml += '<td style="padding: 0.5rem; text-align: center;">';
+                
+                if (article.credibility_score) {
+                    const scoreColor = article.credibility_score >= 70 ? 'var(--secondary)' : 
+                                     article.credibility_score >= 40 ? 'var(--warning)' : 'var(--danger)';
+                    articlesHtml += '<span style="font-weight: 600; color: ' + scoreColor + ';">' + 
+                                   article.credibility_score + '</span>';
+                } else {
+                    articlesHtml += '<span style="color: var(--gray-400);">-</span>';
+                }
+                
+                articlesHtml += '</td>';
+                articlesHtml += '</tr>';
             });
-            findingsHtml += '</ul>';
+            
+            articlesHtml += '</tbody>';
+            articlesHtml += '</table>';
+            articlesHtml += '</div>';
+            
+            content += this.renderSection('Publishing History', 'fa-newspaper', articlesHtml);
+        }
+        
+        // Key Findings Panel
+        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+            let findingsHtml = '<div style="display: grid; gap: 0.75rem;">';
+            
+            data.findings.forEach(function(finding) {
+                const type = finding.type || 'neutral';
+                const icon = type === 'positive' ? 'fa-check-circle' : 
+                            type === 'negative' ? 'fa-exclamation-circle' : 'fa-info-circle';
+                const color = type === 'positive' ? 'var(--secondary)' : 
+                             type === 'negative' ? 'var(--danger)' : 'var(--warning)';
+                
+                findingsHtml += '<div style="display: flex; gap: 0.75rem; padding: 0.75rem; background: var(--gray-50); border-radius: 0.5rem; border-left: 3px solid ' + color + ';">';
+                findingsHtml += '<i class="fas ' + icon + '" style="color: ' + color + '; margin-top: 0.125rem;"></i>';
+                findingsHtml += '<div style="flex: 1;">';
+                findingsHtml += '<div style="font-weight: 600; font-size: 0.875rem; color: var(--dark); margin-bottom: 0.25rem;">' + 
+                               (finding.title || finding) + '</div>';
+                if (finding.description) {
+                    findingsHtml += '<div style="font-size: 0.75rem; color: var(--gray-600); line-height: 1.4;">' + 
+                                   finding.description + '</div>';
+                }
+                findingsHtml += '</div>';
+                findingsHtml += '</div>';
+            });
+            
+            findingsHtml += '</div>';
             content += this.renderSection('Key Findings', 'fa-search', findingsHtml);
         }
         
-        // Recent articles
-        if (data.recent_articles && data.recent_articles.length > 0) {
-            let articlesHtml = '';
-            data.recent_articles.slice(0, 5).forEach(function(article) {
-                articlesHtml += '<div class="recent-article-item">' +
-                    '<span class="article-title">' + (article.title || 'Untitled') + '</span>' +
-                    '<span class="article-date">' + window.truthLensApp.utils.formatDate(article.date) + '</span>' +
-                    '</div>';
+        // Author Network/Associations
+        if (data.associations || data.affiliations) {
+            let assocHtml = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">';
+            const associations = data.associations || data.affiliations;
+            
+            associations.forEach(function(assoc) {
+                assocHtml += '<div style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; background: var(--white); border: 1px solid var(--gray-200); border-radius: 0.375rem; font-size: 0.75rem;">';
+                assocHtml += '<i class="fas fa-building" style="color: var(--gray-500);"></i>';
+                assocHtml += '<span style="color: var(--gray-700);">' + assoc + '</span>';
+                assocHtml += '</div>';
             });
-            content += this.renderSection('Recent Articles', 'fa-newspaper', articlesHtml);
+            
+            assocHtml += '</div>';
+            content += this.renderSection('Professional Associations', 'fa-users', assocHtml);
         }
         
-        // If we still have very little content, add a note
+        // Credibility Factors
+        if (data.credibility_factors) {
+            let factorsHtml = '<div style="display: grid; gap: 0.5rem;">';
+            
+            const factors = [
+                { key: 'verified_identity', label: 'Identity Verified', icon: 'fa-user-check' },
+                { key: 'consistent_bylines', label: 'Consistent Bylines', icon: 'fa-signature' },
+                { key: 'transparent_bio', label: 'Transparent Bio', icon: 'fa-id-card' },
+                { key: 'professional_photo', label: 'Professional Photo', icon: 'fa-camera' },
+                { key: 'contact_available', label: 'Contact Available', icon: 'fa-envelope' }
+            ];
+            
+            factors.forEach(function(factor) {
+                if (data.credibility_factors[factor.key] !== undefined) {
+                    const hasIt = data.credibility_factors[factor.key];
+                    factorsHtml += '<div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0; color: ' + 
+                                  (hasIt ? 'var(--secondary)' : 'var(--gray-500)') + ';">';
+                    factorsHtml += '<i class="fas ' + (hasIt ? 'fa-check' : 'fa-times') + '" style="width: 16px;"></i>';
+                    factorsHtml += '<i class="fas ' + factor.icon + '" style="width: 20px; color: var(--gray-600);"></i>';
+                    factorsHtml += '<span style="font-size: 0.813rem; color: var(--gray-700);">' + factor.label + '</span>';
+                    factorsHtml += '</div>';
+                }
+            });
+            
+            factorsHtml += '</div>';
+            content += this.renderSection('Credibility Indicators', 'fa-shield-alt', factorsHtml);
+        }
+        
+        // Summary Note
         if (!data.author_info && !data.professional_info && !data.findings && !data.recent_articles) {
-            content += this.renderSection('Limited Information', 'fa-exclamation-triangle', 
-                '<p style="color: var(--gray-600); font-style: italic;">Limited author information is available for this article. ' +
-                'This may affect the reliability assessment.</p>'
-            );
+            content += '<div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0.5rem; padding: 1rem; margin-top: 1rem;">';
+            content += '<div style="display: flex; gap: 0.75rem; align-items: start;">';
+            content += '<i class="fas fa-exclamation-triangle" style="color: var(--warning); margin-top: 0.125rem;"></i>';
+            content += '<div>';
+            content += '<div style="font-weight: 600; color: var(--dark); margin-bottom: 0.25rem;">Limited Information Available</div>';
+            content += '<div style="font-size: 0.813rem; color: var(--gray-700); line-height: 1.4;">Limited author information is available for this article. This may affect the reliability assessment. Consider additional verification for important claims.</div>';
+            content += '</div>';
+            content += '</div>';
+            content += '</div>';
         }
         
+        content += '</div>';
         return content;
     }
 
