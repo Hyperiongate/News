@@ -1,5 +1,5 @@
-// truthlens-core.js - Consolidated Core Application Logic
-// FIXED VERSION - Includes improved accordion functionality and complete service configuration
+// truthlens-core.js - COMPLETE FIX VERSION
+// Fixed all data path issues, trust score calculation, and service rendering
 
 // Global configuration with all 8 services properly defined
 const CONFIG = {
@@ -85,8 +85,8 @@ class TruthLensApp {
         };
         
         this.utils = new TruthLensUtils();
-        this.display = null; // Will be initialized after TruthLensDisplay is defined
-        this.services = null; // Will be initialized after TruthLensServices is defined
+        this.display = null;
+        this.services = null;
         
         this.init();
     }
@@ -167,6 +167,13 @@ class TruthLensApp {
             });
         }
         
+        const newAnalysisBtn = document.getElementById('newAnalysisBtn');
+        if (newAnalysisBtn) {
+            newAnalysisBtn.addEventListener('click', function() {
+                window.truthLensApp.resetAnalysis();
+            });
+        }
+        
         // Tab switching
         const modeBtns = document.querySelectorAll('.mode-btn');
         modeBtns.forEach(function(btn) {
@@ -201,27 +208,20 @@ class TruthLensApp {
             }
         });
         
-        ['url', 'text'].forEach(function(type) {
-            const isActive = type === mode;
-            const explanationEl = document.getElementById(type + 'Explanation');
-            const inputWrapperEl = document.getElementById(type + 'InputWrapper');
-            
-            if (explanationEl) {
-                if (isActive) {
-                    explanationEl.classList.add('active');
-                } else {
-                    explanationEl.classList.remove('active');
-                }
-            }
-            
-            if (inputWrapperEl) {
-                if (isActive) {
-                    inputWrapperEl.classList.add('active');
-                } else {
-                    inputWrapperEl.classList.remove('active');
-                }
-            }
-        });
+        // Hide all explanations and inputs first
+        document.getElementById('urlExplanation').style.display = 'none';
+        document.getElementById('textExplanation').style.display = 'none';
+        document.getElementById('urlInputWrapper').style.display = 'none';
+        document.getElementById('textInputWrapper').style.display = 'none';
+        
+        // Show the active mode
+        if (mode === 'url') {
+            document.getElementById('urlExplanation').style.display = 'block';
+            document.getElementById('urlInputWrapper').style.display = 'block';
+        } else {
+            document.getElementById('textExplanation').style.display = 'block';
+            document.getElementById('textInputWrapper').style.display = 'block';
+        }
     }
 
     resetAnalysis() {
@@ -231,7 +231,10 @@ class TruthLensApp {
         
         if (urlInput) urlInput.value = '';
         if (textInput) textInput.value = '';
-        if (resultsSection) resultsSection.style.display = 'none';
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+            resultsSection.classList.remove('active');
+        }
         
         this.state.currentAnalysis = null;
         this.state.currentMetadata = null;
@@ -269,17 +272,12 @@ class TruthLensApp {
         this.utils.showLoading();
 
         try {
-            // FIXED: Ensure payload format matches backend expectations
             const payload = this.state.currentTab === 'url' 
                 ? { url: input, is_pro: CONFIG.isPro }
                 : { text: input, is_pro: CONFIG.isPro };
 
-            // Debug logging
             console.log('=== API Request Debug ===');
-            console.log('Current tab:', this.state.currentTab);
-            console.log('Input value:', input);
             console.log('Sending payload:', JSON.stringify(payload, null, 2));
-            console.log('API Endpoint:', CONFIG.API_ENDPOINT);
 
             const response = await fetch(CONFIG.API_ENDPOINT, {
                 method: 'POST',
@@ -290,9 +288,6 @@ class TruthLensApp {
                 body: JSON.stringify(payload)
             });
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
             const responseText = await response.text();
             console.log('Raw response:', responseText);
 
@@ -300,49 +295,53 @@ class TruthLensApp {
             try {
                 responseData = JSON.parse(responseText);
             } catch (e) {
-                console.error('Failed to parse response as JSON:', e);
+                console.error('Failed to parse response:', e);
                 throw new Error('Invalid response format from server');
             }
 
-            console.log('Parsed response:', responseData);
+            console.log('Parsed response structure:', {
+                success: responseData.success,
+                hasData: !!responseData.data,
+                dataKeys: responseData.data ? Object.keys(responseData.data) : [],
+                hasDetailedAnalysis: !!(responseData.data && responseData.data.detailed_analysis),
+                detailedAnalysisKeys: responseData.data && responseData.data.detailed_analysis ? 
+                    Object.keys(responseData.data.detailed_analysis) : []
+            });
             
             if (!response.ok || !responseData.success) {
-                throw new Error(responseData.error && responseData.error.message || responseData.error || 'Analysis failed');
+                throw new Error(responseData.error && responseData.error.message || 'Analysis failed');
             }
 
+            // CRITICAL FIX: Store the entire response data structure
             const data = responseData.data;
             
-            // FIXED: Recalculate trust score with proper bounds checking
-            const recalculatedScore = this.calculateTrustScore(data.detailed_analysis);
-            if (recalculatedScore !== null) {
-                data.analysis.trust_score = recalculatedScore;
-                data.analysis.trust_level = this.utils.getTrustLevel(recalculatedScore);
-            }
-
+            // Store the complete analysis
             this.state.currentAnalysis = data;
             this.state.currentMetadata = responseData.metadata || {};
+
+            // Log what we're storing
+            console.log('=== Stored Analysis ===');
+            console.log('Article:', data.article ? Object.keys(data.article) : 'missing');
+            console.log('Analysis:', data.analysis ? Object.keys(data.analysis) : 'missing');
+            console.log('Detailed Analysis Services:', data.detailed_analysis ? 
+                Object.keys(data.detailed_analysis) : 'missing');
 
             const self = this;
             setTimeout(function() {
                 self.utils.hideLoading();
                 if (self.display) {
+                    // Pass the complete data structure
                     self.display.showResults(data);
                 }
             }, 1000);
 
         } catch (error) {
-            console.error('=== Analysis Error ===');
-            console.error('Error details:', error);
-            console.error('Error stack:', error.stack);
-            
+            console.error('Analysis Error:', error);
             this.utils.hideLoading();
             
-            // Provide more specific error messages
             let errorMessage = error.message;
             if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Unable to connect to the analysis server. Please check your connection and try again.';
-            } else if (error.message.includes('NetworkError')) {
-                errorMessage = 'Network error occurred. Please check your internet connection.';
+                errorMessage = 'Unable to connect to the analysis server. Please try again.';
             }
             
             this.utils.showError(errorMessage);
@@ -358,9 +357,8 @@ class TruthLensApp {
         let weightedScore = 0;
         const serviceScores = {};
 
-        // FIXED: Only include services that should contribute to trust score
+        // Only include services that should contribute to trust score
         const scoringServices = CONFIG.services.filter(function(service) {
-            // Exclude services that don't directly affect trust score
             return service.id !== 'content_analyzer' && service.id !== 'plagiarism_detector';
         });
 
@@ -369,7 +367,7 @@ class TruthLensApp {
             if (!serviceData || Object.keys(serviceData).length === 0) return;
 
             const score = window.truthLensApp.extractServiceScore(service.id, serviceData);
-            if (score !== null && score !== undefined) {
+            if (score !== null && score !== undefined && !isNaN(score)) {
                 serviceScores[service.id] = score;
                 weightedScore += score * service.weight;
                 totalWeight += service.weight;
@@ -379,7 +377,6 @@ class TruthLensApp {
         // Calculate final score only if we have enough data
         if (Object.keys(serviceScores).length >= 2 && totalWeight > 0) {
             const rawScore = weightedScore / totalWeight;
-            // FIXED: Ensure score is within 0-100 bounds
             return Math.round(Math.min(100, Math.max(0, rawScore)));
         }
 
@@ -388,25 +385,50 @@ class TruthLensApp {
             return Math.min(100, Math.max(0, serviceScores.source_credibility));
         }
 
-        return null;
+        return 50; // Default score
     }
 
     extractServiceScore(serviceId, data) {
+        if (!data || typeof data !== 'object') return null;
+
         const extractors = {
             source_credibility: function(d) {
-                const score = window.truthLensApp.utils.extractScore(d, ['credibility_score', 'score']);
+                // Try multiple possible field names
+                const score = d.credibility_score !== undefined ? d.credibility_score :
+                             d.score !== undefined ? d.score :
+                             d.overall_score !== undefined ? d.overall_score : null;
                 return score !== null ? Math.min(100, Math.max(0, score)) : null;
             },
             author_analyzer: function(d) {
-                // FIXED: Check credibility_score which is what the backend actually returns
-                const score = window.truthLensApp.utils.extractScore(d, ['author_score', 'credibility_score', 'score']);
+                // Check all possible field names for author score
+                const score = d.author_score !== undefined ? d.author_score :
+                             d.credibility_score !== undefined ? d.credibility_score :
+                             d.score !== undefined ? d.score :
+                             d.overall_score !== undefined ? d.overall_score : null;
+                
                 if (score !== null) return Math.min(100, Math.max(0, score));
+                
                 // If no score but author exists, give partial credit
                 return d.author_name ? 50 : null;
             },
             bias_detector: function(d) {
-                const bias = window.truthLensApp.utils.extractScore(d, ['bias_score', 'score', 'overall_bias_score']);
-                // Convert bias to objectivity score (inverse)
+                // Bias score (convert to objectivity)
+                const bias = d.bias_score !== undefined ? d.bias_score :
+                            d.score !== undefined ? d.score :
+                            d.overall_bias_score !== undefined ? d.overall_bias_score : null;
+                
+                // If we have a percentage-based bias level
+                if (d.bias_level && typeof d.bias_level === 'string') {
+                    const levelMap = {
+                        'Minimal': 10, 'Low': 30, 'Moderate': 50, 
+                        'High': 70, 'Extreme': 90
+                    };
+                    const mappedBias = levelMap[d.bias_level];
+                    if (mappedBias !== undefined) {
+                        return 100 - mappedBias;
+                    }
+                }
+                
                 return bias !== null ? Math.min(100, Math.max(0, 100 - bias)) : null;
             },
             fact_checker: function(d) {
@@ -414,42 +436,65 @@ class TruthLensApp {
                 if (d.fact_checks && Array.isArray(d.fact_checks) && d.fact_checks.length > 0) {
                     const total = d.fact_checks.length;
                     const verified = d.fact_checks.filter(function(c) {
-                        return ['True', 'Verified', 'true', 'verified'].indexOf(c.verdict) !== -1;
+                        const verdict = (c.verdict || '').toLowerCase();
+                        return verdict === 'true' || verdict === 'verified' || 
+                               verdict === 'correct' || verdict === 'accurate';
                     }).length;
                     return Math.round((verified / total) * 100);
                 }
-                // Fallback to accuracy score
-                const score = window.truthLensApp.utils.extractScore(d, ['accuracy_score', 'score']);
-                return score !== null ? Math.min(100, Math.max(0, score)) : null;
+                
+                // Try other field names
+                if (d.accuracy_score !== undefined) return Math.min(100, Math.max(0, d.accuracy_score));
+                if (d.verification_rate !== undefined) return Math.min(100, Math.max(0, d.verification_rate));
+                if (d.score !== undefined) return Math.min(100, Math.max(0, d.score));
+                
+                return null;
             },
             transparency_analyzer: function(d) {
-                const score = window.truthLensApp.utils.extractScore(d, ['transparency_score', 'score']);
+                const score = d.transparency_score !== undefined ? d.transparency_score :
+                             d.score !== undefined ? d.score :
+                             d.overall_score !== undefined ? d.overall_score : null;
                 return score !== null ? Math.min(100, Math.max(0, score)) : null;
             },
             manipulation_detector: function(d) {
-                const manipScore = window.truthLensApp.utils.extractScore(d, ['manipulation_score', 'score']);
+                // Manipulation score (convert to trustworthiness)
+                const manipScore = d.manipulation_score !== undefined ? d.manipulation_score :
+                                  d.score !== undefined ? d.score : null;
+                
                 if (manipScore !== null) {
-                    // Convert manipulation to trustworthiness (inverse)
                     return Math.min(100, Math.max(0, 100 - manipScore));
                 }
                 
                 // Handle level-based scoring
-                const levelScores = { 
-                    'Low': 90, 
-                    'Minimal': 95, 
-                    'Moderate': 50, 
-                    'High': 20, 
-                    'Extreme': 10 
-                };
-                return levelScores[d.manipulation_level] || null;
+                if (d.manipulation_level || d.risk_level || d.level) {
+                    const level = d.manipulation_level || d.risk_level || d.level;
+                    const levelScores = { 
+                        'None': 100, 'Low': 90, 'Minimal': 95, 
+                        'Moderate': 50, 'High': 20, 'Extreme': 10 
+                    };
+                    return levelScores[level] || 50;
+                }
+                
+                // If manipulation_detected is boolean
+                if (d.manipulation_detected !== undefined) {
+                    return d.manipulation_detected ? 20 : 90;
+                }
+                
+                return null;
             }
         };
 
         const extractor = extractors[serviceId];
-        return extractor ? extractor(data) : null;
+        const result = extractor ? extractor(data) : null;
+        
+        console.log(`Extracting score for ${serviceId}:`, {
+            input: Object.keys(data).slice(0, 5),
+            result: result
+        });
+        
+        return result;
     }
 
-    // FIXED: Enhanced toggleAccordion function to prevent scrolling issues
     toggleAccordion(serviceId) {
         const item = document.getElementById('service-' + serviceId);
         if (!item) return;
@@ -469,7 +514,7 @@ class TruthLensApp {
             const elContent = el.querySelector('.service-accordion-content');
             const elIcon = el.querySelector('.service-expand-icon');
             if (elContent) elContent.style.maxHeight = '0px';
-            if (elIcon) elIcon.style.transform = 'translateY(-50%) rotate(0deg)';
+            if (elIcon) elIcon.style.transform = 'rotate(0deg)';
         });
         
         // Open clicked accordion if it wasn't active
@@ -481,25 +526,20 @@ class TruthLensApp {
                 
                 // After animation, ensure the item header is visible
                 setTimeout(function() {
-                    const headerHeight = item.querySelector('.service-accordion-header').offsetHeight;
-                    const viewportHeight = window.innerHeight;
                     const currentItemTop = item.getBoundingClientRect().top;
                     
                     // Only scroll if the item is partially out of view
-                    if (currentItemTop < 20 || currentItemTop > viewportHeight - 100) {
+                    if (currentItemTop < 20 || currentItemTop > window.innerHeight - 100) {
                         window.scrollTo({
-                            top: itemTop - 20, // 20px padding from top
+                            top: itemTop - 20,
                             behavior: 'smooth'
                         });
                     }
-                }, 300); // Wait for animation
+                }, 300);
             }
             if (icon) {
-                icon.style.transform = 'translateY(-50%) rotate(180deg)';
+                icon.style.transform = 'rotate(180deg)';
             }
-        } else {
-            // If closing, maintain scroll position
-            window.scrollTo(0, scrollY);
         }
     }
 
@@ -563,7 +603,8 @@ class TruthLensApp {
 class TruthLensUtils {
     showError(message) {
         const errorEl = document.getElementById('errorMessage');
-        if (!errorEl) return;
+        const errorTextEl = document.getElementById('errorText');
+        if (!errorEl || !errorTextEl) return;
         
         const errorMap = {
             'timed out': 'Request timed out. The website may be blocking our service.',
@@ -584,10 +625,10 @@ class TruthLensUtils {
             }
         }
         
-        errorEl.textContent = displayMessage;
+        errorTextEl.textContent = displayMessage;
         errorEl.classList.add('active');
         setTimeout(function() {
-            window.truthLensApp.utils.hideError();
+            errorEl.classList.remove('active');
         }, 10000);
     }
 
@@ -621,7 +662,6 @@ class TruthLensUtils {
             if (data.hasOwnProperty(field) && data[field] !== null && data[field] !== undefined) {
                 const value = parseFloat(data[field]);
                 if (!isNaN(value)) {
-                    // FIXED: Ensure extracted scores are within bounds
                     return Math.round(Math.min(100, Math.max(0, value)));
                 }
             }
@@ -631,7 +671,6 @@ class TruthLensUtils {
     }
 
     getScoreColor(score) {
-        // Ensure score is within bounds
         score = Math.min(100, Math.max(0, score));
         
         if (score >= 80) return '#10b981';
@@ -641,7 +680,6 @@ class TruthLensUtils {
     }
 
     getTrustLevel(score) {
-        // Ensure score is within bounds
         score = Math.min(100, Math.max(0, score));
         
         if (score >= 80) return 'Very High';
