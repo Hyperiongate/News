@@ -1,4 +1,4 @@
-// truthlens-display.js - Consolidated Display and UI Methods
+// truthlens-display.js - Complete Fixed Version with Proper Data Path Handling
 
 class TruthLensDisplay {
     constructor(app) {
@@ -9,14 +9,35 @@ class TruthLensDisplay {
     showResults(data) {
         const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) return;
-        if (!data || !data.analysis) return;
+        
+        // Validate data structure
+        if (!data || typeof data !== 'object') {
+            console.error('Invalid data provided to showResults:', data);
+            return;
+        }
+        
+        console.log('=== Display.showResults Debug ===');
+        console.log('Data structure received:', {
+            hasArticle: !!data.article,
+            hasAnalysis: !!data.analysis,
+            hasDetailedAnalysis: !!data.detailed_analysis,
+            detailedAnalysisKeys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : []
+        });
 
         resultsSection.style.display = 'block';
         resultsSection.classList.add('active');
         
-        this.displayTrustScore(data.analysis, data);
+        // Pass the complete data structure to each display method
+        if (data.analysis) {
+            this.displayTrustScore(data.analysis, data);
+        }
+        
         this.displayKeyFindings(data);
-        this.displayArticleInfo(data.article);
+        
+        if (data.article) {
+            this.displayArticleInfo(data.article);
+        }
+        
         this.displayServiceAccordion(data);
         
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -46,14 +67,16 @@ class TruthLensDisplay {
         // Create gauge
         this.createTrustGauge('trustGauge', score);
         
-        // Update summary - FIXED to include source name
+        // Update summary with proper data access
         const summaryEl = document.getElementById('trustSummary');
         if (summaryEl) {
             summaryEl.innerHTML = this.getTrustSummary(score, level, fullData);
         }
         
-        // Display breakdown
-        this.displayTrustBreakdown(fullData.detailed_analysis || {});
+        // Display breakdown with proper data path
+        if (fullData && fullData.detailed_analysis) {
+            this.displayTrustBreakdown(fullData.detailed_analysis);
+        }
     }
 
     getTrustLevelConfig(score) {
@@ -68,13 +91,19 @@ class TruthLensDisplay {
         const metadata = this.app.state.currentMetadata || {};
         const servicesUsed = metadata.services_used || [];
         
-        // The source name is successfully found in the source_credibility service
-        // So let's get it from there directly
-        let sourceName = 'Unknown Source';
+        // FIXED: Get source name from the correct location
+        let sourceName = 'This source';
         
-        // Get it directly from where we know it exists - source_credibility service
-        if (data.detailed_analysis && data.detailed_analysis.source_credibility && data.detailed_analysis.source_credibility.source_name) {
-            sourceName = data.detailed_analysis.source_credibility.source_name;
+        // Try multiple paths to find the source name
+        if (data && data.detailed_analysis && data.detailed_analysis.source_credibility) {
+            sourceName = data.detailed_analysis.source_credibility.source_name || 
+                        data.detailed_analysis.source_credibility.domain ||
+                        sourceName;
+        }
+        
+        // Fallback to article data
+        if (sourceName === 'This source' && data && data.article) {
+            sourceName = data.article.source || data.article.domain || sourceName;
         }
         
         let summary = '<strong>Source:</strong> ' + sourceName + '<br><br>';
@@ -140,19 +169,22 @@ class TruthLensDisplay {
             '<i class="fas ' + icon + '"></i>' +
             '</div>' +
             '<div class="finding-content">' +
-            '<strong class="finding-title">' + (finding.title || finding.finding) + '</strong>' +
-            '<p class="finding-explanation">' + (finding.explanation || finding.text || '') + '</p>' +
+            '<strong class="finding-title">' + (finding.title || finding.finding || finding.text) + '</strong>' +
+            '<p class="finding-explanation">' + (finding.explanation || finding.description || '') + '</p>' +
             '</div>' +
             '</div>';
     }
 
     generateFindings(data) {
         const findings = [];
+        
+        // FIXED: Access detailed_analysis from the data object
         const analysis = data.detailed_analysis || {};
         
         // Source credibility
         if (analysis.source_credibility) {
-            const sourceScore = analysis.source_credibility.credibility_score || analysis.source_credibility.score || 0;
+            const sourceScore = analysis.source_credibility.credibility_score || 
+                              analysis.source_credibility.score || 0;
             const sourceName = analysis.source_credibility.source_name || 'the source';
             
             if (sourceScore >= 80) {
@@ -170,7 +202,7 @@ class TruthLensDisplay {
             }
         }
 
-        // Author credibility - FIXED to check credibility_score
+        // Author credibility
         if (analysis.author_analyzer) {
             const authorScore = analysis.author_analyzer.author_score || 
                                analysis.author_analyzer.credibility_score || 
@@ -194,7 +226,8 @@ class TruthLensDisplay {
 
         // Bias detection
         if (analysis.bias_detector) {
-            const biasScore = analysis.bias_detector.bias_score || analysis.bias_detector.score || 0;
+            const biasScore = analysis.bias_detector.bias_score || 
+                             analysis.bias_detector.score || 0;
             
             if (biasScore > 70) {
                 findings.push({
@@ -212,10 +245,14 @@ class TruthLensDisplay {
         }
 
         // Fact checking
-        if (analysis.fact_checker && analysis.fact_checker.fact_checks && analysis.fact_checker.fact_checks.length > 0) {
+        if (analysis.fact_checker && analysis.fact_checker.fact_checks && 
+            Array.isArray(analysis.fact_checker.fact_checks) && 
+            analysis.fact_checker.fact_checks.length > 0) {
             const checks = analysis.fact_checker.fact_checks;
             const verified = checks.filter(function(c) {
-                return ['True', 'Verified', 'true', 'verified'].indexOf(c.verdict) !== -1;
+                const verdict = (c.verdict || '').toLowerCase();
+                return verdict === 'true' || verdict === 'verified' || 
+                       verdict === 'correct' || verdict === 'accurate';
             }).length;
             const percentage = Math.round((verified / checks.length) * 100);
             
@@ -238,32 +275,49 @@ class TruthLensDisplay {
         return findings.sort(function(a, b) {
             const order = { negative: 0, warning: 1, positive: 2 };
             return order[a.type] - order[b.type];
-        }).slice(0, 4); // Limit to 4 key findings
+        }).slice(0, 4);
     }
 
     displayTrustBreakdown(detailedAnalysis) {
         const container = document.getElementById('trustBreakdown');
         if (!container) return;
+        
+        // Ensure we have data
+        if (!detailedAnalysis || typeof detailedAnalysis !== 'object') {
+            console.warn('No detailed analysis data for trust breakdown');
+            detailedAnalysis = {};
+        }
 
         const components = [
             {
                 name: 'Source Reputation',
-                score: this.app.utils.extractScore(detailedAnalysis.source_credibility, ['credibility_score', 'score'], 50),
+                score: this.app.utils.extractScore(
+                    detailedAnalysis.source_credibility || {}, 
+                    ['credibility_score', 'score'], 
+                    50
+                ),
                 icon: 'fa-building',
                 color: '#6366f1',
                 meaning: this.getSourceMeaning(detailedAnalysis.source_credibility)
             },
             {
                 name: 'Author Credibility',
-                // FIXED: Include credibility_score in the fields to check
-                score: this.app.utils.extractScore(detailedAnalysis.author_analyzer, ['author_score', 'credibility_score', 'score'], 50),
+                score: this.app.utils.extractScore(
+                    detailedAnalysis.author_analyzer || {}, 
+                    ['author_score', 'credibility_score', 'score'], 
+                    50
+                ),
                 icon: 'fa-user',
                 color: '#10b981',
                 meaning: this.getAuthorMeaning(detailedAnalysis.author_analyzer)
             },
             {
                 name: 'Transparency',
-                score: this.app.utils.extractScore(detailedAnalysis.transparency_analyzer, ['transparency_score', 'score'], 50),
+                score: this.app.utils.extractScore(
+                    detailedAnalysis.transparency_analyzer || {}, 
+                    ['transparency_score', 'score'], 
+                    50
+                ),
                 icon: 'fa-eye',
                 color: '#f59e0b',
                 meaning: this.getTransparencyMeaning(detailedAnalysis.transparency_analyzer)
@@ -271,7 +325,8 @@ class TruthLensDisplay {
             {
                 name: 'Objectivity',
                 score: detailedAnalysis.bias_detector ? 
-                    (100 - (detailedAnalysis.bias_detector.bias_score || detailedAnalysis.bias_detector.score || 0)) : 50,
+                    (100 - (detailedAnalysis.bias_detector.bias_score || 
+                            detailedAnalysis.bias_detector.score || 0)) : 50,
                 icon: 'fa-balance-scale',
                 color: '#ef4444',
                 meaning: this.getObjectivityMeaning(detailedAnalysis.bias_detector)
@@ -330,7 +385,6 @@ class TruthLensDisplay {
 
     getAuthorMeaning(data) {
         if (!data || !data.author_name) return 'Without author information, credibility cannot be fully assessed.';
-        // FIXED: Check credibility_score as well
         const score = data.author_score || data.credibility_score || data.score || 0;
         
         if (score >= 80) return 'Verified journalist with strong credentials.';
@@ -375,7 +429,6 @@ class TruthLensDisplay {
                 metaItems.push('<div class="meta-item"><i class="fas fa-user"></i><span>' + article.author + '</span></div>');
             }
             
-            // FIXED: Better source display
             const source = article.source || article.domain || 'Unknown Source';
             metaItems.push('<div class="meta-item"><i class="fas fa-globe"></i><span>' + source + '</span></div>');
             
@@ -395,11 +448,16 @@ class TruthLensDisplay {
         const container = document.getElementById('servicesAccordion');
         if (!container) return;
         
+        // FIXED: Access detailed_analysis from the data object
         const servicesData = data.detailed_analysis || {};
+        
+        console.log('=== displayServiceAccordion Debug ===');
+        console.log('Services data:', Object.keys(servicesData));
         
         let html = '';
         CONFIG.services.forEach(function(service, index) {
             const serviceData = servicesData[service.id] || {};
+            console.log(`Service ${service.id} data:`, Object.keys(serviceData).slice(0, 5));
             html += window.truthLensApp.display.createServiceAccordionItem(service, serviceData, index);
         });
         
@@ -450,7 +508,6 @@ class TruthLensDisplay {
             case 'source_credibility':
                 return data.credibility_score || data.score || null;
             case 'author_analyzer':
-                // FIXED: Check credibility_score which is what the backend returns
                 return data.author_score || data.credibility_score || data.score || null;
             case 'bias_detector':
                 const biasScore = data.bias_score || data.score;
@@ -458,7 +515,9 @@ class TruthLensDisplay {
             case 'fact_checker':
                 if (data.fact_checks && Array.isArray(data.fact_checks) && data.fact_checks.length > 0) {
                     const verified = data.fact_checks.filter(function(c) {
-                        return ['True', 'Verified', 'true', 'verified'].indexOf(c.verdict) !== -1;
+                        const verdict = (c.verdict || '').toLowerCase();
+                        return verdict === 'true' || verdict === 'verified' || 
+                               verdict === 'correct' || verdict === 'accurate';
                     }).length;
                     return Math.round((verified / data.fact_checks.length) * 100);
                 }
@@ -494,7 +553,6 @@ class TruthLensDisplay {
             },
             author_analyzer: function() {
                 const name = data.author_name || 'Unknown';
-                // FIXED: Check credibility_score as well
                 const score = data.author_score || data.credibility_score || data.score || 0;
                 return '<span class="preview-item"><span class="preview-label">Author:</span> <span class="preview-value">' + 
                        name + '</span></span> <span class="preview-item"><span class="preview-label">Score:</span> <span class="preview-value">' + 
@@ -510,7 +568,9 @@ class TruthLensDisplay {
             fact_checker: function() {
                 const total = (data.fact_checks && data.fact_checks.length) || 0;
                 const verified = (data.fact_checks && data.fact_checks.filter(function(c) {
-                    return ['True', 'Verified', 'true', 'verified'].indexOf(c.verdict) !== -1;
+                    const verdict = (c.verdict || '').toLowerCase();
+                    return verdict === 'true' || verdict === 'verified' || 
+                           verdict === 'correct' || verdict === 'accurate';
                 }).length) || 0;
                 return '<span class="preview-item"><span class="preview-label">Claims:</span> <span class="preview-value">' + 
                        total + '</span></span> <span class="preview-item"><span class="preview-label">Verified:</span> <span class="preview-value">' + 
@@ -524,8 +584,8 @@ class TruthLensDisplay {
                        level + '</span></span>';
             },
             manipulation_detector: function() {
-                const level = data.manipulation_level || data.level || 'Unknown';
-                const tactics = (data.tactics_found || data.tactics || []).length;
+                const level = data.manipulation_level || data.risk_level || data.level || 'Unknown';
+                const tactics = (data.tactics_found || data.tactics || data.techniques || []).length;
                 return '<span class="preview-item"><span class="preview-label">Risk:</span> <span class="preview-value">' + 
                        level + '</span></span> <span class="preview-item"><span class="preview-label">Tactics:</span> <span class="preview-value">' + 
                        tactics + '</span></span>';
@@ -554,7 +614,6 @@ class TruthLensDisplay {
         const el = document.getElementById(elementId);
         if (!el) return;
         
-        // Ensure score is within bounds
         targetScore = Math.min(100, Math.max(0, targetScore));
         
         let current = 0;
@@ -573,7 +632,6 @@ class TruthLensDisplay {
         const canvas = document.getElementById(elementId);
         if (!canvas || !window.Chart) return;
         
-        // Ensure score is within bounds
         score = Math.min(100, Math.max(0, score));
         
         // Destroy existing chart
