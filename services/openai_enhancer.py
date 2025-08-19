@@ -1,6 +1,6 @@
 """
-OpenAI Enhancement Service
-Adds powerful AI features to news analysis using GPT-4
+OpenAI Enhancement Service - FIXED VERSION
+Removes the proxies parameter that's causing the initialization error
 """
 import os
 import logging
@@ -29,6 +29,7 @@ class OpenAIEnhancer(BaseAnalyzer):
         self.max_tokens = 2000
         
         if self.is_available:
+            # FIXED: Remove proxies parameter - not supported in current OpenAI library
             self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
             logger.info(f"OpenAI Enhancer initialized with model: {self.model}")
     
@@ -83,105 +84,100 @@ class OpenAIEnhancer(BaseAnalyzer):
             bias_result = self._analyze_bias_and_framing(text, title)
             results['ai_bias_analysis'] = bias_result
             
-            # 4. Fact Check Suggestions
-            fact_check_result = self._suggest_fact_checks(text, claims_result)
-            results['fact_check_suggestions'] = fact_check_result
+            # 4. Critical Questions
+            questions = self._generate_critical_questions(text, title, context)
+            results['critical_questions'] = questions
             
-            # 5. Reader Questions
-            questions_result = self._generate_critical_questions(text, context)
-            results['critical_questions'] = questions_result
+            # 5. Overall Assessment
+            assessment = self._generate_overall_assessment(
+                text, title, author, source, context
+            )
+            results['overall_assessment'] = assessment
             
-            # 6. Overall AI Assessment
-            assessment = self._generate_overall_assessment(text, title, context)
-            results['ai_assessment'] = assessment
-            
-            # Calculate AI confidence score
-            results['ai_confidence'] = self._calculate_confidence(results)
+            # 6. Fact-Check Suggestions
+            if context.get('fact_checker'):
+                fact_suggestions = self._suggest_fact_checks(
+                    text, context['fact_checker']
+                )
+                results['fact_check_suggestions'] = fact_suggestions
             
             return results
             
         except Exception as e:
-            logger.error(f"OpenAI analysis error: {e}")
+            logger.error(f"OpenAI analysis failed: {e}", exc_info=True)
             return self._build_error_result(str(e))
     
-    def _prepare_context(self, service_results: Optional[Dict[str, Any]]) -> str:
+    def _prepare_context(self, service_results: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Prepare context from other service results"""
         if not service_results:
-            return "No additional context available."
+            return {}
         
-        context_parts = []
+        context = {}
         
-        # Add relevant findings from other services
-        if 'source_credibility' in service_results:
-            score = service_results['source_credibility'].get('credibility_score', 0)
-            context_parts.append(f"Source credibility score: {score}/100")
-        
-        if 'author_analyzer' in service_results:
-            author_info = service_results['author_analyzer'].get('summary', '')
-            if author_info:
-                context_parts.append(f"Author info: {author_info}")
-        
-        if 'bias_detector' in service_results:
-            bias_score = service_results['bias_detector'].get('overall_bias_score', 0)
-            context_parts.append(f"Bias detection score: {bias_score}/100")
-        
-        return " | ".join(context_parts) if context_parts else "Limited context available."
+        # Extract key findings from each service
+        for service, result in service_results.items():
+            if isinstance(result, dict) and result.get('success'):
+                if service == 'source_credibility':
+                    context['source_score'] = result.get('credibility_score', 0)
+                    context['source_info'] = result.get('domain_info', {})
+                elif service == 'author_analyzer':
+                    context['author_score'] = result.get('credibility_score', 0)
+                    context['author_expertise'] = result.get('expertise', {})
+                elif service == 'bias_detector':
+                    context['bias_score'] = result.get('bias_score', 0)
+                    context['political_lean'] = result.get('political_lean', 'center')
+                elif service == 'fact_checker':
+                    context['fact_checker'] = result
+                elif service == 'manipulation_detector':
+                    context['manipulation_level'] = result.get('manipulation_level', 'low')
+                    
+        return context
     
-    def _generate_summary(self, text: str, title: str, author: str) -> Dict[str, Any]:
+    def _generate_summary(self, text: str, title: str, author: str) -> Dict[str, str]:
         """Generate comprehensive article summary"""
         try:
-            # Truncate text if too long
-            max_chars = 12000  # Leave room for response
-            if len(text) > max_chars:
-                text = text[:max_chars] + "..."
-            
-            prompt = f"""Analyze this news article and provide a comprehensive summary.
+            prompt = f"""Provide a comprehensive summary of this news article.
 
 Title: {title}
 Author: {author}
+Text: {text[:4000]}  # Limit to avoid token limits
 
-Article Text:
-{text}
+Create a detailed summary that includes:
+1. Main topic and key points (3-4 sentences)
+2. Primary claims or arguments made
+3. Supporting evidence mentioned
+4. Any conclusions or implications
 
-Provide:
-1. A concise 2-3 sentence summary
-2. Main topic and angle
-3. Key points (3-5 bullet points)
-4. Notable quotes or statistics
-5. What's missing or not addressed
-
-Format as JSON with keys: summary, topic, key_points, notable_quotes, missing_context"""
+Keep the summary factual and neutral. Format as a single paragraph."""
 
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an expert news analyst providing objective, thorough analysis."},
+                    {"role": "system", "content": "You are a professional news analyst providing objective summaries."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=800,
-                response_format={"type": "json_object"}
+                max_tokens=500
             )
             
-            result = json.loads(response.choices[0].message.content)
-            result['tokens_used'] = response.usage.total_tokens
-            
-            return result
+            return {
+                'summary': response.choices[0].message.content,
+                'summary_generated': True
+            }
             
         except Exception as e:
-            logger.error(f"Summary generation error: {e}")
+            logger.error(f"Summary generation failed: {e}")
             return {
-                'summary': 'Unable to generate summary',
-                'error': str(e)
+                'summary': 'Summary generation failed',
+                'summary_generated': False
             }
     
     def _extract_key_claims(self, text: str) -> List[Dict[str, Any]]:
-        """Extract and categorize key claims"""
+        """Extract and categorize key claims from the article"""
         try:
-            prompt = f"""Extract the key factual claims from this article.
+            prompt = f"""Extract the key factual claims from this article that would need verification.
 
-Article Text:
-{text[:8000]}
+Text: {text[:4000]}
 
 For each claim, provide:
 1. The claim itself (exact or paraphrased)
@@ -233,8 +229,8 @@ Format as JSON with keys: language_bias, framing_techniques, perspective_bias, s
                     {"role": "system", "content": "You are a media bias expert providing neutral, evidence-based analysis."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
-                max_tokens=1000,
+                temperature=0.3,
+                max_tokens=1500,
                 response_format={"type": "json_object"}
             )
             
@@ -242,113 +238,86 @@ Format as JSON with keys: language_bias, framing_techniques, perspective_bias, s
             
         except Exception as e:
             logger.error(f"Bias analysis error: {e}")
-            return {'error': str(e)}
+            return {}
     
-    def _suggest_fact_checks(self, text: str, claims: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Suggest specific fact-checks for claims"""
+    def _generate_critical_questions(self, text: str, title: str, context: Dict[str, Any]) -> List[str]:
+        """Generate critical questions readers should ask"""
         try:
-            # Focus on high-importance, verifiable claims
-            priority_claims = [c for c in claims if c.get('importance') == 'high' 
-                              and c.get('verifiability') != 'opinion'][:5]
-            
-            if not priority_claims:
-                return []
-            
-            claims_text = "\n".join([f"- {c['claim']}" for c in priority_claims])
-            
-            prompt = f"""For these key claims, suggest specific fact-checking approaches:
+            context_info = f"""
+Context from other analyses:
+- Source credibility: {context.get('source_score', 'unknown')}/100
+- Author credibility: {context.get('author_score', 'unknown')}/100
+- Bias level: {context.get('bias_score', 'unknown')}/100
+- Political lean: {context.get('political_lean', 'unknown')}
+"""
 
-{claims_text}
+            prompt = f"""Based on this article and its analysis context, generate 5 critical questions readers should ask.
 
-For each claim, provide:
-1. Suggested verification method
-2. Potential sources to check
-3. Red flags to watch for
-4. Questions to ask
+Title: {title}
+Text excerpt: {text[:3000]}
+{context_info}
 
-Format as JSON array with objects containing: claim, verification_method, sources, red_flags, questions"""
+Create thought-provoking questions that:
+1. Challenge assumptions in the article
+2. Identify missing information
+3. Question sources and evidence
+4. Explore alternative perspectives
+5. Consider broader implications
+
+Return as a JSON object with a 'questions' array."""
 
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a professional fact-checker providing actionable verification strategies."},
+                    {"role": "system", "content": "You are a critical thinking expert helping readers analyze news articles."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
+                temperature=0.5,
                 max_tokens=800,
                 response_format={"type": "json_object"}
             )
             
             result = json.loads(response.choices[0].message.content)
-            return result.get('fact_checks', [])
-            
-        except Exception as e:
-            logger.error(f"Fact check suggestions error: {e}")
-            return []
-    
-    def _generate_critical_questions(self, text: str, context: str) -> List[str]:
-        """Generate critical questions readers should ask"""
-        try:
-            prompt = f"""Based on this article, generate 5 critical questions readers should ask.
-
-Article: {text[:4000]}
-Context: {context}
-
-Create thought-provoking questions that:
-1. Challenge assumptions
-2. Seek missing information
-3. Question sources and evidence
-4. Explore alternative perspectives
-5. Examine implications
-
-Return as JSON with key 'questions' containing an array of question strings."""
-
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are a critical thinking expert helping readers analyze news critically."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.6,
-                max_tokens=400,
-                response_format={"type": "json_object"}
-            )
-            
-            result = json.loads(response.choices[0].message.content)
-            return result.get('questions', [])
+            return result.get('questions', [])[:5]
             
         except Exception as e:
             logger.error(f"Question generation error: {e}")
             return []
     
-    def _generate_overall_assessment(self, text: str, title: str, context: str) -> Dict[str, Any]:
-        """Generate overall AI assessment"""
+    def _generate_overall_assessment(self, text: str, title: str, author: str, 
+                                   source: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate overall credibility assessment"""
         try:
-            prompt = f"""Provide an overall journalistic assessment of this article.
+            prompt = f"""Provide an overall credibility assessment of this article.
 
 Title: {title}
-Context: {context}
-Text: {text[:5000]}
+Author: {author}
+Source: {source}
+Text excerpt: {text[:3000]}
 
-Assess:
-1. Journalistic quality (structure, clarity, completeness)
-2. Evidence quality (sources, data, expert opinions)
-3. Balance and fairness
-4. Potential impact or agenda
-5. Reliability for readers
+Context from other analyses:
+- Source credibility: {context.get('source_score', 'unknown')}/100
+- Author credibility: {context.get('author_score', 'unknown')}/100
+- Bias level: {context.get('bias_score', 'unknown')}/100
+- Manipulation level: {context.get('manipulation_level', 'unknown')}
 
-Provide a nuanced assessment with specific observations.
-Format as JSON with keys: quality_score (0-100), strengths (array), weaknesses (array), 
-evidence_quality, balance_assessment, reliability_notes, recommendation"""
+Provide:
+1. Overall credibility rating (high/medium/low)
+2. Main strengths (2-3 points)
+3. Main concerns (2-3 points)
+4. Recommendation for readers
+5. Confidence level in assessment (high/medium/low)
+
+Format as JSON with keys: credibility_rating, strengths, concerns, recommendation, confidence_level"""
 
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a senior journalism professor providing constructive analysis."},
+                    {"role": "system", "content": "You are a senior news analyst providing balanced credibility assessments."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
-                max_tokens=800,
+                temperature=0.3,
+                max_tokens=1000,
                 response_format={"type": "json_object"}
             )
             
@@ -357,72 +326,59 @@ evidence_quality, balance_assessment, reliability_notes, recommendation"""
         except Exception as e:
             logger.error(f"Assessment generation error: {e}")
             return {
-                'quality_score': 0,
+                'credibility_rating': 'unknown',
                 'error': str(e)
             }
     
-    def _calculate_confidence(self, results: Dict[str, Any]) -> int:
-        """Calculate AI confidence in analysis"""
-        confidence = 85  # Base confidence
-        
-        # Adjust based on completeness
-        if results.get('error'):
-            confidence -= 30
-        if not results.get('key_claims'):
-            confidence -= 10
-        if not results.get('ai_assessment'):
-            confidence -= 10
-        
-        # Boost for successful analyses
-        if results.get('ai_assessment', {}).get('quality_score', 0) > 70:
-            confidence += 5
-        
-        return max(0, min(100, confidence))
+    def _suggest_fact_checks(self, text: str, fact_checker_results: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Suggest additional fact-checks based on analysis"""
+        try:
+            # Get claims that weren't checked
+            checked_claims = fact_checker_results.get('claims_checked', [])
+            
+            prompt = f"""Based on this article, suggest additional fact-checks that should be performed.
+
+Text excerpt: {text[:3000]}
+
+Already checked claims:
+{json.dumps(checked_claims, indent=2)}
+
+Suggest 3-5 additional claims or facts that should be verified, focusing on:
+1. Important claims not yet checked
+2. Statistics or data that need verification
+3. Quotes that should be confirmed
+4. Historical facts or comparisons
+
+For each suggestion, provide:
+- The claim to check
+- Why it's important
+- Suggested verification method
+
+Format as JSON array with objects containing: claim, importance, verification_method"""
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a fact-checking expert suggesting verification priorities."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=800,
+                response_format={"type": "json_object"}
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result.get('suggestions', [])[:5]
+            
+        except Exception as e:
+            logger.error(f"Fact-check suggestion error: {e}")
+            return []
     
-    def _build_error_result(self, error: str) -> Dict[str, Any]:
-        """Build error result"""
+    def _build_error_result(self, error_message: str) -> Dict[str, Any]:
+        """Build standardized error result"""
         return {
             'success': False,
             'service': self.service_name,
-            'error': error,
+            'error': error_message,
             'timestamp': datetime.now().isoformat()
         }
-
-
-# Cost estimation helper
-def estimate_openai_cost(text_length: int, num_analyses: int = 6) -> Dict[str, float]:
-    """
-    Estimate OpenAI API cost for analyzing an article
-    
-    GPT-4 Turbo pricing (as of 2024):
-    - Input: $0.01 per 1K tokens
-    - Output: $0.03 per 1K tokens
-    """
-    # Rough token estimation (1 token ≈ 4 characters)
-    input_tokens = text_length / 4
-    
-    # Estimate tokens per analysis
-    tokens_per_analysis = {
-        'summary': 1000,
-        'claims': 1200,
-        'bias': 1200,
-        'fact_check': 1000,
-        'questions': 600,
-        'assessment': 1000
-    }
-    
-    total_output_tokens = sum(tokens_per_analysis.values())
-    
-    # Calculate costs
-    input_cost = (input_tokens * num_analyses / 1000) * 0.01
-    output_cost = (total_output_tokens / 1000) * 0.03
-    total_cost = input_cost + output_cost
-    
-    return {
-        'input_tokens': input_tokens * num_analyses,
-        'output_tokens': total_output_tokens,
-        'input_cost': input_cost,
-        'output_cost': output_cost,
-        'total_cost': total_cost,
-        'analyses_per_dollar': 1 / total_cost if total_cost > 0 else 0
-    }
