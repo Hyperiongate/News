@@ -401,7 +401,7 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
             'key_findings': extract_key_findings(services)
         },
         'article': article_data,
-        'detailed_analysis': services,
+        'detailed_analysis': services,  # THIS IS THE KEY FIELD THAT WAS MISSING
         'metadata': {
             'services_available': result.get('pipeline_metadata', {}).get('total_available_services', 0),
             'is_pro': result.get('is_pro', False),
@@ -409,6 +409,11 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
             'processing_time': result.get('pipeline_metadata', {}).get('total_duration', 0)
         }
     }
+    
+    # Log what we're returning
+    logger.info(f"Returning transformed result with detailed_analysis containing {len(services)} services")
+    if 'author_analyzer' in services:
+        logger.info(f"Author analyzer data included: {list(services['author_analyzer'].keys())}")
     
     return transformed
 
