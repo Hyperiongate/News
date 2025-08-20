@@ -2,12 +2,18 @@
 // This file contains all configuration that needs to be shared between different JavaScript files
 
 const CONFIG = {
+    // API Configuration
+    API_ENDPOINT: '/api/analyze',
+    API_TIMEOUT: 60000,
+    isPro: false,
+
     // Service definitions
     SERVICES: [
         {
             id: 'source_credibility',
             name: 'Source Credibility',
             icon: 'fa-shield-alt',
+            weight: 0.25,
             description: 'Comprehensive evaluation of news source reliability and trustworthiness',
             url: '/templates/source-credibility.html',
             className: 'source-credibility',
@@ -17,6 +23,7 @@ const CONFIG = {
             id: 'author_analyzer',
             name: 'Author Analysis',
             icon: 'fa-user-check',
+            weight: 0.15,
             description: 'In-depth assessment of author credentials and publishing history',
             url: '/templates/author-analysis.html',
             className: 'author-analyzer',
@@ -26,6 +33,7 @@ const CONFIG = {
             id: 'bias_detector',
             name: 'Bias Detection',
             icon: 'fa-balance-scale',
+            weight: 0.20,
             description: 'Multi-dimensional analysis of political and ideological bias',
             url: '/templates/bias-detection.html',
             className: 'bias-detector',
@@ -35,6 +43,7 @@ const CONFIG = {
             id: 'fact_checker',
             name: 'Fact Checking',
             icon: 'fa-check-double',
+            weight: 0.15,
             description: 'Verification of claims against authoritative sources',
             url: '/templates/fact-checking.html',
             className: 'fact-checker',
@@ -44,6 +53,7 @@ const CONFIG = {
             id: 'transparency_analyzer',
             name: 'Transparency Analysis',
             icon: 'fa-eye',
+            weight: 0.10,
             description: 'Assessment of disclosure, sourcing, and editorial transparency',
             url: '/templates/transparency-analysis.html',
             className: 'transparency-analyzer',
@@ -53,6 +63,8 @@ const CONFIG = {
             id: 'manipulation_detector',
             name: 'Manipulation Detection',
             icon: 'fa-mask',
+            weight: 0.10,
+            isPro: true,
             description: 'Identification of manipulative tactics and emotional exploitation',
             url: '/templates/manipulation-detection.html',
             className: 'manipulation-detector',
@@ -62,6 +74,8 @@ const CONFIG = {
             id: 'content_analyzer',
             name: 'Content Analysis',
             icon: 'fa-file-alt',
+            weight: 0.05,
+            isPro: true,
             description: 'Evaluation of writing quality, readability, and structure',
             url: '/templates/content-analysis.html',
             className: 'content-analyzer',
@@ -97,13 +111,6 @@ const CONFIG = {
         { max: 100, label: 'Extreme', color: '#dc2626' }
     ],
 
-    // API endpoints
-    API_ENDPOINTS: {
-        analyze: '/api/analyze',
-        health: '/api/health',
-        download: '/api/download-report'
-    },
-
     // Animation settings
     ANIMATIONS: {
         scoreAnimationDuration: 1500,
@@ -121,7 +128,8 @@ const CONFIG = {
     UI: {
         maxFindingsToShow: 5,
         errorMessageDuration: 5000,
-        loadingDelay: 300
+        loadingDelay: 300,
+        openLinksInNewTab: true // Configuration for opening service pages
     }
 };
 
