@@ -908,5 +908,302 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function() {
+        // 1. Retrieve data
+        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
+        const contentData = analysisData?.detailed_analysis?.content_analyzer || {};
+        
+        // 2. Check if data exists
+        if (!Object.keys(contentData).length) {
+            // Show no data message
+            document.querySelector('.content-analysis-container').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
+                    <h2>No Analysis Data Available</h2>
+                    <p>Please run an analysis first to see results.</p>
+                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // 3. Update UI elements
+        updatePageElements(contentData);
+        
+        function updatePageElements(data) {
+            // Update quality overview
+            const qualityScore = data.quality_score || 0;
+            const gradeLevel = Math.round(data.readability_grade || 11);
+            const grammarIssues = data.grammar_issues || 0;
+            
+            // Update quality cards
+            const qualityCards = document.querySelectorAll('.quality-card');
+            
+            // Overall Quality
+            const qualityGrade = getQualityGrade(qualityScore);
+            qualityCards[0].querySelector('.quality-metric').textContent = qualityGrade;
+            qualityCards[0].className = 'quality-card ' + getQualityClass(qualityScore);
+            
+            // Grade Level
+            qualityCards[1].querySelector('.quality-metric').textContent = getOrdinal(gradeLevel);
+            
+            // Structure
+            const structureQuality = data.structure_quality || 'Fair';
+            qualityCards[2].querySelector('.quality-metric').textContent = structureQuality;
+            qualityCards[2].className = 'quality-card ' + getStructureClass(structureQuality);
+            
+            // Grammar Issues
+            qualityCards[3].querySelector('.quality-metric').textContent = grammarIssues;
+            qualityCards[3].className = 'quality-card ' + (grammarIssues > 5 ? 'fair' : grammarIssues > 2 ? 'good' : 'excellent');
+            
+            // Update readability metrics
+            updateReadabilitySection(data);
+            
+            // Update structure analysis
+            updateStructureSection(data);
+            
+            // Update language quality indicators
+            updateLanguageQuality(data);
+            
+            // Update content distribution
+            updateContentDistribution(data);
+            
+            // Update key findings
+            updateKeyFindings(data);
+            
+            // Update recommendations
+            updateRecommendations(data);
+        }
+        
+        function updateReadabilitySection(data) {
+            // Update grade circle
+            const gradeLevel = Math.round(data.readability_grade || 11);
+            document.querySelector('.grade-number').textContent = gradeLevel;
+            
+            // Update description
+            const description = getReadabilityDescription(gradeLevel);
+            document.querySelector('.reading-description').textContent = description;
+            
+            // Update metrics
+            const metrics = document.querySelectorAll('.readability-metrics .metric-value');
+            metrics[0].textContent = Math.round(data.flesch_reading_ease || 62);
+            metrics[1].textContent = (data.flesch_kincaid_grade || 8.3).toFixed(1);
+            metrics[2].textContent = Math.round(data.gunning_fog || 12);
+        }
+        
+        function updateStructureSection(data) {
+            const structureValues = document.querySelectorAll('.structure-value');
+            
+            // Word count
+            structureValues[0].textContent = formatNumber(data.word_count || 0) + ' words';
+            
+            // Paragraphs
+            structureValues[1].textContent = (data.paragraph_count || 0) + ' paragraphs';
+            
+            // Sections
+            structureValues[2].textContent = (data.section_count || 0) + ' main sections';
+            
+            // Reading time
+            const readingTime = Math.ceil((data.word_count || 0) / 250);
+            structureValues[3].textContent = '~' + readingTime + ' minutes';
+        }
+        
+        function updateLanguageQuality(data) {
+            const indicators = document.querySelectorAll('.indicator-card');
+            
+            // Sentence Variety
+            const sentenceVariety = data.sentence_variety || {};
+            indicators[0].querySelector('.indicator-score').textContent = getScoreLabel(sentenceVariety.score || 70);
+            indicators[0].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(sentenceVariety.score || 70);
+            indicators[0].querySelector('.indicator-details').textContent = sentenceVariety.description || 'Mix of simple, compound, and complex sentences maintains reader engagement';
+            
+            // Vocabulary
+            const vocabulary = data.vocabulary_analysis || {};
+            indicators[1].querySelector('.indicator-score').textContent = getScoreLabel(vocabulary.score || 85);
+            indicators[1].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(vocabulary.score || 85);
+            indicators[1].querySelector('.indicator-details').textContent = vocabulary.description || 'Appropriate use of domain-specific terms with clear explanations';
+            
+            // Grammar & Spelling
+            const grammarIssues = data.grammar_issues_list || [];
+            const grammarScore = grammarIssues.length > 5 ? 40 : grammarIssues.length > 2 ? 70 : 90;
+            indicators[2].querySelector('.indicator-score').textContent = getScoreLabel(grammarScore);
+            indicators[2].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(grammarScore);
+            
+            if (grammarIssues.length > 0) {
+                const issuesList = indicators[2].querySelector('.issues-list');
+                issuesList.innerHTML = grammarIssues.map(issue => 
+                    `<li class="issue-item">${issue}</li>`
+                ).join('');
+            }
+            
+            // Clarity
+            const clarity = data.clarity_analysis || {};
+            indicators[3].querySelector('.indicator-score').textContent = getScoreLabel(clarity.score || 75);
+            indicators[3].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(clarity.score || 75);
+            indicators[3].querySelector('.indicator-details').textContent = clarity.description || 'Most concepts clearly explained, though some sentences could be simplified';
+        }
+        
+        function updateContentDistribution(data) {
+            const distribution = data.content_distribution || {
+                information: 45,
+                analysis: 25,
+                quotes: 20,
+                opinion: 10
+            };
+            
+            const percentages = document.querySelectorAll('.distribution-percentage');
+            percentages[0].textContent = distribution.information + '%';
+            percentages[1].textContent = distribution.analysis + '%';
+            percentages[2].textContent = distribution.quotes + '%';
+            percentages[3].textContent = distribution.opinion + '%';
+        }
+        
+        function updateKeyFindings(data) {
+            const findingsList = document.querySelector('.findings-list');
+            findingsList.innerHTML = '';
+            
+            const findings = data.key_findings || generateDefaultFindings(data);
+            
+            findings.forEach(finding => {
+                const item = document.createElement('div');
+                item.className = `finding-item finding-${finding.type || 'neutral'}`;
+                item.innerHTML = `
+                    <div class="finding-indicator"></div>
+                    <div class="finding-content">
+                        <div class="finding-text">${finding.text}</div>
+                        <div class="finding-detail">${finding.detail || ''}</div>
+                    </div>
+                `;
+                findingsList.appendChild(item);
+            });
+        }
+        
+        function updateRecommendations(data) {
+            const recommendations = data.recommendations || [];
+            const recGrid = document.querySelector('.recommendations-grid');
+            
+            if (recommendations.length > 0) {
+                recGrid.innerHTML = '';
+                recommendations.forEach(rec => {
+                    const card = document.createElement('div');
+                    card.className = 'recommendation-card';
+                    card.innerHTML = `
+                        <div class="rec-icon">
+                            <i class="fas fa-${rec.icon || 'check'}"></i>
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-title">${rec.title}</div>
+                            <div class="rec-text">${rec.text}</div>
+                        </div>
+                    `;
+                    recGrid.appendChild(card);
+                });
+            }
+        }
+        
+        // Helper functions
+        function getQualityGrade(score) {
+            if (score >= 90) return 'A+';
+            if (score >= 85) return 'A';
+            if (score >= 80) return 'B+';
+            if (score >= 75) return 'B';
+            if (score >= 70) return 'C+';
+            if (score >= 65) return 'C';
+            if (score >= 60) return 'D+';
+            if (score >= 55) return 'D';
+            return 'F';
+        }
+        
+        function getQualityClass(score) {
+            if (score >= 80) return 'excellent';
+            if (score >= 65) return 'good';
+            return 'fair';
+        }
+        
+        function getStructureClass(quality) {
+            const qualityLower = quality.toLowerCase();
+            if (qualityLower.includes('excellent') || qualityLower.includes('well')) return 'excellent';
+            if (qualityLower.includes('good')) return 'good';
+            return 'fair';
+        }
+        
+        function getScoreLabel(score) {
+            if (score >= 80) return 'Excellent';
+            if (score >= 60) return 'Good';
+            return 'Needs Work';
+        }
+        
+        function getScoreClass(score) {
+            if (score >= 80) return 'score-excellent';
+            if (score >= 60) return 'score-good';
+            return 'score-needs-work';
+        }
+        
+        function getOrdinal(n) {
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+        
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function getReadabilityDescription(grade) {
+            if (grade <= 6) return 'This article is very easy to read, suitable for elementary school students.';
+            if (grade <= 8) return 'This article is easy to read, suitable for middle school students.';
+            if (grade <= 10) return 'This article is fairly easy to read, suitable for high school students.';
+            if (grade <= 12) return 'This article requires a high school reading level, suitable for most adult readers.';
+            if (grade <= 14) return 'This article requires some college-level reading ability.';
+            return 'This article requires advanced reading skills, suitable for college graduates.';
+        }
+        
+        function generateDefaultFindings(data) {
+            const findings = [];
+            
+            if (data.quality_score >= 75) {
+                findings.push({
+                    text: 'Overall content quality is good',
+                    detail: 'Well-structured with clear writing',
+                    type: 'positive'
+                });
+            }
+            
+            if (data.readability_grade > 12) {
+                findings.push({
+                    text: 'Reading level may be too complex for general audience',
+                    detail: `Grade ${Math.round(data.readability_grade)} reading level detected`,
+                    type: 'negative'
+                });
+            } else {
+                findings.push({
+                    text: 'Appropriate reading level for target audience',
+                    detail: `Grade ${Math.round(data.readability_grade || 11)} level suitable for general news consumption`,
+                    type: 'positive'
+                });
+            }
+            
+            if (data.grammar_issues > 0) {
+                findings.push({
+                    text: 'Grammar and style issues detected',
+                    detail: `${data.grammar_issues} issues found that could be improved`,
+                    type: 'neutral'
+                });
+            }
+            
+            if (data.word_count > 2000) {
+                findings.push({
+                    text: 'Article length may impact reader engagement',
+                    detail: 'Consider breaking into multiple parts or adding summaries',
+                    type: 'neutral'
+                });
+            }
+            
+            return findings;
+        }
+    })();
+    </script>
 </body>
 </html>
