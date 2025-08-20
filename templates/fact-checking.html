@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bias Detection Analysis - TruthLens AI</title>
+    <title>Fact Checking Analysis - TruthLens AI</title>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
         }
 
         /* Main Container */
-        .bias-analysis-container {
+        .fact-check-container {
             max-width: 1200px;
             margin: 0 auto;
             background: var(--white);
@@ -60,7 +60,7 @@
 
         /* Header Section */
         .analysis-header {
-            background: linear-gradient(135deg, var(--warning) 0%, #dc2626 100%);
+            background: linear-gradient(135deg, var(--info) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 1.5rem;
             display: flex;
@@ -116,425 +116,375 @@
             transform: translateY(-1px);
         }
 
-        /* Bias Spectrum Visual */
-        .bias-spectrum-section {
+        /* Summary Section */
+        .summary-section {
             padding: 2rem;
             background: var(--gray-50);
             border-bottom: 1px solid var(--gray-200);
         }
 
-        .spectrum-container {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .spectrum-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .bias-score-display {
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--warning);
-            margin-bottom: 0.5rem;
-        }
-
-        .bias-label {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .spectrum-visual {
-            position: relative;
-            height: 60px;
-            background: linear-gradient(to right, 
-                #1e40af 0%, 
-                #3b82f6 25%, 
-                #6b7280 50%, 
-                #f59e0b 75%, 
-                #dc2626 100%);
-            border-radius: 30px;
-            margin: 2rem 0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .spectrum-marker {
-            position: absolute;
-            top: -10px;
-            width: 80px;
-            height: 80px;
-            background: var(--white);
-            border: 4px solid var(--warning);
-            border-radius: 50%;
-            box-shadow: var(--shadow-lg);
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.25rem;
-            transition: left 1s ease-out;
-        }
-
-        .spectrum-labels {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1rem;
-            font-size: 0.813rem;
-            color: var(--gray-600);
-        }
-
-        /* Main Content Grid */
-        .content-grid {
+        .summary-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
-            padding: 1.5rem;
         }
 
-        /* Key Findings Panel */
-        .findings-panel {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(220, 38, 38, 0.03) 100%);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+        .summary-card {
+            background: var(--white);
             border-radius: var(--radius);
             padding: 1.5rem;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
         }
 
-        .findings-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .findings-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--warning);
-            border-radius: 0.375rem;
+        .summary-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-        }
-
-        .findings-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .findings-list {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--white);
-            border-radius: 0.375rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .finding-indicator {
-            width: 6px;
-            height: 6px;
             border-radius: 50%;
-            margin-top: 0.5rem;
-            flex-shrink: 0;
+            font-size: 1.5rem;
         }
 
-        .finding-high .finding-indicator {
-            background: var(--danger);
+        .icon-verified {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
         }
 
-        .finding-medium .finding-indicator {
-            background: var(--warning);
-        }
-
-        .finding-low .finding-indicator {
-            background: var(--secondary);
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-text {
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-detail {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        /* Bias Types Grid */
-        .bias-types-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-
-        .bias-type-card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.25rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .bias-type-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .bias-type-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--white);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .bias-type-political .bias-type-icon { color: var(--info); }
-        .bias-type-corporate .bias-type-icon { color: var(--warning); }
-        .bias-type-sensational .bias-type-icon { color: var(--danger); }
-        .bias-type-cultural .bias-type-icon { color: #8b5cf6; }
-        .bias-type-confirmation .bias-type-icon { color: #06b6d4; }
-        .bias-type-selection .bias-type-icon { color: #ec4899; }
-
-        .bias-type-info h3 {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .bias-score-bar {
-            height: 8px;
-            background: var(--gray-200);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-
-        .bias-score-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 1s ease-out;
-        }
-
-        .bias-score-high { background: var(--danger); }
-        .bias-score-medium { background: var(--warning); }
-        .bias-score-low { background: var(--secondary); }
-
-        .bias-examples {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            margin-top: 0.75rem;
-        }
-
-        .example-item {
-            padding: 0.5rem;
-            background: var(--white);
-            border-radius: 0.375rem;
-            margin-top: 0.5rem;
-            border-left: 3px solid var(--warning);
-            font-style: italic;
-        }
-
-        /* Loaded Language Analysis */
-        .language-analysis {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .language-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .language-header h2 {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .loaded-phrases {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .phrase-tag {
-            padding: 0.375rem 0.75rem;
-            background: var(--gray-100);
-            border: 1px solid var(--gray-200);
-            border-radius: 2rem;
-            font-size: 0.813rem;
-            position: relative;
-        }
-
-        .phrase-tag.high-bias {
+        .icon-unverified {
             background: rgba(239, 68, 68, 0.1);
-            border-color: var(--danger);
             color: var(--danger);
         }
 
-        .phrase-tag.medium-bias {
+        .icon-partial {
             background: rgba(245, 158, 11, 0.1);
-            border-color: var(--warning);
             color: var(--warning);
         }
 
-        /* Statistical Breakdown */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1.5rem;
+        .icon-total {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
         }
 
-        .stat-card {
-            text-align: center;
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            border: 1px solid var(--gray-200);
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
         }
 
-        .stat-icon {
-            font-size: 1.5rem;
-            color: var(--warning);
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
+        .summary-label {
+            font-size: 0.875rem;
             color: var(--gray-600);
         }
 
-        /* Comparison Section */
-        .comparison-section {
-            background: var(--gray-50);
-            border-radius: var(--radius);
+        /* Main Content */
+        .main-content {
             padding: 1.5rem;
-            margin-top: 1.5rem;
         }
 
-        .comparison-header {
-            font-size: 1.125rem;
+        /* Claims List */
+        .claims-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.375rem 0.75rem;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.375rem;
+            font-size: 0.813rem;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Claim Cards */
+        .claims-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .claim-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid var(--gray-200);
+            transition: all 0.3s;
+        }
+
+        .claim-card.verified {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(16, 185, 129, 0.05) 100%);
+        }
+
+        .claim-card.false {
+            border-color: var(--danger);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.02) 0%, rgba(239, 68, 68, 0.05) 100%);
+        }
+
+        .claim-card.partially-true {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, rgba(245, 158, 11, 0.05) 100%);
+        }
+
+        .claim-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
             margin-bottom: 1rem;
         }
 
-        .comparison-bars {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .comparison-item {
-            display: grid;
-            grid-template-columns: 150px 1fr 80px;
+        .claim-status {
+            display: flex;
             align-items: center;
-            gap: 1rem;
-        }
-
-        .comparison-label {
-            font-size: 0.875rem;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.813rem;
             font-weight: 600;
-            color: var(--dark);
         }
 
-        .comparison-bar {
-            height: 24px;
-            background: var(--gray-200);
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .comparison-fill {
-            height: 100%;
-            background: var(--warning);
-            border-radius: 12px;
-            transition: width 1s ease-out;
-            position: relative;
-        }
-
-        .comparison-fill::after {
-            content: attr(data-value);
-            position: absolute;
-            right: 0.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            font-weight: 600;
+        .status-verified {
+            background: var(--secondary);
             color: white;
         }
 
-        .comparison-value {
-            font-size: 0.875rem;
-            font-weight: 700;
+        .status-false {
+            background: var(--danger);
+            color: white;
+        }
+
+        .status-partial {
+            background: var(--warning);
+            color: white;
+        }
+
+        .status-unverified {
+            background: var(--gray-400);
+            color: white;
+        }
+
+        .claim-confidence {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .claim-text {
+            font-size: 1rem;
             color: var(--dark);
-            text-align: right;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            font-style: italic;
+            padding-left: 1rem;
+            border-left: 3px solid var(--gray-300);
+        }
+
+        .claim-details {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .detail-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--primary);
+        }
+
+        .detail-content {
+            flex: 1;
+            color: var(--gray-700);
+        }
+
+        .detail-content strong {
+            color: var(--dark);
+        }
+
+        .sources-list {
+            margin-top: 0.5rem;
+            padding-left: 1rem;
+        }
+
+        .source-link {
+            color: var(--info);
+            text-decoration: none;
+            font-size: 0.813rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .source-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Verification Methods */
+        .methods-section {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .method-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+        }
+
+        .method-icon {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .method-name {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .method-description {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        /* Confidence Meter */
+        .confidence-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+
+        .confidence-meter {
+            width: 200px;
+            height: 100px;
+            margin: 1rem auto;
+            position: relative;
+        }
+
+        .confidence-gauge {
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(
+                from 180deg,
+                var(--danger) 0deg,
+                var(--warning) 72deg,
+                var(--secondary) 144deg,
+                var(--gray-200) 180deg
+            );
+            border-radius: 100px 100px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .confidence-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            height: 80px;
+            background: var(--dark);
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-45deg);
+            transition: transform 1s ease-out;
+        }
+
+        .confidence-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-top: 1rem;
+        }
+
+        .confidence-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .bias-types-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-grid {
+            .summary-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .comparison-item {
-                grid-template-columns: 120px 1fr 60px;
+            .methods-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="bias-analysis-container">
+    <div class="fact-check-container">
         <!-- Header -->
         <div class="analysis-header">
             <div class="header-left">
                 <div class="header-icon">
-                    <i class="fas fa-balance-scale"></i>
+                    <i class="fas fa-check-double"></i>
                 </div>
                 <div class="header-content">
-                    <h1>Bias Detection Analysis</h1>
-                    <p class="header-subtitle">Multi-dimensional analysis of political and ideological bias</p>
+                    <h1>Fact Checking Analysis</h1>
+                    <p class="header-subtitle">Verification of claims against authoritative sources</p>
                 </div>
             </div>
             <a href="/" class="back-button">
@@ -543,264 +493,263 @@
             </a>
         </div>
 
-        <!-- Bias Spectrum Visual -->
-        <div class="bias-spectrum-section">
-            <div class="spectrum-container">
-                <div class="spectrum-header">
-                    <div class="bias-score-display">68</div>
-                    <div class="bias-label">Moderate Right Bias Detected</div>
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-icon icon-verified">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="summary-value">7</div>
+                    <div class="summary-label">Verified Claims</div>
                 </div>
-                
-                <div class="spectrum-visual">
-                    <div class="spectrum-marker" style="left: 68%;">68</div>
+                <div class="summary-card">
+                    <div class="summary-icon icon-unverified">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="summary-value">3</div>
+                    <div class="summary-label">False Claims</div>
                 </div>
-                
-                <div class="spectrum-labels">
-                    <span>Far Left</span>
-                    <span>Left</span>
-                    <span>Center</span>
-                    <span>Right</span>
-                    <span>Far Right</span>
+                <div class="summary-card">
+                    <div class="summary-icon icon-partial">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="summary-value">2</div>
+                    <div class="summary-label">Partially True</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon icon-total">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="summary-value">12</div>
+                    <div class="summary-label">Total Claims</div>
                 </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="content-grid">
-            <!-- Key Findings -->
-            <div class="findings-panel">
-                <div class="findings-header">
-                    <div class="findings-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
+        <div class="main-content">
+            <!-- Claims List -->
+            <div class="claims-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-list-check"></i>
+                        Claim Analysis
+                    </h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active">All Claims</button>
+                        <button class="filter-btn">Verified</button>
+                        <button class="filter-btn">False</button>
+                        <button class="filter-btn">Partial</button>
                     </div>
-                    <h2 class="findings-title">Key Bias Indicators</h2>
                 </div>
-                <div class="findings-list">
-                    <div class="finding-item finding-high">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Significant use of emotionally charged language</div>
-                            <div class="finding-detail">23 instances of loaded terms detected that may influence reader perception</div>
+
+                <div class="claims-list">
+                    <!-- Claim 1 - Verified -->
+                    <div class="claim-card verified">
+                        <div class="claim-header">
+                            <div class="claim-status status-verified">
+                                <i class="fas fa-check-circle"></i>
+                                Verified True
+                            </div>
+                            <div class="claim-confidence">
+                                <i class="fas fa-shield-alt"></i>
+                                High Confidence (92%)
+                            </div>
+                        </div>
+                        <div class="claim-text">
+                            "The unemployment rate reached 3.8% in December 2024, the lowest in six months."
+                        </div>
+                        <div class="claim-details">
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Primary Source:</strong> U.S. Bureau of Labor Statistics official report
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Verification Date:</strong> January 28, 2025
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Supporting Sources:</strong>
+                                    <div class="sources-list">
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            BLS Employment Report
+                                        </a>
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            Federal Reserve Economic Data
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="finding-item finding-medium">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Selective source citation favoring one perspective</div>
-                            <div class="finding-detail">78% of sources align with right-leaning viewpoints</div>
+
+                    <!-- Claim 2 - False -->
+                    <div class="claim-card false">
+                        <div class="claim-header">
+                            <div class="claim-status status-false">
+                                <i class="fas fa-times-circle"></i>
+                                False
+                            </div>
+                            <div class="claim-confidence">
+                                <i class="fas fa-shield-alt"></i>
+                                High Confidence (88%)
+                            </div>
+                        </div>
+                        <div class="claim-text">
+                            "Crime rates have increased by 50% in major cities over the past year."
+                        </div>
+                        <div class="claim-details">
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Actual Data:</strong> FBI statistics show a 3.2% decrease in violent crime in major cities
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Issue:</strong> Cherry-picked data from specific neighborhoods, not representative of overall trends
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Fact Check Sources:</strong>
+                                    <div class="sources-list">
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            FBI Crime Statistics 2024
+                                        </a>
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            Department of Justice Report
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="finding-item finding-medium">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Framing bias in headline and lead paragraphs</div>
-                            <div class="finding-detail">Story angle emphasizes conservative talking points</div>
+
+                    <!-- Claim 3 - Partially True -->
+                    <div class="claim-card partially-true">
+                        <div class="claim-header">
+                            <div class="claim-status status-partial">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Partially True
+                            </div>
+                            <div class="claim-confidence">
+                                <i class="fas fa-shield-alt"></i>
+                                Moderate Confidence (75%)
+                            </div>
                         </div>
-                    </div>
-                    <div class="finding-item finding-low">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Some attempt at presenting multiple viewpoints</div>
-                            <div class="finding-detail">Opposition views mentioned but given less prominence</div>
+                        <div class="claim-text">
+                            "The new infrastructure bill will create 2 million jobs."
+                        </div>
+                        <div class="claim-details">
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Context:</strong> Projections range from 1.5 to 2.2 million jobs over 10 years, not immediate
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-calculator"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Analysis:</strong> Figure is based on economic modeling with significant uncertainty
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <strong>Sources:</strong>
+                                    <div class="sources-list">
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            Congressional Budget Office Analysis
+                                        </a>
+                                        <a href="#" class="source-link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            Economic Policy Institute Study
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Bias Types Analysis -->
-            <div class="bias-types-grid">
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-political">
-                            <i class="fas fa-landmark"></i>
+            <!-- Verification Methods -->
+            <div class="methods-section">
+                <h2 class="section-title">
+                    <i class="fas fa-tools"></i>
+                    Verification Methods Used
+                </h2>
+                <div class="methods-grid">
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-database"></i>
                         </div>
-                        <div class="bias-type-info">
-                            <h3>Political Bias</h3>
+                        <div class="method-name">Primary Source Verification</div>
+                        <div class="method-description">Cross-referenced with official government databases and reports</div>
+                    </div>
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-users"></i>
                         </div>
+                        <div class="method-name">Expert Consultation</div>
+                        <div class="method-description">Verified claims with subject matter experts in relevant fields</div>
                     </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 72%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Strong ideological framing detected:</p>
-                        <div class="example-item">"radical left policies" instead of "progressive policies"</div>
-                        <div class="example-item">"common-sense solutions" for partisan proposals</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-corporate">
-                            <i class="fas fa-building"></i>
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-search"></i>
                         </div>
-                        <div class="bias-type-info">
-                            <h3>Corporate Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-medium" style="width: 45%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Moderate pro-business framing:</p>
-                        <div class="example-item">Economic impacts emphasized over social concerns</div>
-                        <div class="example-item">Corporate perspectives given prominence</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-sensational">
-                            <i class="fas fa-fire"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Sensationalism</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 65%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Emotional manipulation detected:</p>
-                        <div class="example-item">Headline uses fear-inducing language</div>
-                        <div class="example-item">Dramatic imagery without context</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-cultural">
-                            <i class="fas fa-globe"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Cultural Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-low" style="width: 25%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Minor cultural assumptions:</p>
-                        <div class="example-item">Western-centric perspective in global story</div>
-                        <div class="example-item">Limited diverse viewpoints</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-confirmation">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Confirmation Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-medium" style="width: 58%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Cherry-picking evidence:</p>
-                        <div class="example-item">Statistics selected to support narrative</div>
-                        <div class="example-item">Contradictory data omitted</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-selection">
-                            <i class="fas fa-filter"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Selection Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 70%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Selective coverage detected:</p>
-                        <div class="example-item">Focus on stories that fit narrative</div>
-                        <div class="example-item">Important context excluded</div>
+                        <div class="method-name">Fact-Check Networks</div>
+                        <div class="method-description">Consulted multiple independent fact-checking organizations</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Loaded Language Analysis -->
-            <div class="language-analysis">
-                <div class="language-header">
-                    <i class="fas fa-quote-right" style="color: var(--warning);"></i>
-                    <h2>Loaded Language & Framing</h2>
-                </div>
-                <div class="loaded-phrases">
-                    <span class="phrase-tag high-bias">radical agenda</span>
-                    <span class="phrase-tag high-bias">destroying America</span>
-                    <span class="phrase-tag medium-bias">controversial policy</span>
-                    <span class="phrase-tag high-bias">extreme measures</span>
-                    <span class="phrase-tag medium-bias">critics argue</span>
-                    <span class="phrase-tag high-bias">disastrous consequences</span>
-                    <span class="phrase-tag medium-bias">questionable motives</span>
-                    <span class="phrase-tag high-bias">unprecedented attack</span>
-                    <span class="phrase-tag">common-sense approach</span>
-                    <span class="phrase-tag medium-bias">so-called experts</span>
-                </div>
-            </div>
-
-            <!-- Statistical Breakdown -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-percentage stat-icon"></i>
-                    <span class="stat-value">68%</span>
-                    <span class="stat-label">Overall Bias Score</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-quote-left stat-icon"></i>
-                    <span class="stat-value">23</span>
-                    <span class="stat-label">Loaded Terms</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-users stat-icon"></i>
-                    <span class="stat-value">78%</span>
-                    <span class="stat-label">One-sided Sources</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-exclamation stat-icon"></i>
-                    <span class="stat-value">High</span>
-                    <span class="stat-label">Manipulation Risk</span>
-                </div>
-            </div>
-
-            <!-- Comparison with Similar Articles -->
-            <div class="comparison-section">
-                <h3 class="comparison-header">Bias Comparison with Similar Articles</h3>
-                <div class="comparison-bars">
-                    <div class="comparison-item">
-                        <div class="comparison-label">This Article</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 68%;" data-value="68%"></div>
-                        </div>
-                        <div class="comparison-value">68%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Source Average</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 62%; background: var(--info);" data-value="62%"></div>
-                        </div>
-                        <div class="comparison-value">62%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Topic Average</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 45%; background: var(--secondary);" data-value="45%"></div>
-                        </div>
-                        <div class="comparison-value">45%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Industry Standard</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 35%; background: var(--gray-500);" data-value="35%"></div>
-                        </div>
-                        <div class="comparison-value">35%</div>
+            <!-- Overall Confidence -->
+            <div class="confidence-section">
+                <h2 class="section-title" style="justify-content: center;">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Fact-Check Confidence
+                </h2>
+                <div class="confidence-meter">
+                    <div class="confidence-gauge">
+                        <div class="confidence-needle" style="transform: translateX(-50%) rotate(25deg);"></div>
                     </div>
                 </div>
+                <div class="confidence-value">78%</div>
+                <div class="confidence-label">Overall Verification Confidence</div>
             </div>
         </div>
     </div>
