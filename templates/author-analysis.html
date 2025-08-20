@@ -902,5 +902,186 @@
             </main>
         </div>
     </div>
+
+    <script>
+    (function() {
+        // 1. Retrieve data
+        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
+        const authorData = analysisData?.detailed_analysis?.author_analyzer || {};
+        
+        // 2. Check if data exists
+        if (!Object.keys(authorData).length) {
+            // Show no data message
+            document.querySelector('.author-analysis-container').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
+                    <h2>No Analysis Data Available</h2>
+                    <p>Please run an analysis first to see results.</p>
+                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // 3. Update UI elements
+        updatePageElements(authorData);
+        
+        function updatePageElements(data) {
+            // Update author name
+            const authorName = data.author_name || 'Unknown Author';
+            document.querySelector('.author-name').textContent = authorName;
+            
+            // Update avatar with initials
+            const initials = authorName.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.querySelector('.author-avatar').textContent = initials.slice(0, 2);
+            
+            // Update credibility score
+            const credibilityScore = Math.round(data.credibility_score || 0);
+            document.querySelector('.credibility-score').textContent = credibilityScore;
+            
+            // Update verification status
+            const verificationStatus = document.querySelector('.verification-status');
+            if (data.verified) {
+                verificationStatus.innerHTML = '<i class="fas fa-check-circle"></i> Verified';
+                verificationStatus.style.background = 'var(--secondary)';
+            } else {
+                verificationStatus.innerHTML = '<i class="fas fa-times-circle"></i> Unverified';
+                verificationStatus.style.background = 'var(--gray-400)';
+            }
+            
+            // Update expertise tags
+            const expertiseTags = document.querySelector('.expertise-tags');
+            expertiseTags.innerHTML = '';
+            if (data.expertise_areas && data.expertise_areas.length > 0) {
+                data.expertise_areas.forEach(area => {
+                    const tag = document.createElement('span');
+                    tag.className = 'expertise-tag';
+                    tag.textContent = area;
+                    expertiseTags.appendChild(tag);
+                });
+            } else {
+                expertiseTags.innerHTML = '<span class="expertise-tag">No expertise data available</span>';
+            }
+            
+            // Update key findings
+            const findingsList = document.querySelector('.findings-list');
+            findingsList.innerHTML = '';
+            if (data.key_findings && data.key_findings.length > 0) {
+                data.key_findings.forEach(finding => {
+                    const findingItem = document.createElement('div');
+                    findingItem.className = 'finding-item finding-' + (finding.type || 'neutral');
+                    findingItem.innerHTML = `
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">${finding.text || 'No description'}</div>
+                            <div class="finding-detail">${finding.detail || ''}</div>
+                        </div>
+                    `;
+                    findingsList.appendChild(findingItem);
+                });
+            } else {
+                findingsList.innerHTML = `
+                    <div class="finding-item finding-neutral">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">No specific findings available for this author</div>
+                            <div class="finding-detail">Analysis data not found</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Update recent articles table
+            const articlesTableBody = document.querySelector('.articles-table tbody');
+            articlesTableBody.innerHTML = '';
+            if (data.recent_articles && data.recent_articles.length > 0) {
+                data.recent_articles.forEach(article => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <span class="article-title">${article.title || 'Untitled'}</span>
+                            <span class="article-source">${article.category || 'General'}</span>
+                        </td>
+                        <td>${formatDate(article.date)}</td>
+                        <td>${article.source || 'Unknown'}</td>
+                        <td><span class="credibility-indicator credibility-${getCredibilityLevel(article.credibility)}">${getCredibilityLabel(article.credibility)}</span></td>
+                        <td>${formatViews(article.views || 0)}</td>
+                    `;
+                    articlesTableBody.appendChild(row);
+                });
+            } else {
+                articlesTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--gray-600);">No recent articles found</td>
+                    </tr>
+                `;
+            }
+            
+            // Update quick stats (with defaults if not available)
+            const stats = {
+                articles: data.total_articles || 0,
+                reach: data.total_reach || 0,
+                accuracy: data.accuracy_rate || 0,
+                awards: data.awards_count || 0
+            };
+            
+            document.querySelectorAll('.quick-stats .stat-item').forEach((item, index) => {
+                const valueEl = item.querySelector('.stat-value');
+                switch(index) {
+                    case 0: valueEl.textContent = stats.articles; break;
+                    case 1: valueEl.textContent = formatNumber(stats.reach); break;
+                    case 2: valueEl.textContent = stats.accuracy + '%'; break;
+                    case 3: valueEl.textContent = stats.awards; break;
+                }
+            });
+            
+            // Update metadata grid
+            const metadataValues = document.querySelectorAll('.metadata-value');
+            metadataValues[0].textContent = data.experience || 'Unknown';
+            metadataValues[1].textContent = data.publishing_rate || 'Unknown';
+            metadataValues[2].textContent = data.countries_covered || '0';
+            metadataValues[3].textContent = data.languages || '0';
+            
+            // Update professional info
+            const professionalInfo = document.querySelector('.expertise-section:last-child .info-card-content');
+            professionalInfo.innerHTML = `
+                <p><span class="info-value">${data.position || 'Unknown Position'}</span></p>
+                <p>${data.organization || 'Unknown Organization'}</p>
+                <p class="stat-label" style="margin-top: 0.5rem;">Member since ${data.member_since || 'Unknown'}</p>
+            `;
+        }
+        
+        // Helper functions
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            const date = new Date(dateStr);
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+        
+        function formatNumber(num) {
+            if (!num) return '0';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
+            return num.toString();
+        }
+        
+        function formatViews(views) {
+            return formatNumber(views) + ' views';
+        }
+        
+        function getCredibilityLevel(score) {
+            if (score >= 80) return 'high';
+            if (score >= 50) return 'medium';
+            return 'low';
+        }
+        
+        function getCredibilityLabel(score) {
+            if (score >= 80) return 'High';
+            if (score >= 50) return 'Medium';
+            return 'Low';
+        }
+    })();
+    </script>
 </body>
-</html>
+</html> 
