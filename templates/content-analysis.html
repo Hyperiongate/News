@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Analysis - TruthLens AI</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS Variables */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --cyan: #06b6d4;
+            --dark: #1f2937;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius: 0.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--gray-50);
+            color: var(--dark);
+            line-height: 1.5;
+            padding: 1rem;
+        }
+
+        /* Main Container */
+        .content-analysis-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .analysis-header {
+            background: linear-gradient(135deg, var(--cyan) 0%, #0891b2 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .header-content h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .back-button {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.375rem;
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Quality Overview */
+        .quality-overview {
+            padding: 2rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .quality-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid var(--gray-200);
+            transition: all 0.3s;
+        }
+
+        .quality-card.excellent {
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(16, 185, 129, 0.05) 100%);
+        }
+
+        .quality-card.good {
+            border-color: var(--info);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(59, 130, 246, 0.05) 100%);
+        }
+
+        .quality-card.fair {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, rgba(245, 158, 11, 0.05) 100%);
+        }
+
+        .quality-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .quality-card.excellent .quality-icon { color: var(--secondary); }
+        .quality-card.good .quality-icon { color: var(--info); }
+        .quality-card.fair .quality-icon { color: var(--warning); }
+
+        .quality-metric {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .quality-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 1.5rem;
+        }
+
+        /* Readability Analysis */
+        .readability-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .section-icon {
+            color: var(--cyan);
+        }
+
+        .readability-chart {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .reading-level-display {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .grade-circle {
+            width: 120px;
+            height: 120px;
+            background: var(--white);
+            border: 8px solid var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .grade-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .grade-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+        }
+
+        .reading-description {
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .readability-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-name {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        /* Structure Analysis */
+        .structure-analysis {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2rem;
+        }
+
+        .structure-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .structure-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .structure-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gray-100);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--cyan);
+        }
+
+        .structure-content {
+            flex: 1;
+        }
+
+        .structure-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-bottom: 0.125rem;
+        }
+
+        .structure-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Language Quality */
+        .language-quality {
+            margin-bottom: 2rem;
+        }
+
+        .quality-indicators {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .indicator-card {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .indicator-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .indicator-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .indicator-score {
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .score-excellent {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .score-good {
+            background: var(--info);
+            color: white;
+        }
+
+        .score-needs-work {
+            background: var(--warning);
+            color: white;
+        }
+
+        .indicator-details {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        .issues-list {
+            margin-top: 0.5rem;
+            padding-left: 1rem;
+        }
+
+        .issue-item {
+            font-size: 0.75rem;
+            color: var(--gray-700);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Key Findings */
+        .findings-panel {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(8, 145, 178, 0.03) 100%);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .findings-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .findings-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--cyan);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .findings-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .findings-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .finding-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--white);
+            border-radius: 0.375rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .finding-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .finding-positive .finding-indicator {
+            background: var(--secondary);
+        }
+
+        .finding-negative .finding-indicator {
+            background: var(--danger);
+        }
+
+        .finding-neutral .finding-indicator {
+            background: var(--warning);
+        }
+
+        .finding-content {
+            flex: 1;
+        }
+
+        .finding-text {
+            font-size: 0.875rem;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .finding-detail {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        /* Content Distribution */
+        .distribution-section {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .distribution-chart {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .distribution-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+        }
+
+        .distribution-icon {
+            font-size: 1.5rem;
+            color: var(--cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .distribution-percentage {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: block;
+        }
+
+        .distribution-label {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        /* Recommendations */
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .recommendation-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1rem;
+            border: 1px solid var(--gray-200);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .rec-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--cyan);
+            color: white;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.875rem;
+        }
+
+        .rec-content {
+            flex: 1;
+        }
+
+        .rec-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .rec-text {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .quality-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .readability-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .structure-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .distribution-chart {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .recommendations-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content-analysis-container">
+        <!-- Header -->
+        <div class="analysis-header">
+            <div class="header-left">
+                <div class="header-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="header-content">
+                    <h1>Content Analysis</h1>
+                    <p class="header-subtitle">Evaluation of writing quality, readability, and structure</p>
+                </div>
+            </div>
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Back to Analysis
+            </a>
+        </div>
+
+        <!-- Quality Overview -->
+        <div class="quality-overview">
+            <div class="quality-grid">
+                <div class="quality-card good">
+                    <div class="quality-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="quality-metric">B+</div>
+                    <div class="quality-label">Overall Quality</div>
+                </div>
+                <div class="quality-card good">
+                    <div class="quality-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="quality-metric">11th</div>
+                    <div class="quality-label">Grade Level</div>
+                </div>
+                <div class="quality-card excellent">
+                    <div class="quality-icon">
+                        <i class="fas fa-align-left"></i>
+                    </div>
+                    <div class="quality-metric">Well</div>
+                    <div class="quality-label">Structured</div>
+                </div>
+                <div class="quality-card fair">
+                    <div class="quality-icon">
+                        <i class="fas fa-spell-check"></i>
+                    </div>
+                    <div class="quality-metric">3</div>
+                    <div class="quality-label">Grammar Issues</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Key Findings -->
+            <div class="findings-panel">
+                <div class="findings-header">
+                    <div class="findings-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <h2 class="findings-title">Content Quality Assessment</h2>
+                </div>
+                <div class="findings-list">
+                    <div class="finding-item finding-positive">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Clear structure with logical flow between sections</div>
+                            <div class="finding-detail">Well-organized with proper headings and transitions</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-positive">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Appropriate reading level for target audience</div>
+                            <div class="finding-detail">11th grade level suitable for general news consumption</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-negative">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Some sentences are overly complex</div>
+                            <div class="finding-detail">3 sentences exceed 40 words, impacting readability</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-neutral">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Minor grammatical issues detected</div>
+                            <div class="finding-detail">3 instances of passive voice that could be improved</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readability Analysis -->
+            <div class="readability-section">
+                <div class="section-header">
+                    <i class="fas fa-book-reader section-icon"></i>
+                    <h2 class="section-title">Readability Analysis</h2>
+                </div>
+                
+                <div class="readability-chart">
+                    <div class="reading-level-display">
+                        <div class="grade-circle">
+                            <span class="grade-number">11</span>
+                            <span class="grade-label">Grade Level</span>
+                        </div>
+                        <p class="reading-description">
+                            This article requires an 11th-grade reading level, making it accessible to most adult readers
+                            while maintaining sophistication appropriate for serious news content.
+                        </p>
+                    </div>
+                    
+                    <div class="readability-metrics">
+                        <div class="metric-card">
+                            <span class="metric-value">62</span>
+                            <span class="metric-name">Flesch Reading Ease</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">8.3</span>
+                            <span class="metric-name">Flesch-Kincaid Grade</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">12</span>
+                            <span class="metric-name">Gunning Fog Index</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Structure Analysis -->
+            <div class="structure-analysis">
+                <div class="section-header">
+                    <i class="fas fa-sitemap section-icon"></i>
+                    <h2 class="section-title">Article Structure</h2>
+                </div>
+                
+                <div class="structure-grid">
+                    <div class="structure-item">
+                        <div class="structure-icon">
+                            <i class="fas fa-file-word"></i>
+                        </div>
+                        <div class="structure-content">
+                            <div class="structure-label">Word Count</div>
+                            <div class="structure-value">1,247 words</div>
+                        </div>
+                    </div>
+                    <div class="structure-item">
+                        <div class="structure-icon">
+                            <i class="fas fa-paragraph"></i>
+                        </div>
+                        <div class="structure-content">
+                            <div class="structure-label">Paragraphs</div>
+                            <div class="structure-value">18 paragraphs</div>
+                        </div>
+                    </div>
+                    <div class="structure-item">
+                        <div class="structure-icon">
+                            <i class="fas fa-heading"></i>
+                        </div>
+                        <div class="structure-content">
+                            <div class="structure-label">Sections</div>
+                            <div class="structure-value">5 main sections</div>
+                        </div>
+                    </div>
+                    <div class="structure-item">
+                        <div class="structure-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="structure-content">
+                            <div class="structure-label">Reading Time</div>
+                            <div class="structure-value">~5 minutes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Language Quality -->
+            <div class="language-quality">
+                <div class="section-header">
+                    <i class="fas fa-language section-icon"></i>
+                    <h2 class="section-title">Language Quality</h2>
+                </div>
+                
+                <div class="quality-indicators">
+                    <div class="indicator-card">
+                        <div class="indicator-header">
+                            <h3 class="indicator-title">Sentence Variety</h3>
+                            <span class="indicator-score score-good">Good</span>
+                        </div>
+                        <p class="indicator-details">
+                            Mix of simple, compound, and complex sentences maintains reader engagement
+                        </p>
+                    </div>
+                    
+                    <div class="indicator-card">
+                        <div class="indicator-header">
+                            <h3 class="indicator-title">Vocabulary</h3>
+                            <span class="indicator-score score-excellent">Excellent</span>
+                        </div>
+                        <p class="indicator-details">
+                            Appropriate use of domain-specific terms with clear explanations
+                        </p>
+                    </div>
+                    
+                    <div class="indicator-card">
+                        <div class="indicator-header">
+                            <h3 class="indicator-title">Grammar & Spelling</h3>
+                            <span class="indicator-score score-needs-work">Needs Work</span>
+                        </div>
+                        <p class="indicator-details">
+                            Minor issues detected:
+                            <ul class="issues-list">
+                                <li class="issue-item">3 instances of passive voice</li>
+                                <li class="issue-item">1 subject-verb disagreement</li>
+                                <li class="issue-item">2 comma splices</li>
+                            </ul>
+                        </p>
+                    </div>
+                    
+                    <div class="indicator-card">
+                        <div class="indicator-header">
+                            <h3 class="indicator-title">Clarity</h3>
+                            <span class="indicator-score score-good">Good</span>
+                        </div>
+                        <p class="indicator-details">
+                            Most concepts clearly explained, though 3 sentences could be simplified
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Distribution -->
+            <div class="distribution-section">
+                <div class="section-header">
+                    <i class="fas fa-chart-pie section-icon"></i>
+                    <h2 class="section-title">Content Distribution</h2>
+                </div>
+                
+                <div class="distribution-chart">
+                    <div class="distribution-item">
+                        <div class="distribution-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <span class="distribution-percentage">45%</span>
+                        <span class="distribution-label">Information</span>
+                    </div>
+                    <div class="distribution-item">
+                        <div class="distribution-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <span class="distribution-percentage">25%</span>
+                        <span class="distribution-label">Analysis</span>
+                    </div>
+                    <div class="distribution-item">
+                        <div class="distribution-icon">
+                            <i class="fas fa-quote-right"></i>
+                        </div>
+                        <span class="distribution-percentage">20%</span>
+                        <span class="distribution-label">Quotes</span>
+                    </div>
+                    <div class="distribution-item">
+                        <div class="distribution-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <span class="distribution-percentage">10%</span>
+                        <span class="distribution-label">Opinion</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="recommendations-section">
+                <div class="section-header">
+                    <i class="fas fa-tasks section-icon"></i>
+                    <h2 class="section-title">Improvement Recommendations</h2>
+                </div>
+                
+                <div class="recommendations-grid">
+                    <div class="recommendation-card">
+                        <div class="rec-icon">
+                            <i class="fas fa-cut"></i>
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-title">Simplify Complex Sentences</div>
+                            <div class="rec-text">Break down the 3 sentences that exceed 40 words for better readability</div>
+                        </div>
+                    </div>
+                    <div class="recommendation-card">
+                        <div class="rec-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-title">Use Active Voice</div>
+                            <div class="rec-text">Convert passive constructions to active voice for more engaging writing</div>
+                        </div>
+                    </div>
+                    <div class="recommendation-card">
+                        <div class="rec-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-title">Improve Transitions</div>
+                            <div class="rec-text">Add clearer transitions between the middle sections for better flow</div>
+                        </div>
+                    </div>
+                    <div class="recommendation-card">
+                        <div class="rec-icon">
+                            <i class="fas fa-compress-alt"></i>
+                        </div>
+                        <div class="rec-content">
+                            <div class="rec-title">Tighten Introduction</div>
+                            <div class="rec-text">Consider condensing the opening paragraph to capture attention faster</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
