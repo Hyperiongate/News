@@ -1077,6 +1077,8 @@
                 // Create the card - ALWAYS link to the service page
                 const card = document.createElement('a');
                 card.href = service.url; // Always set the proper URL
+                card.target = '_blank'; // Open in new window
+                card.rel = 'noopener noreferrer'; // Security best practice
                 card.className = `service-card ${service.className} ${!hasData && !analysisPerformed ? 'loading' : ''}`;
                 
                 // Extract key metrics from service data
@@ -1162,7 +1164,7 @@
                         </div>
                     </div>
                     
-                    <span class="view-details-link">View Details <i class="fas fa-arrow-right"></i></span>
+                    <span class="view-details-link">View Details <i class="fas fa-external-link-alt"></i></span>
                 `;
 
                 servicesGrid.appendChild(card);
