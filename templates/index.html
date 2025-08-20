@@ -1048,65 +1048,13 @@
     </div>
 
     <!-- Scripts -->
+    <script src="/static/js/config.js"></script>
     <script src="/static/js/truthlens-core.js"></script>
     <script src="/static/js/truthlens-display.js"></script>
     <script src="/static/js/truthlens-services.js"></script>
     
     <!-- Service Cards Script -->
     <script>
-        // Service configuration
-        const SERVICES = [
-            {
-                id: 'source_credibility',
-                name: 'Source Credibility',
-                icon: 'fa-shield-alt',
-                description: 'Comprehensive evaluation of news source reliability and trustworthiness',
-                url: '/templates/source-credibility.html'
-            },
-            {
-                id: 'author_analyzer',
-                name: 'Author Analysis',
-                icon: 'fa-user-check',
-                description: 'In-depth assessment of author credentials and publishing history',
-                url: '/templates/author-analysis.html'
-            },
-            {
-                id: 'bias_detector',
-                name: 'Bias Detection',
-                icon: 'fa-balance-scale',
-                description: 'Multi-dimensional analysis of political and ideological bias',
-                url: '/templates/bias-detection.html'
-            },
-            {
-                id: 'fact_checker',
-                name: 'Fact Checking',
-                icon: 'fa-check-double',
-                description: 'Verification of claims against authoritative sources',
-                url: '/templates/fact-checking.html'
-            },
-            {
-                id: 'transparency_analyzer',
-                name: 'Transparency Analysis',
-                icon: 'fa-eye',
-                description: 'Assessment of disclosure, sourcing, and editorial transparency',
-                url: '/templates/transparency-analysis.html'
-            },
-            {
-                id: 'manipulation_detector',
-                name: 'Manipulation Detection',
-                icon: 'fa-mask',
-                description: 'Identification of manipulative tactics and emotional exploitation',
-                url: '/templates/manipulation-detection.html'
-            },
-            {
-                id: 'content_analyzer',
-                name: 'Content Analysis',
-                icon: 'fa-file-alt',
-                description: 'Evaluation of writing quality, readability, and structure',
-                url: '/templates/content-analysis.html'
-            }
-        ];
-
         // Track whether analysis has been performed
         let analysisPerformed = false;
 
@@ -1118,7 +1066,8 @@
             let completedCount = 0;
             analysisPerformed = true; // Mark that analysis has been performed
 
-            SERVICES.forEach(service => {
+            // Use CONFIG.SERVICES from the shared configuration
+            CONFIG.SERVICES.forEach(service => {
                 // Check if we have data for this service
                 const serviceData = analysisData?.detailed_analysis?.[service.id] || null;
                 const hasData = serviceData && Object.keys(serviceData).length > 0;
@@ -1128,7 +1077,7 @@
                 // Create the card - ALWAYS link to the service page
                 const card = document.createElement('a');
                 card.href = service.url; // Always set the proper URL
-                card.className = `service-card ${service.id} ${!hasData && !analysisPerformed ? 'loading' : ''}`;
+                card.className = `service-card ${service.className} ${!hasData && !analysisPerformed ? 'loading' : ''}`;
                 
                 // Extract key metrics from service data
                 let metric1 = { label: 'Status', value: hasData ? 'Complete' : 'No Data' };
@@ -1221,7 +1170,7 @@
 
             // Update progress bar
             const progressBar = document.getElementById('servicesProgressBar');
-            const progressPercent = (completedCount / SERVICES.length) * 100;
+            const progressPercent = (completedCount / CONFIG.SERVICES.length) * 100;
             progressBar.style.width = `${progressPercent}%`;
         }
 
