@@ -1,74 +1,69 @@
-// truthlens-core.js - COMPLETE FIX VERSION
-// Fixed all data path issues, trust score calculation, and service rendering
+// truthlens-core.js - Main Application Logic with Centralized Config
 
-// Global configuration with all 8 services properly defined
+// Configuration
 const CONFIG = {
     API_ENDPOINT: '/api/analyze',
-    isPro: true,
-    services: [
-        { 
-            id: 'source_credibility', 
-            name: 'Source Credibility', 
-            icon: 'fa-shield-alt', 
-            weight: 0.25, 
-            isPro: false,
-            description: 'Evaluates the reliability and trustworthiness of the news source'
+    API_TIMEOUT: 60000,
+    isPro: false,
+    // CENTRALIZED SERVICE CONFIGURATION
+    SERVICES: [
+        {
+            id: 'source_credibility',
+            name: 'Source Credibility',
+            icon: 'fa-shield-alt',
+            weight: 0.25,
+            description: 'Comprehensive evaluation of news source reliability and trustworthiness',
+            url: '/templates/source-credibility.html'
         },
-        { 
-            id: 'author_analyzer', 
-            name: 'Author Analysis', 
-            icon: 'fa-user-check', 
-            weight: 0.20, 
-            isPro: false,
-            description: 'Analyzes author credentials and publishing history'
+        {
+            id: 'author_analyzer',
+            name: 'Author Analysis',
+            icon: 'fa-user-check',
+            weight: 0.15,
+            description: 'In-depth assessment of author credentials and publishing history',
+            url: '/templates/author-analysis.html'
         },
-        { 
-            id: 'bias_detector', 
-            name: 'Bias Detection', 
-            icon: 'fa-balance-scale', 
-            weight: 0.15, 
+        {
+            id: 'bias_detector',
+            name: 'Bias Detection',
+            icon: 'fa-balance-scale',
+            weight: 0.20,
+            description: 'Multi-dimensional analysis of political and ideological bias',
+            url: '/templates/bias-detection.html'
+        },
+        {
+            id: 'fact_checker',
+            name: 'Fact Checking',
+            icon: 'fa-check-double',
+            weight: 0.15,
+            description: 'Verification of claims against authoritative sources',
+            url: '/templates/fact-checking.html'
+        },
+        {
+            id: 'transparency_analyzer',
+            name: 'Transparency Analysis',
+            icon: 'fa-eye',
+            weight: 0.10,
+            description: 'Assessment of disclosure, sourcing, and editorial transparency',
+            url: '/templates/transparency-analysis.html'
+        },
+        {
+            id: 'manipulation_detector',
+            name: 'Manipulation Detection',
+            icon: 'fa-mask',
+            weight: 0.10,
             isPro: true,
-            description: 'Detects political, ideological, and other forms of bias'
+            description: 'Identification of manipulation tactics and propaganda techniques',
+            url: '/templates/manipulation-detection.html'
         },
-        { 
-            id: 'fact_checker', 
-            name: 'Fact Verification', 
-            icon: 'fa-check-double', 
-            weight: 0.20, 
+        {
+            id: 'content_analyzer',
+            name: 'Content Analysis',
+            icon: 'fa-file-alt',
+            weight: 0.05,
             isPro: true,
-            description: 'Verifies claims and statements against reliable sources'
-        },
-        { 
-            id: 'transparency_analyzer', 
-            name: 'Transparency Analysis', 
-            icon: 'fa-eye', 
-            weight: 0.10, 
-            isPro: true,
-            description: 'Evaluates disclosure of sources, funding, and conflicts of interest'
-        },
-        { 
-            id: 'manipulation_detector', 
-            name: 'Manipulation Detection', 
-            icon: 'fa-mask', 
-            weight: 0.10, 
-            isPro: true,
-            description: 'Identifies manipulation tactics and propaganda techniques'
-        },
-        { 
-            id: 'content_analyzer', 
-            name: 'Content Analysis', 
-            icon: 'fa-file-alt', 
-            weight: 0.05, 
-            isPro: true,
-            description: 'Analyzes writing quality, readability, and content structure'
-        },
-        { 
-            id: 'plagiarism_detector', 
-            name: 'Plagiarism Detection', 
-            icon: 'fa-copy', 
-            weight: 0.05, 
-            isPro: true,
-            description: 'Checks for copied content and proper attribution'
+            description: 'Analyzes writing quality, readability, and content structure',
+            url: '/templates/content-analysis.html'
         }
     ]
 };
@@ -312,7 +307,7 @@ class TruthLensApp {
                 throw new Error(responseData.error && responseData.error.message || 'Analysis failed');
             }
 
-            // CRITICAL FIX: Store the entire response data structure
+            // Store the entire response data structure
             const data = responseData.data;
             
             // Store the complete analysis
@@ -350,251 +345,31 @@ class TruthLensApp {
         }
     }
 
-    calculateTrustScore(detailedAnalysis) {
-        if (!detailedAnalysis) return null;
-
-        let totalWeight = 0;
-        let weightedScore = 0;
-        const serviceScores = {};
-
-        // Only include services that should contribute to trust score
-        const scoringServices = CONFIG.services.filter(function(service) {
-            return service.id !== 'content_analyzer' && service.id !== 'plagiarism_detector';
-        });
-
-        scoringServices.forEach(function(service) {
-            const serviceData = detailedAnalysis[service.id];
-            if (!serviceData || Object.keys(serviceData).length === 0) return;
-
-            const score = window.truthLensApp.extractServiceScore(service.id, serviceData);
-            if (score !== null && score !== undefined && !isNaN(score)) {
-                serviceScores[service.id] = score;
-                weightedScore += score * service.weight;
-                totalWeight += service.weight;
-            }
-        });
-
-        // Calculate final score only if we have enough data
-        if (Object.keys(serviceScores).length >= 2 && totalWeight > 0) {
-            const rawScore = weightedScore / totalWeight;
-            return Math.round(Math.min(100, Math.max(0, rawScore)));
-        }
-
-        // Fallback to source credibility if available
-        if (serviceScores.source_credibility) {
-            return Math.min(100, Math.max(0, serviceScores.source_credibility));
-        }
-
-        return 50; // Default score
-    }
-
-    extractServiceScore(serviceId, data) {
-        if (!data || typeof data !== 'object') return null;
-
-        const extractors = {
-            source_credibility: function(d) {
-                // Try multiple possible field names
-                const score = d.credibility_score !== undefined ? d.credibility_score :
-                             d.score !== undefined ? d.score :
-                             d.overall_score !== undefined ? d.overall_score : null;
-                return score !== null ? Math.min(100, Math.max(0, score)) : null;
-            },
-            author_analyzer: function(d) {
-                // Check all possible field names for author score
-                const score = d.author_score !== undefined ? d.author_score :
-                             d.credibility_score !== undefined ? d.credibility_score :
-                             d.score !== undefined ? d.score :
-                             d.overall_score !== undefined ? d.overall_score : null;
-                
-                if (score !== null) return Math.min(100, Math.max(0, score));
-                
-                // If no score but author exists, give partial credit
-                return d.author_name ? 50 : null;
-            },
-            bias_detector: function(d) {
-                // Bias score (convert to objectivity)
-                const bias = d.bias_score !== undefined ? d.bias_score :
-                            d.score !== undefined ? d.score :
-                            d.overall_bias_score !== undefined ? d.overall_bias_score : null;
-                
-                // If we have a percentage-based bias level
-                if (d.bias_level && typeof d.bias_level === 'string') {
-                    const levelMap = {
-                        'Minimal': 10, 'Low': 30, 'Moderate': 50, 
-                        'High': 70, 'Extreme': 90
-                    };
-                    const mappedBias = levelMap[d.bias_level];
-                    if (mappedBias !== undefined) {
-                        return 100 - mappedBias;
-                    }
-                }
-                
-                return bias !== null ? Math.min(100, Math.max(0, 100 - bias)) : null;
-            },
-            fact_checker: function(d) {
-                // Handle array of fact checks
-                if (d.fact_checks && Array.isArray(d.fact_checks) && d.fact_checks.length > 0) {
-                    const total = d.fact_checks.length;
-                    const verified = d.fact_checks.filter(function(c) {
-                        const verdict = (c.verdict || '').toLowerCase();
-                        return verdict === 'true' || verdict === 'verified' || 
-                               verdict === 'correct' || verdict === 'accurate';
-                    }).length;
-                    return Math.round((verified / total) * 100);
-                }
-                
-                // Try other field names
-                if (d.accuracy_score !== undefined) return Math.min(100, Math.max(0, d.accuracy_score));
-                if (d.verification_rate !== undefined) return Math.min(100, Math.max(0, d.verification_rate));
-                if (d.score !== undefined) return Math.min(100, Math.max(0, d.score));
-                
-                return null;
-            },
-            transparency_analyzer: function(d) {
-                const score = d.transparency_score !== undefined ? d.transparency_score :
-                             d.score !== undefined ? d.score :
-                             d.overall_score !== undefined ? d.overall_score : null;
-                return score !== null ? Math.min(100, Math.max(0, score)) : null;
-            },
-            manipulation_detector: function(d) {
-                // Manipulation score (convert to trustworthiness)
-                const manipScore = d.manipulation_score !== undefined ? d.manipulation_score :
-                                  d.score !== undefined ? d.score : null;
-                
-                if (manipScore !== null) {
-                    return Math.min(100, Math.max(0, 100 - manipScore));
-                }
-                
-                // Handle level-based scoring
-                if (d.manipulation_level || d.risk_level || d.level) {
-                    const level = d.manipulation_level || d.risk_level || d.level;
-                    const levelScores = { 
-                        'None': 100, 'Low': 90, 'Minimal': 95, 
-                        'Moderate': 50, 'High': 20, 'Extreme': 10 
-                    };
-                    return levelScores[level] || 50;
-                }
-                
-                // If manipulation_detected is boolean
-                if (d.manipulation_detected !== undefined) {
-                    return d.manipulation_detected ? 20 : 90;
-                }
-                
-                return null;
-            }
-        };
-
-        const extractor = extractors[serviceId];
-        const result = extractor ? extractor(data) : null;
-        
-        console.log(`Extracting score for ${serviceId}:`, {
-            input: Object.keys(data).slice(0, 5),
-            result: result
-        });
-        
-        return result;
-    }
-
     toggleAccordion(serviceId) {
         const item = document.getElementById('service-' + serviceId);
-        if (!item) return;
-
-        const content = item.querySelector('.service-accordion-content');
-        const icon = item.querySelector('.service-expand-icon');
-        const wasActive = item.classList.contains('active');
-        
-        // Store current scroll position
-        const scrollY = window.scrollY;
-        const itemTop = item.getBoundingClientRect().top + scrollY;
-        
-        // Close all accordions
-        const allItems = document.querySelectorAll('.service-accordion-item');
-        allItems.forEach(function(el) {
-            el.classList.remove('active');
-            const elContent = el.querySelector('.service-accordion-content');
-            const elIcon = el.querySelector('.service-expand-icon');
-            if (elContent) elContent.style.maxHeight = '0px';
-            if (elIcon) elIcon.style.transform = 'rotate(0deg)';
-        });
-        
-        // Open clicked accordion if it wasn't active
-        if (!wasActive) {
-            item.classList.add('active');
-            if (content) {
-                // Set maxHeight to scrollHeight for smooth animation
-                content.style.maxHeight = content.scrollHeight + 'px';
-                
-                // After animation, ensure the item header is visible
-                setTimeout(function() {
-                    const currentItemTop = item.getBoundingClientRect().top;
-                    
-                    // Only scroll if the item is partially out of view
-                    if (currentItemTop < 20 || currentItemTop > window.innerHeight - 100) {
-                        window.scrollTo({
-                            top: itemTop - 20,
-                            behavior: 'smooth'
-                        });
-                    }
-                }, 300);
-            }
-            if (icon) {
-                icon.style.transform = 'rotate(180deg)';
-            }
+        if (item) {
+            item.classList.toggle('active');
         }
     }
 
-    async downloadPDF() {
-        if (!this.state.currentAnalysis) {
-            this.utils.showError('No analysis available to download');
-            return;
-        }
-        
-        this.utils.showLoading();
-        
-        try {
-            const jsPDF = window.jspdf && window.jspdf.jsPDF;
-            if (!jsPDF) {
-                throw new Error('PDF library not loaded');
-            }
-            
-            const doc = new jsPDF();
-            
-            if (this.services) {
-                this.services.generatePDF(doc, this.state.currentAnalysis, this.state.currentMetadata);
-            }
-            
-            doc.save('truthlens-analysis-' + Date.now() + '.pdf');
-            
-        } catch (error) {
-            console.error('PDF generation error:', error);
-            this.utils.showError('Failed to generate PDF report');
-        } finally {
-            this.utils.hideLoading();
-        }
+    downloadPDF() {
+        // Implement PDF download
+        console.log('Download PDF clicked');
+        this.utils.showError('PDF download coming soon!');
     }
 
     shareResults() {
-        if (!this.state.currentAnalysis) {
-            this.utils.showError('No analysis results to share');
-            return;
-        }
-
-        const shareText = 'Check out this news analysis: Trust Score ' + 
-                         this.state.currentAnalysis.analysis.trust_score + '/100';
-
-        if (navigator.share) {
+        // Implement share functionality
+        console.log('Share results clicked');
+        if (navigator.share && this.state.currentAnalysis) {
+            const article = this.state.currentAnalysis.article;
             navigator.share({
-                title: 'TruthLens Analysis',
-                text: shareText,
+                title: 'News Analysis: ' + (article.title || 'Article'),
+                text: 'Trust Score: ' + this.state.currentAnalysis.analysis.trust_score + '/100',
                 url: window.location.href
-            }).catch(function(err) {
-                console.log('Error sharing:', err);
-            });
+            }).catch(err => console.log('Share failed:', err));
         } else {
-            const self = this;
-            navigator.clipboard.writeText(window.location.href).then(function() {
-                self.utils.showError('Link copied to clipboard!');
-            });
+            this.utils.showError('Sharing not supported on this device');
         }
     }
 }
@@ -654,69 +429,52 @@ class TruthLensUtils {
     }
 
     extractScore(data, fields, defaultValue) {
-        if (defaultValue === undefined) defaultValue = null;
-        if (!data || typeof data !== 'object') return defaultValue;
+        if (defaultValue === undefined) defaultValue = 0;
         
-        for (let i = 0; i < fields.length; i++) {
-            const field = fields[i];
-            if (data.hasOwnProperty(field) && data[field] !== null && data[field] !== undefined) {
-                const value = parseFloat(data[field]);
-                if (!isNaN(value)) {
-                    return Math.round(Math.min(100, Math.max(0, value)));
-                }
+        for (const field of fields) {
+            if (data && data[field] !== undefined && data[field] !== null) {
+                return data[field];
             }
         }
-        
         return defaultValue;
     }
 
     getScoreColor(score) {
-        score = Math.min(100, Math.max(0, score));
-        
         if (score >= 80) return '#10b981';
         if (score >= 60) return '#3b82f6';
         if (score >= 40) return '#f59e0b';
-        return '#ef4444';
-    }
-
-    getTrustLevel(score) {
-        score = Math.min(100, Math.max(0, score));
-        
-        if (score >= 80) return 'Very High';
-        if (score >= 60) return 'High';
-        if (score >= 40) return 'Moderate';
-        if (score >= 20) return 'Low';
-        return 'Very Low';
+        if (score >= 20) return '#ef4444';
+        return '#991b1b';
     }
 
     formatDate(dateString) {
-        if (!dateString) return 'Unknown';
+        if (!dateString) return '';
+        
         try {
             const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'Unknown';
-            
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
             });
         } catch (e) {
-            return 'Unknown';
+            return dateString;
         }
+    }
+
+    formatNumber(num) {
+        if (num === null || num === undefined) return '0';
+        
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
     }
 }
 
-// Initialize app
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     window.truthLensApp = new TruthLensApp();
-    
-    // Re-initialize if other scripts load later
-    setTimeout(function() {
-        if (window.truthLensApp && !window.truthLensApp.display && typeof TruthLensDisplay !== 'undefined') {
-            window.truthLensApp.display = new TruthLensDisplay(window.truthLensApp);
-        }
-        if (window.truthLensApp && !window.truthLensApp.services && typeof TruthLensServices !== 'undefined') {
-            window.truthLensApp.services = new TruthLensServices(window.truthLensApp);
-        }
-    }, 100);
 });
