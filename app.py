@@ -238,6 +238,137 @@ def extract_clean_text(text: str) -> Optional[str]:
     
     return None
 
+def clean_article_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean and standardize article data"""
+    if not isinstance(data, dict):
+        return {}
+    
+    cleaned = {}
+    
+    # Essential fields
+    essential_fields = ['title', 'text', 'author', 'publish_date', 'url', 'domain']
+    for field in essential_fields:
+        if field in data and data[field]:
+            cleaned[field] = data[field]
+    
+    # Additional fields
+    optional_fields = ['description', 'image', 'keywords', 'word_count', 'source', 'language']
+    for field in optional_fields:
+        if field in data and data[field]:
+            cleaned[field] = data[field]
+    
+    # Ensure we have defaults
+    if 'title' not in cleaned:
+        cleaned['title'] = 'Untitled'
+    if 'author' not in cleaned:
+        cleaned['author'] = 'Unknown'
+    
+    return cleaned
+
+def extract_key_findings(services: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract key findings from service results"""
+    findings = []
+    
+    # Check source credibility
+    if 'source_credibility' in services:
+        sc = services['source_credibility']
+        score = sc.get('credibility_score', 0)
+        if score < 50:
+            findings.append({
+                'type': 'warning',
+                'service': 'source_credibility',
+                'text': f'Low source credibility ({score}/100)'
+            })
+    
+    # Check bias
+    if 'bias_detector' in services:
+        bd = services['bias_detector']
+        bias_score = bd.get('bias_score', 0)
+        if bias_score > 70:
+            findings.append({
+                'type': 'warning',
+                'service': 'bias_detector',
+                'text': f'High bias detected ({bias_score}%)'
+            })
+    
+    # Check fact checking
+    if 'fact_checker' in services:
+        fc = services['fact_checker']
+        if fc.get('fact_checks'):
+            false_count = sum(1 for check in fc['fact_checks'] 
+                            if check.get('verdict', '').lower() in ['false', 'mostly false'])
+            if false_count > 0:
+                findings.append({
+                    'type': 'alert',
+                    'service': 'fact_checker',
+                    'text': f'{false_count} false claim(s) detected'
+                })
+    
+    return findings[:5]  # Limit to 5 findings
+
+def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform backend result to match frontend expectations"""
+    
+    # Debug logging
+    logger.info(f"=== TRANSFORM DEBUG ===")
+    logger.info(f"Input result keys: {list(result.keys())}")
+    
+    # Extract all service results
+    services = {}
+    metadata_services = []
+    
+    # The pipeline returns service results directly in the result dict
+    service_names = [
+        'article_extractor', 'source_credibility', 'author_analyzer',
+        'bias_detector', 'fact_checker', 'transparency_analyzer',
+        'manipulation_detector', 'content_analyzer', 'plagiarism_detector'
+    ]
+    
+    for service_name in service_names:
+        if service_name in result and isinstance(result[service_name], dict):
+            service_result = result[service_name]
+            if 'success' in service_result and service_result.get('success'):
+                # Extract the data
+                if 'data' in service_result:
+                    services[service_name] = clean_service_data(service_result['data'])
+                else:
+                    # Remove metadata fields
+                    cleaned_result = {
+                        k: v for k, v in service_result.items()
+                        if k not in ['service', 'success', 'timestamp', 'available', 'error']
+                    }
+                    services[service_name] = clean_service_data(cleaned_result)
+                
+                metadata_services.append(service_name)
+    
+    logger.info(f"Found {len(services)} services: {metadata_services}")
+    
+    # Extract article metadata
+    article_data = {}
+    if 'article' in result:
+        article_data = clean_article_data(result['article'])
+    elif 'article_extractor' in services:
+        article_data = clean_article_data(services['article_extractor'])
+    
+    # Build the expected structure
+    transformed = {
+        'article': article_data,
+        'analysis': {
+            'trust_score': result.get('trust_score', 0),
+            'trust_level': result.get('trust_level', 'unknown'),
+            'summary': result.get('summary', 'Analysis completed'),
+            'key_findings': extract_key_findings(services)
+        },
+        'detailed_analysis': services
+    }
+    
+    logger.info(f"=== TRANSFORM OUTPUT ===")
+    logger.info(f"Article keys: {list(transformed['article'].keys())}")
+    logger.info(f"Analysis keys: {list(transformed['analysis'].keys())}")
+    logger.info(f"Detailed analysis services: {list(transformed['detailed_analysis'].keys())}")
+    
+    return transformed
+
 # MAIN ROUTES
 
 @app.route('/')
@@ -294,29 +425,20 @@ def analyze():
         # Parse request data
         data = request.get_json()
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided'
-            }), 400
+            return ResponseBuilder.error("No data provided", 400)
         
-        # Log the request
+        # Log request
         logger.info(f"Analysis request received with keys: {list(data.keys())}")
         
-        # Validate input - support both url and text
+        # Extract URL or text
         url = data.get('url')
         text = data.get('text')
         
         if not url and not text:
-            return jsonify({
-                'success': False,
-                'error': 'Either URL or text must be provided'
-            }), 400
+            return ResponseBuilder.error("Either URL or text must be provided", 400)
         
         if url and text:
-            return jsonify({
-                'success': False,
-                'error': 'Provide either URL or text, not both'
-            }), 400
+            return ResponseBuilder.error("Provide either URL or text, not both", 400)
         
         # Prepare content for analysis
         content = url if url else text
@@ -334,32 +456,70 @@ def analyze():
         analysis_time = time.time() - start_time
         logger.info(f"Analysis completed in {analysis_time:.2f}s")
         
-        # Clean the result data
-        if result.get('success') and 'detailed_analysis' in result:
-            cleaned_analysis = {}
-            for service_name, service_data in result['detailed_analysis'].items():
-                if service_data and isinstance(service_data, dict):
-                    cleaned_data = clean_service_data(service_data)
-                    if cleaned_data:
-                        cleaned_analysis[service_name] = cleaned_data
-            result['detailed_analysis'] = cleaned_analysis
+        # Check if analysis succeeded
+        if not result.get('success'):
+            error_msg = result.get('error', 'Analysis failed')
+            logger.error(f"Analysis failed: {error_msg}")
+            return ResponseBuilder.error(error_msg, 400)
+        
+        # Transform the result
+        logger.info("Transforming result for frontend...")
+        transformed_result = transform_analysis_result(result)
         
         # Add metadata
-        result['metadata'] = {
+        metadata = {
             'request_id': request.id,
             'analysis_time': analysis_time,
             'timestamp': datetime.now().isoformat()
         }
         
-        return jsonify(result)
+        # Build and return response
+        logger.info("Building response...")
+        response = ResponseBuilder.success(
+            data=transformed_result,
+            message="Analysis completed successfully",
+            metadata=metadata
+        )
+        
+        logger.info("=== RESPONSE DEBUG ===")
+        logger.info(f"Response type: {type(response)}")
+        logger.info(f"Response status: {response[1] if isinstance(response, tuple) else 'unknown'}")
+        
+        return response
         
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'request_id': getattr(request, 'id', 'unknown')
-        }), 500
+        return ResponseBuilder.error(str(e), 500)
+
+# TEST ENDPOINT
+@app.route('/api/test/response-structure')
+def test_response_structure():
+    """Test endpoint to verify response structure"""
+    test_data = {
+        'article': {
+            'title': 'Test Article',
+            'author': 'Test Author',
+            'domain': 'example.com'
+        },
+        'analysis': {
+            'trust_score': 75,
+            'trust_level': 'High',
+            'summary': 'This is a test response',
+            'key_findings': []
+        },
+        'detailed_analysis': {
+            'source_credibility': {
+                'credibility_score': 85,
+                'source_name': 'Example News'
+            }
+        }
+    }
+    
+    return ResponseBuilder.success(
+        data=test_data,
+        message="Test response",
+        metadata={'test': True}
+    )
 
 # DEBUG ROUTES (only in development)
 
