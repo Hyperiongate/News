@@ -36,18 +36,18 @@ class TruthLensApp {
         // URL/Text input handlers
         const urlInput = document.getElementById('urlInput');
         if (urlInput) {
-            urlInput.addEventListener('keypress', function(e) {
+            urlInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    window.truthLensApp.analyzeArticle();
+                    this.analyzeArticle();
                 }
             });
         }
         
         const textInput = document.getElementById('textInput');
         if (textInput) {
-            textInput.addEventListener('keypress', function(e) {
+            textInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && e.ctrlKey) {
-                    window.truthLensApp.analyzeArticle();
+                    this.analyzeArticle();
                 }
             });
         }
@@ -55,70 +55,73 @@ class TruthLensApp {
         // Button handlers
         const analyzeBtn = document.getElementById('analyzeBtn');
         if (analyzeBtn) {
-            analyzeBtn.addEventListener('click', function() {
-                window.truthLensApp.analyzeArticle();
+            analyzeBtn.addEventListener('click', () => {
+                this.analyzeArticle();
             });
         }
         
         const analyzeTextBtn = document.getElementById('analyzeTextBtn');
         if (analyzeTextBtn) {
-            analyzeTextBtn.addEventListener('click', function() {
-                window.truthLensApp.analyzeArticle();
+            analyzeTextBtn.addEventListener('click', () => {
+                this.analyzeArticle();
             });
         }
         
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) {
-            resetBtn.addEventListener('click', function() {
-                window.truthLensApp.resetAnalysis();
+            resetBtn.addEventListener('click', () => {
+                this.resetAnalysis();
             });
         }
         
         const resetTextBtn = document.getElementById('resetTextBtn');
         if (resetTextBtn) {
-            resetTextBtn.addEventListener('click', function() {
-                window.truthLensApp.resetAnalysis();
+            resetTextBtn.addEventListener('click', () => {
+                this.resetAnalysis();
             });
         }
         
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         if (downloadPdfBtn) {
-            downloadPdfBtn.addEventListener('click', function() {
-                window.truthLensApp.downloadPDF();
+            downloadPdfBtn.addEventListener('click', () => {
+                this.downloadPDF();
             });
         }
         
         const shareResultsBtn = document.getElementById('shareResultsBtn');
         if (shareResultsBtn) {
-            shareResultsBtn.addEventListener('click', function() {
-                window.truthLensApp.shareResults();
+            shareResultsBtn.addEventListener('click', () => {
+                this.shareResults();
             });
         }
         
         const newAnalysisBtn = document.getElementById('newAnalysisBtn');
         if (newAnalysisBtn) {
-            newAnalysisBtn.addEventListener('click', function() {
-                window.truthLensApp.resetAnalysis();
+            newAnalysisBtn.addEventListener('click', () => {
+                this.resetAnalysis();
             });
         }
         
         // Tab switching
         const modeBtns = document.querySelectorAll('.mode-btn');
-        modeBtns.forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
+        modeBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
                 const mode = e.currentTarget.getAttribute('data-mode');
-                window.truthLensApp.switchTab(mode);
+                this.switchTab(mode);
             });
         });
         
         // Example buttons
         const exampleBtns = document.querySelectorAll('.example-btn');
-        exampleBtns.forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
+        exampleBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
                 const url = e.target.getAttribute('data-url');
                 if (url) {
-                    document.getElementById('urlInput').value = url;
-                    window.truthLensApp.analyzeArticle();
+                    const urlInput = document.getElementById('urlInput');
+                    if (urlInput) {
+                        urlInput.value = url;
+                        this.analyzeArticle();
+                    }
                 }
             });
         });
@@ -128,7 +131,7 @@ class TruthLensApp {
         this.state.currentTab = mode;
         
         const modeBtns = document.querySelectorAll('.mode-btn');
-        modeBtns.forEach(function(btn) {
+        modeBtns.forEach((btn) => {
             if (btn.getAttribute('data-mode') === mode) {
                 btn.classList.add('active');
             } else {
@@ -137,18 +140,23 @@ class TruthLensApp {
         });
         
         // Hide all explanations and inputs first
-        document.getElementById('urlExplanation').style.display = 'none';
-        document.getElementById('textExplanation').style.display = 'none';
-        document.getElementById('urlInputWrapper').style.display = 'none';
-        document.getElementById('textInputWrapper').style.display = 'none';
+        const urlExplanation = document.getElementById('urlExplanation');
+        const textExplanation = document.getElementById('textExplanation');
+        const urlInputWrapper = document.getElementById('urlInputWrapper');
+        const textInputWrapper = document.getElementById('textInputWrapper');
+        
+        if (urlExplanation) urlExplanation.style.display = 'none';
+        if (textExplanation) textExplanation.style.display = 'none';
+        if (urlInputWrapper) urlInputWrapper.style.display = 'none';
+        if (textInputWrapper) textInputWrapper.style.display = 'none';
         
         // Show the active mode
         if (mode === 'url') {
-            document.getElementById('urlExplanation').style.display = 'block';
-            document.getElementById('urlInputWrapper').style.display = 'block';
+            if (urlExplanation) urlExplanation.style.display = 'block';
+            if (urlInputWrapper) urlInputWrapper.style.display = 'block';
         } else {
-            document.getElementById('textExplanation').style.display = 'block';
-            document.getElementById('textInputWrapper').style.display = 'block';
+            if (textExplanation) textExplanation.style.display = 'block';
+            if (textInputWrapper) textInputWrapper.style.display = 'block';
         }
     }
 
@@ -164,8 +172,19 @@ class TruthLensApp {
             resultsSection.classList.remove('active');
         }
         
+        // Destroy any existing charts
+        if (this.state.charts) {
+            Object.values(this.state.charts).forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    chart.destroy();
+                }
+            });
+        }
+        
+        // Reset state
         this.state.currentAnalysis = null;
         this.state.currentMetadata = null;
+        this.state.charts = {};
     }
 
     async analyzeArticle() {
@@ -237,11 +256,19 @@ class TruthLensApp {
             });
             
             if (!response.ok || !responseData.success) {
-                throw new Error(responseData.error && responseData.error.message || 'Analysis failed');
+                const errorMessage = (responseData.error && responseData.error.message) || 
+                                   responseData.message || 
+                                   'Analysis failed';
+                throw new Error(errorMessage);
             }
 
             // Store the entire response data structure
             const data = responseData.data;
+            
+            // Validate that we have the required data structure
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid data structure received from server');
+            }
             
             // Store the complete analysis
             this.state.currentAnalysis = data;
@@ -254,12 +281,12 @@ class TruthLensApp {
             console.log('Detailed Analysis Services:', data.detailed_analysis ? 
                 Object.keys(data.detailed_analysis) : 'missing');
 
-            const self = this;
-            setTimeout(function() {
-                self.utils.hideLoading();
-                if (self.display) {
+            // Use arrow function to preserve 'this' context
+            setTimeout(() => {
+                this.utils.hideLoading();
+                if (this.display) {
                     // Pass the complete data structure
-                    self.display.showResults(data);
+                    this.display.showResults(data);
                 }
             }, 1000);
 
@@ -286,23 +313,62 @@ class TruthLensApp {
     }
 
     downloadPDF() {
-        // Implement PDF download
+        // Check if we have analysis data
+        if (!this.state.currentAnalysis) {
+            this.utils.showError('No analysis available to download. Please analyze an article first.');
+            return;
+        }
+        
+        // TODO: Implement PDF download functionality
         console.log('Download PDF clicked');
-        this.utils.showError('PDF download coming soon!');
+        console.log('Analysis data available:', this.state.currentAnalysis);
+        this.utils.showError('PDF download feature coming soon!');
     }
 
     shareResults() {
-        // Implement share functionality
+        // Check if we have analysis data before trying to share
+        if (!this.state.currentAnalysis) {
+            this.utils.showError('No analysis results to share. Please analyze an article first.');
+            return;
+        }
+        
         console.log('Share results clicked');
-        if (navigator.share && this.state.currentAnalysis) {
-            const article = this.state.currentAnalysis.article;
-            navigator.share({
-                title: 'News Analysis: ' + (article.title || 'Article'),
-                text: 'Trust Score: ' + this.state.currentAnalysis.analysis.trust_score + '/100',
+        
+        // Check if sharing is supported
+        if (!navigator.share) {
+            // Fallback for browsers that don't support sharing
+            this.utils.showError('Sharing is not supported on this device or browser. You can copy the URL to share.');
+            return;
+        }
+        
+        try {
+            // Safely access the article data with multiple levels of null checking
+            const article = this.state.currentAnalysis.article || {};
+            const analysis = this.state.currentAnalysis.analysis || {};
+            
+            // Build share data with safe fallbacks
+            const shareData = {
+                title: article.title ? `News Analysis: ${article.title}` : 'News Analysis',
+                text: analysis.trust_score !== undefined && analysis.trust_score !== null
+                    ? `Trust Score: ${analysis.trust_score}/100` 
+                    : 'Check out this news analysis',
                 url: window.location.href
-            }).catch(err => console.log('Share failed:', err));
-        } else {
-            this.utils.showError('Sharing not supported on this device');
+            };
+            
+            navigator.share(shareData)
+                .then(() => {
+                    console.log('Successfully shared');
+                })
+                .catch(err => {
+                    console.log('Share failed:', err);
+                    // Don't show error for user cancellation
+                    if (err.name !== 'AbortError') {
+                        this.utils.showError('Failed to share results. Please try again.');
+                    }
+                });
+        } catch (error) {
+            console.error('Error preparing share data:', error);
+            this.utils.showError('Failed to prepare share data. Please try again.');
         }
     }
 }
@@ -335,7 +401,7 @@ class TruthLensUtils {
         
         errorTextEl.textContent = displayMessage;
         errorEl.classList.add('active');
-        setTimeout(function() {
+        setTimeout(() => {
             errorEl.classList.remove('active');
         }, 10000);
     }
@@ -361,9 +427,7 @@ class TruthLensUtils {
         }
     }
 
-    extractScore(data, fields, defaultValue) {
-        if (defaultValue === undefined) defaultValue = 0;
-        
+    extractScore(data, fields, defaultValue = 0) {
         for (const field of fields) {
             if (data && data[field] !== undefined && data[field] !== null) {
                 return data[field];
@@ -385,6 +449,9 @@ class TruthLensUtils {
         
         try {
             const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString;
+            }
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
@@ -398,12 +465,15 @@ class TruthLensUtils {
     formatNumber(num) {
         if (num === null || num === undefined) return '0';
         
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
+        const number = parseFloat(num);
+        if (isNaN(number)) return '0';
+        
+        if (number >= 1000000) {
+            return (number / 1000000).toFixed(1) + 'M';
+        } else if (number >= 1000) {
+            return (number / 1000).toFixed(1) + 'K';
         }
-        return num.toString();
+        return number.toString();
     }
 }
 
