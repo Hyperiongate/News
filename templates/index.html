@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI - Advanced News Credibility Analysis</title>
+    <title>TruthLens Pro - Advanced AI News Analysis</title>
     
-    <!-- Fonts -->
+    <!-- Icons & Fonts -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Main Styles -->
-    <link rel="stylesheet" href="/static/css/styles.css">
-    
-    <!-- Additional styles -->
     <style>
         /* ============================================
            CSS VARIABLES & RESET
@@ -29,6 +28,7 @@
             --warning: #f59e0b;
             --info: #3b82f6;
             --dark: #1f2937;
+            --gray-700: #374151;
             --gray-600: #4b5563;
             --gray-500: #6b7280;
             --gray-400: #9ca3af;
@@ -44,10 +44,12 @@
             
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             
             --radius: 0.75rem;
+            --radius-lg: 1rem;
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             --font-display: 'Space Grotesk', sans-serif;
         }
@@ -67,7 +69,7 @@
         }
 
         /* ============================================
-           HEADER - COMPACT
+           HEADER
            ============================================ */
         .header {
             background: var(--white);
@@ -120,7 +122,7 @@
         }
 
         /* ============================================
-           HERO SECTION - COMPACT
+           HERO SECTION
            ============================================ */
         .hero {
             background: var(--white);
@@ -175,7 +177,7 @@
         }
 
         /* ============================================
-           INPUT SECTION - COMPACT SINGLE BOX
+           INPUT SECTION
            ============================================ */
         .input-section {
             max-width: 700px;
@@ -307,7 +309,7 @@
         }
 
         /* ============================================
-           RESULTS SECTION - COMPACT LAYOUT
+           RESULTS SECTION
            ============================================ */
         .results-section {
             display: none;
@@ -320,7 +322,7 @@
             display: block;
         }
 
-        /* Trust Score Summary - Side by Side Layout */
+        /* Trust Score Summary */
         .trust-summary-container {
             display: grid;
             grid-template-columns: 280px 1fr;
@@ -328,7 +330,6 @@
             margin-bottom: 1.5rem;
         }
 
-        /* Compact Trust Score Card */
         .trust-score-card {
             background: var(--white);
             border-radius: 1rem;
@@ -385,17 +386,6 @@
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
-            animation: scoreGlow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes scoreGlow {
-            from {
-                filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
-            }
-            to {
-                filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.5));
-            }
         }
 
         .trust-score-label {
@@ -442,64 +432,7 @@
             margin-bottom: 1rem;
         }
 
-        .summary-subtitle {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .summary-subtitle i {
-            color: var(--primary);
-            font-size: 0.875rem;
-        }
-
-        .summary-text {
-            color: var(--gray-600);
-            line-height: 1.6;
-            font-size: 0.875rem;
-        }
-
-        .summary-info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-        }
-
-        .summary-info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-
-        .info-label i {
-            color: var(--primary);
-            font-size: 0.75rem;
-        }
-
-        .info-value {
-            font-size: 0.875rem;
-            color: var(--dark);
-            font-weight: 600;
-        }
-
-        /* Article Info Bar - Compact */
+        /* Article Info Bar */
         .article-info-bar {
             background: var(--gray-50);
             border-radius: 0.75rem;
@@ -534,7 +467,7 @@
             font-size: 0.875rem;
         }
 
-        /* Trust Breakdown - Compact with Explanation */
+        /* Trust Breakdown */
         .trust-breakdown-section {
             background: var(--white);
             border-radius: 1rem;
@@ -558,16 +491,6 @@
             font-size: 1rem;
         }
 
-        .breakdown-explanation {
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            line-height: 1.5;
-        }
-
         .breakdown-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -581,86 +504,49 @@
             border: 1px solid var(--gray-200);
         }
 
-        .breakdown-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .breakdown-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--dark);
-        }
-
-        .breakdown-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-        }
-
-        .breakdown-value {
-            font-size: 1.125rem;
-            font-weight: 700;
-        }
-
-        .breakdown-explanation {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            margin-bottom: 0.5rem;
-            line-height: 1.4;
-        }
-
-        .breakdown-bar {
-            height: 6px;
-            background: var(--gray-200);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .breakdown-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 1s ease-out;
-        }
-
         /* ============================================
-           SERVICE CARDS GRID - NEW DESIGN
+           SERVICE CARDS GRID
            ============================================ */
         .services-section {
             background: var(--white);
             border-radius: 1rem;
             padding: 1.5rem;
             box-shadow: var(--shadow-lg);
+            margin-bottom: 1.5rem;
+        }
+
+        .services-progress {
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .services-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 3px;
+            transition: width 1s ease-out;
         }
 
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1rem;
-            margin-top: 1rem;
         }
 
         .service-card {
-            background: var(--gray-50);
+            position: relative;
+            display: block;
+            background: var(--white);
             border: 2px solid var(--gray-200);
-            border-radius: 0.75rem;
+            border-radius: var(--radius);
             padding: 1.25rem;
             transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
             text-decoration: none;
             color: inherit;
-            display: block;
+            cursor: pointer;
         }
 
         .service-card:hover {
@@ -669,7 +555,7 @@
             border-color: var(--primary);
         }
 
-        /* Service card colors based on service type */
+        /* Service-specific colors */
         .service-card.source-credibility {
             border-color: var(--primary);
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.02) 100%);
@@ -705,11 +591,6 @@
             background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(6, 182, 212, 0.02) 100%);
         }
 
-        .service-card.plagiarism-detector {
-            border-color: #ec4899;
-            background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%);
-        }
-
         .service-card-header {
             display: flex;
             align-items: center;
@@ -736,7 +617,6 @@
         .service-card.transparency-analyzer .service-icon-wrapper { color: #8b5cf6; }
         .service-card.manipulation-detector .service-icon-wrapper { color: var(--danger); }
         .service-card.content-analyzer .service-icon-wrapper { color: #06b6d4; }
-        .service-card.plagiarism-detector .service-icon-wrapper { color: #ec4899; }
 
         .service-info h3 {
             font-size: 0.9375rem;
@@ -765,6 +645,11 @@
         .service-status.pending {
             color: var(--gray-500);
             border: 1px solid var(--gray-300);
+        }
+
+        .service-status.no-data {
+            color: var(--warning);
+            border: 1px solid var(--warning);
         }
 
         .service-preview {
@@ -819,8 +704,7 @@
 
         /* Loading state for service cards */
         .service-card.loading {
-            pointer-events: none;
-            opacity: 0.6;
+            opacity: 0.7;
         }
 
         .service-card.loading::after {
@@ -839,48 +723,7 @@
             100% { transform: translateX(100%); }
         }
 
-        /* Empty state for services */
-        .service-empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray-500);
-        }
-
-        .service-empty-state i {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--gray-400);
-        }
-
-        /* Service completion indicator */
-        .services-progress {
-            background: var(--gray-100);
-            height: 6px;
-            border-radius: 3px;
-            margin-bottom: 1rem;
-            overflow: hidden;
-        }
-
-        .services-progress-bar {
-            height: 100%;
-            background: var(--primary);
-            border-radius: 3px;
-            transition: width 0.5s ease;
-            position: relative;
-        }
-
-        .services-progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
-            animation: shimmer 2s infinite;
-        }
-
-        /* Results Actions - Compact */
+        /* Results Actions */
         .results-actions {
             display: flex;
             gap: 0.75rem;
@@ -888,89 +731,7 @@
             margin-top: 2rem;
         }
 
-        /* Error Message - Compact */
-        .error-message {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            background: var(--danger);
-            color: white;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            box-shadow: var(--shadow-xl);
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            max-width: 350px;
-            z-index: 10000;
-        }
-
-        .error-message.active {
-            display: flex;
-        }
-
-        /* Trust Summary */
-        #trustSummary {
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: var(--gray-700);
-        }
-
-        /* Empty states */
-        .empty-state {
-            text-align: center;
-            padding: 2rem;
-            color: var(--gray-500);
-        }
-
-        .empty-state i {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            color: var(--gray-400);
-        }
-
-        .empty-state-text {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .empty-state-subtext {
-            font-size: 0.875rem;
-            color: var(--gray-400);
-        }
-
-        .success-state {
-            color: var(--secondary);
-        }
-
-        .success-state i {
-            color: var(--secondary);
-        }
-
-        /* Info box */
-        .info-box {
-            background: var(--info);
-            color: white;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .info-box-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .info-box-content {
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        /* Loading Overlay - Compact */
+        /* Loading Overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -1023,7 +784,29 @@
             font-weight: 500;
         }
 
-        /* Responsive design for service grid */
+        /* Error Message */
+        .error-message {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--danger);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-xl);
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            max-width: 350px;
+            z-index: 10000;
+        }
+
+        .error-message.active {
+            display: flex;
+        }
+
+        /* Responsive design */
         @media (max-width: 768px) {
             .services-grid {
                 grid-template-columns: 1fr;
@@ -1102,6 +885,10 @@
                     <i class="fas fa-eye"></i>
                     <span>Transparency Analysis</span>
                 </div>
+                <div class="feature-pill">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Content Analysis</span>
+                </div>
             </div>
         </div>
     </section>
@@ -1169,7 +956,7 @@
 
     <!-- Results Section -->
     <section id="resultsSection" class="results-section">
-        <!-- Trust Score Summary (same as before) -->
+        <!-- Trust Score Summary -->
         <div class="trust-summary-container">
             <div class="trust-score-card">
                 <div class="trust-gauge-container">
@@ -1197,13 +984,13 @@
             </div>
         </div>
 
-        <!-- Article Info (same as before) -->
+        <!-- Article Info -->
         <div class="article-info-bar">
             <h3 id="articleTitle">Loading article information...</h3>
             <div id="articleMeta" class="article-meta"></div>
         </div>
 
-        <!-- Trust Breakdown (same as before) -->
+        <!-- Trust Breakdown -->
         <div class="trust-breakdown-section">
             <h3 class="section-header">
                 <i class="fas fa-chart-pie"></i>
@@ -1212,7 +999,7 @@
             <div id="trustBreakdown" class="breakdown-grid"></div>
         </div>
 
-        <!-- NEW: Service Cards Grid -->
+        <!-- Service Cards Grid -->
         <div class="services-section">
             <h3 class="section-header">
                 <i class="fas fa-microscope"></i>
@@ -1229,7 +1016,7 @@
             </div>
         </div>
 
-        <!-- Results Actions (same as before) -->
+        <!-- Results Actions -->
         <div class="results-actions">
             <button id="downloadPdfBtn" class="btn btn-primary">
                 <i class="fas fa-download"></i>
@@ -1246,7 +1033,7 @@
         </div>
     </section>
 
-    <!-- Loading Overlay (same as before) -->
+    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
@@ -1254,7 +1041,7 @@
         </div>
     </div>
 
-    <!-- Error Message (same as before) -->
+    <!-- Error Message -->
     <div id="errorMessage" class="error-message">
         <i class="fas fa-exclamation-circle"></i>
         <span id="errorText"></span>
@@ -1265,7 +1052,7 @@
     <script src="/static/js/truthlens-display.js"></script>
     <script src="/static/js/truthlens-services.js"></script>
     
-    <!-- Add new script to handle service cards -->
+    <!-- Service Cards Script -->
     <script>
         // Service configuration
         const SERVICES = [
@@ -1320,12 +1107,16 @@
             }
         ];
 
+        // Track whether analysis has been performed
+        let analysisPerformed = false;
+
         // Function to create service cards
         function createServiceCards(analysisData) {
             const servicesGrid = document.getElementById('servicesGrid');
             servicesGrid.innerHTML = '';
 
             let completedCount = 0;
+            analysisPerformed = true; // Mark that analysis has been performed
 
             SERVICES.forEach(service => {
                 // Check if we have data for this service
@@ -1334,19 +1125,13 @@
                 
                 if (hasData) completedCount++;
 
-                // Create the card
+                // Create the card - ALWAYS link to the service page
                 const card = document.createElement('a');
-                card.href = hasData ? service.url : '#';
-                card.className = `service-card ${service.id} ${hasData ? '' : 'loading'}`;
-                if (!hasData) {
-                    card.onclick = (e) => {
-                        e.preventDefault();
-                        alert('Analysis for this service is still processing...');
-                    };
-                }
-
+                card.href = service.url; // Always set the proper URL
+                card.className = `service-card ${service.id} ${!hasData && !analysisPerformed ? 'loading' : ''}`;
+                
                 // Extract key metrics from service data
-                let metric1 = { label: 'Status', value: 'Pending' };
+                let metric1 = { label: 'Status', value: hasData ? 'Complete' : 'No Data' };
                 let metric2 = { label: 'Score', value: '--' };
 
                 if (hasData) {
@@ -1383,6 +1168,23 @@
                     }
                 }
 
+                // Determine status
+                let statusClass = 'pending';
+                let statusText = 'Processing...';
+                let statusIcon = 'fa-clock';
+                
+                if (analysisPerformed) {
+                    if (hasData) {
+                        statusClass = 'complete';
+                        statusText = 'Analysis Complete';
+                        statusIcon = 'fa-check-circle';
+                    } else {
+                        statusClass = 'no-data';
+                        statusText = 'No Data Available';
+                        statusIcon = 'fa-info-circle';
+                    }
+                }
+
                 card.innerHTML = `
                     <div class="service-card-header">
                         <div class="service-icon-wrapper">
@@ -1393,9 +1195,9 @@
                         </div>
                     </div>
                     
-                    <div class="service-status ${hasData ? 'complete' : 'pending'}">
-                        <i class="fas ${hasData ? 'fa-check-circle' : 'fa-clock'}"></i>
-                        <span>${hasData ? 'Analysis Complete' : 'Processing...'}</span>
+                    <div class="service-status ${statusClass}">
+                        <i class="fas ${statusIcon}"></i>
+                        <span>${statusText}</span>
                     </div>
                     
                     <p class="service-preview">${service.description}</p>
@@ -1411,7 +1213,7 @@
                         </div>
                     </div>
                     
-                    ${hasData ? '<span class="view-details-link">View Details <i class="fas fa-arrow-right"></i></span>' : ''}
+                    <span class="view-details-link">View Details <i class="fas fa-arrow-right"></i></span>
                 `;
 
                 servicesGrid.appendChild(card);
@@ -1447,12 +1249,21 @@
                 this.classList.add('active');
                 
                 const mode = this.dataset.mode;
+                const urlExplanation = document.getElementById('urlExplanation');
+                const textExplanation = document.getElementById('textExplanation');
+                const urlInputWrapper = document.getElementById('urlInputWrapper');
+                const textInputWrapper = document.getElementById('textInputWrapper');
+                
                 if (mode === 'url') {
-                    document.getElementById('urlExplanation').style.display = 'block';
-                    document.getElementById('textExplanation').style.display = 'none';
+                    urlExplanation.style.display = 'block';
+                    textExplanation.style.display = 'none';
+                    urlInputWrapper.style.display = 'block';
+                    textInputWrapper.style.display = 'none';
                 } else {
-                    document.getElementById('urlExplanation').style.display = 'none';
-                    document.getElementById('textExplanation').style.display = 'block';
+                    urlExplanation.style.display = 'none';
+                    textExplanation.style.display = 'block';
+                    urlInputWrapper.style.display = 'none';
+                    textInputWrapper.style.display = 'block';
                 }
             });
         });
