@@ -1,775 +1,813 @@
 """
-News Analyzer API
-Main Flask application for analyzing news articles
+Transcript Fact Checker - Main Flask Application
+Optimized version with parallel processing
 """
 import os
-import sys
 import logging
-import json
-import traceback
-from typing import Dict, Any, Optional, List
-from flask import Flask, request, jsonify, send_from_directory, make_response, render_template
-from flask_cors import CORS
 import uuid
 from datetime import datetime
+from typing import List, Dict, Optional, Tuple
+from flask import Flask, render_template, jsonify, request, send_file
+from flask_cors import CORS
+from dotenv import load_dotenv
+import json
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import io
+from threading import Thread
 import time
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
+# Import services
+from services.transcript import TranscriptProcessor
+from services.claims import ClaimExtractor
+from services.factcheck import FactChecker
 from config import Config
-from services.news_analyzer import NewsAnalyzer
-from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-
-logger = logging.getLogger(__name__)
+# Load environment variables
+load_dotenv()
 
 # Initialize Flask app
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['SECRET_KEY'] = Config.SECRET_KEY
+app = Flask(__name__)
+app.config.from_object(Config)
+CORS(app)
 
-# Configure CORS
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database initialization with fallback
+mongo_client = None
+db = None
+jobs_collection = None
+results_collection = None
+redis_client = None
+
+# In-memory storage as fallback
+in_memory_jobs = {}
+in_memory_results = {}
+
+# Try to connect to MongoDB if configured
+if Config.MONGODB_URI:
+    try:
+        from pymongo import MongoClient
+        mongo_client = MongoClient(Config.MONGODB_URI, serverSelectionTimeoutMS=5000)
+        # Test connection
+        mongo_client.server_info()
+        db = mongo_client[Config.MONGODB_DB_NAME]
+        jobs_collection = db['jobs']
+        results_collection = db['results']
+        logger.info("MongoDB connected successfully")
+    except Exception as e:
+        logger.warning(f"MongoDB connection failed: {str(e)}. Using in-memory storage.")
+        mongo_client = None
+else:
+    logger.info("MongoDB URI not configured. Using in-memory storage.")
+
+# Try to connect to Redis if configured
+if Config.REDIS_URL:
+    try:
+        import redis
+        redis_client = redis.from_url(Config.REDIS_URL, socket_connect_timeout=5)
+        redis_client.ping()
+        logger.info("Redis connected successfully")
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {str(e)}. Using in-memory storage.")
+        redis_client = None
+else:
+    logger.info("Redis URL not configured. Using in-memory storage.")
 
 # Initialize services
-logger.info("=== INITIALIZING NEWS ANALYZER ===")
-news_analyzer = NewsAnalyzer()
-logger.info("=== NEWS ANALYZER INITIALIZED ===")
+transcript_processor = TranscriptProcessor()
+claim_extractor = ClaimExtractor(openai_api_key=Config.OPENAI_API_KEY)
+fact_checker = FactChecker(Config)
 
-# Debug tracking
-debug_info = {
-    'requests': {},
-    'errors': [],
-    'service_calls': [],
-    'initialization_log': []
+# Enhanced speaker database
+SPEAKER_DATABASE = {
+    'donald trump': {
+        'full_name': 'Donald J. Trump',
+        'role': '45th and 47th President of the United States',
+        'party': 'Republican',
+        'criminal_record': 'Multiple indictments in 2023-2024',
+        'fraud_history': 'Trump Organization fraud conviction 2022',
+        'fact_check_history': 'Extensive record of false and misleading statements',
+        'credibility_notes': 'Known for frequent false claims and exaggerations'
+    },
+    'j.d. vance': {
+        'full_name': 'James David Vance',
+        'role': 'Vice President of the United States',
+        'party': 'Republican',
+        'criminal_record': None,
+        'fraud_history': None,
+        'fact_check_history': 'Mixed record on factual accuracy',
+        'credibility_notes': 'Serving as VP since January 2025'
+    },
+    'joe biden': {
+        'full_name': 'Joseph R. Biden Jr.',
+        'role': '46th President of the United States (2021-2025)',
+        'party': 'Democrat',
+        'criminal_record': None,
+        'fraud_history': None,
+        'fact_check_history': 'Generally accurate with occasional misstatements',
+        'credibility_notes': 'Former President'
+    },
+    'kamala harris': {
+        'full_name': 'Kamala D. Harris',
+        'role': 'Former Vice President of the United States (2021-2025)',
+        'party': 'Democrat',
+        'criminal_record': None,
+        'fraud_history': None,
+        'fact_check_history': 'Generally accurate',
+        'credibility_notes': 'Former Vice President'
+    }
 }
 
-# Request tracking
-@app.before_request
-def before_request():
-    """Log incoming requests"""
-    request.id = str(uuid.uuid4())
-    request.start_time = datetime.now()
-    
-    # Set request ID for response builder
-    ResponseBuilder._request_id = request.id
-    ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
-    
-    # Store request info for debugging
-    debug_info['requests'][request.id] = {
-        'method': request.method,
-        'path': request.path,
-        'args': dict(request.args),
-        'start_time': request.start_time.isoformat()
-    }
-    
-    if request.method == 'POST' and request.is_json:
-        debug_info['requests'][request.id]['body'] = request.get_json()
-    
-    logger.info(f"Request {request.id}: {request.method} {request.path}")
-
-@app.after_request
-def after_request(response):
-    """Log response and timing"""
-    if hasattr(request, 'id'):
-        duration = (datetime.now() - request.start_time).total_seconds()
-        logger.info(f"Request {request.id} completed in {duration:.2f}s with status {response.status_code}")
-        
-        # Update debug info
-        if request.id in debug_info['requests']:
-            debug_info['requests'][request.id]['duration'] = duration
-            debug_info['requests'][request.id]['status_code'] = response.status_code
-    
-    return response
-
-# Data cleaning functions - FIXED VERSION
-def clean_service_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Clean service data by removing only truly corrupted fields while preserving all other data"""
-    if not isinstance(data, dict):
-        return data
-        
-    cleaned = {}
-    
-    # Define fields that should be preserved as-is (never cleaned)
-    preserve_fields = {
-        'credibility_score', 'author_score', 'score', 'bias_score', 'transparency_score',
-        'verified', 'success', 'available', 'service', 'timestamp',
-        'author_name', 'source_name', 'domain', 'position', 'organization',
-        'current_position', 'article_count', 'accuracy_rate', 'awards_count',
-        'experience', 'findings', 'metrics', 'recent_articles', 'expertise_areas',
-        'social_media', 'awards', 'bio_url', 'trust_score', 'trust_level',
-        'bias_indicators', 'fact_checks', 'claims_checked', 'verdict',
-        'transparency_indicators', 'missing_elements', 'manipulation_tactics'
-    }
-    
-    for key, value in data.items():
-        # Always preserve certain critical fields
-        if key in preserve_fields:
-            cleaned[key] = value
-            continue
-            
-        # Skip HTML field if it contains corrupted data
-        if key == 'html' and isinstance(value, str):
-            if contains_corrupted_data(value):
-                logger.warning(f"Skipping corrupted HTML field")
-                continue
-            else:
-                cleaned[key] = value
-        # Handle nested dictionaries
-        elif isinstance(value, dict):
-            cleaned_dict = clean_service_data(value)
-            if cleaned_dict:  # Only add if not empty
-                cleaned[key] = cleaned_dict
-        # Handle lists
-        elif isinstance(value, list):
-            cleaned_list = []
-            for item in value:
-                if isinstance(item, dict):
-                    cleaned_item = clean_service_data(item)
-                    if cleaned_item:
-                        cleaned_list.append(cleaned_item)
-                elif isinstance(item, str) and contains_corrupted_data(item):
-                    continue  # Skip corrupted strings in lists
-                else:
-                    cleaned_list.append(item)
-            if cleaned_list:  # Only add if not empty
-                cleaned[key] = cleaned_list
-        # Handle strings
-        elif isinstance(value, str):
-            if key in ['bio', 'full_bio', 'text', 'content'] and contains_corrupted_data(value):
-                # For long text fields, try to extract clean portion
-                clean_portion = extract_clean_text(value)
-                if clean_portion:
-                    cleaned[key] = clean_portion
-                # Skip entirely if no clean portion found
-            else:
-                # For other string fields, keep as-is unless corrupted
-                if not contains_corrupted_data(value):
-                    cleaned[key] = value
-        # Keep all other types as-is (numbers, booleans, etc.)
+# Helper functions
+def store_job(job_id: str, job_data: dict):
+    """Store job in database or memory"""
+    try:
+        if jobs_collection:
+            jobs_collection.insert_one({'_id': job_id, **job_data})
         else:
-            cleaned[key] = value
-    
-    return cleaned
+            in_memory_jobs[job_id] = job_data.copy()  # Make a copy to avoid reference issues
+            logger.info(f"Stored job {job_id} in memory with status: {job_data.get('status')}")
+        
+        if redis_client:
+            redis_client.setex(f"job:{job_id}", 3600, json.dumps(job_data))
+    except Exception as e:
+        logger.error(f"Error storing job: {e}")
+        in_memory_jobs[job_id] = job_data.copy()
 
-def clean_article_data(article: Dict[str, Any]) -> Dict[str, Any]:
-    """Clean article data specifically"""
-    cleaned = {}
-    
-    # Define safe fields that should be preserved
-    safe_fields = [
-        'title', 'author', 'publish_date', 'url', 'domain', 
-        'description', 'image', 'keywords', 'word_count', 
-        'source', 'language', 'extraction_metadata'
-    ]
-    
-    for field in safe_fields:
-        if field in article:
-            value = article[field]
-            # Special handling for extraction_metadata
-            if field == 'extraction_metadata' and isinstance(value, dict):
-                cleaned[field] = {k: v for k, v in value.items() if k != 'html'}
-            else:
-                cleaned_value = clean_value(value)
-                if cleaned_value is not None:
-                    cleaned[field] = cleaned_value
-    
-    # Handle text field specially - truncate if corrupted
-    if 'text' in article:
-        text = article['text']
-        if isinstance(text, str):
-            if contains_corrupted_data(text):
-                # Try to extract any clean portion
-                clean_portion = extract_clean_text(text)
-                if clean_portion:
-                    cleaned['text'] = clean_portion
-                else:
-                    cleaned['text'] = "Article text could not be extracted properly."
-            else:
-                cleaned['text'] = text
-    
-    # Ensure we have at least basic fields
-    if 'title' not in cleaned or not cleaned.get('title'):
-        cleaned['title'] = 'Unknown Title'
-    
-    if 'domain' not in cleaned and 'url' in cleaned:
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(cleaned['url'])
-            cleaned['domain'] = parsed.netloc
-        except:
-            pass
-    
-    return cleaned
-
-def clean_value(value: Any) -> Any:
-    """Clean individual values"""
-    if isinstance(value, str):
-        if contains_corrupted_data(value):
-            # For short strings, return None
-            if len(value) < 100:
-                return None
-            # For longer strings, try to extract clean portion
-            clean_portion = extract_clean_text(value)
-            return clean_portion if clean_portion else None
-        return value
-    elif isinstance(value, (int, float, bool)):
-        return value
-    elif isinstance(value, dict):
-        return clean_service_data(value)
-    elif isinstance(value, list):
-        return [clean_value(item) for item in value if clean_value(item) is not None]
-    else:
-        return value
-
-def contains_corrupted_data(text: str) -> bool:
-    """Check if text contains corrupted data indicators"""
-    if not isinstance(text, str):
-        return False
-    
-    # Check for replacement character which indicates encoding issues
-    if '\ufffd' in text:
-        return True
-    
-    # Check for excessive non-printable characters
-    non_printable_count = sum(1 for char in text if ord(char) < 32 and char not in '\n\r\t')
-    if len(text) > 0 and non_printable_count / len(text) > 0.1:  # More than 10% non-printable
-        return True
-    
-    return False
-
-def extract_clean_text(text: str) -> Optional[str]:
-    """Try to extract clean portions of text"""
-    if not text:
+def get_job(job_id: str) -> dict:
+    """Get job from database or memory"""
+    try:
+        # Try Redis first for speed
+        if redis_client:
+            cached = redis_client.get(f"job:{job_id}")
+            if cached:
+                return json.loads(cached)
+        
+        # Try MongoDB
+        if jobs_collection:
+            job = jobs_collection.find_one({'_id': job_id})
+            if job:
+                job.pop('_id', None)
+                return job
+        
+        # Fallback to memory
+        job = in_memory_jobs.get(job_id)
+        if job:
+            logger.info(f"Retrieved job {job_id} from memory with status: {job.get('status')}")
+            return job.copy()  # Return a copy to avoid mutations
+        
+        logger.warning(f"Job {job_id} not found in any storage")
         return None
-    
-    # Split by common delimiters and find clean segments
-    segments = text.split('\n')
-    clean_segments = []
-    
-    for segment in segments:
-        if segment and not contains_corrupted_data(segment):
-            clean_segments.append(segment.strip())
-    
-    # If we found clean segments, join them
-    if clean_segments:
-        result = '\n'.join(clean_segments)
-        # Only return if we have meaningful content
-        if len(result) > 50:  # At least 50 characters
-            return result
-    
-    return None
+    except Exception as e:
+        logger.error(f"Error getting job {job_id}: {e}")
+        return in_memory_jobs.get(job_id, {}).copy() if job_id in in_memory_jobs else None
 
-# MAIN ROUTES
+def update_job(job_id: str, updates: dict):
+    """Update job in database or memory"""
+    try:
+        if jobs_collection:
+            jobs_collection.update_one(
+                {'_id': job_id},
+                {'$set': updates}
+            )
+        else:
+            if job_id in in_memory_jobs:
+                # For in-memory storage, do a deep update
+                in_memory_jobs[job_id].update(updates)
+                logger.info(f"Updated job {job_id} in memory with: {list(updates.keys())}")
+            else:
+                logger.error(f"Job {job_id} not found in memory for update")
+        
+        # Update cache if exists
+        if redis_client:
+            job_data = get_job(job_id)
+            if job_data:
+                job_data.update(updates)
+                redis_client.setex(f"job:{job_id}", 3600, json.dumps(job_data))
+    except Exception as e:
+        logger.error(f"Error updating job {job_id}: {e}")
+        if job_id in in_memory_jobs:
+            in_memory_jobs[job_id].update(updates)
 
+def update_job_progress(job_id: str, progress: int, message: str):
+    """Update job progress"""
+    update_job(job_id, {
+        'progress': progress,
+        'message': message,
+        'status': 'failed' if progress < 0 else 'processing'
+    })
+
+# Routes
 @app.route('/')
 def index():
-    """Serve the main application page"""
-    try:
-        logger.info("Serving index page")
-        return render_template('index.html')
-    except Exception as e:
-        logger.error(f"Error rendering template: {e}", exc_info=True)
-        return f"Error loading page: {str(e)}", 500
+    """Render main page"""
+    return render_template('index.html')
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    db_status = "connected" if mongo_client else "in-memory"
+    redis_status = "connected" if redis_client else "in-memory"
+    
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'storage': {
+            'database': db_status,
+            'cache': redis_status
+        }
     })
 
-@app.route('/diagnostic')
-def diagnostic():
-    """Diagnostic page for CSS issues"""
-    try:
-        return render_template('diagnostic.html')
-    except Exception as e:
-        return f"Diagnostic page error: {str(e)}", 500
-
-@app.route('/api/status')
-def status():
-    """Get system status"""
-    try:
-        # Get service status
-        service_status = news_analyzer.service_status
-        
-        return jsonify({
-            'status': 'operational',
-            'version': '1.0.0',
-            'services': service_status,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        logger.error(f"Status check error: {e}")
-        return ResponseBuilder.error(str(e), 500)
-
-@app.route('/api/analyze', methods=['POST', 'OPTIONS'])
+@app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """Main analysis endpoint"""
-    if request.method == 'OPTIONS':
-        return '', 200
+    """Analyze transcript endpoint - OPTIMIZED VERSION"""
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        transcript = data.get('transcript', '').strip()
+        source = data.get('source', 'Direct Input')
+        
+        if not transcript:
+            return jsonify({'success': False, 'error': 'No transcript provided'}), 400
+        
+        if len(transcript) < 50:
+            return jsonify({'success': False, 'error': 'Transcript too short'}), 400
+        
+        if len(transcript) > Config.MAX_TRANSCRIPT_LENGTH:
+            return jsonify({'success': False, 'error': 'Transcript too long'}), 400
+        
+        # Create job
+        job_id = str(uuid.uuid4())
+        job_data = {
+            'status': 'processing',
+            'progress': 0,
+            'message': 'Initializing...',
+            'source': source,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        # Store job
+        store_job(job_id, job_data)
+        
+        # Process transcript in background thread to avoid blocking
+        thread = Thread(target=process_transcript_async, args=(job_id, transcript, source))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({'success': True, 'job_id': job_id})
+            
+    except Exception as e:
+        logger.error(f"Request error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def process_transcript_async(job_id: str, transcript: str, source: str):
+    """Process transcript asynchronously with optimizations"""
+    try:
+        # Step 1: Process transcript (10% - faster)
+        update_job_progress(job_id, 10, 'Processing transcript...')
+        processed_transcript = transcript_processor.process(transcript)
+        
+        # Step 2: Extract metadata (15% - quick)
+        update_job_progress(job_id, 15, 'Extracting metadata...')
+        metadata = transcript_processor.extract_metadata(processed_transcript)
+        
+        # Step 3: Extract claims (25% - optimized)
+        update_job_progress(job_id, 25, 'Extracting claims...')
+        claims_data = claim_extractor.extract_claims(
+            processed_transcript, 
+            max_claims=min(Config.MAX_CLAIMS_PER_TRANSCRIPT, 20)  # Limit for speed
+        )
+        
+        # Extract just the claim text for fact checking
+        if not claims_data:
+            update_job_progress(job_id, 100, 'No verifiable claims found')
+            update_job(job_id, {
+                'status': 'completed',
+                'progress': 100,
+                'message': 'Analysis complete',
+                'fact_checks': [],
+                'credibility_score': calculate_credibility_score([]),
+                'metadata': metadata,
+                'source': source,
+                'completed_at': datetime.now().isoformat()
+            })
+            return
+        
+        claims = claims_data if isinstance(claims_data[0], str) else [c['text'] for c in claims_data]
+        
+        logger.info(f"Job {job_id}: Found {len(claims)} claims to verify")
+        
+        # Step 4: Fact check claims (30-90% - PARALLEL PROCESSING)
+        update_job_progress(job_id, 30, f'Fact-checking {len(claims)} claims...')
+        
+        # Process claims in batches with progress updates
+        fact_checks = []
+        batch_size = 5
+        
+        for i in range(0, len(claims), batch_size):
+            batch = claims[i:i+batch_size]
+            progress = 30 + int((i / len(claims)) * 60)  # 30% to 90%
+            
+            update_job_progress(
+                job_id, 
+                progress, 
+                f'Checking claims {i+1}-{min(i+batch_size, len(claims))} of {len(claims)}...'
+            )
+            
+            # Check batch in parallel
+            batch_results = fact_checker.check_claims(batch, source=source)
+            fact_checks.extend(batch_results)
+            
+            # Small delay to prevent overwhelming APIs
+            time.sleep(0.1)
+        
+        # Step 5: Calculate final scores (90%)
+        update_job_progress(job_id, 90, 'Calculating credibility score...')
+        
+        # Add claim context for better display
+        for i, fc in enumerate(fact_checks):
+            if i < len(claims_data) and isinstance(claims_data[i], dict):
+                fc['indicators'] = claims_data[i].get('indicators', [])
+                fc['confidence_score'] = claims_data[i].get('confidence', 
+                                                           claims_data[i].get('score', 0))
+        
+        credibility_score = calculate_credibility_score(fact_checks)
+        
+        # Extract speaker context if available
+        speakers, topics = claim_extractor.extract_context(transcript)
+        speaker_context = analyze_speaker_credibility(speakers, fact_checks)
+        
+        # Complete (100%)
+        update_job_progress(job_id, 100, 'Analysis complete')
+        
+        # Final results
+        results = {
+            'status': 'completed',
+            'progress': 100,
+            'message': 'Analysis complete',
+            'fact_checks': fact_checks,
+            'credibility_score': credibility_score,
+            'total_claims': len(claims),
+            'processing_time': (datetime.now() - datetime.fromisoformat(
+                get_job(job_id)['created_at'])).total_seconds(),
+            'speakers': speakers,
+            'topics': topics,
+            'source': source,
+            'metadata': metadata,
+            'speaker_context': speaker_context,
+            'completed_at': datetime.now().isoformat()
+        }
+        
+        # Log what we're storing
+        logger.info(f"Storing final results for job {job_id}:")
+        logger.info(f"  - Status: {results['status']}")
+        logger.info(f"  - Total claims: {results['total_claims']}")
+        logger.info(f"  - Credibility score: {results['credibility_score']}")
+        logger.info(f"  - Fact checks count: {len(results['fact_checks'])}")
+        
+        # Store results
+        update_job(job_id, results)
+        
+        # Verify storage
+        stored_job = get_job(job_id)
+        if stored_job:
+            logger.info(f"Verified job {job_id} stored with status: {stored_job.get('status')}")
+        else:
+            logger.error(f"Failed to verify storage of job {job_id}")
+        
+    except Exception as e:
+        logger.error(f"Processing error in job {job_id}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        update_job_progress(job_id, -1, f'Error: {str(e)}')
+        update_job(job_id, {'status': 'failed', 'error': str(e)})ror': str(e)})
+
+@app.route('/api/status/<job_id>')
+def check_status(job_id):
+    """Check job status"""
+    try:
+        job = get_job(job_id)
+        
+        if not job:
+            return jsonify({'success': False, 'error': 'Job not found'}), 404
+        
+        # If job is completed, return full details including credibility score
+        if job.get('status') == 'completed':
+            # Extract credibility score details for completed jobs
+            cred_score = job.get('credibility_score', {})
+            
+            return jsonify({
+                'success': True,
+                'job_id': job_id,
+                'status': job.get('status'),
+                'progress': job.get('progress', 100),
+                'message': job.get('message', 'Analysis complete'),
+                'credibility_score': cred_score.get('score', 0),
+                'credibility_label': cred_score.get('label', 'Unknown'),
+                'total_claims': job.get('total_claims', 0),
+                'true_claims': cred_score.get('true_claims', 0),
+                'false_claims': cred_score.get('false_claims', 0),
+                'unverified_claims': cred_score.get('unverified_claims', 0),
+                'error': job.get('error')
+            })
+        else:
+            # For processing jobs, return minimal info
+            return jsonify({
+                'success': True,
+                'job_id': job_id,
+                'status': job.get('status'),
+                'progress': job.get('progress', 0),
+                'message': job.get('message', ''),
+                'error': job.get('error')
+            })
+            
+    except Exception as e:
+        logger.error(f"Status check error for job {job_id}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/results/<job_id>')
+def get_results(job_id):
+    """Get analysis results"""
+    try:
+        results = get_job(job_id)
+        if not results:
+            return jsonify({'success': False, 'error': 'Results not found'}), 404
+        
+        if results.get('status') != 'completed':
+            return jsonify({'success': False, 'error': 'Analysis not completed'}), 400
+        
+        # Extract credibility score details
+        cred_score = results.get('credibility_score', {})
+        
+        # Format the response for the frontend
+        response_data = {
+            'success': True,
+            'job_id': job_id,
+            'credibility_score': cred_score.get('score', 0),
+            'credibility_label': cred_score.get('label', 'Unknown'),
+            'total_claims': results.get('total_claims', 0),
+            'true_claims': cred_score.get('true_claims', 0),
+            'false_claims': cred_score.get('false_claims', 0),
+            'unverified_claims': cred_score.get('unverified_claims', 0),
+            'fact_checks': results.get('fact_checks', []),
+            'metadata': results.get('metadata', {}),
+            'speakers': results.get('speakers', []),
+            'topics': results.get('topics', []),
+            'speaker_context': results.get('speaker_context', {}),
+            'source': results.get('source', 'Unknown'),
+            'processing_time': results.get('processing_time', 0),
+            'completed_at': results.get('completed_at', ''),
+            'status': results.get('status', 'completed'),
+            'message': results.get('message', 'Analysis complete')
+        }
+        
+        # Log for debugging
+        logger.info(f"Returning results for job {job_id}: credibility_score={response_data['credibility_score']}, total_claims={response_data['total_claims']}")
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Results retrieval error for job {job_id}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/export/<job_id>/<format>')
+def export_results(job_id, format):
+    """Export results in different formats"""
+    job = get_job(job_id)
+    
+    if not job or job.get('status') != 'completed':
+        return jsonify({'error': 'Results not available'}), 404
     
     try:
-        # Get request data
-        data = request.get_json()
-        if not data:
-            return ResponseBuilder.error("No data provided", 400)
-        
-        # Log request
-        logger.info(f"Analysis request: {data}")
-        
-        # Extract URL or text
-        url = data.get('url')
-        text = data.get('text')
-        pro_mode = data.get('is_pro', False)
-        
-        if not url and not text:
-            return ResponseBuilder.error("Please provide either 'url' or 'text'", 400)
-        
-        # Perform analysis
-        logger.info(f"Analyzing: {url if url else 'text content'}")
-        
-        if url:
-            result = news_analyzer.analyze(url, content_type='url', pro_mode=pro_mode)
-        else:
-            result = news_analyzer.analyze(text, content_type='text', pro_mode=pro_mode)
-        
-        if result.get('success'):
-            # Transform the result to match frontend expectations
-            transformed_result = transform_analysis_result(result)
+        if format == 'json':
+            # JSON export
+            return jsonify({
+                'transcript_source': job.get('source', 'Unknown'),
+                'analysis_date': job.get('completed_at', datetime.now().isoformat()),
+                'credibility_score': job.get('credibility_score', {}),
+                'fact_checks': job.get('fact_checks', []),
+                'metadata': job.get('metadata', {}),
+                'processing_time': job.get('processing_time', 0)
+            })
             
-            # Build response
-            return ResponseBuilder.success(
-                transformed_result,
-                message="Analysis completed successfully",
-                metadata={
-                    'processing_time': result.get('pipeline_metadata', {}).get('total_duration', 0),
-                    'services_used': list(transformed_result.get('detailed_analysis', {}).keys())
-                }
+        elif format == 'txt':
+            # Text export
+            output = []
+            output.append("TRANSCRIPT FACT CHECK REPORT")
+            output.append("=" * 50)
+            output.append(f"Date: {job.get('completed_at', datetime.now().isoformat())}")
+            output.append(f"Source: {job.get('source', 'Unknown')}")
+            output.append(f"Processing Time: {job.get('processing_time', 0):.1f} seconds")
+            output.append("")
+            
+            # Credibility Score
+            score = job.get('credibility_score', {})
+            output.append(f"OVERALL CREDIBILITY: {score.get('label', 'Unknown')} ({score.get('score', 0)}%)")
+            output.append(f"True Claims: {score.get('true_claims', 0)}")
+            output.append(f"False Claims: {score.get('false_claims', 0)}")
+            output.append(f"Unverified: {score.get('unverified_claims', 0)}")
+            output.append("")
+            
+            # Fact Checks
+            output.append("FACT CHECK DETAILS:")
+            output.append("-" * 50)
+            
+            for i, fc in enumerate(job.get('fact_checks', []), 1):
+                output.append(f"\n{i}. CLAIM: {fc.get('claim', 'N/A')}")
+                output.append(f"   VERDICT: {fc.get('verdict', 'Unknown').upper()}")
+                if fc.get('explanation'):
+                    output.append(f"   EXPLANATION: {fc.get('explanation')}")
+                if fc.get('sources'):
+                    output.append(f"   SOURCES: {', '.join(fc.get('sources', []))}")
+            
+            response = io.BytesIO()
+            response.write('\n'.join(output).encode('utf-8'))
+            response.seek(0)
+            
+            return send_file(
+                response,
+                mimetype='text/plain',
+                as_attachment=True,
+                download_name=f'fact_check_report_{job_id}.txt'
+            )
+            
+        elif format == 'pdf':
+            # PDF export
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            story = []
+            styles = getSampleStyleSheet()
+            
+            # Title
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=24,
+                textColor=colors.HexColor('#1a73e8'),
+                spaceAfter=30,
+                alignment=TA_CENTER
+            )
+            story.append(Paragraph("Transcript Fact Check Report", title_style))
+            story.append(Spacer(1, 20))
+            
+            # Metadata
+            info_style = styles['Normal']
+            story.append(Paragraph(f"<b>Date:</b> {job.get('completed_at', 'N/A')}", info_style))
+            story.append(Paragraph(f"<b>Source:</b> {job.get('source', 'Unknown')}", info_style))
+            story.append(Paragraph(f"<b>Processing Time:</b> {job.get('processing_time', 0):.1f} seconds", info_style))
+            story.append(Spacer(1, 20))
+            
+            # Credibility Score
+            score = job.get('credibility_score', {})
+            score_style = ParagraphStyle(
+                'ScoreStyle',
+                parent=styles['Heading2'],
+                fontSize=18,
+                textColor=colors.HexColor('#34a853'),
+                spaceAfter=10
+            )
+            story.append(Paragraph(f"Overall Credibility: {score.get('label', 'Unknown')} ({score.get('score', 0)}%)", score_style))
+            
+            # Score table
+            score_data = [
+                ['Metric', 'Count'],
+                ['True Claims', score.get('true_claims', 0)],
+                ['False Claims', score.get('false_claims', 0)],
+                ['Unverified Claims', score.get('unverified_claims', 0)]
+            ]
+            
+            score_table = Table(score_data, colWidths=[200, 100])
+            score_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            story.append(score_table)
+            story.append(Spacer(1, 30))
+            
+            # Fact Checks
+            story.append(Paragraph("Fact Check Details", styles['Heading2']))
+            story.append(Spacer(1, 10))
+            
+            for i, fc in enumerate(job.get('fact_checks', []), 1):
+                claim_style = ParagraphStyle(
+                    'ClaimStyle',
+                    parent=styles['Normal'],
+                    fontSize=11,
+                    leftIndent=20,
+                    rightIndent=20,
+                    spaceAfter=5
+                )
+                
+                # Determine color based on verdict
+                verdict = fc.get('verdict', 'unknown').lower()
+                if verdict in ['true', 'correct', 'accurate']:
+                    verdict_color = '#34a853'
+                elif verdict in ['false', 'incorrect', 'inaccurate']:
+                    verdict_color = '#ea4335'
+                else:
+                    verdict_color = '#fbbc04'
+                
+                story.append(Paragraph(f"<b>{i}. Claim:</b> {fc.get('claim', 'N/A')}", claim_style))
+                story.append(Paragraph(f"<b>Verdict:</b> <font color='{verdict_color}'>{fc.get('verdict', 'Unknown').upper()}</font>", claim_style))
+                
+                if fc.get('explanation'):
+                    story.append(Paragraph(f"<b>Explanation:</b> {fc.get('explanation')}", claim_style))
+                
+                if fc.get('sources'):
+                    sources_text = ', '.join(fc.get('sources', []))
+                # Add the rest of the PDF export logic
+        for i, fc in enumerate(job.get('fact_checks', []), 1):
+            claim_style = ParagraphStyle(
+                'ClaimStyle',
+                parent=styles['Normal'],
+                fontSize=11,
+                leftIndent=20,
+                rightIndent=20,
+                spaceAfter=5
+            )
+            
+            # Determine color based on verdict
+            verdict = fc.get('verdict', 'unknown').lower()
+            if verdict in ['true', 'correct', 'accurate']:
+                verdict_color = '#34a853'
+            elif verdict in ['false', 'incorrect', 'inaccurate']:
+                verdict_color = '#ea4335'
+            else:
+                verdict_color = '#fbbc04'
+            
+            story.append(Paragraph(f"<b>{i}. Claim:</b> {fc.get('claim', 'N/A')}", claim_style))
+            story.append(Paragraph(f"<b>Verdict:</b> <font color='{verdict_color}'>{fc.get('verdict', 'Unknown').upper()}</font>", claim_style))
+            
+            if fc.get('explanation'):
+                story.append(Paragraph(f"<b>Explanation:</b> {fc.get('explanation')}", claim_style))
+            
+            if fc.get('sources'):
+                sources_text = ', '.join(fc.get('sources', []))
+                story.append(Paragraph(f"<b>Sources:</b> {sources_text}", claim_style))
+            
+            story.append(Spacer(1, 15))
+            
+            # Build PDF
+            doc.build(story)
+            buffer.seek(0)
+            
+            return send_file(
+                buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'fact_check_report_{job_id}.pdf'
             )
         else:
-            error_msg = result.get('error', 'Analysis failed')
-            logger.error(f"Analysis failed: {error_msg}")
-            return ResponseBuilder.error(error_msg, 400)
+            return jsonify({'error': 'Invalid format'}), 400
             
     except Exception as e:
-        logger.error(f"Analysis error: {e}", exc_info=True)
-        debug_info['errors'].append({
-            'timestamp': datetime.now().isoformat(),
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        })
-        return ResponseBuilder.error(f"Analysis error: {str(e)}", 500)
+        logger.error(f"Export error: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
 
-def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform backend result to match frontend expectations"""
-    
-    # Debug logging
-    logger.info(f"Transforming result with keys: {list(result.keys())}")
-    
-    # Extract all service results
-    services = {}
-    metadata_services = []
-    
-    # The pipeline returns service results directly in the result dict
-    service_names = [
-        'article_extractor', 'source_credibility', 'author_analyzer',
-        'bias_detector', 'fact_checker', 'transparency_analyzer',
-        'manipulation_detector', 'content_analyzer', 'plagiarism_detector'
-    ]
-    
-    for service_name in service_names:
-        if service_name in result and isinstance(result[service_name], dict):
-            # Check if it's a valid service result (has 'success' field)
-            service_result = result[service_name]
-            if 'success' in service_result and service_result.get('success'):
-                # Log what we're getting for each service
-                logger.info(f"Processing {service_name} with keys: {list(service_result.keys())[:10]}")
-                
-                # Extract the data field if it exists, otherwise use the whole result
-                if 'data' in service_result:
-                    services[service_name] = clean_service_data(service_result['data'])
-                else:
-                    # Remove only the metadata fields, keep everything else
-                    cleaned_result = {
-                        k: v for k, v in service_result.items()
-                        if k not in ['service', 'success', 'timestamp', 'available']
-                    }
-                    services[service_name] = clean_service_data(cleaned_result)
-                
-                metadata_services.append(service_name)
-                logger.info(f"Found successful service: {service_name} with {len(services[service_name])} fields")
-    
-    logger.info(f"Total services found: {len(services)}")
-    logger.info(f"Services used: {metadata_services}")
-    
-    # Extract article metadata from article_extractor if available
-    article_data = {}
-    if 'article' in result:
-        article_data = clean_article_data(result['article'])
-    elif 'article_extractor' in result and result['article_extractor'].get('success'):
-        # Extract from article_extractor service result
-        extractor_data = result['article_extractor']
-        if 'data' in extractor_data:
-            article_data = clean_article_data(extractor_data['data'])
-        else:
-            # Legacy format - extract relevant fields
-            article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
-                           'domain', 'description', 'image', 'keywords', 'word_count', 
-                           'source', 'language']
-            temp_article = {}
-            for field in article_fields:
-                if field in extractor_data:
-                    temp_article[field] = extractor_data[field]
-            article_data = clean_article_data(temp_article)
-    
-    # Build the expected structure
-    transformed = {
-        'analysis': {
-            'trust_score': result.get('trust_score', 0),
-            'trust_level': result.get('trust_level', 'unknown'),
-            'summary': result.get('summary', 'Analysis completed'),
-            'timestamp': datetime.now().isoformat(),
-            'key_findings': extract_key_findings(services)
-        },
-        'article': article_data,
-        'detailed_analysis': services,  # THIS IS THE KEY FIELD THAT WAS MISSING
-        'metadata': {
-            'services_available': result.get('pipeline_metadata', {}).get('total_available_services', 0),
-            'is_pro': result.get('is_pro', False),
-            'analysis_mode': 'premium' if result.get('is_pro', False) else 'basic',
-            'processing_time': result.get('pipeline_metadata', {}).get('total_duration', 0)
+@app.route('/api/export/<job_id>/pdf')
+def export_pdf(job_id):
+    """Direct PDF export endpoint for backward compatibility"""
+    return export_results(job_id, 'pdf')
+
+# Helper functions for analysis
+def calculate_credibility_score(fact_checks: List[Dict]) -> Dict:
+    """Calculate overall credibility score"""
+    if not fact_checks:
+        return {
+            'score': 0,
+            'label': 'No claims verified',
+            'true_claims': 0,
+            'false_claims': 0,
+            'unverified_claims': 0
         }
+    
+    # Count verdicts
+    true_count = sum(1 for fc in fact_checks if fc.get('verdict', '').lower() in ['true', 'mostly true', 'correct', 'accurate'])
+    false_count = sum(1 for fc in fact_checks if fc.get('verdict', '').lower() in ['false', 'mostly false', 'incorrect', 'inaccurate'])
+    mixed_count = sum(1 for fc in fact_checks if fc.get('verdict', '').lower() in ['mixed', 'partially true', 'half true'] or fc.get('rating', '').lower() == 'mixed')
+    unverified_count = sum(1 for fc in fact_checks if fc.get('verdict', '').lower() in ['unverified', 'unsubstantiated', 'lacks_context'])
+    
+    total = len(fact_checks)
+    
+    # Calculate weighted score
+    score = ((true_count * 100) + (mixed_count * 50) + (unverified_count * 30)) / total if total > 0 else 0
+    
+    # Determine label
+    if score >= 80:
+        label = 'High Credibility'
+    elif score >= 60:
+        label = 'Moderate Credibility'
+    elif score >= 40:
+        label = 'Low Credibility'
+    else:
+        label = 'Very Low Credibility'
+    
+    return {
+        'score': round(score),
+        'label': label,
+        'true_claims': true_count,
+        'false_claims': false_count,
+        'unverified_claims': unverified_count
     }
-    
-    # Log what we're returning for debugging
-    logger.info(f"Returning transformed result with detailed_analysis containing {len(services)} services")
-    if 'author_analyzer' in services:
-        logger.info(f"Author analyzer data included: {list(services['author_analyzer'].keys())}")
-        logger.info(f"Author analyzer sample data: credibility_score={services['author_analyzer'].get('credibility_score')}, author_name={services['author_analyzer'].get('author_name')}")
-    
-    return transformed
 
-def extract_key_findings(services: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Extract key findings from service results"""
-    findings = []
+def analyze_speaker_credibility(speakers: List[str], fact_checks: List[Dict]) -> Dict:
+    """Analyze speaker credibility - OPTIMIZED"""
+    speaker_info = {}
     
-    # Source credibility finding
-    if 'source_credibility' in services:
-        source = services['source_credibility']
-        score = source.get('credibility_score', source.get('score', 0))
-        if score < 50:
-            findings.append({
-                'type': 'negative',
-                'finding': 'Low source credibility',
-                'text': f"Source credibility score: {score}/100",
-                'severity': 'high'
-            })
-        elif score >= 80:
-            findings.append({
-                'type': 'positive',
-                'finding': 'High source credibility',
-                'text': f"Source credibility score: {score}/100",
-                'severity': 'low'
-            })
+    # Quick lookup instead of iterating
+    speaker_lookup = {}
+    for speaker in speakers:
+        speaker_lower = speaker.lower()
+        for key, info in SPEAKER_DATABASE.items():
+            if key in speaker_lower or speaker_lower in key:
+                speaker_lookup[speaker] = info
+                break
     
-    # Bias detection finding
-    if 'bias_detector' in services:
-        bias = services['bias_detector']
-        bias_score = bias.get('bias_score', bias.get('score', 0))
-        if bias_score > 60:
-            findings.append({
-                'type': 'negative',
-                'finding': 'High bias detected',
-                'text': f"Bias score: {bias_score}%",
-                'severity': 'high'
-            })
-        elif bias_score < 30:
-            findings.append({
-                'type': 'positive',
-                'finding': 'Low bias detected',
-                'text': f"Bias score: {bias_score}%",
-                'severity': 'low'
-            })
-    
-    # Fact checking finding
-    if 'fact_checker' in services:
-        facts = services['fact_checker']
-        if 'fact_checks' in facts and isinstance(facts['fact_checks'], list):
-            total = len(facts['fact_checks'])
-            verified = sum(1 for f in facts['fact_checks'] 
-                         if f.get('verdict') in ['True', 'Verified', 'true', 'verified'])
-            if total > 0:
-                accuracy = int((verified / total) * 100)
-                if accuracy < 50:
-                    findings.append({
-                        'type': 'negative',
-                        'finding': 'Low fact accuracy',
-                        'text': f"Only {verified}/{total} claims verified ({accuracy}%)",
-                        'severity': 'high'
-                    })
-                elif accuracy >= 80:
-                    findings.append({
-                        'type': 'positive',
-                        'finding': 'High fact accuracy',
-                        'text': f"{verified}/{total} claims verified ({accuracy}%)",
-                        'severity': 'low'
-                    })
-    
-    # Author credibility finding
-    if 'author_analyzer' in services:
-        author = services['author_analyzer']
-        if author.get('author_name'):
-            score = author.get('credibility_score', author.get('author_score', 0))
-            if score > 0:
-                if score < 40:
-                    findings.append({
-                        'type': 'warning',
-                        'finding': 'Limited author credibility',
-                        'text': f"Author {author['author_name']} has credibility score: {score}/100",
-                        'severity': 'medium'
-                    })
-                elif score >= 70:
-                    findings.append({
-                        'type': 'positive',
-                        'finding': 'Credible author',
-                        'text': f"Author {author['author_name']} has credibility score: {score}/100",
-                        'severity': 'low'
-                    })
-        else:
-            findings.append({
-                'type': 'warning',
-                'finding': 'No author information',
-                'text': 'Article lacks author attribution',
-                'severity': 'medium'
-            })
-    
-    # Sort findings by severity (high first)
-    severity_order = {'high': 0, 'medium': 1, 'low': 2}
-    findings.sort(key=lambda f: severity_order.get(f.get('severity', 'medium'), 1))
-    
-    return findings[:5]  # Return top 5 findings
-
-# DEBUG ROUTES
-
-@app.route('/api/debug/info')
-def debug_get_info():
-    """Get debug information"""
-    return jsonify(debug_info)
-
-@app.route('/api/debug/services')
-def debug_services():
-    """Get detailed service information"""
-    try:
-        from services.service_registry import service_registry
-        
-        services_info = {}
-        for name, service in service_registry.services.items():
-            services_info[name] = {
-                'available': service.is_available,
-                'class': service.__class__.__name__,
-                'module': service.__class__.__module__
-            }
-        
-        return jsonify({
-            'services': services_info,
-            'failed': service_registry.failed_services,
-            'total': len(services_info),
-            'available': sum(1 for s in services_info.values() if s['available'])
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/debug/test-analyze')
-def debug_test_analyze():
-    """Test analysis with a known good URL"""
-    test_url = "https://www.bbc.com/news/world-us-canada-68562045"
-    
-    try:
-        logger.info(f"Running test analysis on: {test_url}")
-        
-        result = news_analyzer.analyze(test_url, content_type='url', pro_mode=True)
-        
-        return jsonify({
-            'test_url': test_url,
-            'result': result,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        logger.error(f"Test analysis error: {e}", exc_info=True)
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
-
-@app.route('/api/debug/openai')
-def debug_openai():
-    """Debug endpoint specifically for OpenAI service"""
-    try:
-        from services.service_registry import get_service_registry
-        registry = get_service_registry()
-        
-        # Basic info
-        openai_info = {
-            'api_key_set': bool(Config.OPENAI_API_KEY),
-            'api_key_length': len(Config.OPENAI_API_KEY) if Config.OPENAI_API_KEY else 0,
-            'service_enabled_in_config': Config.is_service_enabled('openai_enhancer'),
+    # Process matched speakers
+    for speaker, info in speaker_lookup.items():
+        speaker_info[speaker] = {
+            'full_name': info.get('full_name', speaker),
+            'role': info.get('role', 'Unknown'),
+            'party': info.get('party', 'Unknown'),
+            'credibility_notes': info.get('credibility_notes', ''),
+            'historical_accuracy': info.get('fact_check_history', 'No data available')
         }
         
-        # Registry status
-        status = registry.get_service_status()
-        if 'openai_enhancer' in status['services']:
-            openai_info['registry_status'] = status['services']['openai_enhancer']
-        else:
-            openai_info['registry_status'] = 'Not in registry'
-            if 'openai_enhancer' in status.get('failed_services', {}):
-                openai_info['failure_reason'] = status['failed_services']['openai_enhancer']
+        # Add warnings efficiently
+        warnings = []
+        if info.get('criminal_record'):
+            warnings.append(f"Criminal Record: {info['criminal_record']}")
+        if info.get('fraud_history'):
+            warnings.append(f"Fraud History: {info['fraud_history']}")
         
-        # Test the service
-        service = registry.get_service('openai_enhancer')
-        if service:
-            openai_info['service_available'] = service.is_available
-            
-            # Try a minimal test
-            if service.is_available:
-                test_result = service.analyze({
-                    'title': 'Debug Test',
-                    'text': 'Testing OpenAI service availability.',
-                    'author': 'Debug',
-                    'source': 'Debug'
-                })
-                openai_info['test_success'] = test_result.get('success', False)
-                if not test_result.get('success'):
-                    openai_info['test_error'] = test_result.get('error')
-        else:
-            openai_info['service_available'] = False
-        
-        return jsonify({
-            'status': 'debug',
-            'openai_service': openai_info,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"OpenAI debug error: {e}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+        if warnings:
+            speaker_info[speaker]['warnings'] = warnings
+    
+    return speaker_info
 
-# STATIC FILE SERVING
-
-@app.route('/static/<path:path>')
-def serve_static_files(path):
-    """Serve static files with correct MIME types"""
-    try:
-        # Security check
-        if '..' in path or path.startswith('/'):
-            return "Invalid path", 400
-        
-        # Determine MIME type
-        mime_types = {
-            '.js': 'application/javascript',
-            '.css': 'text/css',
-            '.html': 'text/html',
-            '.json': 'application/json',
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon',
-            '.woff': 'font/woff',
-            '.woff2': 'font/woff2',
-            '.ttf': 'font/ttf'
+@app.route('/api/debug/jobs')
+def debug_jobs():
+    """Debug endpoint to see all jobs in memory"""
+    if not Config.DEBUG:
+        return jsonify({'error': 'Debug mode not enabled'}), 403
+    
+    jobs_summary = {}
+    for job_id, job_data in in_memory_jobs.items():
+        jobs_summary[job_id] = {
+            'status': job_data.get('status'),
+            'progress': job_data.get('progress'),
+            'created_at': job_data.get('created_at'),
+            'completed_at': job_data.get('completed_at'),
+            'has_credibility_score': 'credibility_score' in job_data,
+            'has_fact_checks': 'fact_checks' in job_data and len(job_data.get('fact_checks', [])) > 0,
+            'total_claims': job_data.get('total_claims', 0)
         }
-        
-        _, ext = os.path.splitext(path)
-        mime_type = mime_types.get(ext.lower(), 'application/octet-stream')
-        
-        # Serve the file
-        response = send_from_directory(app.static_folder, path)
-        response.headers['Content-Type'] = mime_type
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error serving static file {path}: {e}")
-        return f"File not found: {path}", 404
+    
+    return jsonify({
+        'total_jobs': len(in_memory_jobs),
+        'jobs': jobs_summary,
+        'storage_type': 'in-memory'
+    })
 
-# ERROR HANDLERS
-
-@app.errorhandler(404)
-def not_found(e):
-    return ResponseBuilder.error("Resource not found", 404)
-
-@app.errorhandler(500)
-def server_error(e):
-    logger.error(f"Server error: {e}", exc_info=True)
-    return ResponseBuilder.error("Internal server error", 500)
-
-# STARTUP
-
-def track_initialization():
-    """Track service initialization for debugging"""
-    global debug_info
-    try:
-        from services.service_registry import service_registry
-        
-        debug_info['initialization_log'].append({
-            'timestamp': datetime.now().isoformat(),
-            'event': 'startup',
-            'services_loaded': list(service_registry.services.keys()),
-            'services_available': [
-                name for name, service in service_registry.services.items() 
-                if service.is_available
-            ],
-            'failed_services': service_registry.failed_services
-        })
-    except Exception as e:
-        debug_info['initialization_log'].append({
-            'timestamp': datetime.now().isoformat(),
-            'event': 'startup_error',
-            'error': str(e)
-        })
+@app.route('/api/debug/job/<job_id>')
+def debug_job_details(job_id):
+    """Debug endpoint to see specific job details"""
+    if not Config.DEBUG:
+        return jsonify({'error': 'Debug mode not enabled'}), 403
+    
+    job = in_memory_jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+    
+    return jsonify({
+        'job_id': job_id,
+        'full_data': job
+    })
 
 if __name__ == '__main__':
     # Validate configuration on startup
-    config_status = Config.validate()
-    if not config_status['valid']:
-        logger.error(f"Configuration errors: {config_status['errors']}")
-        sys.exit(1)
+    warnings = Config.validate()
+    for warning in warnings:
+        logger.warning(warning)
     
-    if config_status['warnings']:
-        for warning in config_status['warnings']:
-            logger.warning(f"Configuration warning: {warning}")
+    # Use environment variable PORT if available (for Render)
+    port = int(os.environ.get('PORT', Config.PORT))
     
-    # Track initialization
-    track_initialization()
-    
-    # Log startup information
-    logger.info(f"Starting News Analyzer API in {Config.ENV} mode")
-    logger.info(f"Enabled services: {config_status['enabled_services']}")
-    logger.info(f"Debug endpoints available: /api/debug/info, /api/debug/services, /api/debug/test-analyze, /api/debug/openai")
-    
-    # Run the application
-    port = int(os.environ.get('PORT', 5000))
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=Config.DEBUG
-    )
+    # Run the app
+    app.run(debug=Config.DEBUG, host='0.0.0.0', port=port)
