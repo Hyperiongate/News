@@ -804,5 +804,283 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function() {
+        // 1. Retrieve data
+        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
+        const biasData = analysisData?.detailed_analysis?.bias_detector || {};
+        
+        // 2. Check if data exists
+        if (!Object.keys(biasData).length) {
+            // Show no data message
+            document.querySelector('.bias-analysis-container').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
+                    <h2>No Analysis Data Available</h2>
+                    <p>Please run an analysis first to see results.</p>
+                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // 3. Update UI elements
+        updatePageElements(biasData);
+        
+        function updatePageElements(data) {
+            // Update bias score and label
+            const biasScore = Math.round(data.bias_score || 0);
+            document.querySelector('.bias-score-display').textContent = biasScore;
+            
+            // Update spectrum marker position
+            const marker = document.querySelector('.spectrum-marker');
+            marker.style.left = biasScore + '%';
+            marker.textContent = biasScore;
+            
+            // Update bias label based on score and lean
+            const biasLabel = getBiasLabel(biasScore, data.political_lean);
+            document.querySelector('.bias-label').textContent = biasLabel;
+            
+            // Update loaded phrases
+            const phrasesContainer = document.querySelector('.loaded-phrases');
+            phrasesContainer.innerHTML = '';
+            if (data.loaded_phrases && data.loaded_phrases.length > 0) {
+                data.loaded_phrases.forEach(phrase => {
+                    const tag = document.createElement('span');
+                    tag.className = 'phrase-tag ' + getBiasSeverityClass(phrase.severity);
+                    tag.textContent = phrase.text || phrase;
+                    phrasesContainer.appendChild(tag);
+                });
+            } else {
+                phrasesContainer.innerHTML = '<span class="phrase-tag">No loaded phrases detected</span>';
+            }
+            
+            // Update bias dimensions
+            const biasTypes = [
+                { type: 'political', icon: 'landmark', score: data.political_bias || 0 },
+                { type: 'corporate', icon: 'building', score: data.corporate_bias || 0 },
+                { type: 'sensational', icon: 'fire', score: data.sensationalism || 0 },
+                { type: 'cultural', icon: 'globe', score: data.cultural_bias || 0 },
+                { type: 'confirmation', icon: 'check-circle', score: data.confirmation_bias || 0 },
+                { type: 'selection', icon: 'filter', score: data.selection_bias || 0 }
+            ];
+            
+            const biasTypesGrid = document.querySelector('.bias-types-grid');
+            biasTypesGrid.innerHTML = '';
+            
+            biasTypes.forEach(biasType => {
+                const card = createBiasTypeCard(biasType, data);
+                biasTypesGrid.appendChild(card);
+            });
+            
+            // Update statistics
+            const stats = {
+                overall: biasScore + '%',
+                loadedTerms: data.loaded_terms_count || 0,
+                onesidedSources: (data.one_sided_sources || 0) + '%',
+                manipulationRisk: getManipulationLevel(data.manipulation_level)
+            };
+            
+            const statValues = document.querySelectorAll('.stat-value');
+            statValues[0].textContent = stats.overall;
+            statValues[1].textContent = stats.loadedTerms;
+            statValues[2].textContent = stats.onesidedSources;
+            statValues[3].textContent = stats.manipulationRisk;
+            
+            // Update key findings
+            const findingsList = document.querySelector('.findings-list');
+            findingsList.innerHTML = '';
+            if (data.key_findings && data.key_findings.length > 0) {
+                data.key_findings.forEach(finding => {
+                    const findingItem = createFindingItem(finding);
+                    findingsList.appendChild(findingItem);
+                });
+            } else {
+                // Add default findings based on bias score
+                const defaultFindings = generateDefaultFindings(biasScore, data);
+                defaultFindings.forEach(finding => {
+                    const findingItem = createFindingItem(finding);
+                    findingsList.appendChild(findingItem);
+                });
+            }
+            
+            // Update comparison bars
+            updateComparisonBars(biasScore, data);
+        }
+        
+        function createBiasTypeCard(biasType, data) {
+            const card = document.createElement('div');
+            card.className = 'bias-type-card';
+            
+            const examples = data[biasType.type + '_examples'] || [];
+            const examplesHtml = examples.length > 0 
+                ? examples.map(ex => `<div class="example-item">${ex}</div>`).join('')
+                : '<div class="example-item">No specific examples detected</div>';
+            
+            card.innerHTML = `
+                <div class="bias-type-header">
+                    <div class="bias-type-icon bias-type-${biasType.type}">
+                        <i class="fas fa-${biasType.icon}"></i>
+                    </div>
+                    <div class="bias-type-info">
+                        <h3>${capitalizeFirst(biasType.type)} Bias</h3>
+                    </div>
+                </div>
+                <div class="bias-score-bar">
+                    <div class="bias-score-fill ${getBiasLevelClass(biasType.score)}" style="width: ${biasType.score}%;"></div>
+                </div>
+                <div class="bias-examples">
+                    <p>${getExampleDescription(biasType.type)}:</p>
+                    ${examplesHtml}
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        function createFindingItem(finding) {
+            const item = document.createElement('div');
+            item.className = `finding-item finding-${finding.severity || 'medium'}`;
+            item.innerHTML = `
+                <div class="finding-indicator"></div>
+                <div class="finding-content">
+                    <div class="finding-text">${finding.text || finding}</div>
+                    <div class="finding-detail">${finding.detail || ''}</div>
+                </div>
+            `;
+            return item;
+        }
+        
+        function updateComparisonBars(biasScore, data) {
+            const bars = document.querySelectorAll('.comparison-fill');
+            // This Article
+            bars[0].style.width = biasScore + '%';
+            bars[0].setAttribute('data-value', biasScore + '%');
+            
+            // Source Average
+            const sourceAvg = data.source_average || 62;
+            bars[1].style.width = sourceAvg + '%';
+            bars[1].setAttribute('data-value', sourceAvg + '%');
+            
+            // Topic Average
+            const topicAvg = data.topic_average || 45;
+            bars[2].style.width = topicAvg + '%';
+            bars[2].setAttribute('data-value', topicAvg + '%');
+            
+            // Industry Standard
+            const industryStd = data.industry_standard || 35;
+            bars[3].style.width = industryStd + '%';
+            bars[3].setAttribute('data-value', industryStd + '%');
+            
+            // Update values
+            const values = document.querySelectorAll('.comparison-value');
+            values[0].textContent = biasScore + '%';
+            values[1].textContent = sourceAvg + '%';
+            values[2].textContent = topicAvg + '%';
+            values[3].textContent = industryStd + '%';
+        }
+        
+        // Helper functions
+        function getBiasLabel(score, lean) {
+            if (score < 20) return 'Minimal Bias';
+            if (score < 40) {
+                if (lean === 'left') return 'Slight Left Bias';
+                if (lean === 'right') return 'Slight Right Bias';
+                return 'Slight Bias Detected';
+            }
+            if (score < 60) {
+                if (lean === 'left') return 'Moderate Left Bias';
+                if (lean === 'right') return 'Moderate Right Bias';
+                return 'Moderate Bias Detected';
+            }
+            if (score < 80) {
+                if (lean === 'left') return 'Strong Left Bias';
+                if (lean === 'right') return 'Strong Right Bias';
+                return 'Strong Bias Detected';
+            }
+            if (lean === 'left') return 'Extreme Left Bias';
+            if (lean === 'right') return 'Extreme Right Bias';
+            return 'Extreme Bias Detected';
+        }
+        
+        function getBiasSeverityClass(severity) {
+            if (!severity) return '';
+            if (severity === 'high') return 'high-bias';
+            if (severity === 'medium') return 'medium-bias';
+            return '';
+        }
+        
+        function getBiasLevelClass(score) {
+            if (score >= 60) return 'bias-score-high';
+            if (score >= 30) return 'bias-score-medium';
+            return 'bias-score-low';
+        }
+        
+        function getManipulationLevel(level) {
+            if (!level) return 'Low';
+            if (typeof level === 'number') {
+                if (level >= 70) return 'High';
+                if (level >= 40) return 'Medium';
+                return 'Low';
+            }
+            return level.charAt(0).toUpperCase() + level.slice(1);
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        function getExampleDescription(type) {
+            const descriptions = {
+                political: 'Political framing detected',
+                corporate: 'Business perspective bias',
+                sensational: 'Emotional manipulation detected',
+                cultural: 'Cultural assumptions found',
+                confirmation: 'Cherry-picked evidence',
+                selection: 'Selective coverage detected'
+            };
+            return descriptions[type] || 'Examples detected';
+        }
+        
+        function generateDefaultFindings(score, data) {
+            const findings = [];
+            
+            if (score >= 60) {
+                findings.push({
+                    text: 'High level of bias detected in content',
+                    detail: `Bias score of ${score}% indicates significant perspective slant`,
+                    severity: 'high'
+                });
+            }
+            
+            if (data.loaded_phrases && data.loaded_phrases.length > 5) {
+                findings.push({
+                    text: 'Multiple instances of loaded language found',
+                    detail: `${data.loaded_phrases.length} emotionally charged terms detected`,
+                    severity: 'medium'
+                });
+            }
+            
+            if (data.political_lean) {
+                findings.push({
+                    text: `Political lean towards ${data.political_lean} detected`,
+                    detail: 'Content shows preference for one political perspective',
+                    severity: 'medium'
+                });
+            }
+            
+            if (findings.length === 0) {
+                findings.push({
+                    text: 'Moderate bias levels detected',
+                    detail: 'Some perspective slant present but within acceptable range',
+                    severity: 'low'
+                });
+            }
+            
+            return findings;
+        }
+    })();
+    </script>
 </body>
 </html>
