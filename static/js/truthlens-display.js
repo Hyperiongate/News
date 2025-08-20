@@ -54,77 +54,41 @@ class TruthLensDisplay {
             return;
         }
 
-        servicesGrid.innerHTML = '';
+        // Show loading state
+        servicesGrid.innerHTML = '<div class="services-loading"><i class="fas fa-spinner fa-spin"></i> Loading analysis results...</div>';
         
-        // Service configuration
-        const SERVICES = [
-            {
-                id: 'source_credibility',
-                name: 'Source Credibility',
-                icon: 'fa-shield-alt',
-                description: 'Comprehensive evaluation of news source reliability and trustworthiness',
-                url: '/templates/source-credibility.html'
-            },
-            {
-                id: 'author_analyzer',
-                name: 'Author Analysis',
-                icon: 'fa-user-check',
-                description: 'In-depth assessment of author credentials and publishing history',
-                url: '/templates/author-analysis.html'
-            },
-            {
-                id: 'bias_detector',
-                name: 'Bias Detection',
-                icon: 'fa-balance-scale',
-                description: 'Multi-dimensional analysis of political and ideological bias',
-                url: '/templates/bias-detection.html'
-            },
-            {
-                id: 'fact_checker',
-                name: 'Fact Checking',
-                icon: 'fa-check-double',
-                description: 'Verification of claims against authoritative sources',
-                url: '/templates/fact-checking.html'
-            },
-            {
-                id: 'transparency_analyzer',
-                name: 'Transparency Analysis',
-                icon: 'fa-eye',
-                description: 'Assessment of disclosure, sourcing, and editorial transparency',
-                url: '/templates/transparency-analysis.html'
-            },
-            {
-                id: 'manipulation_detector',
-                name: 'Manipulation Detection',
-                icon: 'fa-mask',
-                description: 'Identification of manipulative tactics and emotional exploitation',
-                url: '/templates/manipulation-detection.html'
-            },
-            {
-                id: 'content_analyzer',
-                name: 'Content Analysis',
-                icon: 'fa-file-alt',
-                description: 'Evaluation of writing quality, readability, and structure',
-                url: '/templates/content-analysis.html'
-            }
-        ];
+        // Use centralized service configuration from CONFIG
+        const SERVICES = CONFIG.SERVICES;
+        
+        // Small delay for smooth transition
+        setTimeout(() => {
+            servicesGrid.innerHTML = '';
+            let completedCount = 0;
 
-        let completedCount = 0;
+            SERVICES.forEach(service => {
+                // Check if we have data for this service
+                const serviceData = data?.detailed_analysis?.[service.id] || null;
+                const hasData = serviceData && Object.keys(serviceData).length > 0;
+                
+                if (hasData) completedCount++;
 
-        SERVICES.forEach(service => {
-            // Check if we have data for this service
-            const serviceData = data?.detailed_analysis?.[service.id] || null;
-            const hasData = serviceData && Object.keys(serviceData).length > 0;
-            
-            if (hasData) completedCount++;
-
-            // Create the card element
-            const card = document.createElement('a');
-            card.href = hasData ? service.url : '#';
-            card.className = `service-card ${service.id.replace(/_/g, '-')} ${hasData ? '' : 'pending'}`;
-            if (!hasData) {
-                card.addEventListener('click', (e) => e.preventDefault());
-            }
+                // Create the card element
+                const card = document.createElement('a');
+                card.className = `service-card ${service.id.replace(/_/g, '-')} ${hasData ? '' : 'pending loading'}`;
+                
+                // Better handling for cards without data
+                if (hasData) {
+                    card.href = service.url;
+                    // Add smooth transition
+                    setTimeout(() => card.classList.remove('loading'), 100);
+                } else {
+                    card.style.cursor = 'not-allowed';
+                    card.onclick = (e) => {
+                        e.preventDefault();
+                        this.app.utils.showError(`${service.name} analysis not available for this article`);
+                        return false;
+                    };
+                }
 
             // Get the primary metric for this service
             const primaryMetric = this.getServicePrimaryMetric(service.id, serviceData);
