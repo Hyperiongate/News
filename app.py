@@ -96,28 +96,73 @@ def after_request(response):
     
     return response
 
-# Data cleaning functions
+# Data cleaning functions - FIXED VERSION
 def clean_service_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Clean service data by removing corrupted fields"""
+    """Clean service data by removing only truly corrupted fields while preserving all other data"""
+    if not isinstance(data, dict):
+        return data
+        
     cleaned = {}
     
+    # Define fields that should be preserved as-is (never cleaned)
+    preserve_fields = {
+        'credibility_score', 'author_score', 'score', 'bias_score', 'transparency_score',
+        'verified', 'success', 'available', 'service', 'timestamp',
+        'author_name', 'source_name', 'domain', 'position', 'organization',
+        'current_position', 'article_count', 'accuracy_rate', 'awards_count',
+        'experience', 'findings', 'metrics', 'recent_articles', 'expertise_areas',
+        'social_media', 'awards', 'bio_url', 'trust_score', 'trust_level',
+        'bias_indicators', 'fact_checks', 'claims_checked', 'verdict',
+        'transparency_indicators', 'missing_elements', 'manipulation_tactics'
+    }
+    
     for key, value in data.items():
+        # Always preserve certain critical fields
+        if key in preserve_fields:
+            cleaned[key] = value
+            continue
+            
         # Skip HTML field if it contains corrupted data
         if key == 'html' and isinstance(value, str):
             if contains_corrupted_data(value):
                 logger.warning(f"Skipping corrupted HTML field")
                 continue
-        
-        # Recursively clean nested dictionaries
-        if isinstance(value, dict):
-            cleaned[key] = clean_service_data(value)
-        # Clean lists
+            else:
+                cleaned[key] = value
+        # Handle nested dictionaries
+        elif isinstance(value, dict):
+            cleaned_dict = clean_service_data(value)
+            if cleaned_dict:  # Only add if not empty
+                cleaned[key] = cleaned_dict
+        # Handle lists
         elif isinstance(value, list):
-            cleaned[key] = [clean_value(item) for item in value]
+            cleaned_list = []
+            for item in value:
+                if isinstance(item, dict):
+                    cleaned_item = clean_service_data(item)
+                    if cleaned_item:
+                        cleaned_list.append(cleaned_item)
+                elif isinstance(item, str) and contains_corrupted_data(item):
+                    continue  # Skip corrupted strings in lists
+                else:
+                    cleaned_list.append(item)
+            if cleaned_list:  # Only add if not empty
+                cleaned[key] = cleaned_list
+        # Handle strings
+        elif isinstance(value, str):
+            if key in ['bio', 'full_bio', 'text', 'content'] and contains_corrupted_data(value):
+                # For long text fields, try to extract clean portion
+                clean_portion = extract_clean_text(value)
+                if clean_portion:
+                    cleaned[key] = clean_portion
+                # Skip entirely if no clean portion found
+            else:
+                # For other string fields, keep as-is unless corrupted
+                if not contains_corrupted_data(value):
+                    cleaned[key] = value
+        # Keep all other types as-is (numbers, booleans, etc.)
         else:
-            cleaned_value = clean_value(value)
-            if cleaned_value is not None:
-                cleaned[key] = cleaned_value
+            cleaned[key] = value
     
     return cleaned
 
@@ -346,7 +391,7 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
     service_names = [
         'article_extractor', 'source_credibility', 'author_analyzer',
         'bias_detector', 'fact_checker', 'transparency_analyzer',
-        'manipulation_detector', 'content_analyzer'
+        'manipulation_detector', 'content_analyzer', 'plagiarism_detector'
     ]
     
     for service_name in service_names:
@@ -354,11 +399,14 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
             # Check if it's a valid service result (has 'success' field)
             service_result = result[service_name]
             if 'success' in service_result and service_result.get('success'):
+                # Log what we're getting for each service
+                logger.info(f"Processing {service_name} with keys: {list(service_result.keys())[:10]}")
+                
                 # Extract the data field if it exists, otherwise use the whole result
                 if 'data' in service_result:
                     services[service_name] = clean_service_data(service_result['data'])
                 else:
-                    # Remove metadata fields for cleaner output
+                    # Remove only the metadata fields, keep everything else
                     cleaned_result = {
                         k: v for k, v in service_result.items()
                         if k not in ['service', 'success', 'timestamp', 'available']
@@ -366,7 +414,7 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
                     services[service_name] = clean_service_data(cleaned_result)
                 
                 metadata_services.append(service_name)
-                logger.info(f"Found successful service: {service_name}")
+                logger.info(f"Found successful service: {service_name} with {len(services[service_name])} fields")
     
     logger.info(f"Total services found: {len(services)}")
     logger.info(f"Services used: {metadata_services}")
@@ -410,10 +458,11 @@ def transform_analysis_result(result: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
     
-    # Log what we're returning
+    # Log what we're returning for debugging
     logger.info(f"Returning transformed result with detailed_analysis containing {len(services)} services")
     if 'author_analyzer' in services:
         logger.info(f"Author analyzer data included: {list(services['author_analyzer'].keys())}")
+        logger.info(f"Author analyzer sample data: credibility_score={services['author_analyzer'].get('credibility_score')}, author_name={services['author_analyzer'].get('author_name')}")
     
     return transformed
 
