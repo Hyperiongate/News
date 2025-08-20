@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Analysis - TruthLens AI</title>
+    <title>Content Analysis - TruthLens Analysis</title>
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons & Fonts -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS Variables */
+        /* Use same CSS variables from index.html */
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
@@ -19,8 +22,8 @@
             --danger: #ef4444;
             --warning: #f59e0b;
             --info: #3b82f6;
-            --cyan: #06b6d4;
             --dark: #1f2937;
+            --gray-700: #374151;
             --gray-600: #4b5563;
             --gray-500: #6b7280;
             --gray-400: #9ca3af;
@@ -29,10 +32,17 @@
             --gray-100: #f3f4f6;
             --gray-50: #f9fafb;
             --white: #ffffff;
+            
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius: 0.5rem;
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            
+            --radius: 0.75rem;
+            --radius-lg: 1rem;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
         }
 
         * {
@@ -42,1168 +52,477 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-50);
             color: var(--dark);
-            line-height: 1.5;
-            padding: 1rem;
+            line-height: 1.6;
         }
 
-        /* Main Container */
-        .content-analysis-container {
+        /* Header with Return Button */
+        .service-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
             max-width: 1200px;
             margin: 0 auto;
-            background: var(--white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        /* Header Section */
-        .analysis-header {
-            background: linear-gradient(135deg, var(--cyan) 0%, #0891b2 100%);
-            color: white;
-            padding: 1.5rem;
+            padding: 1rem 2rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-        }
-
-        .header-left {
-            display: flex;
             align-items: center;
-            gap: 1rem;
         }
 
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 0.375rem;
+        /* Prominent Return Button */
+        .return-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .return-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .return-button i {
+            font-size: 1.125rem;
+        }
+
+        .service-title-section {
+            flex: 1;
+            text-align: center;
+        }
+
+        .service-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            gap: 0.75rem;
         }
 
-        .header-content h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .header-subtitle {
-            font-size: 0.875rem;
-            opacity: 0.9;
-        }
-
-        .back-button {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 0.375rem;
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
             color: white;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 600;
+            border-radius: 0.5rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-        }
-
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        /* Quality Overview */
-        .quality-overview {
-            padding: 2rem;
-            background: var(--gray-50);
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .quality-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-
-        .quality-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: var(--shadow-sm);
-            border: 2px solid var(--gray-200);
-            transition: all 0.3s;
-        }
-
-        .quality-card.excellent {
-            border-color: var(--secondary);
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(16, 185, 129, 0.05) 100%);
-        }
-
-        .quality-card.good {
-            border-color: var(--info);
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(59, 130, 246, 0.05) 100%);
-        }
-
-        .quality-card.fair {
-            border-color: var(--warning);
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, rgba(245, 158, 11, 0.05) 100%);
-        }
-
-        .quality-icon {
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .quality-card.excellent .quality-icon { color: var(--secondary); }
-        .quality-card.good .quality-icon { color: var(--info); }
-        .quality-card.fair .quality-icon { color: var(--warning); }
-
-        .quality-metric {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .quality-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 1.5rem;
-        }
-
-        /* Readability Analysis */
-        .readability-section {
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
+            justify-content: center;
             font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
         }
 
-        .section-icon {
-            color: var(--cyan);
-        }
-
-        .readability-chart {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-        }
-
-        .reading-level-display {
-            text-align: center;
+        /* Analysis Summary Section */
+        .analysis-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem 0;
             margin-bottom: 2rem;
         }
 
-        .grade-circle {
-            width: 120px;
-            height: 120px;
-            background: var(--white);
-            border: 8px solid var(--cyan);
+        .summary-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .summary-score {
+            text-align: center;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1rem;
-            box-shadow: var(--shadow-lg);
+            position: relative;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
         }
 
-        .grade-number {
-            font-size: 2.5rem;
+        .score-value {
+            font-size: 3rem;
             font-weight: 800;
-            color: var(--dark);
+            font-family: var(--font-display);
         }
 
-        .grade-label {
-            font-size: 0.75rem;
-            color: var(--gray-600);
+        .score-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .reading-description {
-            font-size: 0.875rem;
-            color: var(--gray-700);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .readability-metrics {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .metric-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1rem;
-            text-align: center;
-            border: 1px solid var(--gray-200);
-        }
-
-        .metric-value {
+        .summary-details h2 {
             font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-            display: block;
-            margin-bottom: 0.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            opacity: 0.9;
         }
 
-        .metric-name {
-            font-size: 0.813rem;
-            color: var(--gray-600);
+        .summary-item {
+            margin-bottom: 1.25rem;
         }
 
-        /* Structure Analysis */
-        .structure-analysis {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 2rem;
-        }
-
-        .structure-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .structure-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .structure-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gray-100);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            color: var(--cyan);
-        }
-
-        .structure-content {
-            flex: 1;
-        }
-
-        .structure-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            margin-bottom: 0.125rem;
-        }
-
-        .structure-value {
+        .summary-item h3 {
             font-size: 1rem;
             font-weight: 600;
-            color: var(--dark);
-        }
-
-        /* Language Quality */
-        .language-quality {
-            margin-bottom: 2rem;
-        }
-
-        .quality-indicators {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .indicator-card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.25rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .indicator-header {
+            margin-bottom: 0.375rem;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
+            gap: 0.5rem;
         }
 
-        .indicator-title {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .indicator-score {
+        .summary-item h3 i {
             font-size: 0.875rem;
-            font-weight: 600;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
+            opacity: 0.8;
         }
 
-        .score-excellent {
-            background: var(--secondary);
-            color: white;
+        .summary-item p {
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            opacity: 0.95;
         }
 
-        .score-good {
-            background: var(--info);
-            color: white;
+        /* Main Content Area */
+        .service-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
         }
 
-        .score-needs-work {
-            background: var(--warning);
-            color: white;
-        }
-
-        .indicator-details {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-        }
-
-        .issues-list {
-            margin-top: 0.5rem;
-            padding-left: 1rem;
-        }
-
-        .issue-item {
-            font-size: 0.75rem;
-            color: var(--gray-700);
-            margin-bottom: 0.25rem;
-        }
-
-        /* Key Findings */
-        .findings-panel {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(8, 145, 178, 0.03) 100%);
-            border: 1px solid rgba(6, 182, 212, 0.2);
-            border-radius: var(--radius);
+        /* Service-specific styles from truthlens-services.js */
+        .service-section {
+            background: var(--white);
+            border-radius: var(--radius-lg);
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
         }
 
-        .findings-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .findings-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--cyan);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-        }
-
-        .findings-title {
+        .section-title {
             font-size: 1.125rem;
             font-weight: 700;
             color: var(--dark);
-        }
-
-        .findings-list {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--white);
-            border-radius: 0.375rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .finding-indicator {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-top: 0.5rem;
-            flex-shrink: 0;
-        }
-
-        .finding-positive .finding-indicator {
-            background: var(--secondary);
-        }
-
-        .finding-negative .finding-indicator {
-            background: var(--danger);
-        }
-
-        .finding-neutral .finding-indicator {
-            background: var(--warning);
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-text {
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-detail {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        /* Content Distribution */
-        .distribution-section {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-        }
-
-        .distribution-chart {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .distribution-item {
-            text-align: center;
-            padding: 1rem;
-            background: var(--white);
-            border-radius: var(--radius);
-            border: 1px solid var(--gray-200);
-        }
-
-        .distribution-icon {
-            font-size: 1.5rem;
-            color: var(--cyan);
-            margin-bottom: 0.5rem;
-        }
-
-        .distribution-percentage {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-            display: block;
-        }
-
-        .distribution-label {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-        }
-
-        /* Recommendations */
-        .recommendations-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .recommendation-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1rem;
-            border: 1px solid var(--gray-200);
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .rec-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--cyan);
-            color: white;
-            border-radius: 0.375rem;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 0.875rem;
+            gap: 0.5rem;
         }
 
-        .rec-content {
-            flex: 1;
+        .section-title i {
+            color: var(--primary);
+            font-size: 1rem;
         }
 
-        .rec-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
+        /* Loading State */
+        .loading-container {
+            text-align: center;
+            padding: 4rem 2rem;
         }
 
-        .rec-text {
-            font-size: 0.813rem;
-            color: var(--gray-600);
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error-container {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem auto;
+            max-width: 600px;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            color: var(--danger);
+            margin-bottom: 1rem;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .quality-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .readability-metrics {
+            .summary-content {
                 grid-template-columns: 1fr;
+                gap: 2rem;
             }
 
-            .structure-grid {
-                grid-template-columns: 1fr;
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
             }
 
-            .distribution-chart {
-                grid-template-columns: repeat(2, 1fr);
+            .service-title-section {
+                order: -1;
             }
 
-            .recommendations-grid {
-                grid-template-columns: 1fr;
+            .return-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <div class="content-analysis-container">
-        <!-- Header -->
-        <div class="analysis-header">
-            <div class="header-left">
-                <div class="header-icon">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-                <div class="header-content">
-                    <h1>Content Analysis</h1>
-                    <p class="header-subtitle">Evaluation of writing quality, readability, and structure</p>
+    <!-- Header with Return Button -->
+    <header class="service-header">
+        <div class="header-content">
+            <a href="javascript:history.back()" class="return-button" id="returnButton">
+                <i class="fas fa-arrow-left"></i>
+                <span>Return to Analysis</span>
+            </a>
+            
+            <div class="service-title-section">
+                <h1 class="service-title">
+                    <div class="service-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <span>Content Analysis</span>
+                </h1>
+            </div>
+            
+            <div style="width: 180px;"></div> <!-- Spacer for balance -->
+        </div>
+    </header>
+
+    <!-- Analysis Summary Section -->
+    <section class="analysis-summary" id="analysisSummary">
+        <div class="summary-content">
+            <div class="summary-score">
+                <div class="score-circle">
+                    <div>
+                        <div class="score-value" id="summaryScore">--</div>
+                        <div class="score-label">Quality Score</div>
+                    </div>
                 </div>
             </div>
-            <a href="/" class="back-button">
+            
+            <div class="summary-details">
+                <h2>Analysis Summary</h2>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-file-alt"></i> What We Analyzed</h3>
+                    <p id="analyzedContent">Loading article information...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-search"></i> What We Found</h3>
+                    <p id="keyFindings">Analyzing content...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-lightbulb"></i> What This Means</h3>
+                    <p id="interpretation">Processing results...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="service-content" id="serviceContent">
+        <div class="loading-container" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>Loading content analysis...</p>
+        </div>
+        
+        <div class="error-container" id="errorState" style="display: none;">
+            <i class="fas fa-exclamation-circle error-icon"></i>
+            <h2>Analysis Not Available</h2>
+            <p id="errorMessage">Content analysis was not performed for this article.</p>
+            <a href="javascript:history.back()" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
                 <i class="fas fa-arrow-left"></i>
-                Back to Analysis
+                <span>Return to Main Analysis</span>
             </a>
         </div>
-
-        <!-- Quality Overview -->
-        <div class="quality-overview">
-            <div class="quality-grid">
-                <div class="quality-card good">
-                    <div class="quality-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="quality-metric">B+</div>
-                    <div class="quality-label">Overall Quality</div>
-                </div>
-                <div class="quality-card good">
-                    <div class="quality-icon">
-                        <i class="fas fa-book-open"></i>
-                    </div>
-                    <div class="quality-metric">11th</div>
-                    <div class="quality-label">Grade Level</div>
-                </div>
-                <div class="quality-card excellent">
-                    <div class="quality-icon">
-                        <i class="fas fa-align-left"></i>
-                    </div>
-                    <div class="quality-metric">Well</div>
-                    <div class="quality-label">Structured</div>
-                </div>
-                <div class="quality-card fair">
-                    <div class="quality-icon">
-                        <i class="fas fa-spell-check"></i>
-                    </div>
-                    <div class="quality-metric">3</div>
-                    <div class="quality-label">Grammar Issues</div>
-                </div>
-            </div>
+        
+        <!-- Service-specific content will be inserted here -->
+        <div id="analysisContent" style="display: none;">
+            <!-- Dynamic content -->
         </div>
+    </main>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Key Findings -->
-            <div class="findings-panel">
-                <div class="findings-header">
-                    <div class="findings-icon">
-                        <i class="fas fa-clipboard-check"></i>
-                    </div>
-                    <h2 class="findings-title">Content Quality Assessment</h2>
-                </div>
-                <div class="findings-list">
-                    <div class="finding-item finding-positive">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Clear structure with logical flow between sections</div>
-                            <div class="finding-detail">Well-organized with proper headings and transitions</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-positive">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Appropriate reading level for target audience</div>
-                            <div class="finding-detail">11th grade level suitable for general news consumption</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-negative">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Some sentences are overly complex</div>
-                            <div class="finding-detail">3 sentences exceed 40 words, impacting readability</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-neutral">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Minor grammatical issues detected</div>
-                            <div class="finding-detail">3 instances of passive voice that could be improved</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Readability Analysis -->
-            <div class="readability-section">
-                <div class="section-header">
-                    <i class="fas fa-book-reader section-icon"></i>
-                    <h2 class="section-title">Readability Analysis</h2>
-                </div>
-                
-                <div class="readability-chart">
-                    <div class="reading-level-display">
-                        <div class="grade-circle">
-                            <span class="grade-number">11</span>
-                            <span class="grade-label">Grade Level</span>
-                        </div>
-                        <p class="reading-description">
-                            This article requires an 11th-grade reading level, making it accessible to most adult readers
-                            while maintaining sophistication appropriate for serious news content.
-                        </p>
-                    </div>
-                    
-                    <div class="readability-metrics">
-                        <div class="metric-card">
-                            <span class="metric-value">62</span>
-                            <span class="metric-name">Flesch Reading Ease</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-value">8.3</span>
-                            <span class="metric-name">Flesch-Kincaid Grade</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-value">12</span>
-                            <span class="metric-name">Gunning Fog Index</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Structure Analysis -->
-            <div class="structure-analysis">
-                <div class="section-header">
-                    <i class="fas fa-sitemap section-icon"></i>
-                    <h2 class="section-title">Article Structure</h2>
-                </div>
-                
-                <div class="structure-grid">
-                    <div class="structure-item">
-                        <div class="structure-icon">
-                            <i class="fas fa-file-word"></i>
-                        </div>
-                        <div class="structure-content">
-                            <div class="structure-label">Word Count</div>
-                            <div class="structure-value">1,247 words</div>
-                        </div>
-                    </div>
-                    <div class="structure-item">
-                        <div class="structure-icon">
-                            <i class="fas fa-paragraph"></i>
-                        </div>
-                        <div class="structure-content">
-                            <div class="structure-label">Paragraphs</div>
-                            <div class="structure-value">18 paragraphs</div>
-                        </div>
-                    </div>
-                    <div class="structure-item">
-                        <div class="structure-icon">
-                            <i class="fas fa-heading"></i>
-                        </div>
-                        <div class="structure-content">
-                            <div class="structure-label">Sections</div>
-                            <div class="structure-value">5 main sections</div>
-                        </div>
-                    </div>
-                    <div class="structure-item">
-                        <div class="structure-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="structure-content">
-                            <div class="structure-label">Reading Time</div>
-                            <div class="structure-value">~5 minutes</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Language Quality -->
-            <div class="language-quality">
-                <div class="section-header">
-                    <i class="fas fa-language section-icon"></i>
-                    <h2 class="section-title">Language Quality</h2>
-                </div>
-                
-                <div class="quality-indicators">
-                    <div class="indicator-card">
-                        <div class="indicator-header">
-                            <h3 class="indicator-title">Sentence Variety</h3>
-                            <span class="indicator-score score-good">Good</span>
-                        </div>
-                        <p class="indicator-details">
-                            Mix of simple, compound, and complex sentences maintains reader engagement
-                        </p>
-                    </div>
-                    
-                    <div class="indicator-card">
-                        <div class="indicator-header">
-                            <h3 class="indicator-title">Vocabulary</h3>
-                            <span class="indicator-score score-excellent">Excellent</span>
-                        </div>
-                        <p class="indicator-details">
-                            Appropriate use of domain-specific terms with clear explanations
-                        </p>
-                    </div>
-                    
-                    <div class="indicator-card">
-                        <div class="indicator-header">
-                            <h3 class="indicator-title">Grammar & Spelling</h3>
-                            <span class="indicator-score score-needs-work">Needs Work</span>
-                        </div>
-                        <p class="indicator-details">
-                            Minor issues detected:
-                            <ul class="issues-list">
-                                <li class="issue-item">3 instances of passive voice</li>
-                                <li class="issue-item">1 subject-verb disagreement</li>
-                                <li class="issue-item">2 comma splices</li>
-                            </ul>
-                        </p>
-                    </div>
-                    
-                    <div class="indicator-card">
-                        <div class="indicator-header">
-                            <h3 class="indicator-title">Clarity</h3>
-                            <span class="indicator-score score-good">Good</span>
-                        </div>
-                        <p class="indicator-details">
-                            Most concepts clearly explained, though 3 sentences could be simplified
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Content Distribution -->
-            <div class="distribution-section">
-                <div class="section-header">
-                    <i class="fas fa-chart-pie section-icon"></i>
-                    <h2 class="section-title">Content Distribution</h2>
-                </div>
-                
-                <div class="distribution-chart">
-                    <div class="distribution-item">
-                        <div class="distribution-icon">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <span class="distribution-percentage">45%</span>
-                        <span class="distribution-label">Information</span>
-                    </div>
-                    <div class="distribution-item">
-                        <div class="distribution-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <span class="distribution-percentage">25%</span>
-                        <span class="distribution-label">Analysis</span>
-                    </div>
-                    <div class="distribution-item">
-                        <div class="distribution-icon">
-                            <i class="fas fa-quote-right"></i>
-                        </div>
-                        <span class="distribution-percentage">20%</span>
-                        <span class="distribution-label">Quotes</span>
-                    </div>
-                    <div class="distribution-item">
-                        <div class="distribution-icon">
-                            <i class="fas fa-lightbulb"></i>
-                        </div>
-                        <span class="distribution-percentage">10%</span>
-                        <span class="distribution-label">Opinion</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recommendations -->
-            <div class="recommendations-section">
-                <div class="section-header">
-                    <i class="fas fa-tasks section-icon"></i>
-                    <h2 class="section-title">Improvement Recommendations</h2>
-                </div>
-                
-                <div class="recommendations-grid">
-                    <div class="recommendation-card">
-                        <div class="rec-icon">
-                            <i class="fas fa-cut"></i>
-                        </div>
-                        <div class="rec-content">
-                            <div class="rec-title">Simplify Complex Sentences</div>
-                            <div class="rec-text">Break down the 3 sentences that exceed 40 words for better readability</div>
-                        </div>
-                    </div>
-                    <div class="recommendation-card">
-                        <div class="rec-icon">
-                            <i class="fas fa-exchange-alt"></i>
-                        </div>
-                        <div class="rec-content">
-                            <div class="rec-title">Use Active Voice</div>
-                            <div class="rec-text">Convert passive constructions to active voice for more engaging writing</div>
-                        </div>
-                    </div>
-                    <div class="recommendation-card">
-                        <div class="rec-icon">
-                            <i class="fas fa-link"></i>
-                        </div>
-                        <div class="rec-content">
-                            <div class="rec-title">Improve Transitions</div>
-                            <div class="rec-text">Add clearer transitions between the middle sections for better flow</div>
-                        </div>
-                    </div>
-                    <div class="recommendation-card">
-                        <div class="rec-icon">
-                            <i class="fas fa-compress-alt"></i>
-                        </div>
-                        <div class="rec-content">
-                            <div class="rec-title">Tighten Introduction</div>
-                            <div class="rec-text">Consider condensing the opening paragraph to capture attention faster</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Scripts -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/truthlens-services.js"></script>
     <script>
-    (function() {
-        // 1. Retrieve data
-        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
-        const contentData = analysisData?.detailed_analysis?.content_analyzer || {};
-        
-        // 2. Check if data exists
-        if (!Object.keys(contentData).length) {
-            // Show no data message
-            document.querySelector('.content-analysis-container').innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
-                    <h2>No Analysis Data Available</h2>
-                    <p>Please run an analysis first to see results.</p>
-                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
-                </div>
-            `;
-            return;
-        }
-        
-        // 3. Update UI elements
-        updatePageElements(contentData);
-        
-        function updatePageElements(data) {
-            // Update quality overview
-            const qualityScore = data.quality_score || 0;
-            const gradeLevel = Math.round(data.readability_grade || 11);
-            const grammarIssues = data.grammar_issues || 0;
+        // Service-specific configuration
+        const SERVICE_CONFIG = {
+            id: 'content_analyzer',
+            name: 'Content Analysis',
+            icon: 'fa-file-alt'
+        };
+
+        // Initialize service page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeServicePage();
+        });
+
+        function initializeServicePage() {
+            // Get analysis data from sessionStorage
+            const analysisData = sessionStorage.getItem('analysisData');
             
-            // Update quality cards
-            const qualityCards = document.querySelectorAll('.quality-card');
-            
-            // Overall Quality
-            const qualityGrade = getQualityGrade(qualityScore);
-            qualityCards[0].querySelector('.quality-metric').textContent = qualityGrade;
-            qualityCards[0].className = 'quality-card ' + getQualityClass(qualityScore);
-            
-            // Grade Level
-            qualityCards[1].querySelector('.quality-metric').textContent = getOrdinal(gradeLevel);
-            
-            // Structure
-            const structureQuality = data.structure_quality || 'Fair';
-            qualityCards[2].querySelector('.quality-metric').textContent = structureQuality;
-            qualityCards[2].className = 'quality-card ' + getStructureClass(structureQuality);
-            
-            // Grammar Issues
-            qualityCards[3].querySelector('.quality-metric').textContent = grammarIssues;
-            qualityCards[3].className = 'quality-card ' + (grammarIssues > 5 ? 'fair' : grammarIssues > 2 ? 'good' : 'excellent');
-            
-            // Update readability metrics
-            updateReadabilitySection(data);
-            
-            // Update structure analysis
-            updateStructureSection(data);
-            
-            // Update language quality indicators
-            updateLanguageQuality(data);
-            
-            // Update content distribution
-            updateContentDistribution(data);
-            
-            // Update key findings
-            updateKeyFindings(data);
-            
-            // Update recommendations
-            updateRecommendations(data);
-        }
-        
-        function updateReadabilitySection(data) {
-            // Update grade circle
-            const gradeLevel = Math.round(data.readability_grade || 11);
-            document.querySelector('.grade-number').textContent = gradeLevel;
-            
-            // Update description
-            const description = getReadabilityDescription(gradeLevel);
-            document.querySelector('.reading-description').textContent = description;
-            
-            // Update metrics
-            const metrics = document.querySelectorAll('.readability-metrics .metric-value');
-            metrics[0].textContent = Math.round(data.flesch_reading_ease || 62);
-            metrics[1].textContent = (data.flesch_kincaid_grade || 8.3).toFixed(1);
-            metrics[2].textContent = Math.round(data.gunning_fog || 12);
-        }
-        
-        function updateStructureSection(data) {
-            const structureValues = document.querySelectorAll('.structure-value');
-            
-            // Word count
-            structureValues[0].textContent = formatNumber(data.word_count || 0) + ' words';
-            
-            // Paragraphs
-            structureValues[1].textContent = (data.paragraph_count || 0) + ' paragraphs';
-            
-            // Sections
-            structureValues[2].textContent = (data.section_count || 0) + ' main sections';
-            
-            // Reading time
-            const readingTime = Math.ceil((data.word_count || 0) / 250);
-            structureValues[3].textContent = '~' + readingTime + ' minutes';
-        }
-        
-        function updateLanguageQuality(data) {
-            const indicators = document.querySelectorAll('.indicator-card');
-            
-            // Sentence Variety
-            const sentenceVariety = data.sentence_variety || {};
-            indicators[0].querySelector('.indicator-score').textContent = getScoreLabel(sentenceVariety.score || 70);
-            indicators[0].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(sentenceVariety.score || 70);
-            indicators[0].querySelector('.indicator-details').textContent = sentenceVariety.description || 'Mix of simple, compound, and complex sentences maintains reader engagement';
-            
-            // Vocabulary
-            const vocabulary = data.vocabulary_analysis || {};
-            indicators[1].querySelector('.indicator-score').textContent = getScoreLabel(vocabulary.score || 85);
-            indicators[1].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(vocabulary.score || 85);
-            indicators[1].querySelector('.indicator-details').textContent = vocabulary.description || 'Appropriate use of domain-specific terms with clear explanations';
-            
-            // Grammar & Spelling
-            const grammarIssues = data.grammar_issues_list || [];
-            const grammarScore = grammarIssues.length > 5 ? 40 : grammarIssues.length > 2 ? 70 : 90;
-            indicators[2].querySelector('.indicator-score').textContent = getScoreLabel(grammarScore);
-            indicators[2].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(grammarScore);
-            
-            if (grammarIssues.length > 0) {
-                const issuesList = indicators[2].querySelector('.issues-list');
-                issuesList.innerHTML = grammarIssues.map(issue => 
-                    `<li class="issue-item">${issue}</li>`
-                ).join('');
+            if (!analysisData) {
+                showError('No analysis data found. Please return to the main page and run a new analysis.');
+                return;
             }
-            
-            // Clarity
-            const clarity = data.clarity_analysis || {};
-            indicators[3].querySelector('.indicator-score').textContent = getScoreLabel(clarity.score || 75);
-            indicators[3].querySelector('.indicator-score').className = 'indicator-score ' + getScoreClass(clarity.score || 75);
-            indicators[3].querySelector('.indicator-details').textContent = clarity.description || 'Most concepts clearly explained, though some sentences could be simplified';
+
+            try {
+                const data = JSON.parse(analysisData);
+                const serviceData = data.detailed_analysis?.[SERVICE_CONFIG.id];
+                
+                if (!serviceData || Object.keys(serviceData).length === 0) {
+                    showError('Content analysis was not performed for this article.');
+                    return;
+                }
+
+                // Populate summary section
+                populateSummary(data, serviceData);
+                
+                // Show analysis content
+                displayServiceAnalysis(serviceData);
+                
+                // Update return button to maintain state
+                updateReturnButton();
+                
+            } catch (error) {
+                console.error('Error loading analysis data:', error);
+                showError('Error loading analysis results.');
+            }
         }
-        
-        function updateContentDistribution(data) {
-            const distribution = data.content_distribution || {
-                information: 45,
-                analysis: 25,
-                quotes: 20,
-                opinion: 10
+
+        function populateSummary(fullData, serviceData) {
+            // Article information
+            const article = fullData.article || {};
+            const articleInfo = `"${article.title || 'Untitled Article'}" from ${article.source || article.domain || 'Unknown Source'}`;
+            document.getElementById('analyzedContent').textContent = articleInfo;
+
+            // Service-specific score and findings
+            const scoreInfo = getServiceScoreInfo(serviceData);
+            document.getElementById('summaryScore').textContent = scoreInfo.score;
+            
+            // Key findings
+            document.getElementById('keyFindings').textContent = getServiceKeyFindings(serviceData);
+            
+            // Interpretation
+            document.getElementById('interpretation').textContent = getServiceInterpretation(serviceData);
+        }
+
+        function getServiceScoreInfo(data) {
+            const score = data.quality_score || data.score || 0;
+            return {
+                score: score,
+                label: 'Quality Score'
             };
+        }
+
+        function getServiceKeyFindings(data) {
+            const quality = data.quality_score || data.score || 0;
+            const readability = data.readability?.level || 'Unknown';
+            let findings = `Content quality score: ${quality}/100. `;
             
-            const percentages = document.querySelectorAll('.distribution-percentage');
-            percentages[0].textContent = distribution.information + '%';
-            percentages[1].textContent = distribution.analysis + '%';
-            percentages[2].textContent = distribution.quotes + '%';
-            percentages[3].textContent = distribution.opinion + '%';
-        }
-        
-        function updateKeyFindings(data) {
-            const findingsList = document.querySelector('.findings-list');
-            findingsList.innerHTML = '';
-            
-            const findings = data.key_findings || generateDefaultFindings(data);
-            
-            findings.forEach(finding => {
-                const item = document.createElement('div');
-                item.className = `finding-item finding-${finding.type || 'neutral'}`;
-                item.innerHTML = `
-                    <div class="finding-indicator"></div>
-                    <div class="finding-content">
-                        <div class="finding-text">${finding.text}</div>
-                        <div class="finding-detail">${finding.detail || ''}</div>
-                    </div>
-                `;
-                findingsList.appendChild(item);
-            });
-        }
-        
-        function updateRecommendations(data) {
-            const recommendations = data.recommendations || [];
-            const recGrid = document.querySelector('.recommendations-grid');
-            
-            if (recommendations.length > 0) {
-                recGrid.innerHTML = '';
-                recommendations.forEach(rec => {
-                    const card = document.createElement('div');
-                    card.className = 'recommendation-card';
-                    card.innerHTML = `
-                        <div class="rec-icon">
-                            <i class="fas fa-${rec.icon || 'check'}"></i>
-                        </div>
-                        <div class="rec-content">
-                            <div class="rec-title">${rec.title}</div>
-                            <div class="rec-text">${rec.text}</div>
-                        </div>
-                    `;
-                    recGrid.appendChild(card);
-                });
-            }
-        }
-        
-        // Helper functions
-        function getQualityGrade(score) {
-            if (score >= 90) return 'A+';
-            if (score >= 85) return 'A';
-            if (score >= 80) return 'B+';
-            if (score >= 75) return 'B';
-            if (score >= 70) return 'C+';
-            if (score >= 65) return 'C';
-            if (score >= 60) return 'D+';
-            if (score >= 55) return 'D';
-            return 'F';
-        }
-        
-        function getQualityClass(score) {
-            if (score >= 80) return 'excellent';
-            if (score >= 65) return 'good';
-            return 'fair';
-        }
-        
-        function getStructureClass(quality) {
-            const qualityLower = quality.toLowerCase();
-            if (qualityLower.includes('excellent') || qualityLower.includes('well')) return 'excellent';
-            if (qualityLower.includes('good')) return 'good';
-            return 'fair';
-        }
-        
-        function getScoreLabel(score) {
-            if (score >= 80) return 'Excellent';
-            if (score >= 60) return 'Good';
-            return 'Needs Work';
-        }
-        
-        function getScoreClass(score) {
-            if (score >= 80) return 'score-excellent';
-            if (score >= 60) return 'score-good';
-            return 'score-needs-work';
-        }
-        
-        function getOrdinal(n) {
-            const s = ["th", "st", "nd", "rd"];
-            const v = n % 100;
-            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-        }
-        
-        function formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-        
-        function getReadabilityDescription(grade) {
-            if (grade <= 6) return 'This article is very easy to read, suitable for elementary school students.';
-            if (grade <= 8) return 'This article is easy to read, suitable for middle school students.';
-            if (grade <= 10) return 'This article is fairly easy to read, suitable for high school students.';
-            if (grade <= 12) return 'This article requires a high school reading level, suitable for most adult readers.';
-            if (grade <= 14) return 'This article requires some college-level reading ability.';
-            return 'This article requires advanced reading skills, suitable for college graduates.';
-        }
-        
-        function generateDefaultFindings(data) {
-            const findings = [];
-            
-            if (data.quality_score >= 75) {
-                findings.push({
-                    text: 'Overall content quality is good',
-                    detail: 'Well-structured with clear writing',
-                    type: 'positive'
-                });
+            if (data.readability?.level) {
+                findings += `Reading level: ${readability}. `;
             }
             
-            if (data.readability_grade > 12) {
-                findings.push({
-                    text: 'Reading level may be too complex for general audience',
-                    detail: `Grade ${Math.round(data.readability_grade)} reading level detected`,
-                    type: 'negative'
-                });
-            } else {
-                findings.push({
-                    text: 'Appropriate reading level for target audience',
-                    detail: `Grade ${Math.round(data.readability_grade || 11)} level suitable for general news consumption`,
-                    type: 'positive'
-                });
+            if (data.metrics?.word_count) {
+                findings += `Article length: ${data.metrics.word_count} words. `;
             }
             
-            if (data.grammar_issues > 0) {
-                findings.push({
-                    text: 'Grammar and style issues detected',
-                    detail: `${data.grammar_issues} issues found that could be improved`,
-                    type: 'neutral'
-                });
-            }
-            
-            if (data.word_count > 2000) {
-                findings.push({
-                    text: 'Article length may impact reader engagement',
-                    detail: 'Consider breaking into multiple parts or adding summaries',
-                    type: 'neutral'
-                });
+            if (data.metrics?.avg_sentence_length) {
+                findings += `Average sentence length: ${Math.round(data.metrics.avg_sentence_length)} words.`;
             }
             
             return findings;
         }
-    })();
+
+        function getServiceInterpretation(data) {
+            const score = data.quality_score || data.score || 0;
+            
+            if (score >= 80) {
+                return 'This article demonstrates excellent writing quality and structure. The content is well-organized, clearly written, and effectively communicates its message with appropriate depth and clarity.';
+            } else if (score >= 60) {
+                return 'This article shows good content quality with clear communication. While generally well-written, there are some areas where clarity or structure could be improved.';
+            } else if (score >= 40) {
+                return 'This article has moderate quality issues affecting readability. The writing may be unclear in places, poorly structured, or contain grammatical errors that impact comprehension.';
+            } else if (score >= 20) {
+                return 'This article suffers from poor writing quality and structure. Significant issues with clarity, organization, or grammar make the content difficult to understand.';
+            } else {
+                return 'This article has severe quality issues that prevent effective communication. The writing is poorly structured, unclear, and contains numerous errors that make it unreliable.';
+            }
+        }
+
+        function displayServiceAnalysis(data) {
+            // Hide loading, show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'block';
+            
+            // Use the renderer from truthlens-services.js
+            if (window.truthLensApp && window.truthLensApp.services) {
+                const content = window.truthLensApp.services.renderContentAnalysis(data);
+                document.getElementById('analysisContent').innerHTML = content;
+            } else {
+                // Fallback if services not loaded
+                const services = new TruthLensServices({ utils: { getScoreColor: (s) => s >= 60 ? '#10b981' : '#ef4444' }});
+                const content = services.renderContentAnalysis(data);
+                document.getElementById('analysisContent').innerHTML = content;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function updateReturnButton() {
+            // If we opened in a new tab, change the return button behavior
+            const returnButton = document.getElementById('returnButton');
+            if (window.opener) {
+                returnButton.innerHTML = '<i class="fas fa-times"></i><span>Close Window</span>';
+                returnButton.onclick = function(e) {
+                    e.preventDefault();
+                    window.close();
+                };
+            }
+        }
     </script>
 </body>
 </html>
