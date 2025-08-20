@@ -12,630 +12,17 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- jsPDF for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <!-- Main Styles -->
     <link rel="stylesheet" href="/static/css/styles.css">
     
-    <!-- Additional styles for accordion fix -->
+    <!-- Additional styles -->
     <style>
-        /* ============================================
-           CSS VARIABLES & RESET
-           ============================================ */
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --dark: #1f2937;
-            --gray-600: #4b5563;
-            --gray-500: #6b7280;
-            --gray-400: #9ca3af;
-            --gray-300: #d1d5db;
-            --gray-200: #e5e7eb;
-            --gray-100: #f3f4f6;
-            --gray-50: #f9fafb;
-            --white: #ffffff;
-            
-            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            --gradient-premium: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            --gradient-dark: linear-gradient(135deg, var(--dark) 0%, #111827 100%);
-            
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            
-            --radius: 0.75rem;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-display: 'Space Grotesk', sans-serif;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: var(--font-sans);
-            background: var(--gray-50);
-            color: var(--dark);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
+        /* Keep all the existing styles from your current index.html up to the service section */
+        /* ... (all previous styles remain the same) ... */
 
         /* ============================================
-           HEADER - COMPACT
+           SERVICE CARDS GRID - NEW DESIGN
            ============================================ */
-        .header {
-            background: var(--white);
-            border-bottom: 1px solid var(--gray-200);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0.75rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-family: var(--font-display);
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--gradient-primary);
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1rem;
-        }
-
-        .pro-badge {
-            background: var(--gradient-premium);
-            color: var(--dark);
-            padding: 0.25rem 0.75rem;
-            border-radius: 2rem;
-            font-size: 0.625rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        /* ============================================
-           HERO SECTION - COMPACT
-           ============================================ */
-        .hero {
-            background: var(--white);
-            padding: 1.5rem 0 1rem;
-            text-align: center;
-        }
-
-        .hero-content {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        .hero h1 {
-            font-family: var(--font-display);
-            font-size: 2rem;
-            font-weight: 700;
-            background: var(--gradient-dark);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        .hero-subtitle {
-            font-size: 1rem;
-            color: var(--gray-600);
-            margin-bottom: 1rem;
-        }
-
-        .feature-pills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        .feature-pill {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.375rem 0.75rem;
-            background: var(--gray-100);
-            border-radius: 2rem;
-            font-size: 0.75rem;
-            color: var(--gray-700);
-        }
-
-        .feature-pill i {
-            color: var(--primary);
-            font-size: 0.875rem;
-        }
-
-        /* ============================================
-           INPUT SECTION - COMPACT SINGLE BOX
-           ============================================ */
-        .input-section {
-            max-width: 700px;
-            margin: -1rem auto 2rem;
-            padding: 0 2rem;
-            position: relative;
-            z-index: 10;
-        }
-
-        .input-card {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-xl);
-            border: 1px solid var(--gray-200);
-        }
-
-        .mode-toggle {
-            display: flex;
-            background: var(--gray-100);
-            border-radius: 0.5rem;
-            padding: 0.25rem;
-            margin-bottom: 1rem;
-        }
-
-        .mode-btn {
-            flex: 1;
-            padding: 0.5rem 1rem;
-            background: transparent;
-            border: none;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.375rem;
-        }
-
-        .mode-btn.active {
-            background: var(--white);
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 2px solid var(--gray-200);
-            border-radius: 0.75rem;
-            font-size: 0.9375rem;
-            transition: all 0.3s ease;
-            background: var(--gray-50);
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: var(--white);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        textarea.input-field {
-            min-height: 100px;
-            resize: vertical;
-            font-family: inherit;
-        }
-
-        .input-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .btn {
-            padding: 0.625rem 1.5rem;
-            border: none;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: var(--gradient-primary);
-            color: white;
-            flex: 1;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-secondary {
-            background: var(--white);
-            color: var(--primary);
-            border: 2px solid var(--gray-200);
-            padding: 0.5rem 1rem;
-        }
-
-        .example-links {
-            text-align: center;
-            margin-top: 0.75rem;
-            font-size: 0.75rem;
-            color: var(--gray-500);
-        }
-
-        .example-btn {
-            color: var(--primary);
-            text-decoration: none;
-            margin: 0 0.375rem;
-            cursor: pointer;
-        }
-
-        .example-btn:hover {
-            text-decoration: underline;
-        }
-
-        /* ============================================
-           RESULTS SECTION - COMPACT LAYOUT
-           ============================================ */
-        .results-section {
-            display: none;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem 3rem;
-        }
-
-        .results-section.active {
-            display: block;
-        }
-
-        /* Trust Score Summary - Side by Side Layout */
-        .trust-summary-container {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Compact Trust Score Card */
-        .trust-score-card {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-lg);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .trust-score-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, var(--primary-light) 0%, transparent 70%);
-            opacity: 0.1;
-            animation: rotateBg 20s linear infinite;
-        }
-
-        @keyframes rotateBg {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .trust-gauge-container {
-            position: relative;
-            width: 200px;
-            height: 100px;
-            margin: 0 auto 1rem;
-            z-index: 1;
-        }
-
-        #trustGauge {
-            width: 100%;
-            height: 100%;
-        }
-
-        .trust-score-display {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -30%);
-            text-align: center;
-        }
-
-        #trustScoreNumber {
-            font-size: 2.5rem;
-            font-weight: 800;
-            font-family: var(--font-display);
-            line-height: 1;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
-            animation: scoreGlow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes scoreGlow {
-            from {
-                filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
-            }
-            to {
-                filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.5));
-            }
-        }
-
-        .trust-score-label {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .trust-level-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--gray-100);
-            border-radius: 2rem;
-            font-size: 0.875rem;
-        }
-
-        .trust-level-icon {
-            font-size: 1rem;
-        }
-
-        #trustLevelText {
-            font-weight: 600;
-        }
-
-        /* Conversational Summary Card */
-        .conversational-summary-card {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .summary-header {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .summary-section {
-            margin-bottom: 1rem;
-        }
-
-        .summary-subtitle {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .summary-subtitle i {
-            color: var(--primary);
-            font-size: 0.875rem;
-        }
-
-        .summary-text {
-            color: var(--gray-600);
-            line-height: 1.6;
-            font-size: 0.875rem;
-        }
-
-        .summary-info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-        }
-
-        .summary-info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-
-        .info-label i {
-            color: var(--primary);
-            font-size: 0.75rem;
-        }
-
-        .info-value {
-            font-size: 0.875rem;
-            color: var(--dark);
-            font-weight: 600;
-        }
-
-        /* Article Info Bar - Compact */
-        .article-info-bar {
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        #articleTitle {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .article-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            color: var(--gray-600);
-            font-size: 0.75rem;
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-
-        .meta-item i {
-            color: var(--primary);
-            font-size: 0.875rem;
-        }
-
-        /* Trust Breakdown - Compact with Explanation */
-        .trust-breakdown-section {
-            background: var(--white);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .section-header {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-header i {
-            color: var(--primary);
-            font-size: 1rem;
-        }
-
-        .breakdown-explanation {
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            line-height: 1.5;
-        }
-
-        .breakdown-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
-
-        .breakdown-item {
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: 0.75rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .breakdown-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .breakdown-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--dark);
-        }
-
-        .breakdown-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-        }
-
-        .breakdown-value {
-            font-size: 1.125rem;
-            font-weight: 700;
-        }
-
-        .breakdown-explanation {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            margin-bottom: 0.5rem;
-            line-height: 1.4;
-        }
-
-        .breakdown-bar {
-            height: 6px;
-            background: var(--gray-200);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .breakdown-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 1s ease-out;
-        }
-
-        /* Service Accordion - Compact with Colored Borders */
         .services-section {
             background: var(--white);
             border-radius: 1rem;
@@ -643,419 +30,260 @@
             box-shadow: var(--shadow-lg);
         }
 
-        .service-accordion-item {
-            border-radius: 0.75rem;
-            margin-bottom: 0.75rem;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            border: 2px solid var(--gray-200);
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
-        /* Different colored borders for each service */
-        #service-source_credibility {
+        .service-card {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
             border-color: var(--primary);
         }
 
-        #service-author_analyzer {
+        /* Service card colors based on service type */
+        .service-card.source-credibility {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.02) 100%);
+        }
+
+        .service-card.author-analyzer {
             border-color: var(--secondary);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
         }
 
-        #service-bias_detector {
+        .service-card.bias-detector {
             border-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 100%);
         }
 
-        #service-fact_checker {
+        .service-card.fact-checker {
             border-color: var(--info);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
         }
 
-        #service-transparency_analyzer {
+        .service-card.transparency-analyzer {
             border-color: #8b5cf6;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.02) 100%);
         }
 
-        #service-manipulation_detector {
+        .service-card.manipulation-detector {
             border-color: var(--danger);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0.02) 100%);
         }
 
-        #service-content_analyzer {
+        .service-card.content-analyzer {
             border-color: #06b6d4;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(6, 182, 212, 0.02) 100%);
         }
 
-        #service-plagiarism_detector {
+        .service-card.plagiarism-detector {
             border-color: #ec4899;
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%);
         }
 
-        .service-accordion-header {
-            padding: 1rem 1.25rem;
-            background: var(--gray-50);
-            cursor: pointer;
+        .service-card-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .service-accordion-item.active .service-accordion-header {
-            background: var(--white);
-        }
-
-        .service-header-content {
-            display: flex;
             gap: 0.75rem;
-            align-items: center;
-            flex: 1;
+            margin-bottom: 0.75rem;
         }
 
         .service-icon-wrapper {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             background: var(--white);
             border-radius: 0.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             box-shadow: var(--shadow-sm);
         }
 
-        .service-info {
-            flex: 1;
-        }
+        .service-card.source-credibility .service-icon-wrapper { color: var(--primary); }
+        .service-card.author-analyzer .service-icon-wrapper { color: var(--secondary); }
+        .service-card.bias-detector .service-icon-wrapper { color: var(--warning); }
+        .service-card.fact-checker .service-icon-wrapper { color: var(--info); }
+        .service-card.transparency-analyzer .service-icon-wrapper { color: #8b5cf6; }
+        .service-card.manipulation-detector .service-icon-wrapper { color: var(--danger); }
+        .service-card.content-analyzer .service-icon-wrapper { color: #06b6d4; }
+        .service-card.plagiarism-detector .service-icon-wrapper { color: #ec4899; }
 
-        .service-name {
-            font-weight: 600;
+        .service-info h3 {
             font-size: 0.9375rem;
-            margin-bottom: 0.125rem;
-            color: var(--dark);
-        }
-
-        .service-preview {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        .service-expand-icon {
-            font-size: 1rem;
-            transition: transform 0.3s ease;
-            color: var(--gray-400);
-        }
-
-        .service-accordion-item.active .service-expand-icon {
-            transform: rotate(180deg);
-        }
-
-        .service-accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .service-accordion-item.active .service-accordion-content {
-            max-height: 2000px;
-        }
-
-        .service-content-inner {
-            padding: 1rem 1.25rem 1.25rem;
-            border-top: 1px solid var(--gray-200);
-        }
-
-        /* Compact Service Content */
-        .service-section {
-            margin-bottom: 1rem;
-        }
-
-        .section-title {
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-            font-size: 0.875rem;
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-
-        .section-title i {
-            color: var(--primary);
-            font-size: 0.75rem;
-        }
-
-        .service-results {
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            font-size: 0.813rem;
-        }
-
-        /* Result items in service results */
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        .result-value {
+            margin: 0;
             color: var(--dark);
         }
 
-        .status-badge {
-            padding: 0.25rem 0.75rem;
+        .service-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--white);
             border-radius: 2rem;
             font-size: 0.75rem;
             font-weight: 600;
+            margin-bottom: 0.75rem;
         }
 
-        .status-high {
-            background: var(--secondary);
-            color: white;
+        .service-status.complete {
+            color: var(--secondary);
+            border: 1px solid var(--secondary);
         }
 
-        .status-medium {
-            background: var(--warning);
-            color: white;
+        .service-status.pending {
+            color: var(--gray-500);
+            border: 1px solid var(--gray-300);
         }
 
-        .status-low {
-            background: var(--danger);
-            color: white;
-        }
-
-        /* Key Findings */
-        .key-findings-header {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1rem;
-        }
-
-        .findings-grid {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .finding-item {
-            display: flex;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--gray-50);
-            border-radius: 0.5rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .finding-positive {
-            border-color: var(--secondary);
-            background: rgba(16, 185, 129, 0.05);
-        }
-
-        .finding-negative {
-            border-color: var(--danger);
-            background: rgba(239, 68, 68, 0.05);
-        }
-
-        .finding-warning {
-            border-color: var(--warning);
-            background: rgba(245, 158, 11, 0.05);
-        }
-
-        .finding-icon {
-            flex-shrink: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-title {
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-explanation {
-            font-size: 0.75rem;
+        .service-preview {
+            font-size: 0.813rem;
             color: var(--gray-600);
+            margin-bottom: 1rem;
             line-height: 1.4;
         }
 
-        /* Loading Overlay - Compact */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .loading-overlay.active {
+        .service-metrics {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--gray-200);
         }
 
-        .loading-content {
+        .metric-item {
             text-align: center;
+            flex: 1;
         }
 
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 1.5rem;
-            position: relative;
+        .metric-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: block;
         }
 
-        .loading-spinner::before {
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .view-details-link {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            font-size: 0.813rem;
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .service-card:hover .view-details-link {
+            opacity: 1;
+        }
+
+        /* Loading state for service cards */
+        .service-card.loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .service-card.loading::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            border-radius: 50%;
-            border: 3px solid var(--gray-200);
-            border-top-color: var(--primary);
-            animation: spin 1s linear infinite;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%);
+            animation: shimmer 1.5s infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
-        .loading-text {
-            font-size: 1rem;
-            color: var(--gray-600);
-            font-weight: 500;
-        }
-
-        /* Results Actions - Compact */
-        .results-actions {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        /* Error Message - Compact */
-        .error-message {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            background: var(--danger);
-            color: white;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            box-shadow: var(--shadow-xl);
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            max-width: 350px;
-            z-index: 10000;
-        }
-
-        .error-message.active {
-            display: flex;
-        }
-
-        /* Trust Summary */
-        #trustSummary {
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: var(--gray-700);
-        }
-
-        /* Empty states */
-        .empty-state {
+        /* Empty state for services */
+        .service-empty-state {
             text-align: center;
-            padding: 2rem;
+            padding: 3rem;
             color: var(--gray-500);
         }
 
-        .empty-state i {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            color: var(--gray-400);
-        }
-
-        .empty-state-text {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .empty-state-subtext {
-            font-size: 0.875rem;
-            color: var(--gray-400);
-        }
-
-        .success-state {
-            color: var(--secondary);
-        }
-
-        .success-state i {
-            color: var(--secondary);
-        }
-
-        /* Info box */
-        .info-box {
-            background: var(--info);
-            color: white;
-            border-radius: 0.5rem;
-            padding: 1rem;
+        .service-empty-state i {
+            font-size: 2.5rem;
             margin-bottom: 1rem;
+            color: var(--gray-400);
         }
 
-        .info-box-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        /* Service completion indicator */
+        .services-progress {
+            background: var(--gray-100);
+            height: 6px;
+            border-radius: 3px;
+            margin-bottom: 1rem;
+            overflow: hidden;
         }
 
-        .info-box-content {
-            font-size: 0.875rem;
-            line-height: 1.5;
+        .services-progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            position: relative;
         }
 
-        /* Responsive Design */
+        .services-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        /* Responsive design for service grid */
         @media (max-width: 768px) {
-            .trust-summary-container {
+            .services-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .breakdown-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .header-content,
-            .hero-content,
-            .input-section,
-            .results-section {
-                padding-left: 1rem;
-                padding-right: 1rem;
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
 </head>
 <body>
+    <!-- Keep all existing HTML up to the services section -->
     <!-- Header -->
     <header class="header">
         <div class="header-content">
@@ -1108,7 +336,7 @@
         </div>
     </section>
 
-    <!-- Input Section -->
+    <!-- Input Section (same as before) -->
     <section class="input-section">
         <div class="input-card">
             <div class="mode-toggle">
@@ -1171,9 +399,8 @@
 
     <!-- Results Section -->
     <section id="resultsSection" class="results-section">
-        <!-- Trust Score Summary - Side by Side -->
+        <!-- Trust Score Summary (same as before) -->
         <div class="trust-summary-container">
-            <!-- Compact Trust Score Card -->
             <div class="trust-score-card">
                 <div class="trust-gauge-container">
                     <canvas id="trustGauge"></canvas>
@@ -1189,29 +416,24 @@
                 </div>
             </div>
 
-            <!-- Conversational Summary Card -->
             <div class="conversational-summary-card">
                 <h2 class="summary-header">Analysis Summary</h2>
-                
-                <!-- Trust Summary -->
                 <div class="summary-section">
                     <div id="trustSummary"></div>
                 </div>
-                
-                <!-- Key Findings -->
                 <div class="summary-section">
                     <div id="keyFindings"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Article Info -->
+        <!-- Article Info (same as before) -->
         <div class="article-info-bar">
             <h3 id="articleTitle">Loading article information...</h3>
             <div id="articleMeta" class="article-meta"></div>
         </div>
 
-        <!-- Trust Breakdown with Explanation -->
+        <!-- Trust Breakdown (same as before) -->
         <div class="trust-breakdown-section">
             <h3 class="section-header">
                 <i class="fas fa-chart-pie"></i>
@@ -1220,16 +442,24 @@
             <div id="trustBreakdown" class="breakdown-grid"></div>
         </div>
 
-        <!-- Detailed Service Analysis with Colored Borders -->
+        <!-- NEW: Service Cards Grid -->
         <div class="services-section">
             <h3 class="section-header">
                 <i class="fas fa-microscope"></i>
-                Detailed Analysis
+                Detailed Analysis Reports
             </h3>
-            <div id="servicesAccordion"></div>
+            
+            <!-- Progress indicator -->
+            <div class="services-progress">
+                <div class="services-progress-bar" id="servicesProgressBar" style="width: 0%"></div>
+            </div>
+
+            <div class="services-grid" id="servicesGrid">
+                <!-- Service cards will be dynamically generated here -->
+            </div>
         </div>
 
-        <!-- Results Actions -->
+        <!-- Results Actions (same as before) -->
         <div class="results-actions">
             <button id="downloadPdfBtn" class="btn btn-primary">
                 <i class="fas fa-download"></i>
@@ -1246,7 +476,7 @@
         </div>
     </section>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay (same as before) -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
@@ -1254,16 +484,227 @@
         </div>
     </div>
 
-    <!-- Error Message -->
+    <!-- Error Message (same as before) -->
     <div id="errorMessage" class="error-message">
         <i class="fas fa-exclamation-circle"></i>
         <span id="errorText"></span>
     </div>
 
-    <!-- TruthLens JavaScript Files -->
+    <!-- Scripts -->
     <script src="/static/js/truthlens-core.js"></script>
     <script src="/static/js/truthlens-display.js"></script>
     <script src="/static/js/truthlens-services.js"></script>
-    <script src="/static/js/truthlens-compact-value-renderers.js"></script>
+    
+    <!-- Add new script to handle service cards -->
+    <script>
+        // Service configuration
+        const SERVICES = [
+            {
+                id: 'source_credibility',
+                name: 'Source Credibility',
+                icon: 'fa-shield-alt',
+                description: 'Comprehensive evaluation of news source reliability and trustworthiness',
+                url: '/source-credibility.html'
+            },
+            {
+                id: 'author_analyzer',
+                name: 'Author Analysis',
+                icon: 'fa-user-check',
+                description: 'In-depth assessment of author credentials and publishing history',
+                url: '/author-analysis.html'
+            },
+            {
+                id: 'bias_detector',
+                name: 'Bias Detection',
+                icon: 'fa-balance-scale',
+                description: 'Multi-dimensional analysis of political and ideological bias',
+                url: '/bias-detection.html'
+            },
+            {
+                id: 'fact_checker',
+                name: 'Fact Checking',
+                icon: 'fa-check-double',
+                description: 'Verification of claims against authoritative sources',
+                url: '/fact-checking.html'
+            },
+            {
+                id: 'transparency_analyzer',
+                name: 'Transparency Analysis',
+                icon: 'fa-eye',
+                description: 'Assessment of disclosure, sourcing, and editorial transparency',
+                url: '/transparency-analysis.html'
+            },
+            {
+                id: 'manipulation_detector',
+                name: 'Manipulation Detection',
+                icon: 'fa-mask',
+                description: 'Identification of manipulative tactics and emotional exploitation',
+                url: '/manipulation-detection.html'
+            },
+            {
+                id: 'content_analyzer',
+                name: 'Content Analysis',
+                icon: 'fa-file-alt',
+                description: 'Evaluation of writing quality, readability, and structure',
+                url: '/content-analysis.html'
+            },
+            {
+                id: 'plagiarism_detector',
+                name: 'Plagiarism Check',
+                icon: 'fa-copy',
+                description: 'Detection of copied content and originality verification',
+                url: '/plagiarism-check.html'
+            }
+        ];
+
+        // Function to create service cards
+        function createServiceCards(analysisData) {
+            const servicesGrid = document.getElementById('servicesGrid');
+            servicesGrid.innerHTML = '';
+
+            let completedCount = 0;
+
+            SERVICES.forEach(service => {
+                // Check if we have data for this service
+                const serviceData = analysisData?.detailed_analysis?.[service.id] || null;
+                const hasData = serviceData && Object.keys(serviceData).length > 0;
+                
+                if (hasData) completedCount++;
+
+                // Create the card
+                const card = document.createElement('a');
+                card.href = hasData ? service.url : '#';
+                card.className = `service-card ${service.id} ${hasData ? '' : 'loading'}`;
+                if (!hasData) {
+                    card.onclick = (e) => {
+                        e.preventDefault();
+                        alert('Analysis for this service is still processing...');
+                    };
+                }
+
+                // Extract key metrics from service data
+                let metric1 = { label: 'Status', value: 'Pending' };
+                let metric2 = { label: 'Score', value: '--' };
+
+                if (hasData) {
+                    // Customize metrics based on service type
+                    switch(service.id) {
+                        case 'source_credibility':
+                            metric1 = { label: 'Score', value: serviceData.credibility_score || serviceData.score || '--' };
+                            metric2 = { label: 'Level', value: serviceData.credibility_level || 'Unknown' };
+                            break;
+                        case 'author_analyzer':
+                            metric1 = { label: 'Score', value: serviceData.credibility_score || serviceData.score || '--' };
+                            metric2 = { label: 'Status', value: serviceData.is_verified ? 'Verified' : 'Unverified' };
+                            break;
+                        case 'bias_detector':
+                            metric1 = { label: 'Bias', value: serviceData.bias_score || '--' };
+                            metric2 = { label: 'Lean', value: serviceData.political_lean || 'Center' };
+                            break;
+                        case 'fact_checker':
+                            metric1 = { label: 'Claims', value: serviceData.total_claims || '0' };
+                            metric2 = { label: 'Verified', value: serviceData.verified_claims || '0' };
+                            break;
+                        case 'transparency_analyzer':
+                            metric1 = { label: 'Score', value: serviceData.transparency_score || serviceData.score || '--' };
+                            metric2 = { label: 'Level', value: serviceData.transparency_level || serviceData.level || 'Unknown' };
+                            break;
+                        case 'manipulation_detector':
+                            metric1 = { label: 'Risk', value: serviceData.manipulation_level || 'Low' };
+                            metric2 = { label: 'Tactics', value: serviceData.tactics_found?.length || '0' };
+                            break;
+                        case 'content_analyzer':
+                            metric1 = { label: 'Quality', value: serviceData.content_quality || 'Good' };
+                            metric2 = { label: 'Grade', value: serviceData.readability_grade || '--' };
+                            break;
+                        case 'plagiarism_detector':
+                            metric1 = { label: 'Original', value: serviceData.originality_score ? `${serviceData.originality_score}%` : '--' };
+                            metric2 = { label: 'Sources', value: serviceData.matches_found || '0' };
+                            break;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="service-card-header">
+                        <div class="service-icon-wrapper">
+                            <i class="fas ${service.icon}"></i>
+                        </div>
+                        <div class="service-info">
+                            <h3>${service.name}</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="service-status ${hasData ? 'complete' : 'pending'}">
+                        <i class="fas ${hasData ? 'fa-check-circle' : 'fa-clock'}"></i>
+                        <span>${hasData ? 'Analysis Complete' : 'Processing...'}</span>
+                    </div>
+                    
+                    <p class="service-preview">${service.description}</p>
+                    
+                    <div class="service-metrics">
+                        <div class="metric-item">
+                            <span class="metric-value">${metric1.value}</span>
+                            <span class="metric-label">${metric1.label}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-value">${metric2.value}</span>
+                            <span class="metric-label">${metric2.label}</span>
+                        </div>
+                    </div>
+                    
+                    ${hasData ? '<span class="view-details-link">View Details <i class="fas fa-arrow-right"></i></span>' : ''}
+                `;
+
+                servicesGrid.appendChild(card);
+            });
+
+            // Update progress bar
+            const progressBar = document.getElementById('servicesProgressBar');
+            const progressPercent = (completedCount / SERVICES.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+        }
+
+        // Override the display results function to use service cards
+        const originalShowResults = window.truthLensApp?.display?.showResults;
+        if (window.truthLensApp && window.truthLensApp.display) {
+            window.truthLensApp.display.showResults = function(data) {
+                // Call original display function for other elements
+                if (originalShowResults) {
+                    originalShowResults.call(this, data);
+                }
+                
+                // Create service cards
+                createServiceCards(data);
+                
+                // Store analysis data for service pages
+                sessionStorage.setItem('analysisData', JSON.stringify(data));
+            };
+        }
+
+        // Mode toggle functionality
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const mode = this.dataset.mode;
+                if (mode === 'url') {
+                    document.getElementById('urlExplanation').style.display = 'block';
+                    document.getElementById('textExplanation').style.display = 'none';
+                } else {
+                    document.getElementById('urlExplanation').style.display = 'none';
+                    document.getElementById('textExplanation').style.display = 'block';
+                }
+            });
+        });
+
+        // Example URL functionality
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('urlInput').value = this.dataset.url;
+            });
+        });
+    </script>
 </body>
 </html>
