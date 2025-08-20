@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bias Detection Analysis - TruthLens AI</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS Variables */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius: 0.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--gray-50);
+            color: var(--dark);
+            line-height: 1.5;
+            padding: 1rem;
+        }
+
+        /* Main Container */
+        .bias-analysis-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .analysis-header {
+            background: linear-gradient(135deg, var(--warning) 0%, #dc2626 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .header-content h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .back-button {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.375rem;
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Bias Spectrum Visual */
+        .bias-spectrum-section {
+            padding: 2rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .spectrum-container {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .spectrum-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .bias-score-display {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+
+        .bias-label {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .spectrum-visual {
+            position: relative;
+            height: 60px;
+            background: linear-gradient(to right, 
+                #1e40af 0%, 
+                #3b82f6 25%, 
+                #6b7280 50%, 
+                #f59e0b 75%, 
+                #dc2626 100%);
+            border-radius: 30px;
+            margin: 2rem 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .spectrum-marker {
+            position: absolute;
+            top: -10px;
+            width: 80px;
+            height: 80px;
+            background: var(--white);
+            border: 4px solid var(--warning);
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            transition: left 1s ease-out;
+        }
+
+        .spectrum-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.813rem;
+            color: var(--gray-600);
+        }
+
+        /* Main Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        /* Key Findings Panel */
+        .findings-panel {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(220, 38, 38, 0.03) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .findings-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .findings-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--warning);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .findings-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .findings-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .finding-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--white);
+            border-radius: 0.375rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .finding-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .finding-high .finding-indicator {
+            background: var(--danger);
+        }
+
+        .finding-medium .finding-indicator {
+            background: var(--warning);
+        }
+
+        .finding-low .finding-indicator {
+            background: var(--secondary);
+        }
+
+        .finding-content {
+            flex: 1;
+        }
+
+        .finding-text {
+            font-size: 0.875rem;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .finding-detail {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        /* Bias Types Grid */
+        .bias-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .bias-type-card {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .bias-type-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .bias-type-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--white);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .bias-type-political .bias-type-icon { color: var(--info); }
+        .bias-type-corporate .bias-type-icon { color: var(--warning); }
+        .bias-type-sensational .bias-type-icon { color: var(--danger); }
+        .bias-type-cultural .bias-type-icon { color: #8b5cf6; }
+        .bias-type-confirmation .bias-type-icon { color: #06b6d4; }
+        .bias-type-selection .bias-type-icon { color: #ec4899; }
+
+        .bias-type-info h3 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .bias-score-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .bias-score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        .bias-score-high { background: var(--danger); }
+        .bias-score-medium { background: var(--warning); }
+        .bias-score-low { background: var(--secondary); }
+
+        .bias-examples {
+            font-size: 0.813rem;
+            color: var(--gray-600);
+            margin-top: 0.75rem;
+        }
+
+        .example-item {
+            padding: 0.5rem;
+            background: var(--white);
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+            border-left: 3px solid var(--warning);
+            font-style: italic;
+        }
+
+        /* Loaded Language Analysis */
+        .language-analysis {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .language-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .language-header h2 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .loaded-phrases {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .phrase-tag {
+            padding: 0.375rem 0.75rem;
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: 2rem;
+            font-size: 0.813rem;
+            position: relative;
+        }
+
+        .phrase-tag.high-bias {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .phrase-tag.medium-bias {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        /* Statistical Breakdown */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        /* Comparison Section */
+        .comparison-section {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .comparison-header {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .comparison-bars {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .comparison-item {
+            display: grid;
+            grid-template-columns: 150px 1fr 80px;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .comparison-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .comparison-bar {
+            height: 24px;
+            background: var(--gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .comparison-fill {
+            height: 100%;
+            background: var(--warning);
+            border-radius: 12px;
+            transition: width 1s ease-out;
+            position: relative;
+        }
+
+        .comparison-fill::after {
+            content: attr(data-value);
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .comparison-value {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--dark);
+            text-align: right;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .bias-types-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .comparison-item {
+                grid-template-columns: 120px 1fr 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bias-analysis-container">
+        <!-- Header -->
+        <div class="analysis-header">
+            <div class="header-left">
+                <div class="header-icon">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <div class="header-content">
+                    <h1>Bias Detection Analysis</h1>
+                    <p class="header-subtitle">Multi-dimensional analysis of political and ideological bias</p>
+                </div>
+            </div>
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Back to Analysis
+            </a>
+        </div>
+
+        <!-- Bias Spectrum Visual -->
+        <div class="bias-spectrum-section">
+            <div class="spectrum-container">
+                <div class="spectrum-header">
+                    <div class="bias-score-display">68</div>
+                    <div class="bias-label">Moderate Right Bias Detected</div>
+                </div>
+                
+                <div class="spectrum-visual">
+                    <div class="spectrum-marker" style="left: 68%;">68</div>
+                </div>
+                
+                <div class="spectrum-labels">
+                    <span>Far Left</span>
+                    <span>Left</span>
+                    <span>Center</span>
+                    <span>Right</span>
+                    <span>Far Right</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-grid">
+            <!-- Key Findings -->
+            <div class="findings-panel">
+                <div class="findings-header">
+                    <div class="findings-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 class="findings-title">Key Bias Indicators</h2>
+                </div>
+                <div class="findings-list">
+                    <div class="finding-item finding-high">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Significant use of emotionally charged language</div>
+                            <div class="finding-detail">23 instances of loaded terms detected that may influence reader perception</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-medium">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Selective source citation favoring one perspective</div>
+                            <div class="finding-detail">78% of sources align with right-leaning viewpoints</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-medium">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Framing bias in headline and lead paragraphs</div>
+                            <div class="finding-detail">Story angle emphasizes conservative talking points</div>
+                        </div>
+                    </div>
+                    <div class="finding-item finding-low">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">Some attempt at presenting multiple viewpoints</div>
+                            <div class="finding-detail">Opposition views mentioned but given less prominence</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bias Types Analysis -->
+            <div class="bias-types-grid">
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-political">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Political Bias</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-high" style="width: 72%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Strong ideological framing detected:</p>
+                        <div class="example-item">"radical left policies" instead of "progressive policies"</div>
+                        <div class="example-item">"common-sense solutions" for partisan proposals</div>
+                    </div>
+                </div>
+
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-corporate">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Corporate Bias</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-medium" style="width: 45%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Moderate pro-business framing:</p>
+                        <div class="example-item">Economic impacts emphasized over social concerns</div>
+                        <div class="example-item">Corporate perspectives given prominence</div>
+                    </div>
+                </div>
+
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-sensational">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Sensationalism</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-high" style="width: 65%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Emotional manipulation detected:</p>
+                        <div class="example-item">Headline uses fear-inducing language</div>
+                        <div class="example-item">Dramatic imagery without context</div>
+                    </div>
+                </div>
+
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-cultural">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Cultural Bias</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-low" style="width: 25%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Minor cultural assumptions:</p>
+                        <div class="example-item">Western-centric perspective in global story</div>
+                        <div class="example-item">Limited diverse viewpoints</div>
+                    </div>
+                </div>
+
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-confirmation">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Confirmation Bias</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-medium" style="width: 58%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Cherry-picking evidence:</p>
+                        <div class="example-item">Statistics selected to support narrative</div>
+                        <div class="example-item">Contradictory data omitted</div>
+                    </div>
+                </div>
+
+                <div class="bias-type-card">
+                    <div class="bias-type-header">
+                        <div class="bias-type-icon bias-type-selection">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                        <div class="bias-type-info">
+                            <h3>Selection Bias</h3>
+                        </div>
+                    </div>
+                    <div class="bias-score-bar">
+                        <div class="bias-score-fill bias-score-high" style="width: 70%;"></div>
+                    </div>
+                    <div class="bias-examples">
+                        <p>Selective coverage detected:</p>
+                        <div class="example-item">Focus on stories that fit narrative</div>
+                        <div class="example-item">Important context excluded</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loaded Language Analysis -->
+            <div class="language-analysis">
+                <div class="language-header">
+                    <i class="fas fa-quote-right" style="color: var(--warning);"></i>
+                    <h2>Loaded Language & Framing</h2>
+                </div>
+                <div class="loaded-phrases">
+                    <span class="phrase-tag high-bias">radical agenda</span>
+                    <span class="phrase-tag high-bias">destroying America</span>
+                    <span class="phrase-tag medium-bias">controversial policy</span>
+                    <span class="phrase-tag high-bias">extreme measures</span>
+                    <span class="phrase-tag medium-bias">critics argue</span>
+                    <span class="phrase-tag high-bias">disastrous consequences</span>
+                    <span class="phrase-tag medium-bias">questionable motives</span>
+                    <span class="phrase-tag high-bias">unprecedented attack</span>
+                    <span class="phrase-tag">common-sense approach</span>
+                    <span class="phrase-tag medium-bias">so-called experts</span>
+                </div>
+            </div>
+
+            <!-- Statistical Breakdown -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-percentage stat-icon"></i>
+                    <span class="stat-value">68%</span>
+                    <span class="stat-label">Overall Bias Score</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-quote-left stat-icon"></i>
+                    <span class="stat-value">23</span>
+                    <span class="stat-label">Loaded Terms</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-users stat-icon"></i>
+                    <span class="stat-value">78%</span>
+                    <span class="stat-label">One-sided Sources</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-exclamation stat-icon"></i>
+                    <span class="stat-value">High</span>
+                    <span class="stat-label">Manipulation Risk</span>
+                </div>
+            </div>
+
+            <!-- Comparison with Similar Articles -->
+            <div class="comparison-section">
+                <h3 class="comparison-header">Bias Comparison with Similar Articles</h3>
+                <div class="comparison-bars">
+                    <div class="comparison-item">
+                        <div class="comparison-label">This Article</div>
+                        <div class="comparison-bar">
+                            <div class="comparison-fill" style="width: 68%;" data-value="68%"></div>
+                        </div>
+                        <div class="comparison-value">68%</div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="comparison-label">Source Average</div>
+                        <div class="comparison-bar">
+                            <div class="comparison-fill" style="width: 62%; background: var(--info);" data-value="62%"></div>
+                        </div>
+                        <div class="comparison-value">62%</div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="comparison-label">Topic Average</div>
+                        <div class="comparison-bar">
+                            <div class="comparison-fill" style="width: 45%; background: var(--secondary);" data-value="45%"></div>
+                        </div>
+                        <div class="comparison-value">45%</div>
+                    </div>
+                    <div class="comparison-item">
+                        <div class="comparison-label">Industry Standard</div>
+                        <div class="comparison-bar">
+                            <div class="comparison-fill" style="width: 35%; background: var(--gray-500);" data-value="35%"></div>
+                        </div>
+                        <div class="comparison-value">35%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
