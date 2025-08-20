@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bias Detection Analysis - TruthLens AI</title>
+    <title>Bias Detection - TruthLens Analysis</title>
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons & Fonts -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS Variables */
+        /* Use same CSS variables from index.html */
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
@@ -20,6 +23,7 @@
             --warning: #f59e0b;
             --info: #3b82f6;
             --dark: #1f2937;
+            --gray-700: #374151;
             --gray-600: #4b5563;
             --gray-500: #6b7280;
             --gray-400: #9ca3af;
@@ -28,10 +32,17 @@
             --gray-100: #f3f4f6;
             --gray-50: #f9fafb;
             --white: #ffffff;
+            
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius: 0.5rem;
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            
+            --radius: 0.75rem;
+            --radius-lg: 1rem;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
         }
 
         * {
@@ -41,1046 +52,475 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-50);
             color: var(--dark);
-            line-height: 1.5;
-            padding: 1rem;
+            line-height: 1.6;
         }
 
-        /* Main Container */
-        .bias-analysis-container {
+        /* Header with Return Button */
+        .service-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
             max-width: 1200px;
             margin: 0 auto;
-            background: var(--white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        /* Header Section */
-        .analysis-header {
-            background: linear-gradient(135deg, var(--warning) 0%, #dc2626 100%);
-            color: white;
-            padding: 1.5rem;
+            padding: 1rem 2rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-        }
-
-        .header-left {
-            display: flex;
             align-items: center;
-            gap: 1rem;
         }
 
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 0.375rem;
+        /* Prominent Return Button */
+        .return-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .return-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .return-button i {
+            font-size: 1.125rem;
+        }
+
+        .service-title-section {
+            flex: 1;
+            text-align: center;
+        }
+
+        .service-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            gap: 0.75rem;
         }
 
-        .header-content h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
         }
 
-        .header-subtitle {
+        /* Analysis Summary Section */
+        .analysis-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .summary-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .summary-score {
+            text-align: center;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            position: relative;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+        }
+
+        .score-label {
             font-size: 0.875rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-details h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
             opacity: 0.9;
         }
 
-        .back-button {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 0.375rem;
-            color: white;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
+        .summary-item {
+            margin-bottom: 1.25rem;
         }
 
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        /* Bias Spectrum Visual */
-        .bias-spectrum-section {
-            padding: 2rem;
-            background: var(--gray-50);
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .spectrum-container {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .spectrum-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .bias-score-display {
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--warning);
-            margin-bottom: 0.5rem;
-        }
-
-        .bias-label {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .spectrum-visual {
-            position: relative;
-            height: 60px;
-            background: linear-gradient(to right, 
-                #1e40af 0%, 
-                #3b82f6 25%, 
-                #6b7280 50%, 
-                #f59e0b 75%, 
-                #dc2626 100%);
-            border-radius: 30px;
-            margin: 2rem 0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .spectrum-marker {
-            position: absolute;
-            top: -10px;
-            width: 80px;
-            height: 80px;
-            background: var(--white);
-            border: 4px solid var(--warning);
-            border-radius: 50%;
-            box-shadow: var(--shadow-lg);
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.25rem;
-            transition: left 1s ease-out;
-        }
-
-        .spectrum-labels {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1rem;
-            font-size: 0.813rem;
-            color: var(--gray-600);
-        }
-
-        /* Main Content Grid */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-            padding: 1.5rem;
-        }
-
-        /* Key Findings Panel */
-        .findings-panel {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(220, 38, 38, 0.03) 100%);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-        }
-
-        .findings-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .findings-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--warning);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-        }
-
-        .findings-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .findings-list {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--white);
-            border-radius: 0.375rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .finding-indicator {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-top: 0.5rem;
-            flex-shrink: 0;
-        }
-
-        .finding-high .finding-indicator {
-            background: var(--danger);
-        }
-
-        .finding-medium .finding-indicator {
-            background: var(--warning);
-        }
-
-        .finding-low .finding-indicator {
-            background: var(--secondary);
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-text {
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-detail {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        /* Bias Types Grid */
-        .bias-types-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-
-        .bias-type-card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.25rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .bias-type-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .bias-type-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--white);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .summary-item h3 {
             font-size: 1rem;
-            box-shadow: var(--shadow-sm);
+            font-weight: 600;
+            margin-bottom: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .bias-type-political .bias-type-icon { color: var(--info); }
-        .bias-type-corporate .bias-type-icon { color: var(--warning); }
-        .bias-type-sensational .bias-type-icon { color: var(--danger); }
-        .bias-type-cultural .bias-type-icon { color: #8b5cf6; }
-        .bias-type-confirmation .bias-type-icon { color: #06b6d4; }
-        .bias-type-selection .bias-type-icon { color: #ec4899; }
+        .summary-item h3 i {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
 
-        .bias-type-info h3 {
+        .summary-item p {
             font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
+            line-height: 1.5;
+            opacity: 0.95;
         }
 
-        .bias-score-bar {
-            height: 8px;
-            background: var(--gray-200);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
+        /* Main Content Area */
+        .service-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 3rem;
         }
 
-        .bias-score-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 1s ease-out;
-        }
-
-        .bias-score-high { background: var(--danger); }
-        .bias-score-medium { background: var(--warning); }
-        .bias-score-low { background: var(--secondary); }
-
-        .bias-examples {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            margin-top: 0.75rem;
-        }
-
-        .example-item {
-            padding: 0.5rem;
+        /* Service-specific styles from truthlens-services.js */
+        .service-section {
             background: var(--white);
-            border-radius: 0.375rem;
-            margin-top: 0.5rem;
-            border-left: 3px solid var(--warning);
-            font-style: italic;
-        }
-
-        /* Loaded Language Analysis */
-        .language-analysis {
-            background: var(--white);
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
         }
 
-        .language-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .language-header h2 {
+        .section-title {
             font-size: 1.125rem;
             font-weight: 700;
             color: var(--dark);
-        }
-
-        .loaded-phrases {
+            margin-bottom: 1rem;
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
             gap: 0.5rem;
         }
 
-        .phrase-tag {
-            padding: 0.375rem 0.75rem;
-            background: var(--gray-100);
-            border: 1px solid var(--gray-200);
-            border-radius: 2rem;
-            font-size: 0.813rem;
-            position: relative;
+        .section-title i {
+            color: var(--primary);
+            font-size: 1rem;
         }
 
-        .phrase-tag.high-bias {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .phrase-tag.medium-bias {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: var(--warning);
-            color: var(--warning);
-        }
-
-        /* Statistical Breakdown */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .stat-card {
+        /* Loading State */
+        .loading-container {
             text-align: center;
-            padding: 1rem;
-            background: var(--gray-50);
+            padding: 4rem 2rem;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error-container {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
             border-radius: var(--radius);
-            border: 1px solid var(--gray-200);
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem auto;
+            max-width: 600px;
         }
 
-        .stat-icon {
-            font-size: 1.5rem;
-            color: var(--warning);
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--dark);
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        /* Comparison Section */
-        .comparison-section {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .comparison-header {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
+        .error-icon {
+            font-size: 3rem;
+            color: var(--danger);
             margin-bottom: 1rem;
-        }
-
-        .comparison-bars {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .comparison-item {
-            display: grid;
-            grid-template-columns: 150px 1fr 80px;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .comparison-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .comparison-bar {
-            height: 24px;
-            background: var(--gray-200);
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .comparison-fill {
-            height: 100%;
-            background: var(--warning);
-            border-radius: 12px;
-            transition: width 1s ease-out;
-            position: relative;
-        }
-
-        .comparison-fill::after {
-            content: attr(data-value);
-            position: absolute;
-            right: 0.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: white;
-        }
-
-        .comparison-value {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: var(--dark);
-            text-align: right;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .bias-types-grid {
+            .summary-content {
                 grid-template-columns: 1fr;
+                gap: 2rem;
             }
 
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
             }
 
-            .comparison-item {
-                grid-template-columns: 120px 1fr 60px;
+            .service-title-section {
+                order: -1;
+            }
+
+            .return-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <div class="bias-analysis-container">
-        <!-- Header -->
-        <div class="analysis-header">
-            <div class="header-left">
-                <div class="header-icon">
-                    <i class="fas fa-balance-scale"></i>
-                </div>
-                <div class="header-content">
-                    <h1>Bias Detection Analysis</h1>
-                    <p class="header-subtitle">Multi-dimensional analysis of political and ideological bias</p>
+    <!-- Header with Return Button -->
+    <header class="service-header">
+        <div class="header-content">
+            <a href="javascript:history.back()" class="return-button" id="returnButton">
+                <i class="fas fa-arrow-left"></i>
+                <span>Return to Analysis</span>
+            </a>
+            
+            <div class="service-title-section">
+                <h1 class="service-title">
+                    <div class="service-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <span>Bias Detection</span>
+                </h1>
+            </div>
+            
+            <div style="width: 180px;"></div> <!-- Spacer for balance -->
+        </div>
+    </header>
+
+    <!-- Analysis Summary Section -->
+    <section class="analysis-summary" id="analysisSummary">
+        <div class="summary-content">
+            <div class="summary-score">
+                <div class="score-circle">
+                    <div>
+                        <div class="score-value" id="summaryScore">--</div>
+                        <div class="score-label">Bias Score</div>
+                    </div>
                 </div>
             </div>
-            <a href="/" class="back-button">
+            
+            <div class="summary-details">
+                <h2>Analysis Summary</h2>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-file-alt"></i> What We Analyzed</h3>
+                    <p id="analyzedContent">Loading article information...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-search"></i> What We Found</h3>
+                    <p id="keyFindings">Analyzing content...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-lightbulb"></i> What This Means</h3>
+                    <p id="interpretation">Processing results...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="service-content" id="serviceContent">
+        <div class="loading-container" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>Loading bias detection analysis...</p>
+        </div>
+        
+        <div class="error-container" id="errorState" style="display: none;">
+            <i class="fas fa-exclamation-circle error-icon"></i>
+            <h2>Analysis Not Available</h2>
+            <p id="errorMessage">Bias detection analysis was not performed for this article.</p>
+            <a href="javascript:history.back()" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
                 <i class="fas fa-arrow-left"></i>
-                Back to Analysis
+                <span>Return to Main Analysis</span>
             </a>
         </div>
-
-        <!-- Bias Spectrum Visual -->
-        <div class="bias-spectrum-section">
-            <div class="spectrum-container">
-                <div class="spectrum-header">
-                    <div class="bias-score-display">68</div>
-                    <div class="bias-label">Moderate Right Bias Detected</div>
-                </div>
-                
-                <div class="spectrum-visual">
-                    <div class="spectrum-marker" style="left: 68%;">68</div>
-                </div>
-                
-                <div class="spectrum-labels">
-                    <span>Far Left</span>
-                    <span>Left</span>
-                    <span>Center</span>
-                    <span>Right</span>
-                    <span>Far Right</span>
-                </div>
-            </div>
+        
+        <!-- Service-specific content will be inserted here -->
+        <div id="analysisContent" style="display: none;">
+            <!-- Dynamic content -->
         </div>
+    </main>
 
-        <!-- Main Content -->
-        <div class="content-grid">
-            <!-- Key Findings -->
-            <div class="findings-panel">
-                <div class="findings-header">
-                    <div class="findings-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h2 class="findings-title">Key Bias Indicators</h2>
-                </div>
-                <div class="findings-list">
-                    <div class="finding-item finding-high">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Significant use of emotionally charged language</div>
-                            <div class="finding-detail">23 instances of loaded terms detected that may influence reader perception</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-medium">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Selective source citation favoring one perspective</div>
-                            <div class="finding-detail">78% of sources align with right-leaning viewpoints</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-medium">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Framing bias in headline and lead paragraphs</div>
-                            <div class="finding-detail">Story angle emphasizes conservative talking points</div>
-                        </div>
-                    </div>
-                    <div class="finding-item finding-low">
-                        <div class="finding-indicator"></div>
-                        <div class="finding-content">
-                            <div class="finding-text">Some attempt at presenting multiple viewpoints</div>
-                            <div class="finding-detail">Opposition views mentioned but given less prominence</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bias Types Analysis -->
-            <div class="bias-types-grid">
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-political">
-                            <i class="fas fa-landmark"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Political Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 72%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Strong ideological framing detected:</p>
-                        <div class="example-item">"radical left policies" instead of "progressive policies"</div>
-                        <div class="example-item">"common-sense solutions" for partisan proposals</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-corporate">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Corporate Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-medium" style="width: 45%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Moderate pro-business framing:</p>
-                        <div class="example-item">Economic impacts emphasized over social concerns</div>
-                        <div class="example-item">Corporate perspectives given prominence</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-sensational">
-                            <i class="fas fa-fire"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Sensationalism</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 65%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Emotional manipulation detected:</p>
-                        <div class="example-item">Headline uses fear-inducing language</div>
-                        <div class="example-item">Dramatic imagery without context</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-cultural">
-                            <i class="fas fa-globe"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Cultural Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-low" style="width: 25%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Minor cultural assumptions:</p>
-                        <div class="example-item">Western-centric perspective in global story</div>
-                        <div class="example-item">Limited diverse viewpoints</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-confirmation">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Confirmation Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-medium" style="width: 58%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Cherry-picking evidence:</p>
-                        <div class="example-item">Statistics selected to support narrative</div>
-                        <div class="example-item">Contradictory data omitted</div>
-                    </div>
-                </div>
-
-                <div class="bias-type-card">
-                    <div class="bias-type-header">
-                        <div class="bias-type-icon bias-type-selection">
-                            <i class="fas fa-filter"></i>
-                        </div>
-                        <div class="bias-type-info">
-                            <h3>Selection Bias</h3>
-                        </div>
-                    </div>
-                    <div class="bias-score-bar">
-                        <div class="bias-score-fill bias-score-high" style="width: 70%;"></div>
-                    </div>
-                    <div class="bias-examples">
-                        <p>Selective coverage detected:</p>
-                        <div class="example-item">Focus on stories that fit narrative</div>
-                        <div class="example-item">Important context excluded</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Loaded Language Analysis -->
-            <div class="language-analysis">
-                <div class="language-header">
-                    <i class="fas fa-quote-right" style="color: var(--warning);"></i>
-                    <h2>Loaded Language & Framing</h2>
-                </div>
-                <div class="loaded-phrases">
-                    <span class="phrase-tag high-bias">radical agenda</span>
-                    <span class="phrase-tag high-bias">destroying America</span>
-                    <span class="phrase-tag medium-bias">controversial policy</span>
-                    <span class="phrase-tag high-bias">extreme measures</span>
-                    <span class="phrase-tag medium-bias">critics argue</span>
-                    <span class="phrase-tag high-bias">disastrous consequences</span>
-                    <span class="phrase-tag medium-bias">questionable motives</span>
-                    <span class="phrase-tag high-bias">unprecedented attack</span>
-                    <span class="phrase-tag">common-sense approach</span>
-                    <span class="phrase-tag medium-bias">so-called experts</span>
-                </div>
-            </div>
-
-            <!-- Statistical Breakdown -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-percentage stat-icon"></i>
-                    <span class="stat-value">68%</span>
-                    <span class="stat-label">Overall Bias Score</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-quote-left stat-icon"></i>
-                    <span class="stat-value">23</span>
-                    <span class="stat-label">Loaded Terms</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-users stat-icon"></i>
-                    <span class="stat-value">78%</span>
-                    <span class="stat-label">One-sided Sources</span>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-exclamation stat-icon"></i>
-                    <span class="stat-value">High</span>
-                    <span class="stat-label">Manipulation Risk</span>
-                </div>
-            </div>
-
-            <!-- Comparison with Similar Articles -->
-            <div class="comparison-section">
-                <h3 class="comparison-header">Bias Comparison with Similar Articles</h3>
-                <div class="comparison-bars">
-                    <div class="comparison-item">
-                        <div class="comparison-label">This Article</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 68%;" data-value="68%"></div>
-                        </div>
-                        <div class="comparison-value">68%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Source Average</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 62%; background: var(--info);" data-value="62%"></div>
-                        </div>
-                        <div class="comparison-value">62%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Topic Average</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 45%; background: var(--secondary);" data-value="45%"></div>
-                        </div>
-                        <div class="comparison-value">45%</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-label">Industry Standard</div>
-                        <div class="comparison-bar">
-                            <div class="comparison-fill" style="width: 35%; background: var(--gray-500);" data-value="35%"></div>
-                        </div>
-                        <div class="comparison-value">35%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Scripts -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/truthlens-services.js"></script>
     <script>
-    (function() {
-        // 1. Retrieve data
-        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
-        const biasData = analysisData?.detailed_analysis?.bias_detector || {};
-        
-        // 2. Check if data exists
-        if (!Object.keys(biasData).length) {
-            // Show no data message
-            document.querySelector('.bias-analysis-container').innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
-                    <h2>No Analysis Data Available</h2>
-                    <p>Please run an analysis first to see results.</p>
-                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
-                </div>
-            `;
-            return;
-        }
-        
-        // 3. Update UI elements
-        updatePageElements(biasData);
-        
-        function updatePageElements(data) {
-            // Update bias score and label
-            const biasScore = Math.round(data.bias_score || 0);
-            document.querySelector('.bias-score-display').textContent = biasScore;
+        // Service-specific configuration
+        const SERVICE_CONFIG = {
+            id: 'bias_detector',
+            name: 'Bias Detection',
+            icon: 'fa-balance-scale'
+        };
+
+        // Initialize service page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeServicePage();
+        });
+
+        function initializeServicePage() {
+            // Get analysis data from sessionStorage
+            const analysisData = sessionStorage.getItem('analysisData');
             
-            // Update spectrum marker position
-            const marker = document.querySelector('.spectrum-marker');
-            marker.style.left = biasScore + '%';
-            marker.textContent = biasScore;
-            
-            // Update bias label based on score and lean
-            const biasLabel = getBiasLabel(biasScore, data.political_lean);
-            document.querySelector('.bias-label').textContent = biasLabel;
-            
-            // Update loaded phrases
-            const phrasesContainer = document.querySelector('.loaded-phrases');
-            phrasesContainer.innerHTML = '';
-            if (data.loaded_phrases && data.loaded_phrases.length > 0) {
-                data.loaded_phrases.forEach(phrase => {
-                    const tag = document.createElement('span');
-                    tag.className = 'phrase-tag ' + getBiasSeverityClass(phrase.severity);
-                    tag.textContent = phrase.text || phrase;
-                    phrasesContainer.appendChild(tag);
-                });
-            } else {
-                phrasesContainer.innerHTML = '<span class="phrase-tag">No loaded phrases detected</span>';
+            if (!analysisData) {
+                showError('No analysis data found. Please return to the main page and run a new analysis.');
+                return;
             }
+
+            try {
+                const data = JSON.parse(analysisData);
+                const serviceData = data.detailed_analysis?.[SERVICE_CONFIG.id];
+                
+                if (!serviceData || Object.keys(serviceData).length === 0) {
+                    showError('Bias detection analysis was not performed for this article.');
+                    return;
+                }
+
+                // Populate summary section
+                populateSummary(data, serviceData);
+                
+                // Show analysis content
+                displayServiceAnalysis(serviceData);
+                
+                // Update return button to maintain state
+                updateReturnButton();
+                
+            } catch (error) {
+                console.error('Error loading analysis data:', error);
+                showError('Error loading analysis results.');
+            }
+        }
+
+        function populateSummary(fullData, serviceData) {
+            // Article information
+            const article = fullData.article || {};
+            const articleInfo = `"${article.title || 'Untitled Article'}" from ${article.source || article.domain || 'Unknown Source'}`;
+            document.getElementById('analyzedContent').textContent = articleInfo;
+
+            // Service-specific score and findings
+            const scoreInfo = getServiceScoreInfo(serviceData);
+            document.getElementById('summaryScore').textContent = scoreInfo.score;
             
-            // Update bias dimensions
-            const biasTypes = [
-                { type: 'political', icon: 'landmark', score: data.political_bias || 0 },
-                { type: 'corporate', icon: 'building', score: data.corporate_bias || 0 },
-                { type: 'sensational', icon: 'fire', score: data.sensationalism || 0 },
-                { type: 'cultural', icon: 'globe', score: data.cultural_bias || 0 },
-                { type: 'confirmation', icon: 'check-circle', score: data.confirmation_bias || 0 },
-                { type: 'selection', icon: 'filter', score: data.selection_bias || 0 }
-            ];
+            // Key findings
+            document.getElementById('keyFindings').textContent = getServiceKeyFindings(serviceData);
             
-            const biasTypesGrid = document.querySelector('.bias-types-grid');
-            biasTypesGrid.innerHTML = '';
-            
-            biasTypes.forEach(biasType => {
-                const card = createBiasTypeCard(biasType, data);
-                biasTypesGrid.appendChild(card);
-            });
-            
-            // Update statistics
-            const stats = {
-                overall: biasScore + '%',
-                loadedTerms: data.loaded_terms_count || 0,
-                onesidedSources: (data.one_sided_sources || 0) + '%',
-                manipulationRisk: getManipulationLevel(data.manipulation_level)
+            // Interpretation
+            document.getElementById('interpretation').textContent = getServiceInterpretation(serviceData);
+        }
+
+        function getServiceScoreInfo(data) {
+            const score = data.bias_score || data.score || 0;
+            return {
+                score: score,
+                label: 'Bias Score'
             };
+        }
+
+        function getServiceKeyFindings(data) {
+            const biasScore = data.bias_score || data.score || 0;
+            const biasLevel = data.bias_level || 'Unknown';
+            const objectivityScore = 100 - biasScore;
             
-            const statValues = document.querySelectorAll('.stat-value');
-            statValues[0].textContent = stats.overall;
-            statValues[1].textContent = stats.loadedTerms;
-            statValues[2].textContent = stats.onesidedSources;
-            statValues[3].textContent = stats.manipulationRisk;
+            let findings = `Article shows ${biasLevel.toLowerCase()} bias (${biasScore}%) with ${objectivityScore}% objectivity. `;
             
-            // Update key findings
-            const findingsList = document.querySelector('.findings-list');
-            findingsList.innerHTML = '';
-            if (data.key_findings && data.key_findings.length > 0) {
-                data.key_findings.forEach(finding => {
-                    const findingItem = createFindingItem(finding);
-                    findingsList.appendChild(findingItem);
-                });
-            } else {
-                // Add default findings based on bias score
-                const defaultFindings = generateDefaultFindings(biasScore, data);
-                defaultFindings.forEach(finding => {
-                    const findingItem = createFindingItem(finding);
-                    findingsList.appendChild(findingItem);
-                });
+            if (data.loaded_phrases?.length > 0) {
+                findings += `${data.loaded_phrases.length} instances of loaded language detected. `;
             }
             
-            // Update comparison bars
-            updateComparisonBars(biasScore, data);
-        }
-        
-        function createBiasTypeCard(biasType, data) {
-            const card = document.createElement('div');
-            card.className = 'bias-type-card';
-            
-            const examples = data[biasType.type + '_examples'] || [];
-            const examplesHtml = examples.length > 0 
-                ? examples.map(ex => `<div class="example-item">${ex}</div>`).join('')
-                : '<div class="example-item">No specific examples detected</div>';
-            
-            card.innerHTML = `
-                <div class="bias-type-header">
-                    <div class="bias-type-icon bias-type-${biasType.type}">
-                        <i class="fas fa-${biasType.icon}"></i>
-                    </div>
-                    <div class="bias-type-info">
-                        <h3>${capitalizeFirst(biasType.type)} Bias</h3>
-                    </div>
-                </div>
-                <div class="bias-score-bar">
-                    <div class="bias-score-fill ${getBiasLevelClass(biasType.score)}" style="width: ${biasType.score}%;"></div>
-                </div>
-                <div class="bias-examples">
-                    <p>${getExampleDescription(biasType.type)}:</p>
-                    ${examplesHtml}
-                </div>
-            `;
-            
-            return card;
-        }
-        
-        function createFindingItem(finding) {
-            const item = document.createElement('div');
-            item.className = `finding-item finding-${finding.severity || 'medium'}`;
-            item.innerHTML = `
-                <div class="finding-indicator"></div>
-                <div class="finding-content">
-                    <div class="finding-text">${finding.text || finding}</div>
-                    <div class="finding-detail">${finding.detail || ''}</div>
-                </div>
-            `;
-            return item;
-        }
-        
-        function updateComparisonBars(biasScore, data) {
-            const bars = document.querySelectorAll('.comparison-fill');
-            // This Article
-            bars[0].style.width = biasScore + '%';
-            bars[0].setAttribute('data-value', biasScore + '%');
-            
-            // Source Average
-            const sourceAvg = data.source_average || 62;
-            bars[1].style.width = sourceAvg + '%';
-            bars[1].setAttribute('data-value', sourceAvg + '%');
-            
-            // Topic Average
-            const topicAvg = data.topic_average || 45;
-            bars[2].style.width = topicAvg + '%';
-            bars[2].setAttribute('data-value', topicAvg + '%');
-            
-            // Industry Standard
-            const industryStd = data.industry_standard || 35;
-            bars[3].style.width = industryStd + '%';
-            bars[3].setAttribute('data-value', industryStd + '%');
-            
-            // Update values
-            const values = document.querySelectorAll('.comparison-value');
-            values[0].textContent = biasScore + '%';
-            values[1].textContent = sourceAvg + '%';
-            values[2].textContent = topicAvg + '%';
-            values[3].textContent = industryStd + '%';
-        }
-        
-        // Helper functions
-        function getBiasLabel(score, lean) {
-            if (score < 20) return 'Minimal Bias';
-            if (score < 40) {
-                if (lean === 'left') return 'Slight Left Bias';
-                if (lean === 'right') return 'Slight Right Bias';
-                return 'Slight Bias Detected';
-            }
-            if (score < 60) {
-                if (lean === 'left') return 'Moderate Left Bias';
-                if (lean === 'right') return 'Moderate Right Bias';
-                return 'Moderate Bias Detected';
-            }
-            if (score < 80) {
-                if (lean === 'left') return 'Strong Left Bias';
-                if (lean === 'right') return 'Strong Right Bias';
-                return 'Strong Bias Detected';
-            }
-            if (lean === 'left') return 'Extreme Left Bias';
-            if (lean === 'right') return 'Extreme Right Bias';
-            return 'Extreme Bias Detected';
-        }
-        
-        function getBiasSeverityClass(severity) {
-            if (!severity) return '';
-            if (severity === 'high') return 'high-bias';
-            if (severity === 'medium') return 'medium-bias';
-            return '';
-        }
-        
-        function getBiasLevelClass(score) {
-            if (score >= 60) return 'bias-score-high';
-            if (score >= 30) return 'bias-score-medium';
-            return 'bias-score-low';
-        }
-        
-        function getManipulationLevel(level) {
-            if (!level) return 'Low';
-            if (typeof level === 'number') {
-                if (level >= 70) return 'High';
-                if (level >= 40) return 'Medium';
-                return 'Low';
-            }
-            return level.charAt(0).toUpperCase() + level.slice(1);
-        }
-        
-        function capitalizeFirst(str) {
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-        
-        function getExampleDescription(type) {
-            const descriptions = {
-                political: 'Political framing detected',
-                corporate: 'Business perspective bias',
-                sensational: 'Emotional manipulation detected',
-                cultural: 'Cultural assumptions found',
-                confirmation: 'Cherry-picked evidence',
-                selection: 'Selective coverage detected'
-            };
-            return descriptions[type] || 'Examples detected';
-        }
-        
-        function generateDefaultFindings(score, data) {
-            const findings = [];
-            
-            if (score >= 60) {
-                findings.push({
-                    text: 'High level of bias detected in content',
-                    detail: `Bias score of ${score}% indicates significant perspective slant`,
-                    severity: 'high'
-                });
-            }
-            
-            if (data.loaded_phrases && data.loaded_phrases.length > 5) {
-                findings.push({
-                    text: 'Multiple instances of loaded language found',
-                    detail: `${data.loaded_phrases.length} emotionally charged terms detected`,
-                    severity: 'medium'
-                });
-            }
-            
-            if (data.political_lean) {
-                findings.push({
-                    text: `Political lean towards ${data.political_lean} detected`,
-                    detail: 'Content shows preference for one political perspective',
-                    severity: 'medium'
-                });
-            }
-            
-            if (findings.length === 0) {
-                findings.push({
-                    text: 'Moderate bias levels detected',
-                    detail: 'Some perspective slant present but within acceptable range',
-                    severity: 'low'
-                });
+            if (data.dominant_bias) {
+                findings += `Primary bias type: ${data.dominant_bias}.`;
             }
             
             return findings;
         }
-    })();
+
+        function getServiceInterpretation(data) {
+            const score = data.bias_score || data.score || 0;
+            
+            if (score >= 80) {
+                return 'This article has extreme bias that severely compromises objectivity. The content is heavily slanted with loaded language, one-sided presentation, and manipulative framing. Readers should seek alternative perspectives.';
+            } else if (score >= 60) {
+                return 'This article contains significant bias that affects objectivity. While some factual content may be present, the presentation is notably slanted. Cross-reference claims with neutral sources.';
+            } else if (score >= 40) {
+                return 'This article shows moderate bias with some objectivity issues. The reporting includes perspective slant but maintains some balance. Be aware of the bias when evaluating claims.';
+            } else if (score >= 20) {
+                return 'This article demonstrates reasonable objectivity with minor bias within acceptable journalistic standards. The content is generally balanced with minimal slant.';
+            } else {
+                return 'This article maintains excellent objectivity with minimal bias. The reporting is well-balanced, uses neutral language, and presents multiple perspectives fairly.';
+            }
+        }
+
+        function displayServiceAnalysis(data) {
+            // Hide loading, show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'block';
+            
+            // Use the renderer from truthlens-services.js
+            if (window.truthLensApp && window.truthLensApp.services) {
+                const content = window.truthLensApp.services.renderBiasDetection(data);
+                document.getElementById('analysisContent').innerHTML = content;
+            } else {
+                // Fallback if services not loaded
+                const services = new TruthLensServices({ utils: { getScoreColor: (s) => s >= 60 ? '#10b981' : '#ef4444' }});
+                const content = services.renderBiasDetection(data);
+                document.getElementById('analysisContent').innerHTML = content;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function updateReturnButton() {
+            // If we opened in a new tab, change the return button behavior
+            const returnButton = document.getElementById('returnButton');
+            if (window.opener) {
+                returnButton.innerHTML = '<i class="fas fa-times"></i><span>Close Window</span>';
+                returnButton.onclick = function(e) {
+                    e.preventDefault();
+                    window.close();
+                };
+            }
+        }
     </script>
 </body>
 </html>
