@@ -3,34 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Source Credibility Analysis - TruthLens AI</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>Source Credibility Analysis - TruthLens</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* CSS Variables */
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #10b981;
-            --danger: #ef4444;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
             --warning: #f59e0b;
-            --info: #3b82f6;
-            --dark: #1f2937;
-            --gray-600: #4b5563;
-            --gray-500: #6b7280;
-            --gray-400: #9ca3af;
-            --gray-300: #d1d5db;
-            --gray-200: #e5e7eb;
-            --gray-100: #f3f4f6;
+            --danger: #ef4444;
             --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
             --white: #ffffff;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --radius: 0.5rem;
         }
 
@@ -41,47 +36,38 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--gray-50);
-            color: var(--dark);
-            line-height: 1.5;
-            padding: 1rem;
+            color: var(--gray-900);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Main Container */
-        .source-credibility-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: var(--white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        /* Header Section */
-        .analysis-header {
+        /* Header Styles */
+        .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 1.5rem;
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
         }
 
-        .header-left {
+        .logo {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .logo i {
             font-size: 1.5rem;
         }
 
@@ -185,36 +171,44 @@
         }
 
         .credibility-level {
+            padding: 0.5rem 1rem;
+            background: var(--success);
+            color: white;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--secondary);
-            color: white;
-            border-radius: 2rem;
-            font-size: 0.875rem;
-            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .credibility-level.low {
+            background: var(--danger);
+        }
+
+        .credibility-level.medium {
+            background: var(--warning);
         }
 
         /* Quick Stats */
         .quick-stats {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 0.75rem;
-            margin-top: 1rem;
         }
 
         .stat-item {
-            text-align: center;
-            padding: 0.75rem;
             background: var(--gray-50);
+            padding: 0.75rem;
             border-radius: 0.375rem;
+            text-align: center;
         }
 
         .stat-value {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--dark);
+            color: var(--gray-900);
         }
 
         .stat-label {
@@ -224,43 +218,39 @@
 
         /* Trust Indicators */
         .trust-indicators {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.25rem;
             margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .section-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .section-title i {
-            color: var(--primary);
-            font-size: 1rem;
+            color: var(--gray-800);
         }
 
         .indicator-list {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .indicator-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 0.375rem;
-            font-size: 0.813rem;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--gray-700);
         }
 
         .indicator-positive {
-            color: var(--secondary);
+            color: var(--success);
         }
 
         .indicator-negative {
@@ -271,193 +261,164 @@
             color: var(--warning);
         }
 
-        /* Main Content Area */
-        .main-content {
-            padding: 1.5rem;
-        }
-
-        /* Key Findings Panel */
-        .findings-panel {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(129, 140, 248, 0.03) 100%);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+        /* Technical Details */
+        .technical-details {
+            background: var(--white);
             border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
         }
 
-        .findings-header {
+        .technical-grid {
             display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .technical-item {
+            display: grid;
+            grid-template-columns: 40px 1fr auto;
             align-items: center;
             gap: 0.75rem;
-            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: 0.375rem;
         }
 
-        .findings-icon {
+        .technical-icon {
             width: 40px;
             height: 40px;
-            background: var(--primary);
-            border-radius: 0.375rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            border-radius: 0.375rem;
             font-size: 1.25rem;
         }
 
-        .findings-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
+        .technical-secure {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
         }
 
-        .findings-list {
-            display: grid;
-            gap: 0.75rem;
+        .technical-insecure {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .technical-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .technical-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 1.5rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Key Findings */
+        .key-findings {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .findings-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .finding-item {
             display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--white);
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--gray-50);
             border-radius: 0.375rem;
-            border: 1px solid var(--gray-200);
+            position: relative;
+            padding-left: 3rem;
         }
 
         .finding-indicator {
-            width: 6px;
-            height: 6px;
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            margin-top: 0.5rem;
-            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .finding-positive {
+            background: rgba(16, 185, 129, 0.05);
         }
 
         .finding-positive .finding-indicator {
-            background: var(--secondary);
+            background: var(--success);
+            color: white;
+        }
+
+        .finding-positive .finding-indicator::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.75rem;
+        }
+
+        .finding-warning {
+            background: rgba(245, 158, 11, 0.05);
         }
 
         .finding-warning .finding-indicator {
             background: var(--warning);
+            color: white;
+        }
+
+        .finding-warning .finding-indicator::after {
+            content: '\f071';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.75rem;
+        }
+
+        .finding-negative {
+            background: rgba(239, 68, 68, 0.05);
         }
 
         .finding-negative .finding-indicator {
             background: var(--danger);
+            color: white;
         }
 
-        .finding-content {
-            flex: 1;
+        .finding-negative .finding-indicator::after {
+            content: '\f00d';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.75rem;
         }
 
         .finding-text {
             font-size: 0.875rem;
-            color: var(--dark);
+            font-weight: 600;
             margin-bottom: 0.25rem;
+            color: var(--gray-900);
         }
 
         .finding-detail {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             color: var(--gray-600);
-        }
-
-        /* Info Grid */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .info-card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.25rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .info-card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .info-card-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.875rem;
-        }
-
-        .info-card-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .info-card-content {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            line-height: 1.5;
-        }
-
-        .info-value {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        /* Historical Analysis */
-        .historical-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .historical-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .historical-header h2 {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .time-filter {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .filter-btn {
-            padding: 0.375rem 0.75rem;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .filter-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .score-timeline {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1rem;
-            height: 200px;
-            position: relative;
-            overflow: hidden;
         }
 
         /* Metadata Grid */
@@ -465,31 +426,30 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: var(--radius);
             margin-bottom: 1.5rem;
         }
 
         .metadata-item {
-            text-align: center;
-            padding: 0.75rem;
             background: var(--white);
-            border-radius: 0.375rem;
             border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .metadata-icon {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             color: var(--primary);
-            margin-bottom: 0.5rem;
         }
 
         .metadata-value {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 700;
-            color: var(--dark);
-            display: block;
+            color: var(--gray-900);
         }
 
         .metadata-label {
@@ -497,75 +457,185 @@
             color: var(--gray-600);
         }
 
-        /* Domain Details Table */
-        .details-table {
-            width: 100%;
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-card {
             background: var(--white);
             border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        /* Score Breakdown */
+        .score-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .score-bar-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .score-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .score-bar-label {
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+
+        .score-bar-value {
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        .score-bar-track {
+            height: 0.5rem;
+            background: var(--gray-200);
+            border-radius: 9999px;
             overflow: hidden;
-            box-shadow: var(--shadow-sm);
         }
 
-        .details-table thead {
+        .score-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        /* History Graph */
+        .history-graph {
+            height: 200px;
             background: var(--gray-50);
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-500);
+            font-size: 0.875rem;
         }
 
-        .details-table th {
-            padding: 0.75rem 1rem;
+        /* Detailed Breakdown Table */
+        .breakdown-table {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .breakdown-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .breakdown-table th {
             text-align: left;
             font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--gray-700);
+            color: var(--gray-600);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
         }
 
-        .details-table td {
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--gray-100);
-            font-size: 0.813rem;
+        .breakdown-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 0.875rem;
+        }
+
+        .breakdown-table tr:last-child td {
+            border-bottom: none;
         }
 
         .check-mark {
-            color: var(--secondary);
+            color: var(--success);
         }
 
         .x-mark {
             color: var(--danger);
         }
 
+        /* Error State */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin: 1.5rem;
+            text-align: center;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-500);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Responsive */
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 300px 1fr;
+            }
+            
+            .metadata-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .content-grid {
                 grid-template-columns: 1fr;
             }
-
+            
             .source-sidebar {
                 border-right: none;
                 border-bottom: 1px solid var(--gray-200);
             }
-
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .metadata-grid {
-                grid-template-columns: repeat(2, 1fr);
+            
+            .quick-stats {
+                grid-template-columns: repeat(4, 1fr);
             }
         }
     </style>
 </head>
 <body>
-    <div class="source-credibility-container">
-        <!-- Header -->
-        <div class="analysis-header">
-            <div class="header-left">
-                <div class="header-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div class="header-content">
-                    <h1>Source Credibility Analysis</h1>
-                    <p class="header-subtitle">Comprehensive evaluation of news source reliability and trustworthiness</p>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-search-location"></i>
+                <div>
+                    <h1>TruthLens</h1>
+                    <div class="header-subtitle">Source Credibility Analysis</div>
                 </div>
             </div>
             <a href="/" class="back-button">
@@ -573,319 +643,424 @@
                 Back to Analysis
             </a>
         </div>
+    </header>
 
-        <!-- Content Grid -->
-        <div class="content-grid">
-            <!-- Left Sidebar -->
-            <aside class="source-sidebar">
-                <!-- Profile Card -->
-                <div class="profile-card">
-                    <div class="source-logo">R</div>
-                    <h2 class="source-name">Reuters</h2>
-                    <p class="source-domain">reuters.com</p>
-                    
-                    <div class="credibility-score-display">
-                        <div class="score-value">92</div>
-                        <div class="score-label">Credibility Score</div>
-                    </div>
-                    
-                    <div class="credibility-level">
-                        <i class="fas fa-check-circle"></i>
-                        Highly Credible
-                    </div>
-
-                    <div class="quick-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">168</div>
-                            <div class="stat-label">Years Active</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">A+</div>
-                            <div class="stat-label">Media Rating</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">200+</div>
-                            <div class="stat-label">Countries</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">94%</div>
-                            <div class="stat-label">Accuracy</div>
-                        </div>
-                    </div>
+    <!-- Content -->
+    <div class="content-grid">
+        <!-- Left Sidebar -->
+        <aside class="source-sidebar">
+            <!-- Source Profile Card -->
+            <div class="profile-card">
+                <div class="source-logo" id="sourceLogo">
+                    <i class="fas fa-newspaper"></i>
+                </div>
+                <h2 class="source-name" id="sourceName">Loading...</h2>
+                <div class="source-domain" id="sourceDomain">Loading...</div>
+                
+                <div class="credibility-score-display">
+                    <div class="score-value" id="credibilityScore">--</div>
+                    <div class="score-label">Credibility Score</div>
+                </div>
+                
+                <div class="credibility-level" id="credibilityLevel">
+                    <i class="fas fa-shield-alt"></i>
+                    <span id="credibilityText">Analyzing...</span>
                 </div>
 
-                <!-- Trust Indicators -->
-                <div class="trust-indicators">
+                <div class="quick-stats" id="quickStats">
+                    <!-- Dynamic stats will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Trust Indicators -->
+            <div class="trust-indicators">
+                <h3 class="section-title">
+                    <i class="fas fa-check-circle"></i>
+                    Trust Indicators
+                </h3>
+                <div class="indicator-list" id="trustIndicators">
+                    <!-- Dynamic indicators will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Technical Details -->
+            <div class="technical-details">
+                <h3 class="section-title">
+                    <i class="fas fa-cog"></i>
+                    Technical Details
+                </h3>
+                <div class="technical-grid" id="technicalDetails">
+                    <!-- Dynamic technical details will be inserted here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>No analysis data available. Please run an analysis first.</p>
+            </div>
+
+            <div id="mainContentArea">
+                <!-- Key Findings -->
+                <div class="key-findings">
                     <h3 class="section-title">
-                        <i class="fas fa-check-circle"></i>
-                        Trust Indicators
+                        <i class="fas fa-lightbulb"></i>
+                        Key Findings
                     </h3>
-                    <div class="indicator-list">
-                        <!-- Dynamic indicators will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Additional Info -->
-                <div class="trust-indicators">
-                    <h3 class="section-title">
-                        <i class="fas fa-info-circle"></i>
-                        Organization Info
-                    </h3>
-                    <div class="info-card-content">
-                        <p><span class="info-value">Type:</span> <span class="org-type">International News Agency</span></p>
-                        <p><span class="info-value">Founded:</span> <span class="org-founded">1851</span></p>
-                        <p><span class="info-value">Headquarters:</span> <span class="org-headquarters">London, UK</span></p>
-                        <p><span class="info-value">Ownership:</span> <span class="org-ownership">Thomson Reuters</span></p>
-                        <p><span class="info-value">Staff:</span> <span class="org-staff">2,500+ journalists</span></p>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <main class="main-content">
-                <!-- Key Findings Panel -->
-                <div class="findings-panel">
-                    <div class="findings-header">
-                        <div class="findings-icon">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <h2 class="findings-title">Key Findings</h2>
-                    </div>
-                    <div class="findings-list">
+                    <div class="findings-grid" id="keyFindings">
                         <!-- Dynamic findings will be inserted here -->
                     </div>
                 </div>
 
                 <!-- Metadata Grid -->
-                <div class="metadata-grid">
+                <div class="metadata-grid" id="metadataGrid">
                     <!-- Dynamic metadata will be inserted here -->
                 </div>
 
                 <!-- Info Grid -->
                 <div class="info-grid">
-                    <!-- Dynamic info cards will be inserted here -->
-                </div>
-
-                <!-- Historical Score Timeline -->
-                <div class="historical-section">
-                    <div class="historical-header">
-                        <h2>Credibility Score History</h2>
-                        <div class="time-filter">
-                            <button class="filter-btn">1M</button>
-                            <button class="filter-btn active">6M</button>
-                            <button class="filter-btn">1Y</button>
-                            <button class="filter-btn">All</button>
+                    <!-- Score Breakdown -->
+                    <div class="info-card">
+                        <h3 class="section-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Score Breakdown
+                        </h3>
+                        <div class="score-bars" id="scoreBreakdown">
+                            <!-- Dynamic score bars will be inserted here -->
                         </div>
                     </div>
-                    <div class="score-timeline">
-                        <!-- Timeline visualization would go here -->
-                        <div style="display: flex; align-items: flex-end; height: 100%; gap: 4px;">
-                            <div style="flex: 1; background: var(--primary); opacity: 0.8; height: 88%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.8; height: 90%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.8; height: 89%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.8; height: 91%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.9; height: 90%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.9; height: 92%;"></div>
-                            <div style="flex: 1; background: var(--primary); opacity: 0.9; height: 91%;"></div>
-                            <div style="flex: 1; background: var(--primary); height: 92%;"></div>
+
+                    <!-- History Graph -->
+                    <div class="info-card">
+                        <h3 class="section-title">
+                            <i class="fas fa-chart-line"></i>
+                            Credibility History
+                        </h3>
+                        <div class="history-graph" id="historyGraph">
+                            <i class="fas fa-chart-line"></i> Historical data visualization
                         </div>
                     </div>
                 </div>
 
-                <!-- Domain Details -->
-                <div class="historical-section">
-                    <h2 style="font-size: 1.125rem; font-weight: 700; color: var(--dark); margin-bottom: 1rem;">Domain Analysis</h2>
-                    <table class="details-table">
+                <!-- Detailed Breakdown -->
+                <div class="breakdown-table">
+                    <h3 class="section-title">
+                        <i class="fas fa-list-check"></i>
+                        Detailed Credibility Breakdown
+                    </h3>
+                    <table>
                         <thead>
                             <tr>
                                 <th>Criteria</th>
                                 <th>Status</th>
                                 <th>Details</th>
-                                <th>Score Impact</th>
+                                <th>Impact</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Dynamic table rows will be inserted here -->
+                        <tbody id="detailedBreakdown">
+                            <!-- Dynamic breakdown will be inserted here -->
                         </tbody>
                     </table>
                 </div>
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
 
     <script>
-    (function() {
-        // 1. Retrieve data
+        // Get analysis data from sessionStorage
         const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
-        const sourceData = analysisData?.detailed_analysis?.source_credibility || {};
-        
-        // 2. Check if data exists
-        if (!Object.keys(sourceData).length) {
-            // Show no data message
-            document.querySelector('.source-credibility-container').innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
-                    <h2>No Analysis Data Available</h2>
-                    <p>Please run an analysis first to see results.</p>
-                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
-                </div>
-            `;
-            return;
-        }
-        
-        // 3. Update UI elements
-        updatePageElements(sourceData);
-        
-        function updatePageElements(data) {
-            // Update source name and domain
-            const sourceName = data.source_name || 'Unknown Source';
-            const domain = data.domain || extractDomain(data.url) || 'unknown.com';
-            
-            document.querySelector('.source-name').textContent = sourceName;
-            document.querySelector('.source-domain').textContent = domain;
-            
-            // Update logo with initials
-            const initials = sourceName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-            document.querySelector('.source-logo').textContent = initials;
-            
+        const sourceData = analysisData?.detailed_analysis?.source_credibility || null;
+
+        if (!sourceData || Object.keys(sourceData).length === 0) {
+            // Show error message
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('mainContentArea').style.display = 'none';
+            document.getElementById('sourceName').textContent = 'No Data';
+            document.getElementById('sourceDomain').textContent = 'No analysis available';
+            document.getElementById('credibilityScore').textContent = '--';
+        } else {
+            // Extract source info
+            const extractedUrl = analysisData?.detailed_analysis?.article_extractor?.url || '';
+            const domain = extractedUrl ? new URL(extractedUrl).hostname : 'Unknown Domain';
+            const sourceName = sourceData.source_name || domain;
+
+            // Update header info
+            document.getElementById('sourceName').textContent = sourceName;
+            document.getElementById('sourceDomain').textContent = domain;
+
             // Update credibility score
-            const score = Math.round(data.credibility_score || 0);
-            document.querySelector('.score-value').textContent = score;
-            
+            const score = sourceData.credibility_score || 0;
+            document.getElementById('credibilityScore').textContent = score;
+
             // Update credibility level
-            const levelEl = document.querySelector('.credibility-level');
-            const level = getCredibilityLevel(score);
-            levelEl.innerHTML = `<i class="fas fa-check-circle"></i> ${level.text}`;
-            levelEl.style.background = level.color;
+            const credLevel = document.getElementById('credibilityLevel');
+            const credText = document.getElementById('credibilityText');
             
+            if (score >= 80) {
+                credLevel.className = 'credibility-level';
+                credText.textContent = 'Highly Credible';
+            } else if (score >= 60) {
+                credLevel.className = 'credibility-level medium';
+                credText.textContent = 'Moderately Credible';
+            } else {
+                credLevel.className = 'credibility-level low';
+                credText.textContent = 'Low Credibility';
+            }
+
+            // Update source logo
+            const logoEl = document.getElementById('sourceLogo');
+            if (sourceName && sourceName !== domain) {
+                logoEl.innerHTML = sourceName.charAt(0).toUpperCase();
+            }
+
             // Update quick stats
-            updateQuickStats(data);
+            const statsHtml = [
+                {
+                    value: sourceData.years_active || 'N/A',
+                    label: 'Years Active'
+                },
+                {
+                    value: sourceData.media_rating || 'N/A',
+                    label: 'Media Rating'
+                },
+                {
+                    value: sourceData.reach || 'Unknown',
+                    label: 'Reach'
+                },
+                {
+                    value: sourceData.accuracy_rate ? `${sourceData.accuracy_rate}%` : 'N/A',
+                    label: 'Accuracy'
+                }
+            ].map(stat => `
+                <div class="stat-item">
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            `).join('');
             
+            document.getElementById('quickStats').innerHTML = statsHtml;
+
             // Update trust indicators
-            updateTrustIndicators(data);
-            
-            // Update organization info
-            updateOrganizationInfo(data);
-            
-            // Update key findings
-            updateKeyFindings(data);
-            
-            // Update metadata grid
-            updateMetadataGrid(data);
-            
-            // Update info cards
-            updateInfoCards(data);
-            
-            // Update domain analysis table
-            updateDomainAnalysis(data);
-        }
-        
-        function updateQuickStats(data) {
-            const stats = document.querySelectorAll('.quick-stats .stat-value');
-            stats[0].textContent = data.years_active || calculateYearsActive(data.founded) || 'N/A';
-            stats[1].textContent = data.media_rating || calculateMediaRating(data.credibility_score) || 'N/A';
-            stats[2].textContent = data.countries_coverage || 'N/A';
-            stats[3].textContent = (data.accuracy_rate || 0) + '%';
-        }
-        
-        function updateTrustIndicators(data) {
-            const indicatorList = document.querySelector('.indicator-list');
-            indicatorList.innerHTML = '';
-            
-            const indicators = data.trust_indicators || generateTrustIndicators(data);
-            
-            indicators.forEach(indicator => {
-                const item = document.createElement('div');
-                item.className = 'indicator-item';
-                item.innerHTML = `
-                    <i class="fas fa-${indicator.icon} indicator-${indicator.type}"></i>
-                    <span>${indicator.text}</span>
-                `;
-                indicatorList.appendChild(item);
-            });
-        }
-        
-        function updateOrganizationInfo(data) {
-            document.querySelector('.org-type').textContent = data.organization_type || 'News Organization';
-            document.querySelector('.org-founded').textContent = data.founded || 'Unknown';
-            document.querySelector('.org-headquarters').textContent = data.headquarters || 'Unknown';
-            document.querySelector('.org-ownership').textContent = data.ownership || 'Unknown';
-            document.querySelector('.org-staff').textContent = data.staff_size || 'Unknown';
-        }
-        
-        function updateKeyFindings(data) {
-            const findingsList = document.querySelector('.findings-list');
-            findingsList.innerHTML = '';
-            
-            const findings = data.key_findings || generateDefaultFindings(data);
-            
-            findings.forEach(finding => {
-                const item = document.createElement('div');
-                item.className = `finding-item finding-${finding.type || 'positive'}`;
-                item.innerHTML = `
-                    <div class="finding-indicator"></div>
-                    <div class="finding-content">
-                        <div class="finding-text">${finding.text}</div>
-                        <div class="finding-detail">${finding.detail || ''}</div>
+            const indicators = sourceData.trust_indicators || {};
+            const indicatorHtml = Object.entries({
+                'has_about_page': 'Has about page with organization info',
+                'has_contact_info': 'Provides contact information',
+                'has_editorial_policy': 'Clear editorial guidelines',
+                'has_corrections_policy': 'Has corrections policy',
+                'transparent_ownership': 'Transparent ownership',
+                'author_bylines': 'Articles have author bylines',
+                'fact_checking_process': 'Has fact-checking process',
+                'ethics_policy': 'Published ethics policy'
+            }).map(([key, label]) => {
+                const hasIt = indicators[key];
+                return `
+                    <div class="indicator-item">
+                        <i class="fas ${hasIt ? 'fa-check indicator-positive' : 'fa-times indicator-negative'}"></i>
+                        <span>${label}</span>
                     </div>
                 `;
-                findingsList.appendChild(item);
-            });
-        }
-        
-        function updateMetadataGrid(data) {
-            const metadataGrid = document.querySelector('.metadata-grid');
-            metadataGrid.innerHTML = '';
+            }).join('');
             
-            const metadata = [
-                { icon: 'globe', value: data.coverage || 'Unknown', label: 'Coverage' },
-                { icon: 'users', value: formatNumber(data.monthly_readers || 0), label: 'Monthly Readers' },
-                { icon: 'award', value: data.awards_count || '0', label: 'Awards' },
-                { icon: 'language', value: data.languages || '1', label: 'Languages' }
+            document.getElementById('trustIndicators').innerHTML = indicatorHtml;
+
+            // Update technical details
+            const tech = sourceData.technical_analysis || {};
+            const techHtml = `
+                ${tech.ssl_certificate !== undefined ? `
+                    <div class="technical-item">
+                        <div class="technical-icon ${tech.ssl_certificate ? 'technical-secure' : 'technical-insecure'}">
+                            <i class="fas ${tech.ssl_certificate ? 'fa-lock' : 'fa-lock-open'}"></i>
+                        </div>
+                        <div class="technical-label">SSL Certificate</div>
+                        <div class="technical-value">${tech.ssl_certificate ? 'Secure' : 'Not Secure'}</div>
+                    </div>
+                ` : ''}
+                ${sourceData.domain_age_days !== undefined ? `
+                    <div class="technical-item">
+                        <div class="technical-icon ${sourceData.domain_age_days > 365 ? 'technical-secure' : 'technical-insecure'}">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="technical-label">Domain Age</div>
+                        <div class="technical-value">${Math.floor(sourceData.domain_age_days / 365)} years</div>
+                    </div>
+                ` : ''}
+                ${tech.dns_valid !== undefined ? `
+                    <div class="technical-item">
+                        <div class="technical-icon ${tech.dns_valid ? 'technical-secure' : 'technical-insecure'}">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="technical-label">DNS Status</div>
+                        <div class="technical-value">${tech.dns_valid ? 'Valid' : 'Invalid'}</div>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('technicalDetails').innerHTML = techHtml;
+
+            // Update key findings
+            const findings = sourceData.key_findings || [];
+            const findingsHtml = findings.map(finding => {
+                const typeClass = finding.type === 'positive' ? 'finding-positive' : 
+                                finding.type === 'warning' ? 'finding-warning' : 'finding-negative';
+                return `
+                    <div class="finding-item ${typeClass}">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">${finding.text || finding.finding}</div>
+                            <div class="finding-detail">${finding.detail || finding.explanation || ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (findingsHtml) {
+                document.getElementById('keyFindings').innerHTML = findingsHtml;
+            } else {
+                // Generate findings from data
+                const generatedFindings = [];
+                
+                if (score >= 80) {
+                    generatedFindings.push({
+                        type: 'positive',
+                        text: 'High credibility source',
+                        detail: 'This source has demonstrated consistent reliability'
+                    });
+                }
+                
+                if (indicators.transparent_ownership) {
+                    generatedFindings.push({
+                        type: 'positive',
+                        text: 'Transparent ownership and funding',
+                        detail: 'Clear information about who owns and funds this source'
+                    });
+                }
+                
+                if (!indicators.has_corrections_policy) {
+                    generatedFindings.push({
+                        type: 'warning',
+                        text: 'No visible corrections policy',
+                        detail: 'Unable to find a clear policy for handling corrections'
+                    });
+                }
+                
+                document.getElementById('keyFindings').innerHTML = generatedFindings.map(finding => `
+                    <div class="finding-item ${finding.type === 'positive' ? 'finding-positive' : 'finding-warning'}">
+                        <div class="finding-indicator"></div>
+                        <div class="finding-content">
+                            <div class="finding-text">${finding.text}</div>
+                            <div class="finding-detail">${finding.detail}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Update metadata grid
+            const metadataHtml = `
+                <div class="metadata-item">
+                    <i class="fas fa-globe metadata-icon"></i>
+                    <span class="metadata-value">${sourceData.coverage || 'Unknown'}</span>
+                    <span class="metadata-label">Coverage</span>
+                </div>
+                <div class="metadata-item">
+                    <i class="fas fa-users metadata-icon"></i>
+                    <span class="metadata-value">${sourceData.audience_size || 'Unknown'}</span>
+                    <span class="metadata-label">Audience</span>
+                </div>
+                <div class="metadata-item">
+                    <i class="fas fa-award metadata-icon"></i>
+                    <span class="metadata-value">${sourceData.awards_count || '0'}</span>
+                    <span class="metadata-label">Awards</span>
+                </div>
+                <div class="metadata-item">
+                    <i class="fas fa-language metadata-icon"></i>
+                    <span class="metadata-value">${sourceData.languages || '1'}</span>
+                    <span class="metadata-label">Languages</span>
+                </div>
+            `;
+            
+            document.getElementById('metadataGrid').innerHTML = metadataHtml;
+
+            // Update score breakdown
+            const breakdown = sourceData.score_breakdown || {};
+            const scoreComponents = [
+                { label: 'Domain Authority', key: 'domain_authority', max: 30 },
+                { label: 'Content Quality', key: 'content_quality', max: 25 },
+                { label: 'Transparency', key: 'transparency', max: 20 },
+                { label: 'Editorial Standards', key: 'editorial_standards', max: 15 },
+                { label: 'Fact-Checking', key: 'fact_checking', max: 10 }
             ];
             
-            metadata.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'metadata-item';
-                el.innerHTML = `
-                    <i class="fas fa-${item.icon} metadata-icon"></i>
-                    <span class="metadata-value">${item.value}</span>
-                    <span class="metadata-label">${item.label}</span>
+            const scoreBreakdownHtml = scoreComponents.map(component => {
+                const value = breakdown[component.key] || 0;
+                const percentage = (value / component.max) * 100;
+                return `
+                    <div class="score-bar-item">
+                        <div class="score-bar-header">
+                            <span class="score-bar-label">${component.label}</span>
+                            <span class="score-bar-value">${value}/${component.max}</span>
+                        </div>
+                        <div class="score-bar-track">
+                            <div class="score-bar-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
                 `;
-                metadataGrid.appendChild(el);
-            });
-        }
-        
-        function updateInfoCards(data) {
-            const infoGrid = document.querySelector('.info-grid');
-            infoGrid.innerHTML = '';
+            }).join('');
             
-            const cards = [
+            document.getElementById('scoreBreakdown').innerHTML = scoreBreakdownHtml;
+
+            // Update detailed breakdown table
+            const criteria = [
                 {
-                    icon: 'newspaper',
-                    title: 'Editorial Standards',
-                    content: generateEditorialStandardsContent(data)
+                    name: 'Domain Registration',
+                    status: sourceData.domain_age_days > 365,
+                    details: sourceData.domain_age_days ? `${Math.floor(sourceData.domain_age_days / 365)} years old` : 'Unknown age',
+                    impact: '+10 points'
                 },
                 {
-                    icon: 'check-double',
-                    title: 'Fact-Checking',
-                    content: generateFactCheckingContent(data)
+                    name: 'SSL Certificate',
+                    status: tech.ssl_certificate,
+                    details: tech.ssl_certificate ? 'Valid SSL certificate' : 'No SSL certificate',
+                    impact: '+5 points'
                 },
                 {
-                    icon: 'balance-scale',
-                    title: 'Bias Assessment',
-                    content: generateBiasContent(data)
+                    name: 'Contact Information',
+                    status: indicators.has_contact_info,
+                    details: indicators.has_contact_info ? 'Contact details available' : 'No contact information',
+                    impact: '+5 points'
+                },
+                {
+                    name: 'Privacy Policy',
+                    status: indicators.has_privacy_policy,
+                    details: indicators.has_privacy_policy ? 'Privacy policy found' : 'No privacy policy',
+                    impact: '+3 points'
+                },
+                {
+                    name: 'About Page',
+                    status: indicators.has_about_page,
+                    details: indicators.has_about_page ? 'About page exists' : 'No about page',
+                    impact: '+5 points'
+                },
+                {
+                    name: 'Author Attribution',
+                    status: indicators.author_bylines,
+                    details: indicators.author_bylines ? 'Articles have bylines' : 'No author attribution',
+                    impact: '+7 points'
                 }
             ];
             
-            cards.forEach(card => {
-                const el = document.createElement('div');
-                el.className = 'info-card';
-                el.innerHTML = `
-                    <div class="info-card-header">
-                        <div class="info-card-icon">
-                            <i class="fas fa-${card.icon}"></i>
-                        </div>
-                        <h3 class="info-card-title">${card.title}</h3>
-                    </div>
-                    <div class
+            const breakdownTableHtml = criteria.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td><i class="fas ${item.status ? 'fa-check check-mark' : 'fa-times x-mark'}"></i></td>
+                    <td>${item.details}</td>
+                    <td>${item.impact}</td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('detailedBreakdown').innerHTML = breakdownTableHtml;
+        }
+    </script>
+</body>
+</html>
