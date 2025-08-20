@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manipulation Detection Analysis - TruthLens AI</title>
+    <title>Manipulation Detection - TruthLens Analysis</title>
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons & Fonts -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS Variables */
+        /* Use same CSS variables from index.html */
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
@@ -20,6 +23,7 @@
             --warning: #f59e0b;
             --info: #3b82f6;
             --dark: #1f2937;
+            --gray-700: #374151;
             --gray-600: #4b5563;
             --gray-500: #6b7280;
             --gray-400: #9ca3af;
@@ -28,10 +32,17 @@
             --gray-100: #f3f4f6;
             --gray-50: #f9fafb;
             --white: #ffffff;
+            
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius: 0.5rem;
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            
+            --radius: 0.75rem;
+            --radius-lg: 1rem;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
         }
 
         * {
@@ -41,1009 +52,468 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: var(--font-sans);
             background: var(--gray-50);
             color: var(--dark);
-            line-height: 1.5;
-            padding: 1rem;
+            line-height: 1.6;
         }
 
-        /* Main Container */
-        .manipulation-container {
+        /* Header with Return Button */
+        .service-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
             max-width: 1200px;
             margin: 0 auto;
-            background: var(--white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-        }
-
-        /* Header Section */
-        .analysis-header {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-            color: white;
-            padding: 1.5rem;
+            padding: 1rem 2rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-        }
-
-        .header-left {
-            display: flex;
             align-items: center;
-            gap: 1rem;
         }
 
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 0.375rem;
+        /* Prominent Return Button */
+        .return-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .return-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .return-button i {
+            font-size: 1.125rem;
+        }
+
+        .service-title-section {
+            flex: 1;
+            text-align: center;
+        }
+
+        .service-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            gap: 0.75rem;
         }
 
-        .header-content h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
         }
 
-        .header-subtitle {
+        /* Analysis Summary Section */
+        .analysis-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .summary-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .summary-score {
+            text-align: center;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            position: relative;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+        }
+
+        .score-label {
             font-size: 0.875rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-details h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
             opacity: 0.9;
         }
 
-        .back-button {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 0.375rem;
-            color: white;
-            text-decoration: none;
-            font-size: 0.875rem;
+        .summary-item {
+            margin-bottom: 1.25rem;
+        }
+
+        .summary-item h3 {
+            font-size: 1rem;
             font-weight: 600;
+            margin-bottom: 0.375rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s;
         }
 
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        /* Risk Assessment */
-        .risk-assessment {
-            padding: 2rem;
-            background: var(--gray-50);
-            border-bottom: 1px solid var(--gray-200);
-            text-align: center;
-        }
-
-        .risk-meter {
-            width: 300px;
-            height: 150px;
-            margin: 0 auto 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .risk-gauge {
-            width: 100%;
-            height: 200px;
-            background: conic-gradient(
-                from 180deg at 50% 100%,
-                var(--secondary) 0deg,
-                var(--warning) 60deg,
-                var(--danger) 120deg,
-                var(--gray-200) 180deg
-            );
-            border-radius: 150px 150px 0 0;
-            position: absolute;
-            top: 0;
-        }
-
-        .risk-needle {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 4px;
-            height: 120px;
-            background: var(--dark);
-            transform-origin: bottom center;
-            transform: translateX(-50%) rotate(30deg);
-            transition: transform 1s ease-out;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        }
-
-        .risk-center {
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 30px;
-            background: var(--dark);
-            border-radius: 50%;
-        }
-
-        .risk-labels {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .risk-label-low { color: var(--secondary); }
-        .risk-label-medium { color: var(--warning); }
-        .risk-label-high { color: var(--danger); }
-
-        .risk-level {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--warning);
-            margin-bottom: 0.5rem;
-        }
-
-        .risk-description {
+        .summary-item h3 i {
             font-size: 0.875rem;
-            color: var(--gray-600);
-            max-width: 600px;
+            opacity: 0.8;
+        }
+
+        .summary-item p {
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            opacity: 0.95;
+        }
+
+        /* Main Content Area */
+        .service-content {
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 0 2rem 3rem;
         }
 
-        /* Main Content */
-        .main-content {
+        /* Service-specific styles from truthlens-services.js */
+        .service-section {
+            background: var(--white);
+            border-radius: var(--radius-lg);
             padding: 1.5rem;
-        }
-
-        /* Tactics Detected */
-        .tactics-section {
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
             margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
         }
 
         .section-title {
-            font-size: 1.25rem;
+            font-size: 1.125rem;
             font-weight: 700;
             color: var(--dark);
-        }
-
-        .section-icon {
-            color: var(--danger);
-        }
-
-        .tactics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-
-        .tactic-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.25rem;
-            border: 2px solid var(--gray-200);
-            transition: all 0.3s;
-        }
-
-        .tactic-card.detected {
-            border-color: var(--danger);
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.02) 0%, rgba(239, 68, 68, 0.05) 100%);
-        }
-
-        .tactic-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
-        }
-
-        .tactic-name {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--dark);
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .tactic-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--danger);
-            color: white;
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
+        .section-title i {
+            color: var(--primary);
+            font-size: 1rem;
         }
 
-        .severity-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .severity-high {
-            background: var(--danger);
-            color: white;
-        }
-
-        .severity-medium {
-            background: var(--warning);
-            color: white;
-        }
-
-        .severity-low {
-            background: var(--gray-400);
-            color: white;
-        }
-
-        .tactic-description {
-            font-size: 0.813rem;
-            color: var(--gray-600);
-            margin-bottom: 0.75rem;
-        }
-
-        .tactic-examples {
-            background: var(--gray-50);
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            margin-top: 0.75rem;
-        }
-
-        .example-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .example-text {
-            font-size: 0.813rem;
-            color: var(--gray-700);
-            font-style: italic;
-            padding-left: 0.75rem;
-            border-left: 3px solid var(--danger);
-        }
-
-        /* Emotional Manipulation */
-        .emotional-analysis {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .emotion-chart {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .emotion-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1rem;
+        /* Loading State */
+        .loading-container {
             text-align: center;
-            border: 1px solid var(--gray-200);
+            padding: 4rem 2rem;
         }
 
-        .emotion-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .emotion-fear { color: var(--danger); }
-        .emotion-anger { color: #dc2626; }
-        .emotion-sadness { color: var(--info); }
-        .emotion-joy { color: var(--secondary); }
-
-        .emotion-name {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .emotion-level {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .emotion-bar {
-            height: 4px;
-            background: var(--gray-200);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-top: 0.5rem;
-        }
-
-        .emotion-fill {
-            height: 100%;
-            border-radius: 2px;
-            transition: width 1s ease-out;
-        }
-
-        /* Manipulation Timeline */
-        .timeline-section {
-            margin-bottom: 2rem;
-        }
-
-        .timeline-container {
-            position: relative;
-            padding-left: 2rem;
-        }
-
-        .timeline-line {
-            position: absolute;
-            left: 0.75rem;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--gray-300);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 1.5rem;
-            padding-left: 1.5rem;
-        }
-
-        .timeline-marker {
-            position: absolute;
-            left: -1.25rem;
-            top: 0.25rem;
-            width: 1rem;
-            height: 1rem;
-            background: var(--danger);
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
             border-radius: 50%;
-            border: 3px solid var(--white);
-            box-shadow: 0 0 0 2px var(--danger);
+            animation: spin 1s linear infinite;
         }
 
-        .timeline-content {
-            background: var(--white);
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error-container {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
             border-radius: var(--radius);
-            padding: 1rem;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--gray-200);
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem auto;
+            max-width: 600px;
         }
 
-        .timeline-paragraph {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-text {
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-tactic {
-            font-size: 0.813rem;
+        .error-icon {
+            font-size: 3rem;
             color: var(--danger);
-            font-weight: 600;
-        }
-
-        /* Key Findings */
-        .findings-panel {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.03) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .findings-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
             margin-bottom: 1rem;
-        }
-
-        .findings-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--danger);
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-        }
-
-        .findings-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-
-        .findings-list {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--white);
-            border-radius: 0.375rem;
-            border: 1px solid var(--gray-200);
-        }
-
-        .finding-indicator {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-top: 0.5rem;
-            flex-shrink: 0;
-            background: var(--danger);
-        }
-
-        .finding-content {
-            flex: 1;
-        }
-
-        .finding-text {
-            font-size: 0.875rem;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .finding-detail {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-        }
-
-        /* Protection Tips */
-        .protection-section {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-        }
-
-        .tips-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .tip-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1rem;
-            border: 1px solid var(--gray-200);
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .tip-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--secondary);
-            color: white;
-            border-radius: 0.375rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 0.875rem;
-        }
-
-        .tip-content {
-            flex: 1;
-        }
-
-        .tip-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .tip-text {
-            font-size: 0.813rem;
-            color: var(--gray-600);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .tactics-grid {
+            .summary-content {
                 grid-template-columns: 1fr;
+                gap: 2rem;
             }
 
-            .emotion-chart {
-                grid-template-columns: repeat(2, 1fr);
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
             }
 
-            .tips-grid {
-                grid-template-columns: 1fr;
+            .service-title-section {
+                order: -1;
+            }
+
+            .return-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <div class="manipulation-container">
-        <!-- Header -->
-        <div class="analysis-header">
-            <div class="header-left">
-                <div class="header-icon">
-                    <i class="fas fa-mask"></i>
-                </div>
-                <div class="header-content">
-                    <h1>Manipulation Detection Analysis</h1>
-                    <p class="header-subtitle">Identification of manipulative tactics and emotional exploitation</p>
+    <!-- Header with Return Button -->
+    <header class="service-header">
+        <div class="header-content">
+            <a href="javascript:history.back()" class="return-button" id="returnButton">
+                <i class="fas fa-arrow-left"></i>
+                <span>Return to Analysis</span>
+            </a>
+            
+            <div class="service-title-section">
+                <h1 class="service-title">
+                    <div class="service-icon">
+                        <i class="fas fa-mask"></i>
+                    </div>
+                    <span>Manipulation Detection</span>
+                </h1>
+            </div>
+            
+            <div style="width: 180px;"></div> <!-- Spacer for balance -->
+        </div>
+    </header>
+
+    <!-- Analysis Summary Section -->
+    <section class="analysis-summary" id="analysisSummary">
+        <div class="summary-content">
+            <div class="summary-score">
+                <div class="score-circle">
+                    <div>
+                        <div class="score-value" id="summaryScore">--</div>
+                        <div class="score-label">Risk Level</div>
+                    </div>
                 </div>
             </div>
-            <a href="/" class="back-button">
+            
+            <div class="summary-details">
+                <h2>Analysis Summary</h2>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-file-alt"></i> What We Analyzed</h3>
+                    <p id="analyzedContent">Loading article information...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-search"></i> What We Found</h3>
+                    <p id="keyFindings">Analyzing content...</p>
+                </div>
+                
+                <div class="summary-item">
+                    <h3><i class="fas fa-lightbulb"></i> What This Means</h3>
+                    <p id="interpretation">Processing results...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="service-content" id="serviceContent">
+        <div class="loading-container" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>Loading manipulation detection analysis...</p>
+        </div>
+        
+        <div class="error-container" id="errorState" style="display: none;">
+            <i class="fas fa-exclamation-circle error-icon"></i>
+            <h2>Analysis Not Available</h2>
+            <p id="errorMessage">Manipulation detection analysis was not performed for this article.</p>
+            <a href="javascript:history.back()" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
                 <i class="fas fa-arrow-left"></i>
-                Back to Analysis
+                <span>Return to Main Analysis</span>
             </a>
         </div>
-
-        <!-- Risk Assessment -->
-        <div class="risk-assessment">
-            <div class="risk-meter">
-                <div class="risk-gauge"></div>
-                <div class="risk-needle"></div>
-                <div class="risk-center"></div>
-                <div class="risk-labels">
-                    <span class="risk-label-low">Low</span>
-                    <span class="risk-label-medium">Medium</span>
-                    <span class="risk-label-high">High</span>
-                </div>
-            </div>
-            <div class="risk-level">Moderate Manipulation Risk</div>
-            <p class="risk-description">
-                This article employs several manipulative techniques including emotional appeals, selective framing, 
-                and loaded language that may influence reader perception and decision-making.
-            </p>
+        
+        <!-- Service-specific content will be inserted here -->
+        <div id="analysisContent" style="display: none;">
+            <!-- Dynamic content -->
         </div>
+    </main>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Key Findings -->
-            <div class="findings-panel">
-                <div class="findings-header">
-                    <div class="findings-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h2 class="findings-title">Critical Manipulation Findings</h2>
-                </div>
-                <div class="findings-list">
-                    <!-- Dynamic findings will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Tactics Detected -->
-            <div class="tactics-section">
-                <div class="section-header">
-                    <i class="fas fa-exclamation-circle section-icon"></i>
-                    <h2 class="section-title">Manipulative Tactics Identified</h2>
-                </div>
-                
-                <div class="tactics-grid">
-                    <!-- Dynamic tactics will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Emotional Manipulation Analysis -->
-            <div class="emotional-analysis">
-                <div class="section-header">
-                    <i class="fas fa-heart-broken section-icon"></i>
-                    <h2 class="section-title">Emotional Manipulation Profile</h2>
-                </div>
-                
-                <div class="emotion-chart">
-                    <!-- Dynamic emotion cards will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Manipulation Timeline -->
-            <div class="timeline-section">
-                <div class="section-header">
-                    <i class="fas fa-stream section-icon"></i>
-                    <h2 class="section-title">Manipulation Flow Through Article</h2>
-                </div>
-                
-                <div class="timeline-container">
-                    <div class="timeline-line"></div>
-                    <!-- Dynamic timeline items will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Protection Tips -->
-            <div class="protection-section">
-                <div class="section-header">
-                    <i class="fas fa-shield-alt section-icon" style="color: var(--secondary);"></i>
-                    <h2 class="section-title">How to Protect Yourself</h2>
-                </div>
-                
-                <div class="tips-grid">
-                    <div class="tip-card">
-                        <div class="tip-icon">
-                            <i class="fas fa-pause"></i>
-                        </div>
-                        <div class="tip-content">
-                            <div class="tip-title">Pause Before Reacting</div>
-                            <div class="tip-text">Take time to process information before forming strong emotional reactions</div>
-                        </div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <div class="tip-content">
-                            <div class="tip-title">Verify Claims</div>
-                            <div class="tip-text">Check statistics and claims against multiple independent sources</div>
-                        </div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">
-                            <i class="fas fa-brain"></i>
-                        </div>
-                        <div class="tip-content">
-                            <div class="tip-title">Question Urgency</div>
-                            <div class="tip-text">Be skeptical of pressure to act immediately without time to think</div>
-                        </div>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <div class="tip-content">
-                            <div class="tip-title">Seek Balance</div>
-                            <div class="tip-text">Look for nuanced perspectives beyond presented extremes</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Scripts -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/truthlens-services.js"></script>
     <script>
-    (function() {
-        // 1. Retrieve data
-        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
-        const manipulationData = analysisData?.detailed_analysis?.manipulation_detector || {};
-        
-        // 2. Check if data exists
-        if (!Object.keys(manipulationData).length) {
-            // Show no data message
-            document.querySelector('.manipulation-container').innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
-                    <h2>No Analysis Data Available</h2>
-                    <p>Please run an analysis first to see results.</p>
-                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
-                </div>
-            `;
-            return;
+        // Service-specific configuration
+        const SERVICE_CONFIG = {
+            id: 'manipulation_detector',
+            name: 'Manipulation Detection',
+            icon: 'fa-mask'
+        };
+
+        // Initialize service page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeServicePage();
+        });
+
+        function initializeServicePage() {
+            // Get analysis data from sessionStorage
+            const analysisData = sessionStorage.getItem('analysisData');
+            
+            if (!analysisData) {
+                showError('No analysis data found. Please return to the main page and run a new analysis.');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(analysisData);
+                const serviceData = data.detailed_analysis?.[SERVICE_CONFIG.id];
+                
+                if (!serviceData || Object.keys(serviceData).length === 0) {
+                    showError('Manipulation detection analysis was not performed for this article.');
+                    return;
+                }
+
+                // Populate summary section
+                populateSummary(data, serviceData);
+                
+                // Show analysis content
+                displayServiceAnalysis(serviceData);
+                
+                // Update return button to maintain state
+                updateReturnButton();
+                
+            } catch (error) {
+                console.error('Error loading analysis data:', error);
+                showError('Error loading analysis results.');
+            }
         }
-        
-        // 3. Update UI elements
-        updatePageElements(manipulationData);
-        
-        function updatePageElements(data) {
-            // Update risk level
-            const riskScore = data.manipulation_score || data.risk_score || 0;
-            updateRiskMeter(riskScore);
+
+        function populateSummary(fullData, serviceData) {
+            // Article information
+            const article = fullData.article || {};
+            const articleInfo = `"${article.title || 'Untitled Article'}" from ${article.source || article.domain || 'Unknown Source'}`;
+            document.getElementById('analyzedContent').textContent = articleInfo;
+
+            // Service-specific score and findings
+            const scoreInfo = getServiceScoreInfo(serviceData);
+            document.getElementById('summaryScore').textContent = scoreInfo.score;
             
-            // Update risk level text
-            const riskLevel = getRiskLevel(riskScore);
-            document.querySelector('.risk-level').textContent = riskLevel.text;
-            document.querySelector('.risk-level').style.color = riskLevel.color;
+            // Key findings
+            document.getElementById('keyFindings').textContent = getServiceKeyFindings(serviceData);
             
-            // Update risk description
-            const description = data.risk_description || generateRiskDescription(riskScore, data);
-            document.querySelector('.risk-description').textContent = description;
-            
-            // Update key findings
-            updateKeyFindings(data);
-            
-            // Update tactics
-            updateTactics(data);
-            
-            // Update emotional analysis
-            updateEmotionalAnalysis(data);
-            
-            // Update timeline
-            updateTimeline(data);
+            // Interpretation
+            document.getElementById('interpretation').textContent = getServiceInterpretation(serviceData);
         }
-        
-        function updateRiskMeter(score) {
-            // Convert score to rotation angle
-            // 0 = -90deg (far left), 50 = 0deg (center), 100 = 90deg (far right)
-            const rotation = (score - 50) * 1.8;
-            document.querySelector('.risk-needle').style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+
+        function getServiceScoreInfo(data) {
+            // Convert risk level to a score
+            const level = data.manipulation_level?.toLowerCase() || 'low';
+            if (level === 'minimal' || level === 'low') return { score: 90, label: 'Risk Level' };
+            if (level === 'moderate') return { score: 50, label: 'Risk Level' };
+            if (level === 'high') return { score: 20, label: 'Risk Level' };
+            return { score: 10, label: 'Risk Level' };
         }
-        
-        function updateKeyFindings(data) {
-            const findingsList = document.querySelector('.findings-list');
-            findingsList.innerHTML = '';
+
+        function getServiceKeyFindings(data) {
+            const tactics = data.tactics_found || data.tactics || data.techniques || [];
+            const level = data.manipulation_level || 'Unknown';
             
-            const findings = data.key_findings || generateDefaultFindings(data);
+            if (tactics.length === 0) {
+                return `No manipulation tactics detected. Risk level: ${level.toLowerCase()}.`;
+            }
             
-            findings.forEach(finding => {
-                const item = document.createElement('div');
-                item.className = 'finding-item';
-                item.innerHTML = `
-                    <div class="finding-indicator"></div>
-                    <div class="finding-content">
-                        <div class="finding-text">${finding.text}</div>
-                        <div class="finding-detail">${finding.detail || ''}</div>
-                    </div>
-                `;
-                findingsList.appendChild(item);
-            });
+            return `${tactics.length} manipulation tactic${tactics.length !== 1 ? 's' : ''} detected. Risk level: ${level.toLowerCase()}. Tactics include emotional manipulation, misleading framing, or propaganda techniques.`;
         }
-        
-        function updateTactics(data) {
-            const tacticsGrid = document.querySelector('.tactics-grid');
-            tacticsGrid.innerHTML = '';
+
+        function getServiceInterpretation(data) {
+            const level = data.manipulation_level?.toLowerCase() || 'low';
+            const tactics = data.tactics_found || data.tactics || [];
             
-            const tactics = data.tactics_found || generateDefaultTactics(data);
-            
-            tactics.forEach(tactic => {
-                const card = createTacticCard(tactic);
-                tacticsGrid.appendChild(card);
-            });
-        }
-        
-        function createTacticCard(tactic) {
-            const card = document.createElement('div');
-            card.className = 'tactic-card detected';
-            
-            card.innerHTML = `
-                <div class="tactic-header">
-                    <div class="tactic-name">
-                        <div class="tactic-icon">
-                            <i class="fas fa-${tactic.icon || 'exclamation'}"></i>
-                        </div>
-                        ${tactic.name}
-                    </div>
-                    <span class="severity-badge severity-${tactic.severity || 'medium'}">${capitalizeFirst(tactic.severity || 'medium')}</span>
-                </div>
-                <p class="tactic-description">
-                    ${tactic.description}
-                </p>
-                ${tactic.example ? `
-                    <div class="tactic-examples">
-                        <div class="example-label">Example found:</div>
-                        <div class="example-text">
-                            "${tactic.example}"
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-            
-            return card;
-        }
-        
-        function updateEmotionalAnalysis(data) {
-            const emotionChart = document.querySelector('.emotion-chart');
-            emotionChart.innerHTML = '';
-            
-            const emotions = data.emotional_manipulation || {
-                fear: 0,
-                anger: 0,
-                sadness: 0,
-                hope: 0
-            };
-            
-            const emotionConfig = [
-                { name: 'Fear', icon: 'frown', class: 'fear', value: emotions.fear || 0 },
-                { name: 'Anger', icon: 'angry', class: 'anger', value: emotions.anger || 0 },
-                { name: 'Sadness', icon: 'sad-tear', class: 'sadness', value: emotions.sadness || 0 },
-                { name: 'Hope', icon: 'smile', class: 'joy', value: emotions.hope || emotions.joy || 0 }
-            ];
-            
-            emotionConfig.forEach(emotion => {
-                const card = document.createElement('div');
-                card.className = 'emotion-card';
-                card.innerHTML = `
-                    <div class="emotion-icon emotion-${emotion.class}">
-                        <i class="fas fa-${emotion.icon}"></i>
-                    </div>
-                    <div class="emotion-name">${emotion.name}</div>
-                    <div class="emotion-level">${emotion.value}%</div>
-                    <div class="emotion-bar">
-                        <div class="emotion-fill emotion-${emotion.class}" style="width: ${emotion.value}%;"></div>
-                    </div>
-                `;
-                emotionChart.appendChild(card);
-            });
-        }
-        
-        function updateTimeline(data) {
-            const timelineContainer = document.querySelector('.timeline-container');
-            // Keep the line element
-            const line = timelineContainer.querySelector('.timeline-line');
-            timelineContainer.innerHTML = '';
-            timelineContainer.appendChild(line);
-            
-            const timeline = data.manipulation_timeline || generateDefaultTimeline(data);
-            
-            timeline.forEach(item => {
-                const timelineItem = document.createElement('div');
-                timelineItem.className = 'timeline-item';
-                timelineItem.innerHTML = `
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-paragraph">${item.location}</div>
-                        <div class="timeline-text">${item.description}</div>
-                        <div class="timeline-tactic">Tactic: ${item.tactic}</div>
-                    </div>
-                `;
-                timelineContainer.appendChild(timelineItem);
-            });
-        }
-        
-        // Helper functions
-        function getRiskLevel(score) {
-            if (score >= 70) return { text: 'High Manipulation Risk', color: 'var(--danger)' };
-            if (score >= 40) return { text: 'Moderate Manipulation Risk', color: 'var(--warning)' };
-            return { text: 'Low Manipulation Risk', color: 'var(--secondary)' };
-        }
-        
-        function generateRiskDescription(score, data) {
-            if (score >= 70) {
-                return 'This article uses multiple severe manipulation techniques that significantly compromise objectivity and may strongly influence reader judgment.';
-            } else if (score >= 40) {
-                return 'This article employs several manipulative techniques including emotional appeals and selective framing that may influence reader perception.';
+            if (level === 'minimal' || level === 'low') {
+                return 'This article shows no significant manipulation tactics. The content appears to be presented fairly without attempts to unduly influence reader emotions or perceptions.';
+            } else if (level === 'moderate') {
+                return 'This article contains minor manipulation tactics within acceptable limits. While some persuasive techniques are used, they do not severely compromise the integrity of the information.';
+            } else if (level === 'high') {
+                return 'This article uses several manipulation tactics that affect credibility. Readers should be aware of emotional appeals, selective presentation, and other techniques designed to influence perception.';
             } else {
-                return 'This article shows minimal signs of manipulation, maintaining reasonable objectivity in its presentation.';
+                return 'This article employs extensive manipulation tactics and propaganda techniques. The content is designed to manipulate reader emotions and perceptions rather than inform objectively.';
             }
         }
-        
-        function generateDefaultFindings(data) {
-            const findings = [];
+
+        function displayServiceAnalysis(data) {
+            // Hide loading, show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'block';
             
-            if (data.emotional_manipulation && (data.emotional_manipulation.fear > 50 || data.emotional_manipulation.anger > 50)) {
-                findings.push({
-                    text: 'High levels of emotional manipulation detected',
-                    detail: 'Article uses fear or anger to bypass rational thinking'
-                });
+            // Use the renderer from truthlens-services.js
+            if (window.truthLensApp && window.truthLensApp.services) {
+                const content = window.truthLensApp.services.renderManipulation(data);
+                document.getElementById('analysisContent').innerHTML = content;
+            } else {
+                // Fallback if services not loaded
+                const services = new TruthLensServices({ utils: { getScoreColor: (s) => s >= 60 ? '#10b981' : '#ef4444' }});
+                const content = services.renderManipulation(data);
+                document.getElementById('analysisContent').innerHTML = content;
             }
-            
-            if (data.loaded_language_count > 10) {
-                findings.push({
-                    text: 'Extensive use of loaded language',
-                    detail: `${data.loaded_language_count} instances of emotionally charged words`
-                });
-            }
-            
-            if (data.false_dichotomy) {
-                findings.push({
-                    text: 'False dichotomy presented',
-                    detail: 'Complex issues reduced to oversimplified either/or choices'
-                });
-            }
-            
-            if (findings.length === 0) {
-                findings.push({
-                    text: 'Minimal manipulation detected',
-                    detail: 'Article maintains reasonable objectivity'
-                });
-            }
-            
-            return findings;
         }
-        
-        function generateDefaultTactics(data) {
-            const tactics = [];
-            
-            if (data.emotional_manipulation && Object.values(data.emotional_manipulation).some(v => v > 50)) {
-                tactics.push({
-                    name: 'Emotional Manipulation',
-                    icon: 'bolt',
-                    severity: 'high',
-                    description: 'Uses strong emotions to bypass rational thinking',
-                    example: data.emotional_example
-                });
-            }
-            
-            if (data.statistical_manipulation) {
-                tactics.push({
-                    name: 'Statistical Manipulation',
-                    icon: 'chart-line',
-                    severity: 'medium',
-                    description: 'Misrepresents data through selective presentation',
-                    example: data.statistical_example
-                });
-            }
-            
-            if (data.ad_hominem) {
-                tactics.push({
-                    name: 'Ad Hominem Attacks',
-                    icon: 'crosshairs',
-                    severity: 'high',
-                    description: 'Attacks opponents personally rather than addressing arguments',
-                    example: data.ad_hominem_example
-                });
-            }
-            
-            if (data.urgency_pressure) {
-                tactics.push({
-                    name: 'Urgency Pressure',
-                    icon: 'clock',
-                    severity: 'medium',
-                    description: 'Creates false sense of urgency to prevent careful consideration',
-                    example: data.urgency_example
-                });
-            }
-            
-            return tactics;
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
         }
-        
-        function generateDefaultTimeline(data) {
-            const timeline = [];
-            
-            if (data.opening_tactic) {
-                timeline.push({
-                    location: 'Opening Paragraph',
-                    description: 'Starts with emotional hook',
-                    tactic: 'Emotional Manipulation'
-                });
+
+        function updateReturnButton() {
+            // If we opened in a new tab, change the return button behavior
+            const returnButton = document.getElementById('returnButton');
+            if (window.opener) {
+                returnButton.innerHTML = '<i class="fas fa-times"></i><span>Close Window</span>';
+                returnButton.onclick = function(e) {
+                    e.preventDefault();
+                    window.close();
+                };
             }
-            
-            if (data.middle_tactics) {
-                timeline.push({
-                    location: 'Middle Section',
-                    description: 'Presents selective evidence',
-                    tactic: 'Cherry Picking'
-                });
-            }
-            
-            if (data.conclusion_tactic) {
-                timeline.push({
-                    location: 'Conclusion',
-                    description: 'Urgent call to action',
-                    tactic: 'False Urgency'
-                });
-            }
-            
-            if (timeline.length === 0) {
-                timeline.push({
-                    location: 'Throughout',
-                    description: 'Minimal manipulation detected',
-                    tactic: 'None significant'
-                });
-            }
-            
-            return timeline;
         }
-        
-        function capitalizeFirst(str) {
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-    })();
     </script>
 </body>
 </html>
