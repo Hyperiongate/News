@@ -1,6 +1,7 @@
 """
 FILE: services/content_analyzer.py
 PURPOSE: Enhanced content quality analysis service with readability scores, evidence detection, and structure assessment
+NOW WITH AI ENHANCEMENT for deeper content insights
 """
 
 import logging
@@ -9,16 +10,18 @@ import math
 from typing import Dict, Any, List, Tuple, Optional
 from collections import Counter
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ContentAnalyzer(BaseAnalyzer):
-    """Enhanced content quality analysis service that inherits from BaseAnalyzer"""
+class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
+    """Enhanced content quality analysis service with AI capabilities"""
     
     def __init__(self):
         super().__init__('content_analyzer')
-        logger.info("Enhanced ContentAnalyzer initialized")
+        AIEnhancementMixin.__init__(self)
+        logger.info(f"Enhanced ContentAnalyzer initialized with AI: {self._ai_available}")
         
         # Statistical claim patterns
         self.stat_patterns = {
@@ -64,7 +67,7 @@ class ContentAnalyzer(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze content quality using the standardized interface
+        Analyze content quality using the standardized interface WITH AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze
@@ -86,7 +89,52 @@ class ContentAnalyzer(BaseAnalyzer):
         images = data.get('images', [])
         videos = data.get('videos', [])
         
-        return self._analyze_content(text, title, images, videos)
+        # Perform base analysis
+        result = self._analyze_content(text, title, images, videos)
+        
+        # AI ENHANCEMENT - Add deeper content quality insights
+        if self._ai_available and text:
+            logger.info("Enhancing content analysis with AI")
+            
+            # Get AI content quality insights
+            ai_quality = self._ai_analyze_content_quality(
+                text=text[:3000],  # Limit text for API
+                metrics={
+                    'readability_score': result['data']['readability']['flesch_reading_ease'],
+                    'sentence_complexity': result['data']['readability']['avg_sentence_length'],
+                    'vocabulary_diversity': result['data']['language_quality']['vocabulary_diversity'],
+                    'evidence_score': result['data']['evidence_quality']['score'],
+                    'structure_score': result['data']['structure']['score']
+                }
+            )
+            
+            # Merge AI enhancements
+            if ai_quality:
+                result['data'] = self._merge_ai_enhancements(
+                    result['data'],
+                    ai_quality,
+                    'content_quality_analysis'
+                )
+                
+                # Add AI insights to recommendations
+                if ai_quality.get('weaknesses'):
+                    for weakness in ai_quality['weaknesses'][:2]:
+                        result['data']['recommendations'].append(f"AI suggests: {weakness}")
+                
+                # Update summary with AI assessment
+                if ai_quality.get('information_value'):
+                    result['data']['summary'] += f" AI assessment: {ai_quality.get('argument_quality', 'N/A')} argument quality, {ai_quality.get('information_value', 'N/A')} information value."
+                
+                # Adjust quality score if AI found significant issues
+                if ai_quality.get('professionalism') and ai_quality['professionalism'] < 50:
+                    result['data']['quality_score'] = max(0, result['data']['quality_score'] - 10)
+                    result['data']['quality_level'] = self._get_quality_level(result['data']['quality_score'])
+            
+            result['metadata']['ai_enhanced'] = True
+        else:
+            result['metadata']['ai_enhanced'] = False
+        
+        return result
     
     def _analyze_content(self, text: str, title: str = '', images: List[str] = None, videos: List[str] = None) -> Dict[str, Any]:
         """Perform comprehensive content analysis"""
@@ -811,3 +859,24 @@ class ContentAnalyzer(BaseAnalyzer):
             return "college-educated readers"
         else:
             return "academic or professional audiences"
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Flesch-Kincaid readability analysis',
+                'Document structure assessment',
+                'Language quality evaluation',
+                'Evidence quality scoring',
+                'Statistical claim verification',
+                'Media ratio analysis',
+                'AI-ENHANCED content insights',
+                'AI-powered argument quality assessment'
+            ],
+            'readability_metrics': ['flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog'],
+            'evidence_types': list(self.evidence_indicators.keys()),
+            'statistical_patterns': list(self.stat_patterns.keys()),
+            'ai_enhanced': self._ai_available
+        })
+        return info
