@@ -388,7 +388,7 @@ def process_transcript_async(job_id: str, transcript: str, source: str):
         import traceback
         logger.error(traceback.format_exc())
         update_job_progress(job_id, -1, f'Error: {str(e)}')
-        update_job(job_id, {'status': 'failed', 'error': str(e)})ror': str(e)})
+        update_job(job_id, {'status': 'failed', 'error': str(e)})
 
 @app.route('/api/status/<job_id>')
 def check_status(job_id):
@@ -631,37 +631,9 @@ def export_results(job_id, format):
                 
                 if fc.get('sources'):
                     sources_text = ', '.join(fc.get('sources', []))
-                # Add the rest of the PDF export logic
-        for i, fc in enumerate(job.get('fact_checks', []), 1):
-            claim_style = ParagraphStyle(
-                'ClaimStyle',
-                parent=styles['Normal'],
-                fontSize=11,
-                leftIndent=20,
-                rightIndent=20,
-                spaceAfter=5
-            )
-            
-            # Determine color based on verdict
-            verdict = fc.get('verdict', 'unknown').lower()
-            if verdict in ['true', 'correct', 'accurate']:
-                verdict_color = '#34a853'
-            elif verdict in ['false', 'incorrect', 'inaccurate']:
-                verdict_color = '#ea4335'
-            else:
-                verdict_color = '#fbbc04'
-            
-            story.append(Paragraph(f"<b>{i}. Claim:</b> {fc.get('claim', 'N/A')}", claim_style))
-            story.append(Paragraph(f"<b>Verdict:</b> <font color='{verdict_color}'>{fc.get('verdict', 'Unknown').upper()}</font>", claim_style))
-            
-            if fc.get('explanation'):
-                story.append(Paragraph(f"<b>Explanation:</b> {fc.get('explanation')}", claim_style))
-            
-            if fc.get('sources'):
-                sources_text = ', '.join(fc.get('sources', []))
-                story.append(Paragraph(f"<b>Sources:</b> {sources_text}", claim_style))
-            
-            story.append(Spacer(1, 15))
+                    story.append(Paragraph(f"<b>Sources:</b> {sources_text}", claim_style))
+                
+                story.append(Spacer(1, 15))
             
             # Build PDF
             doc.build(story)
