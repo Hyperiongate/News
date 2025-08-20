@@ -545,164 +545,7 @@
                 </div>
 
                 <div class="claims-list">
-                    <!-- Claim 1 - Verified -->
-                    <div class="claim-card verified">
-                        <div class="claim-header">
-                            <div class="claim-status status-verified">
-                                <i class="fas fa-check-circle"></i>
-                                Verified True
-                            </div>
-                            <div class="claim-confidence">
-                                <i class="fas fa-shield-alt"></i>
-                                High Confidence (92%)
-                            </div>
-                        </div>
-                        <div class="claim-text">
-                            "The unemployment rate reached 3.8% in December 2024, the lowest in six months."
-                        </div>
-                        <div class="claim-details">
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-database"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Primary Source:</strong> U.S. Bureau of Labor Statistics official report
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-calendar-check"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Verification Date:</strong> January 28, 2025
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-link"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Supporting Sources:</strong>
-                                    <div class="sources-list">
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            BLS Employment Report
-                                        </a>
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            Federal Reserve Economic Data
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Claim 2 - False -->
-                    <div class="claim-card false">
-                        <div class="claim-header">
-                            <div class="claim-status status-false">
-                                <i class="fas fa-times-circle"></i>
-                                False
-                            </div>
-                            <div class="claim-confidence">
-                                <i class="fas fa-shield-alt"></i>
-                                High Confidence (88%)
-                            </div>
-                        </div>
-                        <div class="claim-text">
-                            "Crime rates have increased by 50% in major cities over the past year."
-                        </div>
-                        <div class="claim-details">
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-chart-line"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Actual Data:</strong> FBI statistics show a 3.2% decrease in violent crime in major cities
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Issue:</strong> Cherry-picked data from specific neighborhoods, not representative of overall trends
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-link"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Fact Check Sources:</strong>
-                                    <div class="sources-list">
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            FBI Crime Statistics 2024
-                                        </a>
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            Department of Justice Report
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Claim 3 - Partially True -->
-                    <div class="claim-card partially-true">
-                        <div class="claim-header">
-                            <div class="claim-status status-partial">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Partially True
-                            </div>
-                            <div class="claim-confidence">
-                                <i class="fas fa-shield-alt"></i>
-                                Moderate Confidence (75%)
-                            </div>
-                        </div>
-                        <div class="claim-text">
-                            "The new infrastructure bill will create 2 million jobs."
-                        </div>
-                        <div class="claim-details">
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-info-circle"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Context:</strong> Projections range from 1.5 to 2.2 million jobs over 10 years, not immediate
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-calculator"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Analysis:</strong> Figure is based on economic modeling with significant uncertainty
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-link"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <strong>Sources:</strong>
-                                    <div class="sources-list">
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            Congressional Budget Office Analysis
-                                        </a>
-                                        <a href="#" class="source-link">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            Economic Policy Institute Study
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Claims will be dynamically inserted here -->
                 </div>
             </div>
 
@@ -753,5 +596,221 @@
             </div>
         </div>
     </div>
+
+    <script>
+    (function() {
+        // 1. Retrieve data
+        const analysisData = JSON.parse(sessionStorage.getItem('analysisData') || '{}');
+        const factCheckData = analysisData?.detailed_analysis?.fact_checker || {};
+        
+        // 2. Check if data exists
+        if (!Object.keys(factCheckData).length) {
+            // Show no data message
+            document.querySelector('.fact-check-container').innerHTML = `
+                <div style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-info-circle" style="font-size: 3rem; color: #9ca3af; margin-bottom: 1rem; display: block;"></i>
+                    <h2>No Analysis Data Available</h2>
+                    <p>Please run an analysis first to see results.</p>
+                    <a href="/" style="color: #6366f1; text-decoration: none; font-weight: 600;">Back to Analysis</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // 3. Update UI elements
+        updatePageElements(factCheckData);
+        
+        function updatePageElements(data) {
+            // Update summary statistics
+            const totalClaims = data.total_claims || 0;
+            const verifiedClaims = data.verified_claims || 0;
+            const falseClaims = data.false_claims || 0;
+            const partialClaims = data.partial_claims || 0;
+            
+            const summaryValues = document.querySelectorAll('.summary-value');
+            summaryValues[0].textContent = verifiedClaims;
+            summaryValues[1].textContent = falseClaims;
+            summaryValues[2].textContent = partialClaims;
+            summaryValues[3].textContent = totalClaims;
+            
+            // Update claims list
+            const claimsList = document.querySelector('.claims-list');
+            claimsList.innerHTML = '';
+            
+            if (data.fact_checks && data.fact_checks.length > 0) {
+                data.fact_checks.forEach(claim => {
+                    const claimCard = createClaimCard(claim);
+                    claimsList.appendChild(claimCard);
+                });
+            } else {
+                claimsList.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--gray-600);">
+                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                        <p>No specific claims were identified for fact-checking in this article.</p>
+                    </div>
+                `;
+            }
+            
+            // Update confidence meter
+            const accuracy = data.accuracy_percentage || 0;
+            updateConfidenceMeter(accuracy);
+            
+            // Add filter functionality
+            setupFilters();
+        }
+        
+        function createClaimCard(claim) {
+            const card = document.createElement('div');
+            const status = getClaimStatus(claim.verdict || claim.status);
+            card.className = `claim-card ${status.class}`;
+            
+            card.innerHTML = `
+                <div class="claim-header">
+                    <div class="claim-status ${status.statusClass}">
+                        <i class="fas fa-${status.icon}"></i>
+                        ${status.label}
+                    </div>
+                    <div class="claim-confidence">
+                        <i class="fas fa-shield-alt"></i>
+                        ${getConfidenceLabel(claim.confidence || 0)}
+                    </div>
+                </div>
+                <div class="claim-text">
+                    "${claim.claim || claim.text || 'No claim text available'}"
+                </div>
+                <div class="claim-details">
+                    ${claim.explanation ? `
+                        <div class="detail-item">
+                            <div class="detail-icon">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="detail-content">
+                                <strong>Explanation:</strong> ${claim.explanation}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${claim.verification_date ? `
+                        <div class="detail-item">
+                            <div class="detail-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="detail-content">
+                                <strong>Verification Date:</strong> ${formatDate(claim.verification_date)}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${claim.sources && claim.sources.length > 0 ? `
+                        <div class="detail-item">
+                            <div class="detail-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div class="detail-content">
+                                <strong>Sources:</strong>
+                                <div class="sources-list">
+                                    ${claim.sources.map(source => `
+                                        <a href="${source.url || '#'}" class="source-link" target="_blank">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            ${source.name || source.title || 'Source'}
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        function getClaimStatus(verdict) {
+            const verdictLower = (verdict || '').toLowerCase();
+            
+            if (verdictLower.includes('true') && !verdictLower.includes('partial')) {
+                return {
+                    class: 'verified',
+                    statusClass: 'status-verified',
+                    icon: 'check-circle',
+                    label: 'Verified True'
+                };
+            } else if (verdictLower.includes('false')) {
+                return {
+                    class: 'false',
+                    statusClass: 'status-false',
+                    icon: 'times-circle',
+                    label: 'False'
+                };
+            } else if (verdictLower.includes('partial') || verdictLower.includes('mixed')) {
+                return {
+                    class: 'partially-true',
+                    statusClass: 'status-partial',
+                    icon: 'exclamation-circle',
+                    label: 'Partially True'
+                };
+            } else {
+                return {
+                    class: '',
+                    statusClass: 'status-unverified',
+                    icon: 'question-circle',
+                    label: 'Unverified'
+                };
+            }
+        }
+        
+        function getConfidenceLabel(confidence) {
+            if (confidence >= 80) return `High Confidence (${confidence}%)`;
+            if (confidence >= 60) return `Moderate Confidence (${confidence}%)`;
+            if (confidence >= 40) return `Low Confidence (${confidence}%)`;
+            return `Confidence: ${confidence}%`;
+        }
+        
+        function updateConfidenceMeter(accuracy) {
+            // Update the needle position based on accuracy (0-100)
+            // -90deg = 0%, 0deg = 50%, 90deg = 100%
+            const rotation = (accuracy - 50) * 1.8; // Convert to degrees
+            const needle = document.querySelector('.confidence-needle');
+            needle.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+            
+            // Update the value display
+            document.querySelector('.confidence-value').textContent = accuracy + '%';
+        }
+        
+        function setupFilters() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const claimCards = document.querySelectorAll('.claim-card');
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // Filter claims
+                    const filter = button.textContent.toLowerCase();
+                    claimCards.forEach(card => {
+                        if (filter === 'all claims') {
+                            card.style.display = 'block';
+                        } else if (filter === 'verified' && card.classList.contains('verified')) {
+                            card.style.display = 'block';
+                        } else if (filter === 'false' && card.classList.contains('false')) {
+                            card.style.display = 'block';
+                        } else if (filter === 'partial' && card.classList.contains('partially-true')) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            const date = new Date(dateStr);
+            const options = { month: 'long', day: 'numeric', year: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+    })();
+    </script>
 </body>
 </html>
