@@ -58,7 +58,7 @@ class TruthLensDisplay {
         servicesGrid.innerHTML = '<div class="services-loading"><i class="fas fa-spinner fa-spin"></i> Loading analysis results...</div>';
         
         // Use centralized service configuration from CONFIG
-        const SERVICES = CONFIG.SERVICES;
+        const SERVICES = window.CONFIG ? window.CONFIG.SERVICES : [];
         
         // Small delay for smooth transition
         setTimeout(() => {
@@ -79,6 +79,8 @@ class TruthLensDisplay {
                 // Better handling for cards without data
                 if (hasData) {
                     card.href = service.url;
+                    card.target = '_blank'; // Open in new window
+                    card.rel = 'noopener noreferrer'; // Security best practice
                     // Add smooth transition
                     setTimeout(() => card.classList.remove('loading'), 100);
                 } else {
@@ -113,7 +115,7 @@ class TruthLensDisplay {
                     <div class="service-metrics">
                         ${primaryMetric}
                     </div>
-                    <span class="view-details-link">View Details <i class="fas fa-arrow-right"></i></span>
+                    <span class="view-details-link">View Details <i class="fas fa-external-link-alt"></i></span>
                 ` : ''}
             `;
 
@@ -126,6 +128,7 @@ class TruthLensDisplay {
             const progressPercent = (completedCount / SERVICES.length) * 100;
             progressBar.style.width = `${progressPercent}%`;
         }
+        }, 300);
     }
 
     getServicePrimaryMetric(serviceId, data) {
@@ -148,7 +151,7 @@ class TruthLensDisplay {
                 
             case 'bias_detector':
                 const biasScore = data.bias_score || data.score || 0;
-                const biasLevel = data.bias_level || this.getBiasLevel(biasScore);
+                const biasLevel = data.bias_level || CONFIG.getBiasLevel(biasScore).label;
                 return `<div class="metric-item">
                     <span class="metric-value">${biasLevel}</span>
                     <span class="metric-label">Bias Level</span>
@@ -237,6 +240,11 @@ class TruthLensDisplay {
     }
 
     getBiasLevel(score) {
+        if (window.CONFIG) {
+            const level = CONFIG.getBiasLevel(score);
+            return level ? level.label : 'Unknown';
+        }
+        // Fallback if CONFIG not available
         if (score < 20) return 'Minimal';
         if (score < 40) return 'Low';
         if (score < 60) return 'Moderate';
@@ -518,6 +526,10 @@ class TruthLensDisplay {
     }
 
     getTrustLevelConfig(score) {
+        if (window.CONFIG) {
+            return CONFIG.getTrustLevel(score);
+        }
+        // Fallback if CONFIG not available
         if (score >= 80) {
             return { class: 'very-high', icon: 'fa-shield-check', text: 'Very High Trust' };
         } else if (score >= 60) {
