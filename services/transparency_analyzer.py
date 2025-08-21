@@ -25,13 +25,57 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         return True
     
     def _ai_assess_transparency(self, text: str, initial_findings: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """AI method to assess transparency - placeholder for AI enhancement"""
-        # This is a placeholder method that would normally call the AI service
-        # For now, we'll return None to indicate no AI enhancement available
+        """AI method to assess transparency - calls the mixin's AI method"""
         try:
-            if hasattr(self, '_ai_analyze_transparency'):
-                # Call the mixin's AI method if available
-                return self._ai_analyze_transparency(text, initial_findings)
+            if hasattr(self, '_ai_analyze_transparency') and self._ai_available:
+                # Prepare data in the format expected by the mixin
+                transparency_data = {
+                    'indicators': initial_findings.get('indicators', []),
+                    'source_count': initial_findings.get('source_count', 0),
+                    'quote_count': initial_findings.get('quote_count', 0),
+                    'has_disclosures': initial_findings.get('has_disclosures', False)
+                }
+                
+                article_data = {
+                    'title': initial_findings.get('title', 'Unknown'),
+                    'author': initial_findings.get('author', 'Unknown'),
+                    'source': initial_findings.get('source', 'Unknown')
+                }
+                
+                # Call the mixin's AI method with proper parameters
+                ai_result = self._ai_analyze_transparency(transparency_data, article_data)
+                
+                if ai_result:
+                    # Transform the result to match what the analyze method expects
+                    transformed_result = {
+                        'hidden_issues': [],
+                        'transparency_strengths': [],
+                        'potential_conflicts': [],
+                        'sponsorship_indicators': False
+                    }
+                    
+                    # Extract issues from AI result
+                    if ai_result.get('disclosure_issues'):
+                        transformed_result['hidden_issues'] = ai_result['disclosure_issues'][:2]
+                    
+                    if ai_result.get('transparency_gaps'):
+                        transformed_result['hidden_issues'].extend(ai_result['transparency_gaps'][:2])
+                    
+                    # Extract strengths
+                    if ai_result.get('attribution_quality') == 'high':
+                        transformed_result['transparency_strengths'].append('Strong source attribution')
+                    
+                    # Check for conflicts
+                    if ai_result.get('trust_impact') and 'conflict' in str(ai_result.get('trust_impact', '')).lower():
+                        transformed_result['potential_conflicts'] = ['Possible undisclosed conflict of interest']
+                    
+                    # Check for sponsorship
+                    if any('sponsor' in issue.lower() or 'funding' in issue.lower() 
+                           for issue in ai_result.get('disclosure_issues', [])):
+                        transformed_result['sponsorship_indicators'] = True
+                    
+                    return transformed_result
+                
         except Exception as e:
             logger.warning(f"AI transparency assessment failed: {e}")
         
@@ -186,16 +230,23 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             if self._ai_available and text:
                 logger.info("Enhancing transparency analysis with AI")
                 
+                # Prepare initial findings for AI assessment
+                initial_findings = {
+                    'author': author,
+                    'source': domain,
+                    'title': data.get('title', 'Unknown'),
+                    'author_provided': bool(author),
+                    'source_count': sources_found,
+                    'quote_count': quote_count,
+                    'has_disclosures': len(disclosures) > 0,
+                    'transparency_score': transparency_score,
+                    'indicators': indicators
+                }
+                
                 # Get AI transparency assessment
                 ai_transparency = self._ai_assess_transparency(
                     text=text[:2000],  # Limit text for API
-                    initial_findings={
-                        'author_provided': bool(author),
-                        'source_count': sources_found,
-                        'quote_count': quote_count,
-                        'has_disclosures': len(disclosures) > 0,
-                        'transparency_score': transparency_score
-                    }
+                    initial_findings=initial_findings
                 )
                 
                 if ai_transparency:
