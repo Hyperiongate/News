@@ -429,7 +429,7 @@
     <!-- Header with Return Button -->
     <header class="service-header">
         <div class="header-content">
-            <a href="javascript:history.back()" class="return-button" id="returnButton">
+            <a href="/" class="return-button" id="returnButton">
                 <i class="fas fa-arrow-left"></i>
                 <span>Return to Analysis</span>
             </a>
@@ -491,7 +491,7 @@
             <i class="fas fa-exclamation-circle error-icon"></i>
             <h2>Analysis Not Available</h2>
             <p id="errorMessage">Source credibility analysis was not performed for this article.</p>
-            <a href="javascript:history.back()" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
+            <a href="/" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
                 <i class="fas fa-arrow-left"></i>
                 <span>Return to Main Analysis</span>
             </a>
@@ -506,6 +506,7 @@
     <!-- Scripts -->
     <script src="/static/js/config.js"></script>
     <script src="/static/js/truthlens-services.js"></script>
+    <script src="/static/js/service-navigation.js"></script>
     <script>
         // Service-specific configuration
         const SERVICE_CONFIG = {
@@ -514,44 +515,9 @@
             icon: 'fa-shield-alt'
         };
 
-        // Initialize service page
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeServicePage();
-        });
-
-        function initializeServicePage() {
-            // Get analysis data from sessionStorage
-            const analysisData = sessionStorage.getItem('analysisData');
-            
-            if (!analysisData) {
-                showError('No analysis data found. Please return to the main page and run a new analysis.');
-                return;
-            }
-
-            try {
-                const data = JSON.parse(analysisData);
-                const serviceData = data.detailed_analysis?.[SERVICE_CONFIG.id];
-                
-                if (!serviceData || Object.keys(serviceData).length === 0) {
-                    showError('Source credibility analysis was not performed for this article.');
-                    return;
-                }
-
-                // Populate summary section
-                populateSummary(data, serviceData);
-                
-                // Show analysis content
-                displayServiceAnalysis(serviceData);
-                
-                // Update return button to maintain state
-                updateReturnButton();
-                
-            } catch (error) {
-                console.error('Error loading analysis data:', error);
-                showError('Error loading analysis results.');
-            }
-        }
-
+        // These functions will be overridden by service-navigation.js
+        // but we define them here for fallback support
+        
         function populateSummary(fullData, serviceData) {
             // Article information
             const article = fullData.article || {};
@@ -638,17 +604,14 @@
             document.getElementById('errorMessage').textContent = message;
         }
 
-        function updateReturnButton() {
-            // If we opened in a new tab, change the return button behavior
-            const returnButton = document.getElementById('returnButton');
-            if (window.opener) {
-                returnButton.innerHTML = '<i class="fas fa-times"></i><span>Close Window</span>';
-                returnButton.onclick = function(e) {
-                    e.preventDefault();
-                    window.close();
-                };
+        // Initialize page when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Service navigation will handle initialization
+            if (!window.initializeServicePage) {
+                // Fallback initialization
+                initializeServicePage();
             }
-        }
+        });
     </script>
 </body>
 </html>
