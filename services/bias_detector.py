@@ -1,6 +1,6 @@
 """
-Bias Detector Service
-Advanced multi-dimensional bias detection with rich explanations and visualizations
+Bias Detector Service - AI ENHANCED VERSION
+Advanced multi-dimensional bias detection with rich explanations, visualizations, and AI insights
 """
 
 import re
@@ -12,24 +12,26 @@ import statistics
 
 from config import Config
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class BiasDetector(BaseAnalyzer):
+class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     """
     Advanced bias detection analyzing multiple dimensions including political,
-    corporate, sensational, nationalistic, and establishment bias
+    corporate, sensational, nationalistic, and establishment bias WITH AI ENHANCEMENT
     """
     
     def __init__(self):
-        """Initialize bias detector with comprehensive pattern database"""
+        """Initialize bias detector with comprehensive pattern database and AI"""
         super().__init__('bias_detector')
+        AIEnhancementMixin.__init__(self)
         
         # Initialize all bias patterns and indicators
         self._initialize_bias_patterns()
         
-        logger.info("BiasDetector initialized with multi-dimensional analysis")
+        logger.info(f"BiasDetector initialized with multi-dimensional analysis and AI enhancement: {self._ai_available}")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -37,7 +39,7 @@ class BiasDetector(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Perform comprehensive bias analysis
+        Perform comprehensive bias analysis WITH AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze (required)
@@ -83,13 +85,62 @@ class BiasDetector(BaseAnalyzer):
             # Create visualization data
             visualization = self._create_visualization_data(dimensions)
             
-            return {
+            # AI ENHANCEMENT - Add deeper bias insights
+            if self._ai_available and text:
+                logger.info("Enhancing bias analysis with AI")
+                
+                # Get AI bias pattern detection
+                ai_bias_patterns = self._ai_detect_bias_patterns(
+                    text=full_text[:2000],  # Limit text for API
+                    initial_findings={
+                        'political_label': dimensions['political']['label'],
+                        'sensationalism': dimensions['sensational']['label'],
+                        'loaded_phrases': loaded_phrases[:5],  # Top 5 phrases
+                        'bias_score': bias_score
+                    }
+                )
+                
+                if ai_bias_patterns:
+                    # Add AI-detected subtle biases
+                    if ai_bias_patterns.get('subtle_biases'):
+                        for bias in ai_bias_patterns['subtle_biases']:
+                            patterns.append({
+                                'type': 'ai_subtle_bias',
+                                'description': f'AI detected: {bias}',
+                                'severity': 'medium',
+                                'impact': 'May influence reader perception subtly',
+                                'source': 'ai'
+                            })
+                    
+                    # Add AI framing issues to findings
+                    if ai_bias_patterns.get('framing_issues'):
+                        for issue in ai_bias_patterns['framing_issues'][:2]:
+                            findings.append({
+                                'type': 'ai_framing_bias',
+                                'text': f'AI: {issue}',
+                                'severity': 'medium',
+                                'explanation': 'Subtle framing bias detected by AI analysis'
+                            })
+                    
+                    # Update summary with AI insights
+                    if ai_bias_patterns.get('severity_assessment') in ['high', 'severe']:
+                        summary += " AI analysis reveals additional subtle bias patterns that may not be immediately apparent."
+                        # Adjust scores
+                        bias_score = min(100, bias_score + 10)
+                        objectivity_score = max(0, objectivity_score - 10)
+                    
+                    # Add missing perspectives if detected
+                    if ai_bias_patterns.get('missing_perspectives'):
+                        source_analysis['ai_missing_perspectives'] = ai_bias_patterns['missing_perspectives']
+            
+            # Build final result
+            result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
                     'score': bias_score,
                     'level': bias_level,
-                    'findings': findings,
+                    'findings': findings[:5],  # Top 5 findings
                     'summary': summary,
                     'bias_score': bias_score,
                     'objectivity_score': objectivity_score,
@@ -97,7 +148,7 @@ class BiasDetector(BaseAnalyzer):
                     'emotional_score': emotional_score,
                     'confidence': confidence,
                     'dimensions': dimensions,
-                    'patterns': patterns,
+                    'patterns': patterns[:10],  # Top 10 patterns
                     'loaded_phrases': loaded_phrases[:10],  # Top 10
                     'manipulation_tactics': manipulation_tactics,
                     'framing_analysis': framing_analysis,
@@ -117,9 +168,13 @@ class BiasDetector(BaseAnalyzer):
                     'text_length': len(text.split()),
                     'title_analyzed': bool(title),
                     'patterns_found': len(patterns),
-                    'loaded_phrases_found': len(loaded_phrases)
+                    'loaded_phrases_found': len(loaded_phrases),
+                    'ai_enhanced': self._ai_available,
+                    'ai_patterns_found': len([p for p in patterns if p.get('source') == 'ai'])
                 }
             }
+            
+            return result
             
         except Exception as e:
             logger.error(f"Bias analysis failed: {e}", exc_info=True)
@@ -1007,10 +1062,13 @@ class BiasDetector(BaseAnalyzer):
                 'Manipulation tactic identification',
                 'Loaded language extraction',
                 'Framing analysis',
-                'Source diversity assessment'
+                'Source diversity assessment',
+                'AI-ENHANCED subtle bias detection',
+                'AI-powered framing analysis'
             ],
             'dimensions_analyzed': 5,
             'patterns_detected': len(self.loaded_patterns),
-            'visualization_ready': True
+            'visualization_ready': True,
+            'ai_enhanced': self._ai_available
         })
         return info
