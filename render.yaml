@@ -7,4 +7,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: WEB_CONCURRENCY
+        value: 2
     staticPublishPath: ./static
+    healthCheckPath: /health
+    autoDeploy: false
+    plan: free
+    region: oregon
