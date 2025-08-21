@@ -269,7 +269,7 @@ def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
     if 'analysis' not in data:
         data['analysis'] = {
             'trust_score': 0,
-            'credibility_level': 'Unknown',
+            'trust_level': 'Unknown',  # Note: frontend expects trust_level, not credibility_level
             'key_findings': [],
             'summary': 'Analysis incomplete'
         }
@@ -374,6 +374,13 @@ def analyze():
         # Get options from request
         options = data.get('options', {})
         
+        # Check if analyzer is available
+        if not news_analyzer:
+            return jsonify({
+                'success': False,
+                'error': 'Analysis service is not available'
+            }), 503
+        
         # Run analysis
         logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
         start_time = time.time()
@@ -396,7 +403,8 @@ def analyze():
         for key, value in result.items():
             if key not in metadata_fields and isinstance(value, dict):
                 # This is likely a service result
-                if value and isinstance(value, dict):
+                # Check if it has expected service result structure
+                if 'success' in value or 'data' in value or any(k in value for k in ['score', 'level', 'analysis']):
                     cleaned_data = clean_service_data(value)
                     if cleaned_data:
                         service_results[key] = cleaned_data
@@ -412,7 +420,7 @@ def analyze():
                     'title': 'Unknown Title',
                     'url': content if content_type == 'url' else '',
                     'text': content if content_type == 'text' else '',
-                    'extraction_successful': False
+                    'extraction_successful': bool(result.get('article'))
                 }),
                 'analysis': {
                     'trust_score': result.get('trust_score', 50),
@@ -462,9 +470,21 @@ def debug_services():
     from services.service_registry import get_service_registry
     registry = get_service_registry()
     
+    # Add missing method if it doesn't exist
+    service_details = {}
+    if hasattr(registry, 'get_service_details'):
+        service_details = registry.get_service_details()
+    else:
+        # Build service details from available methods
+        for service_name, service in registry.get_all_services().items():
+            service_details[service_name] = {
+                'available': service.is_available if hasattr(service, 'is_available') else False,
+                'type': type(service).__name__
+            }
+    
     return jsonify({
         'registry_status': registry.get_service_status(),
-        'service_details': registry.get_service_details(),
+        'service_details': service_details,
         'configuration': Config.validate()
     })
 
