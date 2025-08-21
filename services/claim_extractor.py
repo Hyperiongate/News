@@ -1,21 +1,30 @@
 # services/claim_extractor.py
 """
-Claim Extraction Service
-Extracts and categorizes factual claims from articles
+Claim Extraction Service - AI ENHANCED VERSION
+Extracts and categorizes factual claims from articles with AI assistance
 """
 
 import re
 import logging
 from typing import Dict, List, Any
+from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
-class ClaimExtractor:
-    """Extract factual claims from article content"""
+class ClaimExtractor(BaseAnalyzer, AIEnhancementMixin):
+    """Extract factual claims from article content with AI enhancement"""
     
     def __init__(self):
-        """Initialize claim patterns"""
+        """Initialize claim patterns and AI"""
+        super().__init__('claim_extractor')
+        AIEnhancementMixin.__init__(self)
         self._initialize_patterns()
+        logger.info(f"ClaimExtractor initialized with AI: {self._ai_available}")
+    
+    def _check_availability(self) -> bool:
+        """Service is always available"""
+        return True
     
     def _initialize_patterns(self):
         """Initialize patterns for claim detection"""
@@ -77,9 +86,97 @@ class ClaimExtractor:
             r'next\s+(year|month|week)'
         ]
     
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract claims from article using BaseAnalyzer interface
+        """
+        try:
+            content = data.get('content') or data.get('text', '')
+            
+            if not content:
+                return {
+                    'service': self.service_name,
+                    'success': True,
+                    'data': {
+                        'claims': [],
+                        'claim_count': 0,
+                        'claim_types': {}
+                    },
+                    'metadata': {
+                        'ai_enhanced': False
+                    }
+                }
+            
+            # Extract claims using patterns
+            result = self.extract_claims({'content': content})
+            
+            # AI ENHANCEMENT - Extract additional claims
+            if self._ai_available and content:
+                logger.info("Enhancing claim extraction with AI")
+                
+                # Use the AI fact-check claims method from mixin
+                ai_claims = self._ai_fact_check_claims(
+                    claims=[],  # Empty list to trigger claim extraction
+                    context=content[:2000]  # Provide context for extraction
+                )
+                
+                if ai_claims and ai_claims.get('claims'):
+                    # Convert AI claims to our format
+                    for ai_claim in ai_claims['claims'][:5]:  # Add up to 5 AI claims
+                        claim_text = ai_claim.get('claim', '')
+                        if claim_text and len(claim_text) > 20:
+                            # Check if this claim isn't already in our list
+                            already_found = any(
+                                claim['text'].lower() in claim_text.lower() or
+                                claim_text.lower() in claim['text'].lower()
+                                for claim in result['claims']
+                            )
+                            
+                            if not already_found:
+                                result['claims'].append({
+                                    'text': claim_text,
+                                    'type': 'ai_extracted',
+                                    'importance': ai_claim.get('verifiability', 'medium'),
+                                    'verifiable': ai_claim.get('verifiability', 'medium') != 'hard',
+                                    'source': 'ai'
+                                })
+                                
+                                # Update claim types
+                                if 'ai_extracted' not in result['claim_types']:
+                                    result['claim_types']['ai_extracted'] = []
+                                result['claim_types']['ai_extracted'].append({
+                                    'text': claim_text,
+                                    'type': 'ai_extracted',
+                                    'importance': ai_claim.get('verifiability', 'medium'),
+                                    'verifiable': ai_claim.get('verifiability', 'medium') != 'hard'
+                                })
+                    
+                    # Update claim count
+                    result['claim_count'] = len(result['claims'])
+                    result['ai_claims_added'] = len([c for c in result['claims'] if c.get('source') == 'ai'])
+            
+            # Format as standard service response
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': result,
+                'metadata': {
+                    'ai_enhanced': self._ai_available,
+                    'total_claims': result['claim_count'],
+                    'claim_breakdown': {
+                        claim_type: len(claims) 
+                        for claim_type, claims in result['claim_types'].items()
+                    }
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Claim extraction failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
+    
     def extract_claims(self, article_data):
         """
-        Extract claims from article
+        Extract claims from article (original method maintained for compatibility)
         
         Args:
             article_data: Dictionary containing article information
@@ -250,3 +347,21 @@ class ClaimExtractor:
             text += '.'
         
         return text
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Statistical claim extraction',
+                'Causal relationship detection',
+                'Comparison claim identification',
+                'Temporal/predictive claim extraction',
+                'AI-ENHANCED claim discovery',
+                'AI-powered claim prioritization'
+            ],
+            'claim_types': ['statistical', 'causal', 'comparison', 'predictive', 'ai_extracted'],
+            'max_claims': 20,
+            'ai_enhanced': self._ai_available
+        })
+        return info
