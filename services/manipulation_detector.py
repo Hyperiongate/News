@@ -1,6 +1,6 @@
 """
-Manipulation Detector Service - COMPLETE IMPLEMENTATION
-Detects propaganda techniques and manipulation tactics in news articles
+Manipulation Detector Service - AI ENHANCED VERSION
+Detects propaganda techniques and manipulation tactics in news articles with AI insights
 """
 
 import re
@@ -8,17 +8,19 @@ import logging
 from typing import Dict, List, Any, Tuple
 from collections import Counter
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ManipulationDetector(BaseAnalyzer):
-    """Detect manipulation tactics and propaganda techniques in articles"""
+class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
+    """Detect manipulation tactics and propaganda techniques in articles with AI enhancement"""
     
     def __init__(self):
         super().__init__('manipulation_detector')
+        AIEnhancementMixin.__init__(self)
         self._initialize_manipulation_patterns()
-        logger.info("ManipulationDetector initialized with comprehensive pattern database")
+        logger.info(f"ManipulationDetector initialized with comprehensive pattern database and AI: {self._ai_available}")
     
     def _initialize_manipulation_patterns(self):
         """Initialize comprehensive manipulation and propaganda patterns"""
@@ -164,7 +166,7 @@ class ManipulationDetector(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Detect manipulation tactics in article
+        Detect manipulation tactics in article WITH AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze
@@ -191,6 +193,45 @@ class ManipulationDetector(BaseAnalyzer):
             manipulation_score = self._calculate_manipulation_score(
                 tactics_found, propaganda, logical_fallacies, clickbait
             )
+            
+            # AI ENHANCEMENT - Add deeper manipulation insights
+            if self._ai_available and text:
+                logger.info("Enhancing manipulation detection with AI")
+                
+                # Calculate emotional score for AI
+                emotional_score = self._calculate_emotional_score(full_text)
+                
+                # Get AI manipulation insights
+                ai_manipulation = self._ai_detect_manipulation(
+                    text=full_text[:2000],  # Limit text for API
+                    emotional_score=emotional_score
+                )
+                
+                if ai_manipulation:
+                    # Add AI-detected tactics
+                    if ai_manipulation.get('emotional_tactics'):
+                        for tactic in ai_manipulation['emotional_tactics']:
+                            tactics_found.append({
+                                'type': 'ai_emotional',
+                                'name': f'AI: {tactic}',
+                                'severity': 'medium',
+                                'description': 'Emotional manipulation detected by AI',
+                                'source': 'ai'
+                            })
+                    
+                    if ai_manipulation.get('logical_fallacies'):
+                        for fallacy in ai_manipulation['logical_fallacies']:
+                            logical_fallacies.append({
+                                'type': 'ai_fallacy',
+                                'name': f'AI: {fallacy}',
+                                'severity': ai_manipulation.get('severity', 'medium'),
+                                'description': 'Logical fallacy detected by AI',
+                                'source': 'ai'
+                            })
+                    
+                    # Adjust score if AI found severe manipulation
+                    if ai_manipulation.get('severity') == 'high':
+                        manipulation_score = min(100, manipulation_score + 15)
             
             # Determine manipulation level
             if manipulation_score >= 70:
@@ -233,6 +274,11 @@ class ManipulationDetector(BaseAnalyzer):
             # Generate summary
             summary = self._generate_summary(manipulation_score, level, all_tactics)
             
+            # Add AI note to summary if applicable
+            ai_detected = sum(1 for t in all_tactics if t.get('source') == 'ai')
+            if ai_detected > 0:
+                summary += f" AI analysis identified {ai_detected} additional manipulation patterns."
+            
             return {
                 'service': self.service_name,
                 'success': True,
@@ -255,13 +301,15 @@ class ManipulationDetector(BaseAnalyzer):
                         'high_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'high'),
                         'medium_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'medium'),
                         'low_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'low'),
+                        'ai_detected_count': ai_detected,
                         'has_clickbait': clickbait['is_clickbait'],
                         'word_count': len(full_text.split())
                     }
                 },
                 'metadata': {
                     'tactics_detected': len(all_tactics),
-                    'analyzed_with_title': bool(title)
+                    'analyzed_with_title': bool(title),
+                    'ai_enhanced': self._ai_available
                 }
             }
             
@@ -414,6 +462,32 @@ class ManipulationDetector(BaseAnalyzer):
             'reason': '; '.join(reasons) if reasons else 'No clickbait indicators'
         }
     
+    def _calculate_emotional_score(self, text: str) -> int:
+        """Calculate emotional intensity for AI analysis"""
+        emotional_words = {
+            # High intensity
+            'shocking': 3, 'devastating': 3, 'horrifying': 3, 'outrageous': 3,
+            'explosive': 3, 'catastrophic': 3, 'terrifying': 3,
+            # Medium intensity
+            'amazing': 2, 'terrible': 2, 'wonderful': 2, 'awful': 2,
+            'fantastic': 2, 'horrible': 2, 'incredible': 2,
+            # Low intensity
+            'surprising': 1, 'concerning': 1, 'interesting': 1, 'notable': 1
+        }
+        
+        text_lower = text.lower()
+        word_count = len(text.split())
+        
+        emotional_score = 0
+        for word, weight in emotional_words.items():
+            count = text_lower.count(word)
+            emotional_score += count * weight
+        
+        # Normalize
+        score = min(100, int((emotional_score / max(word_count, 1)) * 500))
+        
+        return score
+    
     def _calculate_manipulation_score(self, tactics: List, propaganda: List, 
                                     fallacies: List, clickbait: Dict) -> int:
         """Calculate overall manipulation score"""
@@ -469,9 +543,12 @@ class ManipulationDetector(BaseAnalyzer):
                 'Fear mongering identification',
                 'Ad hominem detection',
                 'False dichotomy recognition',
-                'Manipulation scoring'
+                'Manipulation scoring',
+                'AI-ENHANCED psychological tactics detection',
+                'AI-powered gaslighting identification'
             ],
             'patterns_loaded': len(self.manipulation_patterns),
-            'propaganda_types': len(self.propaganda_techniques)
+            'propaganda_types': len(self.propaganda_techniques),
+            'ai_enhanced': self._ai_available
         })
         return info
