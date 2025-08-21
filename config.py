@@ -51,11 +51,11 @@ class Config:
     FRED_API_KEY = os.getenv('FRED_API_KEY')
     MEDIASTACK_API_KEY = os.getenv('MEDIASTACK_API_KEY')
     
-    # Service Configurations
+    # Service Configurations - INCREASED TIMEOUTS
     SERVICES = {
         'article_extractor': ServiceConfig(
             enabled=True,
-            timeout=30,
+            timeout=60,  # Increased from 30
             max_retries=3,
             options={
                 'min_text_length': 200,
@@ -64,72 +64,77 @@ class Config:
                 'extract_videos': True,
                 'extract_metadata': True,
                 'use_scraperapi': bool(SCRAPERAPI_KEY),
-                'use_scrapingbee': bool(SCRAPINGBEE_API_KEY)
+                'use_scrapingbee': bool(SCRAPINGBEE_API_KEY),
+                'fallback_methods': ['enhanced_requests', 'live_news', 'cloudscraper', 'newspaper3k']
             }
         ),
         'source_credibility': ServiceConfig(
             enabled=True,
-            timeout=10,
+            timeout=45,  # Increased from 20
             max_retries=2,
             options={
-                'cache_duration': 86400,  # 24 hours
-                'fallback_to_domain_check': True,
-                'use_news_api': bool(NEWS_API_KEY or NEWSAPI_KEY),
+                'check_https': True,
                 'check_domain_age': True,
-                'check_ssl_certificate': True
+                'check_alexa_rank': False,
+                'check_social_presence': True,
+                'use_ai_enhancement': bool(OPENAI_API_KEY)
             }
         ),
         'author_analyzer': ServiceConfig(
             enabled=True,
-            timeout=15,
+            timeout=45,  # Increased from 20
             max_retries=2,
-            api_key=NEWS_API_KEY or NEWSAPI_KEY,
             options={
-                'search_history': True,
-                'analyze_expertise': True,
-                'check_credentials': True
+                'search_online': True,
+                'check_social_media': True,
+                'analyze_past_articles': True,
+                'use_ai_enhancement': bool(OPENAI_API_KEY)
             }
         ),
         'bias_detector': ServiceConfig(
             enabled=True,
-            timeout=20,
+            timeout=30,  # Increased from 15
             max_retries=2,
             options={
+                'detect_political_bias': True,
+                'detect_sentiment': True,
                 'detect_loaded_language': True,
-                'sentiment_analysis': True,
-                'fact_opinion_ratio': True,
-                'source_diversity': True,
-                'framing_analysis': True
+                'analyze_sources': True,
+                'use_ai_enhancement': bool(OPENAI_API_KEY)
             }
         ),
         'fact_checker': ServiceConfig(
             enabled=bool(GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY),
-            timeout=30,
+            timeout=60,  # Increased from 30
             max_retries=3,
             api_key=GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY,
+            endpoint='https://factchecktools.googleapis.com/v1alpha1/claims:search',
             options={
-                'extract_claims': True,
-                'verify_with_google': True,
-                'check_multiple_sources': True,
-                'confidence_threshold': 0.7
+                'max_claims': 10,
+                'min_relevance_score': 0.7,
+                'check_snopes': True,
+                'check_politifact': True
             }
         ),
         'transparency_analyzer': ServiceConfig(
             enabled=True,
-            timeout=15,
+            timeout=30,  # Increased from 15
             max_retries=2,
             options={
+                'check_author_info': True,
                 'check_sources': True,
+                'check_corrections': True,
                 'check_funding': True,
-                'check_conflicts': True,
-                'author_disclosure': True
+                'check_contact_info': True,
+                'use_ai_enhancement': bool(OPENAI_API_KEY)
             }
         ),
         'manipulation_detector': ServiceConfig(
             enabled=True,
-            timeout=20,
+            timeout=30,  # Increased from 20
             max_retries=2,
             options={
+                'detect_emotional_language': True,
                 'detect_propaganda': True,
                 'detect_logical_fallacies': True,
                 'detect_emotional_manipulation': True,
@@ -139,7 +144,7 @@ class Config:
         ),
         'content_analyzer': ServiceConfig(
             enabled=True,
-            timeout=15,
+            timeout=30,  # Increased from 15
             max_retries=2,
             options={
                 'readability_metrics': True,
@@ -151,7 +156,7 @@ class Config:
         ),
         'plagiarism_detector': ServiceConfig(
             enabled=bool(COPYLEAKS_API_KEY or COPYSCAPE_API_KEY),
-            timeout=45,
+            timeout=60,  # Increased from 45
             max_retries=2,
             api_key=COPYLEAKS_API_KEY or COPYSCAPE_API_KEY,
             options={
@@ -163,7 +168,7 @@ class Config:
         ),
         'openai_enhancer': ServiceConfig(
             enabled=bool(OPENAI_API_KEY),
-            timeout=30,
+            timeout=60,  # Increased from 30
             max_retries=2,
             api_key=OPENAI_API_KEY,
             options={
@@ -180,12 +185,12 @@ class Config:
         )
     }
     
-    # Pipeline Configuration
+    # Pipeline Configuration - INCREASED TIMEOUT
     PIPELINE = {
         'stages': ['extraction', 'analysis', 'enhancement'],
         'parallel_processing': True,
         'max_workers': 5,
-        'max_total_timeout': 120,  # 2 minutes
+        'max_total_timeout': 240,  # Increased from 120 to 4 minutes
         'min_required_services': 3,  # Minimum services for valid analysis
         'retry_failed_services': True,
         'continue_on_error': True
@@ -326,8 +331,8 @@ class Config:
             key_name.replace('APIKEY', 'API_KEY')
         ]
         
-        for variation in variations:
-            key = os.getenv(variation)
+        for variant in variations:
+            key = os.getenv(variant)
             if key:
                 return key
                 
@@ -336,45 +341,32 @@ class Config:
     @classmethod
     def validate(cls) -> Dict[str, Any]:
         """Validate configuration and return status"""
-        status = {
-            'valid': True,
-            'warnings': [],
-            'errors': [],
-            'enabled_services': list(cls.get_all_enabled_services().keys()),
-            'api_keys_found': [],
-            'api_keys_missing': []
+        errors = []
+        warnings = []
+        
+        # Check critical API keys
+        critical_keys = {
+            'OPENAI_API_KEY': 'OpenAI API key for AI enhancement',
+            'GOOGLE_FACT_CHECK_API_KEY': 'Google Fact Check API for fact verification'
         }
         
-        # Check for critical API keys
-        if not cls.SECRET_KEY or cls.SECRET_KEY == 'dev-key-change-in-production':
-            status['warnings'].append('Using default SECRET_KEY - change in production')
+        for key, description in critical_keys.items():
+            if not cls.get_api_key(key):
+                warnings.append(f"Missing {description} ({key})")
         
-        # Check service-specific API keys
-        api_key_checks = {
-            'fact_checker': ['GOOGLE_FACT_CHECK_API_KEY', 'GOOGLE_FACTCHECK_API_KEY'],
-            'plagiarism_detector': ['COPYLEAKS_API_KEY', 'COPYSCAPE_API_KEY'],
-            'article_extractor': ['SCRAPERAPI_KEY', 'SCRAPINGBEE_API_KEY'],
-            'openai_enhancer': ['OPENAI_API_KEY']  # NEW
-        }
-        
-        for service, key_names in api_key_checks.items():
-            if cls.is_service_enabled(service):
-                found_key = False
-                for key_name in key_names:
-                    if os.getenv(key_name):
-                        status['api_keys_found'].append(f"{service}: {key_name}")
-                        found_key = True
-                        break
-                
-                if not found_key:
-                    status['warnings'].append(f"{service} enabled but no API key found")
-                    status['api_keys_missing'].extend(key_names)
+        # Check service configurations
+        enabled_count = len(cls.get_all_enabled_services())
+        if enabled_count < 3:
+            errors.append(f"Only {enabled_count} services enabled. Minimum 3 required.")
         
         # Check pipeline configuration
-        if cls.PIPELINE['min_required_services'] > len(cls.get_all_enabled_services()):
-            status['warnings'].append(
-                f"Pipeline requires {cls.PIPELINE['min_required_services']} services "
-                f"but only {len(cls.get_all_enabled_services())} are enabled"
-            )
+        if cls.PIPELINE['max_total_timeout'] < 60:
+            warnings.append("Pipeline timeout may be too short for complex articles")
         
-        return status
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'warnings': warnings,
+            'enabled_services': enabled_count,
+            'pipeline_timeout': cls.PIPELINE['max_total_timeout']
+        }
