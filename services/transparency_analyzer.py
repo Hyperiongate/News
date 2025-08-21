@@ -24,6 +24,19 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         """Service is always available"""
         return True
     
+    def _ai_assess_transparency(self, text: str, initial_findings: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """AI method to assess transparency - placeholder for AI enhancement"""
+        # This is a placeholder method that would normally call the AI service
+        # For now, we'll return None to indicate no AI enhancement available
+        try:
+            if hasattr(self, '_ai_analyze_transparency'):
+                # Call the mixin's AI method if available
+                return self._ai_analyze_transparency(text, initial_findings)
+        except Exception as e:
+            logger.warning(f"AI transparency assessment failed: {e}")
+        
+        return None
+    
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze transparency indicators in article WITH AI ENHANCEMENT
