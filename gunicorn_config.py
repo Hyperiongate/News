@@ -1,33 +1,29 @@
-"""
-Gunicorn configuration file for production deployment
-"""
-import multiprocessing
+# gunicorn_config.py
+# Gunicorn configuration for Render deployment
+
 import os
+import multiprocessing
+import logging
 
-# Server socket
-bind = f"0.0.0.0:{os.environ.get('PORT', 10000)}"
-backlog = 2048
-
-# Worker processes
-workers = multiprocessing.cpu_count() * 2 + 1
-worker_class = 'sync'
+# Worker configuration
+workers = int(os.environ.get('WEB_CONCURRENCY', 2))  # Allow env override
+worker_class = 'sync'  # Using sync workers for better timeout handling
 worker_connections = 1000
-# INCREASED TIMEOUT TO HANDLE LONG ANALYSIS REQUESTS
-timeout = 120  # Increased from 30 to 120 seconds
-keepalive = 2
 
-# Restart workers after this many requests, to help prevent memory leaks
-max_requests = 1000
-max_requests_jitter = 50
+# CRITICAL: Increase timeout to handle long-running analysis
+timeout = 300  # 5 minutes for analysis operations
+graceful_timeout = 120  # 2 minutes for graceful shutdown
+keepalive = 5
 
-# Preload the application before forking worker processes
-preload_app = True
+# Additional timeout settings
+# These help prevent worker timeouts during long operations
+worker_tmp_dir = '/dev/shm'  # Use shared memory for worker heartbeat
 
 # Logging
 accesslog = '-'
 errorlog = '-'
 loglevel = 'info'
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+capture_output = True  # Capture stdout/stderr to logs
 
 # Process naming
 proc_name = 'news-analyzer'
@@ -39,70 +35,33 @@ user = None
 group = None
 tmp_upload_dir = None
 
-# SSL (if needed in the future)
+# SSL (not needed on Render)
 keyfile = None
 certfile = None
 
-# Worker timeout handling
-graceful_timeout = 30  # Time to wait for graceful worker shutdown
+# Server socket
+bind = '0.0.0.0:' + str(os.environ.get('PORT', 5000))
+backlog = 2048  # Increase connection queue
 
-# StatsD (optional monitoring)
+# Preload app for better performance
+# But be careful with memory usage
+preload_app = True
+
+# Memory management
+max_requests = 1000  # Restart workers after 1000 requests
+max_requests_jitter = 50  # Add some randomness to prevent all workers restarting at once
+
+# StatsD (optional, for monitoring)
 statsd_host = None
 statsd_prefix = 'news-analyzer'
 
-# Environment
-raw_env = [
-    'FLASK_ENV=production',
-]
+# Set up logging with more detail
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S %z'
+)
 
-# Worker class settings for better performance
-if os.environ.get('WEB_CONCURRENCY'):
-    workers = int(os.environ.get('WEB_CONCURRENCY'))
-
-# Memory management
-max_worker_memory = 512 * 1024 * 1024  # 512MB per worker
-
-# Request limits
-limit_request_line = 4094
-limit_request_fields = 100
-limit_request_field_size = 8190
-
-def worker_int(worker):
-    """Called when a worker receives the INT or QUIT signal"""
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Worker {worker.pid} received interrupt signal")
-
-def worker_abort(worker):
-    """Called when a worker receives the SIGABRT signal"""
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.error(f"Worker {worker.pid} was aborted - likely due to timeout")
-
-def pre_fork(server, worker):
-    """Called just before a worker is forked"""
-    pass
-
-def post_fork(server, worker):
-    """Called just after a worker has been forked"""
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Worker spawned (pid: {worker.pid})")
-
-def pre_exec(server):
-    """Called just before a new master process is forked"""
-    server.log.info("Forking new master process...")
-
-def when_ready(server):
-    """Called just after the server is started"""
-    server.log.info("Server is ready. Spawning workers...")
-
-def worker_exit(server, worker):
-    """Called just after a worker has been exited"""
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Worker exited (pid: {worker.pid})")
-
-def nworkers_changed(server, new_value, old_value):
-    """Called just after num_workers has been changed"""
-    server.log.info(f"Number of workers changed from {old_value} to {new_value}")
+# Log configuration on startup
+logger = logging.getLogger(__name__)
+logger.info(f"Gunicorn config loaded - workers: {workers}, timeout: {timeout}s")
