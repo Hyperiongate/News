@@ -383,11 +383,12 @@
     <!-- IMPORTANT: Define SERVICE_CONFIG before loading other scripts -->
     <script>
         // Service-specific configuration - MUST be defined before service-navigation.js loads
-        const SERVICE_CONFIG = {
+        window.SERVICE_CONFIG = {
             id: 'author_analyzer',
             name: 'Author Analysis',
             icon: 'fa-user-check'
         };
+        console.log('SERVICE_CONFIG defined at script load:', window.SERVICE_CONFIG);
     </script>
     
     <!-- Now load the scripts in proper order -->
