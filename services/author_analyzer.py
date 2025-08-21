@@ -49,301 +49,199 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             '[data-author] a',
             'a[href*="/author/"]',
             'a[href*="/profile/"]',
-            # Generic author link patterns
-            f'a:contains("{author_name}")',
+            
+            # General news site patterns
+            'a[rel="author"]',
             '.byline a',
             '.author a',
-            '[rel="author"]',
+            'span[itemprop="author"] a',
+            'div[class*="author"] a',
+            '[class*="byline"] a',
+            
+            # Search for links containing author name
+            f'a:contains("{author_name}")'
         ]
         
-        # First try exact selectors
+        author_url = None
+        base_url = f"{urlparse(article_url).scheme}://{urlparse(article_url).netloc}"
+        
+        # Try each selector
         for selector in selectors:
             try:
                 links = soup.select(selector)
                 for link in links:
-                    href = link.get('href')
-                    if href:
-                        # Check if this is likely an author page
-                        if any(pattern in href.lower() for pattern in ['/author/', '/profile/', '/people/', '/staff/']):
-                            author_url = urljoin(article_url, href)
-                            logger.info(f"Found author bio link via selector '{selector}': {author_url}")
-                            return author_url
+                    href = link.get('href', '')
+                    if href and ('/author/' in href or '/profile/' in href or 
+                               author_name.lower().replace(' ', '-') in href.lower()):
+                        author_url = urljoin(base_url, href)
+                        logger.info(f"Found author URL via selector '{selector}': {author_url}")
+                        return author_url
             except Exception as e:
-                logger.debug(f"Error with selector {selector}: {e}")
+                logger.debug(f"Selector '{selector}' failed: {e}")
                 continue
         
-        # If no direct selector worked, search more broadly
-        # Look for any link containing the author name
-        author_parts = author_name.lower().split()
-        all_links = soup.find_all('a', href=True)
-        
-        for link in all_links:
-            href = link.get('href', '')
-            link_text = link.get_text(strip=True).lower()
-            
-            # Check if link text contains author name
-            if all(part in link_text for part in author_parts):
-                # Check if it's an author/profile page
-                if any(pattern in href for pattern in ['/author/', '/profile/', '/people/', '/staff/']):
-                    author_url = urljoin(article_url, href)
-                    logger.info(f"Found author bio link via name match: {author_url}")
-                    return author_url
-        
-        # Last resort: check for author pages in meta tags
+        # Alternative: Check meta tags
         meta_author = soup.find('meta', {'property': 'article:author'})
         if meta_author and meta_author.get('content'):
-            author_url = meta_author['content']
-            if author_url.startswith('http'):
-                logger.info(f"Found author bio link in meta tag: {author_url}")
-                return author_url
+            potential_url = meta_author['content']
+            if potential_url.startswith('http'):
+                logger.info(f"Found author URL in meta tag: {potential_url}")
+                return potential_url
         
-        logger.warning(f"No author bio link found for: {author_name}")
+        # Alternative: Look for JSON-LD data
+        json_ld = soup.find('script', {'type': 'application/ld+json'})
+        if json_ld:
+            try:
+                import json
+                data = json.loads(json_ld.string)
+                if isinstance(data, dict) and 'author' in data:
+                    author_data = data['author']
+                    if isinstance(author_data, dict) and 'url' in author_data:
+                        logger.info(f"Found author URL in JSON-LD: {author_data['url']}")
+                        return author_data['url']
+            except:
+                pass
+        
+        logger.info(f"No author URL found for {author_name}")
         return None
     
     def _scrape_author_bio(self, bio_url: str) -> Dict[str, Any]:
-        """Scrape author bio page for detailed information"""
+        """Scrape author bio information from their profile page"""
         try:
             logger.info(f"Scraping author bio from: {bio_url}")
             
-            # Fetch the bio page with proper headers
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
-            
-            response = requests.get(bio_url, timeout=15, headers=headers)
+            # Request the bio page
+            response = requests.get(bio_url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
-            
             bio_data = {
                 'bio_url': bio_url,
-                'full_bio': None,
-                'position': None,
-                'experience': None,
-                'education': None,
+                'full_bio': '',
+                'position': '',
+                'organization': '',
+                'experience': '',
                 'expertise_areas': [],
-                'social_media': {},
-                'email': None,
-                'recent_articles': [],
+                'education': [],
                 'awards': [],
-                'organization': None,
-                'article_count': 0
+                'social_media': {},
+                'email': '',
+                'article_count': 0,
+                'recent_articles': []
             }
             
-            # Extract author name from page if not already known
-            name_selectors = [
-                'h1.author-name', 'h1.profile-name', '.author-header h1',
-                'h1[itemprop="name"]', '.author-title h1', 'h1'
-            ]
-            
-            author_full_name = None
-            for selector in name_selectors:
-                name_elem = soup.select_one(selector)
-                if name_elem:
-                    author_full_name = name_elem.get_text(strip=True)
-                    break
-            
-            # Extract bio text - updated selectors for The Independent
+            # Extract bio text - multiple possible selectors
             bio_selectors = [
-                '.author-bio', '.author-description', '.bio-text',
-                '.profile-bio', 'div[class*="bio"]', '.author-about',
-                'p.bio', 'div.bio', '.author-info p',
-                # The Independent specific
-                '.sc-1ef49iv-3', '.author-bio-text', '[data-testid="author-bio"]'
+                'div.author-bio',
+                'div.bio',
+                'div.author-description',
+                'div[class*="bio"]',
+                'p.author-bio',
+                'section.author-info',
+                'div.contributor-bio',
+                'div.writer-bio',
+                '[itemprop="description"]'
             ]
             
             for selector in bio_selectors:
-                bio_elems = soup.select(selector)
-                if bio_elems:
-                    bio_texts = [elem.get_text(strip=True) for elem in bio_elems if elem.get_text(strip=True)]
-                    if bio_texts:
-                        bio_data['full_bio'] = ' '.join(bio_texts)
-                        logger.info(f"Found bio text with selector '{selector}': {len(bio_data['full_bio'])} chars")
-                        break
-            
-            # If no bio found with selectors, look for descriptive paragraphs
-            if not bio_data['full_bio']:
-                # Look for paragraphs near the author name
-                if author_full_name:
-                    for p in soup.find_all('p'):
-                        text = p.get_text(strip=True)
-                        if len(text) > 50 and (author_full_name in text or 'journalist' in text.lower() or 'reporter' in text.lower()):
-                            bio_data['full_bio'] = text
-                            logger.info(f"Found bio in paragraph: {len(text)} chars")
-                            break
+                bio_element = soup.select_one(selector)
+                if bio_element:
+                    bio_data['full_bio'] = bio_element.get_text(strip=True)
+                    break
             
             # Extract position/title
             position_selectors = [
-                '.author-title', '.author-position', '.job-title',
-                '.author-role', 'span.title', '.position',
-                # The Independent specific
-                '.author-tagline', '[data-testid="author-title"]'
+                'span.author-title',
+                'div.author-position',
+                'span.title',
+                'p.position',
+                '[itemprop="jobTitle"]'
             ]
             
             for selector in position_selectors:
-                pos_elem = soup.select_one(selector)
-                if pos_elem:
-                    position_text = pos_elem.get_text(strip=True)
-                    if position_text and position_text != author_full_name:
-                        bio_data['position'] = position_text
-                        logger.info(f"Found position: {position_text}")
-                        break
-            
-            # Extract organization (often The Independent)
-            org_selectors = [
-                '.organization', '.publication', '.employer',
-                'a[href*="independent.co.uk"]'
-            ]
-            
-            for selector in org_selectors:
-                org_elem = soup.select_one(selector)
-                if org_elem:
-                    bio_data['organization'] = org_elem.get_text(strip=True)
+                position_element = soup.select_one(selector)
+                if position_element:
+                    bio_data['position'] = position_element.get_text(strip=True)
                     break
             
-            # Default to The Independent if on their domain
-            if not bio_data['organization'] and 'independent.co.uk' in bio_url:
-                bio_data['organization'] = 'The Independent'
+            # Look for article count
+            count_patterns = [
+                r'(\d+)\s*(?:articles?|stories|posts)',
+                r'(?:written|authored|published)\s*(\d+)',
+                r'(\d+)\s*(?:contributions?)'
+            ]
             
-            # Extract expertise areas from bio text or tags
+            page_text = soup.get_text()
+            for pattern in count_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE)
+                if match:
+                    bio_data['article_count'] = int(match.group(1))
+                    break
+            
+            # Extract recent articles
+            article_selectors = [
+                'article.author-article',
+                'div.article-item',
+                'li.article',
+                'div[class*="article-list"] article',
+                'a.article-link'
+            ]
+            
+            for selector in article_selectors:
+                articles = soup.select(selector)[:5]  # Get up to 5 recent articles
+                for article in articles:
+                    title_elem = article.select_one('h2, h3, h4, a')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if not link:
+                            link_elem = article.select_one('a')
+                            if link_elem:
+                                link = link_elem.get('href', '')
+                        
+                        bio_data['recent_articles'].append({
+                            'title': title,
+                            'url': urljoin(bio_url, link) if link else ''
+                        })
+            
+            # Extract expertise areas from bio text
             if bio_data['full_bio']:
-                # Look for expertise patterns in bio
+                # Common expertise indicators
                 expertise_patterns = [
-                    r'specializ(?:es?|ing) in ([^.]+)',
-                    r'covers? ([^.]+)',
-                    r'focus(?:es)? on ([^.]+)',
-                    r'expert in ([^.]+)',
-                    r'writing about ([^.]+)'
+                    r'(?:specializes?|focuses?|covers?|reports? on|expertise in)\s+([^.]+)',
+                    r'(?:expert in|covering|beat includes?)\s+([^.]+)',
+                    r'(?:writes? about|columnist for)\s+([^.]+)'
                 ]
                 
                 for pattern in expertise_patterns:
                     matches = re.findall(pattern, bio_data['full_bio'], re.IGNORECASE)
                     for match in matches:
-                        areas = [area.strip() for area in match.split(',')]
-                        bio_data['expertise_areas'].extend(areas)
+                        # Clean up and split expertise areas
+                        areas = re.split(r',|and|&', match)
+                        for area in areas:
+                            area = area.strip()
+                            if area and len(area) < 50:
+                                bio_data['expertise_areas'].append(area)
             
-            # Also check for topic tags
-            topic_selectors = [
-                '.topics a', '.tags a', '.expertise-tag',
-                '.author-topics a', '[data-testid="topic-tag"]'
+            # Extract experience
+            experience_patterns = [
+                r'(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|journalism)',
+                r'(?:since|from)\s*(\d{4})',
+                r'(?:joined|started)\s*(?:in\s*)?\s*(\d{4})'
             ]
             
-            for selector in topic_selectors:
-                tags = soup.select(selector)
-                for tag in tags:
-                    topic = tag.get_text(strip=True)
-                    if topic and topic not in bio_data['expertise_areas']:
-                        bio_data['expertise_areas'].append(topic)
+            for pattern in experience_patterns:
+                match = re.search(pattern, bio_data['full_bio'], re.IGNORECASE)
+                if match:
+                    bio_data['experience'] = match.group(0)
+                    break
             
-            # Clean up expertise areas
-            bio_data['expertise_areas'] = list(set([
-                area.title() for area in bio_data['expertise_areas'] 
-                if area and len(area) < 50
-            ]))[:10]  # Limit to 10 areas
-            
-            # Extract social media links
-            social_patterns = {
-                'twitter': [r'twitter\.com/(\w+)', r'x\.com/(\w+)'],
-                'linkedin': [r'linkedin\.com/in/([\w-]+)'],
-                'facebook': [r'facebook\.com/([\w.]+)'],
-                'instagram': [r'instagram\.com/(\w+)']
-            }
-            
-            for link in soup.find_all('a', href=True):
-                href = link.get('href', '')
-                for platform, patterns in social_patterns.items():
-                    for pattern in patterns:
-                        match = re.search(pattern, href)
-                        if match:
-                            bio_data['social_media'][platform] = f"@{match.group(1)}"
-                            break
-            
-            # Extract recent articles count
-            article_count_selectors = [
-                '.article-count', '.stories-count', '.author-article-count',
-                '[data-testid="article-count"]'
-            ]
-            
-            for selector in article_count_selectors:
-                count_elem = soup.select_one(selector)
-                if count_elem:
-                    count_text = count_elem.get_text(strip=True)
-                    count_match = re.search(r'(\d+)', count_text)
-                    if count_match:
-                        bio_data['article_count'] = int(count_match.group(1))
-                        logger.info(f"Found article count: {bio_data['article_count']}")
-                        break
-            
-            # Extract recent articles list
-            articles_container_selectors = [
-                '.author-articles', '.recent-stories', '.author-feed',
-                '.articles-list', '[data-testid="author-articles"]',
-                # The Independent specific
-                'div[class*="author-articles"]', '.sc-1d5htuw-0'
-            ]
-            
-            for selector in articles_container_selectors:
-                container = soup.select_one(selector)
-                if container:
-                    # Find article links within container
-                    article_links = container.select('a[href*="/news/"], a[href*="/article/"]')[:10]
-                    
-                    for link in article_links:
-                        article_title = link.get_text(strip=True)
-                        if article_title:
-                            article_data = {
-                                'title': article_title[:200],  # Limit title length
-                                'url': urljoin(bio_url, link.get('href', ''))
-                            }
-                            
-                            # Try to find date
-                            date_elem = link.find_parent().find(text=re.compile(r'\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2}'))
-                            if date_elem:
-                                article_data['date'] = date_elem.strip()
-                            
-                            bio_data['recent_articles'].append(article_data)
-                    
-                    if bio_data['recent_articles']:
-                        logger.info(f"Found {len(bio_data['recent_articles'])} recent articles")
-                        break
-            
-            # If no specific count found but we have articles, use that count
-            if not bio_data['article_count'] and bio_data['recent_articles']:
-                # This is a minimum count
-                bio_data['article_count'] = len(bio_data['recent_articles'])
-            
-            # Try to extract years of experience from bio text
-            if bio_data['full_bio']:
-                exp_patterns = [
-                    r'(\d+)\+?\s*years?\s*(?:of\s*)?experience',
-                    r'(?:for|over|nearly)\s*(\d+)\s*years?',
-                    r'(\d+)\s*years?\s*(?:as|in|covering)',
-                    r'since\s*(\d{4})'  # Calculate from year
-                ]
-                
-                for pattern in exp_patterns:
-                    match = re.search(pattern, bio_data['full_bio'], re.IGNORECASE)
-                    if match:
-                        if pattern == r'since\s*(\d{4})':
-                            start_year = int(match.group(1))
-                            current_year = datetime.now().year
-                            years = current_year - start_year
-                            bio_data['experience'] = f"{years}+ years"
-                        else:
-                            years = int(match.group(1))
-                            bio_data['experience'] = f"{years}+ years"
-                        logger.info(f"Found experience: {bio_data['experience']}")
-                        break
-            
-            # Extract any awards or recognition
+            # Extract awards/recognition
             if bio_data['full_bio']:
                 award_patterns = [
-                    r'(?:won|awarded|received)\s+(?:the\s+)?([^.]+award[^.]+)',
+                    r'(?:award|prize|honor|recognition)\s+(?:for|in)\s+([^.]+)',
                     r'(?:winner of|recipient of)\s+(?:the\s+)?([^.]+)',
                     r'(?:nominated for|finalist for)\s+(?:the\s+)?([^.]+)'
                 ]
@@ -483,125 +381,106 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 },
                 'recent_articles': [],
                 'current_position': '',
+                'expertise_areas': [],
                 'findings': [],
                 'metadata': {
+                    'bio_scraped': False,
                     'ai_enhanced': False
                 }
             }
             
-            # Try to get author bio URL if we have article HTML and URL
+            # Try to extract author bio URL from article HTML
+            bio_data = {}
             article_url = data.get('url')
             article_html = data.get('html')
-            bio_data = {}
             
             if article_url and article_html:
-                try:
-                    soup = BeautifulSoup(article_html, 'html.parser')
-                    bio_url = self._extract_author_url(soup, author_name, article_url)
+                soup = BeautifulSoup(article_html, 'html.parser')
+                author_url = self._extract_author_url(soup, author_name, article_url)
+                
+                if author_url:
+                    # Scrape the author bio page
+                    bio_data = self._scrape_author_bio(author_url)
                     
-                    if bio_url:
-                        # Scrape the bio page
-                        bio_data = self._scrape_author_bio(bio_url)
+                    if bio_data:
+                        result['metadata']['bio_scraped'] = True
+                        result['verified'] = True
                         
-                        if bio_data:
-                            # Update result with scraped data
-                            result['verified'] = True
-                            
-                            # Author info
-                            result['author_info'] = {
-                                'bio': bio_data.get('full_bio', ''),
-                                'position': bio_data.get('position', ''),
-                                'experience': bio_data.get('experience', ''),
-                                'expertise': bio_data.get('expertise_areas', [])
-                            }
-                            
-                            # Current position (for display)
-                            if bio_data.get('position'):
-                                org = bio_data.get('organization', '')
-                                if org:
-                                    result['current_position'] = f"{bio_data['position']} at {org}"
-                                else:
-                                    result['current_position'] = bio_data['position']
-                            
-                            # Metrics
-                            result['metrics'] = {
-                                'article_count': bio_data.get('article_count', 0),
-                                'accuracy_rate': 85,  # Default high rate for verified journalists
-                                'awards_count': len(bio_data.get('awards', []))
-                            }
-                            
-                            # Recent articles (format for frontend)
-                            if bio_data.get('recent_articles'):
-                                for article in bio_data['recent_articles'][:5]:
-                                    formatted_article = {
-                                        'title': article.get('title', ''),
-                                        'date': article.get('date', ''),
-                                        'credibility_score': 82  # Default score
-                                    }
-                                    result['recent_articles'].append(formatted_article)
-                            
-                            # Calculate enhanced credibility score
-                            result['credibility_score'] = self._calculate_credibility_score(bio_data)
-                            
-                            # Generate findings
-                            findings = []
-                            
-                            # Positive findings
-                            if result['credibility_score'] >= 70:
-                                findings.append({
-                                    'type': 'positive',
-                                    'title': 'Verified journalist',
-                                    'description': f'Confirmed credentials with {bio_data.get("organization", "publication")}'
-                                })
-                            
-                            if bio_data.get('experience'):
-                                findings.append({
-                                    'type': 'positive',
-                                    'title': 'Experienced journalist',
-                                    'description': f'{bio_data["experience"]} of professional experience'
-                                })
-                            
-                            if bio_data.get('awards'):
-                                findings.append({
-                                    'type': 'positive',
-                                    'title': 'Award-winning journalist',
-                                    'description': f'Received {len(bio_data["awards"])} awards/recognitions'
-                                })
-                            
-                            if bio_data.get('expertise_areas'):
-                                findings.append({
-                                    'type': 'info',
-                                    'title': 'Subject matter expert',
-                                    'description': f'Specializes in: {", ".join(bio_data["expertise_areas"][:3])}'
-                                })
-                            
-                            # Warning findings
-                            if not bio_data.get('experience'):
-                                findings.append({
-                                    'type': 'warning',
-                                    'title': 'Experience unclear',
-                                    'description': 'Years of experience not specified in bio'
-                                })
-                            
-                            result['findings'] = findings
-                            
-                            logger.info(f"Successfully analyzed author {author_name} with score {result['credibility_score']}")
-                            
-                except Exception as e:
-                    logger.warning(f"Error processing author bio: {e}")
-                    # Continue with basic analysis
+                        # Update result with scraped data
+                        result['author_info']['bio'] = bio_data.get('full_bio', '')[:500]  # Limit length
+                        result['author_info']['position'] = bio_data.get('position', '')
+                        result['author_info']['experience'] = bio_data.get('experience', '')
+                        result['author_info']['expertise'] = bio_data.get('expertise_areas', [])
+                        
+                        result['current_position'] = bio_data.get('position', '')
+                        result['expertise_areas'] = bio_data.get('expertise_areas', [])
+                        
+                        result['metrics']['article_count'] = bio_data.get('article_count', 0)
+                        result['metrics']['awards_count'] = len(bio_data.get('awards', []))
+                        
+                        if bio_data.get('recent_articles'):
+                            result['recent_articles'] = bio_data['recent_articles'][:5]
+                        
+                        # Calculate credibility score
+                        result['credibility_score'] = self._calculate_credibility_score(bio_data)
+                        
+                        # Generate findings based on bio data
+                        findings = []
+                        
+                        # Positive findings
+                        if bio_data.get('position'):
+                            findings.append({
+                                'type': 'positive',
+                                'title': 'Verified position',
+                                'description': f'Currently: {bio_data["position"]}'
+                            })
+                        
+                        if bio_data.get('experience'):
+                            findings.append({
+                                'type': 'positive',
+                                'title': 'Professional experience',
+                                'description': bio_data['experience']
+                            })
+                        
+                        if bio_data.get('awards'):
+                            findings.append({
+                                'type': 'positive',
+                                'title': 'Awards and recognition',
+                                'description': f'Received: {", ".join(bio_data["awards"][:2])}'
+                            })
+                        
+                        if bio_data.get('article_count', 0) > 50:
+                            findings.append({
+                                'type': 'positive',
+                                'title': 'Prolific writer',
+                                'description': f'Published {bio_data["article_count"]} articles'
+                            })
+                        
+                        # Warning findings
+                        if not bio_data.get('experience'):
+                            findings.append({
+                                'type': 'warning',
+                                'title': 'Experience unclear',
+                                'description': 'Years of experience not specified in bio'
+                            })
+                        
+                        result['findings'] = findings
+                        
+                        logger.info(f"Successfully analyzed author {author_name} with score {result['credibility_score']}")
             
             # AI ENHANCEMENT - Add deeper author insights
             if self._ai_available and author_name:
                 logger.info("Enhancing author analysis with AI")
                 
-                # Get AI author assessment
-                ai_author_analysis = self._ai_analyze_author_credibility(
+                # Prepare data for AI analysis
+                author_history = result.get('recent_articles', [])
+                article_content = data.get('text', '')
+                
+                # Get AI author assessment using the correct method name
+                ai_author_analysis = self._ai_analyze_author(
                     author_name=author_name,
-                    bio_text=bio_data.get('full_bio', '')[:1000] if bio_data else None,
-                    position=bio_data.get('position') if bio_data else None,
-                    expertise_areas=bio_data.get('expertise_areas', []) if bio_data else [],
-                    article_count=bio_data.get('article_count', 0) if bio_data else 0
+                    author_history=author_history,
+                    article_content=article_content[:1000]  # Limit text
                 )
                 
                 if ai_author_analysis:
@@ -668,29 +547,39 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             return result
             
         except Exception as e:
-            logger.error(f"Author analysis failed: {e}")
-            return self.get_error_result(str(e))
+            logger.error(f"Author analysis failed: {e}", exc_info=True)
+            return self.get_error_result(f"Analysis failed: {str(e)}")
     
     def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
-        info = super().get_service_info()
-        info.update({
+        """Return service information"""
+        return {
+            'service': self.service_name,
+            'name': 'Author Analyzer',
+            'version': '2.0',
+            'description': 'Analyzes article authors by scraping their bio pages for credibility assessment',
             'capabilities': [
-                'Author profile extraction',
-                'Bio page scraping',
-                'Credibility scoring',
-                'Experience detection',
+                'Author bio page extraction',
+                'Professional background analysis',
+                'Article count tracking',
+                'Recent publications listing',
+                'Awards and recognition detection',
+                'Experience assessment',
                 'Expertise area identification',
-                'Recent article tracking',
-                'Social media presence detection',
-                'Award recognition',
-                'AI-ENHANCED credibility assessment',
-                'AI-powered expertise validation'
+                'Credibility scoring',
+                'AI-enhanced author insights',
+                'Bias pattern detection'
             ],
-            'supported_sites': [
-                'The Independent',
-                'Generic news sites with author pages'
+            'limitations': [
+                'Requires author bio page to be accessible',
+                'Some sites may block scraping attempts',
+                'Limited to publicly available information'
             ],
-            'ai_enhanced': self._ai_available
-        })
-        return info
+            'score_range': '0-100',
+            'score_interpretation': {
+                '90-100': 'Highly credible, verified journalist',
+                '70-89': 'Established writer with good credentials',
+                '50-69': 'Moderate credibility, limited information',
+                '30-49': 'Low credibility, minimal verification',
+                '0-29': 'Very low credibility or unknown'
+            }
+        }
