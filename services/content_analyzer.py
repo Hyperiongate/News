@@ -126,9 +126,16 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     result['data']['summary'] += f" AI assessment: {ai_quality.get('argument_quality', 'N/A')} argument quality, {ai_quality.get('information_value', 'N/A')} information value."
                 
                 # Adjust quality score if AI found significant issues
-                if ai_quality.get('professionalism') and ai_quality['professionalism'] < 50:
-                    result['data']['quality_score'] = max(0, result['data']['quality_score'] - 10)
-                    result['data']['quality_level'] = self._get_quality_level(result['data']['quality_score'])
+                # FIX: Convert professionalism to int before comparison
+                professionalism = ai_quality.get('professionalism')
+                if professionalism is not None:
+                    try:
+                        professionalism_score = int(professionalism)
+                        if professionalism_score < 50:
+                            result['data']['quality_score'] = max(0, result['data']['quality_score'] - 10)
+                            result['data']['quality_level'] = self._get_quality_level(result['data']['quality_score'])
+                    except (ValueError, TypeError):
+                        logger.warning(f"Could not convert professionalism score to int: {professionalism}")
             
             result['metadata']['ai_enhanced'] = True
         else:
