@@ -12,9 +12,6 @@ import uuid
 import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from functools import wraps
-from collections import defaultdict
-
 from flask import Flask, request, jsonify, render_template, Response, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -31,15 +28,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
+app = Flask(__name__, static_folder='static', template_folder='templates')
+app.config['SECRET_KEY'] = Config.SECRET_KEY
 
 # Enable CORS with configuration
-CORS(app, 
-     origins=Config.CORS_ORIGINS,
-     allow_headers=Config.CORS_ALLOWED_HEADERS,
-     methods=Config.CORS_ALLOWED_METHODS,
-     supports_credentials=Config.CORS_CREDENTIALS)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["*"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Rate limiting
 limiter = Limiter(
@@ -51,6 +50,7 @@ limiter = Limiter(
 
 # Import services after app creation
 from services.news_analyzer import NewsAnalyzer
+from services.response_builder import ResponseBuilder
 
 # Initialize analyzer
 try:
@@ -72,6 +72,12 @@ def before_request():
     """Log and track incoming requests"""
     request.id = str(uuid.uuid4())
     request.start_time = datetime.now()
+    
+    # Set request ID for response builder if it has these attributes
+    if hasattr(ResponseBuilder, '_request_id'):
+        ResponseBuilder._request_id = request.id
+    if hasattr(ResponseBuilder, '_start_time'):
+        ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
     
     # Store request info
     debug_info['requests'][request.id] = {
@@ -287,6 +293,50 @@ def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
     
     return result
 
+def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure the response has the expected structure for the frontend"""
+    # Make sure we have the expected top-level keys
+    if 'success' not in result:
+        result['success'] = True
+    
+    if 'data' not in result:
+        result['data'] = {}
+    
+    # Ensure data has the required structure
+    data = result['data']
+    
+    # Ensure we have article info
+    if 'article' not in data:
+        data['article'] = {
+            'title': 'Unknown Title',
+            'url': '',
+            'domain': '',
+            'text': '',
+            'extraction_successful': False
+        }
+    
+    # Ensure we have analysis info
+    if 'analysis' not in data:
+        data['analysis'] = {
+            'trust_score': 0,
+            'trust_level': 'Unknown',  # Note: frontend expects trust_level, not credibility_level
+            'key_findings': [],
+            'summary': 'Analysis incomplete'
+        }
+    
+    # Ensure we have detailed_analysis
+    if 'detailed_analysis' not in data:
+        data['detailed_analysis'] = {}
+    
+    # Ensure metadata exists
+    if 'metadata' not in result:
+        result['metadata'] = {
+            'timestamp': datetime.now().isoformat(),
+            'analysis_time': 0
+        }
+    
+    return result
+
 # MAIN ROUTES
 
 @app.route('/')
@@ -385,10 +435,27 @@ def analyze():
         logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
         start_time = time.time()
         
-        result = news_analyzer.analyze(content, content_type, options)
+        try:
+            result = news_analyzer.analyze(content, content_type, options)
+        except Exception as e:
+            logger.error(f"NewsAnalyzer.analyze() failed: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': f'Analysis service error: {str(e)}',
+                'request_id': getattr(request, 'id', 'unknown')
+            }), 500
         
         analysis_time = time.time() - start_time
         logger.info(f"Analysis completed in {analysis_time:.2f}s")
+        
+        # Validate result structure
+        if not isinstance(result, dict):
+            logger.error(f"Invalid result type from analyzer: {type(result)}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid response from analysis service',
+                'request_id': getattr(request, 'id', 'unknown')
+            }), 500
         
         # FIXED: Extract service results from pipeline output
         # The pipeline returns service results at the top level, not in 'detailed_analysis'
@@ -416,12 +483,12 @@ def analyze():
         response_data = {
             'success': result.get('success', False),
             'data': {
-                'article': result.get('article', {
+                'article': result.get('article') or {
                     'title': 'Unknown Title',
                     'url': content if content_type == 'url' else '',
                     'text': content if content_type == 'text' else '',
                     'extraction_successful': bool(result.get('article'))
-                }),
+                },
                 'analysis': {
                     'trust_score': result.get('trust_score', 50),
                     'trust_level': result.get('trust_level', 'Unknown'),
@@ -431,7 +498,7 @@ def analyze():
                 'detailed_analysis': service_results  # Use the extracted service results
             },
             'metadata': {
-                'request_id': request.id,
+                'request_id': getattr(request, 'id', 'unknown'),
                 'analysis_time': analysis_time,
                 'timestamp': datetime.now().isoformat(),
                 'pipeline_metadata': result.get('pipeline_metadata', {}),
