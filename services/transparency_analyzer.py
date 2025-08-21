@@ -1,22 +1,24 @@
 """
-Transparency Analyzer Service - COMPLETE IMPLEMENTATION
-Analyzes transparency indicators in news articles
+Transparency Analyzer Service - AI ENHANCED VERSION
+Analyzes transparency indicators in news articles with AI insights
 """
 
 import re
 import logging
 from typing import Dict, Any, Optional, List
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class TransparencyAnalyzer(BaseAnalyzer):
-    """Analyze transparency in news articles"""
+class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
+    """Analyze transparency in news articles WITH AI ENHANCEMENT"""
     
     def __init__(self):
         super().__init__('transparency_analyzer')
-        logger.info("TransparencyAnalyzer initialized")
+        AIEnhancementMixin.__init__(self)
+        logger.info(f"TransparencyAnalyzer initialized with AI enhancement: {self._ai_available}")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -24,7 +26,7 @@ class TransparencyAnalyzer(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze transparency indicators in article
+        Analyze transparency indicators in article WITH AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze
@@ -167,6 +169,47 @@ class TransparencyAnalyzer(BaseAnalyzer):
             # Ensure score is within bounds
             transparency_score = max(0, min(100, transparency_score))
             
+            # AI ENHANCEMENT - Add deeper transparency insights
+            if self._ai_available and text:
+                logger.info("Enhancing transparency analysis with AI")
+                
+                # Get AI transparency assessment
+                ai_transparency = self._ai_assess_transparency(
+                    text=text[:2000],  # Limit text for API
+                    initial_findings={
+                        'author_provided': bool(author),
+                        'source_count': sources_found,
+                        'quote_count': quote_count,
+                        'has_disclosures': len(disclosures) > 0,
+                        'transparency_score': transparency_score
+                    }
+                )
+                
+                if ai_transparency:
+                    # Add AI-detected transparency issues
+                    if ai_transparency.get('hidden_issues'):
+                        for issue in ai_transparency['hidden_issues'][:2]:
+                            missing_elements.append(f"AI detected: {issue}")
+                            transparency_score = max(0, transparency_score - 5)
+                    
+                    # Add AI-found transparency strengths
+                    if ai_transparency.get('transparency_strengths'):
+                        for strength in ai_transparency['transparency_strengths'][:2]:
+                            indicators.append(f"AI noted: {strength}")
+                    
+                    # Check for conflicts of interest AI might detect
+                    if ai_transparency.get('potential_conflicts'):
+                        missing_elements.append(f"Potential conflict: {ai_transparency['potential_conflicts'][0]}")
+                        transparency_score = max(0, transparency_score - 10)
+                    
+                    # Check for hidden sponsorship patterns
+                    if ai_transparency.get('sponsorship_indicators'):
+                        missing_elements.append("AI detected possible undisclosed sponsorship")
+                        transparency_score = max(0, transparency_score - 15)
+            
+            # Recalculate score bounds after AI adjustments
+            transparency_score = max(0, min(100, transparency_score))
+            
             # Determine transparency level
             if transparency_score >= 80:
                 level = 'Excellent'
@@ -206,6 +249,15 @@ class TransparencyAnalyzer(BaseAnalyzer):
                     'finding': 'Transparency issues'
                 })
             
+            # Add AI-specific findings if enhanced
+            if self._ai_available and any('AI' in elem for elem in missing_elements + indicators):
+                findings.append({
+                    'type': 'transparency',
+                    'severity': 'info',
+                    'text': 'AI analysis provided additional transparency insights',
+                    'finding': 'AI-enhanced analysis'
+                })
+            
             # Generate recommendations
             recommendations = self._generate_recommendations(missing_elements, transparency_score)
             
@@ -238,7 +290,9 @@ class TransparencyAnalyzer(BaseAnalyzer):
                 },
                 'metadata': {
                     'indicators_found': len(indicators),
-                    'issues_found': len(missing_elements)
+                    'issues_found': len(missing_elements),
+                    'ai_enhanced': self._ai_available,
+                    'ai_insights_added': self._ai_available and any('AI' in elem for elem in missing_elements + indicators)
                 }
             }
             
@@ -268,6 +322,11 @@ class TransparencyAnalyzer(BaseAnalyzer):
         if score < 50:
             recommendations.append('Consider adding disclosure statements about funding or conflicts')
         
+        # Add AI-specific recommendations if detected
+        ai_issues = [elem for elem in missing_elements if 'AI detected' in elem]
+        if ai_issues:
+            recommendations.append('Address subtle transparency issues identified by AI analysis')
+        
         return recommendations
     
     def get_service_info(self) -> Dict[str, Any]:
@@ -282,9 +341,13 @@ class TransparencyAnalyzer(BaseAnalyzer):
                 'Disclosure statement identification',
                 'Contact information detection',
                 'Methodology transparency',
-                'External reference tracking'
+                'External reference tracking',
+                'AI-ENHANCED transparency assessment',
+                'AI-powered conflict detection',
+                'Hidden sponsorship detection'
             ],
             'transparency_elements': 8,
-            'scoring_range': '0-100'
+            'scoring_range': '0-100',
+            'ai_enhanced': self._ai_available
         })
         return info
