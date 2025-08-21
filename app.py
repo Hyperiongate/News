@@ -1,91 +1,86 @@
 """
-News Analyzer API
-Main Flask application for analyzing news articles
+News Analyzer Flask Application
+Main API server for news credibility analysis
+FIXED: Properly processes service results from pipeline
 """
 import os
 import sys
+import time
 import logging
 import json
-import traceback
-from typing import Dict, Any, Optional, List
-from flask import Flask, request, jsonify, send_from_directory, make_response, render_template
-from flask_cors import CORS
 import uuid
+import traceback
 from datetime import datetime
-import time
-import signal
+from typing import Dict, Any, Optional, List
+from functools import wraps
+from collections import defaultdict
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from flask import Flask, request, jsonify, render_template, Response, send_from_directory
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
+# Import configuration
 from config import Config
-from services.news_analyzer import NewsAnalyzer
-from services.response_builder import ResponseBuilder, AnalysisResponseBuilder
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['SECRET_KEY'] = Config.SECRET_KEY
+# Create Flask app
+app = Flask(__name__)
+app.config.from_object(Config)
 
-# Configure CORS
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Enable CORS with configuration
+CORS(app, 
+     origins=Config.CORS_ORIGINS,
+     allow_headers=Config.CORS_ALLOWED_HEADERS,
+     methods=Config.CORS_ALLOWED_METHODS,
+     supports_credentials=Config.CORS_CREDENTIALS)
 
-# Initialize services
-logger.info("=== INITIALIZING NEWS ANALYZER ===")
-news_analyzer = NewsAnalyzer()
-logger.info("=== NEWS ANALYZER INITIALIZED ===")
+# Rate limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["1000 per hour", "100 per minute"],
+    storage_uri="memory://"
+)
 
-# Debug tracking
+# Import services after app creation
+from services.news_analyzer import NewsAnalyzer
+
+# Initialize analyzer
+try:
+    news_analyzer = NewsAnalyzer()
+    logger.info("NewsAnalyzer initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize NewsAnalyzer: {e}")
+    news_analyzer = None
+
+# Track debug information
 debug_info = {
     'requests': {},
-    'errors': [],
-    'service_calls': [],
-    'initialization_log': []
+    'errors': []
 }
-
-# Graceful shutdown handler
-def signal_handler(signum, frame):
-    """Handle shutdown signals gracefully"""
-    logger.info(f"Received signal {signum}, shutting down gracefully...")
-    sys.exit(0)
-
-signal.signal(signal.SIGTERM, signal_handler)
-signal.signal(signal.SIGINT, signal_handler)
 
 # Request tracking
 @app.before_request
 def before_request():
-    """Log incoming requests"""
+    """Log and track incoming requests"""
     request.id = str(uuid.uuid4())
     request.start_time = datetime.now()
     
-    # Set request ID for response builder
-    ResponseBuilder._request_id = request.id
-    ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
-    
-    # Store request info for debugging
+    # Store request info
     debug_info['requests'][request.id] = {
+        'id': request.id,
         'method': request.method,
         'path': request.path,
-        'timestamp': request.start_time.isoformat(),
         'args': dict(request.args),
-        'json': request.get_json(silent=True) if request.is_json else None
+        'timestamp': request.start_time.isoformat(),
+        'ip': request.remote_addr
     }
     
     logger.info(f"Request {request.id}: {request.method} {request.path}")
@@ -299,30 +294,6 @@ def index():
     """Serve the main application page"""
     return render_template('index.html')
 
-@app.route('/favicon.ico')
-def favicon():
-    """Handle favicon requests"""
-    # Try to serve from static/images/favicon.ico
-    favicon_path = os.path.join(app.static_folder, 'images', 'favicon.ico')
-    if os.path.exists(favicon_path):
-        return send_from_directory(
-            os.path.join(app.static_folder, 'images'),
-            'favicon.ico',
-            mimetype='image/vnd.microsoft.icon'
-        )
-    
-    # Try favicon.png as fallback
-    favicon_png_path = os.path.join(app.static_folder, 'images', 'favicon.png')
-    if os.path.exists(favicon_png_path):
-        return send_from_directory(
-            os.path.join(app.static_folder, 'images'),
-            'favicon.png',
-            mimetype='image/png'
-        )
-    
-    # Return empty favicon to prevent 404
-    return '', 204
-
 @app.route('/health')
 def health():
     """Health check endpoint"""
@@ -403,69 +374,74 @@ def analyze():
         # Get options from request
         options = data.get('options', {})
         
-        # Log analysis start
+        # Run analysis
         logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
         start_time = time.time()
         
-        # Set a timeout for the analysis
-        import signal
-        from contextlib import contextmanager
-        
-        class TimeoutException(Exception):
-            pass
-        
-        @contextmanager
-        def time_limit(seconds):
-            def signal_handler(signum, frame):
-                raise TimeoutException("Analysis timed out")
-            signal.signal(signal.SIGALRM, signal_handler)
-            signal.alarm(seconds)
-            try:
-                yield
-            finally:
-                signal.alarm(0)
-        
-        try:
-            # Run analysis with timeout (4.5 minutes to stay under gunicorn's 5 minute timeout)
-            with time_limit(270):
-                result = news_analyzer.analyze(content, content_type, options)
-        except TimeoutException:
-            logger.error("Analysis timed out after 270 seconds")
-            return jsonify({
-                'success': False,
-                'error': 'Analysis timed out. The article may be too long or complex. Please try a shorter article.',
-                'request_id': request.id
-            }), 504
+        result = news_analyzer.analyze(content, content_type, options)
         
         analysis_time = time.time() - start_time
         logger.info(f"Analysis completed in {analysis_time:.2f}s")
         
-        # Clean the result data
-        if result.get('success') and 'detailed_analysis' in result:
-            cleaned_analysis = {}
-            for service_name, service_data in result['detailed_analysis'].items():
-                if service_data and isinstance(service_data, dict):
-                    cleaned_data = clean_service_data(service_data)
-                    if cleaned_data:
-                        cleaned_analysis[service_name] = cleaned_data
-            result['detailed_analysis'] = cleaned_analysis
+        # FIXED: Extract service results from pipeline output
+        # The pipeline returns service results at the top level, not in 'detailed_analysis'
+        # We need to build the proper response structure
         
-        # Add metadata
-        result['metadata'] = {
-            'request_id': request.id,
-            'analysis_time': analysis_time,
-            'timestamp': datetime.now().isoformat()
+        # Known metadata fields that are NOT service results
+        metadata_fields = ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 
+                          'errors', 'article', 'services_available', 'is_pro', 'analysis_mode']
+        
+        # Extract service results
+        service_results = {}
+        for key, value in result.items():
+            if key not in metadata_fields and isinstance(value, dict):
+                # This is likely a service result
+                if value and isinstance(value, dict):
+                    cleaned_data = clean_service_data(value)
+                    if cleaned_data:
+                        service_results[key] = cleaned_data
+                        logger.info(f"Found service result: {key} with {len(cleaned_data)} fields")
+        
+        logger.info(f"Extracted {len(service_results)} service results from pipeline")
+        
+        # Build proper response structure
+        response_data = {
+            'success': result.get('success', False),
+            'data': {
+                'article': result.get('article', {
+                    'title': 'Unknown Title',
+                    'url': content if content_type == 'url' else '',
+                    'text': content if content_type == 'text' else '',
+                    'extraction_successful': False
+                }),
+                'analysis': {
+                    'trust_score': result.get('trust_score', 50),
+                    'trust_level': result.get('trust_level', 'Unknown'),
+                    'key_findings': [],  # TODO: Extract from service results
+                    'summary': result.get('summary', 'Analysis incomplete')
+                },
+                'detailed_analysis': service_results  # Use the extracted service results
+            },
+            'metadata': {
+                'request_id': request.id,
+                'analysis_time': analysis_time,
+                'timestamp': datetime.now().isoformat(),
+                'pipeline_metadata': result.get('pipeline_metadata', {}),
+                'services_available': result.get('services_available', 0),
+                'is_pro': result.get('is_pro', False),
+                'analysis_mode': result.get('analysis_mode', 'basic')
+            }
         }
         
-        # Ensure proper response structure
-        result = ensure_response_structure(result)
+        # If there were errors, include them
+        if result.get('errors'):
+            response_data['errors'] = result['errors']
         
         # Log the response structure for debugging
-        logger.info(f"Response structure - success: {result.get('success')}, "
-                   f"has_data: {'data' in result}, "
-                   f"data_keys: {list(result.get('data', {}).keys())}")
+        logger.info(f"Response structure - success: {response_data['success']}, "
+                   f"services in detailed_analysis: {list(response_data['data']['detailed_analysis'].keys())}")
         
-        return jsonify(result)
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}", exc_info=True)
