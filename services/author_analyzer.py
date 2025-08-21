@@ -1,6 +1,6 @@
 """
-Enhanced Author Analyzer Service
-Analyzes article authors and their credibility by following bio links
+Enhanced Author Analyzer Service - AI ENHANCED VERSION
+Analyzes article authors and their credibility by following bio links with AI insights
 """
 import re
 import logging
@@ -11,17 +11,19 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 from .base_analyzer import BaseAnalyzer
+from .ai_enhancement_mixin import AIEnhancementMixin
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 
-class AuthorAnalyzer(BaseAnalyzer):
-    """Enhanced author analysis service that follows bio links"""
+class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
+    """Enhanced author analysis service that follows bio links WITH AI ENHANCEMENT"""
     
     def __init__(self):
         super().__init__('author_analyzer')
-        # Note: _check_availability is called by parent __init__
+        AIEnhancementMixin.__init__(self)
+        logger.info(f"AuthorAnalyzer initialized with AI enhancement: {self._ai_available}")
         
     def _check_availability(self) -> bool:
         """Check if service is available"""
@@ -427,7 +429,7 @@ class AuthorAnalyzer(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze article author with enhanced bio scraping
+        Analyze article author with enhanced bio scraping AND AI ENHANCEMENT
         
         Args:
             data: Must contain 'author' and optionally 'url' and 'html'
@@ -454,7 +456,10 @@ class AuthorAnalyzer(BaseAnalyzer):
                         'accuracy_rate': 0,
                         'awards_count': 0
                     },
-                    'findings': []
+                    'findings': [],
+                    'metadata': {
+                        'ai_enhanced': False
+                    }
                 }
             
             # Initialize result structure matching frontend expectations
@@ -478,12 +483,16 @@ class AuthorAnalyzer(BaseAnalyzer):
                 },
                 'recent_articles': [],
                 'current_position': '',
-                'findings': []
+                'findings': [],
+                'metadata': {
+                    'ai_enhanced': False
+                }
             }
             
             # Try to get author bio URL if we have article HTML and URL
             article_url = data.get('url')
             article_html = data.get('html')
+            bio_data = {}
             
             if article_url and article_html:
                 try:
@@ -582,6 +591,48 @@ class AuthorAnalyzer(BaseAnalyzer):
                     logger.warning(f"Error processing author bio: {e}")
                     # Continue with basic analysis
             
+            # AI ENHANCEMENT - Add deeper author insights
+            if self._ai_available and author_name:
+                logger.info("Enhancing author analysis with AI")
+                
+                # Get AI author assessment
+                ai_author_analysis = self._ai_analyze_author_credibility(
+                    author_name=author_name,
+                    bio_text=bio_data.get('full_bio', '')[:1000] if bio_data else None,
+                    position=bio_data.get('position') if bio_data else None,
+                    expertise_areas=bio_data.get('expertise_areas', []) if bio_data else [],
+                    article_count=bio_data.get('article_count', 0) if bio_data else 0
+                )
+                
+                if ai_author_analysis:
+                    # Add AI insights to findings
+                    if ai_author_analysis.get('red_flags'):
+                        for flag in ai_author_analysis['red_flags'][:2]:
+                            result['findings'].append({
+                                'type': 'warning',
+                                'title': 'AI concern',
+                                'description': flag
+                            })
+                    
+                    if ai_author_analysis.get('strengths'):
+                        for strength in ai_author_analysis['strengths'][:2]:
+                            result['findings'].append({
+                                'type': 'positive',
+                                'title': 'AI insight',
+                                'description': strength
+                            })
+                    
+                    # Adjust credibility score based on AI assessment
+                    if ai_author_analysis.get('credibility_adjustment'):
+                        adjustment = ai_author_analysis['credibility_adjustment']
+                        result['credibility_score'] = max(0, min(100, result['credibility_score'] + adjustment))
+                    
+                    # Add AI expertise assessment
+                    if ai_author_analysis.get('expertise_assessment') and not result['author_info']['expertise']:
+                        result['author_info']['expertise'] = ai_author_analysis['expertise_assessment']
+                    
+                    result['metadata']['ai_enhanced'] = True
+            
             # If no bio found or scraped, provide basic analysis
             if not result['verified']:
                 # Check if it's a news agency
@@ -619,3 +670,27 @@ class AuthorAnalyzer(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Author analysis failed: {e}")
             return self.get_error_result(str(e))
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Author profile extraction',
+                'Bio page scraping',
+                'Credibility scoring',
+                'Experience detection',
+                'Expertise area identification',
+                'Recent article tracking',
+                'Social media presence detection',
+                'Award recognition',
+                'AI-ENHANCED credibility assessment',
+                'AI-powered expertise validation'
+            ],
+            'supported_sites': [
+                'The Independent',
+                'Generic news sites with author pages'
+            ],
+            'ai_enhanced': self._ai_available
+        })
+        return info
