@@ -238,6 +238,50 @@ def extract_clean_text(text: str) -> Optional[str]:
     
     return None
 
+def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure the response has the expected structure for the frontend"""
+    # Make sure we have the expected top-level keys
+    if 'success' not in result:
+        result['success'] = True
+    
+    if 'data' not in result:
+        result['data'] = {}
+    
+    # Ensure data has the required structure
+    data = result['data']
+    
+    # Ensure we have article info
+    if 'article' not in data:
+        data['article'] = {
+            'title': 'Unknown Title',
+            'url': '',
+            'domain': '',
+            'text': '',
+            'extraction_successful': False
+        }
+    
+    # Ensure we have analysis info
+    if 'analysis' not in data:
+        data['analysis'] = {
+            'trust_score': 0,
+            'credibility_level': 'Unknown',
+            'key_findings': [],
+            'summary': 'Analysis incomplete'
+        }
+    
+    # Ensure we have detailed_analysis
+    if 'detailed_analysis' not in data:
+        data['detailed_analysis'] = {}
+    
+    # Ensure metadata exists
+    if 'metadata' not in result:
+        result['metadata'] = {
+            'timestamp': datetime.now().isoformat(),
+            'analysis_time': 0
+        }
+    
+    return result
+
 # MAIN ROUTES
 
 @app.route('/')
@@ -350,6 +394,14 @@ def analyze():
             'analysis_time': analysis_time,
             'timestamp': datetime.now().isoformat()
         }
+        
+        # Ensure proper response structure
+        result = ensure_response_structure(result)
+        
+        # Log the response structure for debugging
+        logger.info(f"Response structure - success: {result.get('success')}, "
+                   f"has_data: {'data' in result}, "
+                   f"data_keys: {list(result.get('data', {}).keys())}")
         
         return jsonify(result)
         
