@@ -13,6 +13,7 @@ from flask_cors import CORS
 import uuid
 from datetime import datetime
 import time
+import signal
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -57,6 +58,15 @@ debug_info = {
     'service_calls': [],
     'initialization_log': []
 }
+
+# Graceful shutdown handler
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info(f"Received signal {signum}, shutting down gracefully...")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 # Request tracking
 @app.before_request
@@ -289,6 +299,30 @@ def index():
     """Serve the main application page"""
     return render_template('index.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """Handle favicon requests"""
+    # Try to serve from static/images/favicon.ico
+    favicon_path = os.path.join(app.static_folder, 'images', 'favicon.ico')
+    if os.path.exists(favicon_path):
+        return send_from_directory(
+            os.path.join(app.static_folder, 'images'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
+    
+    # Try favicon.png as fallback
+    favicon_png_path = os.path.join(app.static_folder, 'images', 'favicon.png')
+    if os.path.exists(favicon_png_path):
+        return send_from_directory(
+            os.path.join(app.static_folder, 'images'),
+            'favicon.png',
+            mimetype='image/png'
+        )
+    
+    # Return empty favicon to prevent 404
+    return '', 204
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
@@ -369,11 +403,39 @@ def analyze():
         # Get options from request
         options = data.get('options', {})
         
-        # Run analysis
+        # Log analysis start
         logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
         start_time = time.time()
         
-        result = news_analyzer.analyze(content, content_type, options)
+        # Set a timeout for the analysis
+        import signal
+        from contextlib import contextmanager
+        
+        class TimeoutException(Exception):
+            pass
+        
+        @contextmanager
+        def time_limit(seconds):
+            def signal_handler(signum, frame):
+                raise TimeoutException("Analysis timed out")
+            signal.signal(signal.SIGALRM, signal_handler)
+            signal.alarm(seconds)
+            try:
+                yield
+            finally:
+                signal.alarm(0)
+        
+        try:
+            # Run analysis with timeout (4.5 minutes to stay under gunicorn's 5 minute timeout)
+            with time_limit(270):
+                result = news_analyzer.analyze(content, content_type, options)
+        except TimeoutException:
+            logger.error("Analysis timed out after 270 seconds")
+            return jsonify({
+                'success': False,
+                'error': 'Analysis timed out. The article may be too long or complex. Please try a shorter article.',
+                'request_id': request.id
+            }), 504
         
         analysis_time = time.time() - start_time
         logger.info(f"Analysis completed in {analysis_time:.2f}s")
