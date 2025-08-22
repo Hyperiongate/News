@@ -1,11 +1,12 @@
 """
-News Analyzer Service (Refactored)
-Clean implementation using pipeline and service registry
+News Analyzer Service - Main orchestrator for news credibility analysis
+Fixed to work with the new AnalysisPipeline class
 """
+
 import logging
 from typing import Dict, Any, Optional
-from config import Config
-from services.analysis_pipeline import get_pipeline
+
+from services.analysis_pipeline import AnalysisPipeline
 from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
@@ -13,89 +14,66 @@ logger = logging.getLogger(__name__)
 
 class NewsAnalyzer:
     """
-    Main orchestrator for news analysis
-    Now uses pipeline pattern for clean processing
+    Main orchestrator for news article analysis using the pipeline pattern
     """
     
     def __init__(self):
-        """Initialize analyzer with pipeline"""
-        self.pipeline = get_pipeline()
+        """Initialize the news analyzer"""
+        self.pipeline = AnalysisPipeline()
         self.service_registry = get_service_registry()
-        self.service_status = self.service_registry.get_service_status()
-        
-        logger.info(f"NewsAnalyzer initialized with {self.service_status['summary']['total_available']} available services")
+        logger.info("NewsAnalyzer initialized with pipeline pattern")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
-        Perform comprehensive analysis on news content
+        Analyze news content for credibility
         
         Args:
             content: URL or text to analyze
             content_type: 'url' or 'text'
-            pro_mode: Whether to use premium features (changed from is_pro to match app.py)
+            pro_mode: Whether to use pro features
             
         Returns:
-            Standardized analysis results
+            Analysis results with trust score and service outputs
         """
         try:
-            logger.info(f"Starting analysis - type: {content_type}, pro: {pro_mode}")
-            
-            # Set options based on pro status
-            options = {
+            # Prepare input data
+            data = {
                 'is_pro': pro_mode,
-                'include_fact_checking': pro_mode,
-                'include_ai_summary': pro_mode and Config.OPENAI_API_KEY,
-                'include_manipulation_detection': pro_mode,
-                'detailed_bias_analysis': pro_mode
+                'analysis_mode': 'pro' if pro_mode else 'basic'
             }
             
-            # FIXED: Always use sync pipeline since all our services are sync
-            # The async pipeline was causing "Service not found or not async" errors
-            # because ArticleExtractor and other services are sync, not async
-            results = self.pipeline.run(content, content_type, options)
+            if content_type == 'url':
+                data['url'] = content
+            else:
+                data['text'] = content
+                data['content_type'] = 'text'
             
-            # Add service metadata
-            results['services_available'] = self.service_status['summary']['total_available']
-            results['is_pro'] = pro_mode
-            results['analysis_mode'] = 'premium' if pro_mode else 'basic'
+            # Run pipeline analysis
+            logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
+            results = self.pipeline.analyze(data)
             
-            # Log completion
-            logger.info(f"Analysis completed - success: {results.get('success')}, "
-                       f"trust_score: {results.get('trust_score')}, "
-                       f"duration: {results.get('pipeline_metadata', {}).get('total_duration', 0):.2f}s")
+            # Log results
+            if results.get('success'):
+                logger.info(f"Analysis completed successfully with trust score: {results.get('trust_score', 'N/A')}")
+            else:
+                logger.error(f"Analysis failed: {results.get('error', 'Unknown error')}")
             
             return results
             
         except Exception as e:
-            logger.error(f"Analysis failed: {str(e)}", exc_info=True)
+            logger.error(f"NewsAnalyzer error: {str(e)}", exc_info=True)
             return {
                 'success': False,
-                'error': f'Analysis failed: {str(e)}',
+                'error': str(e),
                 'trust_score': 50,
                 'trust_level': 'Unknown',
-                'services_available': self.service_status['summary']['total_available'],
-                'is_pro': pro_mode,
-                'analysis_mode': 'error'
+                'services_available': 0
             }
     
-    def get_service_status(self) -> Dict[str, Any]:
-        """Get current status of all services"""
+    def get_available_services(self) -> Dict[str, Any]:
+        """Get information about available services"""
         return self.service_registry.get_service_status()
     
-    def reload_services(self) -> Dict[str, Any]:
-        """Reload all services and return new status"""
-        # Reload failed services
-        failed_services = self.service_registry.failed_services.copy()
-        reloaded = []
-        
-        for service_name in failed_services:
-            if self.service_registry.reload_service(service_name):
-                reloaded.append(service_name)
-        
-        # Update status
-        self.service_status = self.service_registry.get_service_status()
-        
-        return {
-            'reloaded': reloaded,
-            'current_status': self.service_status
-        }
+    def get_service_info(self, service_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific service"""
+        return self.service_registry.get_service_info(service_name)
