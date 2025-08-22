@@ -380,19 +380,25 @@
     </main>
 
     <!-- Scripts -->
-    <script src="/static/js/config.js"></script>
-    <script src="/static/js/truthlens-services.js"></script>
-    <script src="/static/js/service-navigation.js"></script>
+    <!-- IMPORTANT: Define SERVICE_CONFIG before loading other scripts -->
     <script>
-        // Service-specific configuration
-        const SERVICE_CONFIG = {
+        // Service-specific configuration - MUST be defined before service-navigation.js loads
+        window.SERVICE_CONFIG = {
             id: 'transparency_analyzer',
             name: 'Transparency Analysis',
             icon: 'fa-eye'
         };
-
-        // These functions will be overridden by service-navigation.js
-        // but we define them here for fallback support
+        console.log('SERVICE_CONFIG defined at script load:', window.SERVICE_CONFIG);
+    </script>
+    
+    <!-- Now load the scripts in proper order -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/truthlens-services.js"></script>
+    <script src="/static/js/service-navigation.js"></script>
+    
+    <!-- Service-specific functions -->
+    <script>
+        // These functions will be used by service-navigation.js
         
         function populateSummary(fullData, serviceData) {
             // Article information
@@ -483,14 +489,8 @@
             document.getElementById('errorMessage').textContent = message;
         }
 
-        // Initialize page when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Service navigation will handle initialization
-            if (!window.initializeServicePage) {
-                // Fallback initialization
-                initializeServicePage();
-            }
-        });
+        // Note: The DOMContentLoaded listener is no longer needed here
+        // service-navigation.js will handle initialization
     </script>
 </body>
 </html>
