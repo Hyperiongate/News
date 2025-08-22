@@ -1,4 +1,4 @@
-/* static/css/styles.css - Fixed version with Service Cards */
+/* static/css/styles.css - Complete version with Compact Trust Score */
 
 /* CSS Variables */
 :root {
@@ -21,7 +21,10 @@
     --white: #ffffff;
     --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --radius: 8px;
+    --radius-sm: 4px;
+    --radius-lg: 12px;
     --transition: all 0.2s ease;
     
     /* Spacing */
@@ -336,115 +339,282 @@ body {
     }
 }
 
-/* Trust Summary Container */
+/* OLD Trust Summary Container - HIDDEN */
 .trust-summary-container {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
+    display: none !important;
 }
 
-/* Trust Score Card */
-.trust-score-card {
+/* OLD Trust Breakdown Section - HIDDEN */
+.trust-breakdown-section {
+    display: none !important;
+}
+
+/* OLD Article Info Bar - HIDDEN */
+.article-info-bar {
+    display: none !important;
+}
+
+/* =============================================== */
+/* COMPACT TRUST SCORE SUMMARY - NEW DESIGN */
+/* =============================================== */
+
+/* Compact Trust Summary Container */
+.trust-summary-container-compact {
     background: white;
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     padding: var(--space-xl);
-    box-shadow: var(--shadow);
-    text-align: center;
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
 }
 
-.trust-gauge-container {
-    position: relative;
+.trust-summary-container-compact::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* Trust Score Header */
+.trust-score-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-xl);
+    align-items: start;
     margin-bottom: var(--space-lg);
 }
 
-.trust-score-display {
+/* Trust Score Visual */
+.trust-score-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.trust-score-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.trust-score-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.trust-score-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
 }
 
-#trustScoreNumber {
-    font-size: 3rem;
-    font-weight: 700;
-    color: var(--primary);
+.trust-score-number {
+    font-size: 2.5rem;
+    font-weight: 800;
     line-height: 1;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .trust-score-label {
-    font-size: 0.875rem;
-    color: var(--gray);
-    margin-top: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
 }
 
-.trust-level-indicator {
-    padding: var(--space-sm) var(--space-lg);
-    background: var(--light-gray);
-    border-radius: var(--radius);
+.trust-level-badge {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--gray-100);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
 }
 
-.trust-level-icon {
-    font-size: 1.25rem;
+.trust-level-badge.very-high {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--secondary);
 }
 
-/* Conversational Summary Card */
-.conversational-summary-card {
-    background: white;
+.trust-level-badge.high {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+}
+
+.trust-level-badge.moderate {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.trust-level-badge.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.trust-level-badge.very-low {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+/* Trust Summary Content */
+.trust-summary-content {
+    flex: 1;
+}
+
+/* Article Header Compact */
+.article-header-compact {
+    margin-bottom: var(--space-lg);
+}
+
+.article-title-compact {
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: var(--space-sm);
+    color: var(--gray-900);
+}
+
+.article-meta-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.article-meta-compact .meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.article-meta-compact .meta-item i {
+    color: var(--primary);
+    font-size: 0.75rem;
+}
+
+/* Article Summary */
+.article-summary {
+    background: var(--gray-50);
     border-radius: var(--radius);
-    padding: var(--space-xl);
-    box-shadow: var(--shadow);
-}
-
-.summary-header {
-    font-size: 1.25rem;
-    margin-bottom: var(--space-lg);
-    color: var(--dark);
-}
-
-.summary-section {
+    padding: var(--space-md);
     margin-bottom: var(--space-lg);
 }
 
-.summary-section:last-child {
+.summary-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.summary-text {
+    color: var(--gray-700);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
+/* Key Findings Compact */
+.key-findings-compact {
     margin-bottom: 0;
 }
 
-/* Article Info Bar */
-.article-info-bar {
-    background: white;
-    border-radius: var(--radius);
-    padding: var(--space-lg);
-    box-shadow: var(--shadow);
-    margin-bottom: var(--space-xl);
-}
-
-#articleTitle {
-    font-size: 1.25rem;
-    margin-bottom: var(--space-md);
-    color: var(--dark);
-}
-
-.article-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-lg);
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
+.findings-label {
     font-size: 0.875rem;
-    color: var(--gray);
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--space-sm);
 }
 
-.meta-item i {
+.findings-list-compact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-sm);
+}
+
+.finding-item-compact {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.finding-item-compact.positive {
+    background: rgba(16, 185, 129, 0.08);
+    border-left: 3px solid var(--secondary);
+}
+
+.finding-item-compact.negative {
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid var(--danger);
+}
+
+.finding-item-compact.warning {
+    background: rgba(245, 158, 11, 0.08);
+    border-left: 3px solid var(--warning);
+}
+
+.finding-icon-compact {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.finding-text-compact {
+    flex: 1;
+    color: var(--gray-700);
+}
+
+/* Trust Methodology */
+.trust-methodology {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border-radius: var(--radius);
+    padding: var(--space-md);
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+    border: 1px solid var(--gray-200);
+    margin-top: var(--space-lg);
+}
+
+.trust-methodology i {
     color: var(--primary);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
 }
 
-/* Trust Breakdown Section */
-.trust-breakdown-section {
+.trust-methodology p {
+    flex: 1;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Services Section Updates */
+.services-section {
     background: white;
     border-radius: var(--radius);
     padding: var(--space-xl);
@@ -452,6 +622,48 @@ body {
     margin-bottom: var(--space-xl);
 }
 
+.services-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.pro-upgrade-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: linear-gradient(135deg, #FFD93D 0%, #FFB344 100%);
+    border-radius: 999px;
+    font-size: 0.813rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pro-upgrade-hint:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+/* Animation for trust score circle */
+@keyframes fillCircle {
+    to {
+        stroke-dashoffset: var(--target-offset);
+    }
+}
+
+#trustScoreCircle {
+    transition: stroke-dashoffset 1.5s ease-out;
+}
+
+/* =============================================== */
+/* END OF COMPACT TRUST SCORE SUMMARY */
+/* =============================================== */
+
+/* Services Section */
 .section-header {
     font-size: 1.25rem;
     margin-bottom: var(--space-lg);
@@ -459,67 +671,6 @@ body {
     align-items: center;
     gap: var(--space-sm);
     color: var(--dark);
-}
-
-.breakdown-grid {
-    display: grid;
-    gap: var(--space-lg);
-}
-
-.breakdown-item {
-    display: grid;
-    gap: var(--space-sm);
-}
-
-.breakdown-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    font-weight: 600;
-    color: var(--dark);
-}
-
-.breakdown-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-}
-
-.breakdown-value {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.breakdown-explanation {
-    font-size: 0.875rem;
-    color: var(--gray);
-    line-height: 1.5;
-}
-
-.breakdown-bar {
-    height: 8px;
-    background: var(--light-gray);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.breakdown-fill {
-    height: 100%;
-    transition: width 1s ease-out;
-}
-
-/* Services Section */
-.services-section {
-    background: white;
-    border-radius: var(--radius);
-    padding: var(--space-xl);
-    box-shadow: var(--shadow);
-    margin-bottom: var(--space-xl);
 }
 
 .services-progress {
@@ -756,69 +907,23 @@ body {
     color: var(--dark);
 }
 
-/* Key Findings */
+/* OLD Key Findings - HIDDEN */
 .findings-grid {
-    display: grid;
-    gap: var(--space-md);
+    display: none;
 }
 
 .finding-item {
-    display: flex;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    border-radius: var(--radius);
-    background: var(--gray-50);
+    display: none;
 }
 
-.finding-item.finding-positive {
-    background: rgba(16, 185, 129, 0.1);
-    border-left: 3px solid var(--secondary);
-}
-
-.finding-item.finding-negative {
-    background: rgba(239, 68, 68, 0.1);
-    border-left: 3px solid var(--danger);
-}
-
-.finding-item.finding-warning {
-    background: rgba(245, 158, 11, 0.1);
-    border-left: 3px solid var(--warning);
-}
-
-.finding-icon {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.finding-content {
-    flex: 1;
-}
-
-.finding-title {
-    display: block;
-    font-weight: 600;
-    margin-bottom: var(--space-xs);
-    color: var(--dark);
-}
-
-.finding-explanation {
-    font-size: 0.875rem;
-    color: var(--gray-700);
-    line-height: 1.5;
-    margin: 0;
-}
-
+/* No findings message */
 .no-findings {
     text-align: center;
     color: var(--gray);
     padding: var(--space-xl);
 }
 
-/* Trust Level States */
+/* Trust Level States - OLD (keeping for backward compatibility) */
 .trust-level-indicator.very-high {
     background: rgba(16, 185, 129, 0.1);
     color: var(--secondary);
@@ -851,8 +956,32 @@ body {
         gap: var(--space-sm);
     }
     
-    .trust-summary-container {
+    /* Compact trust score responsive */
+    .trust-score-header {
         grid-template-columns: 1fr;
+        text-align: center;
+    }
+    
+    .trust-score-visual {
+        margin: 0 auto;
+    }
+    
+    .findings-list-compact {
+        grid-template-columns: 1fr;
+    }
+    
+    .trust-methodology {
+        flex-direction: column;
+    }
+    
+    .services-header {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: stretch;
+    }
+    
+    .pro-upgrade-hint {
+        justify-content: center;
     }
     
     .services-grid {
@@ -872,7 +1001,7 @@ body {
         justify-content: center;
     }
     
-    .article-meta {
+    .article-meta-compact {
         flex-direction: column;
         gap: var(--space-sm);
     }
