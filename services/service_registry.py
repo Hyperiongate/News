@@ -8,11 +8,18 @@ import importlib
 import inspect
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+from enum import Enum
 
 from config import Config
 from services.base_analyzer import BaseAnalyzer, AsyncBaseAnalyzer
 
 logger = logging.getLogger(__name__)
+
+
+class ServiceType(Enum):
+    """Service type enumeration"""
+    SYNC = "sync"
+    ASYNC = "async"
 
 
 class ServiceRegistry:
@@ -21,7 +28,7 @@ class ServiceRegistry:
     # Service mapping - maps service names to their module and class names
     SERVICE_MAPPING = {
         'article_extractor': ('services.article_extractor', 'ArticleExtractor'),
-        'source_credibility': ('services.source_credibility', 'SourceCredibility'),
+        'source_credibility': ('services.source_credibility', 'SourceCredibilityAnalyzer'),  # FIXED: Correct class name
         'author_analyzer': ('services.author_analyzer', 'AuthorAnalyzer'),
         'bias_detector': ('services.bias_detector', 'BiasDetector'),
         'fact_checker': ('services.fact_checker', 'FactChecker'),
@@ -29,7 +36,7 @@ class ServiceRegistry:
         'manipulation_detector': ('services.manipulation_detector', 'ManipulationDetector'),
         'content_analyzer': ('services.content_analyzer', 'ContentAnalyzer'),
         'plagiarism_detector': ('services.plagiarism_detector', 'PlagiarismDetector'),
-        'openai_enhancer': ('services.openai_enhancer', 'OpenAIEnhancer'),  # NEW LINE ADDED
+        'openai_enhancer': ('services.openai_enhancer', 'OpenAIEnhancer'),
     }
     
     def __init__(self):
@@ -80,6 +87,9 @@ class ServiceRegistry:
                 # Get the class
                 logger.info(f"Getting class {class_name} from module...")
                 if not hasattr(module, class_name):
+                    # List available classes in module for debugging
+                    available_classes = [name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)]
+                    logger.error(f"Available classes in {module_name}: {available_classes}")
                     raise AttributeError(f"Module {module_name} has no class {class_name}")
                 service_class = getattr(module, class_name)
                 
@@ -127,12 +137,20 @@ class ServiceRegistry:
         logger.info(f"Async services registered: {len(self.async_services)}")
         logger.info(f"Failed services: {len(self.failed_services)}")
         logger.info(f"Available services: {list(self.services.keys()) + list(self.async_services.keys())}")
+        if self.failed_services:
+            logger.info(f"Failed services detail: {self.failed_services}")
         logger.info("=" * 80 + "\n")
     
     def get_service(self, service_name: str) -> Optional[BaseAnalyzer]:
         """Get a service by name"""
         self._ensure_initialized()
         return self.services.get(service_name) or self.async_services.get(service_name)
+    
+    def is_service_available(self, service_name: str) -> bool:
+        """Check if a service is available"""
+        self._ensure_initialized()
+        service = self.get_service(service_name)
+        return service is not None and service.is_available
     
     def get_all_services(self) -> Dict[str, BaseAnalyzer]:
         """Get all registered services"""
@@ -150,6 +168,14 @@ class ServiceRegistry:
             for name, service in self.get_all_services().items() 
             if service.is_available
         }
+    
+    def get_service_info(self, service_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific service"""
+        self._ensure_initialized()
+        service = self.get_service(service_name)
+        if service:
+            return service.get_service_info()
+        return None
     
     def get_service_status(self) -> Dict[str, Any]:
         """Get status of all services"""
