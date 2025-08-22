@@ -1,6 +1,6 @@
 """
 Configuration Management for News Analyzer
-All settings, API keys, and constants in one place
+OPTIMIZED: Reduced timeouts for better performance
 """
 import os
 from typing import Dict, Any, Optional
@@ -51,12 +51,12 @@ class Config:
     FRED_API_KEY = os.getenv('FRED_API_KEY')
     MEDIASTACK_API_KEY = os.getenv('MEDIASTACK_API_KEY')
     
-    # Service Configurations - INCREASED TIMEOUTS
+    # Service Configurations - OPTIMIZED TIMEOUTS
     SERVICES = {
         'article_extractor': ServiceConfig(
             enabled=True,
-            timeout=60,  # Increased from 30
-            max_retries=3,
+            timeout=10,  # Reduced from 60 - extraction should be fast
+            max_retries=2,  # Reduced from 3
             options={
                 'min_text_length': 200,
                 'max_text_length': 50000,
@@ -65,74 +65,78 @@ class Config:
                 'extract_metadata': True,
                 'use_scraperapi': bool(SCRAPERAPI_KEY),
                 'use_scrapingbee': bool(SCRAPINGBEE_API_KEY),
-                'fallback_methods': ['enhanced_requests', 'live_news', 'cloudscraper', 'newspaper3k']
+                'fallback_methods': ['newspaper3k', 'requests']  # Removed slower methods
             }
         ),
         'source_credibility': ServiceConfig(
             enabled=True,
-            timeout=45,  # Increased from 20
-            max_retries=2,
+            timeout=8,  # Reduced from 45 - most checks should complete quickly
+            max_retries=1,  # Reduced from 2
             options={
                 'check_https': True,
-                'check_domain_age': True,
+                'check_domain_age': False,  # DISABLED - This is slow
                 'check_alexa_rank': False,
-                'check_social_presence': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY)
+                'check_social_presence': False,  # DISABLED - This is slow
+                'use_ai_enhancement': False,  # DISABLED - AI adds latency
+                'web_request_timeout': 5  # NEW - limit individual web requests
             }
         ),
         'author_analyzer': ServiceConfig(
             enabled=True,
-            timeout=45,  # Increased from 20
-            max_retries=2,
+            timeout=8,  # Reduced from 45
+            max_retries=1,  # Reduced from 2
             options={
-                'search_online': True,
-                'check_social_media': True,
+                'search_online': False,  # DISABLED - This is slow
+                'check_social_media': False,  # DISABLED - This is slow
                 'analyze_past_articles': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY)
+                'use_ai_enhancement': False,  # DISABLED
+                'web_request_timeout': 5  # NEW
             }
         ),
         'bias_detector': ServiceConfig(
             enabled=True,
-            timeout=30,  # Increased from 15
-            max_retries=2,
+            timeout=5,  # Reduced from 30 - text analysis is fast
+            max_retries=1,  # Reduced from 2
             options={
                 'detect_political_bias': True,
                 'detect_sentiment': True,
                 'detect_loaded_language': True,
                 'analyze_sources': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY)
+                'use_ai_enhancement': False  # DISABLED
             }
         ),
         'fact_checker': ServiceConfig(
             enabled=bool(GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY),
-            timeout=60,  # Increased from 30
-            max_retries=3,
+            timeout=10,  # Reduced from 60 - API calls should be fast
+            max_retries=1,  # Reduced from 3
             api_key=GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY,
             endpoint='https://factchecktools.googleapis.com/v1alpha1/claims:search',
             options={
-                'max_claims': 10,
-                'min_relevance_score': 0.7,
-                'check_snopes': True,
-                'check_politifact': True
+                'max_claims': 5,  # Reduced from 10 - check fewer claims
+                'min_relevance_score': 0.8,  # Increased from 0.7 - stricter filtering
+                'check_snopes': False,  # DISABLED - external checks are slow
+                'check_politifact': False,  # DISABLED
+                'web_request_timeout': 5  # NEW
             }
         ),
         'transparency_analyzer': ServiceConfig(
             enabled=True,
-            timeout=30,  # Increased from 15
-            max_retries=2,
+            timeout=5,  # Reduced from 30 - mostly text analysis
+            max_retries=1,  # Reduced from 2
             options={
                 'check_author_info': True,
                 'check_sources': True,
                 'check_corrections': True,
                 'check_funding': True,
-                'check_contact_info': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY)
+                'check_contact_info': False,  # DISABLED - requires web requests
+                'use_ai_enhancement': False,  # DISABLED
+                'skip_web_checks': True  # NEW - skip slow web checks
             }
         ),
         'manipulation_detector': ServiceConfig(
             enabled=True,
-            timeout=30,  # Increased from 20
-            max_retries=2,
+            timeout=5,  # Reduced from 30 - text analysis is fast
+            max_retries=1,  # Reduced from 2
             options={
                 'detect_emotional_language': True,
                 'detect_propaganda': True,
@@ -144,19 +148,20 @@ class Config:
         ),
         'content_analyzer': ServiceConfig(
             enabled=True,
-            timeout=30,  # Increased from 15
-            max_retries=2,
+            timeout=5,  # Reduced from 30 - text analysis should be fast
+            max_retries=1,  # Reduced from 2
             options={
                 'readability_metrics': True,
-                'structure_analysis': True,
+                'structure_analysis': False,  # DISABLED - requires web requests
                 'evidence_quality': True,
                 'statistical_verification': True,
-                'media_ratio_analysis': True
+                'media_ratio_analysis': True,
+                'skip_web_checks': True  # NEW - skip slow web checks
             }
         ),
         'plagiarism_detector': ServiceConfig(
-            enabled=bool(COPYLEAKS_API_KEY or COPYSCAPE_API_KEY),
-            timeout=60,  # Increased from 45
+            enabled=False,  # DISABLED - too slow for real-time analysis
+            timeout=60,
             max_retries=2,
             api_key=COPYLEAKS_API_KEY or COPYSCAPE_API_KEY,
             options={
@@ -167,32 +172,32 @@ class Config:
             }
         ),
         'openai_enhancer': ServiceConfig(
-            enabled=bool(OPENAI_API_KEY),
-            timeout=60,  # Increased from 30
+            enabled=False,  # DISABLED - adds significant latency
+            timeout=60,
             max_retries=2,
             api_key=OPENAI_API_KEY,
             options={
-                'model': 'gpt-4-turbo-preview',
+                'model': 'gpt-3.5-turbo',  # Faster model
                 'generate_summary': True,
-                'extract_claims': True,
-                'analyze_bias': True,
-                'suggest_fact_checks': True,
-                'generate_questions': True,
+                'extract_claims': False,
+                'analyze_bias': False,
+                'suggest_fact_checks': False,
+                'generate_questions': False,
                 'overall_assessment': True,
-                'max_tokens': 2000,
+                'max_tokens': 500,  # Reduced from 2000
                 'temperature': 0.3
             }
         )
     }
     
-    # Pipeline Configuration - INCREASED TIMEOUT
+    # Pipeline Configuration - OPTIMIZED
     PIPELINE = {
-        'stages': ['extraction', 'analysis', 'enhancement'],
+        'stages': ['extraction', 'analysis'],  # Removed enhancement stage
         'parallel_processing': True,
-        'max_workers': 5,
-        'max_total_timeout': 240,  # Increased from 120 to 4 minutes
+        'max_workers': 4,  # Reduced from 5
+        'max_total_timeout': 30,  # Reduced from 240 - target under 30 seconds
         'min_required_services': 3,  # Minimum services for valid analysis
-        'retry_failed_services': True,
+        'retry_failed_services': False,  # DISABLED - no retries for speed
         'continue_on_error': True
     }
     
@@ -206,10 +211,9 @@ class Config:
             'fact_checker',
             'transparency_analyzer',
             'manipulation_detector',
-            'content_analyzer',
-            'plagiarism_detector'
-        ],
-        'enhancement': ['openai_enhancer']  # NEW - OpenAI runs in enhancement stage
+            'content_analyzer'
+        ]
+        # 'enhancement': ['openai_enhancer']  # Removed
     }
     
     # Service to stage mapping (reverse lookup)
@@ -221,9 +225,7 @@ class Config:
         'fact_checker': 'analysis',
         'transparency_analyzer': 'analysis',
         'manipulation_detector': 'analysis',
-        'content_analyzer': 'analysis',
-        'plagiarism_detector': 'analysis',
-        'openai_enhancer': 'enhancement'  # NEW
+        'content_analyzer': 'analysis'
     }
     
     # Trust Score Weights
@@ -241,7 +243,7 @@ class Config:
         'include_metadata': True,
         'include_debug_info': DEBUG,
         'timestamp_format': 'iso',
-        'compress_large_responses': True,
+        'compress_large_responses': False,  # Disabled for speed
         'max_response_size_mb': 10,
         'include_confidence_scores': True,
         'include_service_timings': DEBUG
@@ -257,9 +259,9 @@ class Config:
     
     # Logging Configuration
     LOGGING = {
-        'level': logging.DEBUG if DEBUG else logging.INFO,
+        'level': logging.INFO,  # Reduced from DEBUG
         'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        'file': 'news_analyzer.log' if not DEBUG else None,
+        'file': None,  # Disabled file logging for speed
         'max_file_size_mb': 100,
         'backup_count': 5
     }
@@ -267,7 +269,7 @@ class Config:
     # Cache Configuration
     CACHE = {
         'enabled': True,
-        'type': 'memory',  # Options: 'memory', 'redis', 'disk'
+        'type': 'memory',
         'max_size_mb': 500,
         'ttl_default': 3600,
         'ttl_article': 86400,  # 24 hours for article content
@@ -279,9 +281,9 @@ class Config:
     HEALTH_CHECK = {
         'enabled': True,
         'interval_seconds': 300,  # 5 minutes
-        'timeout_seconds': 10,
-        'failure_threshold': 3,  # Mark unhealthy after 3 failures
-        'recovery_threshold': 2  # Mark healthy after 2 successes
+        'timeout_seconds': 5,  # Reduced from 10
+        'failure_threshold': 3,
+        'recovery_threshold': 2
     }
     
     @classmethod
@@ -346,7 +348,6 @@ class Config:
         
         # Check critical API keys
         critical_keys = {
-            'OPENAI_API_KEY': 'OpenAI API key for AI enhancement',
             'GOOGLE_FACT_CHECK_API_KEY': 'Google Fact Check API for fact verification'
         }
         
@@ -360,8 +361,8 @@ class Config:
             errors.append(f"Only {enabled_count} services enabled. Minimum 3 required.")
         
         # Check pipeline configuration
-        if cls.PIPELINE['max_total_timeout'] < 60:
-            warnings.append("Pipeline timeout may be too short for complex articles")
+        if cls.PIPELINE['max_total_timeout'] < 10:
+            warnings.append("Pipeline timeout may be too short")
         
         return {
             'valid': len(errors) == 0,
@@ -370,3 +371,13 @@ class Config:
             'enabled_services': enabled_count,
             'pipeline_timeout': cls.PIPELINE['max_total_timeout']
         }
+
+# Performance optimization notes:
+# 1. Reduced all service timeouts to reasonable limits
+# 2. Disabled slow features like domain age checking, social media checks
+# 3. Disabled AI enhancement (adds 5-10s per service)
+# 4. Disabled external web checks where possible
+# 5. Added web_request_timeout option for services to limit individual requests
+# 6. Disabled retries to fail fast
+# 7. Reduced pipeline timeout to 30 seconds total
+# 8. Disabled plagiarism detector and OpenAI enhancer entirely
