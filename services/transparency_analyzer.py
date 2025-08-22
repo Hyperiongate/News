@@ -81,6 +81,15 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         
         return None
     
+    def _analyze_text_only(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform text-only analysis when web checks are disabled"""
+        text = data.get('text', '')
+        if not text:
+            return self.get_error_result("No text provided for transparency analysis")
+        
+        # Perform the standard analysis without any web components
+        return self.analyze({**data, '_skip_web_components': True})
+    
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze transparency indicators in article WITH AI ENHANCEMENT
@@ -94,6 +103,11 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             Standardized response with transparency analysis
         """
         try:
+            # Skip web checks if configured - PATCHED
+            if self.config.options.get('skip_web_checks', False):
+                # Do only text-based analysis, no web requests
+                return self._analyze_text_only(data)
+            
             text = data.get('text', '')
             if not text:
                 return self.get_error_result("No text provided for transparency analysis")
@@ -123,91 +137,103 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 r'(?:study|research|report) (?:by|from) [\w\s]+',
                 r'data from [\w\s]+',
                 r'survey conducted by [\w\s]+',
-                r'(?:based on|derived from) [\w\s]+'
+                r'(?:a |the )?(?:New York Times|Washington Post|CNN|BBC|Reuters|AP|Bloomberg|Guardian)',
+                r'(?:told|said to|confirmed to) (?:reporters|this publication|our correspondent)'
             ]
             
             sources_found = 0
-            source_examples = []
             for pattern in source_patterns:
                 matches = re.findall(pattern, text, re.IGNORECASE)
                 sources_found += len(matches)
-                if matches:
-                    source_examples.extend(matches[:2])  # Keep first 2 examples
             
-            if sources_found > 0:
-                points = min(sources_found * 5, 30)
-                transparency_score += points
-                indicators.append(f'Found {sources_found} source citations')
-                if source_examples:
-                    indicators.append(f'Examples: {", ".join(source_examples[:3])}')
+            if sources_found > 5:
+                transparency_score += 30
+                indicators.append(f'Multiple sources cited ({sources_found} references)')
+            elif sources_found > 2:
+                transparency_score += 20
+                indicators.append(f'Some sources cited ({sources_found} references)')
+            elif sources_found > 0:
+                transparency_score += 10
+                indicators.append(f'Limited sources cited ({sources_found} references)')
             else:
                 missing_elements.append('No source citations found')
-                transparency_score -= 15
+                transparency_score -= 10
             
-            # 3. Direct Quotes (15 points)
-            quote_pattern = r'"[^"]{20,}"'  # Quotes with at least 20 characters
+            # 3. Direct Quotes (10 points)
+            quote_pattern = r'"[^"]{20,}"'
             quotes = re.findall(quote_pattern, text)
             quote_count = len(quotes)
             
-            if quote_count >= 2:
-                transparency_score += 15
-                indicators.append(f'Contains {quote_count} direct quotes')
-            elif quote_count == 1:
-                transparency_score += 7
-                indicators.append('Contains 1 direct quote')
+            if quote_count > 3:
+                transparency_score += 10
+                indicators.append(f'Includes direct quotes ({quote_count} found)')
+            elif quote_count > 0:
+                transparency_score += 5
+                indicators.append(f'Some direct quotes ({quote_count} found)')
             else:
                 missing_elements.append('No direct quotes from sources')
             
-            # 4. Data/Statistics with Sources (15 points)
-            data_pattern = r'(\d+(?:\.\d+)?%?)\s*(?:of|from|according to|based on|source:)\s*([\w\s]+)'
-            data_matches = re.findall(data_pattern, text, re.IGNORECASE)
+            # 4. Data/Statistics Attribution (10 points)
+            stat_patterns = [
+                r'\d+(?:\.\d+)?\s*(?:percent|%)',
+                r'\d+\s*(?:million|billion|thousand)',
+                r'(?:survey|poll|study) of \d+',
+                r'(?:increase|decrease|growth|decline) of \d+'
+            ]
             
-            if data_matches:
-                transparency_score += 15
-                indicators.append(f'Statistics include sources ({len(data_matches)} instances)')
-            else:
-                # Check for unsourced statistics
-                unsourced_stats = re.findall(r'\d+(?:\.\d+)?%', text)
-                if len(unsourced_stats) > 2:
+            stats_found = 0
+            for pattern in stat_patterns:
+                stats_found += len(re.findall(pattern, text, re.IGNORECASE))
+            
+            if stats_found > 0:
+                # Check if stats have sources
+                stat_with_source = 0
+                for i, pattern in enumerate(stat_patterns):
+                    matches = re.finditer(pattern, text, re.IGNORECASE)
+                    for match in matches:
+                        # Check if source mentioned within 100 chars
+                        context = text[max(0, match.start()-100):match.end()+100]
+                        if any(src in context.lower() for src in ['according', 'report', 'study', 'survey', 'data from']):
+                            stat_with_source += 1
+                
+                if stat_with_source > stats_found * 0.5:
+                    transparency_score += 10
+                    indicators.append('Statistics include source attribution')
+                else:
+                    transparency_score += 3
                     missing_elements.append('Statistics lack source attribution')
-                    transparency_score -= 10
             
-            # 5. Disclosure Statements (10 points)
+            # 5. Disclosure Statements (15 points)
             disclosure_patterns = [
-                r'disclosure:\s*[^.]+',
-                r'disclaimer:\s*[^.]+',
-                r'conflict of interest:\s*[^.]+',
-                r'funded by\s*[^.]+',
-                r'sponsored by\s*[^.]+',
-                r'correction:\s*[^.]+',
-                r'update:\s*[^.]+'
+                r'(?:disclosure|disclaimer):\s*[^.]+',
+                r'(?:the author|I|we) (?:work|worked|consult|consulted) (?:for|with|at)',
+                r'(?:conflict of interest|financial interest)',
+                r'(?:funded by|sponsored by|supported by)',
+                r'(?:affiliate link|commission|compensated)',
+                r'(?:own|hold|bought) (?:shares|stock|position)'
             ]
             
             for pattern in disclosure_patterns:
                 matches = re.findall(pattern, text, re.IGNORECASE)
-                if matches:
-                    transparency_score += 10
-                    disclosures.extend(matches)
-                    indicators.append('Contains disclosure statements')
-                    break
+                disclosures.extend(matches)
+            
+            if disclosures:
+                transparency_score += 15
+                indicators.append(f'Includes disclosure statements ({len(disclosures)} found)')
             
             # 6. Contact Information (5 points)
             contact_patterns = [
-                r'contact (?:us|me|the author) at',
-                r'email:?\s*[\w\.-]+@[\w\.-]+',
-                r'reach out (?:at|to)',
-                r'for more information'
+                r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+                r'(?:contact|reach|email) (?:us|me|the author) at',
+                r'(?:twitter|facebook|linkedin)\.com/[a-zA-Z0-9_]+',
+                r'for (?:corrections|questions|more information)'
             ]
             
-            has_contact = False
-            for pattern in contact_patterns:
-                if re.search(pattern, text, re.IGNORECASE):
-                    transparency_score += 5
-                    indicators.append('Provides contact information')
-                    has_contact = True
-                    break
-            
-            if not has_contact:
+            contact_found = any(re.search(pattern, text, re.IGNORECASE) for pattern in contact_patterns)
+            if contact_found:
+                transparency_score += 5
+                indicators.append('Contact information provided')
+            else:
                 missing_elements.append('No contact information provided')
             
             # 7. Methodology (10 points for investigative pieces)
@@ -259,68 +285,22 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     # Add AI-found transparency strengths
                     if ai_transparency.get('transparency_strengths'):
                         for strength in ai_transparency['transparency_strengths'][:2]:
-                            indicators.append(f"AI noted: {strength}")
+                            indicators.append(f"AI verified: {strength}")
+                            transparency_score = min(100, transparency_score + 3)
                     
-                    # Check for conflicts of interest AI might detect
+                    # Check for potential conflicts
                     if ai_transparency.get('potential_conflicts'):
-                        missing_elements.append(f"Potential conflict: {ai_transparency['potential_conflicts'][0]}")
+                        missing_elements.extend(ai_transparency['potential_conflicts'][:1])
                         transparency_score = max(0, transparency_score - 10)
                     
-                    # Check for hidden sponsorship patterns
+                    # Check for sponsored content
                     if ai_transparency.get('sponsorship_indicators'):
-                        missing_elements.append("AI detected possible undisclosed sponsorship")
+                        missing_elements.append("Possible undisclosed sponsored content")
                         transparency_score = max(0, transparency_score - 15)
             
-            # Recalculate score bounds after AI adjustments
-            transparency_score = max(0, min(100, transparency_score))
-            
-            # Determine transparency level
-            if transparency_score >= 80:
-                level = 'Excellent'
-                assessment = 'Very transparent with clear sourcing and attribution'
-            elif transparency_score >= 65:
-                level = 'Good'
-                assessment = 'Generally transparent with most key elements present'
-            elif transparency_score >= 50:
-                level = 'Moderate'
-                assessment = 'Some transparency but missing important elements'
-            elif transparency_score >= 35:
-                level = 'Low'
-                assessment = 'Limited transparency with many missing elements'
-            else:
-                level = 'Very Low'
-                assessment = 'Lacks basic transparency standards'
-            
-            # Generate findings for UI
-            findings = []
-            
-            # Add positive findings
-            if transparency_score >= 65:
-                findings.append({
-                    'type': 'transparency',
-                    'severity': 'positive',
-                    'text': f'Good transparency practices: {", ".join(indicators[:2])}',
-                    'finding': 'Strong transparency'
-                })
-            
-            # Add negative findings
-            if missing_elements:
-                severity = 'high' if len(missing_elements) > 3 else 'medium'
-                findings.append({
-                    'type': 'transparency',
-                    'severity': severity,
-                    'text': f'Missing: {", ".join(missing_elements[:2])}',
-                    'finding': 'Transparency issues'
-                })
-            
-            # Add AI-specific findings if enhanced
-            if self._ai_available and any('AI' in elem for elem in missing_elements + indicators):
-                findings.append({
-                    'type': 'transparency',
-                    'severity': 'info',
-                    'text': 'AI analysis provided additional transparency insights',
-                    'finding': 'AI-enhanced analysis'
-                })
+            # Generate summary and level
+            level = self._get_transparency_level(transparency_score)
+            assessment = self._generate_assessment(transparency_score, indicators, missing_elements)
             
             # Generate recommendations
             recommendations = self._generate_recommendations(missing_elements, transparency_score)
@@ -331,9 +311,8 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'data': {
                     'score': transparency_score,
                     'level': level,
-                    'findings': findings,
-                    'assessment': assessment,
-                    'summary': f"Transparency score: {transparency_score}%. {assessment}",
+                    'findings': self._generate_findings(transparency_score, indicators, missing_elements),
+                    'summary': f"{assessment}",
                     'indicators': indicators,
                     'missing_elements': missing_elements,
                     'disclosures': disclosures,
@@ -384,34 +363,95 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             recommendations.append('Include contact information for corrections or questions')
         
         if score < 50:
-            recommendations.append('Consider adding disclosure statements about funding or conflicts')
+            recommendations.append('Consider adding disclosure statements for any potential conflicts')
         
-        # Add AI-specific recommendations if detected
-        ai_issues = [elem for elem in missing_elements if 'AI detected' in elem]
-        if ai_issues:
-            recommendations.append('Address subtle transparency issues identified by AI analysis')
+        return recommendations[:3]  # Top 3 recommendations
+    
+    def _get_transparency_level(self, score: int) -> str:
+        """Convert transparency score to level"""
+        if score >= 80:
+            return 'Excellent'
+        elif score >= 65:
+            return 'Good'
+        elif score >= 50:
+            return 'Fair'
+        elif score >= 35:
+            return 'Poor'
+        else:
+            return 'Very Poor'
+    
+    def _generate_findings(self, score: int, indicators: List[str], missing: List[str]) -> List[Dict[str, Any]]:
+        """Generate structured findings"""
+        findings = []
         
-        return recommendations
+        # Add positive findings
+        if score >= 65:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': 'Strong transparency practices',
+                'explanation': f'{len(indicators)} transparency indicators found'
+            })
+        
+        # Add missing element warnings
+        for element in missing[:3]:  # Top 3 issues
+            severity = 'high' if score < 50 else 'medium'
+            findings.append({
+                'type': 'warning',
+                'severity': severity,
+                'text': element,
+                'explanation': 'Reduces article transparency'
+            })
+        
+        # Add overall assessment
+        if score < 35:
+            findings.append({
+                'type': 'critical',
+                'severity': 'high',
+                'text': 'Severe transparency issues',
+                'explanation': 'Article lacks basic transparency elements'
+            })
+        
+        return findings
+    
+    def _generate_assessment(self, score: int, indicators: List[str], missing: List[str]) -> str:
+        """Generate transparency assessment summary"""
+        if score >= 80:
+            return f"Excellent transparency with {len(indicators)} positive indicators including clear attribution and sourcing."
+        elif score >= 65:
+            return f"Good transparency practices with {len(indicators)} indicators, though some elements could be improved."
+        elif score >= 50:
+            return f"Fair transparency with {len(indicators)} indicators present but {len(missing)} important elements missing."
+        elif score >= 35:
+            return f"Poor transparency with only {len(indicators)} indicators found and significant gaps in disclosure."
+        else:
+            return f"Very poor transparency with {len(missing)} critical elements missing, raising credibility concerns."
     
     def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
+        """Get information about the service"""
         info = super().get_service_info()
         info.update({
             'capabilities': [
-                'Author attribution checking',
-                'Source citation analysis',
-                'Direct quote detection',
-                'Data source verification',
-                'Disclosure statement identification',
-                'Contact information detection',
+                'Author attribution analysis',
+                'Source citation detection',
+                'Quote extraction and analysis',
+                'Statistical claim verification',
+                'Disclosure statement detection',
+                'Contact information checking',
                 'Methodology transparency',
                 'External reference tracking',
                 'AI-ENHANCED transparency assessment',
-                'AI-powered conflict detection',
-                'Hidden sponsorship detection'
+                'AI-powered conflict detection'
             ],
-            'transparency_elements': 8,
-            'scoring_range': '0-100',
+            'transparency_factors': {
+                'author_attribution': 20,
+                'source_citations': 30,
+                'direct_quotes': 10,
+                'data_attribution': 10,
+                'disclosures': 15,
+                'contact_info': 5,
+                'methodology': 10
+            },
             'ai_enhanced': self._ai_available
         })
         return info
