@@ -1,6 +1,6 @@
 """
 News Analyzer API - Main Flask Application
-Enhanced with performance monitoring to identify slow services
+FIXED: Proper response formatting with performance monitoring
 """
 import os
 import sys
@@ -8,7 +8,7 @@ import logging
 import time
 import traceback
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import json
 
 # Flask imports
@@ -21,7 +21,6 @@ from flask_limiter.util import get_remote_address
 from config import Config
 from services.news_analyzer import NewsAnalyzer
 from services.service_registry import get_service_registry
-from services.response_builder import ResponseBuilder
 
 # Setup logging
 logging.basicConfig(
@@ -47,119 +46,135 @@ limiter = Limiter(
 
 # Initialize services
 news_analyzer = NewsAnalyzer()
-response_builder = ResponseBuilder()
+
+# Performance tracking storage
+performance_stats = {}
 
 # Debug information storage
 debug_info = {
     'requests': [],
     'errors': [],
-    'service_timings': {}  # Track service performance
+    'service_timings': {}
 }
 
-# Performance tracking
-class PerformanceMonitor:
-    """Track performance metrics for all services"""
+# Helper function to extract service data
+def extract_service_data(service_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract meaningful data from service result"""
+    if not isinstance(service_result, dict):
+        return {}
     
-    def __init__(self):
-        self.timings = {}
-        self.call_counts = {}
-        self.errors = {}
-        self.start_time = time.time()
+    # If service result has 'data' field, use it
+    if 'data' in service_result and isinstance(service_result['data'], dict):
+        return service_result['data']
     
-    def record_timing(self, service_name: str, duration: float, success: bool = True):
-        """Record timing for a service"""
-        if service_name not in self.timings:
-            self.timings[service_name] = []
-            self.call_counts[service_name] = 0
-            self.errors[service_name] = 0
-        
-        self.timings[service_name].append(duration)
-        self.call_counts[service_name] += 1
-        if not success:
-            self.errors[service_name] += 1
-    
-    def get_stats(self):
-        """Get performance statistics"""
-        stats = {}
-        for service, timings in self.timings.items():
-            if timings:
-                stats[service] = {
-                    'calls': self.call_counts[service],
-                    'errors': self.errors[service],
-                    'min_time': min(timings),
-                    'max_time': max(timings),
-                    'avg_time': sum(timings) / len(timings),
-                    'total_time': sum(timings),
-                    'success_rate': ((self.call_counts[service] - self.errors[service]) / 
-                                   self.call_counts[service] * 100) if self.call_counts[service] > 0 else 0
-                }
-        return stats
-    
-    def reset(self):
-        """Reset all metrics"""
-        self.timings.clear()
-        self.call_counts.clear()
-        self.errors.clear()
-        self.start_time = time.time()
+    # Otherwise, extract all fields except metadata
+    exclude_fields = {'success', 'service', 'timestamp', 'available', 'error', 'processing_time'}
+    return {k: v for k, v in service_result.items() if k not in exclude_fields}
 
-# Global performance monitor
-perf_monitor = PerformanceMonitor()
-
-# Helper function for error responses
-def error_response(message: str, status_code: int = 400):
-    """Create standardized error response"""
-    error_data = {
-        'success': False,
-        'error': message,
-        'timestamp': datetime.now().isoformat()
+# Helper to identify service results in pipeline output
+def is_service_result(key: str, value: Any) -> bool:
+    """Check if a key-value pair is a service result"""
+    # Known non-service keys
+    non_service_keys = {
+        'success', 'trust_score', 'trust_level', 'summary', 
+        'pipeline_metadata', 'errors', 'article', 'services_available', 
+        'is_pro', 'analysis_mode'
     }
     
-    # Log error
-    debug_info['errors'].append({
-        'message': message,
-        'status_code': status_code,
-        'timestamp': error_data['timestamp']
-    })
+    if key in non_service_keys:
+        return False
     
-    return jsonify(error_data), status_code
+    # Check if value looks like a service result
+    if isinstance(value, dict):
+        # Service results typically have 'success' field
+        if 'success' in value:
+            return True
+        # Or have typical service data fields
+        service_indicators = {'score', 'analysis', 'data', 'results', 'level', 'findings'}
+        if any(indicator in value for indicator in service_indicators):
+            return True
+    
+    return False
 
-# Helper to transform analysis results
-def transform_results(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform service results to expected format"""
-    # Extract the results dict if wrapped
-    if 'results' in result and isinstance(result['results'], dict):
-        data = result['results']
-    else:
-        data = result
+# Monkey-patch NewsAnalyzer to add performance tracking
+class PerformanceTrackingNewsAnalyzer(NewsAnalyzer):
+    """NewsAnalyzer with performance tracking"""
     
-    # Ensure all required fields exist
-    if 'trust_score' not in data:
-        data['trust_score'] = 0
+    def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
+        """Override to add performance tracking"""
+        # Store original method
+        registry = self.service_registry
+        original_analyze = registry.analyze_with_service
         
-    if 'article_data' not in data and 'article_extractor' in data:
-        data['article_data'] = data['article_extractor']
-    
-    if 'summary' not in data:
-        data['summary'] = {
-            'verdict': 'Analysis incomplete',
-            'trust_score': data.get('trust_score', 0),
-            'risk_level': 'unknown',
-            'key_findings': [],
-            'summary': 'Analysis incomplete'
-        }
-    
-    # Ensure we have detailed_analysis
-    if 'detailed_analysis' not in data:
-        data['detailed_analysis'] = {}
-    
-    # Ensure metadata exists
-    if 'metadata' not in result:
-        result['metadata'] = {
-            'timestamp': datetime.now().isoformat(),
-            'analysis_time': 0
-        }
-    
-    return result
+        # Create timing storage for this request
+        request_timings = {}
+        
+        def tracked_analyze(service_name, data):
+            """Wrapper to track timing"""
+            start_time = time.time()
+            try:
+                result = original_analyze(service_name, data)
+                duration = time.time() - start_time
+                request_timings[service_name] = {
+                    'duration': duration,
+                    'success': result.get('success', False) if isinstance(result, dict) else False
+                }
+                
+                # Update global stats
+                if service_name not in performance_stats:
+                    performance_stats[service_name] = {
+                        'total_time': 0,
+                        'call_count': 0,
+                        'success_count': 0,
+                        'failure_count': 0,
+                        'min_time': float('inf'),
+                        'max_time': 0
+                    }
+                
+                stats = performance_stats[service_name]
+                stats['total_time'] += duration
+                stats['call_count'] += 1
+                stats['min_time'] = min(stats['min_time'], duration)
+                stats['max_time'] = max(stats['max_time'], duration)
+                
+                if result.get('success', False):
+                    stats['success_count'] += 1
+                else:
+                    stats['failure_count'] += 1
+                
+                logger.info(f"Service {service_name} completed in {duration:.2f}s")
+                return result
+                
+            except Exception as e:
+                duration = time.time() - start_time
+                request_timings[service_name] = {
+                    'duration': duration,
+                    'success': False,
+                    'error': str(e)
+                }
+                logger.error(f"Service {service_name} failed after {duration:.2f}s: {e}")
+                raise
+        
+        # Replace method temporarily
+        registry.analyze_with_service = tracked_analyze
+        
+        try:
+            # Run the analysis
+            result = super().analyze(content, content_type, pro_mode)
+            
+            # Add timing info to pipeline metadata
+            if 'pipeline_metadata' not in result:
+                result['pipeline_metadata'] = {}
+            result['pipeline_metadata']['service_timings'] = request_timings
+            
+            return result
+            
+        finally:
+            # Restore original method
+            registry.analyze_with_service = original_analyze
+
+# Replace the analyzer with performance tracking version
+news_analyzer = PerformanceTrackingNewsAnalyzer()
 
 # MAIN ROUTES
 
@@ -171,8 +186,6 @@ def index():
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    # Get service registry status
-    from services.service_registry import get_service_registry
     registry = get_service_registry()
     service_status = registry.get_service_status()
     
@@ -183,34 +196,10 @@ def health():
         'summary': service_status['summary']
     })
 
-@app.route('/api/status')
-def api_status():
-    """Get detailed API status"""
-    # Get service registry
-    from services.service_registry import get_service_registry
-    registry = get_service_registry()
-    service_status = registry.get_service_status()
-    
-    # Get configuration status
-    config_status = Config.validate()
-    
-    return jsonify({
-        'api_version': '2.0',
-        'status': 'operational',
-        'timestamp': datetime.now().isoformat(),
-        'services': service_status,
-        'configuration': config_status,
-        'stats': {
-            'total_requests': len(debug_info['requests']),
-            'total_errors': len(debug_info['errors']),
-            'uptime': (datetime.now() - app.config.get('start_time', datetime.now())).total_seconds()
-        }
-    })
-
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Main analysis endpoint with performance tracking
+    Main analysis endpoint - FIXED version
     Accepts: { "url": "..." } or { "text": "..." }
     """
     try:
@@ -239,259 +228,240 @@ def analyze():
         content = url if url else text
         content_type = 'url' if url else 'text'
         
-        # Record request
-        request_info = {
-            'timestamp': datetime.now().isoformat(),
-            'content_type': content_type,
-            'content_preview': content[:100] if content_type == 'text' else content,
-            'ip': request.remote_addr
-        }
-        debug_info['requests'].append(request_info)
-        
         # Check for pro mode
         pro_mode = data.get('pro_mode', False) or data.get('is_pro', False)
         
-        # Create a custom news analyzer with performance tracking
-        analyzer = NewsAnalyzerWithPerformance(perf_monitor)
-        
         # Run analysis with timing
         start_time = time.time()
-        result = analyzer.analyze(content, content_type, pro_mode)
+        
+        try:
+            # Get results from pipeline
+            pipeline_results = news_analyzer.analyze(content, content_type, pro_mode)
+        except Exception as e:
+            logger.error(f"Analysis failed: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': f'Analysis failed: {str(e)}'
+            }), 500
+        
         total_time = time.time() - start_time
         
-        # Transform results to expected format
-        result = transform_results(result)
+        # Extract service results from pipeline output
+        service_results = {}
+        article_data = None
         
-        # Add performance metadata
-        result['performance'] = {
-            'total_analysis_time': total_time,
-            'service_timings': perf_monitor.get_stats()
+        for key, value in pipeline_results.items():
+            if key == 'article':
+                article_data = value
+            elif is_service_result(key, value):
+                # Extract the actual data from service result
+                service_data = extract_service_data(value)
+                if service_data:
+                    service_results[key] = service_data
+                    logger.info(f"Extracted {key} data with {len(service_data)} fields")
+        
+        # Ensure we have article data
+        if not article_data:
+            # Try to get from article_extractor
+            if 'article_extractor' in pipeline_results:
+                article_data = extract_service_data(pipeline_results['article_extractor'])
+            
+            if not article_data:
+                article_data = {
+                    'title': 'Unknown Title',
+                    'url': content if content_type == 'url' else '',
+                    'text': content if content_type == 'text' else '',
+                    'extraction_successful': False
+                }
+        
+        # Build the response in the format frontend expects
+        response_data = {
+            'success': pipeline_results.get('success', False),
+            'data': {
+                'article': article_data,
+                'analysis': {
+                    'trust_score': pipeline_results.get('trust_score', 50),
+                    'trust_level': pipeline_results.get('trust_level', 'Unknown'),
+                    'key_findings': extract_key_findings(service_results),
+                    'summary': pipeline_results.get('summary', 'Analysis incomplete')
+                },
+                'detailed_analysis': service_results
+            },
+            'metadata': {
+                'analysis_time': total_time,
+                'timestamp': datetime.now().isoformat(),
+                'pipeline_metadata': pipeline_results.get('pipeline_metadata', {}),
+                'services_available': pipeline_results.get('services_available', 0),
+                'is_pro': pipeline_results.get('is_pro', False),
+                'analysis_mode': pipeline_results.get('analysis_mode', 'basic')
+            }
         }
         
-        # Log completion
-        logger.info(f"Analysis completed in {total_time:.2f}s - success: {result.get('success')}")
+        # Add errors if any
+        if pipeline_results.get('errors'):
+            response_data['errors'] = pipeline_results['errors']
         
-        return jsonify(result)
+        # Log success
+        logger.info(f"Analysis completed successfully in {total_time:.2f}s")
+        logger.info(f"Services included: {list(service_results.keys())}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"Analysis error: {str(e)}", exc_info=True)
-        return error_response(f"Analysis failed: {str(e)}", 500)
+        logger.error(f"Unexpected error in analyze endpoint: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': 'An unexpected error occurred during analysis'
+        }), 500
 
 @app.route('/api/performance', methods=['GET'])
 def performance_analysis():
     """Get detailed performance analysis of all services"""
     try:
-        # Get current performance stats
-        stats = perf_monitor.get_stats()
+        # Calculate averages and format stats
+        formatted_stats = {}
         
-        # Sort services by total time (slowest first)
+        for service, stats in performance_stats.items():
+            if stats['call_count'] > 0:
+                formatted_stats[service] = {
+                    'avg_time': stats['total_time'] / stats['call_count'],
+                    'min_time': stats['min_time'],
+                    'max_time': stats['max_time'],
+                    'total_calls': stats['call_count'],
+                    'success_rate': (stats['success_count'] / stats['call_count']) * 100,
+                    'total_time': stats['total_time']
+                }
+        
+        # Sort by average time (slowest first)
         sorted_services = sorted(
-            stats.items(), 
-            key=lambda x: x[1]['total_time'], 
+            formatted_stats.items(), 
+            key=lambda x: x[1]['avg_time'], 
             reverse=True
         )
         
         # Identify bottlenecks
         bottlenecks = []
-        for service, data in sorted_services[:3]:  # Top 3 slowest
-            if data['avg_time'] > 5.0:  # Services taking more than 5 seconds
+        for service, data in sorted_services[:3]:
+            if data['avg_time'] > 5.0:
                 bottlenecks.append({
                     'service': service,
                     'avg_time': data['avg_time'],
                     'max_time': data['max_time'],
-                    'calls': data['calls'],
                     'impact': 'HIGH' if data['avg_time'] > 10 else 'MEDIUM'
                 })
         
         return jsonify({
             'success': True,
             'timestamp': datetime.now().isoformat(),
-            'uptime': time.time() - perf_monitor.start_time,
             'performance_stats': dict(sorted_services),
             'bottlenecks': bottlenecks,
-            'recommendations': generate_performance_recommendations(stats)
+            'recommendations': generate_recommendations(formatted_stats)
         })
         
     except Exception as e:
         logger.error(f"Performance analysis error: {str(e)}", exc_info=True)
-        return error_response(f"Performance analysis failed: {str(e)}", 500)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/performance/test', methods=['POST'])
 def performance_test():
-    """Run a performance test on a specific URL or all services"""
+    """Run a performance test on a specific URL"""
     try:
         data = request.get_json() or {}
         test_url = data.get('url', 'https://www.reuters.com/technology/artificial-intelligence/openai-microsoft-face-new-lawsuit-authors-over-ai-training-2023-11-21/')
         
-        # Reset performance monitor for clean test
-        perf_monitor.reset()
-        
         logger.info(f"Starting performance test with URL: {test_url}")
         
-        # Run analysis with detailed timing
-        analyzer = NewsAnalyzerWithPerformance(perf_monitor)
+        # Clear previous stats for this test
+        performance_stats.clear()
+        
+        # Run analysis
         start_time = time.time()
         
-        result = analyzer.analyze(test_url, 'url', pro_mode=True)
+        result = news_analyzer.analyze(test_url, 'url', pro_mode=True)
         
         total_time = time.time() - start_time
         
-        # Get detailed stats
-        stats = perf_monitor.get_stats()
+        # Get service timings from pipeline metadata
+        service_timings = result.get('pipeline_metadata', {}).get('service_timings', {})
         
         # Create performance report
         report = {
             'success': True,
             'test_url': test_url,
             'total_time': total_time,
-            'service_count': len(stats),
+            'service_count': len(service_timings),
             'services': {}
         }
         
         # Add detailed service information
-        for service, data in stats.items():
+        for service, timing in service_timings.items():
             report['services'][service] = {
-                'time': data['avg_time'],
-                'status': 'SLOW' if data['avg_time'] > 5 else 'OK',
-                'success_rate': data['success_rate']
+                'time': timing['duration'],
+                'status': 'SLOW' if timing['duration'] > 5 else 'OK',
+                'success': timing.get('success', False)
             }
         
         # Identify the slowest service
-        if stats:
-            slowest = max(stats.items(), key=lambda x: x[1]['avg_time'])
+        if service_timings:
+            slowest = max(service_timings.items(), key=lambda x: x[1]['duration'])
             report['slowest_service'] = {
                 'name': slowest[0],
-                'time': slowest[1]['avg_time']
+                'time': slowest[1]['duration']
             }
         
         return jsonify(report)
         
     except Exception as e:
         logger.error(f"Performance test error: {str(e)}", exc_info=True)
-        return error_response(f"Performance test failed: {str(e)}", 500)
-
-# DEBUG ROUTES
-
-@app.route('/api/debug/info')
-def debug_info_route():
-    """Get debug information"""
-    return jsonify({
-        'requests': debug_info['requests'][-10:],  # Last 10 requests
-        'errors': debug_info['errors'][-10:],      # Last 10 errors
-        'performance': perf_monitor.get_stats()
-    })
-
-@app.route('/api/debug/services')
-def debug_services():
-    """Get detailed service information"""
-    from services.service_registry import get_service_registry
-    registry = get_service_registry()
-    
-    return jsonify({
-        'status': registry.get_service_status(),
-        'performance': perf_monitor.get_stats()
-    })
-
-@app.route('/api/debug/test-service/<service_name>')
-def test_service(service_name):
-    """Test a specific service"""
-    from services.service_registry import get_service_registry
-    registry = get_service_registry()
-    
-    test_data = {
-        'url': 'https://example.com/test',
-        'title': 'Test Article',
-        'content': 'This is test content for service debugging.'
-    }
-    
-    try:
-        service = registry.get_service(service_name)
-        if not service:
-            return jsonify({
-                'success': False,
-                'error': f'Service {service_name} not found'
-            }), 404
-        
-        # Time the service
-        start_time = time.time()
-        result = service.analyze(test_data)
-        duration = time.time() - start_time
-        
-        return jsonify({
-            'success': True,
-            'service': service_name,
-            'duration': duration,
-            'result': result
-        })
-        
-    except Exception as e:
         return jsonify({
             'success': False,
-            'service': service_name,
-            'error': str(e),
-            'traceback': traceback.format_exc()
+            'error': str(e)
         }), 500
 
-# Static file serving for templates
-@app.route('/templates/<path:filename>')
-def serve_template(filename):
-    """Serve template files"""
-    try:
-        # Security check
-        if '..' in filename or filename.startswith('/'):
-            return "Invalid path", 400
-            
-        # Check if file exists
-        template_path = os.path.join(app.template_folder, filename)
-        if not os.path.exists(template_path):
-            logger.warning(f"Template not found: {filename}")
-            return f"Template not found: {filename}", 404
-            
-        # Serve the template file
-        return send_from_directory('templates', filename)
-    except Exception as e:
-        logger.error(f"Error serving template {filename}: {e}")
-        return f"Error loading template: {str(e)}", 500
-
-# Custom NewsAnalyzer with performance tracking
-class NewsAnalyzerWithPerformance(NewsAnalyzer):
-    """NewsAnalyzer wrapper that tracks performance"""
-    
-    def __init__(self, perf_monitor):
-        super().__init__()
-        self.perf_monitor = perf_monitor
-    
-    def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
-        """Override analyze to add performance tracking"""
-        # Monkey-patch the pipeline to track individual service timings
-        original_analyze = self.service_registry.analyze_with_service
-        
-        def tracked_analyze(service_name, data):
-            start_time = time.time()
-            try:
-                result = original_analyze(service_name, data)
-                duration = time.time() - start_time
-                self.perf_monitor.record_timing(service_name, duration, success=True)
-                logger.info(f"Service {service_name} completed in {duration:.2f}s")
-                return result
-            except Exception as e:
-                duration = time.time() - start_time
-                self.perf_monitor.record_timing(service_name, duration, success=False)
-                logger.error(f"Service {service_name} failed after {duration:.2f}s: {e}")
-                raise
-        
-        # Temporarily replace the method
-        self.service_registry.analyze_with_service = tracked_analyze
-        
-        try:
-            # Run the analysis
-            return super().analyze(content, content_type, pro_mode)
-        finally:
-            # Restore original method
-            self.service_registry.analyze_with_service = original_analyze
-
 # Helper functions
-def generate_performance_recommendations(stats: Dict[str, Any]) -> list:
+
+def extract_key_findings(service_results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract key findings from service results"""
+    findings = []
+    
+    # Check source credibility
+    if 'source_credibility' in service_results:
+        data = service_results['source_credibility']
+        score = data.get('credibility_score', data.get('score', 0))
+        if score < 60:
+            findings.append({
+                'type': 'warning',
+                'text': f'Low source credibility score: {score}/100',
+                'service': 'source_credibility'
+            })
+    
+    # Check bias
+    if 'bias_detector' in service_results:
+        data = service_results['bias_detector']
+        bias_score = data.get('bias_score', data.get('score', 0))
+        if bias_score > 40:
+            findings.append({
+                'type': 'warning',
+                'text': f'Significant bias detected: {bias_score}/100',
+                'service': 'bias_detector'
+            })
+    
+    # Check fact checking
+    if 'fact_checker' in service_results:
+        data = service_results['fact_checker']
+        if data.get('unverified_claims', 0) > 0:
+            findings.append({
+                'type': 'info',
+                'text': f'{data.get("unverified_claims", 0)} unverified claims found',
+                'service': 'fact_checker'
+            })
+    
+    return findings[:5]  # Limit to 5 findings
+
+def generate_recommendations(stats: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Generate performance improvement recommendations"""
     recommendations = []
     
@@ -500,26 +470,38 @@ def generate_performance_recommendations(stats: Dict[str, Any]) -> list:
             recommendations.append({
                 'service': service,
                 'issue': 'Very slow response time',
-                'recommendation': f"Consider optimizing {service} or increasing timeout",
+                'recommendation': f'Consider optimizing {service} or increasing timeout',
                 'severity': 'HIGH'
             })
         elif data['avg_time'] > 5:
             recommendations.append({
                 'service': service,
                 'issue': 'Slow response time',
-                'recommendation': f"Monitor {service} performance",
+                'recommendation': f'Monitor {service} performance',
                 'severity': 'MEDIUM'
             })
         
         if data['success_rate'] < 80:
             recommendations.append({
                 'service': service,
-                'issue': f"Low success rate ({data['success_rate']:.1f}%)",
-                'recommendation': f"Investigate failures in {service}",
+                'issue': f'Low success rate ({data["success_rate"]:.1f}%)',
+                'recommendation': f'Investigate failures in {service}',
                 'severity': 'HIGH'
             })
     
     return recommendations
+
+# Debug routes
+
+@app.route('/api/debug/services')
+def debug_services():
+    """Get detailed service information"""
+    registry = get_service_registry()
+    
+    return jsonify({
+        'status': registry.get_service_status(),
+        'performance': performance_stats
+    })
 
 # Initialize app state
 app.config['start_time'] = datetime.now()
