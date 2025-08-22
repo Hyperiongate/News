@@ -1,28 +1,28 @@
 """
-Source Credibility Service - AI ENHANCED VERSION
-Comprehensive source credibility analysis with database, domain verification, and reputation tracking
-NOW WITH AI ENHANCEMENT for deeper insights
+Source Credibility Analyzer Service - AI ENHANCED VERSION
+Comprehensive source credibility analysis with domain checks, reputation analysis,
+and AI-powered insights
 """
 
 import os
-import logging
 import time
+import logging
 import re
 import ssl
 import socket
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List, Tuple
 from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-# Handle whois import gracefully
+# Import after basic setup
 try:
     import whois
     WHOIS_AVAILABLE = True
 except ImportError:
     WHOIS_AVAILABLE = False
-    logging.warning("python-whois not installed. Domain age checking will be limited.")
+    logging.warning("python-whois not available - domain age checks disabled")
 
 from config import Config
 from services.base_analyzer import BaseAnalyzer
@@ -31,48 +31,50 @@ from services.ai_enhancement_mixin import AIEnhancementMixin
 logger = logging.getLogger(__name__)
 
 
-class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
+class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     """
-    Enhanced source credibility analyzer with comprehensive database,
-    domain verification, SSL checking, real-time analysis, and AI enhancement
+    Analyze source credibility using multiple signals WITH AI ENHANCEMENT
     """
     
     def __init__(self):
-        """Initialize source credibility analyzer with AI enhancement"""
-        # Initialize base analyzer
+        """Initialize the source credibility analyzer"""
         super().__init__('source_credibility')
-        
-        # Initialize AI enhancement
         AIEnhancementMixin.__init__(self)
         
-        # API key for NewsAPI (optional enhancement)
+        # API keys
         self.news_api_key = Config.NEWS_API_KEY or Config.NEWSAPI_KEY
+        
+        # Initialize source database
+        self.source_database = self._initialize_source_database()
         
         # Session for web requests
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        # Note: timeout must be passed to individual requests, not session
         
-        # Initialize comprehensive source database
-        self.source_database = self._initialize_source_database()
-        
-        # Cache for domain analysis
+        # Cache
         self.cache = {}
-        self.cache_ttl = 86400  # 24 hours
+        self.cache_ttl = 3600  # 1 hour
         
-        logger.info(f"SourceCredibility initialized with {len(self.source_database)} sources and AI enhancement: {self._ai_available}")
+        logger.info(f"SourceCredibilityAnalyzer initialized - AI: {self._ai_available}, NewsAPI: {bool(self.news_api_key)}")
     
     def _check_availability(self) -> bool:
-        """Service is always available"""
-        return True
+        """Check if the service is available"""
+        return True  # Always available since we have fallback methods
+    
+    def _is_valid_domain(self, domain: str) -> bool:
+        """Check if domain format is valid"""
+        # Basic domain validation
+        domain_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$'
+        return bool(re.match(domain_pattern, domain.lower()))
     
     def _extract_domain(self, data: Dict[str, Any]) -> Optional[str]:
-        """Extract domain from data (URL or domain field)"""
-        # Check for direct domain
-        if 'domain' in data and data['domain']:
-            return data['domain'].lower().replace('www.', '')
+        """Extract domain from various input formats"""
+        # Check if domain is directly provided
+        domain = data.get('domain', '')
+        if domain:
+            return domain.lower().replace('www.', '')
         
         # Extract from URL
         url = data.get('url', '')
@@ -136,15 +138,19 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             if 'technical' in analysis:
                 tech = analysis['technical']
                 technical_data = {
-                    'age_years': tech.get('age_years'),
-                    'age_credibility': tech.get('age_credibility', 'unknown'),
-                    'ssl': tech.get('ssl', {}),
-                    'registrar': tech.get('registrar'),
-                    'structure': tech.get('structure', {})
+                    'domain_age_days': tech.get('age_days'),
+                    'domain_age_credibility': tech.get('age_credibility', 'unknown'),
+                    'has_ssl': tech.get('ssl', {}).get('valid', False),
+                    'ssl_days_remaining': tech.get('ssl', {}).get('days_remaining'),
+                    'has_about_page': tech.get('structure', {}).get('has_about_page'),
+                    'has_contact_page': tech.get('structure', {}).get('has_contact_page'),
+                    'has_privacy_policy': tech.get('structure', {}).get('has_privacy_policy'),
+                    'has_author_bylines': tech.get('structure', {}).get('has_author_bylines'),
+                    'website_transparency_score': tech.get('structure', {}).get('transparency_score', 0)
                 }
             
-            # Build base results
-            base_results = {
+            # Build response
+            result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
@@ -152,114 +158,77 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                     'level': credibility_level,
                     'findings': findings,
                     'summary': summary,
+                    'source_name': analysis.get('source_name', domain),
+                    'source_type': analysis['database_info'].get('type', 'Unknown'),
                     'credibility_score': credibility_score,
-                    'domain': domain,
-                    'source_name': analysis['source_name'],
-                    'source_info': {
-                        'credibility_rating': analysis['database_info']['credibility'],
-                        'bias': analysis['database_info']['bias'],
-                        'type': analysis['database_info']['type'],
-                        'description': analysis['database_info']['description'],
-                        'in_database': analysis['in_database']
+                    'credibility_level': credibility_level,
+                    'credibility': analysis['database_info'].get('credibility', 'Unknown'),
+                    'bias': analysis['database_info'].get('bias', 'Unknown'),
+                    'in_database': analysis.get('in_database', False),
+                    'factual_reporting': self._get_factual_reporting_level(analysis),
+                    'media_bias': {
+                        'bias': analysis['database_info'].get('bias', 'Unknown'),
+                        'description': self._get_bias_description(analysis['database_info'].get('bias'))
                     },
-                    'technical_analysis': technical_data,
-                    'reputation_analysis': analysis.get('reputation', {}),
-                    'transparency_indicators': analysis.get('transparency', {}),
-                    'historical_context': analysis.get('history', {})
+                    'transparency_indicators': analysis.get('transparency', {}).get('indicators', []),
+                    'missing_transparency': analysis.get('transparency', {}).get('missing_elements', []),
+                    **technical_data
                 },
                 'metadata': {
-                    'processing_time': time.time() - start_time,
-                    'technical_checks_performed': check_technical,
-                    'data_sources': analysis.get('data_sources', [])
+                    'analysis_time': time.time() - start_time,
+                    'data_sources': analysis.get('data_sources', []),
+                    'whois_available': WHOIS_AVAILABLE,
+                    'news_api_available': bool(self.news_api_key),
+                    'ai_enhanced': self._ai_available
                 }
             }
             
-            # AI ENHANCEMENT - Add deeper insights
-            if self._ai_available:
-                logger.info(f"Enhancing source credibility analysis with AI for {domain}")
-                
-                # Prepare data for AI analysis
-                article_data = {
-                    'title': data.get('title', ''),
-                    'text': data.get('text', ''),
-                    'author': data.get('author', ''),
-                    'source': domain
-                }
-                
-                # Get AI credibility insights
-                ai_credibility = self._ai_analyze_credibility(
-                    source_info={
-                        'domain': domain,
-                        'type': analysis['database_info']['type'],
-                        'credibility_rating': analysis['database_info']['credibility'],
-                        'bias': analysis['database_info']['bias'],
-                        'age_years': technical_data.get('age_years'),
-                        'ssl_valid': technical_data.get('ssl', {}).get('valid', False)
-                    },
-                    article_data=article_data
+            # AI ENHANCEMENT - Add red flags if available
+            if self._ai_available and text:
+                logger.info("Enhancing source credibility with AI insights")
+                ai_flags = self._ai_detect_credibility_issues(
+                    domain=domain,
+                    content=text[:2000],
+                    source_info=analysis['database_info']
                 )
                 
-                # Merge AI enhancements
-                if ai_credibility:
-                    base_results['data'] = self._merge_ai_enhancements(
-                        base_results['data'],
-                        ai_credibility,
-                        'credibility_analysis'
-                    )
+                if ai_flags:
+                    # Add AI-detected red flags
+                    for flag in ai_flags.get('red_flags', [])[:3]:
+                        findings.append({
+                            'type': 'warning',
+                            'severity': 'high',
+                            'text': f"AI detected: {flag['issue']}",
+                            'explanation': flag.get('explanation', '')
+                        })
                     
-                    # Add AI findings if significant
-                    if ai_credibility.get('red_flags'):
-                        for flag in ai_credibility['red_flags'][:2]:
-                            findings.append({
-                                'type': 'ai_red_flag',
-                                'text': flag,
-                                'severity': 'high',
-                                'explanation': 'AI-detected credibility concern'
-                            })
+                    # Add trust signals
+                    for signal in ai_flags.get('trust_signals', [])[:2]:
+                        findings.append({
+                            'type': 'positive',
+                            'severity': 'positive',
+                            'text': f"AI verified: {signal}",
+                            'explanation': 'Indicates credible source'
+                        })
                     
-                    # Update summary with AI insights
-                    if ai_credibility.get('overall_assessment'):
-                        base_results['data']['summary'] += f" AI assessment: {ai_credibility['overall_assessment']}"
-                    
-                    # Adjust score if AI found serious issues
-                    if ai_credibility.get('red_flags') and len(ai_credibility['red_flags']) > 2:
-                        base_results['data']['score'] = max(0, base_results['data']['score'] - 10)
-                        base_results['data']['credibility_score'] = base_results['data']['score']
-                        base_results['data']['level'] = self._get_credibility_level(base_results['data']['score'])
-                
-                # Log AI enhancement
-                base_results['metadata']['ai_enhanced'] = True
-                logger.info(f"AI enhancement completed for {domain}")
-            else:
-                base_results['metadata']['ai_enhanced'] = False
+                    result['metadata']['ai_insights_added'] = True
             
-            return base_results
+            return result
             
         except Exception as e:
             logger.error(f"Source credibility analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
-    def _is_valid_domain(self, domain: str) -> bool:
-        """Validate domain format"""
-        # Basic domain validation pattern
-        domain_pattern = re.compile(
-            r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$'
-        )
-        return bool(domain_pattern.match(domain))
-    
-    def _analyze_source_comprehensive(self, domain: str, check_technical: bool) -> Dict[str, Any]:
+    def _analyze_source_comprehensive(self, domain: str, check_technical: bool = True) -> Dict[str, Any]:
         """Perform comprehensive source analysis"""
-        
         # Check cache first
-        cache_key = f"{domain}:{check_technical}"
-        cached = self._get_cached_result(cache_key)
-        if cached:
-            return cached
+        cache_key = f"source:{domain}:{check_technical}"
+        cached_result = self._get_cached_result(cache_key)
+        if cached_result:
+            return cached_result
         
         analysis = {
-            'domain': domain,
             'source_name': self._get_source_name(domain),
-            'in_database': False,
             'data_sources': []
         }
         
@@ -288,7 +257,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 if ssl_info.get('valid'):
                     analysis['data_sources'].append('ssl_certificate')
                 
-                # Website structure
+                # Website structure - PATCHED WITH TIMEOUT AND CONFIG
                 structure_info = self._analyze_website_structure(domain)
                 technical_results['structure'] = structure_info
                 if structure_info.get('has_about_page'):
@@ -338,93 +307,81 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 info['description'] = self._get_credibility_description(info['credibility'])
                 return info
         
-        # Not in database
+        # Return unknown
         return {
             'credibility': 'Unknown',
-            'bias': 'Unknown',
+            'bias': 'Unknown', 
             'type': 'Unknown',
             'description': 'Source not found in credibility database'
         }
     
     def _get_source_name(self, domain: str) -> str:
-        """Get human-readable source name from domain"""
-        # Remove common suffixes
-        name = domain.replace('.com', '').replace('.org', '').replace('.net', '')
-        name = name.replace('.co.uk', '').replace('.edu', '').replace('.gov', '')
+        """Get human-readable source name"""
+        # Remove common prefixes/suffixes
+        name = domain.lower().replace('www.', '').replace('.com', '').replace('.org', '').replace('.net', '')
         
-        # Handle special cases
-        special_cases = {
-            'nytimes': 'New York Times',
-            'wsj': 'Wall Street Journal',
-            'washingtonpost': 'Washington Post',
+        # Known names mapping
+        known_names = {
+            'nytimes': 'The New York Times',
+            'wsj': 'The Wall Street Journal',
+            'washingtonpost': 'The Washington Post',
             'bbc': 'BBC',
             'cnn': 'CNN',
             'foxnews': 'Fox News',
-            'msnbc': 'MSNBC',
             'npr': 'NPR',
             'apnews': 'Associated Press',
-            'reuters': 'Reuters'
+            'reuters': 'Reuters',
+            'theguardian': 'The Guardian',
+            'bloomberg': 'Bloomberg',
+            'ft': 'Financial Times'
         }
         
-        if name in special_cases:
-            return special_cases[name]
-        
-        # Capitalize first letter of each word
-        return ' '.join(word.capitalize() for word in name.split('.'))
+        return known_names.get(name, domain.capitalize())
     
     def _analyze_domain(self, domain: str) -> Dict[str, Any]:
         """Analyze domain registration and age"""
+        if not WHOIS_AVAILABLE:
+            return {'error': 'WHOIS lookup not available'}
+        
         try:
             w = whois.whois(domain)
             
             # Extract creation date
-            creation_date = None
-            if w.creation_date:
-                if isinstance(w.creation_date, list):
-                    creation_date = w.creation_date[0]
-                else:
-                    creation_date = w.creation_date
+            creation_date = w.creation_date
+            if isinstance(creation_date, list):
+                creation_date = creation_date[0]
             
-            # Calculate age
             if creation_date:
-                age = datetime.now() - creation_date
-                age_days = age.days
+                age_days = (datetime.now() - creation_date).days
                 age_years = age_days / 365.25
                 
                 # Determine credibility based on age
-                if age_years >= 5:
-                    age_credibility = 'established'
-                elif age_years >= 2:
-                    age_credibility = 'moderate'
-                elif age_years >= 1:
-                    age_credibility = 'new'
-                else:
+                if age_years < 0.5:
                     age_credibility = 'very_new'
-            else:
-                age_days = None
-                age_years = None
-                age_credibility = 'unknown'
+                elif age_years < 1:
+                    age_credibility = 'new'
+                elif age_years < 3:
+                    age_credibility = 'moderate'
+                else:
+                    age_credibility = 'established'
+                
+                return {
+                    'age_days': age_days,
+                    'age_years': round(age_years, 1),
+                    'age_credibility': age_credibility,
+                    'creation_date': creation_date.isoformat()
+                }
             
-            return {
-                'creation_date': creation_date.isoformat() if creation_date else None,
-                'age_days': age_days,
-                'age_years': round(age_years, 1) if age_years else None,
-                'age_credibility': age_credibility,
-                'registrar': getattr(w, 'registrar', None)
-            }
+            return {'error': 'No creation date found'}
             
         except Exception as e:
-            logger.warning(f"Domain analysis failed for {domain}: {e}")
-            return {
-                'error': str(e),
-                'age_credibility': 'unknown'
-            }
+            logger.warning(f"WHOIS lookup failed for {domain}: {e}")
+            return {'error': str(e)}
     
     def _check_ssl(self, domain: str) -> Dict[str, Any]:
         """Check SSL certificate validity"""
         try:
             context = ssl.create_default_context()
-            
             with socket.create_connection((domain, 443), timeout=5) as sock:
                 with context.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert = ssock.getpeercert()
@@ -449,42 +406,39 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             }
     
     def _analyze_website_structure(self, domain: str) -> Dict[str, Any]:
-        """Analyze website structure for credibility indicators"""
+        """Analyze website structure for transparency indicators with proper timeout"""
         try:
-            response = self.session.get(f'https://{domain}', timeout=10)
-            soup = BeautifulSoup(response.text, 'html.parser')
+            url = f"https://{domain}"
             
-            # Check for common credibility indicators
-            has_about = bool(soup.find('a', href=re.compile(r'/about|about-us|who-we-are', re.I)))
-            has_contact = bool(soup.find('a', href=re.compile(r'/contact|contact-us', re.I)))
-            has_privacy = bool(soup.find('a', href=re.compile(r'/privacy|privacy-policy', re.I)))
-            has_terms = bool(soup.find('a', href=re.compile(r'/terms|terms-of-service', re.I)))
+            # Get timeout from config or use default - PATCHED
+            timeout = self.config.options.get('web_request_timeout', 5)
             
-            # Check for author bylines
-            has_authors = bool(soup.find(class_=re.compile(r'author|byline|writer', re.I)))
+            response = self.session.get(
+                url, 
+                timeout=timeout,  # Use configured timeout instead of hardcoded 10
+                allow_redirects=True,
+                verify=False  # Skip SSL verification for speed
+            )
             
-            # Check for date stamps
-            has_dates = bool(soup.find(class_=re.compile(r'date|time|published', re.I)))
+            # Quick analysis without BeautifulSoup for speed
+            text = response.text.lower()
             
             return {
-                'has_about_page': has_about,
-                'has_contact_page': has_contact,
-                'has_privacy_policy': has_privacy,
-                'has_terms_of_service': has_terms,
-                'has_author_bylines': has_authors,
-                'has_date_stamps': has_dates,
-                'transparency_score': sum([has_about, has_contact, has_privacy, has_terms, has_authors, has_dates]) * 100 / 6
+                'has_about_page': '/about' in text or 'about-us' in text,
+                'has_contact_page': '/contact' in text or 'contact-us' in text,
+                'has_privacy_policy': 'privacy' in text,
+                'has_terms': 'terms' in text,
+                'has_author_bylines': 'author' in text or 'by ' in text,
+                'has_date_stamps': any(year in text for year in ['2023', '2024', '2025']),
+                'response_time': response.elapsed.total_seconds()
             }
-            
+                
         except Exception as e:
             logger.warning(f"Website structure analysis failed for {domain}: {e}")
-            return {
-                'error': str(e),
-                'transparency_score': 0
-            }
+            return {'error': str(e)}
     
     def _analyze_reputation(self, domain: str) -> Dict[str, Any]:
-        """Analyze source reputation through news mentions"""
+        """Analyze domain reputation using news mentions"""
         if not self.news_api_key:
             return {
                 'api_available': False,
@@ -492,43 +446,61 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             }
         
         try:
-            # Search for mentions of the domain in news
+            # Search for domain mentions in news
             url = 'https://newsapi.org/v2/everything'
             params = {
                 'q': f'"{domain}"',
                 'apiKey': self.news_api_key,
+                'sortBy': 'relevancy',
                 'pageSize': 10,
-                'sortBy': 'relevancy'
+                'language': 'en',
+                'from': (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
             }
             
             response = self.session.get(url, params=params, timeout=10)
-            data = response.json()
             
-            if data.get('status') == 'ok':
-                articles = data.get('articles', [])
+            if response.status_code == 200:
+                data = response.json()
+                total_results = data.get('totalResults', 0)
                 
-                # Analyze sentiment of mentions
-                positive_keywords = ['reliable', 'trusted', 'credible', 'accurate', 'award']
-                negative_keywords = ['fake', 'misleading', 'false', 'disinformation', 'bias']
-                
-                positive_mentions = 0
-                negative_mentions = 0
-                
-                for article in articles:
-                    title = (article.get('title', '') + ' ' + article.get('description', '')).lower()
+                if total_results > 0:
+                    # Analyze sentiment of mentions
+                    articles = data.get('articles', [])
+                    positive_mentions = 0
+                    negative_mentions = 0
                     
-                    if any(keyword in title for keyword in positive_keywords):
-                        positive_mentions += 1
-                    if any(keyword in title for keyword in negative_keywords):
-                        negative_mentions += 1
+                    negative_keywords = ['fake', 'false', 'misleading', 'propaganda', 'conspiracy', 'debunked']
+                    positive_keywords = ['reliable', 'trusted', 'credible', 'accurate', 'award', 'respected']
+                    
+                    for article in articles[:10]:
+                        title = (article.get('title', '') + ' ' + article.get('description', '')).lower()
+                        
+                        if any(keyword in title for keyword in negative_keywords):
+                            negative_mentions += 1
+                        elif any(keyword in title for keyword in positive_keywords):
+                            positive_mentions += 1
+                    
+                    # Calculate reputation score
+                    reputation_score = 50  # Base score
+                    reputation_score += (positive_mentions * 10)
+                    reputation_score -= (negative_mentions * 15)
+                    reputation_score = max(0, min(100, reputation_score))
+                    
+                    return {
+                        'api_available': True,
+                        'mentions_found': True,
+                        'total_mentions': total_results,
+                        'positive_mentions': positive_mentions,
+                        'negative_mentions': negative_mentions,
+                        'reputation_score': reputation_score
+                    }
                 
+                # No mentions found
                 return {
                     'api_available': True,
-                    'mentions_found': len(articles) > 0,
-                    'total_mentions': len(articles),
-                    'positive_mentions': positive_mentions,
-                    'negative_mentions': negative_mentions,
-                    'reputation_score': (positive_mentions - negative_mentions) * 10 + 50
+                    'mentions_found': False,
+                    'total_mentions': 0,
+                    'reputation_score': 50  # Neutral
                 }
             else:
                 return {
@@ -748,7 +720,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 findings.append({
                     'type': 'positive',
                     'severity': 'positive',
-                    'text': f'Established domain ({tech.get("age_years", "?")} years)',
+                    'text': f'Established domain ({tech.get("age_years", "?") years)',
                     'explanation': 'Long-standing web presence'
                 })
             
@@ -898,29 +870,56 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             # Medium credibility - Conservative
             'nationalreview.com': {'credibility': 'Medium', 'bias': 'Right', 'type': 'Magazine'},
             'theamericanconservative.com': {'credibility': 'Medium', 'bias': 'Right', 'type': 'Magazine'},
-            'reason.com': {'credibility': 'Medium', 'bias': 'Libertarian', 'type': 'Magazine'},
-            'thefederalist.com': {'credibility': 'Low', 'bias': 'Right', 'type': 'Digital'},
+            'reason.com': {'credibility': 'Medium', 'bias': 'Libertarian-Right', 'type': 'Magazine'},
+            'dailycaller.com': {'credibility': 'Low', 'bias': 'Right', 'type': 'Digital'},
+            'dailywire.com': {'credibility': 'Low', 'bias': 'Right', 'type': 'Digital'},
             
-            # Medium credibility - Progressive
-            'motherjones.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Magazine'},
-            'thenation.com': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Magazine'},
-            'commondreams.org': {'credibility': 'Medium', 'bias': 'Left', 'type': 'Digital'},
-            
-            # Low credibility sources
+            # Low credibility - Partisan
             'breitbart.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Digital'},
-            'infowars.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Digital'},
-            'naturalnews.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Digital'},
+            'infowars.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Conspiracy'},
+            'naturalnews.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'Pseudoscience'},
             'occupydemocrats.com': {'credibility': 'Low', 'bias': 'Far-Left', 'type': 'Digital'},
             'bipartisanreport.com': {'credibility': 'Low', 'bias': 'Far-Left', 'type': 'Digital'},
             
-            # Fact-checking sites
-            'snopes.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Check'},
-            'factcheck.org': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Check'},
-            'politifact.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Check'},
+            # Fact checking sites
+            'snopes.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Checking'},
+            'factcheck.org': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Checking'},
+            'politifact.com': {'credibility': 'High', 'bias': 'Center', 'type': 'Fact-Checking'},
             
-            # State media
-            'rt.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'State Media'},
-            'sputniknews.com': {'credibility': 'Low', 'bias': 'Far-Right', 'type': 'State Media'},
-            'xinhuanet.com': {'credibility': 'Low', 'bias': 'Far-Left', 'type': 'State Media'},
-            'presstv.com': {'credibility': 'Low', 'bias': 'Far-Left', 'type': 'State Media'},
+            # International sources
+            'rt.com': {'credibility': 'Low', 'bias': 'Pro-Russia', 'type': 'State Media'},
+            'sputniknews.com': {'credibility': 'Low', 'bias': 'Pro-Russia', 'type': 'State Media'},
+            'cgtn.com': {'credibility': 'Low', 'bias': 'Pro-China', 'type': 'State Media'},
+            'globaltimes.cn': {'credibility': 'Low', 'bias': 'Pro-China', 'type': 'State Media'},
         }
+    
+    def _get_factual_reporting_level(self, analysis: Dict[str, Any]) -> str:
+        """Determine factual reporting level based on analysis"""
+        db_info = analysis.get('database_info', {})
+        credibility = db_info.get('credibility', 'Unknown')
+        
+        if credibility == 'High':
+            return 'Very High'
+        elif credibility == 'Medium':
+            return 'Mostly Factual'
+        elif credibility == 'Low':
+            return 'Mixed' 
+        else:
+            return 'Unknown'
+    
+    def _get_bias_description(self, bias: str) -> str:
+        """Get description for bias rating"""
+        descriptions = {
+            'Far-Left': 'Extreme liberal bias with agenda-driven reporting',
+            'Left': 'Liberal editorial bias in story selection and reporting',
+            'Center-Left': 'Slight liberal bias in reporting and story selection',
+            'Center': 'Minimal bias with balanced reporting',
+            'Center-Right': 'Slight conservative bias in reporting and story selection',
+            'Right': 'Conservative editorial bias in story selection and reporting',
+            'Far-Right': 'Extreme conservative bias with agenda-driven reporting',
+            'Pro-Russia': 'Russian state-controlled media',
+            'Pro-China': 'Chinese state-controlled media',
+            'Libertarian-Right': 'Libertarian perspective with right-leaning bias',
+            'Unknown': 'Bias orientation not determined'
+        }
+        return descriptions.get(bias, 'No bias information available')
