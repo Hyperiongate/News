@@ -51,116 +51,114 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         # Claim extraction patterns
         self.claim_patterns = self._initialize_claim_patterns()
         
-        logger.info(f"FactChecker initialized - Google API: {bool(self.google_api_key)}, "
-                   f"News API: {bool(self.news_api_key)}, AI: {self._ai_available}")
+        logger.info(f"FactChecker initialized - Google API: {bool(self.google_api_key)}, AI: {self._ai_available}")
     
     def _check_availability(self) -> bool:
-        """Check if the service has required dependencies"""
-        # Service can work with pattern analysis even without API keys
+        """Check if the service is available"""
+        # Available if we have at least pattern-based checking
         return True
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Perform fact checking analysis WITH AI ENHANCEMENT
+        Analyze article for fact-checkable claims WITH AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze
-            - title: Article title (optional)
-            - url: Article URL (optional)
-            - published_date: Publication date (optional)
-            - claims: Pre-extracted claims (optional)
+            - url: (optional) Article URL
+            - title: (optional) Article title
+            - date: (optional) Publication date
+            
+        Returns:
+            Comprehensive fact-checking analysis
         """
         try:
             start_time = time.time()
             
-            # Extract or get claims
-            if 'claims' in data and data['claims']:
-                claims = data['claims']
-            else:
-                text = data.get('text', '')
-                title = data.get('title', '')
-                full_text = f"{title} {text}" if title else text
-                
-                if not full_text:
-                    return self.get_error_result("No text provided for fact checking")
-                
-                claims = self._extract_claims(full_text)
+            text = data.get('text', '')
+            if not text:
+                return self.get_error_result("No text provided for fact checking")
+            
+            article_url = data.get('url')
+            article_date = data.get('date')
+            
+            # Extract claims from text
+            claims = self._extract_claims(text)
             
             if not claims:
                 return {
                     'service': self.service_name,
                     'success': True,
                     'data': {
-                        'score': 100,  # No claims to verify
+                        'score': 100,
                         'level': 'No Claims',
-                        'findings': [],
-                        'summary': 'No verifiable claims found in the article',
+                        'findings': [{
+                            'type': 'info',
+                            'severity': 'low',
+                            'text': 'No fact-checkable claims found',
+                            'explanation': 'Article contains no specific factual claims to verify'
+                        }],
+                        'summary': 'No specific factual claims were found in this article that require verification.',
                         'fact_checks': [],
-                        'verification_score': 100
+                        'verification_score': 100,
+                        'statistics': {
+                            'total_claims': 0,
+                            'verified_claims': 0,
+                            'true_claims': 0,
+                            'false_claims': 0,
+                            'partially_true': 0,
+                            'average_confidence': 0
+                        }
                     },
                     'metadata': {
                         'processing_time': time.time() - start_time,
-                        'claims_found': 0,
-                        'ai_enhanced': False
+                        'claims_found': 0
                     }
                 }
             
-            # Check claims
-            fact_checks = self._check_claims(
-                claims,
-                article_url=data.get('url'),
-                article_date=data.get('published_date')
-            )
-            
-            # AI ENHANCEMENT - Add deeper fact-checking insights
+            # AI ENHANCEMENT - Prioritize and enhance claims
             if self._ai_available and claims:
                 logger.info("Enhancing fact checking with AI")
                 
-                # Get AI fact-checking assistance
-                ai_fact_checks = self._ai_fact_check_claims(
-                    claims=claims[:10],  # Top 10 claims
-                    context=full_text[:1000]  # Article context
+                # Get AI help to identify key claims
+                ai_claims = self._ai_analyze_claims(
+                    claims=claims[:10],  # Analyze top 10 claims
+                    context=text[:2000]
                 )
                 
-                if ai_fact_checks:
-                    # Enhance existing fact checks with AI insights
-                    for i, fc in enumerate(fact_checks):
-                        # Find matching AI analysis
-                        ai_match = None
-                        if ai_fact_checks.get('claims'):
-                            for ai_claim in ai_fact_checks['claims']:
-                                if ai_claim.get('claim', '').lower() in fc['claim'].lower():
-                                    ai_match = ai_claim
-                                    break
-                        
-                        if ai_match:
-                            # Add AI insights to fact check
-                            fc['ai_analysis'] = {
-                                'verifiability': ai_match.get('verifiability', 'unknown'),
-                                'approach': ai_match.get('approach', ''),
-                                'red_flags': ai_match.get('red_flags', []),
-                                'search_queries': ai_match.get('search_queries', [])
+                if ai_claims and ai_claims.get('claims'):
+                    # Enhance claims with AI insights
+                    ai_enhanced_claims = {}
+                    for ai_claim in ai_claims['claims']:
+                        claim_text = ai_claim.get('claim', '')
+                        if claim_text:
+                            ai_enhanced_claims[claim_text] = {
+                                'verifiability': ai_claim.get('verifiability', 'medium'),
+                                'approach': ai_claim.get('approach', []),
+                                'red_flags': ai_claim.get('red_flags', []),
+                                'search_queries': ai_claim.get('search_queries', [])
                             }
-                            
-                            # Update confidence if AI found red flags
-                            if ai_match.get('red_flags'):
-                                fc['confidence'] = max(0, fc['confidence'] - 10)
-                            
-                            # Add AI evidence
-                            if ai_match.get('approach'):
-                                fc['evidence'].append(f"AI suggests: {ai_match['approach']}")
+                    
+                    # Use AI insights in fact checking
+                    for i, claim in enumerate(claims):
+                        if claim in ai_enhanced_claims:
+                            claims[i] = {
+                                'text': claim,
+                                'ai_enhanced': True,
+                                'ai_data': ai_enhanced_claims[claim]
+                            }
             
-            # Calculate scores and summary
+            # Check claims
+            fact_checks = self._check_claims(claims, article_url, article_date)
+            
+            # Calculate verification score and statistics
             verification_score = self._calculate_verification_score(fact_checks)
             trust_impact = self._calculate_trust_impact(fact_checks)
-            findings = self._generate_findings(fact_checks)
+            
+            # Generate findings
+            findings = self._generate_findings(fact_checks, verification_score)
             
             # Generate summary
             summary = self._generate_summary(fact_checks, verification_score)
-            
-            # Add AI enhancement note to summary if applicable
-            if self._ai_available and any('ai_analysis' in fc for fc in fact_checks):
-                summary += " AI analysis provided additional verification insights."
             
             return {
                 'service': self.service_name,
@@ -222,45 +220,28 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         sentences = re.split(r'[.!?]+\s+', text)
         
         # Restore periods
-        sentences = [s.replace('<PERIOD>', '.') for s in sentences]
+        sentences = [s.replace('<PERIOD>', '.') for s in sentences if s.strip()]
         
-        # Filter out very short sentences
-        return [s for s in sentences if len(s.split()) > 5]
+        return sentences
     
     def _is_verifiable_claim(self, sentence: str) -> bool:
         """Determine if a sentence contains a verifiable claim"""
         sentence_lower = sentence.lower()
         
-        # Must contain patterns
-        must_patterns = [
-            r'\b\d+\s*(?:percent|%)\b',  # Percentages
-            r'\b(?:million|billion|thousand|hundred)\b',  # Large numbers
-            r'\b(?:study|research|report|survey|poll)\b',  # Research references
-            r'\b(?:increased|decreased|rose|fell|grew|declined)\b',  # Trends
-            r'\b(?:data|statistics|numbers|figures)\b',  # Data references
-            r'\b(?:according to|reported|found|discovered)\b',  # Attribution
-            r'\b(?:caused|leads to|results in|due to)\b',  # Causation
-            r'\b(?:first|last|only|largest|smallest|biggest)\b',  # Superlatives
-            r'\b(?:always|never|all|none|every)\b',  # Absolutes
-            r'\b(?:proven|confirmed|verified|established)\b',  # Certainty claims
-        ]
+        # Skip opinions and subjective statements
+        opinion_indicators = ['i think', 'i believe', 'in my opinion', 'it seems', 
+                            'arguably', 'perhaps', 'maybe', 'possibly']
+        if any(indicator in sentence_lower for indicator in opinion_indicators):
+            return False
         
-        # Avoid patterns (not verifiable)
-        avoid_patterns = [
-            r'\b(?:I think|I believe|I feel|in my opinion)\b',  # Opinions
-            r'\b(?:maybe|perhaps|possibly|might|could)\b',  # Too uncertain
-            r'\?$',  # Questions
-            r'^(?:However|Therefore|Thus|Hence|Moreover)',  # Transition sentences
-        ]
+        # Look for factual claim indicators
+        for pattern in self.claim_patterns['claim_indicators']:
+            if re.search(pattern, sentence, re.IGNORECASE):
+                return True
         
-        # Check avoid patterns first
-        for pattern in avoid_patterns:
-            if re.search(pattern, sentence_lower):
-                return False
-        
-        # Check must patterns
-        for pattern in must_patterns:
-            if re.search(pattern, sentence_lower):
+        # Look for specific fact patterns
+        for pattern in self.claim_patterns['fact_patterns']:
+            if re.search(pattern, sentence, re.IGNORECASE):
                 return True
         
         return False
@@ -270,20 +251,19 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         scored_claims = []
         
         for claim in claims:
-            score = self._calculate_claim_priority_score(claim)
-            scored_claims.append((claim, score))
+            score = self._score_claim_priority(claim)
+            scored_claims.append((score, claim))
         
-        # Sort by score (highest first)
-        scored_claims.sort(key=lambda x: x[1], reverse=True)
-        
-        return [claim for claim, _ in scored_claims]
+        # Sort by score (descending) and return claims
+        scored_claims.sort(reverse=True)
+        return [claim for score, claim in scored_claims]
     
-    def _calculate_claim_priority_score(self, claim: str) -> float:
-        """Calculate priority score for a claim"""
-        score = 0.0
+    def _score_claim_priority(self, claim: str) -> int:
+        """Score claim priority based on various factors"""
+        score = 0
         claim_lower = claim.lower()
         
-        # High priority indicators
+        # High priority patterns
         high_priority = {
             r'\b(?:death|kill|die|fatal|deadly)\b': 30,
             r'\b(?:cure|treatment|vaccine|drug)\b': 25,
@@ -319,8 +299,16 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         fact_checks = []
         
         for i, claim in enumerate(claims):
+            # Handle both string claims and dict claims (with AI enhancement)
+            if isinstance(claim, dict):
+                claim_text = claim['text']
+                ai_data = claim.get('ai_data', {})
+            else:
+                claim_text = claim
+                ai_data = {}
+            
             # Check cache first
-            cache_key = self._get_cache_key(claim)
+            cache_key = self._get_cache_key(claim_text)
             cached_result = self._get_cached_result(cache_key)
             
             if cached_result:
@@ -329,7 +317,17 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 continue
             
             # Perform fact check
-            result = self._check_single_claim(claim, i, article_url, article_date)
+            result = self._check_single_claim(claim_text, i, article_url, article_date)
+            
+            # Add AI enhancement if available
+            if ai_data:
+                result['ai_analysis'] = ai_data
+                
+                # Use AI red flags to adjust confidence
+                if ai_data.get('red_flags'):
+                    result['confidence'] = max(0, result['confidence'] - 10 * len(ai_data['red_flags']))
+                    result['evidence'].extend([f"AI flag: {flag}" for flag in ai_data['red_flags'][:2]])
+            
             fact_checks.append(result)
             
             # Cache the result
@@ -359,8 +357,8 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         
         # 1. Try Google Fact Check API first (if available)
         if self.google_api_key:
-            google_result = self._check_with_google_api(claim)
-            if google_result['found']:
+            google_result = self._check_google_fact_check(claim)
+            if google_result and google_result.get('found'):
                 result.update(google_result['data'])
                 methods_tried.append('Google Fact Check API')
         
@@ -395,19 +393,24 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         
         return result
     
-    def _check_with_google_api(self, claim: str) -> Dict[str, Any]:
-        """Check claim using Google Fact Check API"""
+    def _check_google_fact_check(self, claim: str) -> Optional[Dict[str, Any]]:
+        """Check claim using Google Fact Check API with timeout"""
+        if not self.google_api_key:
+            return None
+        
+        # Get timeout from config - PATCHED
+        timeout = self.config.options.get('web_request_timeout', 5)
+        
         try:
-            url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
-            
-            params = {
-                'key': self.google_api_key,
-                'query': claim[:200],  # API has query length limits
-                'languageCode': 'en',
-                'pageSize': 5
-            }
-            
-            response = self.session.get(url, params=params, timeout=10)
+            response = self.session.get(
+                self.GOOGLE_FACT_CHECK_ENDPOINT,
+                params={
+                    'query': claim,
+                    'key': self.google_api_key,
+                    'languageCode': 'en'
+                },
+                timeout=timeout  # Use configured timeout
+            )
             
             if response.status_code == 200:
                 data = response.json()
@@ -473,70 +476,62 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             r'\b100%\s+(?:safe|effective|proven)\b': ('impossible certainty', -25),
             r'\b(?:miracle|breakthrough|revolutionary)\s+(?:cure|treatment)\b': ('hyperbolic medical claim', -30),
             r'\bthey don\'t want you to know\b': ('conspiracy language', -25),
-            r'\b(?:big pharma|deep state|mainstream media)\b': ('conspiracy terminology', -20),
-            r'\bone weird trick\b': ('clickbait pattern', -15),
+            r'\b(?:secret|hidden|suppressed)\s+(?:cure|treatment|truth)\b': ('conspiracy theory', -25),
+            r'\bdoctors hate (?:him|her|this)\b': ('clickbait pattern', -20)
         }
-        
-        for pattern, (description, modifier) in false_patterns.items():
-            if re.search(pattern, claim_lower):
-                evidence_points.append(f"Contains {description}")
-                confidence_modifiers.append(modifier)
-                result['verdict'] = 'likely_false'
         
         # Check for credible patterns (likely true)
         true_patterns = {
-            r'according to (?:a |the )?(?:\d{4} )?(?:study|research|report) (?:published |)(?:in|by)': 
-                ('cited research', 25),
-            r'(?:approximately|about|around|nearly|roughly) \d+': 
-                ('qualified numbers', 15),
-            r'between \d+ and \d+': 
-                ('range instead of absolute', 15),
-            r'\b(?:may|might|could|potentially)\b': 
-                ('appropriately cautious language', 10),
-            r'peer[- ]reviewed': 
-                ('peer-reviewed source', 20),
+            r'\baccording to (?:a |the )?(?:CDC|WHO|FDA|NIH)\b': ('authoritative source', 20),
+            r'\bpeer[- ]reviewed (?:study|research)\b': ('academic source', 15),
+            r'\bpublished in (?:Nature|Science|NEJM|JAMA|The Lancet)\b': ('top journal', 20),
+            r'\b(?:confirmed|verified) by (?:multiple|independent) sources\b': ('multi-source verification', 15)
         }
+        
+        # Apply patterns
+        for pattern, (description, modifier) in false_patterns.items():
+            if re.search(pattern, claim_lower):
+                confidence_modifiers.append(modifier)
+                evidence_points.append(f"Red flag: {description}")
+                result['confidence'] = max(0, result['confidence'] + modifier)
         
         for pattern, (description, modifier) in true_patterns.items():
             if re.search(pattern, claim_lower):
-                evidence_points.append(f"Uses {description}")
                 confidence_modifiers.append(modifier)
-                if result['verdict'] == 'unverified':
-                    result['verdict'] = 'likely_true'
+                evidence_points.append(f"Credibility indicator: {description}")
+                result['confidence'] = min(100, result['confidence'] + modifier)
         
-        # Check for mixed signals
-        if len([m for m in confidence_modifiers if m > 0]) > 0 and \
-           len([m for m in confidence_modifiers if m < 0]) > 0:
-            result['verdict'] = 'partially_true'
-            evidence_points.append("Contains both credible and questionable elements")
-        
-        # Calculate final confidence
-        base_confidence = 50
-        total_modifier = sum(confidence_modifiers)
-        result['confidence'] = max(10, min(90, base_confidence + total_modifier))
-        
-        # Set explanation
-        if evidence_points:
-            result['explanation'] = f"Pattern analysis: {'; '.join(evidence_points[:2])}"
+        # Determine verdict based on confidence
+        if result['confidence'] >= 70:
+            result['verdict'] = 'likely_true'
+            result['explanation'] = 'Claim shows credible patterns'
+        elif result['confidence'] <= 20:
+            result['verdict'] = 'likely_false'
+            result['explanation'] = 'Claim shows suspicious patterns'
+        else:
+            result['verdict'] = 'uncertain'
+            result['explanation'] = 'Mixed signals, further verification needed'
         
         result['evidence'] = evidence_points
         
         return result
     
     def _cross_reference_news(self, claim: str) -> Dict[str, Any]:
-        """Cross-reference claim with recent news articles"""
+        """Cross-reference claim with news sources"""
+        if not self.news_api_key:
+            return {'found': False}
+        
         try:
-            # Extract key terms for search
-            key_terms = self._extract_key_search_terms(claim)
-            search_query = ' '.join(key_terms)
+            # Extract key terms from claim
+            key_terms = self._extract_key_terms(claim)
+            query = ' '.join(key_terms[:3])  # Use top 3 terms
             
-            url = "https://newsapi.org/v2/everything"
+            url = 'https://newsapi.org/v2/everything'
             params = {
+                'q': query,
                 'apiKey': self.news_api_key,
-                'q': search_query,
-                'searchIn': 'title,description',
                 'sortBy': 'relevancy',
-                'pageSize': 10,
+                'pageSize': 5,
                 'language': 'en'
             }
             
@@ -544,31 +539,59 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             
             if response.status_code == 200:
                 data = response.json()
+                articles = data.get('articles', [])
                 
-                if data.get('articles'):
-                    # Analyze coverage
-                    reputable_sources = []
-                    coverage_count = 0
+                if articles:
+                    sources = []
+                    evidence = []
                     
-                    for article in data['articles']:
-                        source = article.get('source', {}).get('name', '')
-                        if self._is_reputable_news_source(source):
-                            reputable_sources.append(source)
-                            coverage_count += 1
+                    for article in articles[:3]:
+                        source = article.get('source', {}).get('name', 'Unknown')
+                        sources.append(source)
+                        
+                        title = article.get('title', '')
+                        if title:
+                            evidence.append(f"Reported by {source}: {title}")
                     
-                    if coverage_count >= 2:
-                        return {
-                            'found': True,
-                            'sources': list(set(reputable_sources))[:3],
-                            'evidence': [f"Reported by {coverage_count} reputable news sources"],
-                            'coverage_level': 'high' if coverage_count >= 3 else 'moderate'
-                        }
+                    return {
+                        'found': True,
+                        'sources': sources,
+                        'evidence': evidence
+                    }
             
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"News cross-reference error: {e}")
+            logger.error(f"News cross-reference failed: {e}")
             return {'found': False}
+    
+    def _extract_key_terms(self, text: str) -> List[str]:
+        """Extract key terms from text for search"""
+        # Remove common words
+        stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+                    'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be',
+                    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+                    'should', 'may', 'might', 'must', 'can', 'that', 'this', 'these', 'those'}
+        
+        # Extract words
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        
+        # Filter and count
+        word_counts = Counter(word for word in words if word not in stopwords and len(word) > 2)
+        
+        # Return most common terms
+        return [word for word, count in word_counts.most_common(5)]
+    
+    def _contains_statistics(self, claim: str) -> bool:
+        """Check if claim contains statistical information"""
+        stat_patterns = [
+            r'\b\d+(?:\.\d+)?\s*(?:percent|%)',
+            r'\b\d+\s*(?:million|billion|thousand)',
+            r'\b\d+\s*(?:times|fold)\b',
+            r'\b(?:increased?|decreased?|grew|fell)\s+(?:by\s+)?\d+'
+        ]
+        
+        return any(re.search(pattern, claim, re.IGNORECASE) for pattern in stat_patterns)
     
     def _verify_statistics(self, claim: str) -> Dict[str, Any]:
         """Verify statistical claims for plausibility"""
@@ -578,62 +601,41 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             'analysis': ''
         }
         
-        # Extract numbers and check for issues
-        issues = []
-        
-        # Check percentages
-        percentages = re.findall(r'(\d+(?:\.\d+)?)\s*%', claim)
-        for pct_str in percentages:
-            pct = float(pct_str)
-            if pct > 100:
-                issues.append(f"Impossible percentage: {pct}%")
+        # Extract percentages
+        percentages = re.findall(r'(\d+(?:\.\d+)?)\s*(?:percent|%)', claim, re.IGNORECASE)
+        for pct in percentages:
+            value = float(pct)
+            if value > 100:
+                result['checked'] = True
                 result['plausible'] = False
-            elif pct == 100 or pct == 0:
-                issues.append(f"Suspicious absolute percentage: {pct}%")
+                result['analysis'] = f"Impossible percentage: {value}% exceeds 100%"
+                return result
         
-        # Check for contradictions
-        if re.search(r'increased.*decreased|decreased.*increased', claim.lower()):
-            issues.append("Contains contradictory trends")
-            result['plausible'] = False
+        # Check for unrealistic numbers
+        large_numbers = re.findall(r'(\d+)\s*(million|billion|trillion)', claim, re.IGNORECASE)
+        for number, unit in large_numbers:
+            value = int(number)
+            if unit.lower() == 'billion' and value > 100:
+                result['checked'] = True
+                result['analysis'] = f"Extremely large number: {value} billion (verify context)"
+            elif unit.lower() == 'trillion' and value > 10:
+                result['checked'] = True
+                result['plausible'] = False
+                result['analysis'] = f"Implausible number: {value} trillion"
         
-        # Check number magnitude consistency
-        numbers = re.findall(r'\b(\d+(?:,\d{3})*(?:\.\d+)?)\b', claim)
-        if numbers:
-            parsed_numbers = []
-            for num_str in numbers:
-                try:
-                    num = float(num_str.replace(',', ''))
-                    parsed_numbers.append(num)
-                except:
-                    continue
-            
-            # Check for scale inconsistencies
-            if len(parsed_numbers) >= 2:
-                max_num = max(parsed_numbers)
-                min_num = min(parsed_numbers)
-                if min_num > 0 and max_num / min_num > 10000:
-                    issues.append("Numbers vary by more than 4 orders of magnitude")
+        # Check for impossible growth rates
+        growth_patterns = re.findall(r'(?:increased?|grew)\s+(?:by\s+)?(\d+)(?:\s*times|\s*fold)?', claim, re.IGNORECASE)
+        for growth in growth_patterns:
+            value = int(growth)
+            if value > 1000:
+                result['checked'] = True
+                result['plausible'] = False
+                result['analysis'] = f"Implausible growth: {value}x increase"
         
-        if issues:
-            result['analysis'] = f"Statistical issues: {'; '.join(issues)}"
-            result['checked'] = True
-        elif numbers or percentages:
+        if result['checked'] and result['plausible']:
             result['analysis'] = "Statistical claims appear plausible"
-            result['checked'] = True
         
         return result
-    
-    def _contains_statistics(self, claim: str) -> bool:
-        """Check if claim contains statistical information"""
-        stat_patterns = [
-            r'\b\d+\s*%',  # Percentages
-            r'\b\d+(?:,\d{3})*(?:\.\d+)?\b',  # Numbers
-            r'\b(?:million|billion|thousand)\b',  # Scale words
-            r'\b(?:increase|decrease|rise|fall|grew|declined)\b',  # Trends
-            r'\b(?:average|median|mean)\b',  # Statistical terms
-        ]
-        
-        return any(re.search(pattern, claim) for pattern in stat_patterns)
     
     def _determine_consensus_verdict(self, verdicts: List[str]) -> str:
         """Determine consensus from multiple fact check verdicts"""
@@ -644,94 +646,57 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         normalized = []
         for verdict in verdicts:
             verdict_lower = verdict.lower()
-            if any(term in verdict_lower for term in ['false', 'incorrect', 'wrong', 'misleading', 'fake']):
-                normalized.append('false')
-            elif any(term in verdict_lower for term in ['true', 'correct', 'accurate', 'right']):
+            if any(word in verdict_lower for word in ['true', 'correct', 'accurate']):
                 normalized.append('true')
-            elif any(term in verdict_lower for term in ['partly', 'partially', 'mixed', 'half']):
+            elif any(word in verdict_lower for word in ['false', 'incorrect', 'wrong']):
+                normalized.append('false')
+            elif any(word in verdict_lower for word in ['partly', 'partially', 'mixed']):
                 normalized.append('partially_true')
             else:
-                normalized.append('unverified')
+                normalized.append('uncertain')
         
-        # Get most common verdict
+        # Count verdicts
         verdict_counts = Counter(normalized)
-        most_common = verdict_counts.most_common(1)[0][0]
         
-        # Add likely_ prefix if not unanimous
-        if len(set(normalized)) > 1:
-            if most_common in ['true', 'false']:
-                return f'likely_{most_common}'
-        
-        return most_common
+        # Determine consensus
+        if verdict_counts['false'] > verdict_counts['true']:
+            return 'false'
+        elif verdict_counts['true'] > verdict_counts['false']:
+            return 'true'
+        elif verdict_counts['partially_true'] > 0:
+            return 'partially_true'
+        else:
+            return 'uncertain'
     
     def _calculate_api_confidence(self, verdicts: List[str], publishers: List[str]) -> int:
         """Calculate confidence based on API results"""
-        base_confidence = 70
+        if not verdicts:
+            return 30
         
-        # Boost for multiple verdicts
-        confidence = base_confidence + (len(verdicts) * 5)
+        base_confidence = 60
         
-        # Boost for reputable publishers
-        reputable_count = sum(1 for p in publishers if self._is_reputable_fact_checker(p))
-        confidence += reputable_count * 10
+        # More verdicts = higher confidence
+        base_confidence += min(len(verdicts) * 10, 30)
         
-        # Cap at 95
-        return min(confidence, 95)
-    
-    def _is_reputable_fact_checker(self, publisher: str) -> bool:
-        """Check if fact-checking organization is reputable"""
-        reputable = {
-            'snopes', 'factcheck.org', 'politifact', 'associated press',
-            'reuters', 'afp fact check', 'full fact', 'africa check',
-            'chequeado', 'correctiv', 'les décodeurs', 'pagella politica'
-        }
+        # Consistent verdicts = higher confidence
+        unique_verdicts = len(set(verdicts))
+        if unique_verdicts == 1:
+            base_confidence += 10
         
-        publisher_lower = publisher.lower()
-        return any(org in publisher_lower for org in reputable)
-    
-    def _is_reputable_news_source(self, source: str) -> bool:
-        """Check if news source is reputable"""
-        reputable = {
-            'reuters', 'associated press', 'ap news', 'bbc', 'the guardian',
-            'new york times', 'washington post', 'wall street journal',
-            'financial times', 'the economist', 'npr', 'pbs', 'cnn',
-            'abc news', 'nbc news', 'cbs news', 'bloomberg', 'the atlantic'
-        }
+        # Known publishers = higher confidence
+        known_publishers = ['Snopes', 'FactCheck.org', 'PolitiFact', 'Reuters', 'AP']
+        if any(pub in publishers for pub in known_publishers):
+            base_confidence += 10
         
-        source_lower = source.lower()
-        return any(org in source_lower for org in reputable)
-    
-    def _extract_key_search_terms(self, claim: str) -> List[str]:
-        """Extract key terms for searching"""
-        # Remove common words
-        stop_words = {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to',
-            'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are',
-            'were', 'been', 'be', 'have', 'has', 'had', 'will', 'would',
-            'could', 'should', 'may', 'might', 'must', 'can', 'that', 'this'
-        }
-        
-        words = re.findall(r'\b\w+\b', claim.lower())
-        key_terms = []
-        
-        # Prioritize proper nouns (capitalized in original)
-        for match in re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', claim):
-            key_terms.append(match.lower())
-        
-        # Add other significant words
-        for word in words:
-            if word not in stop_words and len(word) > 2 and word not in key_terms:
-                key_terms.append(word)
-        
-        return key_terms[:6]  # Limit to 6 terms
+        return min(base_confidence, 95)
     
     def _get_claim_priority(self, claim: str) -> str:
         """Determine claim priority level"""
-        score = self._calculate_claim_priority_score(claim)
+        score = self._score_claim_priority(claim)
         
         if score >= 50:
             return 'high'
-        elif score >= 20:
+        elif score >= 25:
             return 'medium'
         else:
             return 'low'
@@ -739,136 +704,144 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
     def _calculate_verification_score(self, fact_checks: List[Dict[str, Any]]) -> int:
         """Calculate overall verification score"""
         if not fact_checks:
-            return 100  # No claims to verify
+            return 100
         
+        total_score = 0
         total_weight = 0
-        weighted_score = 0
         
         for fc in fact_checks:
-            # Weight by confidence and priority
-            confidence = fc.get('confidence', 0)
-            priority_weights = {'high': 3, 'medium': 2, 'low': 1}
-            weight = priority_weights.get(fc.get('priority', 'medium'), 2)
+            # Weight by priority
+            weight = {'high': 3, 'medium': 2, 'low': 1}.get(fc.get('priority', 'medium'), 2)
             
-            # Score based on verdict
-            verdict_scores = {
-                'true': 100,
-                'likely_true': 80,
-                'partially_true': 50,
-                'unverified': 50,
-                'likely_false': 20,
-                'false': 0
-            }
+            # Score by verdict
+            if fc['verdict'] in ['true', 'likely_true']:
+                score = 100
+            elif fc['verdict'] == 'partially_true':
+                score = 60
+            elif fc['verdict'] in ['false', 'likely_false']:
+                score = 20
+            elif fc['verdict'] == 'uncertain':
+                score = 50
+            else:  # unverified
+                score = 40
             
-            score = verdict_scores.get(fc['verdict'], 50)
+            # Adjust by confidence
+            confidence = fc.get('confidence', 50) / 100
+            adjusted_score = score * confidence
             
-            weighted_score += score * weight * (confidence / 100)
+            total_score += adjusted_score * weight
             total_weight += weight
         
-        if total_weight > 0:
-            return int(weighted_score / total_weight)
-        
-        return 50
+        return round(total_score / total_weight) if total_weight > 0 else 50
     
     def _calculate_trust_impact(self, fact_checks: List[Dict[str, Any]]) -> int:
-        """Calculate impact on article trust score"""
+        """Calculate impact on trust score"""
         if not fact_checks:
             return 100
+        
+        # Start with neutral score
+        trust_score = 70
+        
+        # Adjust based on false claims
+        false_claims = sum(1 for fc in fact_checks if fc['verdict'] in ['false', 'likely_false'])
+        true_claims = sum(1 for fc in fact_checks if fc['verdict'] in ['true', 'likely_true'])
+        
+        # Heavy penalty for false claims
+        trust_score -= false_claims * 15
+        
+        # Small bonus for verified true claims
+        trust_score += true_claims * 5
+        
+        # Ensure within bounds
+        return max(0, min(100, trust_score))
+    
+    def _generate_findings(self, fact_checks: List[Dict[str, Any]], verification_score: int) -> List[Dict[str, Any]]:
+        """Generate findings from fact checks"""
+        findings = []
         
         # Count verdicts
         false_count = sum(1 for fc in fact_checks if fc['verdict'] in ['false', 'likely_false'])
         true_count = sum(1 for fc in fact_checks if fc['verdict'] in ['true', 'likely_true'])
-        partial_count = sum(1 for fc in fact_checks if fc['verdict'] == 'partially_true')
+        unverified_count = sum(1 for fc in fact_checks if fc['verdict'] == 'unverified')
         
-        # Weight by priority
-        high_priority_false = sum(1 for fc in fact_checks 
-                                 if fc['verdict'] in ['false', 'likely_false'] 
-                                 and fc.get('priority') == 'high')
-        
-        # Calculate score
-        total = len(fact_checks)
-        base_score = ((true_count * 100) + (partial_count * 50)) / total
-        
-        # Apply penalties
-        false_penalty = false_count * 10
-        high_priority_penalty = high_priority_false * 20
-        
-        trust_impact = max(0, base_score - false_penalty - high_priority_penalty)
-        
-        return int(trust_impact)
-    
-    def _generate_findings(self, fact_checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate findings from fact checks"""
-        findings = []
-        
-        # Group by verdict
-        false_claims = [fc for fc in fact_checks if fc['verdict'] in ['false', 'likely_false']]
-        true_claims = [fc for fc in fact_checks if fc['verdict'] in ['true', 'likely_true']]
-        partial_claims = [fc for fc in fact_checks if fc['verdict'] == 'partially_true']
-        unverified_claims = [fc for fc in fact_checks if fc['verdict'] == 'unverified']
-        
-        # Report false claims first (most important)
-        for fc in false_claims[:3]:  # Top 3 false claims
+        # Overall verification finding
+        if verification_score >= 80:
             findings.append({
-                'type': 'false_claim',
-                'text': fc['claim'][:150] + '...' if len(fc['claim']) > 150 else fc['claim'],
-                'severity': 'high' if fc.get('priority') == 'high' else 'medium',
-                'explanation': fc.get('explanation', 'Fact checkers determined this claim is false')
+                'type': 'positive',
+                'severity': 'positive',
+                'text': 'Most claims are well-verified',
+                'explanation': f'{true_count} of {len(fact_checks)} claims verified as accurate'
+            })
+        elif verification_score < 40:
+            findings.append({
+                'type': 'critical',
+                'severity': 'high',
+                'text': 'Multiple false or misleading claims',
+                'explanation': f'{false_count} claims appear to be false or misleading'
             })
         
-        # Report partially true claims
-        for fc in partial_claims[:2]:
+        # Specific false claim warnings
+        for fc in fact_checks:
+            if fc['verdict'] in ['false', 'likely_false'] and fc.get('priority') == 'high':
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high',
+                    'text': f'False claim: "{fc["claim"][:100]}..."',
+                    'explanation': fc.get('explanation', 'Claim contradicted by fact checkers')
+                })
+        
+        # Unverified claims
+        if unverified_count > len(fact_checks) * 0.5:
             findings.append({
-                'type': 'partial_truth',
-                'text': fc['claim'][:150] + '...' if len(fc['claim']) > 150 else fc['claim'],
+                'type': 'info',
                 'severity': 'medium',
-                'explanation': fc.get('explanation', 'This claim contains both true and false elements')
+                'text': 'Many claims could not be verified',
+                'explanation': 'Limited fact-checking sources available for these claims'
             })
         
-        # Summary finding if many claims couldn't be verified
-        if len(unverified_claims) > 3:
+        # AI enhancement finding
+        ai_enhanced = sum(1 for fc in fact_checks if 'ai_analysis' in fc)
+        if ai_enhanced > 0:
             findings.append({
-                'type': 'verification_difficulty',
-                'text': f'{len(unverified_claims)} claims could not be verified',
+                'type': 'info',
                 'severity': 'low',
-                'explanation': 'Multiple claims lack sufficient evidence or sources for verification'
+                'text': f'AI-enhanced analysis for {ai_enhanced} claims',
+                'explanation': 'Additional verification strategies suggested by AI'
             })
         
-        return findings
+        return findings[:5]  # Limit to 5 most important findings
     
     def _generate_summary(self, fact_checks: List[Dict[str, Any]], verification_score: int) -> str:
-        """Generate human-readable summary"""
+        """Generate fact checking summary"""
         if not fact_checks:
-            return "No verifiable claims found in the article."
+            return "No fact-checkable claims were found in this article."
         
         total = len(fact_checks)
-        false_count = sum(1 for fc in fact_checks if fc['verdict'] in ['false', 'likely_false'])
-        true_count = sum(1 for fc in fact_checks if fc['verdict'] in ['true', 'likely_true'])
-        partial_count = sum(1 for fc in fact_checks if fc['verdict'] == 'partially_true')
+        verified = sum(1 for fc in fact_checks if fc['verdict'] != 'unverified')
+        true_claims = sum(1 for fc in fact_checks if fc['verdict'] in ['true', 'likely_true'])
+        false_claims = sum(1 for fc in fact_checks if fc['verdict'] in ['false', 'likely_false'])
         
-        # Build summary
-        summary_parts = []
+        summary = f"Analyzed {total} fact-checkable claims. "
         
-        summary_parts.append(f"Analyzed {total} claim{'s' if total != 1 else ''}:")
+        if verified > 0:
+            summary += f"{verified} claims were verified: "
+            if true_claims > 0:
+                summary += f"{true_claims} true"
+            if false_claims > 0:
+                if true_claims > 0:
+                    summary += f", {false_claims} false"
+                else:
+                    summary += f"{false_claims} false"
+            summary += ". "
         
-        if false_count > 0:
-            summary_parts.append(f"{false_count} false")
-        if true_count > 0:
-            summary_parts.append(f"{true_count} true")
-        if partial_count > 0:
-            summary_parts.append(f"{partial_count} partially true")
-        
-        summary = " - ".join(summary_parts)
-        
-        # Add overall assessment
         if verification_score >= 80:
-            summary += ". Most claims are well-supported by evidence."
+            summary += "Most claims are well-supported by evidence."
         elif verification_score >= 60:
-            summary += ". Mixed accuracy with some questionable claims."
+            summary += "Mixed accuracy with some questionable claims."
         elif verification_score >= 40:
-            summary += ". Several claims lack support or are disputed."
+            summary += "Several claims lack support or are disputed."
         else:
-            summary += ". Many claims appear to be false or misleading."
+            summary += "Many claims appear to be false or misleading."
         
         return summary
     
