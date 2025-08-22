@@ -1,26 +1,29 @@
 """
-News Analyzer Flask Application
-Main API server for news credibility analysis
-FIXED: Properly processes service results from pipeline
+News Analyzer API - Main Flask Application
+Enhanced with performance monitoring to identify slow services
 """
 import os
 import sys
-import time
 import logging
-import json
-import uuid
+import time
 import traceback
 from datetime import datetime
-from typing import Dict, Any, Optional, List
-from flask import Flask, request, jsonify, render_template, Response, send_from_directory
+from typing import Dict, Any, Optional
+import json
+
+# Flask imports
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Import configuration
+# Application imports
 from config import Config
+from services.news_analyzer import NewsAnalyzer
+from services.service_registry import get_service_registry
+from services.response_builder import ResponseBuilder
 
-# Configure logging
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -28,298 +31,119 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create Flask app
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['SECRET_KEY'] = Config.SECRET_KEY
+app = Flask(__name__)
+app.config.from_object(Config)
 
-# Enable CORS with configuration
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Enable CORS
+CORS(app, origins=["*"])
 
-# Rate limiting
+# Setup rate limiting
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["1000 per hour", "100 per minute"],
+    default_limits=["100 per hour", "20 per minute"],
     storage_uri="memory://"
 )
 
-# Import services after app creation
-from services.news_analyzer import NewsAnalyzer
-from services.response_builder import ResponseBuilder
+# Initialize services
+news_analyzer = NewsAnalyzer()
+response_builder = ResponseBuilder()
 
-# Initialize analyzer
-try:
-    news_analyzer = NewsAnalyzer()
-    logger.info("NewsAnalyzer initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize NewsAnalyzer: {e}")
-    news_analyzer = None
-
-# Track debug information
+# Debug information storage
 debug_info = {
-    'requests': {},
-    'errors': []
+    'requests': [],
+    'errors': [],
+    'service_timings': {}  # Track service performance
 }
 
-# Request tracking
-@app.before_request
-def before_request():
-    """Log and track incoming requests"""
-    request.id = str(uuid.uuid4())
-    request.start_time = datetime.now()
+# Performance tracking
+class PerformanceMonitor:
+    """Track performance metrics for all services"""
     
-    # Set request ID for response builder if it has these attributes
-    if hasattr(ResponseBuilder, '_request_id'):
-        ResponseBuilder._request_id = request.id
-    if hasattr(ResponseBuilder, '_start_time'):
-        ResponseBuilder._start_time = int(datetime.now().timestamp() * 1000)
+    def __init__(self):
+        self.timings = {}
+        self.call_counts = {}
+        self.errors = {}
+        self.start_time = time.time()
     
-    # Store request info
-    debug_info['requests'][request.id] = {
-        'id': request.id,
-        'method': request.method,
-        'path': request.path,
-        'args': dict(request.args),
-        'timestamp': request.start_time.isoformat(),
-        'ip': request.remote_addr
-    }
-    
-    logger.info(f"Request {request.id}: {request.method} {request.path}")
-
-@app.after_request
-def after_request(response):
-    """Log response and add headers"""
-    if hasattr(request, 'id'):
-        duration = (datetime.now() - request.start_time).total_seconds()
-        logger.info(f"Request {request.id} completed in {duration:.3f}s with status {response.status_code}")
+    def record_timing(self, service_name: str, duration: float, success: bool = True):
+        """Record timing for a service"""
+        if service_name not in self.timings:
+            self.timings[service_name] = []
+            self.call_counts[service_name] = 0
+            self.errors[service_name] = 0
         
-        # Update request info
-        if request.id in debug_info['requests']:
-            debug_info['requests'][request.id].update({
-                'status': response.status_code,
-                'duration': duration,
-                'completed': datetime.now().isoformat()
-            })
+        self.timings[service_name].append(duration)
+        self.call_counts[service_name] += 1
+        if not success:
+            self.errors[service_name] += 1
     
-    # Add security headers
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
+    def get_stats(self):
+        """Get performance statistics"""
+        stats = {}
+        for service, timings in self.timings.items():
+            if timings:
+                stats[service] = {
+                    'calls': self.call_counts[service],
+                    'errors': self.errors[service],
+                    'min_time': min(timings),
+                    'max_time': max(timings),
+                    'avg_time': sum(timings) / len(timings),
+                    'total_time': sum(timings),
+                    'success_rate': ((self.call_counts[service] - self.errors[service]) / 
+                                   self.call_counts[service] * 100) if self.call_counts[service] > 0 else 0
+                }
+        return stats
     
-    return response
+    def reset(self):
+        """Reset all metrics"""
+        self.timings.clear()
+        self.call_counts.clear()
+        self.errors.clear()
+        self.start_time = time.time()
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    """Global error handler"""
-    error_id = str(uuid.uuid4())
-    error_info = {
-        'id': error_id,
-        'type': type(error).__name__,
-        'message': str(error),
-        'traceback': traceback.format_exc(),
+# Global performance monitor
+perf_monitor = PerformanceMonitor()
+
+# Helper function for error responses
+def error_response(message: str, status_code: int = 400):
+    """Create standardized error response"""
+    error_data = {
+        'success': False,
+        'error': message,
         'timestamp': datetime.now().isoformat()
     }
     
-    # Store error for debugging
-    debug_info['errors'].append(error_info)
-    
     # Log error
-    logger.error(f"Error {error_id}: {error_info['type']} - {error_info['message']}")
-    logger.error(error_info['traceback'])
+    debug_info['errors'].append({
+        'message': message,
+        'status_code': status_code,
+        'timestamp': error_data['timestamp']
+    })
     
-    # Return appropriate error response
-    if isinstance(error, ValueError):
-        return jsonify({
-            'success': False,
-            'error': str(error),
-            'error_id': error_id
-        }), 400
-    
-    # Generic error response
-    return jsonify({
-        'success': False,
-        'error': 'An internal error occurred',
-        'error_id': error_id
-    }), 500
+    return jsonify(error_data), status_code
 
-# Helper functions
-def clean_service_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Clean service data to remove None values and empty strings"""
-    if not isinstance(data, dict):
-        return data
-    
-    cleaned = {}
-    for key, value in data.items():
-        if value is None or value == '':
-            continue
-        
-        if isinstance(value, dict):
-            cleaned_value = clean_service_data(value)
-            if cleaned_value:  # Only include non-empty dicts
-                cleaned[key] = cleaned_value
-        elif isinstance(value, list):
-            cleaned[key] = [clean_value(item) for item in value if clean_value(item) is not None]
-        else:
-            cleaned[key] = clean_value(value)
-    
-    # Special handling for article extractor
-    if 'content' in cleaned and 'text' not in cleaned:
-        # Check if content looks like text or URL
-        content = cleaned.get('content', '')
-        if isinstance(content, str):
-            if content.startswith('http://') or content.startswith('https://'):
-                cleaned['url'] = content
-            else:
-                cleaned['text'] = content
-    
-    # Ensure we have at least basic fields
-    if 'title' not in cleaned or not cleaned.get('title'):
-        cleaned['title'] = 'Unknown Title'
-    
-    if 'domain' not in cleaned and 'url' in cleaned:
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(cleaned['url'])
-            cleaned['domain'] = parsed.netloc
-        except:
-            pass
-    
-    return cleaned
-
-def clean_value(value: Any) -> Any:
-    """Clean individual values"""
-    if isinstance(value, str):
-        if contains_corrupted_data(value):
-            # For short strings, return None
-            if len(value) < 100:
-                return None
-            # For longer strings, try to extract clean portion
-            clean_portion = extract_clean_text(value)
-            return clean_portion if clean_portion else None
-        return value
-    elif isinstance(value, (int, float, bool)):
-        return value
-    elif isinstance(value, dict):
-        return clean_service_data(value)
-    elif isinstance(value, list):
-        return [clean_value(item) for item in value if clean_value(item) is not None]
+# Helper to transform analysis results
+def transform_results(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform service results to expected format"""
+    # Extract the results dict if wrapped
+    if 'results' in result and isinstance(result['results'], dict):
+        data = result['results']
     else:
-        return value
-
-def contains_corrupted_data(text: str) -> bool:
-    """Check if text contains corrupted data indicators"""
-    if not isinstance(text, str):
-        return False
+        data = result
     
-    # Check for replacement character which indicates encoding issues
-    if '\ufffd' in text:
-        return True
+    # Ensure all required fields exist
+    if 'trust_score' not in data:
+        data['trust_score'] = 0
+        
+    if 'article_data' not in data and 'article_extractor' in data:
+        data['article_data'] = data['article_extractor']
     
-    # Check for excessive non-printable characters
-    non_printable_count = sum(1 for char in text if ord(char) < 32 and char not in '\n\r\t')
-    if len(text) > 0 and non_printable_count / len(text) > 0.1:  # More than 10% non-printable
-        return True
-    
-    return False
-
-def extract_clean_text(text: str) -> Optional[str]:
-    """Try to extract clean portions of text"""
-    if not text:
-        return None
-    
-    # Split by common delimiters and find clean segments
-    segments = text.split('\n')
-    clean_segments = []
-    
-    for segment in segments:
-        if segment and not contains_corrupted_data(segment):
-            clean_segments.append(segment.strip())
-    
-    # If we found clean segments, join them
-    if clean_segments:
-        result = '\n'.join(clean_segments)
-        # Only return if we have meaningful content
-        if len(result) > 50:  # At least 50 characters
-            return result
-    
-    return None
-
-def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Ensure the response has the expected structure for the frontend"""
-    # Make sure we have the expected top-level keys
-    if 'success' not in result:
-        result['success'] = True
-    
-    if 'data' not in result:
-        result['data'] = {}
-    
-    # Ensure data has the required structure
-    data = result['data']
-    
-    # Ensure we have article info
-    if 'article' not in data:
-        data['article'] = {
-            'title': 'Unknown Title',
-            'url': '',
-            'domain': '',
-            'text': '',
-            'extraction_successful': False
-        }
-    
-    # Ensure we have analysis info
-    if 'analysis' not in data:
-        data['analysis'] = {
-            'trust_score': 0,
-            'trust_level': 'Unknown',  # Note: frontend expects trust_level, not credibility_level
-            'key_findings': [],
-            'summary': 'Analysis incomplete'
-        }
-    
-    # Ensure we have detailed_analysis
-    if 'detailed_analysis' not in data:
-        data['detailed_analysis'] = {}
-    
-    # Ensure metadata exists
-    if 'metadata' not in result:
-        result['metadata'] = {
-            'timestamp': datetime.now().isoformat(),
-            'analysis_time': 0
-        }
-    
-    return result
-
-def ensure_response_structure(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Ensure the response has the expected structure for the frontend"""
-    # Make sure we have the expected top-level keys
-    if 'success' not in result:
-        result['success'] = True
-    
-    if 'data' not in result:
-        result['data'] = {}
-    
-    # Ensure data has the required structure
-    data = result['data']
-    
-    # Ensure we have article info
-    if 'article' not in data:
-        data['article'] = {
-            'title': 'Unknown Title',
-            'url': '',
-            'domain': '',
-            'text': '',
-            'extraction_successful': False
-        }
-    
-    # Ensure we have analysis info
-    if 'analysis' not in data:
-        data['analysis'] = {
-            'trust_score': 0,
-            'trust_level': 'Unknown',  # Note: frontend expects trust_level, not credibility_level
+    if 'summary' not in data:
+        data['summary'] = {
+            'verdict': 'Analysis incomplete',
+            'trust_score': data.get('trust_score', 0),
+            'risk_level': 'unknown',
             'key_findings': [],
             'summary': 'Analysis incomplete'
         }
@@ -386,7 +210,7 @@ def api_status():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Main analysis endpoint
+    Main analysis endpoint with performance tracking
     Accepts: { "url": "..." } or { "text": "..." }
     """
     try:
@@ -408,195 +232,174 @@ def analyze():
         if not url and not text:
             return jsonify({
                 'success': False,
-                'error': 'Either URL or text must be provided'
+                'error': 'Please provide either a URL or text to analyze'
             }), 400
         
-        if url and text:
-            return jsonify({
-                'success': False,
-                'error': 'Provide either URL or text, not both'
-            }), 400
-        
-        # Prepare content for analysis
+        # Determine content type
         content = url if url else text
         content_type = 'url' if url else 'text'
         
-        # Get options from request
-        options = data.get('options', {})
+        # Record request
+        request_info = {
+            'timestamp': datetime.now().isoformat(),
+            'content_type': content_type,
+            'content_preview': content[:100] if content_type == 'text' else content,
+            'ip': request.remote_addr
+        }
+        debug_info['requests'].append(request_info)
         
-        # Check if analyzer is available
-        if not news_analyzer:
-            return jsonify({
-                'success': False,
-                'error': 'Analysis service is not available'
-            }), 503
+        # Check for pro mode
+        pro_mode = data.get('pro_mode', False) or data.get('is_pro', False)
         
-        # Run analysis
-        logger.info(f"Starting analysis for {content_type}: {content[:100]}...")
+        # Create a custom news analyzer with performance tracking
+        analyzer = NewsAnalyzerWithPerformance(perf_monitor)
+        
+        # Run analysis with timing
         start_time = time.time()
+        result = analyzer.analyze(content, content_type, pro_mode)
+        total_time = time.time() - start_time
         
-        try:
-            result = news_analyzer.analyze(content, content_type, options)
-        except Exception as e:
-            logger.error(f"NewsAnalyzer.analyze() failed: {str(e)}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': f'Analysis service error: {str(e)}',
-                'request_id': getattr(request, 'id', 'unknown')
-            }), 500
+        # Transform results to expected format
+        result = transform_results(result)
         
-        analysis_time = time.time() - start_time
-        logger.info(f"Analysis completed in {analysis_time:.2f}s")
-        
-        # Validate result structure
-        if not isinstance(result, dict):
-            logger.error(f"Invalid result type from analyzer: {type(result)}")
-            return jsonify({
-                'success': False,
-                'error': 'Invalid response from analysis service',
-                'request_id': getattr(request, 'id', 'unknown')
-            }), 500
-        
-        # FIXED: Extract service results from pipeline output
-        # The pipeline returns service results at the top level, not in 'detailed_analysis'
-        # We need to build the proper response structure
-        
-        # Known metadata fields that are NOT service results
-        metadata_fields = ['success', 'trust_score', 'trust_level', 'summary', 'pipeline_metadata', 
-                          'errors', 'article', 'services_available', 'is_pro', 'analysis_mode']
-        
-        # Extract service results
-        service_results = {}
-        for key, value in result.items():
-            if key not in metadata_fields and isinstance(value, dict):
-                # This is likely a service result
-                # Check if it has expected service result structure
-                if 'success' in value or 'data' in value or any(k in value for k in ['score', 'level', 'analysis']):
-                    cleaned_data = clean_service_data(value)
-                    if cleaned_data:
-                        service_results[key] = cleaned_data
-                        logger.info(f"Found service result: {key} with {len(cleaned_data)} fields")
-        
-        logger.info(f"Extracted {len(service_results)} service results from pipeline")
-        
-        # Build proper response structure
-        response_data = {
-            'success': result.get('success', False),
-            'data': {
-                'article': result.get('article') or {
-                    'title': 'Unknown Title',
-                    'url': content if content_type == 'url' else '',
-                    'text': content if content_type == 'text' else '',
-                    'extraction_successful': bool(result.get('article'))
-                },
-                'analysis': {
-                    'trust_score': result.get('trust_score', 50),
-                    'trust_level': result.get('trust_level', 'Unknown'),
-                    'key_findings': [],  # TODO: Extract from service results
-                    'summary': result.get('summary', 'Analysis incomplete')
-                },
-                'detailed_analysis': service_results  # Use the extracted service results
-            },
-            'metadata': {
-                'request_id': getattr(request, 'id', 'unknown'),
-                'analysis_time': analysis_time,
-                'timestamp': datetime.now().isoformat(),
-                'pipeline_metadata': result.get('pipeline_metadata', {}),
-                'services_available': result.get('services_available', 0),
-                'is_pro': result.get('is_pro', False),
-                'analysis_mode': result.get('analysis_mode', 'basic')
-            }
+        # Add performance metadata
+        result['performance'] = {
+            'total_analysis_time': total_time,
+            'service_timings': perf_monitor.get_stats()
         }
         
-        # If there were errors, include them
-        if result.get('errors'):
-            response_data['errors'] = result['errors']
+        # Log completion
+        logger.info(f"Analysis completed in {total_time:.2f}s - success: {result.get('success')}")
         
-        # Log the response structure for debugging
-        logger.info(f"Response structure - success: {response_data['success']}, "
-                   f"services in detailed_analysis: {list(response_data['data']['detailed_analysis'].keys())}")
-        
-        return jsonify(response_data)
+        return jsonify(result)
         
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'request_id': getattr(request, 'id', 'unknown')
-        }), 500
+        return error_response(f"Analysis failed: {str(e)}", 500)
 
-# DEBUG ROUTES (only in development)
+@app.route('/api/performance', methods=['GET'])
+def performance_analysis():
+    """Get detailed performance analysis of all services"""
+    try:
+        # Get current performance stats
+        stats = perf_monitor.get_stats()
+        
+        # Sort services by total time (slowest first)
+        sorted_services = sorted(
+            stats.items(), 
+            key=lambda x: x[1]['total_time'], 
+            reverse=True
+        )
+        
+        # Identify bottlenecks
+        bottlenecks = []
+        for service, data in sorted_services[:3]:  # Top 3 slowest
+            if data['avg_time'] > 5.0:  # Services taking more than 5 seconds
+                bottlenecks.append({
+                    'service': service,
+                    'avg_time': data['avg_time'],
+                    'max_time': data['max_time'],
+                    'calls': data['calls'],
+                    'impact': 'HIGH' if data['avg_time'] > 10 else 'MEDIUM'
+                })
+        
+        return jsonify({
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'uptime': time.time() - perf_monitor.start_time,
+            'performance_stats': dict(sorted_services),
+            'bottlenecks': bottlenecks,
+            'recommendations': generate_performance_recommendations(stats)
+        })
+        
+    except Exception as e:
+        logger.error(f"Performance analysis error: {str(e)}", exc_info=True)
+        return error_response(f"Performance analysis failed: {str(e)}", 500)
+
+@app.route('/api/performance/test', methods=['POST'])
+def performance_test():
+    """Run a performance test on a specific URL or all services"""
+    try:
+        data = request.get_json() or {}
+        test_url = data.get('url', 'https://www.reuters.com/technology/artificial-intelligence/openai-microsoft-face-new-lawsuit-authors-over-ai-training-2023-11-21/')
+        
+        # Reset performance monitor for clean test
+        perf_monitor.reset()
+        
+        logger.info(f"Starting performance test with URL: {test_url}")
+        
+        # Run analysis with detailed timing
+        analyzer = NewsAnalyzerWithPerformance(perf_monitor)
+        start_time = time.time()
+        
+        result = analyzer.analyze(test_url, 'url', pro_mode=True)
+        
+        total_time = time.time() - start_time
+        
+        # Get detailed stats
+        stats = perf_monitor.get_stats()
+        
+        # Create performance report
+        report = {
+            'success': True,
+            'test_url': test_url,
+            'total_time': total_time,
+            'service_count': len(stats),
+            'services': {}
+        }
+        
+        # Add detailed service information
+        for service, data in stats.items():
+            report['services'][service] = {
+                'time': data['avg_time'],
+                'status': 'SLOW' if data['avg_time'] > 5 else 'OK',
+                'success_rate': data['success_rate']
+            }
+        
+        # Identify the slowest service
+        if stats:
+            slowest = max(stats.items(), key=lambda x: x[1]['avg_time'])
+            report['slowest_service'] = {
+                'name': slowest[0],
+                'time': slowest[1]['avg_time']
+            }
+        
+        return jsonify(report)
+        
+    except Exception as e:
+        logger.error(f"Performance test error: {str(e)}", exc_info=True)
+        return error_response(f"Performance test failed: {str(e)}", 500)
+
+# DEBUG ROUTES
+
+@app.route('/api/debug/info')
+def debug_info_route():
+    """Get debug information"""
+    return jsonify({
+        'requests': debug_info['requests'][-10:],  # Last 10 requests
+        'errors': debug_info['errors'][-10:],      # Last 10 errors
+        'performance': perf_monitor.get_stats()
+    })
 
 @app.route('/api/debug/services')
 def debug_services():
-    """Debug endpoint to check service status"""
-    if not Config.DEBUG:
-        return jsonify({'error': 'Not available in production'}), 403
-    
+    """Get detailed service information"""
     from services.service_registry import get_service_registry
     registry = get_service_registry()
     
-    # Add missing method if it doesn't exist
-    service_details = {}
-    if hasattr(registry, 'get_service_details'):
-        service_details = registry.get_service_details()
-    else:
-        # Build service details from available methods
-        for service_name, service in registry.get_all_services().items():
-            service_details[service_name] = {
-                'available': service.is_available if hasattr(service, 'is_available') else False,
-                'type': type(service).__name__
-            }
-    
     return jsonify({
-        'registry_status': registry.get_service_status(),
-        'service_details': service_details,
-        'configuration': Config.validate()
+        'status': registry.get_service_status(),
+        'performance': perf_monitor.get_stats()
     })
 
-@app.route('/api/debug/requests')
-def debug_requests():
-    """Debug endpoint to see recent requests"""
-    if not Config.DEBUG:
-        return jsonify({'error': 'Not available in production'}), 403
-    
-    # Get last 10 requests
-    recent_requests = sorted(
-        debug_info['requests'].items(),
-        key=lambda x: x[1]['timestamp'],
-        reverse=True
-    )[:10]
-    
-    return jsonify({
-        'total_requests': len(debug_info['requests']),
-        'recent_requests': [req[1] for req in recent_requests]
-    })
-
-@app.route('/api/debug/errors')
-def debug_errors():
-    """Debug endpoint to see recent errors"""
-    if not Config.DEBUG:
-        return jsonify({'error': 'Not available in production'}), 403
-    
-    return jsonify({
-        'total_errors': len(debug_info['errors']),
-        'recent_errors': debug_info['errors'][-10:]  # Last 10 errors
-    })
-
-@app.route('/api/debug/test/<service_name>')
-def debug_test_service(service_name):
-    """Debug endpoint to test individual services"""
-    if not Config.DEBUG:
-        return jsonify({'error': 'Not available in production'}), 403
-    
+@app.route('/api/debug/test-service/<service_name>')
+def test_service(service_name):
+    """Test a specific service"""
     from services.service_registry import get_service_registry
     registry = get_service_registry()
     
-    # Test data
     test_data = {
-        'url': 'https://www.example.com/test-article',
-        'text': 'This is a test article for debugging purposes.',
+        'url': 'https://example.com/test',
         'title': 'Test Article',
         'content': 'This is test content for service debugging.'
     }
@@ -609,11 +412,15 @@ def debug_test_service(service_name):
                 'error': f'Service {service_name} not found'
             }), 404
         
+        # Time the service
+        start_time = time.time()
         result = service.analyze(test_data)
+        duration = time.time() - start_time
         
         return jsonify({
             'success': True,
             'service': service_name,
+            'duration': duration,
             'result': result
         })
         
@@ -645,6 +452,74 @@ def serve_template(filename):
     except Exception as e:
         logger.error(f"Error serving template {filename}: {e}")
         return f"Error loading template: {str(e)}", 500
+
+# Custom NewsAnalyzer with performance tracking
+class NewsAnalyzerWithPerformance(NewsAnalyzer):
+    """NewsAnalyzer wrapper that tracks performance"""
+    
+    def __init__(self, perf_monitor):
+        super().__init__()
+        self.perf_monitor = perf_monitor
+    
+    def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
+        """Override analyze to add performance tracking"""
+        # Monkey-patch the pipeline to track individual service timings
+        original_analyze = self.service_registry.analyze_with_service
+        
+        def tracked_analyze(service_name, data):
+            start_time = time.time()
+            try:
+                result = original_analyze(service_name, data)
+                duration = time.time() - start_time
+                self.perf_monitor.record_timing(service_name, duration, success=True)
+                logger.info(f"Service {service_name} completed in {duration:.2f}s")
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                self.perf_monitor.record_timing(service_name, duration, success=False)
+                logger.error(f"Service {service_name} failed after {duration:.2f}s: {e}")
+                raise
+        
+        # Temporarily replace the method
+        self.service_registry.analyze_with_service = tracked_analyze
+        
+        try:
+            # Run the analysis
+            return super().analyze(content, content_type, pro_mode)
+        finally:
+            # Restore original method
+            self.service_registry.analyze_with_service = original_analyze
+
+# Helper functions
+def generate_performance_recommendations(stats: Dict[str, Any]) -> list:
+    """Generate performance improvement recommendations"""
+    recommendations = []
+    
+    for service, data in stats.items():
+        if data['avg_time'] > 10:
+            recommendations.append({
+                'service': service,
+                'issue': 'Very slow response time',
+                'recommendation': f"Consider optimizing {service} or increasing timeout",
+                'severity': 'HIGH'
+            })
+        elif data['avg_time'] > 5:
+            recommendations.append({
+                'service': service,
+                'issue': 'Slow response time',
+                'recommendation': f"Monitor {service} performance",
+                'severity': 'MEDIUM'
+            })
+        
+        if data['success_rate'] < 80:
+            recommendations.append({
+                'service': service,
+                'issue': f"Low success rate ({data['success_rate']:.1f}%)",
+                'recommendation': f"Investigate failures in {service}",
+                'severity': 'HIGH'
+            })
+    
+    return recommendations
 
 # Initialize app state
 app.config['start_time'] = datetime.now()
