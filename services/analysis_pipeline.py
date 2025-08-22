@@ -1,620 +1,324 @@
 """
-Analysis Pipeline
-Orchestrates the flow of data through analysis services
+Fixed Analysis Pipeline with Performance Optimizations
 """
+import asyncio
 import time
 import logging
 from typing import Dict, Any, List, Optional, Set
-from dataclasses import dataclass, field
-import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import traceback
 
-from config import Config
+from .service_registry import get_service_registry
+from .base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class PipelineStage:
-    """Represents a stage in the analysis pipeline"""
-    name: str
-    services: List[str]
-    required: bool = True
-    parallel: bool = True
-    depends_on: List[str] = field(default_factory=list)
-    
-    def can_run(self, completed_stages: Set[str]) -> bool:
-        """Check if this stage can run based on dependencies"""
-        return all(dep in completed_stages for dep in self.depends_on)
-
-
-@dataclass
-class PipelineContext:
-    """Context object that flows through the pipeline"""
-    input_data: Dict[str, Any]
-    results: Dict[str, Any] = field(default_factory=dict)
-    errors: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    start_time: float = field(default_factory=time.time)
-    
-    def add_result(self, service_name: str, result: Dict[str, Any]):
-        """Add service result to context"""
-        self.results[service_name] = result
-        
-    def add_error(self, service_name: str, error: str, stage: str):
-        """Add error to context"""
-        self.errors.append({
-            'service': service_name,
-            'error': error,
-            'stage': stage,
-            'timestamp': time.time()
-        })
-    
-    def get_elapsed_time(self) -> float:
-        """Get elapsed time since pipeline start"""
-        return time.time() - self.start_time
-    
-    def has_minimum_results(self, min_required: int) -> bool:
-        """Check if we have minimum required successful results"""
-        successful = sum(1 for r in self.results.values() 
-                        if r and r.get('success', False))
-        return successful >= min_required
-    
-    def get_successful_services(self) -> List[str]:
-        """Get list of services that succeeded"""
-        return [name for name, result in self.results.items()
-                if result and result.get('success', False)]
-
-
 class AnalysisPipeline:
-    """Main analysis pipeline orchestrator"""
+    """
+    Fixed pipeline with proper parallel execution and timeout handling
+    """
     
-    # Define pipeline stages - ONLY INCLUDE EXISTING SERVICES
-    DEFAULT_STAGES = [
-        PipelineStage(
-            name='extraction',
-            services=['article_extractor'],
-            required=True,
-            parallel=False
-        ),
-        PipelineStage(
-            name='basic_analysis',
-            services=['source_credibility', 'author_analyzer', 'transparency_analyzer'],
-            required=False,
-            parallel=True,
-            depends_on=['extraction']
-        ),
-        PipelineStage(
-            name='content_analysis',
-            services=['bias_detector', 'manipulation_detector', 'content_analyzer'],
-            required=False,
-            parallel=True,
-            depends_on=['extraction']
-        ),
-        PipelineStage(
-            name='fact_checking',
-            services=['fact_checker'],
-            required=False,
-            parallel=False,
-            depends_on=['extraction']
-        )
+    # Service groups for parallel execution
+    STAGE_1_SERVICES = ['article_extractor']  # Must run first
+    STAGE_2_SERVICES = [  # Can run in parallel after extraction
+        'source_credibility',
+        'author_analyzer',
+        'bias_detector',
+        'transparency_analyzer',
+        'manipulation_detector',
+        'content_analyzer'
     ]
+    STAGE_3_SERVICES = ['fact_checker']  # Depends on article content
+    STAGE_4_SERVICES = ['openai_enhancer']  # Enhancement layer
     
-    def __init__(self, stages: Optional[List[PipelineStage]] = None):
-        self.stages = stages or self.DEFAULT_STAGES
-        self.config = Config.PIPELINE
-        self._service_registry = None  # Lazy load the registry
+    def __init__(self):
+        self.registry = get_service_registry()
+        self.executor = ThreadPoolExecutor(max_workers=8)  # Increased workers
         
-    def _get_service_registry(self):
-        """Lazy load service registry to avoid circular imports"""
-        if self._service_registry is None:
-            # Import here to avoid circular dependency
-            from services.service_registry import get_service_registry
-            self._service_registry = get_service_registry()
-        return self._service_registry
-        
-    def _calculate_dynamic_min_required(self) -> int:
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate minimum required services dynamically based on what's available
+        Run analysis pipeline with optimized parallel execution
         """
-        # Get service availability
-        registry = self._get_service_registry()
-        service_status = registry.get_service_status()
-        total_available = service_status['summary']['total_available']
-        
-        # Dynamic calculation:
-        # - If only article extractor is available (1 service), require 1
-        # - If 2-3 services available, require 2 (extraction + 1 analysis)
-        # - If 4+ services available, require 3 minimum
-        if total_available <= 1:
-            return 1
-        elif total_available <= 3:
-            return 2
-        else:
-            # Use configured value or default to 3
-            return min(self.config.get('min_required_services', 3), total_available)
-    
-    async def run_async(self, 
-                       content: str, 
-                       content_type: str = 'url',
-                       options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Run the analysis pipeline asynchronously
-        
-        Args:
-            content: URL or text to analyze
-            content_type: 'url' or 'text'
-            options: Additional options
-            
-        Returns:
-            Analysis results
-        """
-        # Create context
-        context = PipelineContext(
-            input_data={
-                'content': content,
-                'content_type': content_type,
-                'options': options or {}
+        start_time = time.time()
+        results = {
+            'success': True,
+            'article': None,
+            'trust_score': 50,
+            'trust_level': 'Unknown',
+            'services_available': 0,
+            'pipeline_metadata': {
+                'stages_completed': [],
+                'service_timings': {},
+                'total_services': 0
             }
-        )
-        
-        # Track metadata
-        context.metadata['pipeline_start'] = time.time()
-        context.metadata['stages_planned'] = [stage.name for stage in self.stages]
-        
-        # Calculate dynamic minimum required services
-        min_required = self._calculate_dynamic_min_required()
-        registry = self._get_service_registry()
-        context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = registry.get_service_status()['summary']['total_available']
-        
-        logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
-                   f"requiring minimum {min_required} successful results")
-        
-        # Run stages
-        completed_stages = set()
-        
-        for stage in self.stages:
-            # Check timeout
-            if context.get_elapsed_time() > self.config['max_total_timeout']:
-                logger.warning("Pipeline timeout reached")
-                context.add_error('pipeline', 'Total timeout exceeded', stage.name)
-                break
-            
-            # Check dependencies
-            if not stage.can_run(completed_stages):
-                logger.warning(f"Skipping stage {stage.name} due to unmet dependencies")
-                continue
-            
-            # Run stage
-            try:
-                await self._run_stage_async(stage, context)
-                completed_stages.add(stage.name)
-                
-                # Check if we should continue after required stage failure
-                if stage.required and self._stage_failed(stage, context):
-                    logger.error(f"Required stage {stage.name} failed, stopping pipeline")
-                    break
-                    
-            except Exception as e:
-                logger.error(f"Stage {stage.name} failed with exception: {e}")
-                context.add_error('pipeline', str(e), stage.name)
-                if stage.required:
-                    break
-        
-        # Finalize results with dynamic minimum
-        return self._finalize_results(context, min_required)
-    
-    def run(self, 
-            content: str, 
-            content_type: str = 'url',
-            options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Run the analysis pipeline synchronously
-        
-        Args:
-            content: URL or text to analyze
-            content_type: 'url' or 'text'
-            options: Additional options
-            
-        Returns:
-            Analysis results
-        """
-        # Create context
-        context = PipelineContext(
-            input_data={
-                'content': content,
-                'content_type': content_type,
-                'options': options or {}
-            }
-        )
-        
-        # Track metadata
-        context.metadata['pipeline_start'] = time.time()
-        context.metadata['stages_planned'] = [stage.name for stage in self.stages]
-        
-        # Calculate dynamic minimum required services
-        min_required = self._calculate_dynamic_min_required()
-        registry = self._get_service_registry()
-        context.metadata['min_required_services'] = min_required
-        context.metadata['total_available_services'] = registry.get_service_status()['summary']['total_available']
-        
-        logger.info(f"Pipeline starting with {context.metadata['total_available_services']} available services, "
-                   f"requiring minimum {min_required} successful results")
-        
-        # Run stages
-        completed_stages = set()
-        
-        for stage in self.stages:
-            # Check timeout
-            if context.get_elapsed_time() > self.config['max_total_timeout']:
-                logger.warning("Pipeline timeout reached")
-                context.add_error('pipeline', 'Total timeout exceeded', stage.name)
-                break
-            
-            # Check dependencies
-            if not stage.can_run(completed_stages):
-                logger.warning(f"Skipping stage {stage.name} due to unmet dependencies")
-                continue
-            
-            # Run stage
-            try:
-                self._run_stage_sync(stage, context)
-                completed_stages.add(stage.name)
-                
-                # Check if we should continue after required stage failure
-                if stage.required and self._stage_failed(stage, context):
-                    logger.error(f"Required stage {stage.name} failed, stopping pipeline")
-                    break
-                    
-            except Exception as e:
-                logger.error(f"Stage {stage.name} failed with exception: {e}")
-                context.add_error('pipeline', str(e), stage.name)
-                if stage.required:
-                    break
-        
-        # Finalize results with dynamic minimum
-        return self._finalize_results(context, min_required)
-    
-    async def _run_stage_async(self, stage: PipelineStage, context: PipelineContext):
-        """Run a pipeline stage asynchronously"""
-        logger.info(f"Running stage: {stage.name}")
-        stage_start = time.time()
-        
-        registry = self._get_service_registry()
-        
-        # Get available services for this stage
-        available_services = [
-            s for s in stage.services 
-            if registry.get_service(s) and registry.get_service(s).is_available
-        ]
-        
-        if not available_services:
-            logger.warning(f"No available services for stage {stage.name}")
-            if stage.required:
-                raise Exception(f"Required stage {stage.name} has no available services")
-            return
-        
-        logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
-        
-        # Prepare data for services
-        service_data = self._prepare_service_data(stage, context)
-        
-        # Run services
-        if stage.parallel and len(available_services) > 1:
-            # Run in parallel
-            tasks = []
-            for service_name in available_services:
-                task = registry.analyze_with_service_async(service_name, service_data)
-                tasks.append(task)
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            for service_name, result in zip(available_services, results):
-                if isinstance(result, Exception):
-                    context.add_error(service_name, str(result), stage.name)
-                else:
-                    context.add_result(service_name, result)
-        else:
-            # Run sequentially
-            for service_name in available_services:
-                try:
-                    result = await registry.analyze_with_service_async(service_name, service_data)
-                    context.add_result(service_name, result)
-                except Exception as e:
-                    context.add_error(service_name, str(e), stage.name)
-        
-        # Track stage metadata
-        context.metadata[f'stage_{stage.name}_duration'] = time.time() - stage_start
-        context.metadata[f'stage_{stage.name}_services'] = available_services
-    
-    def _run_stage_sync(self, stage: PipelineStage, context: PipelineContext):
-        """Run a pipeline stage synchronously"""
-        logger.info(f"Running stage: {stage.name}")
-        stage_start = time.time()
-        
-        registry = self._get_service_registry()
-        
-        # Get available services for this stage
-        available_services = [
-            s for s in stage.services 
-            if registry.get_service(s) and registry.get_service(s).is_available
-        ]
-        
-        if not available_services:
-            logger.warning(f"No available services for stage {stage.name}")
-            if stage.required:
-                raise Exception(f"Required stage {stage.name} has no available services")
-            return
-        
-        logger.info(f"Stage {stage.name} has {len(available_services)} available services: {available_services}")
-        
-        # Prepare data for services
-        service_data = self._prepare_service_data(stage, context)
-        
-        # FIXED: Replace analyze_parallel with manual parallel execution
-        if stage.parallel and len(available_services) > 1 and self.config['parallel_processing']:
-            # Run in parallel using ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=min(len(available_services), 4)) as executor:
-                # Submit all tasks
-                future_to_service = {}
-                for service_name in available_services:
-                    future = executor.submit(
-                        registry.analyze_with_service,
-                        service_name,
-                        service_data
-                    )
-                    future_to_service[future] = service_name
-                
-                # Collect results
-                for future in as_completed(future_to_service):
-                    service_name = future_to_service[future]
-                    try:
-                        result = future.result(timeout=30)  # 30 second timeout per service
-                        context.add_result(service_name, result)
-                    except Exception as e:
-                        logger.error(f"Service {service_name} failed: {e}", exc_info=True)
-                        context.add_error(service_name, str(e), stage.name)
-        else:
-            # Run sequentially
-            for service_name in available_services:
-                try:
-                    result = registry.analyze_with_service(service_name, service_data)
-                    context.add_result(service_name, result)
-                except Exception as e:
-                    logger.error(f"Service {service_name} threw exception: {e}", exc_info=True)
-                    context.add_error(service_name, str(e), stage.name)
-        
-        # Track stage metadata
-        context.metadata[f'stage_{stage.name}_duration'] = time.time() - stage_start
-        context.metadata[f'stage_{stage.name}_services'] = available_services
-    
-    def _prepare_service_data(self, stage: PipelineStage, context: PipelineContext) -> Dict[str, Any]:
-        """Prepare data for services based on stage"""
-        if stage.name == 'extraction':
-            # Extraction stage uses raw input
-            return context.input_data
-        else:
-            # Other stages use extraction results plus any previous results
-            data = {}
-            
-            # Add extraction results if available
-            if 'article_extractor' in context.results:
-                extraction = context.results['article_extractor']
-                # Check success field
-                if extraction and extraction.get('success', False):
-                    # Handle both formats: nested data field or flat structure
-                    if 'data' in extraction and isinstance(extraction['data'], dict):
-                        # Preferred format: extract data from the 'data' field
-                        data.update(extraction['data'])
-                        
-                        # CRITICAL FIX: Get HTML from the article extractor
-                        # The article extractor should have saved the raw HTML
-                        if 'html' in extraction['data']:
-                            data['html'] = extraction['data']['html']
-                        # Also check if it's in extraction_metadata
-                        elif 'extraction_metadata' in extraction['data'] and 'html' in extraction['data']['extraction_metadata']:
-                            data['html'] = extraction['data']['extraction_metadata']['html']
-                            
-                    else:
-                        # Legacy format: extract article fields from top level
-                        article_fields = ['title', 'text', 'author', 'publish_date', 'url', 
-                                        'domain', 'description', 'image', 'keywords', 'word_count', 'html']
-                        for field in article_fields:
-                            if field in extraction:
-                                data[field] = extraction[field]
-            
-            # Add relevant previous results (only successful ones)
-            data['previous_results'] = {
-                k: v for k, v in context.results.items()
-                if v and v.get('success', False)
-            }
-            
-            # Add original input data
-            data['input'] = context.input_data
-            
-            return data
-    
-    def _stage_failed(self, stage: PipelineStage, context: PipelineContext) -> bool:
-        """Check if a stage failed"""
-        # A stage succeeds if at least one service succeeded
-        for service in stage.services:
-            if service in context.results:
-                result = context.results[service]
-                if result and result.get('success', False):
-                    return False  # At least one service succeeded
-        
-        return True  # All services failed or no results
-    
-    def _finalize_results(self, context: PipelineContext, min_required: int) -> Dict[str, Any]:
-        """Finalize pipeline results"""
-        # Get successful services
-        successful_services = context.get_successful_services()
-        
-        # Calculate trust score if we have enough results
-        trust_score = self._calculate_trust_score(context.results)
-        
-        # Build final metadata
-        context.metadata['pipeline_end'] = time.time()
-        context.metadata['total_duration'] = context.metadata['pipeline_end'] - context.metadata['pipeline_start']
-        context.metadata['services_succeeded'] = len(successful_services)
-        context.metadata['services_failed'] = len(context.errors)
-        context.metadata['successful_services'] = successful_services
-        
-        # Check if pipeline succeeded based on dynamic minimum
-        pipeline_success = context.has_minimum_results(min_required)
-        
-        # Log the decision
-        logger.info(f"Pipeline completed: {len(successful_services)} services succeeded "
-                   f"(required: {min_required}), success: {pipeline_success}")
-        
-        # Structure final results
-        final_results = {
-            'success': pipeline_success,
-            'trust_score': trust_score,
-            'trust_level': self._get_trust_level(trust_score),
-            'summary': self._generate_summary(context),
-            
-            # Service results (only include successful ones)
-            **{name: result for name, result in context.results.items() 
-               if result and result.get('success', False)},
-            
-            # Metadata
-            'pipeline_metadata': context.metadata,
-            'errors': context.errors
         }
         
-        # Add article data if extraction succeeded
-        if 'article_extractor' in context.results:
-            extraction = context.results['article_extractor']
-            if extraction and extraction.get('success', False):
-                if 'data' in extraction:
-                    final_results['article'] = extraction['data']
-                else:
-                    # Fallback for legacy format
-                    final_results['article'] = {
-                        k: v for k, v in extraction.items()
-                        if k not in ['service', 'success', 'error', 'available', 'timestamp']
-                    }
+        try:
+            # Stage 1: Article Extraction (must complete first)
+            logger.info("Stage 1: Article Extraction")
+            article_data = self._run_stage_sequential(self.STAGE_1_SERVICES, data, results)
+            
+            if not article_data or not article_data.get('article_extractor', {}).get('success'):
+                logger.error("Article extraction failed")
+                results['success'] = False
+                results['error'] = 'Failed to extract article content'
+                return results
+            
+            # Update article data
+            extracted_article = self._extract_article_data(article_data['article_extractor'])
+            results['article'] = extracted_article
+            enriched_data = {**data, 'article': extracted_article}
+            
+            # Stage 2: Core Analysis (parallel execution)
+            logger.info("Stage 2: Core Analysis Services (Parallel)")
+            stage2_start = time.time()
+            stage2_results = self._run_stage_parallel(self.STAGE_2_SERVICES, enriched_data, results)
+            logger.info(f"Stage 2 completed in {time.time() - stage2_start:.2f}s")
+            
+            # Merge stage 2 results
+            for service_name, service_result in stage2_results.items():
+                results[service_name] = service_result
+            
+            # Stage 3: Fact Checking (can run after extraction)
+            logger.info("Stage 3: Fact Checking")
+            stage3_results = self._run_stage_parallel(self.STAGE_3_SERVICES, enriched_data, results)
+            for service_name, service_result in stage3_results.items():
+                results[service_name] = service_result
+            
+            # Stage 4: Enhancement (optional, non-blocking)
+            if data.get('is_pro', False):
+                logger.info("Stage 4: AI Enhancement")
+                # Run enhancement in background, don't wait
+                self._run_stage_async(self.STAGE_4_SERVICES, enriched_data, results)
+            
+            # Calculate trust score from available results
+            results['trust_score'] = self._calculate_trust_score(results)
+            results['trust_level'] = self._get_trust_level(results['trust_score'])
+            
+            # Update metadata
+            total_time = time.time() - start_time
+            results['pipeline_metadata']['total_time'] = total_time
+            results['pipeline_metadata']['services_available'] = len([
+                s for s in results.keys() 
+                if isinstance(results.get(s), dict) and results[s].get('success')
+            ])
+            
+            logger.info(f"Pipeline completed in {total_time:.2f}s with {results['pipeline_metadata']['services_available']} services")
+            
+        except Exception as e:
+            logger.error(f"Pipeline error: {str(e)}", exc_info=True)
+            results['success'] = False
+            results['error'] = str(e)
+            
+        return results
+    
+    def _run_stage_sequential(self, services: List[str], data: Dict[str, Any], 
+                            results: Dict[str, Any]) -> Dict[str, Any]:
+        """Run services sequentially (for dependencies)"""
+        stage_results = {}
         
-        return final_results
+        for service_name in services:
+            if not self.registry.is_service_available(service_name):
+                logger.warning(f"Service {service_name} not available")
+                continue
+                
+            try:
+                start_time = time.time()
+                result = self.registry.analyze_with_service(service_name, data)
+                duration = time.time() - start_time
+                
+                stage_results[service_name] = result
+                results['pipeline_metadata']['service_timings'][service_name] = duration
+                
+                logger.info(f"Service {service_name} completed in {duration:.2f}s")
+                
+            except Exception as e:
+                logger.error(f"Service {service_name} failed: {str(e)}")
+                stage_results[service_name] = {
+                    'success': False,
+                    'error': str(e),
+                    'service': service_name
+                }
+                
+        return stage_results
+    
+    def _run_stage_parallel(self, services: List[str], data: Dict[str, Any], 
+                          results: Dict[str, Any]) -> Dict[str, Any]:
+        """Run services in parallel with timeout protection"""
+        stage_results = {}
+        futures = {}
+        
+        # Submit all tasks
+        for service_name in services:
+            if not self.registry.is_service_available(service_name):
+                logger.warning(f"Service {service_name} not available")
+                continue
+                
+            future = self.executor.submit(self._run_service_with_timeout, service_name, data)
+            futures[future] = service_name
+        
+        # Collect results with timeout
+        timeout = 10  # 10 second timeout per service
+        for future in as_completed(futures, timeout=timeout):
+            service_name = futures[future]
+            try:
+                result, duration = future.result()
+                stage_results[service_name] = result
+                results['pipeline_metadata']['service_timings'][service_name] = duration
+                logger.info(f"Service {service_name} completed in {duration:.2f}s")
+            except Exception as e:
+                logger.error(f"Service {service_name} failed: {str(e)}")
+                stage_results[service_name] = {
+                    'success': False,
+                    'error': str(e),
+                    'service': service_name
+                }
+        
+        return stage_results
+    
+    def _run_service_with_timeout(self, service_name: str, data: Dict[str, Any]) -> tuple:
+        """Run a single service with timeout protection"""
+        start_time = time.time()
+        try:
+            # Use the service's own timeout if available
+            service = self.registry._services.get(service_name)
+            if service and hasattr(service, 'analyze_with_timeout'):
+                result = service.analyze_with_timeout(data)
+            else:
+                result = self.registry.analyze_with_service(service_name, data)
+            
+            duration = time.time() - start_time
+            return result, duration
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"Service {service_name} error: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'service': service_name
+            }, duration
+    
+    def _run_stage_async(self, services: List[str], data: Dict[str, Any], 
+                        results: Dict[str, Any]) -> None:
+        """Run services asynchronously without blocking"""
+        for service_name in services:
+            if self.registry.is_service_available(service_name):
+                self.executor.submit(self._run_service_async, service_name, data, results)
+    
+    def _run_service_async(self, service_name: str, data: Dict[str, Any], 
+                          results: Dict[str, Any]) -> None:
+        """Run a service asynchronously and update results"""
+        try:
+            start_time = time.time()
+            result = self.registry.analyze_with_service(service_name, data)
+            duration = time.time() - start_time
+            
+            results[service_name] = result
+            results['pipeline_metadata']['service_timings'][service_name] = duration
+            
+            logger.info(f"Async service {service_name} completed in {duration:.2f}s")
+            
+        except Exception as e:
+            logger.error(f"Async service {service_name} failed: {str(e)}")
+    
+    def _extract_article_data(self, extraction_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract article data from extraction service result"""
+        if not extraction_result.get('success'):
+            return {}
+            
+        # Handle different extraction result formats
+        if 'article' in extraction_result:
+            return extraction_result['article']
+        elif 'data' in extraction_result:
+            return extraction_result['data']
+        else:
+            # Extract relevant fields
+            article_fields = ['title', 'text', 'author', 'publish_date', 
+                            'domain', 'url', 'word_count', 'language']
+            return {
+                field: extraction_result.get(field) 
+                for field in article_fields 
+                if field in extraction_result
+            }
     
     def _calculate_trust_score(self, results: Dict[str, Any]) -> int:
         """Calculate overall trust score from service results"""
         scores = []
         weights = {
-            'source_credibility': 2.0,
-            'author_analyzer': 1.5,
-            'fact_checker': 2.0,
-            'bias_detector': 1.5,
-            'content_analyzer': 1.0,
-            'transparency_analyzer': 1.0,
-            'manipulation_detector': 1.5
+            'source_credibility': 0.25,
+            'author_analyzer': 0.20,
+            'bias_detector': 0.20,
+            'fact_checker': 0.15,
+            'transparency_analyzer': 0.10,
+            'manipulation_detector': 0.10
         }
         
-        total_weight = 0
-        weighted_sum = 0
+        for service, weight in weights.items():
+            if service in results and isinstance(results[service], dict):
+                service_data = results[service]
+                if service_data.get('success'):
+                    # Extract score from service
+                    score = self._extract_service_score(service, service_data)
+                    if score is not None:
+                        scores.append((score, weight))
         
-        for service_name, result in results.items():
-            # Only include successful services
-            if result and result.get('success', False):
-                score = None
-                
-                # Extract score based on service type
-                if 'data' in result and isinstance(result['data'], dict):
-                    data = result['data']
-                    # Try various score field names
-                    for score_field in ['trust_score', 'credibility_score', 'score', 
-                                       'transparency_score', 'bias_score']:
-                        if score_field in data:
-                            score = data[score_field]
-                            break
-                
-                # Try top-level score fields
-                if score is None:
-                    for score_field in ['trust_score', 'credibility_score', 'score']:
-                        if score_field in result:
-                            score = result[score_field]
-                            break
-                
-                if score is not None and isinstance(score, (int, float)):
-                    weight = weights.get(service_name, 1.0)
-                    weighted_sum += score * weight
-                    total_weight += weight
+        if not scores:
+            return 50  # Default middle score
         
         # Calculate weighted average
-        if total_weight > 0:
-            return int(weighted_sum / total_weight)
+        total_weight = sum(weight for _, weight in scores)
+        weighted_sum = sum(score * weight for score, weight in scores)
         
-        # Default to 50 if no scores available
-        return 50
+        return int(weighted_sum / total_weight) if total_weight > 0 else 50
+    
+    def _extract_service_score(self, service_name: str, data: Dict[str, Any]) -> Optional[int]:
+        """Extract numerical score from service result"""
+        # Common score field names
+        score_fields = ['trust_score', 'credibility_score', 'score', 'overall_score']
+        
+        # Check common fields first
+        for field in score_fields:
+            if field in data and isinstance(data[field], (int, float)):
+                return int(data[field])
+        
+        # Service-specific logic
+        if service_name == 'bias_detector':
+            # For bias, invert the score (less bias = higher trust)
+            bias_score = data.get('bias_score', data.get('score', 50))
+            return 100 - int(bias_score)
+            
+        elif service_name == 'fact_checker':
+            # Calculate from fact check results
+            if 'fact_checks' in data and isinstance(data['fact_checks'], list):
+                if len(data['fact_checks']) > 0:
+                    verified = sum(1 for fc in data['fact_checks'] 
+                                 if fc.get('verdict', '').lower() in ['true', 'verified', 'correct'])
+                    return int((verified / len(data['fact_checks'])) * 100)
+            return 75  # Default if no claims to check
+            
+        elif service_name == 'manipulation_detector':
+            # Less manipulation = higher trust
+            manipulation_score = data.get('manipulation_score', 0)
+            tactics_count = len(data.get('tactics_found', []))
+            if tactics_count > 5:
+                return 20
+            elif tactics_count > 2:
+                return 50
+            else:
+                return 100 - int(manipulation_score)
+        
+        return None
     
     def _get_trust_level(self, score: int) -> str:
-        """Get trust level from score"""
+        """Get trust level description from score"""
         if score >= 80:
-            return 'High'
+            return 'Very High'
         elif score >= 60:
-            return 'Moderate'
+            return 'High'
         elif score >= 40:
+            return 'Moderate'
+        elif score >= 20:
             return 'Low'
         else:
             return 'Very Low'
-    
-    def _generate_summary(self, context: PipelineContext) -> str:
-        """Generate summary of analysis"""
-        successful = context.get_successful_services()
-        
-        if not successful:
-            return "Analysis could not be completed due to extraction failure."
-        
-        if 'article_extractor' in successful:
-            extraction = context.results.get('article_extractor', {})
-            if extraction.get('success'):
-                # Try to get title from either nested or flat structure
-                title = None
-                if 'data' in extraction:
-                    title = extraction['data'].get('title')
-                else:
-                    title = extraction.get('title')
-                
-                if title:
-                    summary = f"Analysis of '{title[:50]}...' completed with {len(successful)} services. "
-                else:
-                    summary = f"Analysis completed with {len(successful)} services. "
-            else:
-                summary = f"Analysis completed with {len(successful)} services. "
-        else:
-            summary = f"Partial analysis completed with {len(successful)} services. "
-        
-        # Add key findings
-        findings = []
-        
-        if 'fact_checker' in successful:
-            fc_result = context.results['fact_checker']
-            if fc_result.get('data', {}).get('verified_facts'):
-                findings.append(f"{len(fc_result['data']['verified_facts'])} facts verified")
-        
-        if 'bias_detector' in successful:
-            bias_result = context.results['bias_detector']
-            if bias_result.get('data', {}).get('overall_bias'):
-                findings.append(f"{bias_result['data']['overall_bias']} bias detected")
-        
-        if findings:
-            summary += "Key findings: " + ", ".join(findings) + "."
-        
-        return summary
-
-
-# Create singleton instance factory
-_pipeline_instance = None
-
-def get_pipeline():
-    """Get or create the singleton pipeline instance"""
-    global _pipeline_instance
-    if _pipeline_instance is None:
-        _pipeline_instance = AnalysisPipeline()
-        logger.info("Created pipeline instance")
-    return _pipeline_instance
-
-# For backward compatibility - create a variable named 'pipeline'
-pipeline = get_pipeline()
