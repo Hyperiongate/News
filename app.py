@@ -503,6 +503,26 @@ def debug_services():
         'performance': performance_stats
     })
 
+@app.route('/performance-test')
+def performance_test_page():
+    """Serve the performance test page"""
+    return render_template('performance-test.html')
+
+# Static file serving for templates
+@app.route('/templates/<path:filename>')
+def serve_template(filename):
+    """Serve template files"""
+    try:
+        # Security check
+        if '..' in filename or filename.startswith('/'):
+            return "Invalid path", 400
+            
+        # Serve the template file
+        return send_from_directory('templates', filename)
+    except Exception as e:
+        logger.error(f"Error serving template {filename}: {e}")
+        return f"Error loading template: {str(e)}", 500
+
 # Initialize app state
 app.config['start_time'] = datetime.now()
 
