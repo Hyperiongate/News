@@ -184,6 +184,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             }
             
             # AI ENHANCEMENT - Add red flags if available
+            text = data.get('text', '')
             if self._ai_available and text:
                 logger.info("Enhancing source credibility with AI insights")
                 ai_flags = self._ai_detect_credibility_issues(
@@ -717,10 +718,12 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'explanation': 'New sites have not established credibility'
                 })
             elif tech.get('age_credibility') == 'established':
+                # FIXED: Use single quotes inside f-string
+                age_years = tech.get('age_years', '?')
                 findings.append({
                     'type': 'positive',
                     'severity': 'positive',
-                    'text': f'Established domain ({tech.get("age_years", "?") years)',
+                    'text': f'Established domain ({age_years} years)',
                     'explanation': 'Long-standing web presence'
                 })
             
