@@ -3,489 +3,778 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Author Analysis - TruthLens Analysis</title>
+    <title>Author Intelligence Report - TruthLens AI</title>
     
-    <!-- Icons & Fonts -->
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <!-- Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Professional Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    <!-- Service-specific styles -->
     <style>
-        /* Use same CSS variables from index.html */
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --dark: #1f2937;
-            --gray-700: #374151;
-            --gray-600: #4b5563;
-            --gray-500: #6b7280;
-            --gray-400: #9ca3af;
-            --gray-300: #d1d5db;
-            --gray-200: #e5e7eb;
-            --gray-100: #f3f4f6;
-            --gray-50: #f9fafb;
-            --white: #ffffff;
-            
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            
-            --radius: 0.75rem;
-            --radius-lg: 1rem;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-display: 'Space Grotesk', sans-serif;
+        /* Service Detail Page Enhancements */
+        .service-detail-header {
+            background: linear-gradient(180deg, var(--bg-dark) 0%, #1e293b 100%);
+            position: relative;
+            overflow: hidden;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: var(--font-sans);
-            background: var(--gray-50);
-            color: var(--dark);
-            line-height: 1.6;
-        }
-
-        /* Header with Return Button */
-        .service-header {
-            background: var(--white);
-            border-bottom: 1px solid var(--gray-200);
-            position: sticky;
+        
+        .header-background-pattern {
+            position: absolute;
             top: 0;
-            z-index: 1000;
-            box-shadow: var(--shadow-sm);
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.1;
+            background-image: 
+                radial-gradient(circle at 20% 50%, var(--primary) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--secondary) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, var(--accent) 0%, transparent 50%);
         }
-
-        .header-content {
-            max-width: 1200px;
+        
+        .detail-nav-bar {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-container {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 1rem 2rem;
+            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        /* Prominent Return Button */
-        .return-button {
+        
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-md);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all var(--transition);
+            backdrop-filter: blur(10px);
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-4px);
+        }
+        
+        .service-badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
+            padding: 0.5rem 1rem;
             background: var(--primary);
             color: white;
-            text-decoration: none;
-            border-radius: var(--radius);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
             font-weight: 600;
-            font-size: 0.9375rem;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-md);
         }
-
-        .return-button:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
+        
+        /* Hero Section */
+        .detail-hero {
+            position: relative;
+            z-index: 10;
+            padding: 3rem 0 4rem;
+            color: white;
         }
-
-        .return-button i {
-            font-size: 1.125rem;
+        
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 3rem;
+            align-items: center;
         }
-
-        .service-title-section {
-            flex: 1;
+        
+        .score-showcase {
             text-align: center;
         }
-
-        .service-title {
-            font-family: var(--font-display);
+        
+        .score-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            margin: 0 auto;
+        }
+        
+        .score-ring {
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(
+                from 0deg,
+                var(--primary) 0deg,
+                var(--secondary) 120deg,
+                var(--accent) 240deg,
+                var(--primary) 360deg
+            );
+            border-radius: 50%;
+            padding: 8px;
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+        
+        .score-inner {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-number {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .score-label {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+        
+        .score-status {
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Intelligence Summary */
+        .intelligence-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .summary-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        .insight-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .insight-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+        
+        .insight-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--dark);
+        }
+        
+        /* Analysis Sections */
+        .analysis-content {
+            max-width: 1400px;
+            margin: -2rem auto 0;
+            padding: 0 2rem 4rem;
+            position: relative;
+            z-index: 20;
+        }
+        
+        .analysis-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-2xl);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        
+        .card-header {
+            background: var(--gray-50);
+            padding: 2rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
+            color: white;
+            font-size: 1.25rem;
         }
-
-        .service-icon {
+        
+        .card-content {
+            padding: 2rem;
+        }
+        
+        /* Credentials Section */
+        .credentials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .credential-item {
+            padding: 1.5rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+            transition: all var(--transition);
+        }
+        
+        .credential-item:hover {
+            background: white;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .credential-icon {
             width: 40px;
             height: 40px;
             background: var(--primary);
             color: white;
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        /* Analysis Summary Section */
-        .analysis-summary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-        }
-
-        .summary-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 3rem;
-            align-items: center;
-        }
-
-        .summary-score {
-            text-align: center;
-        }
-
-        .score-circle {
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-            position: relative;
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
-        }
-
-        .score-value {
-            font-size: 3rem;
-            font-weight: 800;
-            font-family: var(--font-display);
-        }
-
-        .score-label {
-            font-size: 0.875rem;
-            opacity: 0.9;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .summary-details h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            opacity: 0.9;
-        }
-
-        .summary-item {
-            margin-bottom: 1.25rem;
-        }
-
-        .summary-item h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.375rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .summary-item h3 i {
-            font-size: 0.875rem;
-            opacity: 0.8;
-        }
-
-        .summary-item p {
-            font-size: 0.9375rem;
-            line-height: 1.5;
-            opacity: 0.95;
-        }
-
-        /* Main Content Area */
-        .service-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem 3rem;
-        }
-
-        /* Service-specific styles from truthlens-services.js */
-        .service-section {
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-md);
-        }
-
-        .section-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-title i {
-            color: var(--primary);
-            font-size: 1rem;
-        }
-
-        /* Loading State */
-        .loading-container {
-            text-align: center;
-            padding: 4rem 2rem;
-        }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 1.5rem;
-            border: 3px solid var(--gray-200);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Error State */
-        .error-container {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--danger);
             border-radius: var(--radius);
-            padding: 2rem;
-            text-align: center;
-            margin: 2rem auto;
-            max-width: 600px;
-        }
-
-        .error-icon {
-            font-size: 3rem;
-            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin-bottom: 1rem;
         }
-
+        
+        .credential-title {
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .credential-detail {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        /* Publishing History Chart */
+        .chart-container {
+            height: 300px;
+            margin: 2rem 0;
+        }
+        
+        /* Expertise Tags */
+        .expertise-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .expertise-tag {
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            transition: all var(--transition);
+        }
+        
+        .expertise-tag:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* Warning Banner */
+        .warning-banner {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--accent-dark) 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: var(--radius-lg);
+            margin: 2rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .warning-icon {
+            font-size: 1.5rem;
+        }
+        
+        .warning-content h4 {
+            font-size: 1.125rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .warning-content p {
+            font-size: 0.9375rem;
+            opacity: 0.9;
+        }
+        
+        /* Loading States */
+        .skeleton-loader {
+            background: linear-gradient(90deg, var(--gray-200) 0%, var(--gray-100) 50%, var(--gray-200) 100%);
+            background-size: 200% 100%;
+            animation: skeleton 1.5s infinite;
+            border-radius: var(--radius);
+        }
+        
+        @keyframes skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
-            .summary-content {
+            .hero-content {
                 grid-template-columns: 1fr;
-                gap: 2rem;
+                text-align: center;
             }
-
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
             }
-
-            .service-title-section {
-                order: -1;
-            }
-
-            .return-button {
-                width: 100%;
-                justify-content: center;
+            
+            .credentials-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header with Return Button -->
-    <header class="service-header">
-        <div class="header-content">
-            <a href="/" class="return-button" id="returnButton">
-                <i class="fas fa-arrow-left"></i>
-                <span>Return to Analysis</span>
-            </a>
-            
-            <div class="service-title-section">
-                <h1 class="service-title">
-                    <div class="service-icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <span>Author Analysis</span>
-                </h1>
+    <!-- Professional Header -->
+    <header class="service-detail-header">
+        <div class="header-background-pattern"></div>
+        
+        <!-- Navigation Bar -->
+        <nav class="detail-nav-bar">
+            <div class="nav-container">
+                <a href="/" class="back-button" id="returnButton">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Analysis</span>
+                </a>
+                
+                <div class="service-badge">
+                    <i class="fas fa-user-check"></i>
+                    <span>Author Intelligence</span>
+                </div>
             </div>
-            
-            <div style="width: 180px;"></div> <!-- Spacer for balance -->
-        </div>
+        </nav>
+        
+        <!-- Hero Section -->
+        <section class="detail-hero">
+            <div class="hero-content">
+                <!-- Score Showcase -->
+                <div class="score-showcase">
+                    <div class="score-container">
+                        <div class="score-ring">
+                            <div class="score-inner">
+                                <div class="score-number" id="authorScore">--</div>
+                                <div class="score-label">Credibility Score</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="score-status" id="scoreStatus">
+                        <i class="fas fa-shield-check"></i>
+                        <span id="statusText">Analyzing...</span>
+                    </div>
+                </div>
+                
+                <!-- Intelligence Summary -->
+                <div class="intelligence-summary">
+                    <h1 class="summary-title" id="authorName">Loading Author Data...</h1>
+                    
+                    <div class="summary-grid">
+                        <div class="insight-card">
+                            <div class="insight-label">
+                                <i class="fas fa-newspaper"></i>
+                                <span>Articles Published</span>
+                            </div>
+                            <div class="insight-value" id="articleCount">--</div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-label">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Years Active</span>
+                            </div>
+                            <div class="insight-value" id="yearsActive">--</div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-label">
+                                <i class="fas fa-award"></i>
+                                <span>Verification Status</span>
+                            </div>
+                            <div class="insight-value" id="verificationStatus">--</div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-label">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Trust Trend</span>
+                            </div>
+                            <div class="insight-value" id="trustTrend">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </header>
 
-    <!-- Analysis Summary Section -->
-    <section class="analysis-summary" id="analysisSummary">
-        <div class="summary-content">
-            <div class="summary-score">
-                <div class="score-circle">
-                    <div>
-                        <div class="score-value" id="summaryScore">--</div>
-                        <div class="score-label">Author Score</div>
+    <!-- Main Analysis Content -->
+    <main class="analysis-content">
+        <!-- Loading State -->
+        <div class="loading-container" id="loadingState" style="display: none;">
+            <div class="analysis-card">
+                <div class="card-content" style="text-align: center; padding: 4rem;">
+                    <div class="loading-hexagon" style="margin: 0 auto 2rem;">
+                        <div class="hexagon-inner"></div>
+                    </div>
+                    <h3>Analyzing Author Intelligence...</h3>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error State -->
+        <div class="error-container" id="errorState" style="display: none;">
+            <div class="analysis-card">
+                <div class="card-content" style="text-align: center; padding: 4rem;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: var(--danger); margin-bottom: 1rem;"></i>
+                    <h2>Analysis Not Available</h2>
+                    <p id="errorMessage" style="color: var(--gray-600); margin: 1rem 0;">Author analysis data could not be loaded.</p>
+                    <a href="/" class="primary-action-btn" style="display: inline-flex; margin-top: 1.5rem;">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Return to Main Analysis</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analysis Results -->
+        <div id="analysisContent" style="display: none;">
+            <!-- Professional Credentials -->
+            <div class="analysis-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <span>Professional Credentials</span>
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="credentials-grid" id="credentialsGrid">
+                        <!-- Dynamic credentials will be inserted here -->
                     </div>
                 </div>
             </div>
             
-            <div class="summary-details">
-                <h2>Analysis Summary</h2>
-                
-                <div class="summary-item">
-                    <h3><i class="fas fa-file-alt"></i> What We Analyzed</h3>
-                    <p id="analyzedContent">Loading article information...</p>
+            <!-- Publishing Analytics -->
+            <div class="analysis-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-area"></i>
+                        </div>
+                        <span>Publishing Analytics</span>
+                    </h2>
                 </div>
-                
-                <div class="summary-item">
-                    <h3><i class="fas fa-search"></i> What We Found</h3>
-                    <p id="keyFindings">Analyzing content...</p>
-                </div>
-                
-                <div class="summary-item">
-                    <h3><i class="fas fa-lightbulb"></i> What This Means</h3>
-                    <p id="interpretation">Processing results...</p>
+                <div class="card-content">
+                    <div class="chart-container" id="publishingChart">
+                        <!-- Chart will be rendered here -->
+                    </div>
+                    <div class="stats-grid" id="publishingStats">
+                        <!-- Publishing statistics -->
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Main Content Area -->
-    <main class="service-content" id="serviceContent">
-        <div class="loading-container" id="loadingState">
-            <div class="loading-spinner"></div>
-            <p>Loading author analysis...</p>
-        </div>
-        
-        <div class="error-container" id="errorState" style="display: none;">
-            <i class="fas fa-exclamation-circle error-icon"></i>
-            <h2>Analysis Not Available</h2>
-            <p id="errorMessage">Author analysis was not performed for this article.</p>
-            <a href="/" class="return-button" style="margin-top: 1.5rem; display: inline-flex;">
-                <i class="fas fa-arrow-left"></i>
-                <span>Return to Main Analysis</span>
-            </a>
-        </div>
-        
-        <!-- Service-specific content will be inserted here -->
-        <div id="analysisContent" style="display: none;">
-            <!-- Dynamic content -->
+            
+            <!-- Expertise & Topics -->
+            <div class="analysis-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <span>Areas of Expertise</span>
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <p style="margin-bottom: 1rem; color: var(--gray-600);">Topics frequently covered by this author:</p>
+                    <div class="expertise-cloud" id="expertiseCloud">
+                        <!-- Expertise tags will be inserted here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trust Indicators -->
+            <div class="analysis-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <span>Trust Indicators</span>
+                    </h2>
+                </div>
+                <div class="card-content" id="trustIndicators">
+                    <!-- Trust indicators will be inserted here -->
+                </div>
+            </div>
+            
+            <!-- Warnings or Concerns -->
+            <div id="warningsSection" style="display: none;">
+                <div class="warning-banner">
+                    <i class="fas fa-exclamation-triangle warning-icon"></i>
+                    <div class="warning-content">
+                        <h4>Credibility Concerns</h4>
+                        <p id="warningText">This author has some credibility concerns that should be considered.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
     <!-- Scripts -->
-    <!-- IMPORTANT: Define SERVICE_CONFIG before loading other scripts -->
     <script>
-        // Service-specific configuration - MUST be defined before service-navigation.js loads
+        // Service-specific configuration
         window.SERVICE_CONFIG = {
             id: 'author_analyzer',
-            name: 'Author Analysis',
+            name: 'Author Intelligence',
             icon: 'fa-user-check'
         };
-        console.log('SERVICE_CONFIG defined at script load:', window.SERVICE_CONFIG);
     </script>
     
-    <!-- Now load the scripts in proper order -->
+    <!-- Core Scripts -->
     <script src="/static/js/config.js"></script>
     <script src="/static/js/truthlens-services.js"></script>
     <script src="/static/js/service-navigation.js"></script>
     
-    <!-- Service-specific functions -->
+    <!-- Professional Service Functions -->
     <script>
-        // These functions will be used by service-navigation.js
-        
+        // Professional data population functions
         function populateSummary(fullData, serviceData) {
-            // Article information
-            const article = fullData.article || {};
-            const articleInfo = `"${article.title || 'Untitled Article'}" from ${article.source || article.domain || 'Unknown Source'}`;
-            document.getElementById('analyzedContent').textContent = articleInfo;
-
-            // Service-specific score and findings
-            const scoreInfo = getServiceScoreInfo(serviceData);
-            document.getElementById('summaryScore').textContent = scoreInfo.score;
+            // Update hero section
+            const authorName = serviceData.author_name || 'Unknown Author';
+            const score = serviceData.author_score || serviceData.credibility_score || serviceData.score || 0;
             
-            // Key findings
-            document.getElementById('keyFindings').textContent = getServiceKeyFindings(serviceData);
+            document.getElementById('authorName').textContent = authorName;
+            document.getElementById('authorScore').textContent = score;
             
-            // Interpretation
-            document.getElementById('interpretation').textContent = getServiceInterpretation(serviceData);
-        }
-
-        function getServiceScoreInfo(data) {
-            const score = data.author_score || data.credibility_score || data.score || 0;
-            return {
-                score: score,
-                label: 'Author Score'
-            };
-        }
-
-        function getServiceKeyFindings(data) {
-            const score = data.author_score || data.credibility_score || 0;
-            const authorName = data.author_name || 'The author';
-            const verified = data.verified ? 'verified' : 'unverified';
-            
-            let findings = `${authorName} is ${verified} with a credibility score of ${score}/100. `;
-            
-            if (data.metrics?.article_count) {
-                findings += `They have published ${data.metrics.article_count} articles. `;
-            }
-            
-            if (data.author_info?.experience || data.professional_info?.years_experience) {
-                const exp = data.author_info?.experience || data.professional_info?.years_experience;
-                findings += `${exp}+ years of experience in journalism.`;
-            }
-            
-            return findings;
-        }
-
-        function getServiceInterpretation(data) {
-            const score = data.author_score || data.credibility_score || data.score || 0;
-            const authorName = data.author_name || 'The author';
+            // Update status based on score
+            const statusEl = document.getElementById('scoreStatus');
+            const statusTextEl = document.getElementById('statusText');
             
             if (score >= 80) {
-                return `${authorName} is a verified journalist with strong credentials and extensive experience. Their work demonstrates high standards of accuracy and professionalism, making them a trustworthy source of information.`;
+                statusEl.style.background = 'rgba(16, 185, 129, 0.2)';
+                statusTextEl.textContent = 'Highly Credible';
             } else if (score >= 60) {
-                return `${authorName} shows reasonable credibility with some verified credentials. While generally reliable, readers should still cross-reference important claims with other sources.`;
+                statusEl.style.background = 'rgba(59, 130, 246, 0.2)';
+                statusTextEl.textContent = 'Generally Credible';
             } else if (score >= 40) {
-                return `${authorName} has limited verifiable information or credentials. Their credibility is uncertain, and readers should exercise caution and verify claims through additional sources.`;
-            } else if (score >= 20) {
-                return `${authorName} lacks verified credentials or has credibility concerns. Content from this author should be approached with significant skepticism and verified through multiple independent sources.`;
+                statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
+                statusTextEl.textContent = 'Mixed Credibility';
             } else {
-                return `${authorName} has no verifiable credentials or significant credibility issues. Content from this author should not be considered reliable without extensive independent verification.`;
+                statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+                statusTextEl.textContent = 'Low Credibility';
             }
+            
+            // Update insight cards
+            document.getElementById('articleCount').textContent = 
+                serviceData.metrics?.article_count || serviceData.total_articles || '0';
+            
+            document.getElementById('yearsActive').textContent = 
+                serviceData.professional_info?.years_experience || 
+                serviceData.author_info?.experience || 
+                'N/A';
+            
+            document.getElementById('verificationStatus').textContent = 
+                serviceData.verified ? 'Verified' : 'Unverified';
+            
+            // Calculate trend
+            const trend = score >= 60 ? 'Stable' : 'Concerning';
+            document.getElementById('trustTrend').textContent = trend;
         }
-
+        
         function displayServiceAnalysis(data) {
             // Hide loading, show content
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('analysisContent').style.display = 'block';
             
-            // Use the renderer from truthlens-services.js
-            if (window.truthLensApp && window.truthLensApp.services) {
-                const content = window.truthLensApp.services.renderAuthorAnalysis(data);
-                document.getElementById('analysisContent').innerHTML = content;
-            } else {
-                // Fallback if services not loaded
-                const services = new TruthLensServices({ utils: { getScoreColor: (s) => s >= 60 ? '#10b981' : '#ef4444' }});
-                const content = services.renderAuthorAnalysis(data);
-                document.getElementById('analysisContent').innerHTML = content;
+            // Populate credentials
+            populateCredentials(data);
+            
+            // Populate expertise
+            populateExpertise(data);
+            
+            // Populate trust indicators
+            populateTrustIndicators(data);
+            
+            // Show warnings if needed
+            if (data.author_score < 40 || data.credibility_score < 40) {
+                document.getElementById('warningsSection').style.display = 'block';
+                document.getElementById('warningText').textContent = 
+                    data.credibility_factors?.negative?.join(' ') || 
+                    'This author has limited verifiable credentials.';
             }
         }
-
+        
+        function populateCredentials(data) {
+            const grid = document.getElementById('credentialsGrid');
+            grid.innerHTML = '';
+            
+            const credentials = [
+                {
+                    icon: 'fa-user',
+                    title: 'Identity',
+                    detail: data.author_name || 'Unknown'
+                },
+                {
+                    icon: 'fa-building',
+                    title: 'Organization',
+                    detail: data.organization || data.professional_info?.current_organization || 'Independent'
+                },
+                {
+                    icon: 'fa-graduation-cap',
+                    title: 'Education',
+                    detail: data.education || data.professional_info?.education || 'Not specified'
+                },
+                {
+                    icon: 'fa-trophy',
+                    title: 'Awards',
+                    detail: data.awards?.length ? `${data.awards.length} awards` : 'None listed'
+                }
+            ];
+            
+            credentials.forEach(cred => {
+                const item = document.createElement('div');
+                item.className = 'credential-item';
+                item.innerHTML = `
+                    <div class="credential-icon">
+                        <i class="fas ${cred.icon}"></i>
+                    </div>
+                    <div class="credential-title">${cred.title}</div>
+                    <div class="credential-detail">${cred.detail}</div>
+                `;
+                grid.appendChild(item);
+            });
+        }
+        
+        function populateExpertise(data) {
+            const cloud = document.getElementById('expertiseCloud');
+            cloud.innerHTML = '';
+            
+            const topics = data.expertise_areas || data.topics || ['General News'];
+            
+            topics.forEach(topic => {
+                const tag = document.createElement('span');
+                tag.className = 'expertise-tag';
+                tag.textContent = topic;
+                cloud.appendChild(tag);
+            });
+        }
+        
+        function populateTrustIndicators(data) {
+            const container = document.getElementById('trustIndicators');
+            
+            const indicators = [];
+            
+            if (data.verified) {
+                indicators.push({
+                    icon: 'fa-check-circle',
+                    text: 'Verified journalist identity',
+                    positive: true
+                });
+            }
+            
+            if (data.professional_info?.years_experience > 5) {
+                indicators.push({
+                    icon: 'fa-clock',
+                    text: `${data.professional_info.years_experience}+ years of experience`,
+                    positive: true
+                });
+            }
+            
+            if (data.social_media_verified) {
+                indicators.push({
+                    icon: 'fa-twitter',
+                    text: 'Verified social media presence',
+                    positive: true
+                });
+            }
+            
+            let html = '<div style="display: grid; gap: 1rem;">';
+            indicators.forEach(ind => {
+                html += `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: ${ind.positive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; border-radius: var(--radius-md);">
+                        <i class="fas ${ind.icon}" style="color: ${ind.positive ? 'var(--success)' : 'var(--danger)'}; font-size: 1.25rem;"></i>
+                        <span style="color: var(--gray-700);">${ind.text}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
         function showError(message) {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('errorState').style.display = 'block';
             document.getElementById('errorMessage').textContent = message;
         }
-
-        // Note: The DOMContentLoaded listener is no longer needed here
-        // service-navigation.js will handle initialization
     </script>
 </body>
 </html>
