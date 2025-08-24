@@ -160,7 +160,7 @@ class AnalysisPipeline:
             futures[future] = service_name
         
         # Collect results with timeout
-        timeout = 10  # 10 second timeout per service
+        timeout = 30  # Increased from 10 to 30 seconds for AI-enhanced services
         for future in as_completed(futures, timeout=timeout):
             service_name = futures[future]
             try:
