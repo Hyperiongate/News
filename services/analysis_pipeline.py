@@ -180,8 +180,8 @@ class AnalysisPipeline:
         """Run a single service with timeout protection"""
         start_time = time.time()
         try:
-            # Use the service's own timeout if available
-            service = self.registry._services.get(service_name)
+            # FIXED: Access the service using get_service method instead of _services
+            service = self.registry.get_service(service_name)
             if service and hasattr(service, 'analyze_with_timeout'):
                 result = service.analyze_with_timeout(data)
             else:
