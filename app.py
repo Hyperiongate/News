@@ -57,19 +57,50 @@ debug_info = {
     'service_timings': {}
 }
 
-# Helper function to extract service data
+# FIXED: Enhanced service data extraction that preserves all fields
 def extract_service_data(service_result: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract meaningful data from service result"""
+    """Extract meaningful data from service result - FIXED VERSION"""
     if not isinstance(service_result, dict):
         return {}
     
-    # If service result has 'data' field, use it
+    # If service result has 'data' field, extract it
     if 'data' in service_result and isinstance(service_result['data'], dict):
-        return service_result['data']
+        extracted_data = service_result['data'].copy()
+        
+        # CRITICAL FIX: Ensure commonly expected fields are at top level
+        # This makes the data accessible to frontend without deep nesting
+        
+        # For content_analyzer
+        if 'content_score' in extracted_data:
+            extracted_data['score'] = extracted_data.get('score', extracted_data['content_score'])
+            extracted_data['quality_score'] = extracted_data.get('content_score')
+        
+        # For transparency_analyzer
+        if 'transparency_score' in extracted_data:
+            extracted_data['score'] = extracted_data.get('score', extracted_data['transparency_score'])
+        
+        # Ensure all services have a score field
+        if 'score' not in extracted_data:
+            # Try to find any score-like field
+            for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
+                if key in extracted_data:
+                    extracted_data['score'] = extracted_data[key]
+                    break
+        
+        return extracted_data
     
     # Otherwise, extract all fields except metadata
     exclude_fields = {'success', 'service', 'timestamp', 'available', 'error', 'processing_time'}
-    return {k: v for k, v in service_result.items() if k not in exclude_fields}
+    extracted = {k: v for k, v in service_result.items() if k not in exclude_fields}
+    
+    # Ensure score field exists
+    if 'score' not in extracted:
+        for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
+            if key in extracted:
+                extracted['score'] = extracted[key]
+                break
+    
+    return extracted
 
 # Helper to identify service results in pipeline output
 def is_service_result(key: str, value: Any) -> bool:
@@ -212,6 +243,9 @@ def analyze():
         service_results = {}
         article_data = None
         
+        # Log what we got from pipeline
+        logger.info(f"Pipeline results keys: {list(pipeline_results.keys())}")
+        
         for key, value in pipeline_results.items():
             if key == 'article':
                 article_data = value
@@ -221,6 +255,9 @@ def analyze():
                 if service_data:
                     service_results[key] = service_data
                     logger.info(f"Extracted {key} data with {len(service_data)} fields")
+                    # Log first few fields for debugging
+                    for field_name in list(service_data.keys())[:5]:
+                        logger.info(f"  - {key}.{field_name}: {type(service_data[field_name]).__name__}")
         
         # Ensure we have article data
         if not article_data:
@@ -268,6 +305,17 @@ def analyze():
         # Log success
         logger.info(f"Analysis completed in {total_time:.2f}s")
         logger.info(f"Services included: {list(service_results.keys())}")
+        logger.info("=" * 80)
+        logger.info("FINAL detailed_analysis structure:")
+        for service_name, service_data in service_results.items():
+            logger.info(f"{service_name}:")
+            for key in list(service_data.keys())[:5]:
+                value = service_data[key]
+                if isinstance(value, (str, int, float, bool)):
+                    logger.info(f"  - {key}: {value}")
+                else:
+                    logger.info(f"  - {key}: {type(value).__name__}")
+        logger.info("=" * 80)
         
         return jsonify(response_data)
         
@@ -348,79 +396,114 @@ def extract_key_findings(service_results: Dict[str, Any]) -> List[Dict[str, Any]
     if 'bias_detector' in service_results:
         data = service_results['bias_detector']
         bias_score = data.get('bias_score', data.get('score', 0))
-        if bias_score > 40:
+        if bias_score > 60:
             findings.append({
-                'type': 'warning',
-                'text': f'Significant bias detected: {bias_score}/100',
+                'type': 'warning', 
+                'text': f'High bias detected: {bias_score}/100',
                 'service': 'bias_detector'
             })
     
-    # Check fact checking
-    if 'fact_checker' in service_results:
-        data = service_results['fact_checker']
-        if data.get('unverified_claims', 0) > 0:
+    # Check transparency
+    if 'transparency_analyzer' in service_results:
+        data = service_results['transparency_analyzer']
+        transparency_score = data.get('transparency_score', data.get('score', 0))
+        if transparency_score < 50:
             findings.append({
-                'type': 'info',
-                'text': f'{data.get("unverified_claims", 0)} unverified claims found',
-                'service': 'fact_checker'
+                'type': 'warning',
+                'text': f'Low transparency: {transparency_score}/100',
+                'service': 'transparency_analyzer'
             })
     
-    return findings[:5]  # Limit to 5 findings
+    # Check content quality
+    if 'content_analyzer' in service_results:
+        data = service_results['content_analyzer']
+        quality_score = data.get('content_score', data.get('quality_score', data.get('score', 0)))
+        if quality_score < 50:
+            findings.append({
+                'type': 'info',
+                'text': f'Content quality concerns: {quality_score}/100',
+                'service': 'content_analyzer'
+            })
+    
+    return findings[:5]  # Return top 5 findings
 
-# Debug routes
+# API Status and debugging endpoints
+
+@app.route('/api/status')
+def api_status():
+    """Get API status and service availability"""
+    return jsonify(news_analyzer.get_available_services())
 
 @app.route('/api/debug/services')
 def debug_services():
-    """Get detailed service information"""
+    """Debug endpoint to check service status"""
     registry = get_service_registry()
+    status = registry.get_service_status()
+    
+    # Add more debug info
+    status['registered_services'] = list(registry._services.keys())
+    status['failed_services'] = registry._failed_services
+    
+    return jsonify(status)
+
+@app.route('/api/debug/analyze-test', methods=['GET', 'POST'])
+def debug_analyze_test():
+    """Test analysis with a sample URL"""
+    test_url = "https://www.reuters.com/technology/artificial-intelligence/openai-allows-employees-sell-shares-tender-offer-led-softbank-2024-11-27/"
+    
+    result = news_analyzer.analyze(test_url, 'url', False)
+    
+    # Extract service results for easier debugging
+    service_data = {}
+    for key, value in result.items():
+        if is_service_result(key, value):
+            service_data[key] = {
+                'success': value.get('success', False),
+                'has_data': 'data' in value,
+                'data_keys': list(value.get('data', {}).keys()) if isinstance(value.get('data'), dict) else [],
+                'error': value.get('error')
+            }
     
     return jsonify({
-        'status': registry.get_service_status(),
-        'performance': performance_stats
+        'test_url': test_url,
+        'success': result.get('success', False),
+        'trust_score': result.get('trust_score'),
+        'services_found': list(service_data.keys()),
+        'service_details': service_data,
+        'full_result': result
     })
 
-# Static file serving for templates
-@app.route('/templates/<path:filename>')
-def serve_template(filename):
-    """Serve template files"""
-    try:
-        # Security check
-        if '..' in filename or filename.startswith('/'):
-            return "Invalid path", 400
-            
-        # Serve the template file
-        return send_from_directory('templates', filename)
-    except Exception as e:
-        logger.error(f"Error serving template {filename}: {e}")
-        return f"Error loading template: {str(e)}", 500
+@app.route('/api/debug/clear-cache', methods=['POST'])
+def clear_cache():
+    """Clear any caches (placeholder for future implementation)"""
+    return jsonify({
+        'success': True,
+        'message': 'Cache cleared (if implemented)'
+    })
 
-# Initialize app state
-app.config['start_time'] = datetime.now()
+# Static file serving for service pages
+@app.route('/<path:filename>')
+def serve_static_html(filename):
+    """Serve static HTML files from templates directory"""
+    if filename.endswith('.html'):
+        return render_template(filename)
+    return send_from_directory('static', filename)
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({
+        'success': False,
+        'error': 'Endpoint not found'
+    }), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error'
+    }), 500
 
 if __name__ == '__main__':
-    # Validate configuration
-    config_status = Config.validate()
-    
-    logger.info("Configuration Status:")
-    logger.info(f"  Valid: {config_status['valid']}")
-    logger.info(f"  Enabled Services: {config_status['enabled_services']}")
-    
-    if config_status['warnings']:
-        logger.warning("Configuration Warnings:")
-        for warning in config_status['warnings']:
-            logger.warning(f"  - {warning}")
-    
-    if config_status['errors']:
-        logger.error("Configuration Errors:")
-        for error in config_status['errors']:
-            logger.error(f"  - {error}")
-    
-    # Get port from environment or config
-    port = int(os.environ.get('PORT', 5000))
-    
-    # Run the application
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=Config.DEBUG
-    )
+    # Development server
+    app.run(debug=True, host='0.0.0.0', port=5000)
