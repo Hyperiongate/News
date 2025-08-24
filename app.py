@@ -375,6 +375,68 @@ def test_extraction():
             'traceback': traceback.format_exc()
         })
 
+@app.route('/api/debug/test-services-data', methods=['POST'])
+def test_services_data():
+    """Debug endpoint to check what data services are actually returning"""
+    try:
+        data = request.get_json() or {}
+        test_text = data.get('text', """
+        The president announced new economic policies today. According to a government report,
+        unemployment has decreased by 2.5% this quarter. The author, John Smith, cited multiple
+        sources including the Bureau of Labor Statistics. "This is encouraging news," said the
+        Treasury Secretary in a press conference. However, some economists argue these numbers
+        don't tell the full story. The methodology used in the study has been questioned by critics.
+        Contact us at editor@example.com for more information.
+        """)
+        
+        registry = get_service_registry()
+        results = {}
+        
+        # Test each service individually
+        test_data = {
+            'text': test_text,
+            'title': 'Test Article for Debugging',
+            'author': 'John Smith',
+            'domain': 'example.com',
+            'url': 'https://example.com/test'
+        }
+        
+        services_to_test = ['content_analyzer', 'transparency_analyzer', 'author_analyzer']
+        
+        for service_name in services_to_test:
+            if registry.is_service_available(service_name):
+                result = registry.analyze_with_service(service_name, test_data)
+                
+                # Extract the data
+                extracted = extract_service_data(result)
+                
+                results[service_name] = {
+                    'raw_result': result,
+                    'extracted_data': extracted,
+                    'has_score': 'score' in extracted,
+                    'score_value': extracted.get('score'),
+                    'all_keys': list(extracted.keys()) if extracted else [],
+                    'success': result.get('success', False)
+                }
+            else:
+                results[service_name] = {
+                    'error': 'Service not available'
+                }
+        
+        return jsonify({
+            'success': True,
+            'services_tested': results,
+            'test_text_length': len(test_text)
+        })
+        
+    except Exception as e:
+        logger.error(f"Service data test error: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
+
 # Helper functions
 
 def extract_key_findings(service_results: Dict[str, Any]) -> List[Dict[str, Any]]:
