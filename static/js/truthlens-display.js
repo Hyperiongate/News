@@ -1,509 +1,440 @@
-"""
-News Analyzer API - Main Flask Application
-FIXED: Better error handling for extraction failures
-"""
-import os
-import sys
-import logging
-import time
-import traceback
-from datetime import datetime
-from typing import Dict, Any, Optional, List
-import json
+// truthlens-display.js - Complete Fixed Version with AI Summary Display
 
-# Flask imports
-from flask import Flask, request, jsonify, render_template, send_from_directory
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-# Application imports
-from config import Config
-from services.news_analyzer import NewsAnalyzer
-from services.service_registry import get_service_registry
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Create Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# Enable CORS
-CORS(app, origins=["*"])
-
-# Setup rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["100 per hour", "20 per minute"],
-    storage_uri="memory://"
-)
-
-# Initialize services
-news_analyzer = NewsAnalyzer()
-
-# Performance tracking storage
-performance_stats = {}
-
-# Debug information storage
-debug_info = {
-    'requests': [],
-    'errors': [],
-    'service_timings': {}
-}
-
-# FIXED: Enhanced service data extraction that preserves all fields
-def extract_service_data(service_result: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract meaningful data from service result - FIXED VERSION"""
-    if not isinstance(service_result, dict):
-        return {}
-    
-    # If service result has 'data' field, extract it
-    if 'data' in service_result and isinstance(service_result['data'], dict):
-        extracted_data = service_result['data'].copy()
-        
-        # CRITICAL FIX: Ensure commonly expected fields are at top level
-        # This makes the data accessible to frontend without deep nesting
-        
-        # For content_analyzer
-        if 'content_score' in extracted_data:
-            extracted_data['score'] = extracted_data.get('score', extracted_data['content_score'])
-            extracted_data['quality_score'] = extracted_data.get('content_score')
-        
-        # For transparency_analyzer
-        if 'transparency_score' in extracted_data:
-            extracted_data['score'] = extracted_data.get('score', extracted_data['transparency_score'])
-        
-        # Ensure all services have a score field
-        if 'score' not in extracted_data:
-            # Try to find any score-like field
-            for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
-                if key in extracted_data:
-                    extracted_data['score'] = extracted_data[key]
-                    break
-        
-        return extracted_data
-    
-    # Otherwise, extract all fields except metadata
-    exclude_fields = {'success', 'service', 'timestamp', 'available', 'error', 'processing_time'}
-    extracted = {k: v for k, v in service_result.items() if k not in exclude_fields}
-    
-    # Ensure score field exists
-    if 'score' not in extracted:
-        for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
-            if key in extracted:
-                extracted['score'] = extracted[key]
-                break
-    
-    return extracted
-
-# Helper to identify service results in pipeline output
-def is_service_result(key: str, value: Any) -> bool:
-    """Check if a key-value pair is a service result"""
-    # Known non-service keys
-    non_service_keys = {
-        'success', 'trust_score', 'trust_level', 'summary', 
-        'pipeline_metadata', 'errors', 'article', 'services_available', 
-        'is_pro', 'analysis_mode'
+class TruthLensDisplay {
+    constructor(app) {
+        this.app = app;
+        this.charts = {};
     }
-    
-    if key in non_service_keys:
-        return False
-    
-    # Check if value looks like a service result
-    if isinstance(value, dict):
-        # Service results typically have 'success' field
-        if 'success' in value:
-            return True
-        # Or have typical service data fields
-        service_indicators = {'score', 'analysis', 'data', 'results', 'level', 'findings'}
-        if any(indicator in value for indicator in service_indicators):
-            return True
-    
-    return False
 
-# MAIN ROUTES
-
-@app.route('/')
-def index():
-    """Serve the main application page"""
-    return render_template('index.html')
-
-@app.route('/health')
-def health():
-    """Health check endpoint"""
-    registry = get_service_registry()
-    service_status = registry.get_service_status()
-    
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'services': service_status['services'],
-        'summary': service_status['summary']
-    })
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze():
-    """
-    Main analysis endpoint - FIXED version with better error handling
-    Accepts: { "url": "..." } or { "text": "..." }
-    """
-    try:
-        # Parse request data
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided'
-            }), 400
+    showResults(data) {
+        const resultsSection = document.getElementById('resultsSection');
+        if (!resultsSection) return;
         
-        # Log the request
-        logger.info(f"Analysis request received with keys: {list(data.keys())}")
-        
-        # Validate input - support both url and text
-        url = data.get('url')
-        text = data.get('text')
-        
-        if not url and not text:
-            return jsonify({
-                'success': False,
-                'error': 'Please provide either a URL or text to analyze'
-            }), 400
-        
-        # Determine content type
-        content = url if url else text
-        content_type = 'url' if url else 'text'
-        
-        # Check for pro mode
-        pro_mode = data.get('pro_mode', False) or data.get('is_pro', False)
-        
-        # Run analysis with timing
-        start_time = time.time()
-        
-        try:
-            # Get results from pipeline
-            pipeline_results = news_analyzer.analyze(content, content_type, pro_mode)
-        except Exception as e:
-            logger.error(f"Analysis failed: {str(e)}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': f'Analysis failed: {str(e)}'
-            }), 500
-        
-        total_time = time.time() - start_time
-        
-        # Check if extraction failed
-        if not pipeline_results.get('success', False):
-            # Look for specific error information
-            error_msg = pipeline_results.get('error', 'Unknown error')
-            
-            # Check if article extraction failed
-            if 'article_extractor' in pipeline_results:
-                extractor_result = pipeline_results['article_extractor']
-                if not extractor_result.get('success', False):
-                    error_msg = extractor_result.get('error', 'Failed to extract article content')
-            
-            # Return a proper error response with partial data
-            return jsonify({
-                'success': False,
-                'error': error_msg,
-                'data': {
-                    'article': {
-                        'title': 'Extraction Failed',
-                        'url': content if content_type == 'url' else '',
-                        'text': content if content_type == 'text' else '',
-                        'extraction_successful': False,
-                        'error': error_msg
-                    },
-                    'analysis': {
-                        'trust_score': 0,
-                        'trust_level': 'Cannot Analyze',
-                        'key_findings': [{
-                            'type': 'error',
-                            'text': 'Unable to extract article content',
-                            'explanation': error_msg
-                        }],
-                        'summary': f'Analysis failed: {error_msg}'
-                    },
-                    'detailed_analysis': {}
-                },
-                'metadata': {
-                    'analysis_time': total_time,
-                    'timestamp': datetime.now().isoformat(),
-                    'error_details': error_msg
-                }
-            }), 200  # Return 200 with error in response body for better frontend handling
-        
-        # Extract service results from pipeline output
-        service_results = {}
-        article_data = None
-        
-        # Log what we got from pipeline
-        logger.info(f"Pipeline results keys: {list(pipeline_results.keys())}")
-        
-        for key, value in pipeline_results.items():
-            if key == 'article':
-                article_data = value
-            elif is_service_result(key, value):
-                # Extract the actual data from service result
-                service_data = extract_service_data(value)
-                if service_data:
-                    service_results[key] = service_data
-                    logger.info(f"Extracted {key} data with {len(service_data)} fields")
-                    # Log first few fields for debugging
-                    for field_name in list(service_data.keys())[:5]:
-                        logger.info(f"  - {key}.{field_name}: {type(service_data[field_name]).__name__}")
-        
-        # Ensure we have article data
-        if not article_data:
-            # Try to get from article_extractor
-            if 'article_extractor' in pipeline_results:
-                article_data = extract_service_data(pipeline_results['article_extractor'])
-            
-            if not article_data or not article_data.get('text'):
-                # Create minimal article data
-                article_data = {
-                    'title': 'Unknown Title',
-                    'url': content if content_type == 'url' else '',
-                    'text': content if content_type == 'text' else '',
-                    'extraction_successful': False,
-                    'error': 'Could not extract article content'
-                }
-        
-        # Build the response in the format frontend expects
-        response_data = {
-            'success': True,  # Overall request succeeded even if some services failed
-            'data': {
-                'article': article_data,
-                'analysis': {
-                    'trust_score': pipeline_results.get('trust_score', 50),
-                    'trust_level': pipeline_results.get('trust_level', 'Unknown'),
-                    'key_findings': extract_key_findings(service_results),
-                    'summary': pipeline_results.get('summary', 'Analysis completed')
-                },
-                'detailed_analysis': service_results
-            },
-            'metadata': {
-                'analysis_time': total_time,
-                'timestamp': datetime.now().isoformat(),
-                'pipeline_metadata': pipeline_results.get('pipeline_metadata', {}),
-                'services_available': len(service_results),
-                'is_pro': pipeline_results.get('is_pro', False),
-                'analysis_mode': pipeline_results.get('analysis_mode', 'basic')
-            }
+        // Validate data structure
+        if (!data || typeof data !== 'object') {
+            console.error('Invalid data provided to showResults:', data);
+            return;
         }
         
-        # Add warnings if any services failed
-        if pipeline_results.get('errors'):
-            response_data['warnings'] = pipeline_results['errors']
+        console.log('=== Display.showResults Debug ===');
+        console.log('Data structure received:', {
+            hasArticle: !!data.article,
+            hasAnalysis: !!data.analysis,
+            hasDetailedAnalysis: !!data.detailed_analysis,
+            detailedAnalysisKeys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
+            hasOpenAIEnhancer: data.detailed_analysis?.openai_enhancer ? true : false
+        });
+
+        resultsSection.style.display = 'block';
+        resultsSection.classList.add('active');
         
-        # Log success
-        logger.info(f"Analysis completed in {total_time:.2f}s")
-        logger.info(f"Services included: {list(service_results.keys())}")
-        logger.info("=" * 80)
-        logger.info("FINAL detailed_analysis structure:")
-        for service_name, service_data in service_results.items():
-            logger.info(f"{service_name}:")
-            for key in list(service_data.keys())[:5]:
-                value = service_data[key]
-                if isinstance(value, (str, int, float, bool)):
-                    logger.info(f"  - {key}: {value}")
-                else:
-                    logger.info(f"  - {key}: {type(value).__name__}")
-        logger.info("=" * 80)
+        // Pass the complete data structure to each display method
+        if (data.analysis) {
+            this.displayTrustScore(data.analysis, data);
+        }
         
-        return jsonify(response_data)
+        // Display AI Summary and Key Findings
+        this.displayAISummary(data);
+        this.displayKeyFindings(data);
         
-    except Exception as e:
-        logger.error(f"Unexpected error in analyze endpoint: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': 'An unexpected error occurred during analysis',
-            'data': {
-                'article': {
-                    'title': 'Error',
-                    'extraction_successful': False,
-                    'error': str(e)
-                },
-                'analysis': {
-                    'trust_score': 0,
-                    'trust_level': 'Error',
-                    'key_findings': [],
-                    'summary': 'Analysis could not be completed'
-                },
-                'detailed_analysis': {}
+        if (data.article) {
+            this.displayArticleInfo(data.article);
+        }
+        
+        // Display service cards instead of accordion
+        this.displayServiceCards(data);
+        
+        // Store analysis data for service pages using localStorage for cross-window access
+        if (window.ServiceNavigation) {
+            window.ServiceNavigation.saveAnalysisData(data, window.location.href);
+        } else {
+            // Fallback to sessionStorage
+            sessionStorage.setItem('analysisData', JSON.stringify(data));
+        }
+        
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    displayAISummary(data) {
+        const trustSummaryEl = document.getElementById('trustSummary');
+        if (!trustSummaryEl) return;
+
+        try {
+            // Check for AI-enhanced summary from openai_enhancer service
+            const aiEnhancer = data.detailed_analysis?.openai_enhancer;
+            const analysis = data.analysis || {};
+            
+            let summaryContent = '';
+            
+            // First check if we have AI-enhanced content
+            if (aiEnhancer && aiEnhancer.ai_summary) {
+                summaryContent = '<div class="ai-enhanced-summary">' +
+                    '<i class="fas fa-sparkles ai-icon"></i>' +
+                    '<span class="ai-label">AI Analysis</span>' +
+                    '<p>' + aiEnhancer.ai_summary + '</p>' +
+                    '</div>';
+            } else if (analysis.summary) {
+                // Fallback to regular summary
+                summaryContent = '<p>' + analysis.summary + '</p>';
+            } else {
+                // Generate basic summary from trust score
+                const trustScore = analysis.trust_score || 50;
+                const trustLevel = analysis.trust_level || 'Unknown';
+                summaryContent = '<p>Analysis complete. Trust score: ' + trustScore + '/100 (' + trustLevel + ')</p>';
             }
-        }), 200
+            
+            trustSummaryEl.innerHTML = summaryContent;
+            
+        } catch (error) {
+            console.error('Error displaying AI summary:', error);
+            trustSummaryEl.innerHTML = '<p>Analysis summary unavailable</p>';
+        }
+    }
 
-@app.route('/api/debug/test-extraction', methods=['POST'])
-def test_extraction():
-    """Debug endpoint to test article extraction directly"""
-    try:
-        data = request.get_json() or {}
-        url = data.get('url', 'https://www.reuters.com/technology/')
-        
-        registry = get_service_registry()
-        
-        # Test if article_extractor is available
-        if not registry.is_service_available('article_extractor'):
-            return jsonify({
-                'success': False,
-                'error': 'Article extractor service not available',
-                'service_status': registry.get_service_status()
-            })
-        
-        # Try to extract
-        result = registry.analyze_with_service('article_extractor', {'url': url})
-        
-        return jsonify({
-            'success': result.get('success', False),
-            'url': url,
-            'result': result,
-            'extracted_fields': list(result.keys()) if isinstance(result, dict) else []
-        })
-        
-    except Exception as e:
-        logger.error(f"Extraction test error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        })
+    displayKeyFindings(data) {
+        const keyFindingsEl = document.getElementById('keyFindings');
+        if (!keyFindingsEl) return;
 
-# Helper functions
-
-def extract_key_findings(service_results: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Extract key findings from service results"""
-    findings = []
-    
-    # Check source credibility
-    if 'source_credibility' in service_results:
-        data = service_results['source_credibility']
-        score = data.get('credibility_score', data.get('score', 0))
-        if score < 60:
-            findings.append({
-                'type': 'warning',
-                'text': f'Low source credibility score: {score}/100',
-                'service': 'source_credibility'
-            })
-    
-    # Check bias
-    if 'bias_detector' in service_results:
-        data = service_results['bias_detector']
-        bias_score = data.get('bias_score', data.get('score', 0))
-        if bias_score > 60:
-            findings.append({
-                'type': 'warning', 
-                'text': f'High bias detected: {bias_score}/100',
-                'service': 'bias_detector'
-            })
-    
-    # Check transparency
-    if 'transparency_analyzer' in service_results:
-        data = service_results['transparency_analyzer']
-        transparency_score = data.get('transparency_score', data.get('score', 0))
-        if transparency_score < 50:
-            findings.append({
-                'type': 'warning',
-                'text': f'Low transparency: {transparency_score}/100',
-                'service': 'transparency_analyzer'
-            })
-    
-    # Check content quality
-    if 'content_analyzer' in service_results:
-        data = service_results['content_analyzer']
-        quality_score = data.get('content_score', data.get('quality_score', data.get('score', 0)))
-        if quality_score < 50:
-            findings.append({
-                'type': 'info',
-                'text': f'Content quality concerns: {quality_score}/100',
-                'service': 'content_analyzer'
-            })
-    
-    return findings[:5]  # Return top 5 findings
-
-# API Status and debugging endpoints
-
-@app.route('/api/status')
-def api_status():
-    """Get API status and service availability"""
-    return jsonify(news_analyzer.get_available_services())
-
-@app.route('/api/debug/services')
-def debug_services():
-    """Debug endpoint to check service status"""
-    registry = get_service_registry()
-    status = registry.get_service_status()
-    
-    # Add more debug info
-    status['registered_services'] = list(registry._services.keys())
-    status['failed_services'] = registry._failed_services
-    
-    return jsonify(status)
-
-@app.route('/api/debug/analyze-test', methods=['GET', 'POST'])
-def debug_analyze_test():
-    """Test analysis with a sample URL"""
-    test_url = "https://www.reuters.com/technology/artificial-intelligence/openai-allows-employees-sell-shares-tender-offer-led-softbank-2024-11-27/"
-    
-    result = news_analyzer.analyze(test_url, 'url', False)
-    
-    # Extract service results for easier debugging
-    service_data = {}
-    for key, value in result.items():
-        if is_service_result(key, value):
-            service_data[key] = {
-                'success': value.get('success', False),
-                'has_data': 'data' in value,
-                'data_keys': list(value.get('data', {}).keys()) if isinstance(value.get('data'), dict) else [],
-                'error': value.get('error')
+        try {
+            const findings = data.analysis?.key_findings || [];
+            const aiEnhancer = data.detailed_analysis?.openai_enhancer;
+            
+            let findingsHTML = '';
+            
+            // Display AI key insights if available
+            if (aiEnhancer?.key_insights && aiEnhancer.key_insights.length > 0) {
+                findingsHTML += '<div class="ai-insights">';
+                findingsHTML += '<h4><i class="fas fa-sparkles"></i> AI Key Insights</h4>';
+                findingsHTML += '<ul>';
+                aiEnhancer.key_insights.forEach(insight => {
+                    findingsHTML += '<li class="ai-insight">' + insight + '</li>';
+                });
+                findingsHTML += '</ul>';
+                findingsHTML += '</div>';
             }
-    
-    return jsonify({
-        'test_url': test_url,
-        'success': result.get('success', False),
-        'trust_score': result.get('trust_score'),
-        'services_found': list(service_data.keys()),
-        'service_details': service_data,
-        'full_result': result
-    })
+            
+            // Display regular findings
+            if (findings.length > 0) {
+                findingsHTML += '<ul class="findings-list">';
+                findings.forEach(finding => {
+                    const icon = this.getFindingIcon(finding.type);
+                    const cssClass = this.getFindingClass(finding.type);
+                    findingsHTML += '<li class="' + cssClass + '">' +
+                        '<i class="fas ' + icon + '"></i>' +
+                        '<span>' + finding.text + '</span>' +
+                        (finding.explanation ? '<small>' + finding.explanation + '</small>' : '') +
+                        '</li>';
+                });
+                findingsHTML += '</ul>';
+            } else if (!aiEnhancer?.key_insights) {
+                findingsHTML = '<p class="no-findings">No significant findings</p>';
+            }
+            
+            keyFindingsEl.innerHTML = findingsHTML;
+            
+        } catch (error) {
+            console.error('Error displaying key findings:', error);
+            keyFindingsEl.innerHTML = '<p>Unable to display findings</p>';
+        }
+    }
 
-@app.route('/api/debug/clear-cache', methods=['POST'])
-def clear_cache():
-    """Clear any caches (placeholder for future implementation)"""
-    return jsonify({
-        'success': True,
-        'message': 'Cache cleared (if implemented)'
-    })
+    displayTrustScore(analysis, fullData) {
+        const scoreEl = document.getElementById('trustScoreNumber');
+        const levelEl = document.getElementById('trustLevel');
+        const meterFill = document.querySelector('.trust-meter-fill');
+        
+        if (!scoreEl || !levelEl || !meterFill) return;
+        
+        const score = analysis.trust_score || 0;
+        const level = analysis.trust_level || 'Unknown';
+        
+        // Update text
+        scoreEl.textContent = score;
+        levelEl.textContent = level;
+        levelEl.className = 'trust-level ' + level.toLowerCase().replace(' ', '-');
+        
+        // Update meter
+        meterFill.style.width = score + '%';
+        meterFill.className = 'trust-meter-fill ' + this.getTrustScoreClass(score);
+        
+        // Add animation
+        meterFill.style.transition = 'width 1s ease-out';
+    }
 
-# Static file serving for service pages
-@app.route('/<path:filename>')
-def serve_static_html(filename):
-    """Serve static HTML files from templates directory"""
-    if filename.endswith('.html'):
-        return render_template(filename)
-    return send_from_directory('static', filename)
+    displayArticleInfo(article) {
+        // Update article metadata
+        const elements = {
+            title: document.getElementById('articleTitle'),
+            author: document.getElementById('articleAuthor'),
+            date: document.getElementById('articleDate'),
+            source: document.getElementById('articleSource'),
+            wordCount: document.getElementById('wordCount'),
+            readingTime: document.getElementById('readingTime')
+        };
+        
+        if (elements.title) elements.title.textContent = article.title || 'Untitled';
+        if (elements.author) elements.author.textContent = article.author || 'Unknown Author';
+        if (elements.date) elements.date.textContent = article.publish_date || 'Date not available';
+        if (elements.source) elements.source.textContent = article.domain || article.source || 'Unknown Source';
+        if (elements.wordCount) elements.wordCount.textContent = (article.word_count || 0) + ' words';
+        if (elements.readingTime) {
+            const minutes = Math.ceil((article.word_count || 0) / 200);
+            elements.readingTime.textContent = minutes + ' min read';
+        }
+    }
 
-# Error handlers
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({
-        'success': False,
-        'error': 'Endpoint not found'
-    }), 404
+    displayServiceCards(data) {
+        const servicesGrid = document.getElementById('servicesGrid');
+        if (!servicesGrid) return;
+        
+        const SERVICES = window.CONFIG ? window.CONFIG.SERVICES : [];
+        
+        // Small delay for smooth transition
+        setTimeout(() => {
+            servicesGrid.innerHTML = '';
+            let completedCount = 0;
 
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({
-        'success': False,
-        'error': 'Internal server error'
-    }), 500
+            SERVICES.forEach(service => {
+                // Check if we have data for this service
+                const serviceData = data?.detailed_analysis?.[service.id] || null;
+                const hasData = serviceData && Object.keys(serviceData).length > 0;
+                
+                if (hasData) completedCount++;
 
-if __name__ == '__main__':
-    # Development server
-    app.run(debug=True, host='0.0.0.0', port=5000)
+                // Create the card element
+                const card = document.createElement('a');
+                card.className = 'service-card ' + service.id.replace(/_/g, '-') + ' ' + (hasData ? '' : 'pending loading');
+                
+                // Better handling for cards without data
+                if (hasData && service.url) {
+                    card.href = service.url;
+                    // Remove target="_blank" to keep navigation in same window
+                    card.rel = 'noopener noreferrer';
+                    // Add smooth transition
+                    setTimeout(() => card.classList.remove('loading'), 100);
+                } else {
+                    card.style.cursor = 'not-allowed';
+                    card.onclick = (e) => {
+                        e.preventDefault();
+                        this.app.utils.showError(service.name + ' analysis not available for this article');
+                        return false;
+                    };
+                }
+
+                // Get the primary metric for this service
+                const primaryMetric = this.getServicePrimaryMetric(service.id, serviceData);
+                
+                // Build card HTML
+                let cardHTML = '<div class="service-card-header">' +
+                    '<div class="service-icon-wrapper">' +
+                    '<i class="fas ' + service.icon + '"></i>' +
+                    '</div>' +
+                    '<div class="service-info">' +
+                    '<h3>' + service.name + '</h3>' +
+                    '<div class="service-status ' + (hasData ? 'complete' : 'pending') + '">' +
+                    '<i class="fas ' + (hasData ? 'fa-check-circle' : 'fa-clock') + '"></i> ' +
+                    (hasData ? 'Complete' : 'Not Available') +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="service-preview">' +
+                    (hasData ? this.getServicePreview(service.id, serviceData) : 'Analysis not performed for this service') +
+                    '</div>';
+                
+                if (hasData) {
+                    cardHTML += '<div class="service-metrics">';
+                    if (primaryMetric) {
+                        cardHTML += '<div class="metric-item">' +
+                            '<span class="metric-value">' + primaryMetric.value + '</span>' +
+                            '<span class="metric-label">' + primaryMetric.label + '</span>' +
+                            '</div>';
+                    }
+                    cardHTML += '<div class="view-details-link">' +
+                        'View Details <i class="fas fa-arrow-right"></i>' +
+                        '</div>' +
+                        '</div>';
+                }
+                
+                card.innerHTML = cardHTML;
+                servicesGrid.appendChild(card);
+            });
+            
+            // Update services summary
+            const summaryEl = document.querySelector('.services-summary');
+            if (summaryEl) {
+                summaryEl.textContent = completedCount + ' of ' + SERVICES.length + ' analyses completed';
+            }
+        }, 100);
+    }
+
+    getServicePreview(serviceId, data) {
+        if (!data) return 'No data available';
+        
+        // FIXED: Handle the actual data structure from services
+        switch (serviceId) {
+            case 'source_credibility':
+                const credScore = data.credibility_score || data.score || 0;
+                const credLevel = data.credibility_level || data.level || 'Unknown';
+                return 'Source credibility: ' + credLevel + ' (' + credScore + '/100)';
+                
+            case 'author_analyzer':
+                const authorScore = data.author_score || data.credibility_score || data.score || 0;
+                const authorName = data.author_name || data.author || 'Unknown author';
+                return authorName + ': ' + authorScore + '/100 credibility';
+                
+            case 'bias_detector':
+                const biasScore = data.bias_score || data.score || 0;
+                const biasLevel = this.getBiasLevel(biasScore);
+                return 'Bias level: ' + biasLevel + ' (' + biasScore + '/100)';
+                
+            case 'fact_checker':
+                const claims = data.fact_checks || data.claims || [];
+                const verified = claims.filter(c => c.verdict === 'true').length;
+                return claims.length + ' claims checked, ' + verified + ' verified';
+                
+            case 'transparency_analyzer':
+                // FIXED: Access the correct fields from transparency analyzer
+                const transScore = data.transparency_score || data.score || 0;
+                const transLevel = data.transparency_level || data.level || 'Unknown';
+                const indicators = data.indicators || [];
+                return 'Transparency: ' + transLevel + ' (' + transScore + '/100) - ' + indicators.length + ' indicators';
+                
+            case 'manipulation_detector':
+                const manipScore = data.manipulation_score || data.score || 0;
+                const tactics = data.tactics_found || data.tactics || 0;
+                return 'Manipulation risk: ' + manipScore + '/100' + (tactics > 0 ? ' - ' + tactics + ' tactics found' : '');
+                
+            case 'content_analyzer':
+                // FIXED: Access the correct fields from content analyzer
+                const qualityScore = data.content_score || data.quality_score || data.score || 0;
+                const qualityLevel = data.quality_level || data.level || 'Unknown';
+                const readability = data.readability?.reading_level || 'Unknown';
+                return 'Quality: ' + qualityLevel + ' (' + qualityScore + '/100) - ' + readability + ' reading level';
+                
+            default:
+                // Generic fallback
+                const score = data.score || 0;
+                const level = data.level || 'Unknown';
+                return level + ' (' + score + '/100)';
+        }
+    }
+
+    getServicePrimaryMetric(serviceId, data) {
+        if (!data) return null;
+        
+        // FIXED: Return the correct primary metric for each service
+        switch (serviceId) {
+            case 'source_credibility':
+                return {
+                    value: data.credibility_score || data.score || 0,
+                    label: 'Credibility Score'
+                };
+                
+            case 'author_analyzer':
+                return {
+                    value: data.author_score || data.credibility_score || data.score || 0,
+                    label: 'Author Score'
+                };
+                
+            case 'bias_detector':
+                return {
+                    value: data.bias_score || data.score || 0,
+                    label: 'Bias Score'
+                };
+                
+            case 'fact_checker':
+                const totalClaims = data.total_claims || (data.fact_checks || []).length || 0;
+                return {
+                    value: totalClaims,
+                    label: 'Claims Checked'
+                };
+                
+            case 'transparency_analyzer':
+                return {
+                    value: data.transparency_score || data.score || 0,
+                    label: 'Transparency'
+                };
+                
+            case 'manipulation_detector':
+                return {
+                    value: data.manipulation_score || data.score || 0,
+                    label: 'Risk Score'
+                };
+                
+            case 'content_analyzer':
+                return {
+                    value: data.content_score || data.quality_score || data.score || 0,
+                    label: 'Quality Score'
+                };
+                
+            default:
+                return {
+                    value: data.score || 0,
+                    label: 'Score'
+                };
+        }
+    }
+
+    getBiasLevel(score) {
+        if (score >= 80) return 'Extreme';
+        if (score >= 60) return 'High';
+        if (score >= 40) return 'Moderate';
+        if (score >= 20) return 'Low';
+        return 'Minimal';
+    }
+
+    getTrustScoreClass(score) {
+        if (score >= 80) return 'excellent';
+        if (score >= 65) return 'good';
+        if (score >= 50) return 'fair';
+        if (score >= 35) return 'poor';
+        return 'very-poor';
+    }
+
+    getFindingIcon(type) {
+        const icons = {
+            'positive': 'fa-check-circle',
+            'warning': 'fa-exclamation-triangle',
+            'critical': 'fa-times-circle',
+            'info': 'fa-info-circle',
+            'error': 'fa-exclamation-circle'
+        };
+        return icons[type] || 'fa-circle';
+    }
+
+    getFindingClass(type) {
+        const classes = {
+            'positive': 'finding-positive',
+            'warning': 'finding-warning',
+            'critical': 'finding-critical',
+            'info': 'finding-info',
+            'error': 'finding-error'
+        };
+        return classes[type] || 'finding-default';
+    }
+
+    showError(message) {
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.innerHTML = '<div class="error-message">' +
+                '<i class="fas fa-exclamation-circle"></i>' +
+                '<p>' + message + '</p>' +
+                '</div>';
+            resultsSection.style.display = 'block';
+        }
+    }
+
+    showLoading() {
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.innerHTML = '<div class="loading-spinner">' +
+                '<i class="fas fa-spinner fa-spin"></i>' +
+                '<p>Analyzing content...</p>' +
+                '</div>';
+            resultsSection.style.display = 'block';
+        }
+    }
+}
+
+// Export for use in main app
+window.TruthLensDisplay = TruthLensDisplay;
