@@ -67,7 +67,9 @@ class AnalysisPipeline:
             # Update article data
             extracted_article = self._extract_article_data(article_data['article_extractor'])
             results['article'] = extracted_article
-            enriched_data = {**data, 'article': extracted_article}
+            
+            # FIXED: Merge article fields directly into data for services that expect it
+            enriched_data = {**data, **extracted_article, 'article': extracted_article}
             
             # Stage 2: Core Analysis (parallel execution)
             logger.info("Stage 2: Core Analysis Services (Parallel)")
