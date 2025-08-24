@@ -1,5 +1,5 @@
-// truthlens-core.js - Main Application Logic
-// Uses shared CONFIG from config.js
+// truthlens-core.js - Complete File with Real-time Updates
+// Main Application Logic with Enhanced Progress Tracking
 
 // Main Application Class
 class TruthLensApp {
@@ -16,6 +16,11 @@ class TruthLensApp {
         this.display = null;
         this.services = null;
         
+        // Real-time update properties
+        this.analysisSSE = null;
+        this.pollingInterval = null;
+        this.analysisId = null;
+        
         this.init();
     }
 
@@ -29,7 +34,7 @@ class TruthLensApp {
         }
         
         this.setupEventListeners();
-        console.log('TruthLens initialized');
+        console.log('TruthLens initialized with real-time updates');
     }
 
     setupEventListeners() {
@@ -50,6 +55,15 @@ class TruthLensApp {
                     this.analyzeArticle();
                 }
             });
+            
+            // Word count update
+            textInput.addEventListener('input', (e) => {
+                const wordCount = e.target.value.trim().split(/\s+/).filter(word => word.length > 0).length;
+                const wordCountEl = document.getElementById('wordCount');
+                if (wordCountEl) {
+                    wordCountEl.textContent = `${wordCount} words`;
+                }
+            });
         }
         
         // Button handlers
@@ -64,20 +78,6 @@ class TruthLensApp {
         if (analyzeTextBtn) {
             analyzeTextBtn.addEventListener('click', () => {
                 this.analyzeArticle();
-            });
-        }
-        
-        const resetBtn = document.getElementById('resetBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                this.resetAnalysis();
-            });
-        }
-        
-        const resetTextBtn = document.getElementById('resetTextBtn');
-        if (resetTextBtn) {
-            resetTextBtn.addEventListener('click', () => {
-                this.resetAnalysis();
             });
         }
         
@@ -103,7 +103,7 @@ class TruthLensApp {
         }
         
         // Tab switching
-        const modeBtns = document.querySelectorAll('.mode-btn');
+        const modeBtns = document.querySelectorAll('.mode-tab');
         modeBtns.forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 const mode = e.currentTarget.getAttribute('data-mode');
@@ -112,7 +112,7 @@ class TruthLensApp {
         });
         
         // Example buttons
-        const exampleBtns = document.querySelectorAll('.example-btn');
+        const exampleBtns = document.querySelectorAll('.example-chip');
         exampleBtns.forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 const url = e.target.getAttribute('data-url');
@@ -130,7 +130,7 @@ class TruthLensApp {
     switchTab(mode) {
         this.state.currentTab = mode;
         
-        const modeBtns = document.querySelectorAll('.mode-btn');
+        const modeBtns = document.querySelectorAll('.mode-tab');
         modeBtns.forEach((btn) => {
             if (btn.getAttribute('data-mode') === mode) {
                 btn.classList.add('active');
@@ -139,28 +139,21 @@ class TruthLensApp {
             }
         });
         
-        // Hide all explanations and inputs first
-        const urlExplanation = document.getElementById('urlExplanation');
-        const textExplanation = document.getElementById('textExplanation');
-        const urlInputWrapper = document.getElementById('urlInputWrapper');
-        const textInputWrapper = document.getElementById('textInputWrapper');
+        // Update input panels
+        const panels = document.querySelectorAll('.input-panel');
+        panels.forEach(panel => {
+            panel.classList.remove('active');
+        });
         
-        if (urlExplanation) urlExplanation.style.display = 'none';
-        if (textExplanation) textExplanation.style.display = 'none';
-        if (urlInputWrapper) urlInputWrapper.style.display = 'none';
-        if (textInputWrapper) textInputWrapper.style.display = 'none';
-        
-        // Show the active mode
         if (mode === 'url') {
-            if (urlExplanation) urlExplanation.style.display = 'block';
-            if (urlInputWrapper) urlInputWrapper.style.display = 'block';
+            document.getElementById('urlInputWrapper')?.classList.add('active');
         } else {
-            if (textExplanation) textExplanation.style.display = 'block';
-            if (textInputWrapper) textInputWrapper.style.display = 'block';
+            document.getElementById('textInputWrapper')?.classList.add('active');
         }
     }
 
     resetAnalysis() {
+        // Clear inputs
         const urlInput = document.getElementById('urlInput');
         const textInput = document.getElementById('textInput');
         const resultsSection = document.getElementById('resultsSection');
@@ -170,6 +163,16 @@ class TruthLensApp {
         if (resultsSection) {
             resultsSection.style.display = 'none';
             resultsSection.classList.remove('active');
+        }
+        
+        // Clear word count
+        const wordCountEl = document.getElementById('wordCount');
+        if (wordCountEl) wordCountEl.textContent = '0 words';
+        
+        // Clear any polling
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
         }
         
         // Destroy any existing charts
@@ -185,6 +188,12 @@ class TruthLensApp {
         this.state.currentAnalysis = null;
         this.state.currentMetadata = null;
         this.state.charts = {};
+        this.analysisId = null;
+        
+        // Clear stored data
+        if (window.ServiceNavigation) {
+            window.ServiceNavigation.clearAnalysisData();
+        }
     }
 
     async analyzeArticle() {
@@ -213,18 +222,25 @@ class TruthLensApp {
                 this.utils.showError('Please enter a valid URL starting with http:// or https://');
                 return;
             }
+        } else {
+            // Validate text length
+            const wordCount = input.split(/\s+/).filter(word => word.length > 0).length;
+            if (wordCount < 100) {
+                this.utils.showError('Please enter at least 100 words for accurate analysis');
+                return;
+            }
         }
 
         this.state.isAnalyzing = true;
-        this.utils.showLoading();
+        this.showEnhancedLoading();
 
         try {
             const payload = this.state.currentTab === 'url' 
                 ? { url: input, is_pro: CONFIG.isPro }
                 : { text: input, is_pro: CONFIG.isPro };
 
-            console.log('=== API Request Debug ===');
-            console.log('Sending payload:', JSON.stringify(payload, null, 2));
+            console.log('=== Starting Analysis ===');
+            console.log('Payload:', payload);
 
             const response = await fetch(CONFIG.API_ENDPOINT, {
                 method: 'POST',
@@ -236,7 +252,7 @@ class TruthLensApp {
             });
 
             const responseText = await response.text();
-            console.log('Raw response:', responseText);
+            console.log('Response received, length:', responseText.length);
 
             let responseData;
             try {
@@ -246,49 +262,29 @@ class TruthLensApp {
                 throw new Error('Invalid response format from server');
             }
 
-            console.log('Parsed response structure:', {
+            console.log('Response parsed:', {
                 success: responseData.success,
                 hasData: !!responseData.data,
-                dataKeys: responseData.data ? Object.keys(responseData.data) : [],
-                hasDetailedAnalysis: !!(responseData.data && responseData.data.detailed_analysis),
-                detailedAnalysisKeys: responseData.data && responseData.data.detailed_analysis ? 
-                    Object.keys(responseData.data.detailed_analysis) : []
+                hasAnalysisId: !!responseData.analysis_id,
+                error: responseData.error
             });
             
             if (!response.ok || !responseData.success) {
-                const errorMessage = (responseData.error && responseData.error.message) || 
+                const errorMessage = responseData.error?.message || 
                                    responseData.message || 
                                    'Analysis failed';
                 throw new Error(errorMessage);
             }
 
-            // Store the entire response data structure
-            const data = responseData.data;
-            
-            // Validate that we have the required data structure
-            if (!data || typeof data !== 'object') {
-                throw new Error('Invalid data structure received from server');
+            // Check if we got an analysis ID for polling
+            if (responseData.analysis_id) {
+                // Start polling for updates
+                this.analysisId = responseData.analysis_id;
+                this.startProgressPolling();
+            } else {
+                // Legacy mode - we got all data at once
+                this.handleAnalysisComplete(responseData.data);
             }
-            
-            // Store the complete analysis
-            this.state.currentAnalysis = data;
-            this.state.currentMetadata = responseData.metadata || {};
-
-            // Log what we're storing
-            console.log('=== Stored Analysis ===');
-            console.log('Article:', data.article ? Object.keys(data.article) : 'missing');
-            console.log('Analysis:', data.analysis ? Object.keys(data.analysis) : 'missing');
-            console.log('Detailed Analysis Services:', data.detailed_analysis ? 
-                Object.keys(data.detailed_analysis) : 'missing');
-
-            // Use arrow function to preserve 'this' context
-            setTimeout(() => {
-                this.utils.hideLoading();
-                if (this.display) {
-                    // Pass the complete data structure
-                    this.display.showResults(data);
-                }
-            }, 1000);
 
         } catch (error) {
             console.error('Analysis Error:', error);
@@ -300,20 +296,234 @@ class TruthLensApp {
             }
             
             this.utils.showError(errorMessage);
-        } finally {
             this.state.isAnalyzing = false;
         }
     }
 
-    toggleAccordion(serviceId) {
-        const item = document.getElementById('service-' + serviceId);
-        if (item) {
-            item.classList.toggle('active');
+    // Show enhanced loading with progress
+    showEnhancedLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (!overlay) {
+            this.utils.showLoading();
+            return;
+        }
+        
+        overlay.classList.add('active');
+        
+        // Reset loading steps
+        const steps = ['step1', 'step2', 'step3', 'step4'];
+        steps.forEach(stepId => {
+            const stepEl = document.getElementById(stepId);
+            if (stepEl) {
+                stepEl.classList.remove('active');
+                stepEl.querySelector('i').className = 'fas fa-circle';
+            }
+        });
+        
+        // Activate first step
+        const step1 = document.getElementById('step1');
+        if (step1) {
+            step1.classList.add('active');
+            step1.querySelector('i').className = 'fas fa-spinner fa-spin';
         }
     }
 
+    // Start polling for analysis progress
+    startProgressPolling() {
+        console.log('Starting progress polling for analysis:', this.analysisId);
+        
+        let pollCount = 0;
+        const maxPolls = 60; // 5 minutes maximum
+        
+        this.pollingInterval = setInterval(async () => {
+            pollCount++;
+            
+            try {
+                const response = await fetch(`/api/analyze/status/${this.analysisId}`);
+                const data = await response.json();
+                
+                console.log('Progress update:', data);
+                
+                if (data.status === 'complete') {
+                    // Analysis complete
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                    this.handleAnalysisComplete(data.data);
+                    
+                } else if (data.status === 'failed') {
+                    // Analysis failed
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                    throw new Error(data.error || 'Analysis failed');
+                    
+                } else if (data.status === 'processing') {
+                    // Update progress
+                    this.updateAnalysisProgress(data);
+                }
+                
+                // Timeout check
+                if (pollCount >= maxPolls) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                    throw new Error('Analysis timed out - please try again');
+                }
+                
+            } catch (error) {
+                console.error('Polling error:', error);
+                clearInterval(this.pollingInterval);
+                this.pollingInterval = null;
+                this.utils.hideLoading();
+                this.utils.showError(error.message);
+                this.state.isAnalyzing = false;
+            }
+        }, 5000); // Poll every 5 seconds
+    }
+
+    // Update analysis progress in real-time
+    updateAnalysisProgress(progressData) {
+        const {
+            services_completed = 0,
+            services_total = 10,
+            current_service = '',
+            partial_results = {}
+        } = progressData;
+
+        const percentage = Math.round((services_completed / services_total) * 100);
+        
+        // Update loading steps based on progress
+        this.updateLoadingSteps(services_completed);
+        
+        // If we have partial results, update the UI incrementally
+        if (partial_results && Object.keys(partial_results).length > 0) {
+            this.updatePartialResults(partial_results);
+        }
+    }
+
+    // Update loading steps
+    updateLoadingSteps(completedCount) {
+        const steps = [
+            { id: 'step1', threshold: 1, icon: 'fa-check-circle' },
+            { id: 'step2', threshold: 3, icon: 'fa-spinner fa-spin' },
+            { id: 'step3', threshold: 6, icon: 'fa-circle' },
+            { id: 'step4', threshold: 9, icon: 'fa-circle' }
+        ];
+        
+        steps.forEach((step, index) => {
+            const stepEl = document.getElementById(step.id);
+            if (!stepEl) return;
+            
+            if (completedCount >= step.threshold) {
+                stepEl.classList.add('active');
+                if (index < steps.length - 1 && completedCount < steps[index + 1].threshold) {
+                    // This is the current step
+                    stepEl.querySelector('i').className = 'fas fa-spinner fa-spin';
+                } else {
+                    // This step is complete
+                    stepEl.querySelector('i').className = 'fas fa-check-circle';
+                }
+            }
+        });
+    }
+
+    // Update UI with partial results
+    updatePartialResults(partialData) {
+        // Show results section if hidden
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection && resultsSection.style.display === 'none') {
+            resultsSection.style.display = 'block';
+            resultsSection.classList.add('active');
+        }
+        
+        // Update trust score if available
+        if (partialData.trust_score !== undefined) {
+            const scoreEl = document.getElementById('trustScoreNumber');
+            if (scoreEl) {
+                scoreEl.textContent = partialData.trust_score;
+            }
+        }
+        
+        // Update service cards incrementally
+        if (partialData.services) {
+            this.updateServiceCards(partialData.services);
+        }
+    }
+
+    // Update service cards with real-time data
+    updateServiceCards(servicesData) {
+        Object.entries(servicesData).forEach(([serviceId, serviceData]) => {
+            const card = document.querySelector(`.service-card.${serviceId.replace(/_/g, '-')}`);
+            if (card && serviceData) {
+                // Remove pending class
+                card.classList.remove('pending');
+                card.classList.add('complete');
+                
+                // Update status
+                const statusEl = card.querySelector('.service-status');
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
+                    statusEl.classList.add('complete');
+                }
+                
+                // Update preview if needed
+                const previewEl = card.querySelector('.service-preview');
+                if (previewEl && this.display) {
+                    previewEl.textContent = this.display.getServicePreview(serviceId, serviceData);
+                }
+                
+                // Make card clickable
+                card.style.cursor = 'pointer';
+                card.onclick = null;
+            }
+        });
+    }
+
+    // Handle complete analysis
+    handleAnalysisComplete(data) {
+        console.log('=== Analysis Complete ===');
+        console.log('Data structure:', {
+            hasArticle: !!data.article,
+            hasAnalysis: !!data.analysis,
+            hasDetailedAnalysis: !!data.detailed_analysis,
+            detailedServices: data.detailed_analysis ? Object.keys(data.detailed_analysis) : []
+        });
+        
+        // Clear polling
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        
+        // Validate data
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid analysis data received');
+        }
+        
+        // Store the complete analysis
+        this.state.currentAnalysis = data;
+        this.state.currentMetadata = data.metadata || {};
+        
+        // Save to storage for service pages
+        if (window.ServiceNavigation) {
+            window.ServiceNavigation.saveAnalysisData(data, window.location.href);
+        }
+        
+        // Trigger custom event
+        window.dispatchEvent(new CustomEvent('analysisComplete', { detail: data }));
+        
+        // Update all loading steps to complete
+        this.updateLoadingSteps(10);
+        
+        // Hide loading and show results
+        setTimeout(() => {
+            this.utils.hideLoading();
+            if (this.display) {
+                this.display.showResults(data);
+            }
+            this.state.isAnalyzing = false;
+        }, 1000);
+    }
+
     downloadPDF() {
-        // Check if we have analysis data
         if (!this.state.currentAnalysis) {
             this.utils.showError('No analysis available to download. Please analyze an article first.');
             return;
@@ -326,7 +536,6 @@ class TruthLensApp {
     }
 
     shareResults() {
-        // Check if we have analysis data before trying to share
         if (!this.state.currentAnalysis) {
             this.utils.showError('No analysis results to share. Please analyze an article first.');
             return;
@@ -334,19 +543,15 @@ class TruthLensApp {
         
         console.log('Share results clicked');
         
-        // Check if sharing is supported
         if (!navigator.share) {
-            // Fallback for browsers that don't support sharing
             this.utils.showError('Sharing is not supported on this device or browser. You can copy the URL to share.');
             return;
         }
         
         try {
-            // Safely access the article data with multiple levels of null checking
             const article = this.state.currentAnalysis.article || {};
             const analysis = this.state.currentAnalysis.analysis || {};
             
-            // Build share data with safe fallbacks
             const shareData = {
                 title: article.title ? `News Analysis: ${article.title}` : 'News Analysis',
                 text: analysis.trust_score !== undefined && analysis.trust_score !== null
@@ -361,7 +566,6 @@ class TruthLensApp {
                 })
                 .catch(err => {
                     console.log('Share failed:', err);
-                    // Don't show error for user cancellation
                     if (err.name !== 'AbortError') {
                         this.utils.showError('Failed to share results. Please try again.');
                     }
@@ -480,4 +684,5 @@ class TruthLensUtils {
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     window.truthLensApp = new TruthLensApp();
+    console.log('TruthLens App initialized');
 });
