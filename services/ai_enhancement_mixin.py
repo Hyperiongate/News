@@ -1,12 +1,11 @@
 """
 AI Enhancement Mixin
 Provides AI capabilities to any service that inherits from it
+FIXED: Handles initialization errors gracefully
 """
 import logging
 import json
 from typing import Dict, Any, List, Optional
-from openai import OpenAI
-from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +22,22 @@ class AIEnhancementMixin:
         self._ai_model = "gpt-3.5-turbo"  # Using faster model
         self._ai_available = False
         
-        if Config.OPENAI_API_KEY:
-            try:
-                self._ai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
-                self._ai_available = True
-                logger.info(f"{self.__class__.__name__} AI enhancement initialized")
-            except Exception as e:
-                logger.warning(f"AI enhancement not available for {self.__class__.__name__}: {e}")
+        try:
+            from config import Config
+            if Config.OPENAI_API_KEY:
+                try:
+                    from openai import OpenAI
+                    self._ai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+                    self._ai_available = True
+                    logger.info(f"{self.__class__.__name__} AI enhancement initialized")
+                except ImportError:
+                    logger.warning(f"OpenAI library not installed for {self.__class__.__name__}")
+                except Exception as e:
+                    logger.warning(f"AI enhancement not available for {self.__class__.__name__}: {e}")
+            else:
+                logger.debug(f"No OpenAI API key configured for {self.__class__.__name__}")
+        except Exception as e:
+            logger.warning(f"Error initializing AI enhancement for {self.__class__.__name__}: {e}")
     
     def _enhance_with_ai(self, prompt: str, temperature: float = 0.3, 
                         max_tokens: int = 1000, json_mode: bool = False) -> Optional[Dict[str, Any]]:
@@ -84,6 +92,9 @@ class AIEnhancementMixin:
     def _ai_detect_credibility_issues(self, source_name: str, domain: str, 
                                     analysis_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """AI method to detect credibility issues in sources"""
+        if not self._ai_available:
+            return None
+            
         prompt = f"""Analyze the credibility of this news source:
 
 Source: {source_name}
@@ -101,8 +112,11 @@ Format as JSON with keys: red_flags (array of objects with 'issue' and 'explanat
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
     # Bias Detection AI Methods
-    def _ai_analyze_bias(self, text: str, initial_bias_score: int) -> Optional[Dict[str, Any]]:
-        """AI method to analyze bias in article text"""
+    def _ai_detect_bias_patterns(self, text: str, initial_bias_score: int) -> Optional[Dict[str, Any]]:
+        """AI method to detect bias patterns in article text"""
+        if not self._ai_available:
+            return None
+            
         prompt = f"""Analyze the bias in this news article:
 
 Text excerpt: {text[:1500]}
@@ -119,15 +133,20 @@ Format as JSON with keys: biased_phrases (array), missing_perspectives (array), 
         return self._enhance_with_ai(prompt, temperature=0.3, json_mode=True)
     
     # Author Analysis AI Methods
-    def _ai_analyze_author(self, author_name: str, bio_text: str, 
-                          author_history: List[Dict]) -> Optional[Dict[str, Any]]:
+    def _ai_analyze_author(self, author_name: str, author_history: List[Dict], 
+                          article_content: str) -> Optional[Dict[str, Any]]:
         """AI method to analyze author credibility"""
+        if not self._ai_available:
+            return None
+            
+        # Handle empty bio_text
+        history_titles = [a.get('title', '') for a in (author_history or [])[:5]]
+        
         prompt = f"""Analyze the credibility of this journalist:
 
 Author: {author_name}
-Bio: {bio_text[:500]}
-Previous article titles:
-{json.dumps([a.get('title', '') for a in author_history[:5]], indent=2)}
+Previous article titles: {json.dumps(history_titles, indent=2)}
+Current article excerpt: {article_content[:500]}
 
 Assess:
 1. Writing style consistency
@@ -136,7 +155,7 @@ Assess:
 4. Credibility indicators
 5. Red flags if any
 
-Format as JSON with keys: style_assessment, expertise_indicators (array), bias_patterns (array), credibility_factors (array), concerns (array), overall_rating"""
+Format as JSON with keys: style_assessment, expertise_indicators (array), bias_patterns (array), credibility_factors (array), red_flags (array), strengths (array), credibility_adjustment (integer from -20 to +20), expertise_assessment (array)"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
@@ -144,6 +163,9 @@ Format as JSON with keys: style_assessment, expertise_indicators (array), bias_p
     def _ai_analyze_transparency(self, transparency_data: Dict[str, Any], 
                                 article_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """AI method to assess transparency"""
+        if not self._ai_available:
+            return None
+            
         prompt = f"""Assess the transparency of this news article:
 
 Title: {article_data.get('title', 'Unknown')}
@@ -166,6 +188,9 @@ Format as JSON with keys: transparency_score (0-100), missing_elements (array), 
     # Manipulation Detection AI Methods
     def _ai_detect_manipulation(self, text: str, tactics_found: List[str]) -> Optional[Dict[str, Any]]:
         """AI method to detect manipulation tactics"""
+        if not self._ai_available:
+            return None
+            
         prompt = f"""Analyze manipulation tactics in this article:
 
 Text excerpt: {text[:1500]}
@@ -185,6 +210,9 @@ Format as JSON with keys: emotional_tactics (array), logical_fallacies (array), 
     # Content Analysis AI Methods
     def _ai_analyze_content_quality(self, text: str, metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """AI-enhanced content quality analysis"""
+        if not self._ai_available:
+            return None
+            
         prompt = f"""Analyze the quality and structure of this news article:
 
 Text preview: {text[:1000]}...
@@ -208,18 +236,21 @@ Format as JSON with keys: argument_quality, evidence_assessment, clarity_score, 
     # Fact Checking AI Methods
     def _ai_fact_check_claims(self, claims: List[str], context: str) -> Optional[Dict[str, Any]]:
         """AI method to help with fact checking"""
+        if not self._ai_available:
+            return None
+            
         if not claims:
             # Extract claims if none provided
             prompt = f"""Extract factual claims from this text that should be fact-checked:
 
-{context}
+{context[:1000]}
 
 List up to 10 specific, verifiable claims. Format as JSON with key 'claims' containing an array of objects with 'claim' and 'context' fields."""
         else:
             prompt = f"""Analyze these claims for fact-checking:
 
 Claims:
-{json.dumps(claims, indent=2)}
+{json.dumps(claims[:10], indent=2)}
 
 For each claim, suggest:
 1. Verification approach
@@ -248,10 +279,17 @@ Format as JSON with key 'fact_checks' containing array of objects with fields: c
             return original_results
             
         # Add AI enhancement marker
-        if 'ai_enhanced' not in original_results:
-            original_results['ai_enhanced'] = {}
+        if 'metadata' not in original_results:
+            original_results['metadata'] = {}
+            
+        original_results['metadata']['ai_enhanced'] = True
+        original_results['metadata']['ai_enhancement_type'] = enhancement_type
         
-        original_results['ai_enhanced'][enhancement_type] = ai_results
+        # Store AI results separately
+        if 'ai_insights' not in original_results:
+            original_results['ai_insights'] = {}
+        
+        original_results['ai_insights'][enhancement_type] = ai_results
         
         # Update summary if AI found significant issues
         if 'summary' in original_results and ai_results.get('concerns'):
