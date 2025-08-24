@@ -1,6 +1,6 @@
 """
 News Analyzer API - Main Flask Application
-FIXED: Better error handling for extraction failures
+FIXED: Better error handling for extraction failures and complete debug endpoints
 """
 import os
 import sys
@@ -10,6 +10,7 @@ import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 import json
+import importlib
 
 # Flask imports
 from flask import Flask, request, jsonify, render_template, send_from_directory
@@ -21,6 +22,7 @@ from flask_limiter.util import get_remote_address
 from config import Config
 from services.news_analyzer import NewsAnalyzer
 from services.service_registry import get_service_registry
+from services.base_analyzer import BaseAnalyzer
 
 # Setup logging
 logging.basicConfig(
@@ -433,6 +435,113 @@ def test_services_data():
         logger.error(f"Service data test error: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
+
+@app.route('/api/debug/check-all-services', methods=['GET'])
+def check_all_services():
+    """Comprehensive debug endpoint to check all service registrations and issues"""
+    try:
+        registry = get_service_registry()
+        
+        # Force initialization if not done
+        registry._ensure_initialized()
+        
+        results = {
+            'service_mapping': registry.SERVICE_MAPPING,
+            'registered_sync_services': list(registry.services.keys()),
+            'registered_async_services': list(registry.async_services.keys()),
+            'failed_services': registry.failed_services,
+            'service_details': {},
+            'import_tests': {},
+            'class_checks': {}
+        }
+        
+        # Test each service import and class
+        for service_name, (module_name, class_name) in registry.SERVICE_MAPPING.items():
+            # Test import
+            try:
+                module = importlib.import_module(module_name)
+                results['import_tests'][service_name] = {
+                    'success': True,
+                    'module': module_name
+                }
+                
+                # Test class exists
+                try:
+                    service_class = getattr(module, class_name)
+                    results['class_checks'][service_name] = {
+                        'success': True,
+                        'class_name': class_name,
+                        'is_base_analyzer': issubclass(service_class, BaseAnalyzer),
+                        'mro': [c.__name__ for c in service_class.__mro__]
+                    }
+                    
+                    # Try to instantiate
+                    try:
+                        instance = service_class()
+                        results['service_details'][service_name] = {
+                            'instantiated': True,
+                            'is_available': instance.is_available,
+                            'service_name_attr': getattr(instance, 'service_name', 'NO SERVICE NAME'),
+                            'has_analyze': hasattr(instance, 'analyze'),
+                            'has_data_wrapper': False  # Will check this below
+                        }
+                        
+                        # Test if analyze returns data in 'data' field
+                        if service_name in ['content_analyzer', 'transparency_analyzer', 'author_analyzer']:
+                            test_data = {
+                                'text': 'Test article by John Smith.',
+                                'author': 'John Smith',
+                                'title': 'Test',
+                                'domain': 'test.com'
+                            }
+                            try:
+                                result = instance.analyze(test_data)
+                                has_data = 'data' in result
+                                results['service_details'][service_name]['has_data_wrapper'] = has_data
+                                results['service_details'][service_name]['result_keys'] = list(result.keys())
+                                if has_data:
+                                    results['service_details'][service_name]['data_keys'] = list(result['data'].keys())[:10]
+                            except Exception as e:
+                                results['service_details'][service_name]['analyze_error'] = str(e)
+                        
+                    except Exception as e:
+                        results['service_details'][service_name] = {
+                            'instantiated': False,
+                            'error': str(e),
+                            'error_type': type(e).__name__
+                        }
+                        
+                except AttributeError as e:
+                    results['class_checks'][service_name] = {
+                        'success': False,
+                        'error': f"Class {class_name} not found in module",
+                        'available_classes': [name for name in dir(module) if name[0].isupper()]
+                    }
+                    
+            except ImportError as e:
+                results['import_tests'][service_name] = {
+                    'success': False,
+                    'error': str(e),
+                    'error_type': type(e).__name__
+                }
+        
+        # Summary
+        results['summary'] = {
+            'total_services': len(registry.SERVICE_MAPPING),
+            'import_success': sum(1 for r in results['import_tests'].values() if r['success']),
+            'class_found': sum(1 for r in results['class_checks'].values() if r.get('success', False)),
+            'instantiated': sum(1 for r in results['service_details'].values() if r.get('instantiated', False)),
+            'available': sum(1 for r in results['service_details'].values() if r.get('is_available', False)),
+            'has_data_wrapper': sum(1 for r in results['service_details'].values() if r.get('has_data_wrapper', False))
+        }
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({
             'error': str(e),
             'traceback': traceback.format_exc()
         })
