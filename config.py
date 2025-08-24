@@ -3,7 +3,7 @@ Configuration Management for News Analyzer
 FIXED: Enabled OpenAI Enhancer for AI summaries
 """
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
 
