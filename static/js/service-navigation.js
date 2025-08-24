@@ -1,59 +1,89 @@
-// service-navigation.js - Fixed Navigation and Data Passing for Service Pages
-// This file handles navigation between main analysis page and service detail pages
+// COMPLETE DATA FLOW FIX - Replace existing service-navigation.js
+// This fixes the timing issues and ensures data properly flows to service pages
 
 (function() {
     'use strict';
 
-    // Service Navigation Module
+    // Service Navigation Module with Enhanced Data Management
     const ServiceNavigation = {
-        // Store analysis data in localStorage instead of sessionStorage for cross-window access
+        // Storage configuration
         STORAGE_KEY: 'truthlens_analysis_data',
         STORAGE_EXPIRY_KEY: 'truthlens_analysis_expiry',
         STORAGE_URL_KEY: 'truthlens_analysis_url',
-        EXPIRY_DURATION: 2 * 60 * 60 * 1000, // 2 hours
-        DEBUG: true, // Enable debug logging
+        EXPIRY_DURATION: 4 * 60 * 60 * 1000, // 4 hours
+        DEBUG: true,
 
-        // Save analysis data when navigating to service pages
+        // Save analysis data
         saveAnalysisData: function(data, sourceUrl) {
-            if (this.DEBUG) console.log('Saving analysis data to localStorage...');
+            if (this.DEBUG) {
+                console.log('=== SAVING ANALYSIS DATA ===');
+                console.log('Data structure:', {
+                    hasArticle: !!data.article,
+                    hasAnalysis: !!data.analysis,
+                    hasDetailedAnalysis: !!data.detailed_analysis,
+                    detailedServices: data.detailed_analysis ? Object.keys(data.detailed_analysis) : []
+                });
+            }
+            
             try {
                 const now = Date.now();
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
                 localStorage.setItem(this.STORAGE_EXPIRY_KEY, now + this.EXPIRY_DURATION);
                 localStorage.setItem(this.STORAGE_URL_KEY, sourceUrl || window.location.href);
+                
+                // Also save to sessionStorage as backup
+                sessionStorage.setItem('analysisData', JSON.stringify(data));
+                
                 if (this.DEBUG) {
-                    console.log('Analysis data saved successfully');
-                    console.log('Data keys:', Object.keys(data));
-                    console.log('Detailed analysis services:', data.detailed_analysis ? Object.keys(data.detailed_analysis) : 'None');
+                    console.log('✓ Data saved to localStorage and sessionStorage');
+                    console.log('✓ Expiry set to:', new Date(now + this.EXPIRY_DURATION).toLocaleString());
                 }
+                
+                // Trigger custom event for any listeners
+                window.dispatchEvent(new CustomEvent('analysisDataSaved', { detail: data }));
+                
             } catch (e) {
                 console.error('Failed to save analysis data:', e);
+                // Try sessionStorage as fallback
+                try {
+                    sessionStorage.setItem('analysisData', JSON.stringify(data));
+                    console.log('Saved to sessionStorage as fallback');
+                } catch (e2) {
+                    console.error('Failed to save to sessionStorage too:', e2);
+                }
             }
         },
 
-        // Retrieve analysis data on service pages
+        // Retrieve analysis data
         getAnalysisData: function() {
             try {
+                // First try localStorage
                 const expiryTime = localStorage.getItem(this.STORAGE_EXPIRY_KEY);
                 const now = Date.now();
 
-                // Check if data has expired
-                if (!expiryTime || now > parseInt(expiryTime)) {
-                    this.clearAnalysisData();
-                    return null;
+                if (expiryTime && now <= parseInt(expiryTime)) {
+                    const data = localStorage.getItem(this.STORAGE_KEY);
+                    if (data) {
+                        if (this.DEBUG) console.log('✓ Retrieved data from localStorage');
+                        return JSON.parse(data);
+                    }
                 }
 
-                const data = localStorage.getItem(this.STORAGE_KEY);
-                return data ? JSON.parse(data) : null;
+                // Try sessionStorage as fallback
+                const sessionData = sessionStorage.getItem('analysisData');
+                if (sessionData) {
+                    if (this.DEBUG) console.log('✓ Retrieved data from sessionStorage (fallback)');
+                    return JSON.parse(sessionData);
+                }
+
+                // No valid data found
+                if (this.DEBUG) console.log('✗ No valid analysis data found');
+                return null;
+
             } catch (e) {
                 console.error('Failed to retrieve analysis data:', e);
                 return null;
             }
-        },
-
-        // Get the URL to return to
-        getReturnUrl: function() {
-            return localStorage.getItem(this.STORAGE_URL_KEY) || '/';
         },
 
         // Clear stored data
@@ -61,298 +91,248 @@
             localStorage.removeItem(this.STORAGE_KEY);
             localStorage.removeItem(this.STORAGE_EXPIRY_KEY);
             localStorage.removeItem(this.STORAGE_URL_KEY);
+            sessionStorage.removeItem('analysisData');
+            if (this.DEBUG) console.log('✓ Cleared all stored analysis data');
         },
 
         // Initialize on main analysis page
         initMainPage: function() {
-            console.log('Initializing ServiceNavigation on main page');
+            console.log('=== Initializing ServiceNavigation on Main Page ===');
             
-            // Check if data exists from previous analysis
-            const existingData = this.getAnalysisData();
-            if (existingData && this.DEBUG) {
-                console.log('Found existing analysis data in localStorage');
-            }
+            // Method 1: Override the display showResults method
+            this.overrideShowResults();
             
-            // Override the showResults function to save data to localStorage
-            if (window.truthLensApp && window.truthLensApp.display) {
-                const originalShowResults = window.truthLensApp.display.showResults;
-                window.truthLensApp.display.showResults = function(data) {
-                    console.log('showResults called with data:', data);
+            // Method 2: Listen for analysis completion in multiple ways
+            this.setupAnalysisListeners();
+            
+            // Method 3: Override service card creation
+            this.overrideServiceCardCreation();
+            
+            // Method 4: Add a fallback data capture
+            this.setupFallbackDataCapture();
+        },
+
+        // Override showResults method
+        overrideShowResults: function() {
+            const self = this;
+            let attempts = 0;
+            const maxAttempts = 100; // 10 seconds
+
+            const tryOverride = function() {
+                if (window.truthLensApp && window.truthLensApp.display && window.truthLensApp.display.showResults) {
+                    const original = window.truthLensApp.display.showResults;
                     
-                    // Call original function
-                    if (originalShowResults) {
-                        originalShowResults.call(this, data);
-                    }
-                    
-                    // Save to localStorage for service pages
-                    ServiceNavigation.saveAnalysisData(data, window.location.href);
-                };
-            } else {
-                // If truthLensApp is not ready yet, wait for it
-                console.log('Waiting for truthLensApp to initialize...');
-                
-                let checkCount = 0;
-                const checkInterval = setInterval(() => {
-                    checkCount++;
-                    if (window.truthLensApp && window.truthLensApp.display) {
-                        clearInterval(checkInterval);
-                        console.log('truthLensApp found after', checkCount, 'checks');
+                    window.truthLensApp.display.showResults = function(data) {
+                        console.log('=== ShowResults Intercepted ===');
+                        console.log('Data received:', data ? 'Yes' : 'No');
                         
-                        const originalShowResults = window.truthLensApp.display.showResults;
-                        window.truthLensApp.display.showResults = function(data) {
-                            console.log('showResults called with data:', data);
-                            
-                            // Call original function
-                            if (originalShowResults) {
-                                originalShowResults.call(this, data);
-                            }
-                            
-                            // Save to localStorage for service pages
-                            ServiceNavigation.saveAnalysisData(data, window.location.href);
-                        };
-                    } else if (checkCount > 50) { // 5 seconds timeout
-                        clearInterval(checkInterval);
-                        console.error('truthLensApp not found after 5 seconds');
+                        // Save data immediately
+                        self.saveAnalysisData(data, window.location.href);
+                        
+                        // Call original
+                        return original.call(this, data);
+                    };
+                    
+                    console.log('✓ Successfully overrode showResults method');
+                    return true;
+                }
+                return false;
+            };
+
+            // Try immediately
+            if (!tryOverride() && attempts < maxAttempts) {
+                // Keep trying
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (tryOverride() || attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        if (attempts >= maxAttempts) {
+                            console.warn('Could not override showResults after 10 seconds');
+                        }
                     }
                 }, 100);
             }
+        },
 
-            // Update service card creation to handle navigation properly
-            const originalCreateCards = window.createServiceCards;
-            if (originalCreateCards) {
-                window.createServiceCards = function(analysisData) {
-                    const servicesGrid = document.getElementById('servicesGrid');
-                    if (!servicesGrid) return;
+        // Setup multiple listeners for analysis completion
+        setupAnalysisListeners: function() {
+            const self = this;
 
-                    servicesGrid.innerHTML = '';
-                    let completedCount = 0;
-                    window.analysisPerformed = true;
+            // Listen for custom events
+            window.addEventListener('analysisComplete', function(e) {
+                if (e.detail) {
+                    console.log('=== Analysis Complete Event Captured ===');
+                    self.saveAnalysisData(e.detail, window.location.href);
+                }
+            });
 
-                    CONFIG.SERVICES.forEach(service => {
-                        const serviceData = analysisData?.detailed_analysis?.[service.id] || null;
-                        const hasData = serviceData && Object.keys(serviceData).length > 0;
-                        
-                        if (hasData) completedCount++;
+            // Listen for results section becoming visible
+            const observer = new MutationObserver(function(mutations) {
+                const resultsSection = document.getElementById('resultsSection');
+                if (resultsSection && resultsSection.style.display === 'block') {
+                    // Check if we have data in the app state
+                    if (window.truthLensApp && window.truthLensApp.state && window.truthLensApp.state.currentAnalysis) {
+                        console.log('=== Captured data from app state ===');
+                        self.saveAnalysisData(window.truthLensApp.state.currentAnalysis, window.location.href);
+                    }
+                }
+            });
 
-                        // Create card
-                        const card = document.createElement('a');
-                        card.className = `service-card ${service.className} ${!hasData && !window.analysisPerformed ? 'loading' : ''}`;
-                        
-                        // Set up proper navigation
-                        if (hasData) {
-                            card.href = service.url;
-                            // Remove target="_blank" to keep in same window
-                            // card.target = '_blank';
-                            card.rel = 'noopener noreferrer';
-                            
-                            // Add click handler to ensure data is saved
-                            card.addEventListener('click', function(e) {
-                                // Save current data to localStorage
-                                ServiceNavigation.saveAnalysisData(analysisData, window.location.href);
-                            });
-                        } else {
-                            card.href = '#';
-                            card.style.cursor = 'not-allowed';
-                            card.onclick = function(e) {
-                                e.preventDefault();
-                                if (window.truthLensApp && window.truthLensApp.utils) {
-                                    window.truthLensApp.utils.showError(`${service.name} analysis not available for this article`);
-                                }
-                                return false;
-                            };
-                        }
-
-                        // Extract metrics
-                        let metric1 = { label: 'Status', value: hasData ? 'Complete' : 'No Data' };
-                        let metric2 = { label: 'Score', value: '--' };
-
-                        if (hasData) {
-                            switch(service.id) {
-                                case 'source_credibility':
-                                    metric1 = { label: 'Score', value: serviceData.credibility_score || serviceData.score || '--' };
-                                    metric2 = { label: 'Level', value: serviceData.credibility_level || 'Unknown' };
-                                    break;
-                                case 'author_analyzer':
-                                    metric1 = { label: 'Score', value: serviceData.credibility_score || serviceData.score || '--' };
-                                    metric2 = { label: 'Status', value: serviceData.is_verified ? 'Verified' : 'Unverified' };
-                                    break;
-                                case 'bias_detector':
-                                    metric1 = { label: 'Bias', value: serviceData.bias_score || '--' };
-                                    metric2 = { label: 'Lean', value: serviceData.political_lean || 'Center' };
-                                    break;
-                                case 'fact_checker':
-                                    metric1 = { label: 'Claims', value: serviceData.total_claims || '0' };
-                                    metric2 = { label: 'Verified', value: serviceData.verified_claims || '0' };
-                                    break;
-                                case 'transparency_analyzer':
-                                    metric1 = { label: 'Score', value: serviceData.transparency_score || serviceData.score || '--' };
-                                    metric2 = { label: 'Level', value: serviceData.transparency_level || serviceData.level || 'Unknown' };
-                                    break;
-                                case 'manipulation_detector':
-                                    metric1 = { label: 'Risk', value: serviceData.manipulation_level || 'Low' };
-                                    metric2 = { label: 'Tactics', value: serviceData.tactics_found?.length || '0' };
-                                    break;
-                                case 'content_analyzer':
-                                    metric1 = { label: 'Quality', value: serviceData.content_quality || 'Good' };
-                                    metric2 = { label: 'Grade', value: serviceData.readability_grade || '--' };
-                                    break;
-                            }
-                        }
-
-                        // Determine status
-                        let statusClass = 'pending';
-                        let statusText = 'Processing...';
-                        let statusIcon = 'fa-clock';
-                        
-                        if (window.analysisPerformed) {
-                            if (hasData) {
-                                statusClass = 'complete';
-                                statusText = 'Analysis Complete';
-                                statusIcon = 'fa-check-circle';
-                            } else {
-                                statusClass = 'no-data';
-                                statusText = 'No Data Available';
-                                statusIcon = 'fa-info-circle';
-                            }
-                        }
-
-                        card.innerHTML = `
-                            <div class="service-card-header">
-                                <div class="service-icon-wrapper">
-                                    <i class="fas ${service.icon}"></i>
-                                </div>
-                                <div class="service-info">
-                                    <h3>${service.name}</h3>
-                                </div>
-                            </div>
-                            
-                            <div class="service-status ${statusClass}">
-                                <i class="fas ${statusIcon}"></i>
-                                <span>${statusText}</span>
-                            </div>
-                            
-                            <p class="service-preview">${service.description}</p>
-                            
-                            <div class="service-metrics">
-                                <div class="metric-item">
-                                    <span class="metric-value">${metric1.value}</span>
-                                    <span class="metric-label">${metric1.label}</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-value">${metric2.value}</span>
-                                    <span class="metric-label">${metric2.label}</span>
-                                </div>
-                            </div>
-                            
-                            <span class="view-details-link">View Details <i class="fas fa-external-link-alt"></i></span>
-                        `;
-
-                        servicesGrid.appendChild(card);
-                    });
-
-                    // Update progress bar
-                    const progressBar = document.getElementById('servicesProgressBar');
-                    const progressPercent = (completedCount / CONFIG.SERVICES.length) * 100;
-                    progressBar.style.width = `${progressPercent}%`;
-                };
+            // Start observing when DOM is ready
+            if (document.body) {
+                observer.observe(document.body, { 
+                    attributes: true, 
+                    subtree: true, 
+                    attributeFilter: ['style'] 
+                });
             }
+        },
+
+        // Override service card creation to capture data
+        overrideServiceCardCreation: function() {
+            const self = this;
+
+            // Watch for displayServiceCards method
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                if (window.truthLensApp && window.truthLensApp.display && window.truthLensApp.display.displayServiceCards) {
+                    const original = window.truthLensApp.display.displayServiceCards;
+                    
+                    window.truthLensApp.display.displayServiceCards = function(data) {
+                        console.log('=== DisplayServiceCards Intercepted ===');
+                        self.saveAnalysisData(data, window.location.href);
+                        return original.call(this, data);
+                    };
+                    
+                    clearInterval(checkInterval);
+                    console.log('✓ Successfully overrode displayServiceCards');
+                } else if (attempts > 50) {
+                    clearInterval(checkInterval);
+                }
+            }, 100);
+        },
+
+        // Fallback: Periodically check for data
+        setupFallbackDataCapture: function() {
+            const self = this;
+            let lastDataCheck = null;
+
+            setInterval(() => {
+                // Check multiple possible data locations
+                let data = null;
+
+                // Check app state
+                if (window.truthLensApp && window.truthLensApp.state && window.truthLensApp.state.currentAnalysis) {
+                    data = window.truthLensApp.state.currentAnalysis;
+                }
+
+                // Check sessionStorage
+                if (!data) {
+                    const sessionData = sessionStorage.getItem('analysisData');
+                    if (sessionData) {
+                        try {
+                            data = JSON.parse(sessionData);
+                        } catch (e) {}
+                    }
+                }
+
+                // If we found new data, save it
+                if (data && JSON.stringify(data) !== lastDataCheck) {
+                    console.log('=== Fallback Data Capture ===');
+                    self.saveAnalysisData(data, window.location.href);
+                    lastDataCheck = JSON.stringify(data);
+                }
+            }, 2000); // Check every 2 seconds
         },
 
         // Initialize on service detail pages
         initServicePage: function(serviceConfig) {
-            console.log('Initializing service page:', serviceConfig);
-            
-            // Override the existing initialization function
-            const originalInit = window.initializeServicePage;
-            
-            window.initializeServicePage = function() {
-                console.log('Loading analysis data from localStorage...');
-                
-                // Get analysis data from localStorage
-                const analysisData = ServiceNavigation.getAnalysisData();
-                console.log('Analysis data retrieved:', analysisData ? 'Found' : 'Not found');
+            console.log('=== Initializing Service Page ===');
+            console.log('Service:', serviceConfig.name);
+
+            // Wait for DOM
+            const init = () => {
+                // Get stored data
+                const analysisData = this.getAnalysisData();
                 
                 if (!analysisData) {
-                    console.error('No analysis data in localStorage');
-                    if (window.showError) {
-                        window.showError('No analysis data found. Please return to the main page and run a new analysis.');
-                    } else {
-                        // Fallback error display
-                        document.getElementById('loadingState').style.display = 'none';
-                        document.getElementById('errorState').style.display = 'block';
-                        document.getElementById('errorMessage').textContent = 'No analysis data found. Please return to the main page and run a new analysis.';
-                    }
+                    console.error('No analysis data found');
+                    this.showServiceError('No analysis data found. Please return to the main page and run a new analysis.');
                     return;
                 }
 
-                try {
-                    console.log('Looking for service data:', serviceConfig.id);
-                    const serviceData = analysisData.detailed_analysis?.[serviceConfig.id];
-                    console.log('Service data found:', serviceData ? Object.keys(serviceData).length + ' keys' : 'No data');
-                    
-                    if (!serviceData || Object.keys(serviceData).length === 0) {
-                        console.error('No data for service:', serviceConfig.id);
-                        if (window.showError) {
-                            window.showError(`${serviceConfig.name} was not performed for this article.`);
-                        } else {
-                            document.getElementById('loadingState').style.display = 'none';
-                            document.getElementById('errorState').style.display = 'block';
-                            document.getElementById('errorMessage').textContent = `${serviceConfig.name} was not performed for this article.`;
-                        }
-                        return;
-                    }
+                // Extract service data
+                const serviceData = analysisData.detailed_analysis?.[serviceConfig.id];
+                
+                if (!serviceData || Object.keys(serviceData).length === 0) {
+                    console.error('No data for service:', serviceConfig.id);
+                    this.showServiceError(`${serviceConfig.name} analysis was not performed for this article.`);
+                    return;
+                }
 
-                    // Populate summary section
-                    console.log('Populating summary...');
+                console.log('✓ Service data found:', Object.keys(serviceData).length, 'keys');
+
+                // Populate the page
+                try {
+                    // Update summary
                     if (window.populateSummary) {
                         window.populateSummary(analysisData, serviceData);
                     }
-                    
-                    // Show analysis content
-                    console.log('Displaying service analysis...');
+
+                    // Display analysis
                     if (window.displayServiceAnalysis) {
                         window.displayServiceAnalysis(serviceData);
                     }
-                    
+
                     // Update return button
-                    ServiceNavigation.updateReturnButton();
-                    
+                    this.updateReturnButton();
+
+                    console.log('✓ Service page populated successfully');
+
                 } catch (error) {
-                    console.error('Error processing analysis data:', error);
-                    if (window.showError) {
-                        window.showError('Error loading analysis results: ' + error.message);
-                    } else {
-                        document.getElementById('loadingState').style.display = 'none';
-                        document.getElementById('errorState').style.display = 'block';
-                        document.getElementById('errorMessage').textContent = 'Error loading analysis results.';
-                    }
+                    console.error('Error displaying service data:', error);
+                    this.showServiceError('Error loading analysis results: ' + error.message);
                 }
             };
-            
-            // Call the new initialization
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', window.initializeServicePage);
-            } else {
-                // DOM already loaded
-                window.initializeServicePage();
-            }
 
-            // Update the return button
-            this.updateReturnButton();
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
         },
 
-        // Update return button functionality
+        // Show error on service page
+        showServiceError: function(message) {
+            // Hide loading
+            const loadingEl = document.getElementById('loadingState');
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            // Show error
+            const errorEl = document.getElementById('errorState');
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                const messageEl = document.getElementById('errorMessage');
+                if (messageEl) messageEl.textContent = message;
+            }
+
+            // Use showError if available
+            if (window.showError) {
+                window.showError(message);
+            }
+        },
+
+        // Update return button
         updateReturnButton: function() {
             const returnButton = document.getElementById('returnButton');
             if (!returnButton) return;
 
-            const returnUrl = this.getReturnUrl();
-            
-            // Always use the stored return URL
+            const returnUrl = localStorage.getItem(this.STORAGE_URL_KEY) || '/';
             returnButton.href = returnUrl;
-            returnButton.innerHTML = '<i class="fas fa-arrow-left"></i><span>Return to Analysis</span>';
             
-            // Override click to ensure proper navigation
+            // Ensure click works properly
             returnButton.onclick = function(e) {
                 e.preventDefault();
                 window.location.href = returnUrl;
@@ -360,46 +340,53 @@
         }
     };
 
-    // Auto-initialize based on page context
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if we're on the main page or a service page
-        if (document.getElementById('servicesGrid')) {
-            // Main analysis page
-            ServiceNavigation.initMainPage();
-        } else if (window.SERVICE_CONFIG) {
-            // Service detail page
-            ServiceNavigation.initServicePage(window.SERVICE_CONFIG);
-        }
-    });
-
-    // Export for global access
-    window.ServiceNavigation = ServiceNavigation;
-    
-    // Debug function to check localStorage data
-    window.checkAnalysisData = function() {
-        console.log('=== Analysis Data Debug ===');
+    // Debug helper
+    window.debugAnalysisData = function() {
+        console.log('=== ANALYSIS DATA DEBUG ===');
+        
+        // Check localStorage
         const data = localStorage.getItem('truthlens_analysis_data');
-        const expiry = localStorage.getItem('truthlens_analysis_expiry');
-        const url = localStorage.getItem('truthlens_analysis_url');
+        console.log('localStorage data:', data ? 'Present (' + data.length + ' chars)' : 'Missing');
         
-        console.log('Data exists:', !!data);
-        console.log('Data size:', data ? data.length + ' characters' : 'N/A');
-        console.log('Expiry:', expiry ? new Date(parseInt(expiry)).toLocaleString() : 'N/A');
-        console.log('Source URL:', url || 'N/A');
+        // Check sessionStorage
+        const sessionData = sessionStorage.getItem('analysisData');
+        console.log('sessionStorage data:', sessionData ? 'Present (' + sessionData.length + ' chars)' : 'Missing');
         
+        // Check app state
+        if (window.truthLensApp && window.truthLensApp.state) {
+            console.log('App state data:', window.truthLensApp.state.currentAnalysis ? 'Present' : 'Missing');
+        }
+        
+        // Parse and show structure
         if (data) {
             try {
                 const parsed = JSON.parse(data);
                 console.log('Data structure:', {
-                    hasArticle: !!parsed.article,
-                    hasAnalysis: !!parsed.analysis,
-                    hasDetailedAnalysis: !!parsed.detailed_analysis,
-                    services: parsed.detailed_analysis ? Object.keys(parsed.detailed_analysis) : []
+                    article: !!parsed.article,
+                    analysis: !!parsed.analysis,
+                    detailed_analysis: parsed.detailed_analysis ? Object.keys(parsed.detailed_analysis) : []
                 });
             } catch (e) {
                 console.error('Failed to parse data:', e);
             }
         }
-        console.log('======================');
+        
+        console.log('=======================');
     };
+
+    // Auto-initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        // Detect page type and initialize accordingly
+        if (document.getElementById('servicesGrid')) {
+            // Main page
+            ServiceNavigation.initMainPage();
+        } else if (window.SERVICE_CONFIG) {
+            // Service page
+            ServiceNavigation.initServicePage(window.SERVICE_CONFIG);
+        }
+    });
+
+    // Export
+    window.ServiceNavigation = ServiceNavigation;
+
 })();
