@@ -1,4 +1,4 @@
-// truthlens-display.js - Complete Fixed Version with AI Summary Display
+// truthlens-display.js - Complete Fixed Version with CORRECT Data Access
 
 class TruthLensDisplay {
     constructor(app) {
@@ -22,7 +22,7 @@ class TruthLensDisplay {
             hasAnalysis: !!data.analysis,
             hasDetailedAnalysis: !!data.detailed_analysis,
             detailedAnalysisKeys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
-            hasOpenAIEnhancer: data.detailed_analysis?.openai_enhancer ? true : false
+            sampleServiceData: data.detailed_analysis ? Object.values(data.detailed_analysis)[0] : null
         });
 
         resultsSection.style.display = 'block';
@@ -41,15 +41,19 @@ class TruthLensDisplay {
             this.displayArticleInfo(data.article);
         }
         
-        // Display service cards instead of accordion
+        // CRITICAL: Display service cards with proper data mapping
         this.displayServiceCards(data);
         
-        // Store analysis data for service pages using localStorage for cross-window access
+        // Store analysis data for service pages
         if (window.ServiceNavigation) {
             window.ServiceNavigation.saveAnalysisData(data, window.location.href);
         } else {
             // Fallback to sessionStorage
-            sessionStorage.setItem('analysisData', JSON.stringify(data));
+            try {
+                sessionStorage.setItem('analysisData', JSON.stringify(data));
+            } catch (e) {
+                console.warn('Failed to save analysis data:', e);
+            }
         }
         
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -140,54 +144,84 @@ class TruthLensDisplay {
 
     displayTrustScore(analysis, fullData) {
         const scoreEl = document.getElementById('trustScoreNumber');
-        const levelEl = document.getElementById('trustLevel');
-        const meterFill = document.querySelector('.trust-meter-fill');
-        
-        if (!scoreEl || !levelEl || !meterFill) return;
+        const levelEl = document.getElementById('trustLevelText');
+        const progressBar = document.getElementById('servicesProgressBar');
+        const progressPercent = document.getElementById('progressPercent');
         
         const score = analysis.trust_score || 0;
         const level = analysis.trust_level || 'Unknown';
         
-        // Update text
-        scoreEl.textContent = score;
-        levelEl.textContent = level;
-        levelEl.className = 'trust-level ' + level.toLowerCase().replace(' ', '-');
+        // Update trust score display
+        if (scoreEl) {
+            scoreEl.textContent = score;
+        }
+        if (levelEl) {
+            levelEl.textContent = level;
+            levelEl.className = 'trust-level ' + level.toLowerCase().replace(' ', '-');
+        }
         
-        // Update meter
-        meterFill.style.width = score + '%';
-        meterFill.className = 'trust-meter-fill ' + this.getTrustScoreClass(score);
-        
-        // Add animation
-        meterFill.style.transition = 'width 1s ease-out';
+        // Update progress based on available services
+        if (progressBar && progressPercent) {
+            const totalServices = CONFIG.SERVICES ? CONFIG.SERVICES.length : 10;
+            const completedServices = fullData.detailed_analysis ? Object.keys(fullData.detailed_analysis).length : 0;
+            const percentage = Math.round((completedServices / totalServices) * 100);
+            
+            progressBar.style.width = percentage + '%';
+            progressPercent.textContent = percentage + '%';
+        }
     }
 
     displayArticleInfo(article) {
         // Update article metadata
         const elements = {
             title: document.getElementById('articleTitle'),
-            author: document.getElementById('articleAuthor'),
-            date: document.getElementById('articleDate'),
-            source: document.getElementById('articleSource'),
-            wordCount: document.getElementById('wordCount'),
-            readingTime: document.getElementById('readingTime')
+            meta: document.getElementById('articleMeta')
         };
         
-        if (elements.title) elements.title.textContent = article.title || 'Untitled';
-        if (elements.author) elements.author.textContent = article.author || 'Unknown Author';
-        if (elements.date) elements.date.textContent = article.publish_date || 'Date not available';
-        if (elements.source) elements.source.textContent = article.domain || article.source || 'Unknown Source';
-        if (elements.wordCount) elements.wordCount.textContent = (article.word_count || 0) + ' words';
-        if (elements.readingTime) {
-            const minutes = Math.ceil((article.word_count || 0) / 200);
-            elements.readingTime.textContent = minutes + ' min read';
+        if (elements.title) {
+            elements.title.textContent = article.title || 'Untitled Article';
+        }
+        
+        if (elements.meta) {
+            let metaHTML = '';
+            
+            if (article.author) {
+                metaHTML += '<span class="meta-item"><i class="fas fa-user"></i> ' + article.author + '</span>';
+            }
+            
+            if (article.publish_date) {
+                metaHTML += '<span class="meta-item"><i class="fas fa-calendar"></i> ' + this.formatDate(article.publish_date) + '</span>';
+            }
+            
+            if (article.domain || article.source) {
+                metaHTML += '<span class="meta-item"><i class="fas fa-globe"></i> ' + (article.domain || article.source) + '</span>';
+            }
+            
+            if (article.word_count) {
+                const minutes = Math.ceil(article.word_count / 200);
+                metaHTML += '<span class="meta-item"><i class="fas fa-clock"></i> ' + minutes + ' min read</span>';
+            }
+            
+            elements.meta.innerHTML = metaHTML;
         }
     }
 
     displayServiceCards(data) {
         const servicesGrid = document.getElementById('servicesGrid');
-        if (!servicesGrid) return;
+        if (!servicesGrid) {
+            console.error('Services grid element not found');
+            return;
+        }
         
         const SERVICES = window.CONFIG ? window.CONFIG.SERVICES : [];
+        if (!SERVICES || SERVICES.length === 0) {
+            console.error('No services configuration found');
+            return;
+        }
+        
+        console.log('=== Service Cards Display Debug ===');
+        console.log('Available services:', SERVICES.map(s => s.id));
+        console.log('Available detailed analysis:', data.detailed_analysis ? Object.keys(data.detailed_analysis) : []);
         
         // Small delay for smooth transition
         setTimeout(() => {
@@ -195,28 +229,35 @@ class TruthLensDisplay {
             let completedCount = 0;
 
             SERVICES.forEach(service => {
-                // Check if we have data for this service
+                // CRITICAL FIX: Check if we have data for this service
                 const serviceData = data?.detailed_analysis?.[service.id] || null;
                 const hasData = serviceData && Object.keys(serviceData).length > 0;
+                
+                console.log(`Service ${service.id}:`, {
+                    hasData,
+                    serviceData: serviceData ? Object.keys(serviceData) : null,
+                    score: serviceData?.score,
+                    level: serviceData?.level
+                });
                 
                 if (hasData) completedCount++;
 
                 // Create the card element
                 const card = document.createElement('a');
-                card.className = 'service-card ' + service.id.replace(/_/g, '-') + ' ' + (hasData ? '' : 'pending loading');
+                card.className = 'service-card ' + service.id.replace(/_/g, '-') + ' ' + (hasData ? 'completed' : 'pending');
                 
-                // Better handling for cards without data
+                // Handle card navigation
                 if (hasData && service.url) {
                     card.href = service.url;
-                    // Remove target="_blank" to keep navigation in same window
                     card.rel = 'noopener noreferrer';
-                    // Add smooth transition
-                    setTimeout(() => card.classList.remove('loading'), 100);
                 } else {
                     card.style.cursor = 'not-allowed';
                     card.onclick = (e) => {
                         e.preventDefault();
-                        this.app.utils.showError(service.name + ' analysis not available for this article');
+                        console.log(`Service ${service.name} data not available`);
+                        if (this.app && this.app.utils) {
+                            this.app.utils.showError(service.name + ' analysis not available for this article');
+                        }
                         return false;
                     };
                 }
@@ -238,18 +279,22 @@ class TruthLensDisplay {
                     '</div>' +
                     '</div>' +
                     '<div class="service-preview">' +
-                    (hasData ? this.getServicePreview(service.id, serviceData) : 'Analysis not performed for this service') +
+                    this.getServicePreview(service.id, serviceData) +
                     '</div>';
                 
-                if (hasData) {
-                    cardHTML += '<div class="service-metrics">';
-                    if (primaryMetric) {
-                        cardHTML += '<div class="metric-item">' +
-                            '<span class="metric-value">' + primaryMetric.value + '</span>' +
-                            '<span class="metric-label">' + primaryMetric.label + '</span>' +
-                            '</div>';
-                    }
-                    cardHTML += '<div class="view-details-link">' +
+                if (hasData && primaryMetric) {
+                    cardHTML += '<div class="service-metrics">' +
+                        '<div class="metric-item">' +
+                        '<span class="metric-value">' + primaryMetric.value + '</span>' +
+                        '<span class="metric-label">' + primaryMetric.label + '</span>' +
+                        '</div>' +
+                        '<div class="view-details-link">' +
+                        'View Details <i class="fas fa-arrow-right"></i>' +
+                        '</div>' +
+                        '</div>';
+                } else if (hasData) {
+                    cardHTML += '<div class="service-metrics">' +
+                        '<div class="view-details-link">' +
                         'View Details <i class="fas fa-arrow-right"></i>' +
                         '</div>' +
                         '</div>';
@@ -259,120 +304,142 @@ class TruthLensDisplay {
                 servicesGrid.appendChild(card);
             });
             
-            // Update services summary
-            const summaryEl = document.querySelector('.services-summary');
-            if (summaryEl) {
-                summaryEl.textContent = completedCount + ' of ' + SERVICES.length + ' analyses completed';
-            }
+            console.log(`Displayed ${SERVICES.length} service cards, ${completedCount} completed`);
+            
         }, 100);
     }
 
     getServicePreview(serviceId, data) {
-        if (!data) return 'No data available';
+        if (!data) return 'Analysis not available for this article';
         
-        // FIXED: Handle the actual data structure from services
+        console.log(`Getting preview for ${serviceId}:`, {
+            hasData: !!data,
+            keys: Object.keys(data),
+            score: data.score,
+            level: data.level
+        });
+        
+        // CRITICAL FIX: Handle the actual data structure from your services
         switch (serviceId) {
             case 'source_credibility':
-                const credScore = data.credibility_score || data.score || 0;
-                const credLevel = data.credibility_level || data.level || 'Unknown';
-                return 'Source credibility: ' + credLevel + ' (' + credScore + '/100)';
+                const credScore = this.extractValue(data, ['credibility_score', 'score'], 0);
+                const credLevel = this.extractValue(data, ['credibility_level', 'level'], 'Unknown');
+                const sourceType = this.extractValue(data, ['source_type', 'type'], '');
+                return `${credLevel} credibility (${credScore}/100)` + (sourceType ? ` • ${sourceType}` : '');
                 
             case 'author_analyzer':
-                const authorScore = data.author_score || data.credibility_score || data.score || 0;
-                const authorName = data.author_name || data.author || 'Unknown author';
-                return authorName + ': ' + authorScore + '/100 credibility';
+                const authorScore = this.extractValue(data, ['author_score', 'credibility_score', 'score'], 0);
+                const authorName = this.extractValue(data, ['author_name', 'author'], 'Unknown author');
+                const authorLevel = this.extractValue(data, ['credibility_level', 'level'], '');
+                return `${authorName}: ${authorScore}/100` + (authorLevel ? ` (${authorLevel})` : '');
                 
             case 'bias_detector':
-                const biasScore = data.bias_score || data.score || 0;
+                const biasScore = this.extractValue(data, ['bias_score', 'score'], 0);
                 const biasLevel = this.getBiasLevel(biasScore);
-                return 'Bias level: ' + biasLevel + ' (' + biasScore + '/100)';
+                const politicalBias = this.extractValue(data, ['political_bias', 'bias_direction'], '');
+                return `${biasLevel} bias (${biasScore}/100)` + (politicalBias ? ` • ${politicalBias}` : '');
                 
             case 'fact_checker':
-                const claims = data.fact_checks || data.claims || [];
-                const verified = claims.filter(c => c.verdict === 'true').length;
-                return claims.length + ' claims checked, ' + verified + ' verified';
+                const totalClaims = this.extractValue(data, ['total_claims'], 0);
+                const verifiedClaims = this.extractValue(data, ['verified_claims'], 0);
+                const factChecks = data.fact_checks || data.claims || [];
+                const claimsCount = totalClaims || factChecks.length;
+                return claimsCount > 0 ? `${claimsCount} claims analyzed, ${verifiedClaims} verified` : 'No factual claims detected';
                 
             case 'transparency_analyzer':
-                // FIXED: Access the correct fields from transparency analyzer
-                const transScore = data.transparency_score || data.score || 0;
-                const transLevel = data.transparency_level || data.level || 'Unknown';
-                const indicators = data.indicators || [];
-                return 'Transparency: ' + transLevel + ' (' + transScore + '/100) - ' + indicators.length + ' indicators';
+                const transScore = this.extractValue(data, ['transparency_score', 'score'], 0);
+                const transLevel = this.extractValue(data, ['transparency_level', 'level'], 'Unknown');
+                const indicators = data.indicators || data.transparency_indicators || [];
+                return `${transLevel} transparency (${transScore}/100) • ${indicators.length} indicators`;
                 
             case 'manipulation_detector':
-                const manipScore = data.manipulation_score || data.score || 0;
-                const tactics = data.tactics_found || data.tactics || 0;
-                return 'Manipulation risk: ' + manipScore + '/100' + (tactics > 0 ? ' - ' + tactics + ' tactics found' : '');
+                const manipScore = this.extractValue(data, ['manipulation_score', 'score'], 0);
+                const tactics = data.tactics_found || data.manipulation_tactics || [];
+                const tacticsCount = Array.isArray(tactics) ? tactics.length : (typeof tactics === 'number' ? tactics : 0);
+                return tacticsCount > 0 ? `${manipScore}/100 risk • ${tacticsCount} tactics detected` : `${manipScore}/100 manipulation risk`;
                 
             case 'content_analyzer':
-                // FIXED: Access the correct fields from content analyzer
-                const qualityScore = data.content_score || data.quality_score || data.score || 0;
-                const qualityLevel = data.quality_level || data.level || 'Unknown';
-                const readability = data.readability?.reading_level || 'Unknown';
-                return 'Quality: ' + qualityLevel + ' (' + qualityScore + '/100) - ' + readability + ' reading level';
+                const qualityScore = this.extractValue(data, ['content_score', 'quality_score', 'score'], 0);
+                const qualityLevel = this.extractValue(data, ['quality_level', 'level'], 'Unknown');
+                const readability = data.readability_score || data.readability?.score || '';
+                return `${qualityLevel} quality (${qualityScore}/100)` + (readability ? ` • ${readability} readability` : '');
                 
             default:
                 // Generic fallback
-                const score = data.score || 0;
-                const level = data.level || 'Unknown';
-                return level + ' (' + score + '/100)';
+                const score = this.extractValue(data, ['score'], 0);
+                const level = this.extractValue(data, ['level'], 'Unknown');
+                return `${level} (${score}/100)`;
         }
     }
 
     getServicePrimaryMetric(serviceId, data) {
         if (!data) return null;
         
-        // FIXED: Return the correct primary metric for each service
+        // CRITICAL FIX: Return the correct primary metric for each service
         switch (serviceId) {
             case 'source_credibility':
                 return {
-                    value: data.credibility_score || data.score || 0,
-                    label: 'Credibility Score'
+                    value: this.extractValue(data, ['credibility_score', 'score'], 0),
+                    label: 'Credibility'
                 };
                 
             case 'author_analyzer':
                 return {
-                    value: data.author_score || data.credibility_score || data.score || 0,
+                    value: this.extractValue(data, ['author_score', 'credibility_score', 'score'], 0),
                     label: 'Author Score'
                 };
                 
             case 'bias_detector':
                 return {
-                    value: data.bias_score || data.score || 0,
-                    label: 'Bias Score'
+                    value: this.extractValue(data, ['bias_score', 'score'], 0),
+                    label: 'Bias Level'
                 };
                 
             case 'fact_checker':
-                const totalClaims = data.total_claims || (data.fact_checks || []).length || 0;
+                const totalClaims = this.extractValue(data, ['total_claims'], 0);
+                const factChecks = data.fact_checks || data.claims || [];
+                const claimsCount = totalClaims || factChecks.length;
                 return {
-                    value: totalClaims,
-                    label: 'Claims Checked'
+                    value: claimsCount,
+                    label: 'Claims'
                 };
                 
             case 'transparency_analyzer':
                 return {
-                    value: data.transparency_score || data.score || 0,
+                    value: this.extractValue(data, ['transparency_score', 'score'], 0),
                     label: 'Transparency'
                 };
                 
             case 'manipulation_detector':
                 return {
-                    value: data.manipulation_score || data.score || 0,
+                    value: this.extractValue(data, ['manipulation_score', 'score'], 0),
                     label: 'Risk Score'
                 };
                 
             case 'content_analyzer':
                 return {
-                    value: data.content_score || data.quality_score || data.score || 0,
-                    label: 'Quality Score'
+                    value: this.extractValue(data, ['content_score', 'quality_score', 'score'], 0),
+                    label: 'Quality'
                 };
                 
             default:
                 return {
-                    value: data.score || 0,
+                    value: this.extractValue(data, ['score'], 0),
                     label: 'Score'
                 };
         }
+    }
+
+    // CRITICAL UTILITY: Extract values with multiple fallback field names
+    extractValue(data, fieldNames, defaultValue = null) {
+        if (!data) return defaultValue;
+        
+        for (const fieldName of fieldNames) {
+            if (data[fieldName] !== undefined && data[fieldName] !== null) {
+                return data[fieldName];
+            }
+        }
+        return defaultValue;
     }
 
     getBiasLevel(score) {
@@ -411,6 +478,24 @@ class TruthLensDisplay {
             'error': 'finding-error'
         };
         return classes[type] || 'finding-default';
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return '';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString;
+            }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (e) {
+            return dateString;
+        }
     }
 
     showError(message) {
