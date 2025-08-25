@@ -1,6 +1,7 @@
 """
 Base Analyzer Abstract Class
 All analysis services should inherit from this base class
+REAL FIX: Compatible with existing service constructor patterns
 """
 import time
 import logging
@@ -18,9 +19,11 @@ class BaseAnalyzer(ABC):
     """
     Base class for all analysis services
     Provides common functionality and interface
+    FIXED: Maintains compatibility with existing services
     """
     
     def __init__(self, service_name: str):
+        # FIXED: Keep original signature that services expect
         self.service_name = service_name
         self.config = Config.get_service_config(service_name)
         self.is_available = self._check_availability()
@@ -32,7 +35,7 @@ class BaseAnalyzer(ABC):
             'average_time': 0
         }
         
-        logger.info(f"{service_name} initialized successfully")
+        logger.info(f"{service_name} initialized successfully (available: {self.is_available})")
     
     @abstractmethod
     def _check_availability(self) -> bool:
@@ -51,7 +54,7 @@ class BaseAnalyzer(ABC):
             data: Input data for analysis
             
         Returns:
-            Analysis results dictionary
+            Analysis results dictionary with standardized format
         """
         pass
     
@@ -60,15 +63,27 @@ class BaseAnalyzer(ABC):
         return {
             'name': self.service_name,
             'available': self.is_available,
-            'enabled': self.config.enabled if self.config else False,
+            'enabled': self.config.enabled if self.config else True,
             'performance': self._performance_stats.copy()
         }
+    
+    def get_success_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """FIXED: Get standardized success result format"""
+        result = {
+            'service': self.service_name,
+            'success': True,
+            'available': True,
+            'timestamp': time.time(),
+            'analysis_complete': True
+        }
+        result.update(data)  # Merge in the actual analysis data
+        return result
     
     def get_default_result(self) -> Dict[str, Any]:
         """Get default result when service is unavailable"""
         return {
             'service': self.service_name,
-            'success': False,  # FIXED: Added success field
+            'success': False,
             'available': False,
             'error': 'Service unavailable',
             'timestamp': time.time()
@@ -78,7 +93,7 @@ class BaseAnalyzer(ABC):
         """Get error result format"""
         return {
             'service': self.service_name,
-            'success': False,  # FIXED: Added success field
+            'success': False,
             'available': self.is_available,
             'error': error_message,
             'timestamp': time.time()
@@ -88,9 +103,9 @@ class BaseAnalyzer(ABC):
         """Get timeout result format"""
         return {
             'service': self.service_name,
-            'success': False,  # FIXED: Added success field
+            'success': False,
             'available': self.is_available,
-            'error': f'Analysis timed out after {self.config.timeout}s',
+            'error': f'Analysis timed out after {getattr(self.config, "timeout", 30)}s',
             'timeout': True,
             'timestamp': time.time()
         }
@@ -105,9 +120,19 @@ class BaseAnalyzer(ABC):
         if not data:
             return "No input data provided"
         
-        missing_fields = [field for field in required_fields if field not in data or not data[field]]
-        if missing_fields:
-            return f"Missing required fields: {', '.join(missing_fields)}"
+        # FIXED: More flexible validation for text/url input
+        if 'text' in data or 'url' in data or 'title' in data:
+            # Has some content, check for specific required fields
+            missing_fields = []
+            for field in required_fields:
+                if field not in ['text', 'url']:  # Don't require both text and url
+                    if field not in data or not data[field]:
+                        missing_fields.append(field)
+            
+            if missing_fields:
+                return f"Missing required fields: {', '.join(missing_fields)}"
+        else:
+            return "No content provided (need 'text' or 'url')"
         
         return None
     
@@ -170,7 +195,7 @@ class BaseAnalyzer(ABC):
         """
         import concurrent.futures
         
-        timeout = self.config.timeout if self.config else 30
+        timeout = getattr(self.config, 'timeout', 30) if self.config else 30
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(self.analyze, data)
@@ -212,7 +237,7 @@ class AsyncBaseAnalyzer(BaseAnalyzer):
         Returns:
             Analysis results or timeout error
         """
-        timeout = self.config.timeout if self.config else 30
+        timeout = getattr(self.config, 'timeout', 30) if self.config else 30
         
         try:
             result = await asyncio.wait_for(
