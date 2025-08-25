@@ -1,6 +1,6 @@
 """
 News Analyzer API - Main Flask Application
-FIXED: Better error handling for extraction failures and complete debug endpoints
+FIXED: Universal service data extraction that handles both wrapped and unwrapped formats
 """
 import os
 import sys
@@ -59,50 +59,67 @@ debug_info = {
     'service_timings': {}
 }
 
-# FIXED: Enhanced service data extraction that preserves all fields
+# FIXED: Universal service data extraction that handles both wrapped and unwrapped formats
 def extract_service_data(service_result: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract meaningful data from service result - FIXED VERSION"""
+    """
+    Extract meaningful data from service result - UNIVERSAL VERSION
+    Handles both services that wrap data in 'data' field and those that don't
+    """
     if not isinstance(service_result, dict):
         return {}
     
-    # If service result has 'data' field, extract it
+    # Check if this service wraps its data in a 'data' field
     if 'data' in service_result and isinstance(service_result['data'], dict):
+        # Service properly wraps data - just extract it
         extracted_data = service_result['data'].copy()
-        
-        # CRITICAL FIX: Ensure commonly expected fields are at top level
-        # This makes the data accessible to frontend without deep nesting
-        
-        # For content_analyzer
-        if 'content_score' in extracted_data:
-            extracted_data['score'] = extracted_data.get('score', extracted_data['content_score'])
-            extracted_data['quality_score'] = extracted_data.get('content_score')
-        
-        # For transparency_analyzer
-        if 'transparency_score' in extracted_data:
-            extracted_data['score'] = extracted_data.get('score', extracted_data['transparency_score'])
-        
-        # Ensure all services have a score field
-        if 'score' not in extracted_data:
-            # Try to find any score-like field
-            for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
-                if key in extracted_data:
-                    extracted_data['score'] = extracted_data[key]
-                    break
-        
-        return extracted_data
+    else:
+        # Service doesn't wrap data - extract all non-metadata fields
+        exclude_fields = {'success', 'service', 'timestamp', 'available', 'error', 'processing_time', 'metadata'}
+        extracted_data = {k: v for k, v in service_result.items() if k not in exclude_fields}
     
-    # Otherwise, extract all fields except metadata
-    exclude_fields = {'success', 'service', 'timestamp', 'available', 'error', 'processing_time'}
-    extracted = {k: v for k, v in service_result.items() if k not in exclude_fields}
+    # Ensure commonly expected fields are accessible
     
-    # Ensure score field exists
-    if 'score' not in extracted:
-        for key in ['quality_score', 'credibility_score', 'bias_score', 'transparency_score']:
-            if key in extracted:
-                extracted['score'] = extracted[key]
+    # For all services, ensure there's a generic 'score' field
+    if 'score' not in extracted_data:
+        # Try to find any score-like field
+        score_fields = [
+            'quality_score', 'content_score',  # content_analyzer
+            'credibility_score', 'author_score',  # author_analyzer, source_credibility
+            'bias_score',  # bias_detector
+            'transparency_score',  # transparency_analyzer
+            'manipulation_score',  # manipulation_detector
+            'trust_score'  # general
+        ]
+        for field in score_fields:
+            if field in extracted_data:
+                extracted_data['score'] = extracted_data[field]
                 break
     
-    return extracted
+    # For all services, ensure there's a 'level' field
+    if 'level' not in extracted_data:
+        level_fields = ['quality_level', 'credibility_level', 'bias_level', 'transparency_level']
+        for field in level_fields:
+            if field in extracted_data:
+                extracted_data['level'] = extracted_data[field]
+                break
+    
+    # Service-specific field mappings to ensure compatibility
+    
+    # Content analyzer
+    if 'content_score' in extracted_data and 'quality_score' not in extracted_data:
+        extracted_data['quality_score'] = extracted_data['content_score']
+    
+    # Author analyzer
+    if 'author_score' in extracted_data and 'credibility_score' not in extracted_data:
+        extracted_data['credibility_score'] = extracted_data['author_score']
+    
+    # Ensure author name is available in expected field
+    if 'author' in extracted_data and 'author_name' not in extracted_data:
+        extracted_data['author_name'] = extracted_data['author']
+    elif 'author_name' in extracted_data and 'author' not in extracted_data:
+        extracted_data['author'] = extracted_data['author_name']
+    
+    return extracted_data
 
 # Helper to identify service results in pipeline output
 def is_service_result(key: str, value: Any) -> bool:
