@@ -1,7 +1,7 @@
 """
 Source Credibility Analyzer Service - AI ENHANCED VERSION
 Comprehensive source credibility analysis with domain checks, reputation analysis,
-and AI-powered insights
+and AI-powered insights - FIXED: AI null handling bug
 """
 
 import os
@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     """
     Analyze source credibility using multiple signals WITH AI ENHANCEMENT
+    FIXED: Proper AI error handling to prevent crashes
     """
     
     def __init__(self):
@@ -99,6 +100,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze source credibility WITH AI ENHANCEMENT
+        FIXED: Proper AI error handling prevents crashes
         
         Expected input:
             - url: Article URL (preferred)
@@ -183,36 +185,62 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 }
             }
             
-            # AI ENHANCEMENT - Add red flags if available
+            # FIXED AI ENHANCEMENT - Proper null handling prevents crashes
             text = data.get('text', '')
             if self._ai_available and text:
                 logger.info("Enhancing source credibility with AI insights")
-                ai_flags = self._ai_detect_credibility_issues(
-                    domain=domain,
-                    content=text[:2000],
-                    source_info=analysis['database_info']
-                )
-                
-                if ai_flags:
-                    # Add AI-detected red flags
-                    for flag in ai_flags.get('red_flags', [])[:3]:
-                        findings.append({
-                            'type': 'warning',
-                            'severity': 'high',
-                            'text': f"AI detected: {flag['issue']}",
-                            'explanation': flag.get('explanation', '')
-                        })
+                try:
+                    ai_flags = self._ai_detect_credibility_issues(
+                        domain=domain,
+                        content=text[:2000],
+                        source_info=analysis['database_info']
+                    )
                     
-                    # Add trust signals
-                    for signal in ai_flags.get('trust_signals', [])[:2]:
-                        findings.append({
-                            'type': 'positive',
-                            'severity': 'positive',
-                            'text': f"AI verified: {signal}",
-                            'explanation': 'Indicates credible source'
-                        })
-                    
-                    result['metadata']['ai_insights_added'] = True
+                    # CRITICAL FIX: Proper type and null checking
+                    if ai_flags and isinstance(ai_flags, dict):
+                        ai_insights_added = False
+                        
+                        # Add AI-detected red flags with validation
+                        red_flags = ai_flags.get('red_flags', [])
+                        if red_flags and isinstance(red_flags, list):
+                            for flag in red_flags[:3]:
+                                if isinstance(flag, dict) and 'issue' in flag:
+                                    findings.append({
+                                        'type': 'warning',
+                                        'severity': 'high',
+                                        'text': f"AI detected: {flag['issue']}",
+                                        'explanation': flag.get('explanation', '')
+                                    })
+                                    ai_insights_added = True
+                        
+                        # Add trust signals with validation
+                        trust_signals = ai_flags.get('trust_signals', [])
+                        if trust_signals and isinstance(trust_signals, list):
+                            for signal in trust_signals[:2]:
+                                if isinstance(signal, str) and signal.strip():
+                                    findings.append({
+                                        'type': 'positive',
+                                        'severity': 'positive',
+                                        'text': f"AI verified: {signal}",
+                                        'explanation': 'Indicates credible source'
+                                    })
+                                    ai_insights_added = True
+                        
+                        if ai_insights_added:
+                            result['metadata']['ai_insights_added'] = True
+                            logger.info("AI insights successfully added to findings")
+                        else:
+                            logger.info("AI returned data but no usable insights")
+                    else:
+                        logger.info("AI enhancement returned no usable data")
+                        
+                except Exception as ai_error:
+                    logger.warning(f"AI enhancement failed but continuing analysis: {ai_error}")
+                    # Don't crash the entire analysis if AI fails
+            elif self._ai_available and not text:
+                logger.debug("AI available but no text content provided for enhancement")
+            else:
+                logger.debug("AI enhancement not available")
             
             return result
             
@@ -412,7 +440,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             url = f"https://{domain}"
             
             # Get timeout from config or use default - PATCHED
-            timeout = self.config.options.get('web_request_timeout', 5)
+            timeout = self.config.options.get('web_request_timeout', 5) if self.config and self.config.options else 5
             
             response = self.session.get(
                 url, 
