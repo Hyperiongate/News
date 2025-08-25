@@ -269,6 +269,12 @@ def analyze():
             if key == 'article':
                 article_data = value
             elif is_service_result(key, value):
+                # Log the service before extraction
+                logger.info(f"Processing service result: {key}")
+                logger.info(f"  - Has 'success' field: {'success' in value}")
+                logger.info(f"  - Success value: {value.get('success', 'N/A')}")
+                logger.info(f"  - Has 'data' field: {'data' in value}")
+                
                 # Extract the actual data from service result
                 service_data = extract_service_data(value)
                 if service_data:
@@ -277,6 +283,18 @@ def analyze():
                     # Log first few fields for debugging
                     for field_name in list(service_data.keys())[:5]:
                         logger.info(f"  - {key}.{field_name}: {type(service_data[field_name]).__name__}")
+                else:
+                    logger.warning(f"No data extracted for service: {key}")
+                    
+                # Include even if extraction failed to show in UI
+                if not service_data and value.get('success') == False:
+                    # Include error information
+                    service_results[key] = {
+                        'score': 0,
+                        'level': 'Error',
+                        'error': value.get('error', 'Service failed'),
+                        'success': False
+                    }
         
         # Ensure we have article data
         if not article_data:
@@ -673,9 +691,19 @@ def clear_cache():
 @app.route('/<path:filename>')
 def serve_static_html(filename):
     """Serve static HTML files from templates directory"""
-    if filename.endswith('.html'):
-        return render_template(filename)
-    return send_from_directory('static', filename)
+    try:
+        if filename.endswith('.html'):
+            # Remove 'templates/' prefix if present
+            if filename.startswith('templates/'):
+                filename = filename[10:]  # Remove 'templates/' prefix
+            return render_template(filename)
+        return send_from_directory('static', filename)
+    except Exception as e:
+        logger.error(f"Error serving {filename}: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'File not found: {filename}'
+        }), 404
 
 # Error handlers
 @app.errorhandler(404)
