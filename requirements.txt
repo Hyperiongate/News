@@ -9,8 +9,19 @@ beautifulsoup4==4.12.2
 lxml==4.9.3
 html5lib==1.1
 newspaper3k==0.2.8
+urllib3==2.0.7
+
+# CRITICAL: Anti-Bot Detection Libraries
 cloudscraper==1.2.71
 fake-useragent==1.4.0
+undetected-chromedriver==3.5.5
+curl-cffi==0.6.2
+requests-html==0.10.0
+
+# Browser Automation (Optional but Recommended)
+selenium==4.15.2
+webdriver-manager==4.0.1
+playwright==1.40.0
 
 # Data Processing
 pandas==2.0.3
@@ -61,7 +72,17 @@ types-requests==2.31.0.10
 # psycopg2-binary==2.9.9
 # sqlalchemy==2.0.23
 
+# Network Tools
 python-whois
+dnspython==2.4.2
 
 # PDF Generation (added for app.py)
 reportlab==4.0.7
+
+# Additional Network Security Tools
+certifi==2023.11.17
+chardet==5.2.0
+idna==3.6
+
+# Performance and Monitoring
+psutil==5.9.6
