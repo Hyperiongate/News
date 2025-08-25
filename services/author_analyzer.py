@@ -1,7 +1,7 @@
 """
 Enhanced Author Analyzer Service - AI ENHANCED VERSION
 Analyzes article authors and their credibility by following bio links with AI insights
-FIXED: Returns data wrapped in 'data' field like other services
+FIXED: Proper null handling and AI parameter matching
 """
 import re
 import logging
@@ -245,6 +245,7 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze article author with enhanced bio scraping AND AI ENHANCEMENT
+        FIXED: Proper null handling for author field
         
         Args:
             data: Must contain 'author' and optionally 'url' and 'html'
@@ -253,7 +254,12 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             Analysis results with author credibility data wrapped in 'data' field
         """
         try:
-            author_name = data.get('author', '').strip()
+            # FIXED: Proper null handling for author field
+            author_name = data.get('author')
+            if author_name is None:
+                author_name = ''
+            else:
+                author_name = str(author_name).strip()
             
             # CRITICAL FIX: Wrap all return data in 'data' field
             if not author_name or author_name.lower() in ['unknown', 'staff', 'admin', 'editor']:
@@ -390,16 +396,19 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             else:
                 summary = f"{author_name} could not be fully verified. Basic credibility score: {score}/100."
             
-            # AI Enhancement
-            if self._ai_available and author_data.get('bio'):
+            # AI Enhancement - FIXED: Use correct parameter signature
+            if self._ai_available and (author_data.get('bio') or author_name):
                 logger.info("Enhancing author analysis with AI")
                 
-                ai_assessment = self._ai_assess_author_credibility(
-                    author_name=author_name,
-                    bio=author_data.get('bio', ''),
-                    position=author_data.get('position', ''),
-                    article_count=author_data.get('article_count', 0)
-                )
+                # FIXED: Pass data in format expected by AI method
+                ai_author_data = {
+                    'name': author_name,
+                    'bio': author_data.get('bio', ''),
+                    'position': author_data.get('position', ''),
+                    'article_count': author_data.get('article_count', 0)
+                }
+                
+                ai_assessment = self._ai_analyze_author(ai_author_data)
                 
                 if ai_assessment:
                     # Add AI insights to findings
@@ -420,6 +429,13 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                                 'text': f'AI verified: {indicator}',
                                 'explanation': 'Strengthens credibility'
                             })
+                    
+                    # Apply AI credibility adjustment
+                    if ai_assessment.get('credibility_adjustment'):
+                        adjustment = int(ai_assessment['credibility_adjustment'])
+                        author_data['credibility_score'] = max(0, min(100, score + adjustment))
+                        author_data['author_score'] = author_data['credibility_score']
+                        author_data['score'] = author_data['credibility_score']
                     
                     author_data['ai_enhanced'] = True
                     author_data['ai_assessment'] = ai_assessment.get('overall_assessment', '')
@@ -462,26 +478,6 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         except Exception as e:
             logger.error(f"Author analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
-    
-    def _ai_assess_author_credibility(self, author_name: str, bio: str, 
-                                     position: str, article_count: int) -> Optional[Dict[str, Any]]:
-        """AI method to assess author credibility"""
-        if not hasattr(self, '_ai_analyze_author') or not self._ai_available:
-            return None
-            
-        try:
-            author_data = {
-                'name': author_name,
-                'bio': bio[:500],  # Limit for API
-                'position': position,
-                'article_count': article_count
-            }
-            
-            # Call the mixin's AI method
-            return self._ai_analyze_author(author_data)
-        except Exception as e:
-            logger.warning(f"AI author assessment failed: {e}")
-            return None
     
     def get_service_info(self) -> Dict[str, Any]:
         """Get information about the service"""
