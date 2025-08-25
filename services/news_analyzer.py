@@ -110,9 +110,6 @@ class NewsAnalyzer:
                     'extraction_successful': False
                 }
             
-            # REAL FIX: Build detailed_analysis with your service data
-            detailed_analysis = {}
-            
             # Your actual service list
             service_list = [
                 'article_extractor', 'source_credibility', 'author_analyzer',
@@ -120,7 +117,30 @@ class NewsAnalyzer:
                 'manipulation_detector', 'content_analyzer', 'openai_enhancer'
             ]
             
+            # TEMPORARY DEBUG CODE - CRITICAL FOR DIAGNOSIS
+            logger.info("=" * 60)
+            logger.info("DEBUG: PIPELINE RESULTS ANALYSIS")
+            logger.info(f"Pipeline results keys: {list(pipeline_results.keys())}")
+            logger.info(f"Pipeline success: {pipeline_results.get('success')}")
+            
+            # Check each expected service
+            for service_name in service_list:
+                in_results = service_name in pipeline_results
+                logger.info(f"Service {service_name}: {'FOUND' if in_results else 'MISSING'}")
+                if in_results:
+                    service_data = pipeline_results[service_name]
+                    logger.info(f"  Type: {type(service_data)}")
+                    if isinstance(service_data, dict):
+                        logger.info(f"  Keys: {list(service_data.keys())}")
+                        logger.info(f"  Success: {service_data.get('success')}")
+            
+            logger.info("=" * 60)
+            # END TEMPORARY DEBUG CODE
+            
+            # REAL FIX: Build detailed_analysis with your service data
+            detailed_analysis = {}
             services_with_data = 0
+            
             for service_name in service_list:
                 if service_name in pipeline_results:
                     service_data = pipeline_results[service_name]
