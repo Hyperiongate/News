@@ -1,5 +1,5 @@
-// truthlens-core.js - Complete File with Real-time Updates
-// Main Application Logic with Enhanced Progress Tracking
+// truthlens-core.js - Complete File with FIXED Data Flow
+// Main Application Logic - COMPLETELY REPAIRED
 
 // Main Application Class
 class TruthLensApp {
@@ -16,11 +16,6 @@ class TruthLensApp {
         this.display = null;
         this.services = null;
         
-        // Real-time update properties
-        this.analysisSSE = null;
-        this.pollingInterval = null;
-        this.analysisId = null;
-        
         this.init();
     }
 
@@ -34,7 +29,7 @@ class TruthLensApp {
         }
         
         this.setupEventListeners();
-        console.log('TruthLens initialized with real-time updates');
+        console.log('TruthLens initialized');
     }
 
     setupEventListeners() {
@@ -169,12 +164,6 @@ class TruthLensApp {
         const wordCountEl = document.getElementById('wordCount');
         if (wordCountEl) wordCountEl.textContent = '0 words';
         
-        // Clear any polling
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
-        
         // Destroy any existing charts
         if (this.state.charts) {
             Object.values(this.state.charts).forEach(chart => {
@@ -188,7 +177,6 @@ class TruthLensApp {
         this.state.currentAnalysis = null;
         this.state.currentMetadata = null;
         this.state.charts = {};
-        this.analysisId = null;
         
         // Clear stored data
         if (window.ServiceNavigation) {
@@ -262,28 +250,31 @@ class TruthLensApp {
                 throw new Error('Invalid response format from server');
             }
 
-            console.log('Response parsed:', {
+            console.log('=== CRITICAL DEBUG: Response Analysis ===');
+            console.log('Response structure:', {
                 success: responseData.success,
                 hasData: !!responseData.data,
-                hasAnalysisId: !!responseData.analysis_id,
+                dataKeys: responseData.data ? Object.keys(responseData.data) : [],
+                hasDetailedAnalysis: !!(responseData.data && responseData.data.detailed_analysis),
+                detailedAnalysisKeys: responseData.data?.detailed_analysis ? Object.keys(responseData.data.detailed_analysis) : [],
                 error: responseData.error
             });
             
             if (!response.ok || !responseData.success) {
                 const errorMessage = responseData.error?.message || 
                                    responseData.message || 
+                                   responseData.error ||
                                    'Analysis failed';
                 throw new Error(errorMessage);
             }
 
-            // Check if we got an analysis ID for polling
-            if (responseData.analysis_id) {
-                // Start polling for updates
-                this.analysisId = responseData.analysis_id;
-                this.startProgressPolling();
-            } else {
-                // Legacy mode - we got all data at once
+            // CRITICAL FIX: Handle immediate complete results
+            // Your backend returns complete data immediately, not analysis_id
+            if (responseData.data) {
+                console.log('=== IMMEDIATE COMPLETE RESULTS DETECTED ===');
                 this.handleAnalysisComplete(responseData.data);
+            } else {
+                throw new Error('No analysis data received from server');
             }
 
         } catch (error) {
@@ -326,86 +317,20 @@ class TruthLensApp {
             step1.classList.add('active');
             step1.querySelector('i').className = 'fas fa-spinner fa-spin';
         }
-    }
-
-    // Start polling for analysis progress
-    startProgressPolling() {
-        console.log('Starting progress polling for analysis:', this.analysisId);
         
-        let pollCount = 0;
-        const maxPolls = 60; // 5 minutes maximum
-        
-        this.pollingInterval = setInterval(async () => {
-            pollCount++;
-            
-            try {
-                const response = await fetch(`/api/analyze/status/${this.analysisId}`);
-                const data = await response.json();
-                
-                console.log('Progress update:', data);
-                
-                if (data.status === 'complete') {
-                    // Analysis complete
-                    clearInterval(this.pollingInterval);
-                    this.pollingInterval = null;
-                    this.handleAnalysisComplete(data.data);
-                    
-                } else if (data.status === 'failed') {
-                    // Analysis failed
-                    clearInterval(this.pollingInterval);
-                    this.pollingInterval = null;
-                    throw new Error(data.error || 'Analysis failed');
-                    
-                } else if (data.status === 'processing') {
-                    // Update progress
-                    this.updateAnalysisProgress(data);
-                }
-                
-                // Timeout check
-                if (pollCount >= maxPolls) {
-                    clearInterval(this.pollingInterval);
-                    this.pollingInterval = null;
-                    throw new Error('Analysis timed out - please try again');
-                }
-                
-            } catch (error) {
-                console.error('Polling error:', error);
-                clearInterval(this.pollingInterval);
-                this.pollingInterval = null;
-                this.utils.hideLoading();
-                this.utils.showError(error.message);
-                this.state.isAnalyzing = false;
-            }
-        }, 5000); // Poll every 5 seconds
-    }
-
-    // Update analysis progress in real-time
-    updateAnalysisProgress(progressData) {
-        const {
-            services_completed = 0,
-            services_total = 10,
-            current_service = '',
-            partial_results = {}
-        } = progressData;
-
-        const percentage = Math.round((services_completed / services_total) * 100);
-        
-        // Update loading steps based on progress
-        this.updateLoadingSteps(services_completed);
-        
-        // If we have partial results, update the UI incrementally
-        if (partial_results && Object.keys(partial_results).length > 0) {
-            this.updatePartialResults(partial_results);
-        }
+        // Simulate progress for better UX
+        setTimeout(() => this.updateLoadingSteps(1), 500);
+        setTimeout(() => this.updateLoadingSteps(2), 1000);
+        setTimeout(() => this.updateLoadingSteps(3), 1500);
     }
 
     // Update loading steps
     updateLoadingSteps(completedCount) {
         const steps = [
             { id: 'step1', threshold: 1, icon: 'fa-check-circle' },
-            { id: 'step2', threshold: 3, icon: 'fa-spinner fa-spin' },
-            { id: 'step3', threshold: 6, icon: 'fa-circle' },
-            { id: 'step4', threshold: 9, icon: 'fa-circle' }
+            { id: 'step2', threshold: 2, icon: 'fa-spinner fa-spin' },
+            { id: 'step3', threshold: 3, icon: 'fa-circle' },
+            { id: 'step4', threshold: 4, icon: 'fa-circle' }
         ];
         
         steps.forEach((step, index) => {
@@ -425,77 +350,40 @@ class TruthLensApp {
         });
     }
 
-    // Update UI with partial results
-    updatePartialResults(partialData) {
-        // Show results section if hidden
-        const resultsSection = document.getElementById('resultsSection');
-        if (resultsSection && resultsSection.style.display === 'none') {
-            resultsSection.style.display = 'block';
-            resultsSection.classList.add('active');
-        }
-        
-        // Update trust score if available
-        if (partialData.trust_score !== undefined) {
-            const scoreEl = document.getElementById('trustScoreNumber');
-            if (scoreEl) {
-                scoreEl.textContent = partialData.trust_score;
-            }
-        }
-        
-        // Update service cards incrementally
-        if (partialData.services) {
-            this.updateServiceCards(partialData.services);
-        }
-    }
-
-    // Update service cards with real-time data
-    updateServiceCards(servicesData) {
-        Object.entries(servicesData).forEach(([serviceId, serviceData]) => {
-            const card = document.querySelector(`.service-card.${serviceId.replace(/_/g, '-')}`);
-            if (card && serviceData) {
-                // Remove pending class
-                card.classList.remove('pending');
-                card.classList.add('complete');
-                
-                // Update status
-                const statusEl = card.querySelector('.service-status');
-                if (statusEl) {
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
-                    statusEl.classList.add('complete');
-                }
-                
-                // Update preview if needed
-                const previewEl = card.querySelector('.service-preview');
-                if (previewEl && this.display) {
-                    previewEl.textContent = this.display.getServicePreview(serviceId, serviceData);
-                }
-                
-                // Make card clickable
-                card.style.cursor = 'pointer';
-                card.onclick = null;
-            }
-        });
-    }
-
-    // Handle complete analysis
+    // CRITICAL FIX: Handle complete analysis - COMPLETELY REPAIRED
     handleAnalysisComplete(data) {
-        console.log('=== Analysis Complete ===');
-        console.log('Data structure:', {
+        console.log('=== Analysis Complete Handler ===');
+        console.log('Data received:', {
             hasArticle: !!data.article,
             hasAnalysis: !!data.analysis,
             hasDetailedAnalysis: !!data.detailed_analysis,
+            detailedServicesCount: data.detailed_analysis ? Object.keys(data.detailed_analysis).length : 0,
             detailedServices: data.detailed_analysis ? Object.keys(data.detailed_analysis) : []
         });
         
-        // Clear polling
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
-        
-        // Validate data
+        // EXTENSIVE VALIDATION AND LOGGING
         if (!data || typeof data !== 'object') {
+            console.error('CRITICAL: Invalid data structure received');
             throw new Error('Invalid analysis data received');
+        }
+
+        if (!data.detailed_analysis || Object.keys(data.detailed_analysis).length === 0) {
+            console.warn('WARNING: No detailed_analysis data found');
+            console.log('Available data keys:', Object.keys(data));
+            // Continue anyway - some data is better than none
+        }
+
+        // Log each service's data for debugging
+        if (data.detailed_analysis) {
+            Object.entries(data.detailed_analysis).forEach(([serviceName, serviceData]) => {
+                console.log(`Service ${serviceName}:`, {
+                    hasData: !!serviceData,
+                    dataType: typeof serviceData,
+                    keys: Object.keys(serviceData || {}),
+                    score: serviceData?.score,
+                    level: serviceData?.level
+                });
+            });
         }
         
         // Store the complete analysis
@@ -505,19 +393,30 @@ class TruthLensApp {
         // Save to storage for service pages
         if (window.ServiceNavigation) {
             window.ServiceNavigation.saveAnalysisData(data, window.location.href);
+        } else {
+            // Fallback to sessionStorage
+            try {
+                sessionStorage.setItem('analysisData', JSON.stringify(data));
+                console.log('Saved analysis data to sessionStorage');
+            } catch (e) {
+                console.warn('Failed to save to sessionStorage:', e);
+            }
         }
         
         // Trigger custom event
         window.dispatchEvent(new CustomEvent('analysisComplete', { detail: data }));
         
-        // Update all loading steps to complete
-        this.updateLoadingSteps(10);
+        // Update loading to complete
+        this.updateLoadingSteps(4);
         
         // Hide loading and show results
         setTimeout(() => {
             this.utils.hideLoading();
             if (this.display) {
+                console.log('=== Calling display.showResults ===');
                 this.display.showResults(data);
+            } else {
+                console.error('CRITICAL: Display object not available');
             }
             this.state.isAnalyzing = false;
         }, 1000);
