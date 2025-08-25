@@ -3,7 +3,7 @@ News Analyzer Service - Main orchestrator for news credibility analysis
 REAL FIXED: Works with your actual service return formats
 """
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import time
 from datetime import datetime
 
