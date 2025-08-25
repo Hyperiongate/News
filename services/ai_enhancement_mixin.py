@@ -1,7 +1,7 @@
 """
-AI Enhancement Mixin
+AI Enhancement Mixin - COMPLETE FIXED VERSION
 Provides AI capabilities to any service that inherits from it
-FIXED: Handles initialization errors gracefully
+FIXED: Parameter signatures match what services are calling
 """
 import logging
 import json
@@ -88,81 +88,126 @@ class AIEnhancementMixin:
             logger.error(f"AI enhancement failed: {e}")
             return None
     
-    # Source Credibility AI Methods
-    def _ai_detect_credibility_issues(self, source_name: str, domain: str, 
-                                    analysis_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """AI method to detect credibility issues in sources"""
+    # FIXED: Source Credibility AI Methods - Match service parameters
+    def _ai_detect_credibility_issues(self, domain: str, content: str, source_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """AI method to detect credibility issues in sources - FIXED SIGNATURE"""
         if not self._ai_available:
             return None
             
         prompt = f"""Analyze the credibility of this news source:
 
-Source: {source_name}
 Domain: {domain}
-Database Status: {analysis_data.get('in_database', False)}
-Technical Score: {analysis_data.get('technical', {}).get('age_credibility', 'unknown')}
+Content excerpt: {content[:800]}
+Database credibility: {source_info.get('credibility', 'Unknown')}
+Bias rating: {source_info.get('bias', 'Unknown')}
+Source type: {source_info.get('type', 'Unknown')}
 
 Identify:
 1. Red flags that indicate low credibility
-2. Trust signals that indicate high credibility
-3. Specific concerns if any
+2. Trust signals that indicate high credibility  
+3. Specific concerns based on content and source
 
-Format as JSON with keys: red_flags (array of objects with 'issue' and 'explanation'), trust_signals (array of strings), overall_assessment"""
+Format as JSON with keys:
+- red_flags: array of objects with 'issue' and 'explanation' fields
+- trust_signals: array of strings
+- overall_assessment: string assessment"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
-    # Bias Detection AI Methods
-    def _ai_detect_bias_patterns(self, text: str, initial_bias_score: int) -> Optional[Dict[str, Any]]:
-        """AI method to detect bias patterns in article text"""
+    # FIXED: Bias Detection AI Methods - Match service parameters
+    def _ai_detect_bias_patterns(self, text: str, initial_findings: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """AI method to detect bias patterns in article text - FIXED SIGNATURE"""
         if not self._ai_available:
             return None
             
-        prompt = f"""Analyze the bias in this news article:
+        prompt = f"""Analyze additional bias patterns in this news article:
 
 Text excerpt: {text[:1500]}
-Initial bias score: {initial_bias_score}/100
+Initial findings:
+- Political bias: {initial_findings.get('political_label', 'Unknown')}
+- Sensationalism: {initial_findings.get('sensationalism', 'Unknown')}
+- Bias score: {initial_findings.get('bias_score', 0)}/100
+- Already detected phrases: {json.dumps(initial_findings.get('loaded_phrases', [])[:3])}
 
-Identify:
-1. Specific biased phrases or framing
+Identify additional subtle bias patterns:
+1. Framing issues not yet detected
 2. Missing perspectives
-3. Emotional manipulation techniques
-4. One-sided arguments
+3. Subtle manipulation techniques
+4. Hidden assumptions
 
-Format as JSON with keys: biased_phrases (array), missing_perspectives (array), emotional_language (array), bias_assessment"""
+Format as JSON with keys:
+- subtle_biases: array of strings
+- framing_issues: array of strings
+- missing_perspectives: array of strings
+- severity_assessment: string (low/medium/high/severe)"""
 
         return self._enhance_with_ai(prompt, temperature=0.3, json_mode=True)
     
-    # Author Analysis AI Methods
-    def _ai_analyze_author(self, author_name: str, author_history: List[Dict], 
-                          article_content: str) -> Optional[Dict[str, Any]]:
-        """AI method to analyze author credibility"""
+    # FIXED: Author Analysis AI Methods - Match service parameters  
+    def _ai_analyze_author(self, author_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """AI method to analyze author credibility - FIXED SIGNATURE"""
         if not self._ai_available:
             return None
-            
-        # Handle empty bio_text
-        history_titles = [a.get('title', '') for a in (author_history or [])[:5]]
         
+        author_name = author_data.get('name', 'Unknown')
+        bio = author_data.get('bio', '')
+        position = author_data.get('position', '')
+        article_count = author_data.get('article_count', 0)
+            
         prompt = f"""Analyze the credibility of this journalist:
 
 Author: {author_name}
-Previous article titles: {json.dumps(history_titles, indent=2)}
-Current article excerpt: {article_content[:500]}
+Bio: {bio[:500]}
+Position: {position}
+Article count: {article_count}
 
 Assess:
-1. Writing style consistency
+1. Professional qualifications
 2. Topic expertise indicators
-3. Potential bias patterns
-4. Credibility indicators
-5. Red flags if any
+3. Potential bias patterns in background
+4. Credibility indicators and red flags
+5. Overall assessment
 
-Format as JSON with keys: style_assessment, expertise_indicators (array), bias_patterns (array), credibility_factors (array), red_flags (array), strengths (array), credibility_adjustment (integer from -20 to +20), expertise_assessment (array)"""
+Format as JSON with keys:
+- expertise_indicators: array of strings
+- red_flags: array of strings  
+- positive_indicators: array of strings
+- credibility_adjustment: integer from -20 to +20
+- overall_assessment: string assessment"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
-    # Transparency AI Methods
+    # FIXED: Manipulation Detection AI Methods - Match service parameters
+    def _ai_detect_manipulation(self, text: str, emotional_score: int, tactics_found: List[str]) -> Optional[Dict[str, Any]]:
+        """AI method to detect manipulation tactics - FIXED SIGNATURE"""
+        if not self._ai_available:
+            return None
+            
+        prompt = f"""Analyze manipulation tactics in this article:
+
+Text excerpt: {text[:1500]}
+Emotional intensity score: {emotional_score}/100
+Already detected tactics: {json.dumps(tactics_found)}
+
+Identify additional manipulation techniques:
+1. Gaslighting patterns
+2. False dichotomies not yet caught
+3. Appeal to emotion techniques
+4. Psychological manipulation tactics
+5. Hidden persuasion techniques
+
+Format as JSON with keys:
+- gaslighting_patterns: array of strings
+- psychological_tactics: array of strings
+- emotional_manipulation: array of strings
+- severity_assessment: string (low/medium/high)"""
+
+        return self._enhance_with_ai(prompt, temperature=0.3, json_mode=True)
+    
+    # FIXED: Transparency AI Methods - Match service parameters
     def _ai_analyze_transparency(self, transparency_data: Dict[str, Any], 
                                 article_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """AI method to assess transparency"""
+        """AI method to assess transparency - EXISTING SIGNATURE IS CORRECT"""
         if not self._ai_available:
             return None
             
@@ -176,40 +221,22 @@ Transparency indicators: {json.dumps(transparency_data.get('indicators', []))}
 
 Evaluate:
 1. Source attribution quality
-2. Conflict of interest disclosures
+2. Conflict of interest disclosures  
 3. Funding transparency
 4. Correction policy
 5. Author credentials disclosure
 
-Format as JSON with keys: transparency_score (0-100), missing_elements (array), red_flags (array), positive_indicators (array)"""
+Format as JSON with keys:
+- transparency_score: integer 0-100
+- missing_elements: array of strings
+- red_flags: array of strings
+- positive_indicators: array of strings"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
-    # Manipulation Detection AI Methods
-    def _ai_detect_manipulation(self, text: str, tactics_found: List[str]) -> Optional[Dict[str, Any]]:
-        """AI method to detect manipulation tactics"""
-        if not self._ai_available:
-            return None
-            
-        prompt = f"""Analyze manipulation tactics in this article:
-
-Text excerpt: {text[:1500]}
-Already detected tactics: {json.dumps(tactics_found)}
-
-Identify:
-1. Emotional manipulation techniques
-2. Logical fallacies
-3. Propaganda techniques
-4. Misleading framing
-5. Hidden agendas
-
-Format as JSON with keys: emotional_tactics (array), logical_fallacies (array), propaganda_techniques (array), misleading_elements (array), severity_assessment"""
-
-        return self._enhance_with_ai(prompt, temperature=0.3, json_mode=True)
-    
-    # Content Analysis AI Methods
+    # FIXED: Content Analysis AI Methods - Match service parameters
     def _ai_analyze_content_quality(self, text: str, metrics: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """AI-enhanced content quality analysis"""
+        """AI-enhanced content quality analysis - EXISTING SIGNATURE IS CORRECT"""
         if not self._ai_available:
             return None
             
@@ -219,7 +246,7 @@ Text preview: {text[:1000]}...
 
 Current metrics:
 - Readability score: {metrics.get('readability_score', 'Unknown')}
-- Sentence complexity: {metrics.get('sentence_complexity', 'Unknown')}
+- Sentence complexity: {metrics.get('sentence_complexity', 'Unknown')}  
 - Word diversity: {metrics.get('vocabulary_diversity', 'Unknown')}
 
 Assess:
@@ -229,38 +256,57 @@ Assess:
 4. Professional standards
 5. Information density
 
-Format as JSON with keys: argument_quality, evidence_assessment, clarity_score, professionalism, information_value, strengths (array), weaknesses (array)"""
+Format as JSON with keys:
+- argument_quality: string assessment
+- evidence_assessment: string assessment
+- clarity_score: integer 0-100
+- professionalism: string assessment
+- strengths: array of strings
+- weaknesses: array of strings"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
-    # Fact Checking AI Methods
-    def _ai_fact_check_claims(self, claims: List[str], context: str) -> Optional[Dict[str, Any]]:
-        """AI method to help with fact checking"""
+    # NEW: Fact Checking AI Methods - ADD MISSING METHOD
+    def _ai_analyze_claims(self, claims: List[str], article_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """AI method to analyze and prioritize claims for fact checking - NEW METHOD"""
         if not self._ai_available:
             return None
             
+        text = article_data.get('text', '')[:1000]
+        
         if not claims:
             # Extract claims if none provided
-            prompt = f"""Extract factual claims from this text that should be fact-checked:
+            prompt = f"""Extract factual claims from this news article that should be fact-checked:
 
-{context[:1000]}
+Article text: {text}
 
-List up to 10 specific, verifiable claims. Format as JSON with key 'claims' containing an array of objects with 'claim' and 'context' fields."""
+Identify up to 10 specific, verifiable claims that can be fact-checked.
+
+Format as JSON with key 'claims' containing array of objects with fields:
+- claim: string (the specific claim)
+- context: string (surrounding context)
+- priority: string (high/medium/low)
+- type: string (statistic/quote/event/policy)"""
         else:
-            prompt = f"""Analyze these claims for fact-checking:
+            prompt = f"""Analyze these claims for fact-checking priority and approach:
 
-Claims:
+Claims to verify:
 {json.dumps(claims[:10], indent=2)}
 
-For each claim, suggest:
-1. Verification approach
-2. Potential sources to check
-3. Red flags if any
+Article context: {text}
 
-Format as JSON with key 'fact_checks' containing array of objects with fields: claim, verification_approach, suggested_sources, red_flags"""
+For each claim, provide verification guidance.
+
+Format as JSON with key 'claim_analysis' containing array of objects with fields:
+- claim: string
+- verification_approach: string
+- suggested_sources: array of strings
+- priority: string (high/medium/low)
+- red_flags: array of strings"""
 
         return self._enhance_with_ai(prompt, temperature=0.2, json_mode=True)
     
+    # UTILITY METHODS - Keep existing
     def _merge_ai_enhancements(self, original_results: Dict[str, Any], 
                               ai_results: Optional[Dict[str, Any]], 
                               enhancement_type: str) -> Dict[str, Any]:
