@@ -1204,20 +1204,25 @@ class ArticleExtractor(BaseAnalyzer):
         logger.info(f"Available libraries: {OPTIONAL_LIBRARIES}")
         logger.info("=" * 60)
         
+        # Initialize _extractor first
+        self._extractor = None
+        
         try:
             self._extractor = RobustArticleExtractor()
             logger.info("RobustArticleExtractor initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize RobustArticleExtractor: {e}")
+            logger.error(f"Failed to initialize RobustArticleExtractor: {e}", exc_info=True)
             self._extractor = None
         
+        # Now check availability
         self.is_available = self._check_availability()
         logger.info(f"ArticleExtractor initialization complete: is_available={self.is_available}")
         logger.info("=" * 60)
     
     def _check_availability(self) -> bool:
         """Check if service is available"""
-        return self._extractor is not None
+        # Always return True - we have fallback methods even if advanced libraries fail
+        return True
     
     def get_error_result(self, error_message: str) -> Dict[str, Any]:
         """Standardized error response"""
@@ -1239,6 +1244,103 @@ class ArticleExtractor(BaseAnalyzer):
             'timestamp': time.time()
         }
     
+    def _basic_extraction_fallback(self, url: str) -> Dict[str, Any]:
+        """Basic extraction using only standard libraries as absolute fallback"""
+        try:
+            import urllib.request
+            import urllib.error
+            
+            # Create request with basic headers
+            req = urllib.request.Request(
+                url,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                }
+            )
+            
+            # Get the page
+            with urllib.request.urlopen(req, timeout=30) as response:
+                html = response.read().decode('utf-8', errors='ignore')
+            
+            # Parse with BeautifulSoup
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # Extract title
+            title = soup.find('title')
+            title = title.get_text(strip=True) if title else 'Untitled'
+            
+            # Extract content - try multiple strategies
+            content = None
+            
+            # Strategy 1: Article tags
+            article = soup.find('article')
+            if article:
+                paragraphs = article.find_all('p')
+                if paragraphs and len(paragraphs) >= 2:
+                    content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
+                                        if len(p.get_text(strip=True).split()) >= 5)
+            
+            # Strategy 2: Main content containers
+            if not content:
+                for selector in ['main', '[role="main"]', '.article-body', '.story-body', '.content']:
+                    try:
+                        element = soup.select_one(selector)
+                        if element:
+                            paragraphs = element.find_all('p')
+                            if paragraphs and len(paragraphs) >= 2:
+                                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
+                                                    if len(p.get_text(strip=True).split()) >= 5)
+                                break
+                    except:
+                        continue
+            
+            # Strategy 3: All paragraphs as fallback
+            if not content:
+                all_paragraphs = soup.find_all('p')
+                valid_paragraphs = []
+                for p in all_paragraphs:
+                    text = p.get_text(strip=True)
+                    if len(text.split()) >= 10:  # Longer paragraphs only
+                        valid_paragraphs.append(text)
+                
+                if len(valid_paragraphs) >= 2:
+                    content = '\n\n'.join(valid_paragraphs[:20])  # Limit to first 20
+            
+            if not content or len(content.strip()) < 100:
+                return {
+                    'success': False,
+                    'error': 'Could not extract sufficient content'
+                }
+            
+            word_count = len(content.split())
+            
+            return {
+                'success': True,
+                'title': title,
+                'text': content,
+                'author': None,
+                'publish_date': None,
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'description': None,
+                'image': None,
+                'keywords': [],
+                'word_count': word_count,
+                'extraction_metadata': {
+                    'method': 'basic_fallback',
+                    'libraries_available': OPTIONAL_LIBRARIES
+                },
+                'extracted_at': datetime.now().isoformat(),
+                'html': html
+            }
+            
+        except Exception as e:
+            logger.error(f"Basic extraction fallback failed: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Basic extraction failed: {str(e)}'
+            }
+    
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Main analysis method"""
         logger.info("=" * 60)
@@ -1246,9 +1348,6 @@ class ArticleExtractor(BaseAnalyzer):
         logger.info("=" * 60)
         
         try:
-            if not self._extractor:
-                return self.get_error_result("Extractor not initialized")
-            
             # Handle input formats
             url = None
             text = None
@@ -1268,15 +1367,55 @@ class ArticleExtractor(BaseAnalyzer):
             # Extract content
             if url:
                 logger.info(f"Extracting from URL: {url}")
-                result = self._extractor.extract_from_url(url)
+                
+                # Try robust extractor first
+                result = None
+                if self._extractor:
+                    try:
+                        result = self._extractor.extract_from_url(url)
+                    except Exception as e:
+                        logger.warning(f"Robust extractor failed: {e}")
+                        result = None
+                
+                # Fallback to basic extraction if robust failed
+                if not result or not result.get('success'):
+                    logger.info("Using basic extraction fallback")
+                    result = self._basic_extraction_fallback(url)
+                
             elif text:
                 logger.info(f"Processing text input, length: {len(text)}")
-                result = self._extractor.extract_from_text(text)
+                
+                # Try robust extractor first
+                result = None
+                if self._extractor:
+                    try:
+                        result = self._extractor.extract_from_text(text)
+                    except Exception as e:
+                        logger.warning(f"Robust text processor failed: {e}")
+                        result = None
+                
+                # Fallback to basic text processing
+                if not result or not result.get('success'):
+                    lines = text.strip().split('\n')
+                    title = lines[0][:100] if lines else 'Text Analysis'
+                    word_count = len(text.split())
+                    
+                    result = {
+                        'success': True,
+                        'title': title,
+                        'text': text,
+                        'author': None,
+                        'publish_date': None,
+                        'url': None,
+                        'domain': 'text-input',
+                        'word_count': word_count,
+                        'extraction_metadata': {'method': 'basic_text_analysis'}
+                    }
             else:
                 return self.get_error_result("No URL or text provided")
             
             # Return standardized response
-            if result.get('success'):
+            if result and result.get('success'):
                 return {
                     'service': self.service_name,
                     'success': True,
@@ -1298,11 +1437,13 @@ class ArticleExtractor(BaseAnalyzer):
                     'metadata': {
                         'extraction_method': result.get('extraction_metadata', {}).get('method', 'unknown'),
                         'methods_tried': result.get('extraction_metadata', {}).get('methods_tried', []),
-                        'libraries_available': OPTIONAL_LIBRARIES
+                        'libraries_available': OPTIONAL_LIBRARIES,
+                        'robust_extractor_available': self._extractor is not None
                     }
                 }
             else:
-                return self.get_error_result(result.get('error', 'Extraction failed'))
+                error_msg = result.get('error', 'Extraction failed') if result else 'No extraction result'
+                return self.get_error_result(error_msg)
                 
         except Exception as e:
             logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
