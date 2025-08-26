@@ -1,14 +1,16 @@
 """
-FILE: services/content_analyzer.py
-PURPOSE: Enhanced content quality analysis service with readability scores, evidence detection, and structure assessment
-NOW WITH AI ENHANCEMENT for deeper content insights
+Content Analyzer Service - BULLETPROOF AI ENHANCED VERSION
+Analyzes writing quality, structure, and professionalism with bulletproof AI insights
 """
 
-import logging
 import re
-import math
-from typing import Dict, Any, List, Tuple, Optional
+import logging
+import time
+import string
+from typing import Dict, Any, List, Optional
 from collections import Counter
+import statistics
+
 from services.base_analyzer import BaseAnalyzer
 from services.ai_enhancement_mixin import AIEnhancementMixin
 
@@ -16,759 +18,432 @@ logger = logging.getLogger(__name__)
 
 
 class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
-    """Enhanced content quality analysis service with AI capabilities"""
+    """Analyze content quality and structure WITH BULLETPROOF AI ENHANCEMENT"""
     
     def __init__(self):
         super().__init__('content_analyzer')
         AIEnhancementMixin.__init__(self)
-        logger.info(f"Enhanced ContentAnalyzer initialized with AI: {self._ai_available}")
         
-        # Statistical claim patterns
-        self.stat_patterns = {
-            'percentage': r'\b\d+(?:\.\d+)?\s*(?:percent|%)',
-            'comparison': r'(?:increased?|decreased?|grew|fell|rose|dropped)\s+(?:by\s+)?\d+(?:\.\d+)?\s*(?:percent|%|times|fold)',
-            'ranking': r'(?:ranked?|ranks?)\s+(?:#|number|no\.?)?\s*\d+',
-            'population': r'\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|thousand)\s+(?:people|users|customers|citizens)',
-            'monetary': r'(?:\$|USD|EUR|£|¥)\s*\d+(?:,\d{3})*(?:\.\d+)?\s*(?:million|billion|thousand)?',
-            'ratio': r'\b\d+\s*(?:to|:)\s*\d+\b',
-            'survey': r'\b\d+(?:\.\d+)?\s*(?:percent|%)\s+of\s+(?:respondents|people|surveyed|participants)'
-        }
+        # Initialize analysis patterns
+        self._initialize_content_patterns()
         
-        # Evidence quality indicators
-        self.evidence_indicators = {
-            'strong': [
-                r'according to (?:a )?\w+ (?:study|research|report|analysis)',
-                r'peer[- ]reviewed',
-                r'published in \w+ journal',
-                r'data from \w+ (?:agency|organization|institution)',
-                r'official statistics',
-                r'government report',
-                r'academic research'
-            ],
-            'moderate': [
-                r'survey (?:conducted|shows|reveals)',
-                r'experts? (?:say|believe|argue)',
-                r'analysis (?:shows|reveals|indicates)',
-                r'industry report',
-                r'market research'
-            ],
-            'weak': [
-                r'some (?:say|believe|think)',
-                r'critics argue',
-                r'observers note',
-                r'reportedly',
-                r'allegedly'
-            ]
-        }
+        logger.info(f"ContentAnalyzer initialized with AI enhancement: {self._ai_available}")
     
     def _check_availability(self) -> bool:
-        """Check if the service is available"""
-        return True  # Always available as it's self-contained
-    
-    def _analyze_text_quality_only(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Perform text quality analysis only when web checks are disabled"""
-        text = data.get('text', '')
-        if not text:
-            return self.get_error_result("Missing required field: 'text'")
-        
-        title = data.get('title', '')
-        
-        # Perform text-only analysis without any web components
-        # Skip image/video analysis and structure checks that might require web access
-        return self.analyze({
-            **data,
-            'images': [],  # Ignore images
-            'videos': [],  # Ignore videos
-            '_skip_structure_checks': True
-        })
+        """Service is always available"""
+        return True
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze content quality using the standardized interface WITH AI ENHANCEMENT
+        Analyze content quality WITH BULLETPROOF AI ENHANCEMENT
         
         Expected input:
-            - text: Article text to analyze
-            - title: (optional) Article title
-            - images: (optional) List of image URLs
-            - videos: (optional) List of video URLs
-            
-        Returns:
-            Standardized response with comprehensive content quality analysis
+            - text: Article text to analyze (required)
+            - title: Article title (optional)
         """
-        if not self.is_available:
-            return self.get_default_result()
-        
-        # Skip web checks if configured - PATCHED
-        if self.config.options.get('skip_web_checks', False):
-            # Do only text-based analysis, no structure checks
-            return self._analyze_text_quality_only(data)
-        
-        text = data.get('text')
-        if not text:
-            return self.get_error_result("Missing required field: 'text'")
-        
-        title = data.get('title', '')
-        images = data.get('images', [])
-        videos = data.get('videos', [])
-        
-        # Perform base analysis
-        result = self._analyze_content(text, title, images, videos)
-        
-        # AI ENHANCEMENT - Add deeper content quality insights
-        if self._ai_available and text:
-            logger.info("Enhancing content analysis with AI")
-            
-            # Get AI content quality insights
-            ai_quality = self._ai_analyze_content_quality(
-                text=text[:3000],  # Limit text for API
-                metrics={
-                    'readability_score': result['data']['readability']['flesch_reading_ease'],
-                    'sentence_complexity': result['data']['readability']['avg_sentence_length'],
-                    'vocabulary_diversity': result['data']['language_quality']['vocabulary_diversity'],
-                    'evidence_score': result['data']['evidence_quality']['score']
-                }
-            )
-            
-            if ai_quality:
-                # Add AI-detected quality issues
-                if ai_quality.get('clarity_issues'):
-                    for issue in ai_quality['clarity_issues'][:2]:
-                        result['data']['findings'].append({
-                            'type': 'warning',
-                            'severity': 'medium',
-                            'text': f"AI detected: {issue}",
-                            'explanation': 'May impact reader comprehension'
-                        })
-                
-                # Add AI writing insights
-                if ai_quality.get('writing_strengths'):
-                    for strength in ai_quality['writing_strengths'][:2]:
-                        result['data']['findings'].append({
-                            'type': 'positive',
-                            'severity': 'positive',
-                            'text': f"AI noted: {strength}",
-                            'explanation': 'Enhances content quality'
-                        })
-                
-                # Update overall quality assessment with AI insights
-                if ai_quality.get('overall_assessment'):
-                    result['data']['ai_assessment'] = ai_quality['overall_assessment']
-                    result['metadata']['ai_enhanced'] = True
-        
-        return result
-    
-    def _analyze_content(self, text: str, title: str, images: List[str], videos: List[str]) -> Dict[str, Any]:
-        """Core content analysis logic"""
         try:
-            # Calculate various metrics
+            start_time = time.time()
+            
+            text = data.get('text', '')
+            if not text:
+                return self.get_error_result("No text provided for content analysis")
+            
+            title = data.get('title', '')
+            full_text = f"{title}\n\n{text}" if title else text
+            
+            logger.info(f"Analyzing content quality in {len(full_text)} characters of text")
+            
+            # Core content analysis
             readability = self._analyze_readability(text)
-            language_quality = self._analyze_language_quality(text)
-            structure_quality = self._analyze_structure_quality(text) if not self.config.options.get('skip_web_checks', False) else {'score': 50}
-            evidence_quality = self._analyze_evidence_quality(text)
-            statistical_analysis = self._analyze_statistical_claims(text)
-            multimedia_quality = self._analyze_multimedia(images, videos)
+            structure = self._analyze_structure(text)
+            vocabulary = self._analyze_vocabulary(text)
+            grammar = self._analyze_grammar(text)
+            professionalism = self._analyze_professionalism(text)
+            coherence = self._analyze_coherence(text)
             
             # Calculate overall content score
-            content_score = self._calculate_content_score(
-                readability, language_quality, structure_quality, 
-                evidence_quality, statistical_analysis, multimedia_quality
-            )
+            content_metrics = {
+                'readability': readability,
+                'structure': structure,
+                'vocabulary': vocabulary,
+                'grammar': grammar,
+                'professionalism': professionalism,
+                'coherence': coherence
+            }
+            
+            overall_score = self._calculate_content_score(content_metrics)
+            quality_level = self._get_quality_level(overall_score)
             
             # Generate findings
-            findings = self._generate_findings(
-                content_score, readability, language_quality, 
-                structure_quality, evidence_quality, statistical_analysis
-            )
+            findings = self._generate_findings(content_metrics, overall_score)
             
             # Generate summary
-            summary = self._generate_summary(content_score, readability, evidence_quality)
+            summary = self._generate_summary(content_metrics, overall_score, quality_level)
             
-            return {
+            # Build response
+            result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
-                    'score': content_score,
-                    'level': self._get_quality_level(content_score),
+                    'score': overall_score,
+                    'level': quality_level,
+                    'content_score': overall_score,
+                    'quality_level': quality_level,
                     'findings': findings,
                     'summary': summary,
-                    'content_score': content_score,
-                    'quality_level': self._get_quality_level(content_score),
-                    'readability': readability,
-                    'language_quality': language_quality,
-                    'structure_quality': structure_quality,
-                    'evidence_quality': evidence_quality,
-                    'statistical_analysis': statistical_analysis,
-                    'multimedia': multimedia_quality,
+                    'metrics': content_metrics,
+                    'readability_score': readability.get('score', 0),
+                    'structure_score': structure.get('score', 0),
+                    'vocabulary_score': vocabulary.get('score', 0),
+                    'grammar_score': grammar.get('score', 0),
+                    'professionalism_score': professionalism.get('score', 0),
+                    'coherence_score': coherence.get('score', 0),
                     'word_count': len(text.split()),
-                    'reading_time_minutes': readability['reading_time_minutes']
+                    'sentence_count': len(re.findall(r'[.!?]+', text)),
+                    'paragraph_count': len(text.split('\n\n')),
+                    'details': {
+                        'avg_sentence_length': readability.get('avg_sentence_length', 0),
+                        'vocabulary_diversity': vocabulary.get('diversity_score', 0),
+                        'complex_words': vocabulary.get('complex_word_count', 0),
+                        'grammar_issues': grammar.get('issue_count', 0),
+                        'structure_elements': len(structure.get('elements_found', [])),
+                        'professionalism_indicators': len(professionalism.get('indicators', []))
+                    }
                 },
                 'metadata': {
-                    'analysis_depth': 'comprehensive',
-                    'factors_analyzed': 6,
-                    'ai_enhanced': False  # Will be updated if AI is used
+                    'analysis_time': time.time() - start_time,
+                    'text_length': len(text),
+                    'analyzed_with_title': bool(title)
                 }
             }
+            
+            # BULLETPROOF AI ENHANCEMENT
+            if text:
+                logger.info("Enhancing content analysis with AI insights")
+                
+                result = self._safely_enhance_service_result(
+                    result,
+                    '_ai_analyze_content_quality',
+                    text=text[:1000],
+                    metrics=content_metrics
+                )
+            
+            logger.info(f"Content analysis complete: {overall_score}/100 ({quality_level})")
+            return result
             
         except Exception as e:
             logger.error(f"Content analysis failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
+    def _initialize_content_patterns(self):
+        """Initialize patterns for content analysis"""
+        
+        # Professional indicators
+        self.professional_indicators = [
+            'according to', 'data shows', 'research indicates', 'study found',
+            'analysis reveals', 'experts say', 'evidence suggests'
+        ]
+        
+        # Grammar issue patterns (simplified)
+        self.grammar_patterns = [
+            r'\b(there|their|they\'re)\b',  # Common confusion words
+            r'\b(your|you\'re)\b',
+            r'\b(its|it\'s)\b',
+            r'\s{2,}',  # Multiple spaces
+            r'[.!?]{2,}',  # Multiple punctuation
+        ]
+        
+        # Structure elements
+        self.structure_elements = [
+            'introduction', 'background', 'methodology', 'results',
+            'conclusion', 'summary', 'analysis', 'discussion'
+        ]
+    
     def _analyze_readability(self, text: str) -> Dict[str, Any]:
-        """Analyze text readability using multiple metrics"""
-        sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+        """Analyze text readability"""
+        
+        # Basic readability metrics
+        sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
         words = text.split()
         
         if not sentences or not words:
-            return {
-                'flesch_reading_ease': 0,
-                'flesch_kincaid_grade': 0,
-                'avg_sentence_length': 0,
-                'avg_syllables_per_word': 0,
-                'reading_level': 'Unknown',
-                'reading_time_minutes': 0,
-                'complex_word_percentage': 0
-            }
+            return {'score': 0, 'level': 'Poor', 'avg_sentence_length': 0}
         
-        # Calculate metrics
-        total_syllables = sum(self._count_syllables(word) for word in words)
         avg_sentence_length = len(words) / len(sentences)
-        avg_syllables_per_word = total_syllables / len(words)
         
-        # Flesch Reading Ease
-        flesch_score = 206.835 - 1.015 * avg_sentence_length - 84.6 * avg_syllables_per_word
-        flesch_score = max(0, min(100, flesch_score))
-        
-        # Flesch-Kincaid Grade Level
-        fk_grade = 0.39 * avg_sentence_length + 11.8 * avg_syllables_per_word - 15.59
-        fk_grade = max(0, fk_grade)
-        
-        # Complex words (3+ syllables)
-        complex_words = sum(1 for word in words if self._count_syllables(word) >= 3)
-        
-        # Reading time (avg 238 words per minute)
-        reading_time = len(words) / 238
-        
-        # Determine reading level
-        if flesch_score >= 90:
-            reading_level = "Very Easy (5th grade)"
-        elif flesch_score >= 80:
-            reading_level = "Easy (6th grade)"
-        elif flesch_score >= 70:
-            reading_level = "Fairly Easy (7th grade)"
-        elif flesch_score >= 60:
-            reading_level = "Standard (8-9th grade)"
-        elif flesch_score >= 50:
-            reading_level = "Fairly Difficult (10-12th grade)"
-        elif flesch_score >= 30:
-            reading_level = "Difficult (College)"
+        # Simple readability score based on sentence length
+        if avg_sentence_length <= 15:
+            readability_score = 90  # Very easy
+        elif avg_sentence_length <= 20:
+            readability_score = 75  # Easy
+        elif avg_sentence_length <= 25:
+            readability_score = 60  # Moderate
+        elif avg_sentence_length <= 30:
+            readability_score = 45  # Difficult
         else:
-            reading_level = "Very Difficult (Graduate)"
+            readability_score = 30  # Very difficult
+        
+        # Adjust for very short or very long sentences
+        sentence_lengths = [len(s.split()) for s in sentences]
+        if sentence_lengths:
+            length_variance = statistics.stdev(sentence_lengths) if len(sentence_lengths) > 1 else 0
+            if length_variance > 15:  # High variance is good
+                readability_score += 10
+        
+        readability_level = self._get_readability_level(readability_score)
         
         return {
-            'flesch_reading_ease': round(flesch_score, 1),
-            'flesch_kincaid_grade': round(fk_grade, 1),
+            'score': min(100, int(readability_score)),
+            'level': readability_level,
             'avg_sentence_length': round(avg_sentence_length, 1),
-            'avg_syllables_per_word': round(avg_syllables_per_word, 2),
-            'reading_level': reading_level,
-            'reading_time_minutes': round(reading_time, 1),
-            'complex_word_percentage': round((complex_words / len(words)) * 100, 1)
+            'sentence_count': len(sentences),
+            'word_count': len(words),
+            'length_variance': round(length_variance, 1) if sentence_lengths else 0
         }
     
-    def _count_syllables(self, word: str) -> int:
-        """Count syllables in a word (simplified algorithm)"""
-        word = word.lower()
-        vowels = 'aeiouy'
-        syllable_count = 0
-        previous_was_vowel = False
-        
-        for char in word:
-            is_vowel = char in vowels
-            if is_vowel and not previous_was_vowel:
-                syllable_count += 1
-            previous_was_vowel = is_vowel
-        
-        # Adjust for silent e
-        if word.endswith('e'):
-            syllable_count -= 1
-        
-        # Ensure at least one syllable
-        return max(1, syllable_count)
-    
-    def _analyze_structure_quality(self, text: str) -> Dict[str, Any]:
-        """Analyze document structure quality"""
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-        sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
-        
-        # Detect structural elements
-        has_introduction = self._detect_introduction(paragraphs)
-        has_conclusion = self._detect_conclusion(paragraphs)
-        subheadings = self._detect_subheadings(text)
-        
-        # Analyze paragraph quality
-        paragraph_lengths = [len(p.split()) for p in paragraphs]
-        avg_paragraph_length = sum(paragraph_lengths) / len(paragraph_lengths) if paragraph_lengths else 0
-        
-        # Check for logical flow
-        transition_words = self._count_transition_words(text)
-        
-        # Calculate structure score
-        structure_score = 40  # Base score
-        
-        if has_introduction:
-            structure_score += 15
-        if has_conclusion:
-            structure_score += 15
-        if len(subheadings) > 0:
-            structure_score += 10
-        if 50 <= avg_paragraph_length <= 150:  # Ideal paragraph length
-            structure_score += 10
-        if transition_words > len(paragraphs):
-            structure_score += 10
-        
-        return {
-            'score': min(100, structure_score),
-            'paragraph_count': len(paragraphs),
-            'avg_paragraph_length': round(avg_paragraph_length, 1),
-            'has_introduction': has_introduction,
-            'has_conclusion': has_conclusion,
-            'subheading_count': len(subheadings),
-            'subheadings': subheadings[:5],  # First 5 subheadings
-            'transition_word_count': transition_words,
-            'structure_quality': self._get_structure_quality_level(structure_score)
-        }
-    
-    def _detect_introduction(self, paragraphs: List[str]) -> bool:
-        """Detect if article has proper introduction"""
-        if not paragraphs:
-            return False
-        
-        first_para = paragraphs[0].lower()
-        intro_indicators = ['this article', 'we will', 'in this', 'overview', 'introduction']
-        
-        return any(indicator in first_para for indicator in intro_indicators) or len(paragraphs[0].split()) > 40
-    
-    def _detect_conclusion(self, paragraphs: List[str]) -> bool:
-        """Detect if article has proper conclusion"""
-        if len(paragraphs) < 3:
-            return False
-        
-        last_para = paragraphs[-1].lower()
-        conclusion_indicators = ['in conclusion', 'to sum up', 'in summary', 'overall', 'finally']
-        
-        return any(indicator in last_para for indicator in conclusion_indicators)
-    
-    def _detect_subheadings(self, text: str) -> List[str]:
-        """Detect subheadings in the text"""
-        # Pattern for lines that are likely subheadings
-        lines = text.split('\n')
-        subheadings = []
-        
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Check if line is likely a subheading
-            if (len(line) < 100 and  # Not too long
-                not line.endswith('.') and  # Doesn't end with period
-                i > 0 and i < len(lines) - 1 and  # Not first or last line
-                not lines[i-1].strip() and  # Preceded by blank line
-                lines[i+1].strip()):  # Followed by content
-                subheadings.append(line)
-        
-        return subheadings
-    
-    def _count_transition_words(self, text: str) -> int:
-        """Count transition words that indicate logical flow"""
-        transition_words = [
-            'however', 'therefore', 'furthermore', 'moreover', 'consequently',
-            'nevertheless', 'meanwhile', 'subsequently', 'additionally',
-            'first', 'second', 'third', 'finally', 'next', 'then',
-            'in conclusion', 'in summary', 'for example', 'for instance',
-            'on the other hand', 'in contrast', 'similarly', 'likewise'
-        ]
+    def _analyze_structure(self, text: str) -> Dict[str, Any]:
+        """Analyze text structure"""
         
         text_lower = text.lower()
-        count = 0
+        paragraphs = text.split('\n\n')
+        paragraphs = [p.strip() for p in paragraphs if p.strip()]
         
-        for word in transition_words:
-            count += len(re.findall(r'\b' + word + r'\b', text_lower))
+        elements_found = []
+        structure_indicators = []
         
-        return count
+        # Check for structural elements
+        for element in self.structure_elements:
+            if element in text_lower:
+                elements_found.append(element)
+                structure_indicators.append(f"Contains {element} section")
+        
+        # Analyze paragraph structure
+        if len(paragraphs) >= 3:
+            structure_indicators.append("Well-structured paragraphs")
+        elif len(paragraphs) >= 1:
+            structure_indicators.append("Basic paragraph structure")
+        else:
+            structure_indicators.append("Poor paragraph structure")
+        
+        # Check for transitions
+        transition_words = ['however', 'therefore', 'moreover', 'furthermore', 'additionally']
+        transition_count = sum(1 for word in transition_words if word in text_lower)
+        if transition_count >= 2:
+            structure_indicators.append("Good use of transitions")
+        
+        # Calculate structure score
+        structure_score = min(100, 
+                            (len(elements_found) * 15) +
+                            (len(paragraphs) * 5) +
+                            (transition_count * 10) +
+                            20  # Base score
+                            )
+        
+        return {
+            'score': int(structure_score),
+            'paragraph_count': len(paragraphs),
+            'elements_found': elements_found,
+            'transition_count': transition_count,
+            'indicators': structure_indicators,
+            'avg_paragraph_length': sum(len(p.split()) for p in paragraphs) / max(len(paragraphs), 1)
+        }
     
-    def _analyze_language_quality(self, text: str) -> Dict[str, Any]:
-        """Analyze language quality and style"""
-        words = text.split()
-        sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+    def _analyze_vocabulary(self, text: str) -> Dict[str, Any]:
+        """Analyze vocabulary diversity and complexity"""
+        
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        if not words:
+            return {'score': 0, 'diversity_score': 0, 'complex_word_count': 0}
         
         # Vocabulary diversity (unique words / total words)
-        unique_words = set(word.lower() for word in words)
-        vocabulary_diversity = len(unique_words) / len(words) if words else 0
+        unique_words = set(words)
+        diversity_ratio = len(unique_words) / len(words)
+        diversity_score = min(100, diversity_ratio * 200)  # Scale to 0-100
         
-        # Passive voice detection
-        passive_patterns = [
-            r'\b(?:is|are|was|were|been|being)\s+\w+ed\b',
-            r'\b(?:is|are|was|were|been|being)\s+\w+en\b'
-        ]
-        passive_count = sum(len(re.findall(pattern, text, re.IGNORECASE)) 
-                           for pattern in passive_patterns)
-        passive_percentage = (passive_count / len(sentences)) * 100 if sentences else 0
+        # Complex words (6+ letters)
+        complex_words = [w for w in words if len(w) >= 6]
+        complex_ratio = len(complex_words) / len(words)
+        complexity_score = min(100, complex_ratio * 300)
         
-        # Adverb usage (can indicate weak writing if overused)
-        adverb_pattern = r'\b\w+ly\b'
-        adverb_count = len(re.findall(adverb_pattern, text))
-        adverb_percentage = (adverb_count / len(words)) * 100 if words else 0
-        
-        # Cliché detection
-        cliches = [
-            'at the end of the day', 'think outside the box', 'low-hanging fruit',
-            'paradigm shift', 'synergy', 'circle back', 'touch base',
-            'game changer', 'no-brainer', 'win-win'
-        ]
-        cliche_count = sum(text.lower().count(cliche) for cliche in cliches)
-        
-        # Calculate language quality score
-        quality_score = 70  # Base score
-        
-        # Vocabulary diversity bonus/penalty
-        if vocabulary_diversity > 0.5:
-            quality_score += 10
-        elif vocabulary_diversity < 0.3:
-            quality_score -= 10
-        
-        # Passive voice penalty
-        if passive_percentage > 30:
-            quality_score -= 15
-        elif passive_percentage < 10:
-            quality_score += 5
-        
-        # Adverb overuse penalty
-        if adverb_percentage > 5:
-            quality_score -= 10
-        
-        # Cliché penalty
-        quality_score -= (cliche_count * 2)
+        # Overall vocabulary score
+        vocab_score = (diversity_score * 0.6) + (complexity_score * 0.4)
         
         return {
-            'score': max(0, min(100, quality_score)),
-            'vocabulary_diversity': round(vocabulary_diversity, 3),
-            'passive_voice_percentage': round(passive_percentage, 1),
-            'adverb_usage_percentage': round(adverb_percentage, 1),
-            'cliche_count': cliche_count,
-            'avg_word_length': round(sum(len(word) for word in words) / len(words), 1) if words else 0
+            'score': int(vocab_score),
+            'diversity_score': round(diversity_score, 1),
+            'complexity_score': round(complexity_score, 1),
+            'unique_words': len(unique_words),
+            'total_words': len(words),
+            'complex_word_count': len(complex_words),
+            'diversity_ratio': round(diversity_ratio, 3)
         }
     
-    def _analyze_evidence_quality(self, text: str) -> Dict[str, Any]:
-        """Analyze the quality and quantity of evidence presented"""
-        evidence_score = 0
-        evidence_found = []
+    def _analyze_grammar(self, text: str) -> Dict[str, Any]:
+        """Analyze grammar and writing mechanics"""
         
-        # Check for strong evidence
-        for pattern in self.evidence_indicators['strong']:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            if matches:
-                evidence_score += len(matches) * 10
-                evidence_found.extend([('strong', match) for match in matches])
+        issues_found = []
+        issue_count = 0
         
-        # Check for moderate evidence
-        for pattern in self.evidence_indicators['moderate']:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            if matches:
-                evidence_score += len(matches) * 5
-                evidence_found.extend([('moderate', match) for match in matches])
+        # Check for multiple spaces
+        if re.search(r'\s{2,}', text):
+            issues_found.append("Multiple spaces found")
+            issue_count += len(re.findall(r'\s{2,}', text))
         
-        # Check for weak evidence
-        for pattern in self.evidence_indicators['weak']:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            if matches:
-                evidence_score += len(matches) * 2
-                evidence_found.extend([('weak', match) for match in matches])
+        # Check for multiple punctuation
+        if re.search(r'[.!?]{2,}', text):
+            issues_found.append("Multiple punctuation marks")
+            issue_count += len(re.findall(r'[.!?]{2,}', text))
         
-        # Cap the score at 100
-        evidence_score = min(100, evidence_score)
+        # Check capitalization after periods
+        sentences = re.split(r'[.!?]+', text)
+        for sentence in sentences[1:]:  # Skip first
+            sentence = sentence.strip()
+            if sentence and sentence[0].islower():
+                issues_found.append("Capitalization issues")
+                issue_count += 1
+                break
         
-        # Analyze source diversity
-        source_diversity = self._analyze_source_diversity(text)
-        
-        return {
-            'score': evidence_score,
-            'evidence_count': len(evidence_found),
-            'strong_evidence_count': sum(1 for e in evidence_found if e[0] == 'strong'),
-            'moderate_evidence_count': sum(1 for e in evidence_found if e[0] == 'moderate'),
-            'weak_evidence_count': sum(1 for e in evidence_found if e[0] == 'weak'),
-            'source_diversity': source_diversity,
-            'evidence_quality': self._get_evidence_quality_level(evidence_score)
-        }
-    
-    def _analyze_source_diversity(self, text: str) -> str:
-        """Analyze diversity of sources cited"""
-        # Look for named sources
-        source_patterns = [
-            r'(?:according to|said|told|reported) (\w+)',
-            r'(\w+) (?:said|says|stated)',
-            r'(?:study|research|report) (?:by|from) (\w+)',
-            r'(\w+) (?:reported|reports)'
-        ]
-        
-        sources = set()
-        for pattern in source_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            sources.update(matches)
-        
-        if len(sources) >= 5:
-            return "High"
-        elif len(sources) >= 3:
-            return "Moderate"
-        elif len(sources) >= 1:
-            return "Low"
+        # Simple grammar score based on issues found
+        word_count = len(text.split())
+        if word_count > 0:
+            error_rate = issue_count / word_count
+            grammar_score = max(0, 100 - (error_rate * 1000))  # Penalize errors
         else:
-            return "None"
-    
-    def _analyze_statistical_claims(self, text: str) -> Dict[str, Any]:
-        """Analyze and verify statistical claims"""
-        claims = []
-        
-        for claim_type, pattern in self.stat_patterns.items():
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches:
-                claims.append({
-                    'type': claim_type,
-                    'text': match,
-                    'context': self._get_claim_context(text, match)
-                })
-        
-        # Analyze claim quality
-        verified_count = 0
-        sourced_count = 0
-        
-        for claim in claims:
-            context = claim['context'].lower()
-            
-            # Check if claim is sourced
-            if any(indicator in context for indicator in ['according to', 'study', 'report', 'survey']):
-                sourced_count += 1
-                claim['is_sourced'] = True
-            else:
-                claim['is_sourced'] = False
-            
-            # Check for verification language
-            if any(word in context for word in ['verified', 'confirmed', 'official']):
-                verified_count += 1
-                claim['is_verified'] = True
-            else:
-                claim['is_verified'] = False
-        
-        # Calculate statistics score
-        if claims:
-            sourced_percentage = (sourced_count / len(claims)) * 100
-            verified_percentage = (verified_count / len(claims)) * 100
-        else:
-            sourced_percentage = 0
-            verified_percentage = 0
+            grammar_score = 0
         
         return {
-            'total_claims': len(claims),
-            'claims': claims[:10],  # First 10 claims
-            'sourced_count': sourced_count,
-            'verified_count': verified_count,
-            'sourced_percentage': round(sourced_percentage, 1),
-            'verified_percentage': round(verified_percentage, 1)
+            'score': int(grammar_score),
+            'issue_count': issue_count,
+            'issues_found': issues_found[:5],  # Top 5 issues
+            'error_rate': round(error_rate, 4) if word_count > 0 else 0
         }
     
-    def _get_claim_context(self, text: str, claim: str, context_size: int = 100) -> str:
-        """Get context around a claim"""
-        try:
-            index = text.find(claim)
-            if index == -1:
-                return claim
-            
-            start = max(0, index - context_size)
-            end = min(len(text), index + len(claim) + context_size)
-            
-            return text[start:end]
-        except:
-            return claim
-    
-    def _analyze_multimedia(self, images: List[str], videos: List[str]) -> Dict[str, Any]:
-        """Analyze multimedia content quality"""
-        multimedia_score = 50  # Base score
+    def _analyze_professionalism(self, text: str) -> Dict[str, Any]:
+        """Analyze professional writing indicators"""
         
-        # Images analysis
-        if images:
-            multimedia_score += min(20, len(images) * 5)  # Up to 20 points for images
+        text_lower = text.lower()
+        indicators = []
+        professional_score = 50  # Base score
         
-        # Videos analysis
-        if videos:
-            multimedia_score += min(20, len(videos) * 10)  # Up to 20 points for videos
+        # Check for professional phrases
+        for indicator in self.professional_indicators:
+            if indicator in text_lower:
+                indicators.append(f"Uses professional phrase: '{indicator}'")
+                professional_score += 5
         
-        # Balance check
-        text_to_media_balance = "Good"
-        if not images and not videos:
-            text_to_media_balance = "Text only"
-            multimedia_score -= 10
-        elif len(images) + len(videos) > 10:
-            text_to_media_balance = "Media heavy"
+        # Check for citations or references
+        if re.search(r'\([^)]*\d{4}[^)]*\)', text):  # Year in parentheses
+            indicators.append("Contains citations")
+            professional_score += 15
+        
+        # Check for statistics or data
+        if re.search(r'\d+%|\d+\s*percent', text):
+            indicators.append("Includes statistical data")
+            professional_score += 10
+        
+        # Check for quotes
+        if '"' in text:
+            indicators.append("Uses quotations")
+            professional_score += 5
+        
+        # Penalize unprofessional language
+        unprofessional_words = ['awesome', 'totally', 'super', 'really really']
+        unprofessional_count = sum(1 for word in unprofessional_words if word in text_lower)
+        professional_score -= unprofessional_count * 5
+        
+        professional_score = max(0, min(100, professional_score))
         
         return {
-            'score': min(100, multimedia_score),
-            'image_count': len(images),
-            'video_count': len(videos),
-            'total_media': len(images) + len(videos),
-            'balance': text_to_media_balance
+            'score': int(professional_score),
+            'indicators': indicators,
+            'unprofessional_count': unprofessional_count,
+            'citation_found': bool(re.search(r'\([^)]*\d{4}[^)]*\)', text)),
+            'statistics_found': bool(re.search(r'\d+%|\d+\s*percent', text))
         }
     
-    def _calculate_content_score(self, readability: Dict[str, Any], 
-                               language: Dict[str, Any],
-                               structure: Dict[str, Any],
-                               evidence: Dict[str, Any],
-                               statistics: Dict[str, Any],
-                               multimedia: Dict[str, Any]) -> int:
+    def _analyze_coherence(self, text: str) -> Dict[str, Any]:
+        """Analyze text coherence and flow"""
+        
+        paragraphs = text.split('\n\n')
+        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        
+        coherence_indicators = []
+        coherence_score = 50  # Base score
+        
+        # Check paragraph consistency
+        if len(paragraphs) > 1:
+            paragraph_lengths = [len(p.split()) for p in paragraphs]
+            avg_length = sum(paragraph_lengths) / len(paragraph_lengths)
+            
+            # Penalize extremely short or long paragraphs
+            reasonable_paragraphs = sum(1 for length in paragraph_lengths 
+                                     if 20 <= length <= 150)
+            consistency_ratio = reasonable_paragraphs / len(paragraphs)
+            
+            if consistency_ratio > 0.8:
+                coherence_indicators.append("Consistent paragraph lengths")
+                coherence_score += 15
+            elif consistency_ratio > 0.5:
+                coherence_indicators.append("Mostly consistent paragraphs")
+                coherence_score += 10
+        
+        # Check for logical connectors
+        connectors = ['therefore', 'however', 'furthermore', 'additionally', 'consequently']
+        connector_count = sum(1 for connector in connectors if connector in text.lower())
+        
+        if connector_count >= 3:
+            coherence_indicators.append("Good use of logical connectors")
+            coherence_score += 20
+        elif connector_count >= 1:
+            coherence_indicators.append("Some logical connectors")
+            coherence_score += 10
+        
+        # Check for topic consistency (simple keyword analysis)
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        if len(words) > 50:  # Only for substantial text
+            word_freq = Counter(words)
+            # Remove common words
+            common_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'a', 'an', 'this', 'that', 'these', 'those'}
+            content_words = {word: freq for word, freq in word_freq.items() 
+                           if word not in common_words and len(word) > 3}
+            
+            if content_words:
+                top_words = sorted(content_words.items(), key=lambda x: x[1], reverse=True)[:5]
+                topic_consistency = sum(freq for _, freq in top_words) / len(words)
+                
+                if topic_consistency > 0.1:
+                    coherence_indicators.append("Strong topic consistency")
+                    coherence_score += 15
+        
+        coherence_score = max(0, min(100, coherence_score))
+        
+        return {
+            'score': int(coherence_score),
+            'indicators': coherence_indicators,
+            'connector_count': connector_count,
+            'paragraph_consistency': consistency_ratio if len(paragraphs) > 1 else 1.0
+        }
+    
+    def _calculate_content_score(self, metrics: Dict[str, Any]) -> int:
         """Calculate overall content quality score"""
-        # Weighted scoring
+        
+        # Weight different aspects
         weights = {
-            'readability': 0.20,
-            'language': 0.15,
-            'structure': 0.20,
-            'evidence': 0.25,
-            'statistics': 0.10,
-            'multimedia': 0.10
+            'readability': 0.2,
+            'structure': 0.2,
+            'vocabulary': 0.15,
+            'grammar': 0.2,
+            'professionalism': 0.15,
+            'coherence': 0.1
         }
         
-        # Get normalized scores
-        readability_score = self._normalize_readability_score(readability['flesch_reading_ease'])
+        total_score = 0
+        for metric_name, weight in weights.items():
+            metric_score = metrics.get(metric_name, {}).get('score', 0)
+            total_score += metric_score * weight
         
-        # Calculate weighted score
-        weighted_score = (
-            readability_score * weights['readability'] +
-            language['score'] * weights['language'] +
-            structure['score'] * weights['structure'] +
-            evidence['score'] * weights['evidence'] +
-            self._calculate_statistics_score(statistics) * weights['statistics'] +
-            multimedia['score'] * weights['multimedia']
-        )
-        
-        return round(weighted_score)
-    
-    def _normalize_readability_score(self, flesch_score: float) -> float:
-        """Normalize Flesch score to 0-100 quality scale"""
-        # Ideal Flesch score is 60-70 (standard reading level)
-        if 60 <= flesch_score <= 70:
-            return 100
-        elif 50 <= flesch_score < 60 or 70 < flesch_score <= 80:
-            return 85
-        elif 40 <= flesch_score < 50 or 80 < flesch_score <= 90:
-            return 70
-        elif 30 <= flesch_score < 40 or 90 < flesch_score <= 100:
-            return 55
-        else:
-            return 40
-    
-    def _calculate_statistics_score(self, statistics: Dict[str, Any]) -> float:
-        """Calculate score for statistical claims quality"""
-        if statistics['total_claims'] == 0:
-            return 70  # Neutral score if no claims
-        
-        score = 40  # Base score
-        
-        # Bonus for sourced claims
-        score += (statistics['sourced_percentage'] / 100) * 40
-        
-        # Bonus for verified claims
-        score += (statistics['verified_percentage'] / 100) * 20
-        
-        return min(100, score)
-    
-    def _generate_findings(self, score: int, readability: Dict[str, Any],
-                          language: Dict[str, Any], structure: Dict[str, Any],
-                          evidence: Dict[str, Any], statistics: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate findings based on analysis"""
-        findings = []
-        
-        # Overall content quality
-        if score >= 80:
-            findings.append({
-                'type': 'positive',
-                'severity': 'positive',
-                'text': 'High-quality content with strong evidence',
-                'explanation': 'Well-written and thoroughly researched'
-            })
-        elif score < 50:
-            findings.append({
-                'type': 'warning',
-                'severity': 'high',
-                'text': 'Content quality concerns identified',
-                'explanation': 'Multiple areas need improvement'
-            })
-        
-        # Readability findings
-        if readability['flesch_reading_ease'] < 30:
-            findings.append({
-                'type': 'warning',
-                'severity': 'medium',
-                'text': 'Very difficult to read',
-                'explanation': f'Reading level: {readability["reading_level"]}'
-            })
-        elif readability['flesch_reading_ease'] > 90:
-            findings.append({
-                'type': 'info',
-                'severity': 'low',
-                'text': 'Very simple writing style',
-                'explanation': 'May lack depth or nuance'
-            })
-        
-        # Evidence findings
-        if evidence['score'] < 30:
-            findings.append({
-                'type': 'critical',
-                'severity': 'high', 
-                'text': 'Lack of credible evidence',
-                'explanation': 'Few sources or citations provided'
-            })
-        elif evidence['strong_evidence_count'] > 3:
-            findings.append({
-                'type': 'positive',
-                'severity': 'positive',
-                'text': 'Strong evidence base',
-                'explanation': f'{evidence["strong_evidence_count"]} credible sources cited'
-            })
-        
-        # Structure findings
-        if not structure.get('has_introduction', True) or not structure.get('has_conclusion', True):
-            findings.append({
-                'type': 'warning',
-                'severity': 'low',
-                'text': 'Incomplete article structure',
-                'explanation': 'Missing introduction or conclusion'
-            })
-        
-        # Statistical claims findings
-        if statistics['total_claims'] > 0 and statistics['sourced_percentage'] < 50:
-            findings.append({
-                'type': 'warning',
-                'severity': 'medium',
-                'text': 'Unsourced statistical claims',
-                'explanation': f'Only {statistics["sourced_percentage"]}% of statistics are sourced'
-            })
-        
-        return findings
-    
-    def _generate_summary(self, score: int, readability: Dict[str, Any], 
-                         evidence: Dict[str, Any]) -> str:
-        """Generate content quality summary"""
-        quality_level = self._get_quality_level(score)
-        
-        summary = f"Content quality is {quality_level.lower()} with a score of {score}/100. "
-        summary += f"The article has a {readability['reading_level'].lower()} reading level "
-        summary += f"and takes approximately {readability['reading_time_minutes']} minutes to read. "
-        
-        if evidence['score'] >= 70:
-            summary += "Evidence quality is strong with multiple credible sources."
-        elif evidence['score'] >= 40:
-            summary += "Evidence quality is moderate with some supporting sources."
-        else:
-            summary += "Evidence quality is weak with limited supporting sources."
-        
-        return summary
+        return min(100, int(total_score))
     
     def _get_quality_level(self, score: int) -> str:
         """Convert score to quality level"""
@@ -783,52 +458,133 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         else:
             return 'Very Poor'
     
-    def _get_structure_quality_level(self, score: int) -> str:
-        """Convert structure score to quality level"""
+    def _get_readability_level(self, score: int) -> str:
+        """Convert readability score to level"""
         if score >= 80:
-            return 'Well Structured'
+            return 'Very Easy'
         elif score >= 60:
-            return 'Good Structure'
+            return 'Easy'
         elif score >= 40:
-            return 'Basic Structure'
-        else:
-            return 'Poor Structure'
-    
-    def _get_evidence_quality_level(self, score: int) -> str:
-        """Convert evidence score to quality level"""
-        if score >= 80:
-            return 'Strong Evidence'
-        elif score >= 60:
-            return 'Good Evidence'
-        elif score >= 40:
-            return 'Some Evidence'
+            return 'Moderate'
         elif score >= 20:
-            return 'Weak Evidence'
+            return 'Difficult'
         else:
-            return 'No Evidence'
+            return 'Very Difficult'
+    
+    def _generate_findings(self, metrics: Dict[str, Any], overall_score: int) -> List[Dict[str, Any]]:
+        """Generate findings based on content analysis"""
+        findings = []
+        
+        # Overall assessment
+        if overall_score >= 80:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Excellent content quality ({overall_score}/100)',
+                'explanation': 'Article demonstrates professional writing standards'
+            })
+        elif overall_score >= 60:
+            findings.append({
+                'type': 'info',
+                'severity': 'medium',
+                'text': f'Good content quality ({overall_score}/100)',
+                'explanation': 'Article meets most professional writing standards'
+            })
+        else:
+            findings.append({
+                'type': 'warning',
+                'severity': 'medium',
+                'text': f'Poor content quality ({overall_score}/100)',
+                'explanation': 'Article has significant writing quality issues'
+            })
+        
+        # Specific metric findings
+        readability = metrics['readability']
+        if readability['score'] < 40:
+            findings.append({
+                'type': 'warning',
+                'severity': 'medium',
+                'text': f'Poor readability ({readability["score"]}/100)',
+                'explanation': f'Average sentence length: {readability["avg_sentence_length"]} words'
+            })
+        elif readability['score'] > 80:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Excellent readability ({readability["score"]}/100)',
+                'explanation': 'Text is easy to read and understand'
+            })
+        
+        # Grammar findings
+        grammar = metrics['grammar']
+        if grammar['issue_count'] > 5:
+            findings.append({
+                'type': 'warning',
+                'severity': 'high',
+                'text': f'Grammar issues detected ({grammar["issue_count"]})',
+                'explanation': 'Multiple writing mechanics problems found'
+            })
+        
+        # Professional findings
+        professionalism = metrics['professionalism']
+        if professionalism['score'] > 75:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': 'Professional writing style',
+                'explanation': 'Uses appropriate professional language and citations'
+            })
+        
+        return findings
+    
+    def _generate_summary(self, metrics: Dict[str, Any], score: int, level: str) -> str:
+        """Generate summary of content analysis"""
+        
+        if score >= 80:
+            base = "This article demonstrates excellent writing quality with professional standards. "
+        elif score >= 60:
+            base = "This article shows good writing quality with most professional elements present. "
+        elif score >= 40:
+            base = "This article has fair writing quality but could be improved. "
+        else:
+            base = "This article has poor writing quality with significant issues. "
+        
+        # Add specific details
+        readability = metrics['readability']
+        base += f"Readability: {readability['level']}. "
+        
+        structure = metrics['structure']
+        base += f"Structure: {structure['paragraph_count']} paragraphs. "
+        
+        professionalism = metrics['professionalism']
+        if professionalism['citation_found']:
+            base += "Includes citations. "
+        
+        base += f"Overall content score: {score}/100."
+        
+        return base
     
     def get_service_info(self) -> Dict[str, Any]:
-        """Get information about the service"""
+        """Get service information"""
         info = super().get_service_info()
         info.update({
             'capabilities': [
-                'Readability analysis (Flesch scores)',
-                'Language quality assessment',
-                'Document structure analysis',
-                'Evidence quality evaluation',
-                'Statistical claim verification',
-                'Multimedia balance checking',
-                'Reading time estimation',
-                'Vocabulary diversity analysis',
-                'AI-ENHANCED content insights',
-                'AI-powered quality assessment'
+                'Readability analysis',
+                'Text structure evaluation',
+                'Vocabulary diversity assessment',
+                'Grammar and mechanics checking',
+                'Professional writing analysis',
+                'Coherence and flow evaluation',
+                'BULLETPROOF AI-enhanced content quality assessment'
             ],
-            'metrics': {
-                'readability': ['flesch_reading_ease', 'flesch_kincaid_grade'],
-                'language': ['vocabulary_diversity', 'passive_voice', 'cliches'],
-                'structure': ['paragraphs', 'transitions', 'headings'],
-                'evidence': ['citations', 'sources', 'verification']
-            },
+            'metrics_analyzed': [
+                'readability',
+                'structure',
+                'vocabulary',
+                'grammar',
+                'professionalism',
+                'coherence'
+            ],
             'ai_enhanced': self._ai_available
         })
         return info
