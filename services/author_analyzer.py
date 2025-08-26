@@ -1,7 +1,6 @@
 """
-Enhanced Author Analyzer Service - FIXED VERSION
-Analyzes article authors and their credibility by following bio links
-FIXED: Removed AI enhancement bugs and import issues
+Enhanced Author Analyzer Service - BULLETPROOF AI ENHANCED VERSION
+Analyzes article authors and their credibility with bulletproof AI insights
 """
 import re
 import logging
@@ -12,19 +11,29 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class AuthorAnalyzer(BaseAnalyzer):
-    """Enhanced author analysis service that follows bio links - FIXED VERSION"""
+class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
+    """Enhanced author analysis service WITH BULLETPROOF AI ENHANCEMENT"""
     
     def __init__(self):
         super().__init__('author_analyzer')
+        AIEnhancementMixin.__init__(self)
         
         # Compile regex patterns once for efficiency
         self._byline_patterns = [
             re.compile(r'^By\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
+            re.compile(r'By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
+            re.compile(r'Written by\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
+            re.compile(r'Author:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
+            re.compile(r'\n([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\s*\n', re.MULTILINE),
+            re.compile(r'- ([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)(?:\n|$)', re.MULTILINE)
+        ]
+        
+        logger.info(f"AuthorAnalyzer initialized with AI enhancement: {self._ai_available}") re.MULTILINE | re.IGNORECASE),
             re.compile(r'By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
             re.compile(r'Written by\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
             re.compile(r'Author:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)', re.MULTILINE | re.IGNORECASE),
