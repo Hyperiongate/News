@@ -1,6 +1,6 @@
 """
-Enhanced Article Extraction Service - Robust version for resistant sites
-Extracts article content from URLs with multiple anti-bot bypass methods
+Enhanced Article Extraction Service - Universal Scraper with Progressive Escalation
+Incorporates the universal scraper strategy discussed for handling any URL
 """
 
 import json
@@ -72,68 +72,65 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class RobustCircuitBreaker:
-    """Improved circuit breaker with exponential backoff"""
+
+class EnhancedCircuitBreaker:
+    """Enhanced circuit breaker with better recovery and domain-specific strategies"""
     
-    def __init__(self, failure_threshold=5, base_timeout=60, max_timeout=1800):
-        self.failure_threshold = failure_threshold
-        self.base_timeout = base_timeout
-        self.max_timeout = max_timeout
+    def __init__(self):
         self.failures = {}
-        self.last_failure_time = {}
-        self.blocked_until = {}
         self.last_error = {}
-    
-    def record_failure(self, domain: str, error: str):
-        """Record failure with exponential backoff"""
-        current_time = time.time()
+        self.domain_strategies = {}  # Track what worked for each domain
+        self.success_methods = {}    # Track successful methods per domain
+        self.max_failures = 8       # Increased threshold
+        self.recovery_time = 600    # 10 minutes recovery
+        self.last_attempt = {}
         
-        if domain not in self.failures:
-            self.failures[domain] = 0
-            
-        self.failures[domain] += 1
-        self.last_failure_time[domain] = current_time
+    def record_failure(self, domain: str, error: str, method: str):
+        """Record failure with method information"""
+        self.failures[domain] = self.failures.get(domain, 0) + 1
         self.last_error[domain] = error
+        self.last_attempt[domain] = time.time()
+        logger.warning(f"Circuit breaker: {domain} failed {self.failures[domain]} times with {method}: {error}")
         
-        if self.failures[domain] >= self.failure_threshold:
-            # Exponential backoff: 60s, 120s, 240s, 480s, up to max
-            timeout = min(self.base_timeout * (2 ** (self.failures[domain] - self.failure_threshold)), 
-                         self.max_timeout)
-            self.blocked_until[domain] = current_time + timeout
-            logger.warning(f"Circuit breaker activated for {domain} (attempt #{self.failures[domain]}), "
-                         f"blocked for {timeout}s until {self.blocked_until[domain]}")
-    
-    def record_success(self, domain: str):
-        """Record success and reset counters"""
-        if domain in self.failures:
-            self.failures[domain] = 0
-            if domain in self.blocked_until:
-                del self.blocked_until[domain]
-                logger.info(f"Circuit breaker reset for {domain}")
-    
+    def record_success(self, domain: str, method: str):
+        """Record successful method for future prioritization"""
+        self.failures[domain] = 0
+        if domain not in self.success_methods:
+            self.success_methods[domain] = []
+        if method not in self.success_methods[domain]:
+            self.success_methods[domain].insert(0, method)  # Prioritize successful methods
+        logger.info(f"Circuit breaker: {domain} succeeded with {method}")
+        
     def is_blocked(self, domain: str) -> bool:
-        """Check if domain is blocked"""
-        if domain not in self.blocked_until:
+        """Check if domain is temporarily blocked with recovery logic"""
+        if domain not in self.failures:
             return False
             
-        current_time = time.time()
-        if current_time >= self.blocked_until[domain]:
-            # Reset the block
-            del self.blocked_until[domain]
-            self.failures[domain] = max(0, self.failures[domain] - 1)  # Slowly reduce failure count
+        failure_count = self.failures[domain]
+        if failure_count < self.max_failures:
+            return False
+            
+        # Check if recovery time has passed
+        last_attempt = self.last_attempt.get(domain, 0)
+        if time.time() - last_attempt > self.recovery_time:
+            self.failures[domain] = max(0, self.failures[domain] - 2)  # Reduce failures
             return False
             
         return True
-    
+        
+    def get_preferred_methods(self, domain: str) -> List[str]:
+        """Get preferred methods for a domain based on past success"""
+        return self.success_methods.get(domain, [])
+        
     def get_last_error(self, domain: str) -> str:
         return self.last_error.get(domain, "Unknown error")
 
 
-class RobustArticleExtractor:
-    """Robust article extraction with extensive anti-bot measures"""
+class UniversalScraper:
+    """Universal scraper implementing the progressive escalation strategy"""
     
     def __init__(self):
-        logger.info(f"Initializing RobustArticleExtractor with available libraries: {OPTIONAL_LIBRARIES}")
+        logger.info(f"Initializing UniversalScraper with available libraries: {OPTIONAL_LIBRARIES}")
         
         # Initialize session with robust configuration
         self.session = self._create_robust_session()
@@ -161,49 +158,62 @@ class RobustArticleExtractor:
             except Exception as e:
                 logger.warning(f"Failed to initialize Cloudscraper: {e}")
         
-        # Circuit breaker with improved settings
-        self.circuit_breaker = RobustCircuitBreaker()
+        # Enhanced circuit breaker
+        self.circuit_breaker = EnhancedCircuitBreaker()
         
         # Thread pool for parallel attempts
         self.executor = ThreadPoolExecutor(max_workers=3)
         
         # Configuration
-        self.timeout = 30  # Increased timeout
+        self.timeout = 30
         self.browser_timeout = 45
-        self.min_content_length = 50  # Reduced for better detection
-        self.min_paragraphs = 2  # Reduced for better detection
-        self.min_words_per_paragraph = 5  # Reduced for better detection
+        self.min_content_length = 50
+        self.min_paragraphs = 2
+        self.min_words_per_paragraph = 5
         
         # Track methods
         self.methods_tried = []
         
-        # User agents pool
+        # Enhanced user agents pool (more realistic and current)
         self.user_agents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0',
+            # Mobile user agents for sites that are less restrictive to mobile
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
+        ]
+        
+        # Common blocking indicators
+        self.blocking_indicators = [
+            'blocked', 'access denied', 'captcha', 'robot', 'bot detected',
+            'please enable javascript', 'cloudflare', 'checking your browser',
+            'ddos protection', 'security check', 'verify you are human',
+            'too many requests', 'rate limit', 'temporarily unavailable',
+            'service unavailable', 'forbidden', '403 forbidden', 'unauthorized'
         ]
     
     def _create_robust_session(self) -> requests.Session:
         """Create a robust requests session with retry logic and proper headers"""
         session = requests.Session()
         
-        # Retry strategy
+        # Enhanced retry strategy
         retry_strategy = Retry(
             total=3,
-            backoff_factor=1,
+            backoff_factor=2,  # Exponential backoff
             status_forcelist=[429, 500, 502, 503, 504, 520, 522, 524],
-            allowed_methods=["HEAD", "GET", "OPTIONS"]
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+            raise_on_status=False
         )
         
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
         
-        # Default headers
+        # Default headers (will be overridden by specific methods)
         session.headers.update({
             'User-Agent': random.choice(self.user_agents),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -216,11 +226,14 @@ class RobustArticleExtractor:
         
         return session
     
-    def _get_random_headers(self, url: str = None) -> Dict[str, str]:
-        """Generate realistic, randomized headers"""
+    def _get_enhanced_headers(self, url: str = None, strategy: str = "default") -> Dict[str, str]:
+        """Generate enhanced headers based on strategy"""
         
-        # Get user agent
-        if self.ua:
+        # Get user agent based on strategy
+        if strategy == "mobile":
+            user_agents = [ua for ua in self.user_agents if 'Mobile' in ua or 'iPhone' in ua or 'Android' in ua]
+            user_agent = random.choice(user_agents) if user_agents else self.user_agents[0]
+        elif self.ua:
             try:
                 user_agent = self.ua.random
             except:
@@ -228,6 +241,7 @@ class RobustArticleExtractor:
         else:
             user_agent = random.choice(self.user_agents)
         
+        # Base headers
         headers = {
             'User-Agent': user_agent,
             'Accept': random.choice([
@@ -238,30 +252,72 @@ class RobustArticleExtractor:
             'Accept-Language': random.choice([
                 'en-US,en;q=0.9',
                 'en-US,en;q=0.8',
-                'en-US,en;q=0.5'
+                'en-US,en;q=0.5',
+                'en-GB,en-US;q=0.9,en;q=0.8'
             ]),
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': random.choice(['none', 'same-origin', 'cross-site']),
-            'Sec-Fetch-User': '?1',
-            'Cache-Control': random.choice(['max-age=0', 'no-cache']),
         }
         
-        # Add referrer sometimes
-        if url and random.random() > 0.5:
-            domain = urlparse(url).netloc
-            headers['Referer'] = f'https://www.google.com/search?q={domain}'
-        
+        # Strategy-specific enhancements
+        if strategy == "stealth":
+            headers.update({
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': random.choice(['none', 'same-origin', 'cross-site']),
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': random.choice(['max-age=0', 'no-cache']),
+                'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"'
+            })
+        elif strategy == "social":
+            # Add referer from social media
+            headers['Referer'] = random.choice([
+                'https://www.facebook.com/',
+                'https://twitter.com/',
+                'https://www.reddit.com/',
+                'https://news.ycombinator.com/'
+            ])
+        elif strategy == "search":
+            # Add referer from search engines
+            if url:
+                domain = urlparse(url).netloc
+                headers['Referer'] = f'https://www.google.com/search?q={domain}'
+            else:
+                headers['Referer'] = 'https://www.google.com/'
+                
         return headers
     
+    def _is_valid_content(self, soup: BeautifulSoup) -> bool:
+        """Enhanced content validation"""
+        if not soup:
+            return False
+        
+        text = soup.get_text().lower()
+        
+        # Check for blocking indicators
+        for indicator in self.blocking_indicators:
+            if indicator in text:
+                logger.debug(f"Found blocking indicator: {indicator}")
+                return False
+        
+        # Check for minimum content
+        paragraphs = soup.find_all('p')
+        valid_paragraphs = [p for p in paragraphs if len(p.get_text().split()) >= 5]
+        
+        if len(valid_paragraphs) < 2:
+            logger.debug("Not enough valid paragraphs found")
+            return False
+            
+        return True
+    
     def extract_from_url(self, url: str) -> Dict[str, Any]:
-        """Main extraction method with multiple robust approaches"""
+        """Universal extraction with progressive escalation strategy"""
         start_time = time.time()
-        logger.info(f"Starting robust extraction for URL: {url}")
+        logger.info(f"Starting universal extraction for URL: {url}")
         
         # Reset methods tried
         self.methods_tried = []
@@ -273,105 +329,122 @@ class RobustArticleExtractor:
             logger.warning(f"Domain {domain} is circuit-broken. Last error: {last_error}")
             return self._create_user_friendly_error(url, domain, f'Domain temporarily blocked: {last_error}')
         
-        # Build extraction methods in order of preference
-        extraction_methods = []
+        # Get preferred methods for this domain (if any worked before)
+        preferred_methods = self.circuit_breaker.get_preferred_methods(domain)
         
-        # Quick HTTP methods first
-        extraction_methods.append(('enhanced_requests', self._enhanced_requests_extract))
-        extraction_methods.append(('requests_with_session', self._requests_with_session_extract))
-        
-        # Anti-cloudflare methods
-        if self.cloudscraper_session:
-            extraction_methods.append(('cloudscraper', self._cloudscraper_extract))
-        
-        if OPTIONAL_LIBRARIES.get('curl_cffi'):
-            extraction_methods.append(('curl_cffi', self._curl_cffi_extract))
-        
-        # Cookie and header manipulation
-        extraction_methods.append(('cookies_bypass', self._cookies_bypass_extract))
-        extraction_methods.append(('mobile_headers', self._mobile_headers_extract))
-        
-        # Browser automation (most reliable but slower)
-        if OPTIONAL_LIBRARIES.get('undetected_chromedriver'):
-            extraction_methods.append(('undetected_chrome', self._undetected_chrome_extract))
-        
-        if OPTIONAL_LIBRARIES.get('selenium'):
-            extraction_methods.append(('selenium_stealth', self._selenium_stealth_extract))
-        
-        if OPTIONAL_LIBRARIES.get('playwright'):
-            extraction_methods.append(('playwright_stealth', self._playwright_stealth_extract))
-        
-        # Final fallbacks
-        extraction_methods.append(('archive_fallback', self._archive_fallback_extract))
-        extraction_methods.append(('rss_fallback', self._rss_fallback_extract))
+        # Build extraction strategies in escalation order
+        strategies = self._build_escalation_strategies(preferred_methods)
         
         last_error = None
         html_content = None
         
-        # Try each method
-        for method_name, method_func in extraction_methods:
+        # Try each strategy with enhanced error handling
+        for strategy_name, strategy_func in strategies:
             try:
-                logger.info(f"Attempting {method_name} for {url}")
-                self.methods_tried.append(method_name)
+                logger.info(f"Attempting {strategy_name} for {url}")
+                self.methods_tried.append(strategy_name)
                 
-                result = method_func(url)
+                result = strategy_func(url)
                 
-                if result.get('success') and result.get('word_count', 0) > self.min_content_length:
-                    # Success!
-                    self.circuit_breaker.record_success(domain)
-                    
-                    # Store HTML content
-                    if 'html' in result:
-                        html_content = result['html']
-                    
-                    # Add metadata
-                    result['extraction_metadata'] = result.get('extraction_metadata', {})
-                    result['extraction_metadata'].update({
-                        'duration': time.time() - start_time,
-                        'method': method_name,
-                        'methods_tried': self.methods_tried,
-                        'libraries_available': OPTIONAL_LIBRARIES
-                    })
-                    
-                    if html_content:
-                        result['html'] = html_content
-                    
-                    logger.info(f"SUCCESS: Extracted {result.get('word_count', 0)} words using {method_name}")
-                    return result
-                
+                if result.get('success'):
+                    # Validate content quality
+                    if result.get('word_count', 0) > self.min_content_length:
+                        # Success! Record this method for future use
+                        self.circuit_breaker.record_success(domain, strategy_name)
+                        
+                        execution_time = time.time() - start_time
+                        result['extraction_metadata']['execution_time'] = execution_time
+                        result['extraction_metadata']['methods_tried'] = self.methods_tried
+                        result['extraction_metadata']['successful_method'] = strategy_name
+                        
+                        logger.info(f"Successful extraction with {strategy_name} in {execution_time:.2f}s")
+                        return result
+                    else:
+                        logger.warning(f"{strategy_name} returned insufficient content")
                 else:
-                    last_error = result.get('error', f'{method_name} returned insufficient content')
-                    logger.warning(f"{method_name} failed: {last_error}")
+                    last_error = result.get('error', f'{strategy_name} failed')
+                    logger.warning(f"{strategy_name} failed: {last_error}")
                     
+                # Small delay between attempts to be respectful
+                time.sleep(random.uniform(0.5, 1.5))
+                
             except Exception as e:
-                last_error = f"{method_name} exception: {str(e)}"
-                logger.warning(last_error, exc_info=True)
+                last_error = str(e)
+                logger.error(f"{strategy_name} threw exception: {e}")
+                self.circuit_breaker.record_failure(domain, last_error, strategy_name)
+                continue
         
         # All methods failed
-        logger.error(f"All {len(extraction_methods)} extraction methods failed for {url}")
-        self.circuit_breaker.record_failure(domain, last_error)
-        
-        return self._create_user_friendly_error(url, domain, last_error)
+        self.circuit_breaker.record_failure(domain, last_error or 'All strategies failed', 'all')
+        logger.error(f"All extraction strategies failed for {url}")
+        return self._create_user_friendly_error(url, domain, last_error or 'All extraction methods failed')
     
-    def _enhanced_requests_extract(self, url: str) -> Dict[str, Any]:
-        """Enhanced requests with better headers and error handling"""
+    def _build_escalation_strategies(self, preferred_methods: List[str]) -> List[Tuple[str, callable]]:
+        """Build extraction strategies in escalation order, prioritizing known working methods"""
+        
+        all_strategies = []
+        
+        # Level 1: Simple HTTP (fastest, works for ~50% of sites)
+        all_strategies.append(('basic_requests', self._basic_requests_extract))
+        all_strategies.append(('enhanced_headers', self._enhanced_headers_extract))
+        
+        # Level 2: Session and cookie handling (~70% success)
+        all_strategies.append(('session_with_cookies', self._session_with_cookies_extract))
+        all_strategies.append(('social_referer', self._social_referer_extract))
+        all_strategies.append(('search_referer', self._search_referer_extract))
+        
+        # Level 3: Anti-bot libraries (~80% success)
+        if self.cloudscraper_session:
+            all_strategies.append(('cloudscraper', self._cloudscraper_extract))
+        
+        if OPTIONAL_LIBRARIES.get('curl_cffi'):
+            all_strategies.append(('curl_cffi_stealth', self._curl_cffi_stealth_extract))
+        
+        # Level 4: Mobile and header spoofing (~85% success)
+        all_strategies.append(('mobile_headers', self._mobile_headers_extract))
+        all_strategies.append(('consent_cookies', self._consent_cookies_extract))
+        
+        # Level 5: Browser automation (~90% success but slower)
+        if OPTIONAL_LIBRARIES.get('undetected_chromedriver'):
+            all_strategies.append(('undetected_chrome', self._undetected_chrome_extract))
+        
+        if OPTIONAL_LIBRARIES.get('selenium'):
+            all_strategies.append(('selenium_stealth', self._selenium_stealth_extract))
+        
+        if OPTIONAL_LIBRARIES.get('playwright'):
+            all_strategies.append(('playwright_stealth', self._playwright_stealth_extract))
+        
+        # Level 6: Fallback methods
+        all_strategies.append(('archive_fallback', self._archive_fallback_extract))
+        
+        # Prioritize known working methods for this domain
+        if preferred_methods:
+            prioritized = []
+            remaining = []
+            
+            for name, func in all_strategies:
+                if name in preferred_methods:
+                    prioritized.append((name, func))
+                else:
+                    remaining.append((name, func))
+            
+            # Return prioritized methods first, then remaining
+            return prioritized + remaining
+        
+        return all_strategies
+    
+    # EXTRACTION METHODS - Enhanced versions of existing methods
+    
+    def _basic_requests_extract(self, url: str) -> Dict[str, Any]:
+        """Basic requests - fastest method"""
         try:
-            headers = self._get_random_headers(url)
-            
-            # Add delay to seem more human
-            time.sleep(random.uniform(0.5, 2.0))
-            
-            response = self.session.get(
-                url, 
-                headers=headers, 
-                timeout=self.timeout,
-                allow_redirects=True,
-                verify=False  # Skip SSL verification for problematic sites
-            )
+            headers = self._get_enhanced_headers(url)
+            response = requests.get(url, headers=headers, timeout=15, verify=False, allow_redirects=True)
             response.raise_for_status()
             
-            if len(response.content) < 1000:  # Too small, likely blocked
-                return {'success': False, 'error': 'Response too small, likely blocked'}
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content appears to be blocked or invalid'}
             
             return self._parse_content(response.text, url)
             
@@ -380,14 +453,33 @@ class RobustArticleExtractor:
         except requests.exceptions.ConnectionError:
             return {'success': False, 'error': 'Connection failed'}
         except Exception as e:
-            return {'success': False, 'error': f'Enhanced requests failed: {str(e)}'}
+            return {'success': False, 'error': f'Basic requests failed: {str(e)}'}
     
-    def _requests_with_session_extract(self, url: str) -> Dict[str, Any]:
-        """Requests with persistent session and cookie handling"""
+    def _enhanced_headers_extract(self, url: str) -> Dict[str, Any]:
+        """Enhanced headers with stealth techniques"""
         try:
-            # Create fresh session for this attempt
+            headers = self._get_enhanced_headers(url, strategy="stealth")
+            
             session = requests.Session()
-            headers = self._get_random_headers(url)
+            session.headers.update(headers)
+            
+            response = session.get(url, timeout=20, verify=False, allow_redirects=True)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked with enhanced headers'}
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Enhanced headers failed: {str(e)}'}
+    
+    def _session_with_cookies_extract(self, url: str) -> Dict[str, Any]:
+        """Session with persistent cookies and homepage visit"""
+        try:
+            session = requests.Session()
+            headers = self._get_enhanced_headers(url)
             session.headers.update(headers)
             
             # First, visit the homepage to get cookies
@@ -401,13 +493,49 @@ class RobustArticleExtractor:
                 pass  # Continue even if homepage fails
             
             # Now get the actual page
-            response = session.get(url, timeout=self.timeout, verify=False)
+            response = session.get(url, timeout=self.timeout, verify=False, allow_redirects=True)
             response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite session'}
             
             return self._parse_content(response.text, url)
             
         except Exception as e:
-            return {'success': False, 'error': f'Session requests failed: {str(e)}'}
+            return {'success': False, 'error': f'Session extraction failed: {str(e)}'}
+    
+    def _social_referer_extract(self, url: str) -> Dict[str, Any]:
+        """Extract with social media referer"""
+        try:
+            headers = self._get_enhanced_headers(url, strategy="social")
+            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite social referer'}
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Social referer failed: {str(e)}'}
+    
+    def _search_referer_extract(self, url: str) -> Dict[str, Any]:
+        """Extract with search engine referer"""
+        try:
+            headers = self._get_enhanced_headers(url, strategy="search")
+            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite search referer'}
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Search referer failed: {str(e)}'}
     
     def _cloudscraper_extract(self, url: str) -> Dict[str, Any]:
         """CloudScraper for Cloudflare bypass"""
@@ -419,40 +547,65 @@ class RobustArticleExtractor:
             response = self.cloudscraper_session.get(url, timeout=self.timeout)
             response.raise_for_status()
             
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite Cloudscraper'}
+            
             return self._parse_content(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'Cloudscraper failed: {str(e)}'}
     
-    def _curl_cffi_extract(self, url: str) -> Dict[str, Any]:
-        """curl_cffi for TLS fingerprint spoofing"""
+    def _curl_cffi_stealth_extract(self, url: str) -> Dict[str, Any]:
+        """curl_cffi with enhanced stealth"""
         try:
-            headers = self._get_random_headers(url)
+            headers = self._get_enhanced_headers(url, strategy="stealth")
             
             response = curl_requests.get(
                 url,
                 headers=headers,
                 timeout=self.timeout,
-                impersonate="chrome120",  # Latest Chrome impersonation
-                verify=False
+                impersonate="chrome120",
+                verify=False,
+                allow_redirects=True
             )
             response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite curl_cffi stealth'}
             
             return self._parse_content(response.text, url)
             
         except Exception as e:
-            return {'success': False, 'error': f'curl_cffi failed: {str(e)}'}
+            return {'success': False, 'error': f'curl_cffi stealth failed: {str(e)}'}
     
-    def _cookies_bypass_extract(self, url: str) -> Dict[str, Any]:
-        """Try with common consent/bypass cookies"""
+    def _mobile_headers_extract(self, url: str) -> Dict[str, Any]:
+        """Mobile user agent - sites are often less restrictive for mobile"""
+        try:
+            headers = self._get_enhanced_headers(url, strategy="mobile")
+            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite mobile headers'}
+            
+            return self._parse_content(response.text, url)
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Mobile headers failed: {str(e)}'}
+    
+    def _consent_cookies_extract(self, url: str) -> Dict[str, Any]:
+        """Extract with common consent/bypass cookies"""
         try:
             session = requests.Session()
-            headers = self._get_random_headers(url)
+            headers = self._get_enhanced_headers(url)
             session.headers.update(headers)
             
             domain = urlparse(url).netloc
             
-            # Common consent/bypass cookies
+            # Enhanced consent cookies
             bypass_cookies = {
                 'gdpr': '1',
                 'consent': 'yes',
@@ -461,7 +614,11 @@ class RobustArticleExtractor:
                 'cookie_consent': 'accepted',
                 'privacy_consent': 'true',
                 'euconsent-v2': 'accepted',
-                '_sp_enable_dfp_personalized_ads': 'true'
+                '_sp_enable_dfp_personalized_ads': 'true',
+                'cookieConsent': '1',
+                'cookie-agreed': '2',
+                'cookie_notice_accepted': 'true',
+                'cookies-eu-agreed': 'true'
             }
             
             for name, value in bypass_cookies.items():
@@ -471,36 +628,14 @@ class RobustArticleExtractor:
             response = session.get(url, timeout=self.timeout, verify=False)
             response.raise_for_status()
             
-            return self._parse_content(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'Cookies bypass failed: {str(e)}'}
-    
-    def _mobile_headers_extract(self, url: str) -> Dict[str, Any]:
-        """Try with mobile user agent - some sites are less restrictive"""
-        try:
-            mobile_agents = [
-                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
-                'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
-                'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36'
-            ]
-            
-            headers = {
-                'User-Agent': random.choice(mobile_agents),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-            }
-            
-            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
-            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+            if not self._is_valid_content(soup):
+                return {'success': False, 'error': 'Content blocked despite consent cookies'}
             
             return self._parse_content(response.text, url)
             
         except Exception as e:
-            return {'success': False, 'error': f'Mobile headers failed: {str(e)}'}
+            return {'success': False, 'error': f'Consent cookies failed: {str(e)}'}
     
     def _undetected_chrome_extract(self, url: str) -> Dict[str, Any]:
         """Undetected Chrome - most effective for bot detection"""
@@ -517,8 +652,6 @@ class RobustArticleExtractor:
             options.add_argument('--disable-default-apps')
             options.add_argument('--disable-web-security')
             options.add_argument('--disable-features=VizDisplayCompositor')
-            
-            # Run headless
             options.add_argument('--headless=new')
             
             driver = uc.Chrome(options=options)
@@ -527,18 +660,22 @@ class RobustArticleExtractor:
                 driver.set_page_load_timeout(self.browser_timeout)
                 driver.get(url)
                 
-                # Wait for content to load
+                # Wait for content to load with human-like behavior
                 time.sleep(random.uniform(3, 7))
                 
-                # Scroll to trigger lazy loading
+                # Scroll gradually to trigger lazy loading
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
-                time.sleep(1)
+                time.sleep(random.uniform(1, 2))
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight*2/3);")
-                time.sleep(1)
+                time.sleep(random.uniform(1, 2))
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
+                time.sleep(random.uniform(2, 3))
                 
                 html = driver.page_source
+                
+                soup = BeautifulSoup(html, 'html.parser')
+                if not self._is_valid_content(soup):
+                    return {'success': False, 'error': 'Content blocked in undetected Chrome'}
                 
                 return self._parse_content(html, url)
                 
@@ -552,7 +689,7 @@ class RobustArticleExtractor:
             return {'success': False, 'error': f'Undetected Chrome failed: {str(e)}'}
     
     def _selenium_stealth_extract(self, url: str) -> Dict[str, Any]:
-        """Selenium with stealth techniques"""
+        """Enhanced Selenium with comprehensive stealth"""
         try:
             if not OPTIONAL_LIBRARIES.get('selenium'):
                 return {'success': False, 'error': 'Selenium not available'}
@@ -567,24 +704,28 @@ class RobustArticleExtractor:
             options.add_argument('--disable-features=VizDisplayCompositor')
             options.add_argument(f'--user-agent={random.choice(self.user_agents)}')
             
-            # Additional stealth options
+            # Enhanced stealth options
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
+            options.add_experimental_option("prefs", {"profile.managed_default_content_settings.images": 2})
             
             driver = webdriver.Chrome(options=options)
             
             try:
-                # Execute stealth script
+                # Execute comprehensive stealth script
                 driver.execute_script("""
                     Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
                     Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
                     Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+                    Object.defineProperty(navigator, 'permissions', {get: () => undefined});
+                    window.chrome = {runtime: {}};
+                    Object.defineProperty(navigator, 'maxTouchPoints', {get: () => 1});
                 """)
                 
                 driver.set_page_load_timeout(self.browser_timeout)
                 driver.get(url)
                 
-                # Wait and scroll
+                # Wait and scroll with human-like behavior
                 time.sleep(random.uniform(3, 6))
                 
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
@@ -593,6 +734,10 @@ class RobustArticleExtractor:
                 time.sleep(2)
                 
                 html = driver.page_source
+                
+                soup = BeautifulSoup(html, 'html.parser')
+                if not self._is_valid_content(soup):
+                    return {'success': False, 'error': 'Content blocked in Selenium stealth'}
                 
                 return self._parse_content(html, url)
                 
@@ -606,7 +751,7 @@ class RobustArticleExtractor:
             return {'success': False, 'error': f'Selenium stealth failed: {str(e)}'}
     
     def _playwright_stealth_extract(self, url: str) -> Dict[str, Any]:
-        """Playwright with stealth configuration"""
+        """Enhanced Playwright with comprehensive stealth"""
         try:
             if not OPTIONAL_LIBRARIES.get('playwright'):
                 return {'success': False, 'error': 'Playwright not available'}
@@ -626,17 +771,26 @@ class RobustArticleExtractor:
                 
                 context = browser.new_context(
                     viewport={'width': 1920, 'height': 1080},
-                    user_agent=random.choice(self.user_agents)
+                    user_agent=random.choice(self.user_agents),
+                    locale='en-US',
+                    timezone_id='America/New_York'
                 )
                 
-                # Add stealth scripts
+                # Comprehensive stealth scripts
                 context.add_init_script("""
                     Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
                     Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
                     Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+                    Object.defineProperty(navigator, 'permissions', {get: () => undefined});
+                    window.chrome = {runtime: {}};
+                    Object.defineProperty(navigator, 'maxTouchPoints', {get: () => 1});
+                    delete navigator.__proto__.webdriver;
                 """)
                 
                 page = context.new_page()
+                
+                # Handle common popups automatically
+                page.on('dialog', lambda dialog: dialog.accept())
                 
                 try:
                     response = page.goto(url, timeout=self.browser_timeout * 1000, wait_until='domcontentloaded')
@@ -644,8 +798,27 @@ class RobustArticleExtractor:
                     if response and response.status >= 400:
                         return {'success': False, 'error': f'HTTP {response.status}'}
                     
-                    # Wait for content
+                    # Wait for content with human-like behavior
                     page.wait_for_timeout(random.randint(3000, 6000))
+                    
+                    # Handle common overlays
+                    try:
+                        # Close common popup selectors
+                        popup_selectors = [
+                            '[data-testid="close-button"]',
+                            '.close-button',
+                            '.popup-close',
+                            '.modal-close',
+                            '.cookie-banner button'
+                        ]
+                        for selector in popup_selectors:
+                            try:
+                                page.click(selector, timeout=1000)
+                                break
+                            except:
+                                continue
+                    except:
+                        pass
                     
                     # Scroll to load content
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight/2)")
@@ -654,6 +827,10 @@ class RobustArticleExtractor:
                     page.wait_for_timeout(2000)
                     
                     html = page.content()
+                    
+                    soup = BeautifulSoup(html, 'html.parser')
+                    if not self._is_valid_content(soup):
+                        return {'success': False, 'error': 'Content blocked in Playwright stealth'}
                     
                     return self._parse_content(html, url)
                     
@@ -664,80 +841,61 @@ class RobustArticleExtractor:
             return {'success': False, 'error': f'Playwright stealth failed: {str(e)}'}
     
     def _archive_fallback_extract(self, url: str) -> Dict[str, Any]:
-        """Try to get content from archive.org as fallback"""
+        """Enhanced archive.org fallback"""
         try:
-            archive_url = f"http://web.archive.org/web/{url}"
-            headers = self._get_random_headers()
+            archive_urls = [
+                f"http://web.archive.org/web/{url}",
+                f"https://archive.ph/{url}",
+                f"https://webcache.googleusercontent.com/search?q=cache:{url}"
+            ]
             
-            response = requests.get(archive_url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                # Archive.org sometimes wraps content, so we need to extract carefully
-                return self._parse_content(response.text, url)
-            else:
-                return {'success': False, 'error': 'No archive.org version found'}
+            headers = self._get_enhanced_headers()
+            
+            for archive_url in archive_urls:
+                try:
+                    response = requests.get(archive_url, headers=headers, timeout=20)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        if self._is_valid_content(soup):
+                            return self._parse_content(response.text, url)
+                except:
+                    continue
+            
+            return {'success': False, 'error': 'No archived version found'}
                 
         except Exception as e:
             return {'success': False, 'error': f'Archive fallback failed: {str(e)}'}
     
-    def _rss_fallback_extract(self, url: str) -> Dict[str, Any]:
-        """Try to find RSS feed and extract content"""
-        try:
-            domain = urlparse(url).netloc
-            
-            # Common RSS URLs to try
-            rss_urls = [
-                f"https://{domain}/rss",
-                f"https://{domain}/feed",
-                f"https://{domain}/rss.xml",
-                f"https://{domain}/feed.xml",
-                f"https://{domain}/atom.xml",
-            ]
-            
-            headers = self._get_random_headers()
-            
-            for rss_url in rss_urls:
-                try:
-                    response = requests.get(rss_url, headers=headers, timeout=10)
-                    if response.status_code == 200 and 'xml' in response.headers.get('content-type', '').lower():
-                        # Found RSS feed - could extract article summaries
-                        # For now, just indicate we found something
-                        return {'success': False, 'error': 'Found RSS but article extraction from feeds not implemented'}
-                except:
-                    continue
-            
-            return {'success': False, 'error': 'No RSS feeds found'}
-            
-        except Exception as e:
-            return {'success': False, 'error': f'RSS fallback failed: {str(e)}'}
+    # CONTENT PARSING METHODS
     
     def _parse_content(self, html: str, url: str = None) -> Dict[str, Any]:
-        """Robust content parsing with multiple extraction strategies"""
+        """Enhanced content parsing with multiple extraction strategies"""
         try:
             if not html or len(html) < 100:
                 return {'success': False, 'error': 'HTML content too short'}
             
             soup = BeautifulSoup(html, 'html.parser')
             
-            # Remove unwanted elements that interfere with extraction
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header', 'advertisement']):
                 element.decompose()
             
             # Extract content using multiple strategies
-            content, extraction_metadata = self._extract_article_content_robust(soup, url)
+            content, extraction_metadata = self._extract_article_content_universal(soup, url)
             
             if not content or len(content.strip()) < self.min_content_length:
                 return {'success': False, 'error': 'Could not extract sufficient article content'}
             
             # Extract metadata
-            title = self._extract_title_robust(soup) or 'Untitled Article'
-            author = self._extract_author_robust(soup)
-            publish_date = self._extract_date_robust(soup)
-            description = self._extract_description_robust(soup)
-            image = self._extract_image_robust(soup, url) if url else None
-            keywords = self._extract_keywords_robust(soup)
+            title = self._extract_title_universal(soup) or 'Untitled Article'
+            author = self._extract_author_universal(soup)
+            publish_date = self._extract_date_universal(soup)
+            description = self._extract_description_universal(soup)
+            image = self._extract_image_universal(soup, url) if url else None
+            keywords = self._extract_keywords_universal(soup)
             
             # Clean and validate content
-            content = self._clean_content_robust(content)
+            content = self._clean_content_universal(content)
             word_count = len(content.split())
             
             if word_count < self.min_content_length:
@@ -764,8 +922,8 @@ class RobustArticleExtractor:
             logger.error(f"Content parsing failed: {e}", exc_info=True)
             return {'success': False, 'error': f'Content parsing error: {str(e)}'}
     
-    def _extract_article_content_robust(self, soup: BeautifulSoup, url: str = None) -> Tuple[Optional[str], Dict[str, Any]]:
-        """Robust content extraction with multiple strategies"""
+    def _extract_article_content_universal(self, soup: BeautifulSoup, url: str = None) -> Tuple[Optional[str], Dict[str, Any]]:
+        """Universal content extraction with comprehensive strategies"""
         metadata = {'extraction_method': 'unknown', 'content_indicators': [], 'issues': []}
         
         # Strategy 1: Structured data (JSON-LD)
@@ -792,273 +950,227 @@ class RobustArticleExtractor:
             metadata['extraction_method'] = 'paragraph_density'
             return content, metadata
         
-        # Strategy 5: Fallback - all paragraphs
-        content = self._extract_all_paragraphs(soup)
+        # Strategy 5: Content scoring
+        content = self._extract_by_content_scoring(soup)
         if content and len(content.strip()) > self.min_content_length:
-            metadata['extraction_method'] = 'all_paragraphs'
+            metadata['extraction_method'] = 'content_scoring'
             return content, metadata
         
+        # Strategy 6: Fallback to all paragraphs
+        content = self._extract_all_paragraphs_filtered(soup)
+        if content and len(content.strip()) > self.min_content_length:
+            metadata['extraction_method'] = 'filtered_paragraphs'
+            return content, metadata
+        
+        metadata['extraction_method'] = 'failed'
         return None, metadata
     
     def _extract_from_structured_data(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract content from JSON-LD structured data"""
+        """Extract from JSON-LD structured data"""
         try:
-            scripts = soup.find_all('script', {'type': 'application/ld+json'})
+            scripts = soup.find_all('script', type='application/ld+json')
             for script in scripts:
-                if script.string:
-                    try:
-                        data = json.loads(script.string)
-                        content = self._extract_content_from_json_ld(data)
-                        if content:
+                try:
+                    data = json.loads(script.string)
+                    if isinstance(data, list):
+                        data = data[0]
+                    
+                    # Look for article content
+                    if data.get('@type') in ['Article', 'NewsArticle', 'BlogPosting']:
+                        content = data.get('articleBody') or data.get('text')
+                        if content and len(content.strip()) > 100:
                             return content
-                    except json.JSONDecodeError:
-                        continue
-        except Exception as e:
-            logger.debug(f"Structured data extraction failed: {e}")
-        
-        return None
-    
-    def _extract_content_from_json_ld(self, data: Any) -> Optional[str]:
-        """Recursively extract article content from JSON-LD"""
-        if isinstance(data, dict):
-            # Look for articleBody or text content
-            for field in ['articleBody', 'text', 'description', 'mainEntity']:
-                if field in data and isinstance(data[field], str) and len(data[field]) > 100:
-                    return data[field]
-            
-            # Check nested structures
-            for key, value in data.items():
-                if isinstance(value, (dict, list)):
-                    content = self._extract_content_from_json_ld(value)
-                    if content:
-                        return content
-                        
-        elif isinstance(data, list):
-            for item in data:
-                content = self._extract_content_from_json_ld(item)
-                if content:
-                    return content
-        
+                except:
+                    continue
+        except:
+            pass
         return None
     
     def _extract_from_article_tags(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract from article HTML5 tags"""
-        article_tags = soup.find_all('article')
-        for article in article_tags:
-            paragraphs = article.find_all('p')
-            if len(paragraphs) >= self.min_paragraphs:
-                content_parts = []
-                for p in paragraphs:
-                    text = p.get_text(strip=True)
-                    if len(text.split()) >= self.min_words_per_paragraph:
-                        content_parts.append(text)
-                
-                if content_parts:
-                    return '\n\n'.join(content_parts)
-        
+        """Extract from HTML5 article tags"""
+        try:
+            articles = soup.find_all('article')
+            for article in articles:
+                paragraphs = article.find_all('p')
+                if len(paragraphs) >= self.min_paragraphs:
+                    content = '\n\n'.join(
+                        p.get_text(strip=True) for p in paragraphs 
+                        if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph
+                    )
+                    if len(content.strip()) > 100:
+                        return content
+        except:
+            pass
         return None
     
     def _extract_from_main_containers(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract from common content container selectors"""
+        """Extract from common main content containers"""
         selectors = [
-            {'class': re.compile(r'article[-_]?body|story[-_]?body|content[-_]?body|post[-_]?content', re.I)},
-            {'class': re.compile(r'entry[-_]?content|main[-_]?content', re.I)},
-            {'id': re.compile(r'article|story|content|main', re.I)},
-            {'role': 'main'},
-            'main'
+            'main', '[role="main"]', '.article-body', '.story-body', '.content', 
+            '.post-content', '.entry-content', '.article-content', '.main-content',
+            '#content', '#main-content', '.article-text', '.story-text'
         ]
         
         for selector in selectors:
-            if isinstance(selector, str):
-                elements = soup.find_all(selector)
-            else:
-                elements = soup.find_all('div', selector)
-                if not elements:
-                    elements = soup.find_all(['main', 'section', 'article'], selector)
-            
-            for element in elements:
-                paragraphs = element.find_all('p')
-                if len(paragraphs) >= self.min_paragraphs:
-                    content_parts = []
-                    for p in paragraphs:
-                        text = p.get_text(strip=True)
-                        if len(text.split()) >= self.min_words_per_paragraph:
-                            content_parts.append(text)
-                    
-                    if len(content_parts) >= self.min_paragraphs:
-                        return '\n\n'.join(content_parts)
+            try:
+                element = soup.select_one(selector)
+                if element:
+                    paragraphs = element.find_all('p')
+                    if len(paragraphs) >= self.min_paragraphs:
+                        content = '\n\n'.join(
+                            p.get_text(strip=True) for p in paragraphs 
+                            if len(p.get_text(strip=True).split()) >= self.min_words_per_paragraph
+                        )
+                        if len(content.strip()) > 100:
+                            return content
+            except:
+                continue
         
         return None
     
     def _extract_by_paragraph_density(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract by finding areas with high paragraph density"""
-        all_elements = soup.find_all(['div', 'section', 'article'])
-        
-        best_element = None
-        best_score = 0
-        
-        for element in all_elements:
-            paragraphs = element.find_all('p', recursive=False)  # Direct children only
-            if len(paragraphs) < self.min_paragraphs:
-                continue
+        try:
+            all_paragraphs = soup.find_all('p')
+            if len(all_paragraphs) < self.min_paragraphs:
+                return None
             
-            # Score based on paragraph count and average length
-            total_words = sum(len(p.get_text(strip=True).split()) for p in paragraphs)
-            avg_words = total_words / len(paragraphs) if paragraphs else 0
-            
-            # Good content has moderate paragraph count and reasonable word count
-            score = len(paragraphs) * min(avg_words / 20, 1.0)  # Cap at 20 words avg
-            
-            if score > best_score:
-                best_score = score
-                best_element = element
-        
-        if best_element:
-            paragraphs = best_element.find_all('p')
-            content_parts = []
-            for p in paragraphs:
+            # Score paragraphs by their content quality
+            scored_paragraphs = []
+            for p in all_paragraphs:
                 text = p.get_text(strip=True)
                 if len(text.split()) >= self.min_words_per_paragraph:
-                    content_parts.append(text)
+                    score = len(text.split())  # Basic scoring by word count
+                    scored_paragraphs.append((score, text))
             
-            if len(content_parts) >= self.min_paragraphs:
-                return '\n\n'.join(content_parts)
-        
+            # Take the top paragraphs
+            scored_paragraphs.sort(reverse=True)
+            top_paragraphs = scored_paragraphs[:min(20, len(scored_paragraphs))]
+            
+            if len(top_paragraphs) >= self.min_paragraphs:
+                content = '\n\n'.join(p[1] for p in top_paragraphs)
+                return content
+                
+        except:
+            pass
         return None
     
-    def _extract_all_paragraphs(self, soup: BeautifulSoup) -> Optional[str]:
-        """Fallback: extract all reasonable paragraphs"""
-        all_paragraphs = soup.find_all('p')
-        content_parts = []
-        
-        for p in all_paragraphs:
-            text = p.get_text(strip=True)
-            # Skip very short paragraphs and navigation/menu text
-            if (len(text.split()) >= self.min_words_per_paragraph and 
-                not re.match(r'^(home|about|contact|menu|search|login)', text.lower())):
-                content_parts.append(text)
-        
-        if len(content_parts) >= self.min_paragraphs:
-            return '\n\n'.join(content_parts)
-        
+    def _extract_by_content_scoring(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract by scoring content blocks"""
+        try:
+            # Find all text-containing elements
+            text_elements = soup.find_all(['p', 'div', 'section'])
+            
+            scored_elements = []
+            for element in text_elements:
+                text = element.get_text(strip=True)
+                if len(text.split()) >= 10:  # Minimum viable content
+                    # Score based on text length and structure
+                    score = len(text.split())
+                    
+                    # Bonus for article-like classes
+                    classes = ' '.join(element.get('class', []))
+                    if any(indicator in classes.lower() for indicator in ['article', 'content', 'story', 'post']):
+                        score *= 1.5
+                    
+                    scored_elements.append((score, text))
+            
+            if scored_elements:
+                scored_elements.sort(reverse=True)
+                # Take top elements that form a coherent article
+                top_content = []
+                total_words = 0
+                
+                for score, text in scored_elements:
+                    if total_words + len(text.split()) < 2000:  # Don't exceed reasonable length
+                        top_content.append(text)
+                        total_words += len(text.split())
+                    if len(top_content) >= 10 or total_words > 500:
+                        break
+                
+                if len(top_content) >= 2:
+                    return '\n\n'.join(top_content)
+                    
+        except:
+            pass
         return None
     
-    def _extract_title_robust(self, soup: BeautifulSoup) -> Optional[str]:
-        """Robust title extraction"""
+    def _extract_all_paragraphs_filtered(self, soup: BeautifulSoup) -> Optional[str]:
+        """Fallback: extract all paragraphs with filtering"""
+        try:
+            all_paragraphs = soup.find_all('p')
+            valid_paragraphs = []
+            
+            for p in all_paragraphs:
+                text = p.get_text(strip=True)
+                words = text.split()
+                
+                # Filter out likely navigation, ads, etc.
+                if (len(words) >= 10 and 
+                    not any(skip in text.lower() for skip in ['cookie', 'subscribe', 'advertisement', 'click here', 'read more']) and
+                    len(text) < 1000):  # Not too long (likely not spam)
+                    
+                    valid_paragraphs.append(text)
+            
+            if len(valid_paragraphs) >= 2:
+                return '\n\n'.join(valid_paragraphs[:15])  # Limit to first 15 good paragraphs
+                
+        except:
+            pass
+        return None
+    
+    def _extract_title_universal(self, soup: BeautifulSoup) -> Optional[str]:
+        """Universal title extraction"""
         strategies = [
             lambda: soup.find('meta', property='og:title')['content'],
             lambda: soup.find('meta', {'name': 'twitter:title'})['content'],
             lambda: soup.find('h1').get_text(strip=True),
-            lambda: soup.find('title').get_text(strip=True).split('|')[0].split('-')[0].strip(),
-            lambda: soup.find('meta', property='article:title')['content'],
+            lambda: soup.find('title').get_text(strip=True),
+            lambda: soup.select_one('.article-title, .post-title, .story-title').get_text(strip=True)
         ]
         
         for strategy in strategies:
             try:
                 title = strategy()
                 if title and len(title.strip()) > 3:
-                    return title.strip()
+                    # Clean title
+                    title = re.sub(r'\s+', ' ', title.strip())
+                    if len(title) < 200:  # Reasonable title length
+                        return title
             except:
                 continue
         
         return None
     
-    def _extract_author_robust(self, soup: BeautifulSoup) -> Optional[str]:
-        """Robust author extraction"""
-        # Try JSON-LD first
-        try:
-            scripts = soup.find_all('script', {'type': 'application/ld+json'})
-            for script in scripts:
-                if script.string:
-                    try:
-                        data = json.loads(script.string)
-                        author = self._extract_author_from_json_ld(data)
-                        if author:
-                            return author
-                    except:
-                        continue
-        except:
-            pass
-        
-        # Meta tags
-        meta_selectors = [
-            {'name': 'author'},
-            {'property': 'article:author'},
-            {'name': 'byl'},
-            {'name': 'citation_author'},
+    def _extract_author_universal(self, soup: BeautifulSoup) -> Optional[str]:
+        """Universal author extraction"""
+        strategies = [
+            lambda: soup.find('meta', {'name': 'author'})['content'],
+            lambda: soup.find('meta', property='article:author')['content'],
+            lambda: soup.select_one('.author, .byline, [rel="author"]').get_text(strip=True),
+            lambda: soup.find('span', class_=re.compile(r'author', re.I)).get_text(strip=True)
         ]
         
-        for selector in meta_selectors:
+        for strategy in strategies:
             try:
-                meta = soup.find('meta', selector)
-                if meta and meta.get('content'):
-                    author = self._clean_author_name(meta['content'])
-                    if author:
-                        return author
-            except:
-                continue
-        
-        # Byline elements
-        byline_selectors = [
-            {'class': re.compile(r'byline|author|writer', re.I)},
-            {'itemprop': 'author'},
-        ]
-        
-        for selector in byline_selectors:
-            try:
-                elem = soup.find(['span', 'div', 'p', 'a'], selector)
-                if elem:
-                    author = self._clean_author_name(elem.get_text(strip=True))
-                    if author:
+                author = strategy()
+                if author and len(author.strip()) > 2:
+                    author = re.sub(r'^[Bb]y\s+', '', author.strip())
+                    author = re.sub(r'\s+', ' ', author)
+                    if len(author) < 100 and re.match(r"^[A-Za-z\s\-'.]+$", author):
                         return author
             except:
                 continue
         
         return None
     
-    def _extract_author_from_json_ld(self, data: Any) -> Optional[str]:
-        """Extract author from JSON-LD data"""
-        if isinstance(data, dict):
-            if 'author' in data:
-                author_data = data['author']
-                if isinstance(author_data, str):
-                    return self._clean_author_name(author_data)
-                elif isinstance(author_data, dict) and 'name' in author_data:
-                    return self._clean_author_name(author_data['name'])
-                elif isinstance(author_data, list) and author_data:
-                    first_author = author_data[0]
-                    if isinstance(first_author, str):
-                        return self._clean_author_name(first_author)
-                    elif isinstance(first_author, dict) and 'name' in first_author:
-                        return self._clean_author_name(first_author['name'])
-        
-        return None
-    
-    def _clean_author_name(self, author: str) -> Optional[str]:
-        """Clean author name"""
-        if not author:
-            return None
-        
-        # Remove common prefixes and suffixes
-        author = re.sub(r'^(By|by|BY|Written by|Author:)\s+', '', author)
-        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist).*$', '', author, flags=re.I)
-        author = re.sub(r'\s+', ' ', author).strip()
-        
-        # Validate
-        if (len(author) > 2 and len(author) < 100 and 
-            len(author.split()) <= 5 and
-            re.match(r"^[A-Za-z\s\-'.]+$", author)):
-            return author
-        
-        return None
-    
-    def _extract_date_robust(self, soup: BeautifulSoup) -> Optional[str]:
-        """Robust date extraction"""
+    def _extract_date_universal(self, soup: BeautifulSoup) -> Optional[str]:
+        """Universal date extraction"""
         strategies = [
             lambda: soup.find('meta', property='article:published_time')['content'],
             lambda: soup.find('meta', {'name': 'publish_date'})['content'],
             lambda: soup.find('time')['datetime'],
-            lambda: soup.find('meta', property='article:modified_time')['content'],
+            lambda: soup.find('time').get_text(strip=True),
         ]
         
         for strategy in strategies:
@@ -1071,8 +1183,8 @@ class RobustArticleExtractor:
         
         return None
     
-    def _extract_description_robust(self, soup: BeautifulSoup) -> Optional[str]:
-        """Robust description extraction"""
+    def _extract_description_universal(self, soup: BeautifulSoup) -> Optional[str]:
+        """Universal description extraction"""
         strategies = [
             lambda: soup.find('meta', property='og:description')['content'],
             lambda: soup.find('meta', {'name': 'description'})['content'],
@@ -1089,8 +1201,8 @@ class RobustArticleExtractor:
         
         return None
     
-    def _extract_image_robust(self, soup: BeautifulSoup, base_url: str) -> Optional[str]:
-        """Robust image extraction"""
+    def _extract_image_universal(self, soup: BeautifulSoup, base_url: str) -> Optional[str]:
+        """Universal image extraction"""
         strategies = [
             lambda: soup.find('meta', property='og:image')['content'],
             lambda: soup.find('meta', {'name': 'twitter:image'})['content'],
@@ -1106,8 +1218,8 @@ class RobustArticleExtractor:
         
         return None
     
-    def _extract_keywords_robust(self, soup: BeautifulSoup) -> List[str]:
-        """Robust keywords extraction"""
+    def _extract_keywords_universal(self, soup: BeautifulSoup) -> List[str]:
+        """Universal keywords extraction"""
         try:
             keywords_tag = soup.find('meta', {'name': 'keywords'})
             if keywords_tag and keywords_tag.get('content'):
@@ -1118,8 +1230,8 @@ class RobustArticleExtractor:
         
         return []
     
-    def _clean_content_robust(self, content: str) -> str:
-        """Robust content cleaning"""
+    def _clean_content_universal(self, content: str) -> str:
+        """Universal content cleaning"""
         if not content:
             return ""
         
@@ -1128,15 +1240,22 @@ class RobustArticleExtractor:
         content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)
         
         # Remove common artifacts
-        content = re.sub(r'Share this article.*?(\n|$)', '', content, flags=re.I)
-        content = re.sub(r'Read more:.*?(\n|$)', '', content, flags=re.I)
-        content = re.sub(r'Subscribe.*?(\n|$)', '', content, flags=re.I)
-        content = re.sub(r'Advertisement\s*', '', content, flags=re.I)
+        artifacts = [
+            r'Share this article.*?(\n|$)',
+            r'Read more:.*?(\n|$)', 
+            r'Subscribe.*?(\n|$)',
+            r'Advertisement\s*',
+            r'Click here.*?(\n|$)',
+            r'Continue reading.*?(\n|$)'
+        ]
+        
+        for artifact in artifacts:
+            content = re.sub(artifact, '', content, flags=re.I)
         
         return content.strip()
     
     def _create_user_friendly_error(self, url: str, domain: str, last_error: str) -> Dict[str, Any]:
-        """Create user-friendly error message"""
+        """Create user-friendly error message with actionable suggestions"""
         methods_summary = f"Tried {len(self.methods_tried)} extraction methods: {', '.join(self.methods_tried)}"
         
         user_message = (
@@ -1193,81 +1312,159 @@ class RobustArticleExtractor:
 
 # Main ArticleExtractor class that inherits from BaseAnalyzer
 class ArticleExtractor(BaseAnalyzer):
-    """Article extraction service with robust anti-bot capabilities"""
+    """Article extraction service with universal scraper capabilities"""
     
     def __init__(self):
         super().__init__('article_extractor')
         
         logger.info("=" * 60)
-        logger.info("RobustArticleExtractor.__init__() STARTING")
+        logger.info("UniversalScraper ArticleExtractor.__init__() STARTING")
         logger.info(f"Service name: {self.service_name}")
         logger.info(f"Available libraries: {OPTIONAL_LIBRARIES}")
         logger.info("=" * 60)
         
-        # Initialize _extractor first
+        # Initialize universal scraper
         self._extractor = None
         
         try:
-            self._extractor = RobustArticleExtractor()
-            logger.info("RobustArticleExtractor initialized successfully")
+            self._extractor = UniversalScraper()
+            logger.info("UniversalScraper initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize RobustArticleExtractor: {e}", exc_info=True)
+            logger.error(f"Failed to initialize UniversalScraper: {e}")
             self._extractor = None
-        
-        # Now check availability
-        self.is_available = self._check_availability()
-        logger.info(f"ArticleExtractor initialization complete: is_available={self.is_available}")
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Main analysis method using universal scraper"""
         logger.info("=" * 60)
-    
-    def _check_availability(self) -> bool:
-        """Check if service is available"""
-        # Always return True - we have fallback methods even if advanced libraries fail
-        return True
-    
-    def get_error_result(self, error_message: str) -> Dict[str, Any]:
-        """Standardized error response"""
-        return {
-            'service': self.service_name,
-            'success': False,
-            'available': self.is_available,
-            'error': error_message,
-            'timestamp': time.time()
-        }
-    
-    def get_timeout_result(self) -> Dict[str, Any]:
-        """Standardized timeout response"""
-        return {
-            'service': self.service_name,
-            'success': False,
-            'available': self.is_available,
-            'error': 'Service timeout',
-            'timestamp': time.time()
-        }
-    
-    def _basic_extraction_fallback(self, url: str) -> Dict[str, Any]:
-        """Basic extraction using only standard libraries as absolute fallback"""
+        logger.info("UniversalScraper ArticleExtractor.analyze() CALLED")
+        logger.info("=" * 60)
+        
         try:
-            import urllib.request
-            import urllib.error
+            # Handle input formats
+            url = None
+            text = None
             
-            # Create request with basic headers
-            req = urllib.request.Request(
-                url,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+            if 'url' in data:
+                url = data['url']
+            elif 'text' in data:
+                text = data['text']
+            elif 'content' in data and 'content_type' in data:
+                if data['content_type'] == 'url':
+                    url = data['content']
+                else:
+                    text = data['content']
+            else:
+                return self.get_error_result("Invalid input format")
+            
+            # Extract content
+            if url:
+                logger.info(f"Extracting from URL with Universal Scraper: {url}")
+                
+                result = None
+                if self._extractor:
+                    try:
+                        result = self._extractor.extract_from_url(url)
+                    except Exception as e:
+                        logger.warning(f"Universal scraper failed: {e}")
+                        result = None
+                
+                # Fallback to basic extraction if universal scraper failed
+                if not result or not result.get('success'):
+                    logger.warning("Universal scraper failed, trying basic fallback")
+                    try:
+                        result = self._basic_fallback_extract(url)
+                    except Exception as e:
+                        logger.error(f"Basic fallback also failed: {e}")
+                        result = {'success': False, 'error': f'All extraction methods failed: {str(e)}'}
+                
+                if result and result.get('success'):
+                    return {
+                        'success': True,
+                        'service': self.service_name,
+                        'timestamp': datetime.now().isoformat(),
+                        'data': {
+                            'title': result.get('title'),
+                            'text': result.get('text'),
+                            'author': result.get('author'),
+                            'publish_date': result.get('publish_date'),
+                            'url': result.get('url', url),
+                            'domain': result.get('domain'),
+                            'description': result.get('description'),
+                            'image': result.get('image'),
+                            'keywords': result.get('keywords', []),
+                            'word_count': result.get('word_count', 0),
+                            'extraction_metadata': result.get('extraction_metadata', {}),
+                            'extracted_at': result.get('extracted_at'),
+                            'html': result.get('html')  # For other analyzers
+                        },
+                        'metadata': {
+                            'extraction_method': result.get('extraction_metadata', {}).get('successful_method', 'unknown'),
+                            'methods_tried': result.get('extraction_metadata', {}).get('methods_tried', []),
+                            'execution_time': result.get('extraction_metadata', {}).get('execution_time', 0),
+                            'libraries_available': OPTIONAL_LIBRARIES,
+                            'universal_scraper_available': self._extractor is not None
+                        }
+                    }
+                else:
+                    error_msg = result.get('error', 'Universal extraction failed') if result else 'No extraction result'
+                    return self.get_error_result(error_msg)
+                
+            elif text:
+                logger.info("Analyzing raw text input")
+                result = self._extractor.extract_from_text(text) if self._extractor else None
+                
+                if not result:
+                    # Simple text analysis fallback
+                    lines = text.strip().split('\n')
+                    title = lines[0][:100] if lines else 'Text Analysis'
+                    word_count = len(text.split())
+                    
+                    result = {
+                        'success': True,
+                        'title': title,
+                        'text': text,
+                        'word_count': word_count,
+                        'extraction_metadata': {'method': 'simple_text_analysis'}
+                    }
+                
+                return {
+                    'success': True,
+                    'service': self.service_name,
+                    'timestamp': datetime.now().isoformat(),
+                    'data': result,
+                    'metadata': {
+                        'extraction_method': 'text_input',
+                        'universal_scraper_available': self._extractor is not None
+                    }
                 }
-            )
             
-            # Get the page
-            with urllib.request.urlopen(req, timeout=30) as response:
-                html = response.read().decode('utf-8', errors='ignore')
+        except Exception as e:
+            logger.error(f"UniversalScraper ArticleExtractor.analyze failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
+    
+    def _basic_fallback_extract(self, url: str) -> Dict[str, Any]:
+        """Basic fallback extraction when universal scraper fails"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+            }
             
-            # Parse with BeautifulSoup
-            soup = BeautifulSoup(html, 'html.parser')
+            response = requests.get(url, headers=headers, timeout=15, verify=False)
+            response.raise_for_status()
             
-            # Extract title
-            title = soup.find('title')
-            title = title.get_text(strip=True) if title else 'Untitled'
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
+                element.decompose()
+            
+            # Extract basic title
+            title_elem = soup.find('title') or soup.find('h1')
+            title = title_elem.get_text(strip=True) if title_elem else 'Untitled'
             
             # Extract content - try multiple strategies
             content = None
@@ -1331,7 +1528,7 @@ class ArticleExtractor(BaseAnalyzer):
                     'libraries_available': OPTIONAL_LIBRARIES
                 },
                 'extracted_at': datetime.now().isoformat(),
-                'html': html
+                'html': response.text
             }
             
         except Exception as e:
@@ -1341,134 +1538,32 @@ class ArticleExtractor(BaseAnalyzer):
                 'error': f'Basic extraction failed: {str(e)}'
             }
     
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Main analysis method"""
-        logger.info("=" * 60)
-        logger.info("RobustArticleExtractor.analyze() CALLED")
-        logger.info("=" * 60)
-        
-        try:
-            # Handle input formats
-            url = None
-            text = None
-            
-            if 'url' in data:
-                url = data['url']
-            elif 'text' in data:
-                text = data['text']
-            elif 'content' in data and 'content_type' in data:
-                if data['content_type'] == 'url':
-                    url = data['content']
-                else:
-                    text = data['content']
-            else:
-                return self.get_error_result("Invalid input format")
-            
-            # Extract content
-            if url:
-                logger.info(f"Extracting from URL: {url}")
-                
-                # Try robust extractor first
-                result = None
-                if self._extractor:
-                    try:
-                        result = self._extractor.extract_from_url(url)
-                    except Exception as e:
-                        logger.warning(f"Robust extractor failed: {e}")
-                        result = None
-                
-                # Fallback to basic extraction if robust failed
-                if not result or not result.get('success'):
-                    logger.info("Using basic extraction fallback")
-                    result = self._basic_extraction_fallback(url)
-                
-            elif text:
-                logger.info(f"Processing text input, length: {len(text)}")
-                
-                # Try robust extractor first
-                result = None
-                if self._extractor:
-                    try:
-                        result = self._extractor.extract_from_text(text)
-                    except Exception as e:
-                        logger.warning(f"Robust text processor failed: {e}")
-                        result = None
-                
-                # Fallback to basic text processing
-                if not result or not result.get('success'):
-                    lines = text.strip().split('\n')
-                    title = lines[0][:100] if lines else 'Text Analysis'
-                    word_count = len(text.split())
-                    
-                    result = {
-                        'success': True,
-                        'title': title,
-                        'text': text,
-                        'author': None,
-                        'publish_date': None,
-                        'url': None,
-                        'domain': 'text-input',
-                        'word_count': word_count,
-                        'extraction_metadata': {'method': 'basic_text_analysis'}
-                    }
-            else:
-                return self.get_error_result("No URL or text provided")
-            
-            # Return standardized response
-            if result and result.get('success'):
-                return {
-                    'service': self.service_name,
-                    'success': True,
-                    'data': {
-                        'title': result.get('title', 'Untitled'),
-                        'text': result.get('text', ''),
-                        'author': result.get('author'),
-                        'publish_date': result.get('publish_date'),
-                        'url': result.get('url', url),
-                        'domain': result.get('domain'),
-                        'description': result.get('description'),
-                        'image': result.get('image'),
-                        'keywords': result.get('keywords', []),
-                        'word_count': result.get('word_count', 0),
-                        'extraction_metadata': result.get('extraction_metadata', {}),
-                        'extracted_at': result.get('extracted_at'),
-                        'html': result.get('html')  # For other analyzers
-                    },
-                    'metadata': {
-                        'extraction_method': result.get('extraction_metadata', {}).get('method', 'unknown'),
-                        'methods_tried': result.get('extraction_metadata', {}).get('methods_tried', []),
-                        'libraries_available': OPTIONAL_LIBRARIES,
-                        'robust_extractor_available': self._extractor is not None
-                    }
-                }
-            else:
-                error_msg = result.get('error', 'Extraction failed') if result else 'No extraction result'
-                return self.get_error_result(error_msg)
-                
-        except Exception as e:
-            logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
     def get_service_info(self) -> Dict[str, Any]:
         """Get service information"""
         info = super().get_service_info()
         info.update({
-            'extraction_methods': [
-                'enhanced_requests',
-                'requests_with_session', 
+            'extraction_strategies': [
+                'basic_requests',
+                'enhanced_headers',
+                'session_with_cookies',
+                'social_referer',
+                'search_referer',
                 'cloudscraper',
-                'curl_cffi',
-                'cookies_bypass',
+                'curl_cffi_stealth',
                 'mobile_headers',
+                'consent_cookies',
                 'undetected_chrome',
                 'selenium_stealth',
                 'playwright_stealth',
-                'archive_fallback',
-                'rss_fallback'
+                'archive_fallback'
             ],
             'libraries_available': OPTIONAL_LIBRARIES,
             'supports_anti_bot_bypass': True,
+            'supports_progressive_escalation': True,
+            'supports_universal_scraping': True,
             'supports_live_news': True,
-            'supports_text_input': True
+            'supports_text_input': True,
+            'circuit_breaker_enabled': True,
+            'success_rate_optimization': True
         })
         return info
