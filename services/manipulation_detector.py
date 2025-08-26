@@ -283,30 +283,30 @@ class ManipulationDetector(BaseAnalyzer):
         for pattern_name, pattern_info in self.manipulation_patterns.items():
             if 'keywords' in pattern_info:
                 # Check keywords
-                count = sum(1 for keyword in pattern_info['keywords'] 
+                count = sum(1 for keyword in pattern_info.get('keywords', []) 
                            if keyword in text_lower)
                 if count > 0:
                     tactics.append({
                         'type': pattern_name,
-                        'name': pattern_info['name'],
-                        'severity': pattern_info['severity'],
-                        'description': pattern_info['description'],
+                        'name': pattern_info.get('name', pattern_name),
+                        'severity': pattern_info.get('severity', 'medium'),
+                        'description': pattern_info.get('description', ''),
                         'instances': count
                     })
             
             if 'patterns' in pattern_info:
                 # Check regex patterns
                 count = 0
-                for pattern in pattern_info['patterns']:
+                for pattern in pattern_info.get('patterns', []):
                     matches = re.findall(pattern, text, re.IGNORECASE)
                     count += len(matches)
                 
                 if count > 0:
                     tactics.append({
                         'type': pattern_name,
-                        'name': pattern_info['name'],
-                        'severity': pattern_info['severity'],
-                        'description': pattern_info['description'],
+                        'name': pattern_info.get('name', pattern_name),
+                        'severity': pattern_info.get('severity', 'medium'),
+                        'description': pattern_info.get('description', ''),
                         'instances': count
                     })
         
