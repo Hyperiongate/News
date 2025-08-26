@@ -1,7 +1,7 @@
 """
-Enhanced Author Analyzer Service - AI ENHANCED VERSION
-Analyzes article authors and their credibility by following bio links with AI insights
-FIXED: Proper null handling and AI parameter matching
+Enhanced Author Analyzer Service - FIXED VERSION
+Analyzes article authors and their credibility by following bio links
+FIXED: Removed AI enhancement bugs and import issues
 """
 import re
 import logging
@@ -11,86 +11,379 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from .base_analyzer import BaseAnalyzer
-from .ai_enhancement_mixin import AIEnhancementMixin
-from config import Config
+from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
 
 
-class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
-    """Enhanced author analysis service that follows bio links WITH AI ENHANCEMENT"""
+class AuthorAnalyzer(BaseAnalyzer):
+    """Enhanced author analysis service that follows bio links - FIXED VERSION"""
     
     def __init__(self):
         super().__init__('author_analyzer')
-        AIEnhancementMixin.__init__(self)
-        logger.info(f"AuthorAnalyzer initialized with AI enhancement: {self._ai_available}")
+        logger.info("AuthorAnalyzer initialized")
         
     def _check_availability(self) -> bool:
         """Check if service is available"""
-        # Service is always available as it doesn't require external APIs
-        return Config.is_service_enabled(self.service_name)
+        return True  # Always available, doesn't require external APIs
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze author credibility and information - FIXED VERSION
+        FIXED: Improved author extraction and removed AI enhancement bugs
+        
+        Expected input:
+            - text: Article text
+            - title: Article title
+            - url: Article URL (optional)
+            - html: Article HTML (optional)
+            
+        Returns:
+            Standardized response with author analysis
+        """
+        try:
+            text = data.get('text', '')
+            title = data.get('title', '')
+            
+            if not text and not title:
+                return self.get_error_result("No text or title provided for author analysis")
+            
+            logger.info(f"Analyzing author information for article: {title[:50] if title else 'No title'}...")
+            
+            # Extract author name from multiple sources
+            author_name = self._extract_author_name(data)
+            
+            if not author_name:
+                logger.info("No author name found in article")
+                return {
+                    'service': self.service_name,
+                    'success': True,
+                    'data': {
+                        'score': 0,
+                        'level': 'Unknown',
+                        'findings': [{
+                            'type': 'info',
+                            'severity': 'medium',
+                            'text': 'No author information found',
+                            'explanation': 'Article does not contain identifiable author attribution'
+                        }],
+                        'summary': 'No author information available for analysis',
+                        'author_name': None,
+                        'verified': False,
+                        'bio': '',
+                        'position': '',
+                        'organization': '',
+                        'expertise_areas': [],
+                        'article_count': 0,
+                        'recent_articles': [],
+                        'social_media': {},
+                        'bio_scraped': False,
+                        'credibility_score': 0,
+                        'author_score': 0,
+                        'has_byline': False,
+                        'author_link': None
+                    }
+                }
+            
+            logger.info(f"Found author: {author_name}")
+            
+            # Initialize author data
+            author_data = {
+                'author_name': author_name,
+                'score': 50,  # Default score
+                'verified': False,
+                'bio': '',
+                'position': '',
+                'organization': '',
+                'expertise_areas': [],
+                'article_count': 0,
+                'recent_articles': [],
+                'social_media': {},
+                'bio_scraped': False,
+                'has_byline': True,
+                'author_link': None
+            }
+            
+            # Try to extract author bio URL from article HTML
+            bio_data = {}
+            article_url = data.get('url')
+            article_html = data.get('html')
+            
+            if article_url and article_html:
+                try:
+                    soup = BeautifulSoup(article_html, 'html.parser')
+                    author_url = self._extract_author_url(soup, author_name, article_url)
+                    
+                    if author_url:
+                        author_data['author_link'] = author_url
+                        logger.info(f"Found author URL: {author_url}")
+                        
+                        # Scrape the author bio page
+                        bio_data = self._scrape_author_bio(author_url)
+                        
+                        if bio_data:
+                            author_data['bio_scraped'] = True
+                            author_data['verified'] = True
+                            
+                            # Update author data with scraped info
+                            author_data['bio'] = bio_data.get('full_bio', '')[:500]  # Limit length
+                            author_data['position'] = bio_data.get('position', '')
+                            author_data['organization'] = bio_data.get('organization', '')
+                            author_data['expertise_areas'] = bio_data.get('expertise_areas', [])
+                            author_data['article_count'] = bio_data.get('article_count', 0)
+                            author_data['social_media'] = bio_data.get('social_media', {})
+                            
+                            logger.info(f"Successfully scraped bio data for {author_name}")
+                        else:
+                            logger.info(f"Could not scrape bio data from {author_url}")
+                    else:
+                        logger.info("No author URL found in article")
+                except Exception as e:
+                    logger.warning(f"Error processing author bio: {e}")
+            
+            # Also try to extract basic author info from the article text itself
+            if not author_data.get('bio'):
+                author_info = self._extract_author_info_from_text(text, author_name)
+                if author_info:
+                    author_data.update(author_info)
+            
+            # Calculate credibility score
+            credibility_score = self._calculate_credibility_score(author_data)
+            author_data['credibility_score'] = credibility_score
+            author_data['author_score'] = credibility_score  # Alias
+            author_data['score'] = credibility_score  # Generic score
+            
+            # Determine level
+            if credibility_score >= 80:
+                level = 'High'
+            elif credibility_score >= 60:
+                level = 'Good'
+            elif credibility_score >= 40:
+                level = 'Moderate'
+            elif credibility_score >= 20:
+                level = 'Low'
+            else:
+                level = 'Unknown'
+            
+            # Generate findings
+            findings = self._generate_findings(author_data, credibility_score)
+            
+            # Generate summary
+            summary = self._generate_summary(author_data, credibility_score)
+            
+            logger.info(f"Author analysis complete: {author_name} -> {credibility_score}/100 ({level})")
+            
+            return {
+                'service': self.service_name,
+                'success': True,
+                'data': {
+                    **author_data,
+                    'level': level,
+                    'findings': findings,
+                    'summary': summary
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Author analysis failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
+    
+    def _extract_author_name(self, data: Dict[str, Any]) -> Optional[str]:
+        """Extract author name from various sources with improved detection"""
+        # Check if author is directly provided
+        author = data.get('author', '')
+        if author and isinstance(author, str) and len(author.strip()) > 0:
+            cleaned = self._clean_author_name(author.strip())
+            if cleaned:
+                return cleaned
+        
+        # Extract from HTML if available
+        html = data.get('html', '')
+        if html:
+            try:
+                soup = BeautifulSoup(html, 'html.parser')
+                
+                # Try various author selectors
+                author_selectors = [
+                    # Schema.org markup
+                    '[itemprop="author"]',
+                    '[itemtype*="Person"] [itemprop="name"]',
+                    
+                    # Common class names
+                    '.author-name',
+                    '.byline-author',
+                    '.article-author',
+                    '.post-author',
+                    '.writer-name',
+                    '.contributor-name',
+                    
+                    # Meta tags
+                    'meta[name="author"]',
+                    'meta[property="article:author"]',
+                    
+                    # Byline patterns
+                    '.byline',
+                    '.author',
+                    '.by-author'
+                ]
+                
+                for selector in author_selectors:
+                    try:
+                        if selector.startswith('meta'):
+                            element = soup.select_one(selector)
+                            if element:
+                                content = element.get('content', '').strip()
+                                if content:
+                                    cleaned = self._clean_author_name(content)
+                                    if cleaned:
+                                        return cleaned
+                        else:
+                            element = soup.select_one(selector)
+                            if element:
+                                text = element.get_text(strip=True)
+                                if text:
+                                    cleaned = self._clean_author_name(text)
+                                    if cleaned:
+                                        return cleaned
+                    except Exception as e:
+                        logger.debug(f"Error with selector {selector}: {e}")
+                        continue
+                        
+            except Exception as e:
+                logger.warning(f"Error parsing HTML for author: {e}")
+        
+        # Extract from text content
+        text = data.get('text', '')
+        if text:
+            author = self._extract_author_from_text(text)
+            if author:
+                return author
+        
+        return None
+    
+    def _extract_author_from_text(self, text: str) -> Optional[str]:
+        """Extract author from text using various patterns"""
+        # Common byline patterns
+        byline_patterns = [
+            r'^By\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)',
+            r'By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)',
+            r'Written by\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)',
+            r'Author:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)',
+            r'\n([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\s*\n',  # Name on its own line
+            r'- ([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)(?:\n|$)',  # Name after dash
+        ]
+        
+        for pattern in byline_patterns:
+            match = re.search(pattern, text, re.MULTILINE | re.IGNORECASE)
+            if match:
+                author = match.group(1).strip()
+                cleaned = self._clean_author_name(author)
+                if cleaned and len(cleaned.split()) >= 2:  # At least first and last name
+                    return cleaned
+        
+        return None
+    
+    def _clean_author_name(self, author: str) -> Optional[str]:
+        """Clean author name and validate it"""
+        if not author or not isinstance(author, str):
+            return None
+        
+        # Remove common prefixes and suffixes
+        author = re.sub(r'^(By|by|BY|Written by|Author:)\s+', '', author)
+        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent|Editor).*$', '', author, flags=re.I)
+        author = re.sub(r'\s+', ' ', author).strip()
+        
+        # Remove email addresses and social handles
+        author = re.sub(r'\S*@\S*', '', author)
+        author = re.sub(r'@\w+', '', author)
+        
+        # Clean up extra whitespace
+        author = re.sub(r'\s+', ' ', author).strip()
+        
+        # Validate - should be reasonable length and format
+        if (len(author) >= 3 and len(author) <= 100 and 
+            len(author.split()) >= 1 and len(author.split()) <= 5 and
+            re.match(r"^[A-Za-z\s\-'.]+$", author)):
+            
+            # Convert to proper case
+            return ' '.join(word.capitalize() for word in author.split())
+        
+        return None
     
     def _extract_author_url(self, soup: BeautifulSoup, author_name: str, article_url: str) -> Optional[str]:
         """Extract author bio URL from the article"""
         if not author_name:
             return None
             
-        logger.info(f"Searching for author URL for: {author_name}")
+        logger.debug(f"Searching for author URL for: {author_name}")
         
-        # For The Independent, author links are typically in specific patterns
-        # Updated selectors for The Independent's current structure
+        # Try various selectors to find author links
         selectors = [
-            # The Independent specific selectors
+            # Specific author link selectors
             'a.author-link',
             'a[href*="/author/"]',
+            'a[href*="/profile/"]',
+            'a[href*="/contributor/"]',
+            'a[href*="/writer/"]',
             'a[rel="author"]',
-            'span[itemprop="author"] a',
-            'div.author-bio a',
-            'div.author-info a',
-            
-            # General patterns
-            f'a:contains("{author_name}")',
-            'a.by-author',
-            'a.author-name',
-            'a.contributor-link',
-            'a.writer-link'
+            '[itemprop="author"] a',
+            '.byline a',
+            '.author a',
+            '.author-bio a',
+            '.author-info a',
+            '.by-author a'
         ]
         
         for selector in selectors:
             try:
-                # BeautifulSoup doesn't support :contains, so handle it differently
-                if ':contains' in selector:
-                    # Find all links that contain the author name
-                    author_name_lower = author_name.lower()
-                    links = soup.find_all('a', string=lambda text: text and author_name_lower in text.lower())
-                    
-                    for link in links:
-                        href = link.get('href')
-                        if href and ('/author/' in href or '/contributor/' in href or '/profile/' in href):
+                elements = soup.select(selector)
+                for element in elements:
+                    href = element.get('href')
+                    if href:
+                        # Check if link text contains author name or looks like author link
+                        link_text = element.get_text(strip=True).lower()
+                        author_lower = author_name.lower()
+                        
+                        if (author_lower in link_text or 
+                            any(word in href.lower() for word in ['author', 'profile', 'contributor', 'writer'])):
+                            
                             author_url = urljoin(article_url, href)
-                            logger.info(f"Found author URL via name search: {author_url}")
-                            return author_url
-                else:
-                    element = soup.select_one(selector)
-                    if element:
-                        href = element.get('href')
-                        if href:
-                            author_url = urljoin(article_url, href)
-                            logger.info(f"Found author URL with selector '{selector}': {author_url}")
+                            logger.debug(f"Found potential author URL: {author_url}")
                             return author_url
             except Exception as e:
                 logger.debug(f"Error with selector {selector}: {e}")
                 continue
         
-        logger.info("No author URL found in article")
+        # Try to find links that contain the author's name
+        try:
+            author_name_parts = author_name.lower().split()
+            all_links = soup.find_all('a', href=True)
+            
+            for link in all_links:
+                href = link.get('href', '')
+                link_text = link.get_text(strip=True).lower()
+                
+                # Check if link contains author name parts
+                name_matches = sum(1 for part in author_name_parts if part in link_text)
+                
+                if (name_matches >= len(author_name_parts) // 2 and  # At least half the name parts
+                    any(keyword in href.lower() for keyword in ['/author/', '/profile/', '/contributor/', '/writer/'])):
+                    
+                    author_url = urljoin(article_url, href)
+                    logger.debug(f"Found author URL via name matching: {author_url}")
+                    return author_url
+                    
+        except Exception as e:
+            logger.debug(f"Error in name-based author URL search: {e}")
+        
+        logger.debug("No author URL found")
         return None
     
     def _scrape_author_bio(self, author_url: str) -> Dict[str, Any]:
         """Scrape author bio page for additional information"""
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
             }
             
             response = requests.get(author_url, headers=headers, timeout=10)
@@ -103,406 +396,291 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'full_bio': '',
                 'position': '',
                 'organization': '',
-                'experience': '',
                 'expertise_areas': [],
-                'education': [],
-                'awards': [],
-                'social_media': {},
-                'email': '',
                 'article_count': 0,
-                'recent_articles': []
+                'social_media': {}
             }
             
             # Extract bio text - multiple possible selectors
             bio_selectors = [
-                'div.author-bio',
-                'div.bio',
-                'div.author-description',
-                'div[class*="bio"]',
-                'p.author-bio',
-                'section.author-info',
-                'div.contributor-bio',
-                'div.writer-bio',
-                '[itemprop="description"]'
+                '.author-bio',
+                '.bio',
+                '.author-description',
+                '[class*="bio"]',
+                '.author-bio p',
+                '.author-info',
+                '.contributor-bio',
+                '.writer-bio',
+                '[itemprop="description"]',
+                '.profile-bio',
+                '.about'
             ]
             
             for selector in bio_selectors:
-                bio_element = soup.select_one(selector)
-                if bio_element:
-                    bio_data['full_bio'] = bio_element.get_text(strip=True)
-                    break
+                try:
+                    element = soup.select_one(selector)
+                    if element:
+                        text = element.get_text(strip=True)
+                        if len(text) > 50:  # Meaningful bio length
+                            bio_data['full_bio'] = text
+                            break
+                except:
+                    continue
             
             # Extract position/title
             position_selectors = [
-                'span.author-title',
-                'div.author-position',
-                'span.title',
-                'p.position',
-                '[itemprop="jobTitle"]'
+                '.author-title',
+                '.author-position',
+                '.title',
+                '.position',
+                '[itemprop="jobTitle"]',
+                '.job-title'
             ]
             
             for selector in position_selectors:
-                position_element = soup.select_one(selector)
-                if position_element:
-                    bio_data['position'] = position_element.get_text(strip=True)
-                    break
+                try:
+                    element = soup.select_one(selector)
+                    if element:
+                        position = element.get_text(strip=True)
+                        if position and len(position) < 200:
+                            bio_data['position'] = position
+                            break
+                except:
+                    continue
             
-            # Look for article count
+            # Look for article count patterns in text
+            page_text = soup.get_text()
             count_patterns = [
                 r'(\d+)\s*(?:articles?|stories|posts)',
                 r'(?:written|authored|published)\s*(\d+)',
-                r'(\d+)\s*(?:contributions?)'
+                r'(\d+)\s*(?:contributions?|pieces?)'
             ]
             
-            page_text = soup.get_text()
             for pattern in count_patterns:
                 match = re.search(pattern, page_text, re.IGNORECASE)
                 if match:
-                    bio_data['article_count'] = int(match.group(1))
-                    break
+                    count = int(match.group(1))
+                    if count < 10000:  # Reasonable upper limit
+                        bio_data['article_count'] = count
+                        break
             
-            # Extract expertise from bio
+            # Extract expertise areas from bio text
             if bio_data['full_bio']:
-                expertise_patterns = [
-                    r'(?:specializes?|covers?|focuses?|reports?)\s+(?:in|on)\s+([^,.]+)',
-                    r'(?:expert|expertise)\s+(?:in|on)\s+([^,.]+)',
-                    r'beat:?\s*([^,.]+)'
-                ]
-                
-                for pattern in expertise_patterns:
-                    matches = re.findall(pattern, bio_data['full_bio'], re.IGNORECASE)
-                    bio_data['expertise_areas'].extend(matches)
-                
-                bio_data['expertise_areas'] = list(set(bio_data['expertise_areas']))[:5]  # Unique, max 5
+                expertise = self._extract_expertise_from_bio(bio_data['full_bio'])
+                bio_data['expertise_areas'] = expertise
             
-            # Extract social media links
-            social_patterns = {
-                'twitter': r'twitter\.com/([A-Za-z0-9_]+)',
-                'linkedin': r'linkedin\.com/in/([A-Za-z0-9-]+)',
-                'email': r'mailto:([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})'
-            }
+            # Look for social media links
+            social_selectors = [
+                'a[href*="twitter.com"]',
+                'a[href*="linkedin.com"]',
+                'a[href*="facebook.com"]'
+            ]
             
-            for platform, pattern in social_patterns.items():
-                links = soup.find_all('a', href=re.compile(pattern, re.IGNORECASE))
-                if links:
-                    match = re.search(pattern, links[0].get('href', ''), re.IGNORECASE)
-                    if match:
-                        if platform == 'email':
-                            bio_data['email'] = match.group(1)
-                        else:
-                            bio_data['social_media'][platform] = match.group(1)
+            for selector in social_selectors:
+                try:
+                    elements = soup.select(selector)
+                    for element in elements:
+                        href = element.get('href', '')
+                        if 'twitter.com' in href:
+                            bio_data['social_media']['twitter'] = href
+                        elif 'linkedin.com' in href:
+                            bio_data['social_media']['linkedin'] = href
+                        elif 'facebook.com' in href:
+                            bio_data['social_media']['facebook'] = href
+                except:
+                    continue
             
-            logger.info(f"Successfully scraped author bio from {author_url}")
-            return bio_data
+            return bio_data if bio_data['full_bio'] else None
             
         except Exception as e:
-            logger.error(f"Error scraping author bio from {author_url}: {e}")
-            return {}
+            logger.warning(f"Failed to scrape author bio from {author_url}: {e}")
+            return None
+    
+    def _extract_author_info_from_text(self, text: str, author_name: str) -> Dict[str, Any]:
+        """Extract basic author info from article text"""
+        info = {}
+        
+        # Look for author description in the text
+        author_patterns = [
+            rf"{re.escape(author_name)}\s+is\s+([^.]+)",
+            rf"{re.escape(author_name)},\s+([^.]+)",
+            rf"^([^.]+)\s+{re.escape(author_name)}"
+        ]
+        
+        for pattern in author_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                description = match.group(1).strip()
+                if len(description) > 10 and len(description) < 200:
+                    info['bio'] = description
+                    break
+        
+        return info
+    
+    def _extract_expertise_from_bio(self, bio_text: str) -> List[str]:
+        """Extract expertise areas from bio text"""
+        expertise = []
+        
+        # Patterns to identify expertise
+        expertise_patterns = [
+            r'(?:specializes?|covers?|focuses?|reports?)\s+(?:in|on)\s+([^,.]+)',
+            r'(?:expert|expertise)\s+(?:in|on)\s+([^,.]+)',
+            r'beat:?\s*([^,.]+)',
+            r'covers?\s+([^,.]+)'
+        ]
+        
+        for pattern in expertise_patterns:
+            matches = re.finditer(pattern, bio_text, re.IGNORECASE)
+            for match in matches:
+                area = match.group(1).strip()
+                if len(area) > 3 and len(area) < 50:
+                    expertise.append(area.title())
+        
+        return expertise[:5]  # Limit to 5 expertise areas
     
     def _calculate_credibility_score(self, author_data: Dict[str, Any]) -> int:
-        """Calculate author credibility score based on various factors"""
-        score = 30  # Base score for having a name
+        """Calculate author credibility score"""
+        score = 30  # Base score for having a byline
         
-        # Has bio (+20)
-        if author_data.get('bio') and len(author_data['bio']) > 50:
+        # Bio available
+        if author_data.get('bio'):
             score += 20
-        
-        # Has position/title (+15)
-        if author_data.get('position'):
+            
+        # Bio scraped from dedicated page
+        if author_data.get('bio_scraped'):
             score += 15
+            
+        # Has position/title
+        if author_data.get('position'):
+            score += 10
+            
+        # Has organization
+        if author_data.get('organization'):
+            score += 10
+            
+        # Article count
+        article_count = author_data.get('article_count', 0)
+        if article_count > 50:
+            score += 15
+        elif article_count > 10:
+            score += 10
+        elif article_count > 0:
+            score += 5
         
-        # Has expertise areas (+10)
+        # Has expertise areas
         if author_data.get('expertise_areas'):
             score += 10
         
-        # Has significant article count (+10)
-        if author_data.get('article_count', 0) >= 10:
-            score += 10
-            if author_data['article_count'] >= 50:
-                score += 5
-            if author_data['article_count'] >= 100:
-                score += 5
-        
-        # Has recent articles (+5)
-        if author_data.get('recent_articles'):
-            score += 5
-        
-        # Has awards/recognition (+10)
-        if author_data.get('awards'):
-            score += 10
-        
-        # Has social media presence (+5)
+        # Social media presence
         if author_data.get('social_media'):
             score += 5
         
-        # Has organization (+5)
-        if author_data.get('organization'):
-            score += 5
+        # Has author link (verified presence)
+        if author_data.get('author_link'):
+            score += 10
         
-        # Cap at 100
-        return min(score, 100)
+        return min(100, score)
     
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze article author with enhanced bio scraping AND AI ENHANCEMENT
-        FIXED: Proper null handling for author field
+    def _generate_findings(self, author_data: Dict[str, Any], score: int) -> List[Dict[str, Any]]:
+        """Generate findings based on author analysis"""
+        findings = []
         
-        Args:
-            data: Must contain 'author' and optionally 'url' and 'html'
-            
-        Returns:
-            Analysis results with author credibility data wrapped in 'data' field
-        """
-        try:
-            # FIXED: Proper null handling for author field
-            author_name = data.get('author')
-            if author_name is None:
-                author_name = ''
-            else:
-                author_name = str(author_name).strip()
-            
-            # CRITICAL FIX: Wrap all return data in 'data' field
-            if not author_name or author_name.lower() in ['unknown', 'staff', 'admin', 'editor']:
-                return {
-                    'service': self.service_name,
-                    'success': True,
-                    'data': {
-                        'author_name': author_name or 'Unknown',
-                        'credibility_score': 0,
-                        'score': 0,  # Add score field for consistency
-                        'level': 'Unknown',
-                        'verified': False,
-                        'author_info': {
-                            'bio': 'No identifiable author found'
-                        },
-                        'metrics': {
-                            'article_count': 0,
-                            'accuracy_rate': 0,
-                            'awards_count': 0
-                        },
-                        'findings': [],
-                        'summary': 'No identifiable author found for this article'
-                    },
-                    'metadata': {
-                        'ai_enhanced': False
-                    }
-                }
-            
-            # Initialize author data structure
-            author_data = {
-                'author_name': author_name,
-                'credibility_score': 50,  # Default score
-                'author_score': 50,  # Alias for frontend compatibility
-                'score': 50,  # Generic score field
-                'verified': False,
-                'bio': '',
-                'position': '',
-                'organization': '',
-                'expertise_areas': [],
-                'article_count': 0,
-                'recent_articles': [],
-                'social_media': {},
-                'bio_scraped': False,
-                'ai_enhanced': False
-            }
-            
-            # Try to extract author bio URL from article HTML
-            bio_data = {}
-            article_url = data.get('url')
-            article_html = data.get('html')
-            
-            if article_url and article_html:
-                soup = BeautifulSoup(article_html, 'html.parser')
-                author_url = self._extract_author_url(soup, author_name, article_url)
-                
-                if author_url:
-                    # Scrape the author bio page
-                    bio_data = self._scrape_author_bio(author_url)
-                    
-                    if bio_data:
-                        author_data['bio_scraped'] = True
-                        author_data['verified'] = True
-                        
-                        # Update author data with scraped info
-                        author_data['bio'] = bio_data.get('full_bio', '')[:500]  # Limit length
-                        author_data['position'] = bio_data.get('position', '')
-                        author_data['organization'] = bio_data.get('organization', '')
-                        author_data['expertise_areas'] = bio_data.get('expertise_areas', [])
-                        author_data['article_count'] = bio_data.get('article_count', 0)
-                        author_data['social_media'] = bio_data.get('social_media', {})
-                        author_data['email'] = bio_data.get('email', '')
-            
-            # Calculate credibility score
-            author_data['credibility_score'] = self._calculate_credibility_score(author_data)
-            author_data['author_score'] = author_data['credibility_score']  # Alias
-            author_data['score'] = author_data['credibility_score']  # Generic score
-            
-            # Determine credibility level
-            score = author_data['credibility_score']
-            if score >= 80:
-                level = 'Excellent'
-            elif score >= 65:
-                level = 'Good'
-            elif score >= 50:
-                level = 'Fair'
-            elif score >= 35:
-                level = 'Poor'
-            else:
-                level = 'Very Poor'
-            author_data['level'] = level
-            author_data['credibility_level'] = level  # Alias
-            
-            # Generate findings
-            findings = []
-            
-            if author_data['verified']:
-                findings.append({
-                    'type': 'positive',
-                    'severity': 'positive',
-                    'text': f'{author_name} is a verified author',
-                    'explanation': 'Author profile found with credentials'
-                })
-            
-            if author_data['article_count'] >= 50:
-                findings.append({
-                    'type': 'positive',
-                    'severity': 'positive',
-                    'text': f'Experienced author with {author_data["article_count"]} articles',
-                    'explanation': 'Established track record of journalism'
-                })
-            elif author_data['article_count'] == 0:
-                findings.append({
-                    'type': 'warning',
-                    'severity': 'medium',
-                    'text': 'No article history found',
-                    'explanation': 'Could not verify author\'s previous work'
-                })
-            
-            if not author_data['position'] and not author_data['bio']:
-                findings.append({
-                    'type': 'warning',
-                    'severity': 'medium',
-                    'text': 'Limited author information available',
-                    'explanation': 'No bio or position information found'
-                })
-            
-            # Generate summary
-            if author_data['verified']:
-                summary = f"{author_name} is a verified author with a credibility score of {score}/100. "
-                if author_data['position']:
-                    summary += f"Currently {author_data['position']}. "
-                if author_data['article_count'] > 0:
-                    summary += f"Has written {author_data['article_count']} articles."
-            else:
-                summary = f"{author_name} could not be fully verified. Basic credibility score: {score}/100."
-            
-            # AI Enhancement - FIXED: Use correct parameter signature
-            if self._ai_available and (author_data.get('bio') or author_name):
-                logger.info("Enhancing author analysis with AI")
-                
-                # FIXED: Pass data in format expected by AI method
-                ai_author_data = {
-                    'name': author_name,
-                    'bio': author_data.get('bio', ''),
-                    'position': author_data.get('position', ''),
-                    'article_count': author_data.get('article_count', 0)
-                }
-                
-                ai_assessment = self._ai_analyze_author(ai_author_data)
-                
-                if ai_assessment:
-                    # Add AI insights to findings
-                    if ai_assessment.get('red_flags'):
-                        for flag in ai_assessment['red_flags'][:2]:
-                            findings.append({
-                                'type': 'warning',
-                                'severity': 'high',
-                                'text': f'AI detected: {flag}',
-                                'explanation': 'Potential credibility concern'
-                            })
-                    
-                    if ai_assessment.get('positive_indicators'):
-                        for indicator in ai_assessment['positive_indicators'][:2]:
-                            findings.append({
-                                'type': 'positive',
-                                'severity': 'positive',
-                                'text': f'AI verified: {indicator}',
-                                'explanation': 'Strengthens credibility'
-                            })
-                    
-                    # Apply AI credibility adjustment
-                    if ai_assessment.get('credibility_adjustment'):
-                        adjustment = int(ai_assessment['credibility_adjustment'])
-                        author_data['credibility_score'] = max(0, min(100, score + adjustment))
-                        author_data['author_score'] = author_data['credibility_score']
-                        author_data['score'] = author_data['credibility_score']
-                    
-                    author_data['ai_enhanced'] = True
-                    author_data['ai_assessment'] = ai_assessment.get('overall_assessment', '')
-            
-            # CRITICAL: Return with 'data' wrapper
-            return {
-                'service': self.service_name,
-                'success': True,
-                'data': {
-                    'author_name': author_data['author_name'],
-                    'credibility_score': author_data['credibility_score'],
-                    'author_score': author_data['author_score'],
-                    'score': author_data['score'],
-                    'level': author_data['level'],
-                    'credibility_level': author_data['credibility_level'],
-                    'verified': author_data['verified'],
-                    'author_info': {
-                        'bio': author_data['bio'],
-                        'position': author_data['position'],
-                        'organization': author_data['organization'],
-                        'expertise': author_data['expertise_areas']
-                    },
-                    'metrics': {
-                        'article_count': author_data['article_count'],
-                        'accuracy_rate': 0,  # Placeholder
-                        'awards_count': 0  # Placeholder
-                    },
-                    'current_position': author_data['position'],
-                    'expertise_areas': author_data['expertise_areas'],
-                    'findings': findings,
-                    'summary': summary,
-                    'bio_scraped': author_data['bio_scraped']
-                },
-                'metadata': {
-                    'bio_scraped': author_data['bio_scraped'],
-                    'ai_enhanced': author_data.get('ai_enhanced', False)
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Author analysis failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
+        author_name = author_data.get('author_name', 'Unknown')
+        
+        if score >= 70:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Well-documented author: {author_name}',
+                'explanation': 'Author has comprehensive biographical information available'
+            })
+        elif score >= 40:
+            findings.append({
+                'type': 'info',
+                'severity': 'medium',
+                'text': f'Partially documented author: {author_name}',
+                'explanation': 'Some author information available'
+            })
+        else:
+            findings.append({
+                'type': 'warning',
+                'severity': 'medium',
+                'text': f'Limited author information: {author_name}',
+                'explanation': 'Minimal biographical details available'
+            })
+        
+        # Add specific findings
+        if author_data.get('bio_scraped'):
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': 'Author has dedicated bio page',
+                'explanation': 'Indicates established presence at publication'
+            })
+        
+        if author_data.get('article_count', 0) > 20:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Prolific author ({author_data["article_count"]} articles)',
+                'explanation': 'Extensive publication history indicates experience'
+            })
+        
+        if author_data.get('expertise_areas'):
+            areas = ', '.join(author_data['expertise_areas'][:3])
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Specialized expertise: {areas}',
+                'explanation': 'Author has identified areas of specialization'
+            })
+        
+        return findings
+    
+    def _generate_summary(self, author_data: Dict[str, Any], score: int) -> str:
+        """Generate summary of author analysis"""
+        author_name = author_data.get('author_name', 'Unknown author')
+        
+        if score >= 70:
+            summary = f"{author_name} is a well-documented author with comprehensive biographical information. "
+        elif score >= 40:
+            summary = f"{author_name} has some available biographical information. "
+        else:
+            summary = f"{author_name} has limited available biographical information. "
+        
+        if author_data.get('position'):
+            summary += f"Listed as {author_data['position']}. "
+        
+        if author_data.get('article_count', 0) > 0:
+            summary += f"Has published {author_data['article_count']} articles. "
+        
+        if author_data.get('expertise_areas'):
+            areas = ', '.join(author_data['expertise_areas'][:2])
+            summary += f"Specializes in {areas}. "
+        
+        summary += f"Credibility score: {score}/100."
+        
+        return summary
     
     def get_service_info(self) -> Dict[str, Any]:
-        """Get information about the service"""
+        """Get service information"""
         info = super().get_service_info()
         info.update({
             'capabilities': [
-                'Author bio extraction',
-                'Credibility scoring',
-                'Article count tracking',
-                'Expertise identification',
-                'Social media verification',
-                'Organization affiliation',
-                'AI-ENHANCED credibility assessment',
-                'AI-powered red flag detection'
+                'Author name extraction from multiple sources',
+                'Author bio page discovery and scraping',
+                'Expertise area identification',
+                'Publication history analysis',
+                'Social media presence detection',
+                'Author credibility scoring',
+                'Byline verification'
             ],
-            'scoring_factors': {
-                'has_bio': 20,
-                'has_position': 15,
-                'has_expertise': 10,
-                'article_count': 20,
-                'recent_activity': 5,
-                'awards': 10,
-                'social_presence': 5,
-                'organization': 5
-            },
-            'ai_enhanced': self._ai_available
+            'extraction_methods': [
+                'HTML meta tags',
+                'Schema.org markup',
+                'Byline patterns',
+                'Author links',
+                'Bio page scraping'
+            ]
         })
         return info
