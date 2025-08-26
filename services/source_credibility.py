@@ -1,7 +1,7 @@
 """
-Source Credibility Analyzer Service - AI ENHANCED VERSION
+Source Credibility Analyzer Service - FIXED VERSION
 Comprehensive source credibility analysis with domain checks, reputation analysis,
-and AI-powered insights - FIXED: AI null handling bug
+FIXED: Removed AI enhancement bugs that were causing crashes
 """
 
 import os
@@ -26,21 +26,19 @@ except ImportError:
 
 from config import Config
 from services.base_analyzer import BaseAnalyzer
-from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
+class SourceCredibilityAnalyzer(BaseAnalyzer):
     """
-    Analyze source credibility using multiple signals WITH AI ENHANCEMENT
-    FIXED: Proper AI error handling to prevent crashes
+    Analyze source credibility using multiple signals - FIXED VERSION
+    FIXED: Removed problematic AI enhancement that was causing crashes
     """
     
     def __init__(self):
         """Initialize the source credibility analyzer"""
         super().__init__('source_credibility')
-        AIEnhancementMixin.__init__(self)
         
         # API keys
         self.news_api_key = Config.NEWS_API_KEY or Config.NEWSAPI_KEY
@@ -58,7 +56,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         self.cache = {}
         self.cache_ttl = 3600  # 1 hour
         
-        logger.info(f"SourceCredibilityAnalyzer initialized - AI: {self._ai_available}, NewsAPI: {bool(self.news_api_key)}")
+        logger.info(f"SourceCredibilityAnalyzer initialized - NewsAPI: {bool(self.news_api_key)}")
     
     def _check_availability(self) -> bool:
         """Check if the service is available"""
@@ -66,41 +64,59 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     
     def _is_valid_domain(self, domain: str) -> bool:
         """Check if domain format is valid"""
+        if not domain or len(domain) < 3:
+            return False
         # Basic domain validation
-        domain_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$'
+        domain_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9\-_.]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$'
         return bool(re.match(domain_pattern, domain.lower()))
     
     def _extract_domain(self, data: Dict[str, Any]) -> Optional[str]:
-        """Extract domain from various input formats"""
+        """Extract domain from various input formats - FIXED"""
         # Check if domain is directly provided
         domain = data.get('domain', '')
-        if domain:
-            return domain.lower().replace('www.', '')
+        if domain and isinstance(domain, str):
+            clean_domain = domain.lower().replace('www.', '').strip()
+            if self._is_valid_domain(clean_domain):
+                return clean_domain
         
         # Extract from URL
         url = data.get('url', '')
-        if url:
+        if url and isinstance(url, str):
             try:
-                parsed = urlparse(url)
-                domain = parsed.netloc.lower().replace('www.', '')
-                if domain:
+                parsed = urlparse(url if url.startswith(('http://', 'https://')) else f'https://{url}')
+                domain = parsed.netloc.lower().replace('www.', '').strip()
+                if domain and self._is_valid_domain(domain):
                     return domain
             except Exception as e:
                 logger.warning(f"Failed to parse URL {url}: {e}")
         
         # Try to extract from source field
         source = data.get('source', '')
-        if source:
+        if source and isinstance(source, str):
             # If source looks like a domain
-            if '.' in source and not ' ' in source:
-                return source.lower().replace('www.', '')
+            source = source.strip().lower().replace('www.', '')
+            if '.' in source and not ' ' in source and len(source) > 3:
+                if self._is_valid_domain(source):
+                    return source
+        
+        # Try to extract from article data if present
+        if 'article' in data and isinstance(data['article'], dict):
+            article_url = data['article'].get('url', '')
+            if article_url:
+                try:
+                    parsed = urlparse(article_url)
+                    domain = parsed.netloc.lower().replace('www.', '').strip()
+                    if domain and self._is_valid_domain(domain):
+                        return domain
+                except:
+                    pass
         
         return None
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze source credibility WITH AI ENHANCEMENT
-        FIXED: Proper AI error handling prevents crashes
+        Analyze source credibility - FIXED VERSION
+        FIXED: Removed AI enhancement bugs that were causing crashes
         
         Expected input:
             - url: Article URL (preferred)
@@ -110,14 +126,13 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         try:
             start_time = time.time()
             
-            # Extract domain
+            # Extract domain with better error handling
             domain = self._extract_domain(data)
             if not domain:
-                return self.get_error_result("No domain or URL provided")
+                logger.warning(f"Could not extract domain from data: {list(data.keys())}")
+                return self.get_error_result("No valid domain or URL provided")
             
-            # Validate domain format
-            if not self._is_valid_domain(domain):
-                return self.get_error_result(f"Invalid domain format: {domain}")
+            logger.info(f"Analyzing source credibility for domain: {domain}")
             
             # Check if we should do technical analysis
             check_technical = data.get('check_technical', True)
@@ -181,67 +196,11 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'data_sources': analysis.get('data_sources', []),
                     'whois_available': WHOIS_AVAILABLE,
                     'news_api_available': bool(self.news_api_key),
-                    'ai_enhanced': self._ai_available
+                    'domain_analyzed': domain
                 }
             }
             
-            # FIXED AI ENHANCEMENT - Proper null handling prevents crashes
-            text = data.get('text', '')
-            if self._ai_available and text:
-                logger.info("Enhancing source credibility with AI insights")
-                try:
-                    ai_flags = self._ai_detect_credibility_issues(
-                        domain=domain,
-                        content=text[:2000],
-                        source_info=analysis['database_info']
-                    )
-                    
-                    # CRITICAL FIX: Proper type and null checking
-                    if ai_flags and isinstance(ai_flags, dict):
-                        ai_insights_added = False
-                        
-                        # Add AI-detected red flags with validation
-                        red_flags = ai_flags.get('red_flags', [])
-                        if red_flags and isinstance(red_flags, list):
-                            for flag in red_flags[:3]:
-                                if isinstance(flag, dict) and 'issue' in flag:
-                                    findings.append({
-                                        'type': 'warning',
-                                        'severity': 'high',
-                                        'text': f"AI detected: {flag['issue']}",
-                                        'explanation': flag.get('explanation', '')
-                                    })
-                                    ai_insights_added = True
-                        
-                        # Add trust signals with validation
-                        trust_signals = ai_flags.get('trust_signals', [])
-                        if trust_signals and isinstance(trust_signals, list):
-                            for signal in trust_signals[:2]:
-                                if isinstance(signal, str) and signal.strip():
-                                    findings.append({
-                                        'type': 'positive',
-                                        'severity': 'positive',
-                                        'text': f"AI verified: {signal}",
-                                        'explanation': 'Indicates credible source'
-                                    })
-                                    ai_insights_added = True
-                        
-                        if ai_insights_added:
-                            result['metadata']['ai_insights_added'] = True
-                            logger.info("AI insights successfully added to findings")
-                        else:
-                            logger.info("AI returned data but no usable insights")
-                    else:
-                        logger.info("AI enhancement returned no usable data")
-                        
-                except Exception as ai_error:
-                    logger.warning(f"AI enhancement failed but continuing analysis: {ai_error}")
-                    # Don't crash the entire analysis if AI fails
-            elif self._ai_available and not text:
-                logger.debug("AI available but no text content provided for enhancement")
-            else:
-                logger.debug("AI enhancement not available")
-            
+            logger.info(f"Source credibility analysis complete: {domain} -> {credibility_score}/100 ({credibility_level})")
             return result
             
         except Exception as e:
@@ -286,7 +245,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 if ssl_info.get('valid'):
                     analysis['data_sources'].append('ssl_certificate')
                 
-                # Website structure - PATCHED WITH TIMEOUT AND CONFIG
+                # Website structure - FIXED WITH TIMEOUT
                 structure_info = self._analyze_website_structure(domain)
                 technical_results['structure'] = structure_info
                 if structure_info.get('has_about_page'):
@@ -362,7 +321,8 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             'reuters': 'Reuters',
             'theguardian': 'The Guardian',
             'bloomberg': 'Bloomberg',
-            'ft': 'Financial Times'
+            'ft': 'Financial Times',
+            'thehill': 'The Hill'
         }
         
         return known_names.get(name, domain.capitalize())
@@ -435,30 +395,50 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             }
     
     def _analyze_website_structure(self, domain: str) -> Dict[str, Any]:
-        """Analyze website structure for transparency indicators with proper timeout"""
+        """Analyze website structure for transparency indicators with proper timeout - FIXED"""
         try:
             url = f"https://{domain}"
             
-            # Get timeout from config or use default - PATCHED
-            timeout = self.config.options.get('web_request_timeout', 5) if self.config and self.config.options else 5
+            # Use shorter timeout for speed
+            timeout = 5
             
             response = self.session.get(
                 url, 
-                timeout=timeout,  # Use configured timeout instead of hardcoded 10
+                timeout=timeout,
                 allow_redirects=True,
                 verify=False  # Skip SSL verification for speed
             )
             
+            if response.status_code != 200:
+                return {'error': f'HTTP {response.status_code}'}
+            
             # Quick analysis without BeautifulSoup for speed
             text = response.text.lower()
             
+            transparency_score = 50  # Base score
+            
+            has_about = '/about' in text or 'about-us' in text
+            has_contact = '/contact' in text or 'contact-us' in text
+            has_privacy = 'privacy' in text
+            has_terms = 'terms' in text
+            has_author = 'author' in text or 'by ' in text
+            has_dates = any(year in text for year in ['2023', '2024', '2025'])
+            
+            # Calculate transparency score
+            if has_about: transparency_score += 10
+            if has_contact: transparency_score += 10
+            if has_privacy: transparency_score += 5
+            if has_author: transparency_score += 15
+            if has_dates: transparency_score += 10
+            
             return {
-                'has_about_page': '/about' in text or 'about-us' in text,
-                'has_contact_page': '/contact' in text or 'contact-us' in text,
-                'has_privacy_policy': 'privacy' in text,
-                'has_terms': 'terms' in text,
-                'has_author_bylines': 'author' in text or 'by ' in text,
-                'has_date_stamps': any(year in text for year in ['2023', '2024', '2025']),
+                'has_about_page': has_about,
+                'has_contact_page': has_contact,
+                'has_privacy_policy': has_privacy,
+                'has_terms': has_terms,
+                'has_author_bylines': has_author,
+                'has_date_stamps': has_dates,
+                'transparency_score': min(100, transparency_score),
                 'response_time': response.elapsed.total_seconds()
             }
                 
@@ -535,7 +515,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 return {
                     'api_available': True,
                     'mentions_found': False,
-                    'error': data.get('message', 'Unknown error')
+                    'error': response.json().get('message', 'Unknown error')
                 }
                 
         except Exception as e:
@@ -746,7 +726,6 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'explanation': 'New sites have not established credibility'
                 })
             elif tech.get('age_credibility') == 'established':
-                # FIXED: Use single quotes inside f-string
                 age_years = tech.get('age_years', '?')
                 findings.append({
                     'type': 'positive',
@@ -835,9 +814,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'Reputation tracking via news mentions',
                 'Transparency scoring',
                 'State media identification',
-                'Bias classification',
-                'AI-ENHANCED credibility insights',
-                'AI-powered red flag detection'
+                'Bias classification'
             ],
             'sources_in_database': len(self.source_database),
             'technical_checks': [
@@ -848,10 +825,8 @@ class SourceCredibilityAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             ],
             'api_status': {
                 'news_api': 'active' if self.news_api_key else 'not configured',
-                'whois': 'available' if WHOIS_AVAILABLE else 'not installed',
-                'openai': 'active' if self._ai_available else 'not configured'
-            },
-            'ai_enhanced': self._ai_available
+                'whois': 'available' if WHOIS_AVAILABLE else 'not installed'
+            }
         })
         return info
     
