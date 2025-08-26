@@ -128,7 +128,7 @@ def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Optional
 def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
     """
     CRITICAL FIX: Extract individual services from pipeline results
-    Based on your logs showing services at the TOP LEVEL of pipeline_results
+    Handles the actual data structure from your logs
     """
     logger.info("=" * 80)
     logger.info("EXTRACTING INDIVIDUAL SERVICES")
@@ -143,39 +143,28 @@ def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str
     
     logger.info(f"Pipeline result keys: {list(pipeline_results.keys())}")
     
-    # Strategy 1: Extract services directly from top level (primary based on logs)
-    for service_name in known_services:
-        if service_name in pipeline_results:
-            service_data = pipeline_results[service_name]
-            if isinstance(service_data, dict):
-                logger.info(f"Found top-level service: {service_name}")
-                extracted = extract_service_data_bulletproof(service_data)
-                
-                if extracted:  # Only include services that returned meaningful data
-                    service_results[service_name] = extracted
-                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields")
-                else:
-                    logger.warning(f"✗ {service_name}: excluded (failed or no data)")
-    
-    # Strategy 2: Check detailed_analysis if it exists
-    if 'detailed_analysis' in pipeline_results and isinstance(pipeline_results['detailed_analysis'], dict):
-        detailed_analysis = pipeline_results['detailed_analysis']
-        logger.info(f"Also checking detailed_analysis with keys: {list(detailed_analysis.keys())}")
-        
-        for service_name, service_data in detailed_analysis.items():
-            if service_name not in service_results and isinstance(service_data, dict):
-                logger.info(f"Found detailed_analysis service: {service_name}")
-                extracted = extract_service_data_bulletproof(service_data)
-                
-                if extracted:
-                    service_results[service_name] = extracted
-                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from detailed_analysis")
-    
-    # Strategy 3: Check if services are wrapped in a 'data' container
+    # CRITICAL FIX: Based on your latest logs showing data.detailed_analysis structure
+    # Strategy 1: Check data.detailed_analysis (where services actually are)
     if 'data' in pipeline_results and isinstance(pipeline_results['data'], dict):
         data_container = pipeline_results['data']
         logger.info(f"Checking data container with keys: {list(data_container.keys())}")
         
+        if 'detailed_analysis' in data_container and isinstance(data_container['detailed_analysis'], dict):
+            detailed_analysis = data_container['detailed_analysis']
+            logger.info(f"Found data.detailed_analysis with keys: {list(detailed_analysis.keys())}")
+            
+            for service_name, service_data in detailed_analysis.items():
+                if isinstance(service_data, dict):
+                    logger.info(f"Processing service: {service_name}")
+                    extracted = extract_service_data_bulletproof(service_data)
+                    
+                    if extracted:
+                        service_results[service_name] = extracted
+                        logger.info(f"✓ {service_name}: extracted {len(extracted)} fields")
+                    else:
+                        logger.warning(f"✗ {service_name}: excluded (failed or no data)")
+        
+        # Also check for services directly in data container
         for service_name in known_services:
             if service_name in data_container and service_name not in service_results:
                 service_data = data_container[service_name]
@@ -186,6 +175,32 @@ def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str
                     if extracted:
                         service_results[service_name] = extracted
                         logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from data container")
+    
+    # Strategy 2: Check top-level services (fallback)
+    for service_name in known_services:
+        if service_name in pipeline_results and service_name not in service_results:
+            service_data = pipeline_results[service_name]
+            if isinstance(service_data, dict):
+                logger.info(f"Found top-level service: {service_name}")
+                extracted = extract_service_data_bulletproof(service_data)
+                
+                if extracted:
+                    service_results[service_name] = extracted
+                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from top level")
+    
+    # Strategy 3: Check if there's a detailed_analysis at top level
+    if 'detailed_analysis' in pipeline_results and isinstance(pipeline_results['detailed_analysis'], dict):
+        detailed_analysis = pipeline_results['detailed_analysis']
+        logger.info(f"Also checking top-level detailed_analysis with keys: {list(detailed_analysis.keys())}")
+        
+        for service_name, service_data in detailed_analysis.items():
+            if service_name not in service_results and isinstance(service_data, dict):
+                logger.info(f"Found top-level detailed_analysis service: {service_name}")
+                extracted = extract_service_data_bulletproof(service_data)
+                
+                if extracted:
+                    service_results[service_name] = extracted
+                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from top-level detailed_analysis")
     
     logger.info(f"Final services extracted: {list(service_results.keys())}")
     logger.info("=" * 80)
