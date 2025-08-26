@@ -24,7 +24,6 @@ except ImportError:
     WHOIS_AVAILABLE = False
     logging.warning("python-whois not available - domain age checks disabled")
 
-from config import Config
 from services.base_analyzer import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer):
         super().__init__('source_credibility')
         
         # API keys
-        self.news_api_key = Config.NEWS_API_KEY or Config.NEWSAPI_KEY
+        self.news_api_key = os.environ.get('NEWS_API_KEY') or os.environ.get('NEWSAPI_KEY')
         
         # Initialize source database
         self.source_database = self._initialize_source_database()
@@ -399,7 +398,7 @@ class SourceCredibilityAnalyzer(BaseAnalyzer):
         try:
             url = f"https://{domain}"
             
-            # Use shorter timeout for speed
+            # Use shorter timeout for speed  
             timeout = 5
             
             response = self.session.get(
@@ -469,7 +468,15 @@ class SourceCredibilityAnalyzer(BaseAnalyzer):
             response = self.session.get(url, params=params, timeout=10)
             
             if response.status_code == 200:
-                data = response.json()
+                try:
+                    data = response.json()
+                except (ValueError, requests.exceptions.JSONDecodeError):
+                    return {
+                        'api_available': True,
+                        'mentions_found': False,
+                        'error': 'Invalid JSON response from News API'
+                    }
+                
                 total_results = data.get('totalResults', 0)
                 
                 if total_results > 0:
