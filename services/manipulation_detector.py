@@ -1,25 +1,27 @@
 """
-Manipulation Detector Service - FIXED VERSION
-Detects propaganda techniques and manipulation tactics in news articles
-FIXED: Removed AI enhancement bugs that were causing crashes
+Manipulation Detector Service - BULLETPROOF AI ENHANCED VERSION
+Detects propaganda techniques and manipulation tactics with bulletproof AI insights
 """
 
 import re
 import logging
+import time
 from typing import Dict, List, Any, Tuple
 from collections import Counter
 from services.base_analyzer import BaseAnalyzer
+from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ManipulationDetector(BaseAnalyzer):
-    """Detect manipulation tactics and propaganda techniques in articles - FIXED VERSION"""
+class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
+    """Detect manipulation tactics and propaganda techniques WITH BULLETPROOF AI ENHANCEMENT"""
     
     def __init__(self):
         super().__init__('manipulation_detector')
+        AIEnhancementMixin.__init__(self)
         self._initialize_manipulation_patterns()
-        logger.info("ManipulationDetector initialized with comprehensive pattern database")
+        logger.info(f"ManipulationDetector initialized with comprehensive pattern database and AI: {self._ai_available}")
     
     def _initialize_manipulation_patterns(self):
         """Initialize comprehensive manipulation and propaganda patterns"""
@@ -101,28 +103,6 @@ class ManipulationDetector(BaseAnalyzer):
                 ],
                 'weight': 2
             },
-            'cherry_picking': {
-                'name': 'Cherry Picking',
-                'description': 'Selecting only favorable evidence',
-                'severity': 'medium',
-                'keywords': [
-                    'conveniently ignores', 'fails to mention', 'overlooked',
-                    'selective', 'one example', 'single case'
-                ],
-                'weight': 2
-            },
-            'appeal_to_authority': {
-                'name': 'Appeal to Authority',
-                'description': 'Using authority figures inappropriately',
-                'severity': 'low',
-                'patterns': [
-                    r'experts? (?:all )?agree',
-                    r'scientists? (?:all )?say',
-                    r'doctors? (?:all )?recommend',
-                    r'authorities confirm'
-                ],
-                'weight': 1
-            },
             'strawman': {
                 'name': 'Straw Man',
                 'description': 'Misrepresenting opposing arguments',
@@ -134,30 +114,6 @@ class ManipulationDetector(BaseAnalyzer):
                 'weight': 3
             }
         }
-        
-        # Propaganda techniques
-        self.propaganda_techniques = {
-            'card_stacking': {
-                'name': 'Card Stacking',
-                'description': 'Presenting only one side of an argument',
-                'indicators': ['only positive', 'only negative', 'one-sided', 'no counterargument']
-            },
-            'name_calling': {
-                'name': 'Name Calling',
-                'description': 'Using negative labels to discredit',
-                'indicators': ['radical', 'extremist', 'conspiracy theorist', 'denier']
-            },
-            'glittering_generalities': {
-                'name': 'Glittering Generalities',
-                'description': 'Using vague positive phrases',
-                'indicators': ['freedom', 'democracy', 'justice', 'prosperity', 'security']
-            },
-            'transfer': {
-                'name': 'Transfer Technique',
-                'description': 'Connecting something to positive/negative symbols',
-                'indicators': ['flag', 'founding fathers', 'constitution', 'tradition']
-            }
-        }
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -165,8 +121,7 @@ class ManipulationDetector(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Detect manipulation tactics in article - FIXED VERSION
-        FIXED: Removed problematic AI enhancement
+        Detect manipulation tactics WITH BULLETPROOF AI ENHANCEMENT
         
         Expected input:
             - text: Article text to analyze
@@ -176,6 +131,8 @@ class ManipulationDetector(BaseAnalyzer):
             Standardized response with manipulation analysis
         """
         try:
+            start_time = time.time()
+            
             text = data.get('text', '')
             if not text:
                 return self.get_error_result("No text provided for manipulation analysis")
@@ -190,6 +147,7 @@ class ManipulationDetector(BaseAnalyzer):
             propaganda = self._detect_propaganda_techniques(full_text)
             logical_fallacies = self._detect_logical_fallacies(full_text)
             clickbait = self._analyze_clickbait(title)
+            emotional_score = self._calculate_emotional_score(full_text)
             
             # Calculate scores
             manipulation_score = self._calculate_manipulation_score(
@@ -237,9 +195,8 @@ class ManipulationDetector(BaseAnalyzer):
             # Generate summary
             summary = self._generate_summary(manipulation_score, level, all_tactics)
             
-            logger.info(f"Manipulation analysis complete: {manipulation_score}/100 ({level}) - {len(all_tactics)} tactics found")
-            
-            return {
+            # Build response
+            result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
@@ -253,6 +210,7 @@ class ManipulationDetector(BaseAnalyzer):
                     'propaganda_techniques': propaganda,
                     'logical_fallacies': logical_fallacies,
                     'clickbait_analysis': clickbait,
+                    'emotional_score': emotional_score,
                     'manipulation_score': manipulation_score,  # Backward compatibility
                     'manipulation_level': level,  # Backward compatibility
                     'persuasion_score': manipulation_score,  # Backward compatibility
@@ -262,14 +220,32 @@ class ManipulationDetector(BaseAnalyzer):
                         'medium_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'medium'),
                         'low_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'low'),
                         'has_clickbait': clickbait['is_clickbait'],
+                        'emotional_intensity': emotional_score,
                         'word_count': len(full_text.split())
                     }
                 },
                 'metadata': {
+                    'analysis_time': time.time() - start_time,
                     'tactics_detected': len(all_tactics),
                     'analyzed_with_title': bool(title)
                 }
             }
+            
+            # BULLETPROOF AI ENHANCEMENT
+            if full_text:
+                logger.info("Enhancing manipulation detection with AI insights")
+                
+                result = self._safely_enhance_service_result(
+                    result,
+                    '_ai_detect_manipulation',
+                    text=full_text[:1500],
+                    emotional_score=emotional_score,
+                    tactics_found=[t['name'] for t in all_tactics[:5]]
+                )
+            
+            logger.info(f"Manipulation analysis complete: {manipulation_score}/100 ({level}) - {len(all_tactics)} tactics found")
+            
+            return result
             
         except Exception as e:
             logger.error(f"Manipulation analysis failed: {e}", exc_info=True)
@@ -298,8 +274,12 @@ class ManipulationDetector(BaseAnalyzer):
                 # Check regex patterns
                 count = 0
                 for pattern in pattern_info.get('patterns', []):
-                    matches = re.findall(pattern, text, re.IGNORECASE)
-                    count += len(matches)
+                    try:
+                        matches = re.findall(pattern, text, re.IGNORECASE)
+                        count += len(matches)
+                    except re.error:
+                        logger.warning(f"Invalid regex pattern: {pattern}")
+                        continue
                 
                 if count > 0:
                     tactics.append({
@@ -420,6 +400,35 @@ class ManipulationDetector(BaseAnalyzer):
             'reason': '; '.join(reasons) if reasons else 'No clickbait indicators'
         }
     
+    def _calculate_emotional_score(self, text: str) -> int:
+        """Calculate emotional intensity for analysis"""
+        emotional_words = {
+            # High intensity
+            'shocking': 3, 'devastating': 3, 'horrifying': 3, 'outrageous': 3,
+            'explosive': 3, 'catastrophic': 3, 'terrifying': 3,
+            # Medium intensity
+            'amazing': 2, 'terrible': 2, 'wonderful': 2, 'awful': 2,
+            'fantastic': 2, 'horrible': 2, 'incredible': 2,
+            # Low intensity
+            'surprising': 1, 'concerning': 1, 'interesting': 1, 'notable': 1
+        }
+        
+        text_lower = text.lower()
+        word_count = len(text.split())
+        
+        emotional_score = 0
+        for word, weight in emotional_words.items():
+            count = text_lower.count(word)
+            emotional_score += count * weight
+        
+        # Normalize to 0-100 scale
+        if word_count > 0:
+            score = min(100, int((emotional_score / word_count) * 500))
+        else:
+            score = 0
+        
+        return score
+    
     def _calculate_manipulation_score(self, tactics: List, propaganda: List, 
                                     fallacies: List, clickbait: Dict) -> int:
         """Calculate overall manipulation score"""
@@ -427,11 +436,12 @@ class ManipulationDetector(BaseAnalyzer):
         
         # Add scores for tactics based on severity
         for tactic in tactics:
-            if tactic.get('severity') == 'high':
+            severity = tactic.get('severity', 'medium')
+            if severity == 'high':
                 base_score += 15
-            elif tactic.get('severity') == 'medium':
+            elif severity == 'medium':
                 base_score += 10
-            elif tactic.get('severity') == 'low':
+            elif severity == 'low':
                 base_score += 5
         
         # Add propaganda score
@@ -441,7 +451,7 @@ class ManipulationDetector(BaseAnalyzer):
         base_score += len(fallacies) * 10
         
         # Add clickbait score
-        if clickbait['is_clickbait']:
+        if clickbait.get('is_clickbait', False):
             base_score += 20
         
         # Normalize to 0-100 scale
@@ -455,10 +465,12 @@ class ManipulationDetector(BaseAnalyzer):
             return f"Minimal manipulation detected (score: {score}%). Article uses straightforward language and logical arguments."
         elif score < 40:
             tactic_names = [t['name'] for t in tactics[:2]]
-            return f"Low manipulation level (score: {score}%). Found: {', '.join(tactic_names)}. Generally factual presentation."
+            tactic_list = ', '.join(tactic_names) if tactic_names else 'minor issues'
+            return f"Low manipulation level (score: {score}%). Found: {tactic_list}. Generally factual presentation."
         elif score < 70:
             tactic_names = [t['name'] for t in tactics[:3]]
-            return f"Moderate manipulation (score: {score}%). Multiple tactics detected: {', '.join(tactic_names)}. Reader caution advised."
+            tactic_list = ', '.join(tactic_names) if tactic_names else 'various tactics'
+            return f"Moderate manipulation (score: {score}%). Multiple tactics detected: {tactic_list}. Reader caution advised."
         else:
             high_severity = sum(1 for t in tactics if t.get('severity') == 'high')
             return f"High manipulation level (score: {score}%). {len(tactics)} tactics found including {high_severity} severe issues. Significant bias or propaganda present."
@@ -475,9 +487,10 @@ class ManipulationDetector(BaseAnalyzer):
                 'Fear mongering identification',
                 'Ad hominem detection',
                 'False dichotomy recognition',
-                'Manipulation scoring'
+                'Manipulation scoring',
+                'BULLETPROOF AI-enhanced manipulation detection'
             ],
             'patterns_loaded': len(self.manipulation_patterns),
-            'propaganda_types': len(self.propaganda_techniques)
+            'ai_enhanced': self._ai_available
         })
         return info
