@@ -45,7 +45,19 @@ limiter = Limiter(
 )
 
 # Initialize services
-news_analyzer = NewsAnalyzer()
+try:
+    logger.info("=" * 80)
+    logger.info("INITIALIZING NEWS ANALYZER")
+    news_analyzer = NewsAnalyzer()
+    logger.info("NewsAnalyzer initialized successfully")
+    
+    # Check available services
+    available = news_analyzer.get_available_services()
+    logger.info(f"Available services: {available}")
+    logger.info("=" * 80)
+except Exception as e:
+    logger.error(f"CRITICAL: Failed to initialize NewsAnalyzer: {str(e)}", exc_info=True)
+    news_analyzer = None
 
 def calculate_trust_score(pipeline_results: Dict[str, Any]) -> int:
     """
@@ -405,15 +417,26 @@ def analyze():
     5. Findings Summary
     """
     try:
+        # DIAGNOSTIC: Log request received
+        logger.info("=" * 80)
+        logger.info("ANALYZE ENDPOINT HIT")
+        logger.info("=" * 80)
+        
         # Parse request
         data = request.get_json()
+        logger.info(f"Request data: {data}")
+        
         if not data:
+            logger.error("No data provided in request")
             return jsonify({'success': False, 'error': 'No data provided'}), 400
         
         url = data.get('url')
         text = data.get('text')
         
+        logger.info(f"URL: {url}, Text length: {len(text) if text else 0}")
+        
         if not url and not text:
+            logger.error("No URL or text provided")
             return jsonify({'success': False, 'error': 'Please provide either a URL or text'}), 400
         
         content = url if url else text
@@ -424,17 +447,27 @@ def analyze():
         logger.info(f"Type: {content_type}")
         logger.info("=" * 80)
         
+        # DIAGNOSTIC: Check if news_analyzer exists
+        if not news_analyzer:
+            logger.error("NewsAnalyzer not initialized!")
+            return jsonify({
+                'success': False,
+                'error': 'Analysis service not initialized'
+            }), 500
+        
         # Run full analysis pipeline
         start_time = time.time()
         
         try:
+            logger.info("Calling news_analyzer.analyze()...")
             # Use all services to analyze
             pipeline_results = news_analyzer.analyze(content, content_type, pro_mode=True)
             logger.info(f"Pipeline completed with {len(pipeline_results)} keys")
+            logger.info(f"Pipeline success: {pipeline_results.get('success')}")
             
             # Check if pipeline failed
             if not pipeline_results or not pipeline_results.get('success', True):
-                logger.warning("Pipeline failed or returned no data")
+                logger.warning(f"Pipeline failed or returned no data: {pipeline_results.get('error')}")
                 # Still try to provide something
                 pipeline_results = {'success': False, 'data': {}}
                 
@@ -448,6 +481,7 @@ def analyze():
             }
         
         analysis_time = time.time() - start_time
+        logger.info(f"Analysis took {analysis_time:.2f} seconds")
         
         # Extract the 5 simple things you want
         
@@ -565,6 +599,30 @@ def analyze():
                 'findings_summary': f'Analysis could not be completed: {str(e)}'
             }
         }), 200  # Return 200 so frontend can handle it
+
+@app.route('/api/test', methods=['GET', 'POST'])
+def test_endpoint():
+    """Test endpoint that returns simple data without analysis"""
+    logger.info("TEST ENDPOINT HIT")
+    
+    # Check if NewsAnalyzer exists
+    analyzer_status = "initialized" if news_analyzer else "failed"
+    
+    # Try to get service status
+    try:
+        registry = get_service_registry()
+        service_status = registry.get_service_status()
+        services = list(service_status.get('services', {}).keys())
+    except Exception as e:
+        services = f"Error: {str(e)}"
+    
+    return jsonify({
+        'success': True,
+        'message': 'Test endpoint working',
+        'news_analyzer': analyzer_status,
+        'services': services,
+        'timestamp': datetime.now().isoformat()
+    })
 
 @app.route('/api/simple', methods=['POST'])
 def simple_analyze():
