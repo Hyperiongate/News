@@ -3,379 +3,384 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI - Advanced News Intelligence Platform</title>
-    
-    <!-- Premium Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Professional Styles -->
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <title>News Analyzer - Simple Output</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        input[type="url"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .tab-buttons {
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+        
+        .tab-button.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        .input-panel {
+            display: none;
+        }
+        
+        .input-panel.active {
+            display: block;
+        }
+        
+        #results {
+            display: none;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        #results.active {
+            display: block;
+        }
+        
+        .result-item {
+            margin-bottom: 20px;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .result-value {
+            color: #666;
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 3px solid #4CAF50;
+            border-radius: 3px;
+        }
+        
+        .trust-score {
+            font-size: 36px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        #loading.active {
+            display: block;
+        }
+        
+        #error {
+            display: none;
+            padding: 15px;
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        
+        #error.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <!-- Premium Header -->
-    <header class="premium-header">
-        <div class="header-background"></div>
-        <div class="header-container">
-            <div class="brand-section">
-                <div class="brand-logo">
-                    <div class="logo-hexagon">
-                        <i class="fas fa-shield-halved"></i>
-                    </div>
-                </div>
-                <div class="brand-text">
-                    <h1>TruthLens AI</h1>
-                    <p class="brand-tagline">Enterprise News Intelligence</p>
-                </div>
+    <div class="container">
+        <h1>News Analyzer - Simple Output</h1>
+        
+        <div class="input-section">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('url')">URL Input</button>
+                <button class="tab-button" onclick="switchTab('text')">Text Input</button>
             </div>
             
-            <nav class="premium-nav">
-                <a href="#" class="nav-link premium-badge">
-                    <span class="nav-icon"><i class="fas fa-crown"></i></span>
-                    <span>Premium</span>
-                    <span class="pro-indicator">PRO</span>
-                </a>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Hero Section with Advanced Input -->
-    <section class="hero-section">
-        <div class="hero-container">
-            <!-- Animated Background Elements -->
-            <div class="hero-bg-elements">
-                <div class="floating-element element-1"></div>
-                <div class="floating-element element-2"></div>
-                <div class="floating-element element-3"></div>
-                <div class="grid-overlay"></div>
+            <div id="urlPanel" class="input-panel active">
+                <div class="input-group">
+                    <label for="urlInput">Enter News Article URL:</label>
+                    <input type="url" id="urlInput" placeholder="https://example.com/article">
+                </div>
+                <button onclick="analyzeUrl()" id="urlButton">Analyze URL</button>
             </div>
             
-            <!-- Main Analysis Interface -->
-            <div class="analysis-interface">
-                <div class="interface-header">
-                    <h2 class="interface-title">
-                        <span class="gradient-text">AI-Powered News Analysis</span>
-                    </h2>
-                    <p class="interface-subtitle">
-                        Deploy 10+ advanced analysis engines to verify news credibility in real-time
-                    </p>
-                    
-                    <!-- Feature Pills -->
-                    <div class="feature-pills">
-                        <span class="feature-pill">
-                            <i class="fas fa-brain"></i> AI-Powered Analysis
-                        </span>
-                        <span class="feature-pill">
-                            <i class="fas fa-search"></i> 10+ Analysis Services
-                        </span>
-                        <span class="feature-pill">
-                            <i class="fas fa-bolt"></i> Real-time Results
-                        </span>
-                        <span class="feature-pill">
-                            <i class="fas fa-check-circle"></i> Fact Verification
-                        </span>
-                    </div>
+            <div id="textPanel" class="input-panel">
+                <div class="input-group">
+                    <label for="textInput">Paste Article Text:</label>
+                    <textarea id="textInput" placeholder="Paste the article text here..."></textarea>
                 </div>
-                
-                <!-- Advanced Input System -->
-                <div class="input-system">
-                    <!-- Input Mode Selector -->
-                    <div class="mode-selector">
-                        <button class="mode-tab active" data-mode="url">
-                            <i class="fas fa-link"></i>
-                            <span>URL Analysis</span>
-                        </button>
-                        <button class="mode-tab" data-mode="text">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Text Analysis</span>
-                        </button>
-                    </div>
-                    
-                    <!-- URL Input (Active) -->
-                    <div id="urlInputWrapper" class="input-panel active">
-                        <div class="input-header">
-                            <span class="input-label">
-                                <i class="fas fa-globe"></i> Enter News Article URL
-                            </span>
-                            <span class="input-hint">Supports 10,000+ news sources worldwide</span>
-                        </div>
-                        
-                        <div class="advanced-input-group">
-                            <input type="url" 
-                                   id="urlInput" 
-                                   class="premium-input" 
-                                   placeholder="https://example.com/article"
-                                   autocomplete="off">
-                            <button id="analyzeBtn" class="analyze-button">
-                                <span class="button-content">
-                                    <i class="fas fa-microscope"></i>
-                                    <span>Analyze</span>
-                                </span>
-                                <span class="button-glow"></span>
-                            </button>
-                        </div>
-                        
-                        <!-- Quick Examples -->
-                        <div class="quick-examples">
-                            <span class="examples-label">Try:</span>
-                            <button class="example-chip" data-url="https://www.reuters.com/">Reuters</button>
-                            <button class="example-chip" data-url="https://www.bbc.com/news">BBC News</button>
-                            <button class="example-chip" data-url="https://apnews.com/">AP News</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Text Input (Hidden) -->
-                    <div id="textInputWrapper" class="input-panel">
-                        <div class="input-header">
-                            <span class="input-label">
-                                <i class="fas fa-paste"></i> Paste Article Text
-                            </span>
-                            <span class="input-hint">Minimum 100 words for accurate analysis</span>
-                        </div>
-                        
-                        <textarea id="textInput" 
-                                  class="premium-textarea" 
-                                  placeholder="Paste your article text here for instant analysis..."
-                                  rows="8"></textarea>
-                        
-                        <div class="textarea-footer">
-                            <span class="word-count" id="wordCount">0 words</span>
-                            <button id="analyzeTextBtn" class="analyze-button">
-                                <span class="button-content">
-                                    <i class="fas fa-microscope"></i>
-                                    <span>Analyze Text</span>
-                                </span>
-                                <span class="button-glow"></span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Trust Indicators -->
-                <div class="trust-indicators">
-                    <div class="indicator">
-                        <i class="fas fa-lock"></i>
-                        <span>Secure Analysis</span>
-                    </div>
-                    <div class="indicator">
-                        <i class="fas fa-database"></i>
-                        <span>Multiple Sources</span>
-                    </div>
-                    <div class="indicator">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Detailed Reports</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Professional Results Section -->
-    <section id="resultsSection" class="results-section">
-        <!-- Executive Summary Dashboard -->
-        <div class="executive-dashboard">
-            <div class="dashboard-container">
-                <!-- Primary Metrics -->
-                <div class="metrics-panel">
-                    <div class="metric-card primary-metric">
-                        <div class="metric-visual">
-                            <canvas id="trustGauge"></canvas>
-                            <div class="metric-center">
-                                <div class="metric-value" id="trustScoreNumber">--</div>
-                                <div class="metric-label">Trust Score</div>
-                            </div>
-                        </div>
-                        <div class="trust-classification" id="trustLevelIndicator">
-                            <i class="fas fa-shield-alt"></i>
-                            <span id="trustLevelText">Analyzing...</span>
-                        </div>
-                    </div>
-                    
-                    <div class="secondary-metrics">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="metric-info">
-                                <div class="metric-value" id="verifiedClaims">--</div>
-                                <div class="metric-label">Verified Claims</div>
-                            </div>
-                        </div>
-                        
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-balance-scale"></i>
-                            </div>
-                            <div class="metric-info">
-                                <div class="metric-value" id="biasScore">--</div>
-                                <div class="metric-label">Bias Level</div>
-                            </div>
-                        </div>
-                        
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-user-shield"></i>
-                            </div>
-                            <div class="metric-info">
-                                <div class="metric-value" id="sourceRating">--</div>
-                                <div class="metric-label">Source Rating</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- AI Summary Panel -->
-                <div class="ai-summary-panel">
-                    <div class="panel-header">
-                        <h3>
-                            <i class="fas fa-brain"></i>
-                            AI Intelligence Summary
-                        </h3>
-                        <span class="ai-model">GPT-4 Analysis</span>
-                    </div>
-                    
-                    <div class="summary-content" id="aiSummary">
-                        <div class="summary-section">
-                            <h4>Executive Brief</h4>
-                            <p id="trustSummary">Initializing AI analysis engines...</p>
-                        </div>
-                        
-                        <div class="summary-section">
-                            <h4>Critical Findings</h4>
-                            <div id="keyFindings" class="findings-list">
-                                <div class="finding-skeleton"></div>
-                                <div class="finding-skeleton"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="summary-section">
-                            <h4>Recommended Actions</h4>
-                            <div id="recommendations" class="recommendations-list">
-                                <div class="recommendation-skeleton"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button onclick="analyzeText()" id="textButton">Analyze Text</button>
             </div>
         </div>
         
-        <!-- Article Information Bar -->
-        <div class="article-info-panel">
-            <div class="info-container">
-                <div class="article-main-info">
-                    <h3 id="articleTitle">Loading article data...</h3>
-                    <div id="articleMeta" class="article-metadata"></div>
-                </div>
-                <div class="article-actions">
-                    <button class="action-button" id="downloadPdfBtn">
-                        <i class="fas fa-file-pdf"></i>
-                        <span>Export Report</span>
-                    </button>
-                    <button class="action-button" id="shareResultsBtn">
-                        <i class="fas fa-share-nodes"></i>
-                        <span>Share</span>
-                    </button>
-                </div>
-            </div>
+        <div id="loading">
+            Analyzing... This may take a moment.
         </div>
         
-        <!-- Advanced Analysis Grid -->
-        <div class="analysis-grid-section">
-            <div class="grid-header">
-                <h3>
-                    <i class="fas fa-cube"></i>
-                    Deep Analysis Modules
-                </h3>
-                <div class="grid-progress">
-                    <span class="progress-label">Analysis Progress</span>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="servicesProgressBar"></div>
-                    </div>
-                    <span class="progress-percent" id="progressPercent">0%</span>
+        <div id="error"></div>
+        
+        <div id="results">
+            <div class="result-item">
+                <div class="result-label">Trust Score</div>
+                <div class="result-value">
+                    <span id="trustScore" class="trust-score">--</span>/100
                 </div>
             </div>
             
-            <div class="services-grid" id="servicesGrid">
-                <!-- Service cards will be dynamically generated -->
+            <div class="result-item">
+                <div class="result-label">Article Summary</div>
+                <div class="result-value" id="articleSummary">--</div>
             </div>
-        </div>
-        
-        <!-- Professional Actions Bar -->
-        <div class="results-actions-bar">
-            <button class="primary-action-btn" id="newAnalysisBtn">
-                <i class="fas fa-plus-circle"></i>
-                <span>New Analysis</span>
-            </button>
             
-            <div class="secondary-actions">
-                <button class="secondary-action-btn">
-                    <i class="fas fa-history"></i>
-                    <span>Analysis History</span>
-                </button>
-                <button class="secondary-action-btn">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </button>
+            <div class="result-item">
+                <div class="result-label">Source</div>
+                <div class="result-value" id="source">--</div>
             </div>
-        </div>
-    </section>
-
-    <!-- Professional Loading Overlay -->
-    <div id="loadingOverlay" class="premium-loading-overlay">
-        <div class="loading-container">
-            <div class="loading-animation">
-                <div class="loading-hexagon">
-                    <div class="hexagon-inner"></div>
-                </div>
-                <div class="loading-particles">
-                    <span></span><span></span><span></span><span></span>
-                </div>
+            
+            <div class="result-item">
+                <div class="result-label">Author</div>
+                <div class="result-value" id="author">--</div>
             </div>
-            <h3 class="loading-title">Initializing Analysis Engines</h3>
-            <div class="loading-steps">
-                <div class="step active" id="step1">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Extracting article content</span>
-                </div>
-                <div class="step" id="step2">
-                    <i class="fas fa-circle"></i>
-                    <span>Running credibility analysis</span>
-                </div>
-                <div class="step" id="step3">
-                    <i class="fas fa-circle"></i>
-                    <span>Fact-checking claims</span>
-                </div>
-                <div class="step" id="step4">
-                    <i class="fas fa-circle"></i>
-                    <span>Generating AI insights</span>
-                </div>
+            
+            <div class="result-item">
+                <div class="result-label">Findings Summary</div>
+                <div class="result-value" id="findingsSummary">--</div>
             </div>
+            
+            <button onclick="resetAnalysis()">New Analysis</button>
         </div>
     </div>
-
-    <!-- Professional Error Notification -->
-    <div id="errorMessage" class="premium-error-notification">
-        <div class="error-content">
-            <i class="fas fa-exclamation-triangle"></i>
-            <div class="error-text">
-                <strong>Analysis Error</strong>
-                <span id="errorText"></span>
-            </div>
-            <button class="error-close" onclick="this.parentElement.parentElement.classList.remove('active')">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="/static/js/config.js"></script>
-    <script src="/static/js/truthlens-core.js"></script>
-    <script src="/static/js/truthlens-display.js"></script>
-    <script src="/static/js/truthlens-services.js"></script>
-    <script src="/static/js/service-navigation.js"></script>
+    
+    <script>
+        let currentTab = 'url';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.input-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            if (tab === 'url') {
+                document.querySelector('.tab-button').classList.add('active');
+                document.getElementById('urlPanel').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-button')[1].classList.add('active');
+                document.getElementById('textPanel').classList.add('active');
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('urlButton').disabled = true;
+            document.getElementById('textButton').disabled = true;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('urlButton').disabled = false;
+            document.getElementById('textButton').disabled = false;
+        }
+        
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            hideLoading();
+        }
+        
+        function hideError() {
+            document.getElementById('error').classList.remove('active');
+        }
+        
+        function displayResults(data) {
+            // Use the simple data if available, otherwise fall back to regular data
+            const simple = data.simple || {};
+            
+            // If simple data isn't available, try to extract from regular data
+            const trustScore = simple.trust_score || data.data?.analysis?.trust_score || 0;
+            const articleSummary = simple.article_summary || data.data?.article?.summary || 'No summary available';
+            const source = simple.source || data.data?.article?.source || data.data?.article?.domain || 'Unknown';
+            const author = simple.author || data.data?.article?.author || 'Unknown';
+            const findingsSummary = simple.findings_summary || data.data?.analysis?.summary || 'No findings available';
+            
+            // Update the display
+            document.getElementById('trustScore').textContent = trustScore;
+            document.getElementById('trustScore').style.color = 
+                trustScore >= 70 ? '#4CAF50' : 
+                trustScore >= 40 ? '#FF9800' : '#f44336';
+            
+            document.getElementById('articleSummary').textContent = articleSummary;
+            document.getElementById('source').textContent = source || 'Not available';
+            document.getElementById('author').textContent = author || 'Not available';
+            document.getElementById('findingsSummary').textContent = findingsSummary;
+            
+            // Show results
+            document.getElementById('results').classList.add('active');
+            hideLoading();
+        }
+        
+        async function analyzeUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) {
+                showError('Please enter a URL');
+                return;
+            }
+            
+            hideError();
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+                console.error(error);
+            }
+        }
+        
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                showError('Please enter some text');
+                return;
+            }
+            
+            if (text.split(' ').length < 50) {
+                showError('Please enter at least 50 words for analysis');
+                return;
+            }
+            
+            hideError();
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+                console.error(error);
+            }
+        }
+        
+        function resetAnalysis() {
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('urlInput').value = '';
+            document.getElementById('textInput').value = '';
+            hideError();
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') analyzeUrl();
+        });
+    </script>
 </body>
 </html>
