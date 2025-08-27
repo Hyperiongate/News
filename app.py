@@ -221,6 +221,31 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
             'explanation': 'The Earth is an oblate spheroid (roughly spherical), confirmed by centuries of scientific observation and measurement.',
             'evidence': 'Satellite imagery, physics principles, astronomical observations, and navigation systems all confirm Earth\'s spherical shape.',
             'category': 'Science Denial'
+        },
+        
+        # Basic Geography - CORRECT CLAIMS
+        'greenland.*(?:located|is).*(?:northeast|north.*east).*(?:of )?canada': {
+            'claim_type': 'Geographic Location',
+            'accuracy': 'True',
+            'explanation': 'Greenland is indeed located to the northeast of Canada, separated by the Davis Strait and Baffin Bay.',
+            'evidence': 'Geographic coordinates and maps confirm Greenland\'s position northeast of Canada\'s Arctic archipelago.',
+            'category': 'Verified Geographic Fact'
+        },
+        
+        'alaska.*(?:largest|biggest).*(?:state|us state)': {
+            'claim_type': 'Geographic Facts',
+            'accuracy': 'True', 
+            'explanation': 'Alaska is the largest U.S. state by area, covering 663,300 square miles.',
+            'evidence': 'U.S. Census Bureau data confirms Alaska\'s area is more than twice the size of Texas.',
+            'category': 'Verified Geographic Fact'
+        },
+        
+        'mount everest.*(?:highest|tallest).*mountain': {
+            'claim_type': 'Geographic Superlatives',
+            'accuracy': 'True',
+            'explanation': 'Mount Everest is the highest mountain above sea level at 29,032 feet (8,849 meters).',
+            'evidence': 'Surveying data and international geographic standards confirm Everest\'s height.',
+            'category': 'Verified Geographic Fact'
         }
     }
     
@@ -463,15 +488,17 @@ def calculate_overall_trust_score(claims: List[Dict], bias_info: Dict, manipulat
     """Calculate overall trust score based on detailed analysis"""
     base_score = 75
     
-    # Deduct points for false/misleading claims
+    # Adjust points based on claim accuracy
     for claim in claims:
         accuracy = claim.get('accuracy_assessment', '')
-        if 'False' in accuracy:
-            base_score -= 25
+        if 'True' in accuracy:
+            base_score += 10  # Reward accurate claims
+        elif 'False' in accuracy:
+            base_score -= 25  # Heavily penalize false claims
         elif 'Misleading' in accuracy:
-            base_score -= 15
+            base_score -= 15  # Moderately penalize misleading claims
         elif 'Requires Verification' in accuracy:
-            base_score -= 5
+            base_score -= 5   # Small penalty for unverified claims
     
     # Deduct points for bias
     if bias_info['bias_detected']:
