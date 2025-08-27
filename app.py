@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Smart Text Analysis API - FINAL FIXED VERSION
-Actually detects misinformation and provides meaningful analysis
+Comprehensive Text Analysis API - Using ALL Available Services
+Enhanced false claim detection PLUS full utilization of existing analysis services
 """
 import os
 import sys
@@ -58,199 +58,159 @@ limiter = Limiter(
 news_analyzer = None
 if USE_EXISTING_SERVICES:
     try:
-        logger.info("Initializing existing NewsAnalyzer services...")
+        logger.info("Initializing comprehensive NewsAnalyzer services...")
         news_analyzer = NewsAnalyzer()
-        logger.info("NewsAnalyzer initialized successfully")
+        available_services = news_analyzer.get_available_services()
+        logger.info(f"NewsAnalyzer initialized with {available_services.get('summary', {}).get('available', 0)} services")
     except Exception as e:
         logger.error(f"Failed to initialize NewsAnalyzer: {str(e)}")
         news_analyzer = None
 
 # ENHANCED: Comprehensive False Claims Database
 KNOWN_FALSE_CLAIMS = {
-    # Flat Earth
-    'flat earth|earth.*flat|flat.*earth': {
-        'score': 5,
-        'category': 'Conspiracy Theory',
-        'description': 'The flat Earth conspiracy theory contradicts centuries of scientific evidence.',
-        'evidence': 'Satellite imagery, physics, astronomy, and direct observation prove the Earth is spherical.',
+    # Economic Misinformation
+    'tariffs?.*(?:importing|exporting|foreign).*country.*(?:pay|pays|paid)': {
+        'score': 20,
+        'category': 'Economic Misinformation',
+        'description': 'Tariffs are paid by importing companies, not foreign countries.',
+        'evidence': 'US Customs data shows tariff revenue comes from domestic importers.',
         'severity': 'High'
     },
     
-    # Moon conspiracy
-    'moon.*cheese|cheese.*moon': {
-        'score': 8,
-        'category': 'Folkloric Joke',
-        'description': 'The moon being made of cheese is a well-known joke, not a factual claim.',
-        'evidence': 'Moon rock samples brought back by Apollo missions show the moon consists of rock and dust.',
+    'china.*pay.*tariffs?|tariffs?.*china.*pay': {
+        'score': 20,
+        'category': 'Economic Misinformation', 
+        'description': 'China does not directly pay US tariffs.',
+        'evidence': 'Treasury Department data confirms tariffs are paid by US importers.',
         'severity': 'High'
     },
     
-    'moon landing.*(?:fake|hoax|staged|hollywood)': {
-        'score': 15,
-        'category': 'Conspiracy Theory',
-        'description': 'Moon landing conspiracy theories have been repeatedly debunked by evidence.',
-        'evidence': 'Physical evidence, third-party verification, retroreflectors, and technical analysis confirm the landings.',
-        'severity': 'High'
-    },
-    
-    # Vaccine misinformation  
-    'vaccines?.*(?:cause|causing|linked.*to).*autism': {
-        'score': 10,
-        'category': 'Medical Misinformation',
-        'description': 'The claimed link between vaccines and autism has been thoroughly debunked.',
-        'evidence': 'Multiple large-scale studies involving millions of children found no connection between vaccines and autism.',
-        'severity': 'Critical'
-    },
-    
-    'covid.*vaccines?.*(?:more problems|causing.*problems|dangerous|deadly|killing)': {
-        'score': 15,
-        'category': 'Medical Misinformation',
-        'description': 'Claims that COVID vaccines cause more harm than benefit contradict scientific evidence.',
-        'evidence': 'Clinical trials and real-world data show COVID vaccines significantly reduce serious illness, hospitalization, and death with rare serious side effects.',
-        'severity': 'Critical'
-    },
-    
-    'covid.*vaccines?.*(?:contain|have).*(?:microchips?|tracking|5g|control)': {
-        'score': 5,
-        'category': 'Conspiracy Theory',
-        'description': 'Claims about microchips or tracking devices in vaccines are baseless conspiracy theories.',
-        'evidence': 'Vaccine ingredients are publicly available and extensively tested. No tracking technology exists.',
-        'severity': 'High'
-    },
-    
-    # 5G/COVID
-    'covid.*5g|5g.*covid|coronavirus.*5g': {
-        'score': 8,
-        'category': 'Conspiracy Theory',
-        'description': 'There is no scientific connection between 5G technology and COVID-19.',
-        'evidence': 'COVID-19 is caused by a virus (SARS-CoV-2), not radio waves. Countries without 5G networks also had COVID outbreaks.',
-        'severity': 'High'
-    },
-    
-    # Climate denial
-    'climate change.*(?:hoax|fake|scam|lie)': {
-        'score': 12,
-        'category': 'Science Denial',
-        'description': 'Climate change denial contradicts overwhelming scientific consensus.',
-        'evidence': '97% of actively publishing climate scientists agree that recent climate change is primarily caused by human activities.',
-        'severity': 'High'
-    },
-    
-    'global warming.*(?:natural|not.*human|sun|solar)': {
-        'score': 25,
-        'category': 'Partial Misinformation',
-        'description': 'While natural factors affect climate, current warming is primarily human-caused.',
-        'evidence': 'Temperature records, ice core data, and atmospheric measurements show clear correlation with industrial emissions.',
+    'trade.*war.*easy.*win|trade.*wars?.*good': {
+        'score': 30,
+        'category': 'Economic Misinformation',
+        'description': 'Trade wars typically harm all participants.',
+        'evidence': 'Economic studies show trade wars reduce prosperity for all countries involved.',
         'severity': 'Medium'
     },
     
-    # QAnon and political conspiracies
-    'qanon|q.*anon': {
-        'score': 8,
-        'category': 'Conspiracy Theory',
-        'description': 'QAnon is a debunked conspiracy theory with no factual basis.',
-        'evidence': 'No QAnon predictions have materialized and claims lack credible evidence or sources.',
-        'severity': 'High'
+    # Political Power Misinformation
+    'president.*can.*(?:impose|do|change).*(?:all|anything|everything|whatever).*(?:he|she).*wants?': {
+        'score': 30,
+        'category': 'Constitutional Misinformation',
+        'description': 'Presidential powers are constitutionally limited.',
+        'evidence': 'The system of checks and balances limits executive authority through Congress and courts.',
+        'severity': 'Medium'
     },
     
-    'pizzagate': {
+    # Science Denial
+    'flat earth|earth.*flat|flat.*earth': {
         'score': 5,
-        'category': 'Conspiracy Theory',
-        'description': 'Pizzagate conspiracy theory was investigated and found baseless.',
-        'evidence': 'Law enforcement investigations found no evidence supporting the claims.',
+        'category': 'Science Denial',
+        'description': 'Flat Earth theory contradicts established scientific evidence.',
+        'evidence': 'Satellite imagery, physics, and astronomy prove Earth is spherical.',
         'severity': 'High'
     },
     
-    # Historical denialism
-    'holocaust.*(?:hoax|fake|didn.*happen)': {
-        'score': 2,
-        'category': 'Historical Denialism',
-        'description': 'Holocaust denial contradicts overwhelming historical evidence.',
-        'evidence': 'Extensive documentation, survivor testimony, Nazi records, and physical evidence confirm the Holocaust occurred.',
+    'climate change.*(?:hoax|fake|scam|lie)': {
+        'score': 15,
+        'category': 'Science Denial',
+        'description': 'Climate change denial contradicts scientific consensus.',
+        'evidence': '97% of climate scientists agree human activities cause current climate change.',
+        'severity': 'High'
+    },
+    
+    # Medical Misinformation  
+    'vaccines?.*(?:cause|causing|linked.*to).*autism': {
+        'score': 8,
+        'category': 'Medical Misinformation',
+        'description': 'No link between vaccines and autism has been found.',
+        'evidence': 'Large-scale studies involving millions of children found no connection.',
         'severity': 'Critical'
+    },
+    
+    'covid.*vaccines?.*(?:more problems|causing.*problems|dangerous|deadly)': {
+        'score': 12,
+        'category': 'Medical Misinformation',
+        'description': 'Claims about COVID vaccine harm contradict clinical evidence.',
+        'evidence': 'Clinical trials show vaccines significantly reduce severe illness with rare serious side effects.',
+        'severity': 'Critical'
+    },
+    
+    # Conspiracy Theories
+    'moon landing.*(?:fake|hoax|staged)': {
+        'score': 10,
+        'category': 'Conspiracy Theory',
+        'description': 'Moon landing conspiracy theories are debunked.',
+        'evidence': 'Physical evidence and third-party verification confirm the landings occurred.',
+        'severity': 'High'
+    },
+    
+    'moon.*cheese|cheese.*moon': {
+        'score': 5,
+        'category': 'Absurd Claim',
+        'description': 'This is a traditional joke, not a factual claim.',
+        'evidence': 'Moon samples show the moon consists of rock and dust.',
+        'severity': 'High'
     }
 }
 
 # ENHANCED: Suspicious Patterns
 SUSPICIOUS_PATTERNS = {
     'absolute_certainty': {
-        'patterns': [r'\b(?:always|never|all|none|every|no one|everyone|100%)\s+(?:knows?|believes?|agrees?|says?)\b'],
-        'score_penalty': -15,
-        'description': 'Uses absolute language suggesting universal agreement',
-        'severity': 'Medium'
+        'patterns': [r'\b(?:always|never|all|none|every|everyone|100%)\s+(?:knows?|believes?|agrees?)\b'],
+        'score_penalty': -12,
+        'description': 'Uses absolute language suggesting universal agreement'
     },
     'secret_knowledge': {
-        'patterns': [r'\b(?:they don\'?t want you to know|hidden truth|secret|cover[-\s]?up|wake up|sheeple|open your eyes)\b'],
-        'score_penalty': -20,
-        'description': 'Appeals to secret or hidden information',
-        'severity': 'High'
+        'patterns': [r'\b(?:they don\'?t want you to know|hidden truth|secret|cover[-\s]?up|wake up)\b'],
+        'score_penalty': -18,
+        'description': 'Appeals to secret or hidden information'
     },
     'anti_establishment': {
-        'patterns': [r'\b(?:mainstream media|big pharma|deep state|globalists?|elites?|government|media)\s+(?:lie|lying|lies|control|manipulate)\b'],
-        'score_penalty': -18,
-        'description': 'Makes broad claims about institutional deception',
-        'severity': 'Medium'
+        'patterns': [r'\b(?:mainstream media|big pharma|deep state|globalists?)\s+(?:lie|lies|control)\b'],
+        'score_penalty': -15,
+        'description': 'Makes broad claims about institutional deception'
     },
     'miracle_claims': {
-        'patterns': [r'\b(?:miracle|magical|instantly|overnight|revolutionary|breakthrough)\s+(?:cure|fix|solve|treatment)\b'],
-        'score_penalty': -25,
-        'description': 'Makes unrealistic miracle cure or solution claims',
-        'severity': 'High'
+        'patterns': [r'\b(?:miracle|magical|revolutionary)\s+(?:cure|solution|fix)\b'],
+        'score_penalty': -20,
+        'description': 'Makes unrealistic miracle claims'
     },
     'fearmongering': {
-        'patterns': [r'\b(?:dangerous|deadly|poison|toxic|killing|fatal|lethal)\s+(?:government|doctors|scientists|officials|authorities)\b'],
-        'score_penalty': -22,
-        'description': 'Uses fear-based language about authorities or experts',
-        'severity': 'High'
-    },
-    'false_authority': {
-        'patterns': [r'\b(?:studies show|experts say|doctors agree|scientists confirm)\b(?!\s+(?:at|from|in|that))\s*[^.]{0,50}\.'],
-        'score_penalty': -12,
-        'description': 'Makes vague appeals to authority without specific attribution',
-        'severity': 'Medium'
-    },
-    'do_your_research': {
-        'patterns': [r'\b(?:do your (?:own )?research|look it up|educate yourself|think for yourself)\b'],
-        'score_penalty': -10,
-        'description': 'Deflects burden of proof with vague research suggestions',
-        'severity': 'Low'
+        'patterns': [r'\b(?:dangerous|deadly|toxic|poison)\s+(?:government|doctors|scientists)\b'],
+        'score_penalty': -18,
+        'description': 'Uses fear-based language about authorities'
     }
 }
 
 def analyze_text_for_misinformation(text: str) -> Dict[str, Any]:
     """
-    CORE FUNCTION: Analyze text for known false claims and suspicious patterns
-    This is our main defense against misinformation
+    ENHANCED: Analyze text for known false claims and suspicious patterns
     """
     text_lower = text.lower()
     findings = []
     total_penalty = 0
     categories_found = set()
-    severity_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0}
     
-    logger.info(f"Analyzing text: '{text[:100]}...' ({len(text)} chars)")
+    logger.info(f"Analyzing {len(text)} characters for misinformation...")
     
     # Check against known false claims database
     for pattern, claim_data in KNOWN_FALSE_CLAIMS.items():
         try:
             if re.search(pattern, text_lower, re.IGNORECASE):
-                logger.info(f"MATCHED FALSE CLAIM: {pattern} -> {claim_data['category']}")
+                logger.info(f"DETECTED FALSE CLAIM: {pattern} -> {claim_data['category']}")
                 findings.append({
                     'type': 'Known False Claim',
                     'category': claim_data['category'],
                     'description': claim_data['description'],
                     'evidence': claim_data['evidence'],
                     'severity': claim_data['severity'],
-                    'confidence': 95,
-                    'pattern': pattern
+                    'confidence': 95
                 })
                 penalty = 100 - claim_data['score']
                 total_penalty += penalty
                 categories_found.add(claim_data['category'])
-                severity_counts[claim_data['severity']] += 1
-                logger.info(f"Applied penalty: {penalty} points")
-        except re.error as e:
-            logger.error(f"Regex error for pattern '{pattern}': {e}")
+        except re.error:
             continue
     
     # Check for suspicious patterns
@@ -258,27 +218,21 @@ def analyze_text_for_misinformation(text: str) -> Dict[str, Any]:
         for pattern in pattern_data['patterns']:
             try:
                 if re.search(pattern, text_lower, re.IGNORECASE):
-                    logger.info(f"MATCHED SUSPICIOUS PATTERN: {pattern_name}")
                     findings.append({
                         'type': 'Suspicious Pattern',
                         'pattern_name': pattern_name.replace('_', ' ').title(),
                         'description': pattern_data['description'],
-                        'severity': pattern_data['severity'],
-                        'confidence': 75,
-                        'pattern': pattern
+                        'severity': 'Medium',
+                        'confidence': 75
                     })
-                    penalty = abs(pattern_data['score_penalty'])
-                    total_penalty += penalty
-                    severity_counts[pattern_data['severity']] += 1
-                    logger.info(f"Applied pattern penalty: {penalty} points")
-                    break  # Only count each pattern type once
-            except re.error as e:
-                logger.error(f"Regex error for pattern '{pattern}': {e}")
+                    total_penalty += abs(pattern_data['score_penalty'])
+                    break
+            except re.error:
                 continue
     
     # Calculate final credibility score
-    base_score = 75  # Start neutral-positive
-    final_score = max(5, base_score - total_penalty)  # Floor at 5
+    base_score = 75
+    final_score = max(5, base_score - total_penalty)
     
     # Determine credibility level
     if final_score >= 80:
@@ -294,107 +248,215 @@ def analyze_text_for_misinformation(text: str) -> Dict[str, Any]:
     else:
         credibility_level = "Extremely Low"
     
-    logger.info(f"Analysis complete: Score {final_score}, Level {credibility_level}, {len(findings)} issues")
-    
     return {
         'credibility_score': final_score,
         'credibility_level': credibility_level,
         'findings': findings,
         'categories_found': list(categories_found),
-        'severity_counts': severity_counts,
         'total_issues': len(findings),
-        'total_penalty': total_penalty,
-        'analysis_summary': generate_smart_summary(findings, final_score, categories_found, severity_counts)
+        'total_penalty': total_penalty
     }
 
-def generate_smart_summary(findings: List[Dict], score: int, categories: set, severity_counts: Dict) -> str:
-    """Generate intelligent analysis summary"""
-    if not findings:
-        return f"✅ No misinformation patterns detected. Content appears credible. (Score: {score}/100)"
+def extract_service_insights(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Extract key insights from ALL available services
+    Returns compact, actionable insights
+    """
+    insights = {}
     
-    # Critical issues (false claims)
-    critical_issues = severity_counts.get('Critical', 0)
-    high_issues = severity_counts.get('High', 0)
+    # Manipulation Detection Insights
+    if 'manipulation_detector' in pipeline_results:
+        manip_data = pipeline_results['manipulation_detector']
+        if isinstance(manip_data, dict) and manip_data.get('success'):
+            level = manip_data.get('manipulation_level', 'Unknown')
+            tactics = manip_data.get('tactics_found', [])
+            if tactics:
+                insights['manipulation'] = f"{level} risk: {len(tactics)} tactics detected"
+            else:
+                insights['manipulation'] = f"{level} manipulation risk"
     
-    if critical_issues > 0:
-        claim_types = ', '.join(categories) if categories else 'various categories'
-        return f"🚨 CRITICAL: Contains {critical_issues} known false claim(s) in {claim_types}. " \
-               f"These claims contradict established scientific evidence. Score: {score}/100"
+    # Bias Detection Insights
+    if 'bias_detector' in pipeline_results:
+        bias_data = pipeline_results['bias_detector']
+        if isinstance(bias_data, dict) and bias_data.get('success'):
+            bias_level = bias_data.get('bias_level', 'Unknown')
+            political = bias_data.get('political_label', '')
+            if political and political != 'Neutral':
+                insights['bias'] = f"{bias_level} bias ({political} leaning)"
+            else:
+                insights['bias'] = f"{bias_level} bias detected"
     
-    if high_issues > 0:
+    # Fact Checking Insights
+    if 'fact_checker' in pipeline_results:
+        fact_data = pipeline_results['fact_checker']
+        if isinstance(fact_data, dict) and fact_data.get('success'):
+            verified = fact_data.get('verified_claims', 0)
+            total = fact_data.get('total_claims', 0)
+            if total > 0:
+                insights['fact_check'] = f"{verified}/{total} claims verified"
+            else:
+                insights['fact_check'] = "No verifiable claims found"
+    
+    # Source Credibility Insights
+    if 'source_credibility' in pipeline_results:
+        source_data = pipeline_results['source_credibility']
+        if isinstance(source_data, dict) and source_data.get('success'):
+            credibility = source_data.get('credibility_level', 'Unknown')
+            score = source_data.get('score', 0)
+            insights['source'] = f"Source: {credibility} ({score}/100)"
+    
+    # Content Analysis Insights
+    if 'content_analyzer' in pipeline_results:
+        content_data = pipeline_results['content_analyzer']
+        if isinstance(content_data, dict) and content_data.get('success'):
+            quality = content_data.get('quality_score', 0)
+            readability = content_data.get('readability_level', 'Unknown')
+            insights['content'] = f"Quality: {quality}/100, {readability} reading level"
+    
+    # Transparency Analysis Insights
+    if 'transparency_analyzer' in pipeline_results:
+        trans_data = pipeline_results['transparency_analyzer']
+        if isinstance(trans_data, dict) and trans_data.get('success'):
+            transparency = trans_data.get('transparency_level', 'Unknown')
+            score = trans_data.get('score', 0)
+            insights['transparency'] = f"Transparency: {transparency} ({score}/100)"
+    
+    return insights
+
+def calculate_comprehensive_trust_score(misinformation_analysis: Dict[str, Any], pipeline_results: Dict[str, Any]) -> int:
+    """
+    Calculate comprehensive trust score using misinformation analysis + all services
+    """
+    # Start with our misinformation analysis (primary factor)
+    base_score = misinformation_analysis['credibility_score']
+    
+    # If critical misinformation found, cap the score
+    critical_issues = [f for f in misinformation_analysis['findings'] if f.get('severity') == 'Critical']
+    if critical_issues:
+        base_score = min(base_score, 25)
+    
+    high_issues = [f for f in misinformation_analysis['findings'] if f.get('severity') == 'High']
+    if high_issues:
+        base_score = min(base_score, 40)
+    
+    # Collect service scores for blending
+    service_scores = []
+    service_weights = {
+        'manipulation_detector': 2.5,  # High weight - key for misinformation
+        'bias_detector': 1.8,          # High weight - bias affects credibility
+        'fact_checker': 2.2,           # High weight - fact verification crucial
+        'source_credibility': 1.5,     # Medium weight - source matters
+        'content_analyzer': 1.0,       # Lower weight - quality vs truth
+        'transparency_analyzer': 1.2,  # Medium weight - transparency matters
+        'openai_enhancer': 1.3         # Medium weight - AI insights
+    }
+    
+    weighted_sum = 0
+    total_weight = 0
+    
+    for service_name, result in pipeline_results.items():
+        if not isinstance(result, dict) or not result.get('success', False):
+            continue
+            
+        weight = service_weights.get(service_name, 1.0)
+        service_score = None
+        
+        # Extract scores from different service formats
+        if 'score' in result:
+            service_score = result['score']
+        elif 'trust_score' in result:
+            service_score = result['trust_score']
+        elif 'credibility_score' in result:
+            service_score = result['credibility_score']
+        elif service_name == 'bias_detector':
+            # Invert bias score (less bias = higher trust)
+            if 'bias_score' in result:
+                bias_score = result['bias_score']
+                service_score = max(0, 100 - bias_score)
+        elif service_name == 'manipulation_detector':
+            # Invert manipulation score
+            if 'manipulation_score' in result:
+                manip_score = result['manipulation_score']
+                service_score = max(0, 100 - manip_score)
+            elif 'manipulation_level' in result:
+                level = result['manipulation_level'].lower()
+                level_scores = {'low': 85, 'moderate': 60, 'high': 30, 'critical': 15}
+                service_score = level_scores.get(level, 50)
+        
+        if service_score is not None:
+            service_score = max(0, min(100, service_score))
+            service_scores.append(service_score)
+            weighted_sum += service_score * weight
+            total_weight += weight
+    
+    # Blend scores: 60% misinformation analysis, 40% services
+    if total_weight > 0:
+        pipeline_average = weighted_sum / total_weight
+        final_score = int(base_score * 0.6 + pipeline_average * 0.4)
+        logger.info(f"Blended trust score: {final_score} (misinformation: {base_score}, services: {pipeline_average:.1f})")
+    else:
+        final_score = base_score
+        logger.info(f"Using misinformation score only: {final_score}")
+    
+    return max(5, min(100, final_score))
+
+def create_content_summary(text: str, misinformation_analysis: Dict[str, Any]) -> str:
+    """Generate content summary with misinformation context"""
+    # Get text preview
+    preview = text.strip()[:120] + "..." if len(text) > 120 else text.strip()
+    
+    # Add misinformation context
+    issues = misinformation_analysis['total_issues']
+    if issues > 0:
+        categories = misinformation_analysis['categories_found']
         if categories:
-            category_text = f" ({', '.join(list(categories)[:2])})"
+            category_text = f" ({', '.join(categories[:2])})"
         else:
             category_text = ""
-        
-        return f"⚠️ HIGH RISK: Contains {high_issues} serious misinformation indicator(s){category_text}. " \
-               f"Claims should be independently verified. Score: {score}/100"
-    
-    # Medium/Low issues
-    total_issues = len(findings)
-    return f"⚡ SUSPICIOUS: Contains {total_issues} pattern(s) commonly associated with misinformation. " \
-           f"Exercise caution and verify claims. Score: {score}/100"
-
-def create_content_summary(text: str, analysis: Dict[str, Any]) -> str:
-    """Generate an actual summary of the content analyzed"""
-    # Get first 150 characters as preview
-    text_preview = text.strip()[:150]
-    if len(text) > 150:
-        text_preview += "..."
-    
-    # Add analysis context
-    findings = analysis['findings']
-    if findings:
-        issues = len(findings)
-        summary = f'Text claiming: "{text_preview}" - Contains {issues} credibility issue(s) flagged for review.'
+        return f'"{preview}" - {issues} credibility issue(s) detected{category_text}'
     else:
-        summary = f'Text stating: "{text_preview}" - No significant credibility issues detected.'
-    
-    return summary
+        return f'"{preview}" - No significant credibility issues detected'
 
-def generate_comprehensive_findings(analysis: Dict[str, Any], score: int) -> str:
-    """Generate detailed findings report"""
-    findings = analysis['findings']
-    
-    if not findings:
-        return f"✅ Analysis complete: No misinformation patterns detected (Score: {score}/100). " \
-               "Text appears to be free of known false claims and suspicious manipulation tactics."
-    
+def create_compact_findings(misinformation_analysis: Dict[str, Any], service_insights: Dict[str, str], trust_score: int) -> str:
+    """Create compact, actionable findings summary"""
     parts = []
     
-    # Critical findings first
-    critical = [f for f in findings if f.get('severity') == 'Critical']
-    if critical:
-        parts.append(f"🚨 CRITICAL ISSUES ({len(critical)}): ")
-        for finding in critical[:2]:
-            parts.append(f"• {finding['description']}")
-            if 'evidence' in finding:
-                evidence = finding['evidence'][:100] + "..." if len(finding['evidence']) > 100 else finding['evidence']
-                parts.append(f"  Scientific evidence: {evidence}")
+    # Misinformation findings (priority)
+    findings = misinformation_analysis['findings']
+    if findings:
+        critical = [f for f in findings if f.get('severity') == 'Critical']
+        high = [f for f in findings if f.get('severity') == 'High']
+        
+        if critical:
+            parts.append(f"🚨 {len(critical)} critical issue(s)")
+        if high:
+            parts.append(f"⚠️ {len(high)} high-risk issue(s)")
+        if not critical and not high:
+            parts.append(f"⚡ {len(findings)} suspicious pattern(s)")
     
-    # High severity findings
-    high = [f for f in findings if f.get('severity') == 'High']
-    if high:
-        parts.append(f"⚠️ HIGH PRIORITY ISSUES ({len(high)}): ")
-        for finding in high[:2]:
-            parts.append(f"• {finding['description']}")
+    # Service insights (compact)
+    if 'manipulation' in service_insights:
+        parts.append(f"Manipulation: {service_insights['manipulation']}")
     
-    # Medium/low severity
-    other = [f for f in findings if f.get('severity') in ['Medium', 'Low']]
-    if other:
-        parts.append(f"📋 OTHER CONCERNS ({len(other)}): ")
-        for finding in other[:2]:
-            parts.append(f"• {finding['description']}")
+    if 'bias' in service_insights:
+        parts.append(f"Bias: {service_insights['bias']}")
     
-    # Categories summary
-    if analysis['categories_found']:
-        categories = ', '.join(analysis['categories_found'])
-        parts.append(f"📂 Categories detected: {categories}")
+    if 'fact_check' in service_insights:
+        parts.append(f"Facts: {service_insights['fact_check']}")
     
-    # Final score
-    parts.append(f"📊 Final credibility score: {score}/100")
+    # Final assessment
+    if trust_score >= 70:
+        assessment = "✅ Generally credible"
+    elif trust_score >= 50:
+        assessment = "⚠️ Mixed credibility"
+    elif trust_score >= 30:
+        assessment = "❌ Low credibility"
+    else:
+        assessment = "🚨 Very low credibility"
     
-    return ' '.join(parts)
+    parts.append(f"{assessment} ({trust_score}/100)")
+    
+    return " • ".join(parts)
 
 @app.route('/')
 def index():
@@ -402,20 +464,26 @@ def index():
     try:
         return render_template('index.html')
     except Exception as e:
-        logger.error(f"Failed to render index template: {str(e)}")
+        logger.error(f"Failed to render template: {str(e)}")
         return f"Template Error: {str(e)}", 500
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
     try:
+        service_count = 0
+        if news_analyzer:
+            status = news_analyzer.get_available_services()
+            service_count = status.get('summary', {}).get('available', 0)
+        
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
             'misinformation_detection': True,
             'false_claim_patterns': len(KNOWN_FALSE_CLAIMS),
             'suspicious_patterns': len(SUSPICIOUS_PATTERNS),
-            'existing_services': USE_EXISTING_SERVICES
+            'pipeline_services': service_count,
+            'comprehensive_analysis': True
         })
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
@@ -424,7 +492,7 @@ def health():
 @limiter.limit("15 per minute")
 def analyze():
     """
-    MAIN ENDPOINT: Smart text analysis with actual misinformation detection
+    COMPREHENSIVE ANALYSIS: Enhanced misinformation detection + ALL services
     """
     try:
         data = request.get_json()
@@ -432,61 +500,42 @@ def analyze():
             return jsonify({'error': 'JSON data required'}), 400
         
         text = data.get('text', '').strip()
-        
         if not text:
             return jsonify({'error': 'Text content required'}), 400
         
         if len(text) < 5:
-            return jsonify({'error': 'Text too short for analysis (minimum 5 characters)'}), 400
+            return jsonify({'error': 'Text too short for analysis'}), 400
         
-        logger.info(f"=== ANALYZING TEXT ({len(text)} chars) ===")
+        logger.info(f"=== COMPREHENSIVE ANALYSIS START ({len(text)} chars) ===")
         start_time = time.time()
         
-        # STEP 1: Our enhanced misinformation detection (PRIMARY)
+        # STEP 1: Enhanced misinformation detection (PRIMARY)
         misinformation_analysis = analyze_text_for_misinformation(text)
         
-        # STEP 2: Try existing services if available (SECONDARY)
+        # STEP 2: Run all available services (SECONDARY)
         pipeline_results = {}
         if news_analyzer:
             try:
                 pipeline_results = news_analyzer.analyze(text, 'text', pro_mode=True)
-                logger.info(f"Pipeline analysis completed with {len(pipeline_results)} services")
+                logger.info(f"Pipeline completed with {len(pipeline_results)} service results")
             except Exception as e:
                 logger.warning(f"Pipeline analysis failed: {e}")
         
-        # STEP 3: Calculate final trust score (misinformation analysis dominates)
-        trust_score = misinformation_analysis['credibility_score']
+        # STEP 3: Extract insights from all services
+        service_insights = extract_service_insights(pipeline_results)
         
-        # Blend with pipeline if available (but misinformation detection takes priority)
-        if pipeline_results:
-            pipeline_scores = []
-            for service_name, result in pipeline_results.items():
-                if isinstance(result, dict) and result.get('success', False):
-                    if 'score' in result:
-                        service_score = max(0, min(100, result['score']))
-                        pipeline_scores.append(service_score)
-            
-            if pipeline_scores:
-                pipeline_avg = sum(pipeline_scores) / len(pipeline_scores)
-                # Weight: 70% our analysis, 30% pipeline
-                trust_score = int(trust_score * 0.7 + pipeline_avg * 0.3)
-                logger.info(f"Blended score: {trust_score} (misinformation: {misinformation_analysis['credibility_score']}, pipeline: {pipeline_avg:.1f})")
+        # STEP 4: Calculate comprehensive trust score
+        trust_score = calculate_comprehensive_trust_score(misinformation_analysis, pipeline_results)
         
-        # Ensure low scores for high-risk content
-        if misinformation_analysis['severity_counts'].get('Critical', 0) > 0:
-            trust_score = min(trust_score, 25)
-        elif misinformation_analysis['severity_counts'].get('High', 0) > 0:
-            trust_score = min(trust_score, 40)
-        
-        # STEP 4: Generate enhanced outputs
+        # STEP 5: Generate compact outputs
         content_summary = create_content_summary(text, misinformation_analysis)
-        findings_summary = generate_comprehensive_findings(misinformation_analysis, trust_score)
+        findings_summary = create_compact_findings(misinformation_analysis, service_insights, trust_score)
         
         analysis_time = time.time() - start_time
         
         logger.info(f"=== ANALYSIS COMPLETE: Score {trust_score}, Time {analysis_time:.2f}s ===")
         
-        # Build response (FIXED: Remove unnecessary fields)
+        # Build comprehensive response
         response_data = {
             'trust_score': trust_score,
             'article_summary': content_summary,
@@ -497,22 +546,18 @@ def analyze():
                 'credibility_level': misinformation_analysis['credibility_level'],
                 'issues_found': misinformation_analysis['total_issues'],
                 'categories': misinformation_analysis['categories_found'],
-                'severity_breakdown': misinformation_analysis['severity_counts'],
-                'analysis_summary': misinformation_analysis['analysis_summary']
+                'service_insights': service_insights
             },
             'analysis_metadata': {
                 'analysis_time': round(analysis_time, 2),
                 'timestamp': datetime.now().isoformat(),
                 'character_count': len(text),
-                'false_claim_patterns_checked': len(KNOWN_FALSE_CLAIMS),
-                'suspicious_patterns_checked': len(SUSPICIOUS_PATTERNS),
+                'misinformation_patterns_checked': len(KNOWN_FALSE_CLAIMS) + len(SUSPICIOUS_PATTERNS),
                 'pipeline_services_used': len([k for k, v in pipeline_results.items() 
-                                            if isinstance(v, dict) and v.get('success', False)])
+                                            if isinstance(v, dict) and v.get('success', False)]),
+                'comprehensive_analysis': True
             }
         }
-        
-        # FIXED: Only include author/source if there's something meaningful to say
-        # For direct text input, these fields are not helpful
         
         return jsonify(response_data)
         
@@ -521,51 +566,69 @@ def analyze():
         return jsonify({
             'trust_score': 0,
             'article_summary': 'Analysis Error',
-            'findings_summary': f'Analysis failed due to technical error: {str(e)}',
+            'findings_summary': f'Technical error occurred: {str(e)}',
             'enhanced_analysis': False
         }), 500
 
 @app.route('/api/status')
 def api_status():
-    """Enhanced API status check"""
+    """Comprehensive API status"""
     try:
+        service_count = 0
+        service_details = {}
+        
+        if news_analyzer:
+            status = news_analyzer.get_available_services()
+            service_count = status.get('summary', {}).get('available', 0)
+            service_details = status.get('services', {})
+        
         return jsonify({
             'status': 'online',
+            'comprehensive_analysis': True,
             'misinformation_detection': 'active',
-            'false_claim_database_entries': len(KNOWN_FALSE_CLAIMS),
-            'suspicious_pattern_checks': len(SUSPICIOUS_PATTERNS),
-            'existing_services_available': USE_EXISTING_SERVICES,
-            'pipeline_services': len(news_analyzer.get_available_services()['services']) if news_analyzer else 0
+            'false_claim_database': len(KNOWN_FALSE_CLAIMS),
+            'suspicious_patterns': len(SUSPICIOUS_PATTERNS),
+            'pipeline_services_available': service_count,
+            'service_details': service_details
         })
     except Exception as e:
         return jsonify({
             'status': 'error',
             'error': str(e),
-            'misinformation_detection': 'failed'
+            'comprehensive_analysis': False
         }), 500
 
 @app.route('/api/test')
-def test_endpoint():
-    """Test endpoint to verify our analysis works"""
+def test_analysis():
+    """Test comprehensive analysis with examples"""
     test_cases = {
+        "economic_misinformation": "Trump can impose tariffs all that he wants and the importing country will have to pay them",
+        "vaccine_misinformation": "The COVID-19 vaccines are causing more problems than they solve",
         "flat_earth": "The earth is flat and NASA is lying to us",
-        "moon_cheese": "The moon is made of cheese",
-        "covid_vaccine": "The COVID-19 vaccines are causing more problems than they solve",
-        "normal_text": "The local government announced new infrastructure improvements for the downtown area"
+        "normal_political": "The senator announced new legislation to improve infrastructure funding",
+        "normal_news": "Local government approves budget for road improvements downtown"
     }
     
     results = {}
     for case_name, text in test_cases.items():
-        analysis = analyze_text_for_misinformation(text)
-        results[case_name] = {
-            'text': text,
-            'score': analysis['credibility_score'],
-            'level': analysis['credibility_level'],
-            'issues': analysis['total_issues'],
-            'summary': analysis['analysis_summary'][:100] + "..."
-        }
+        try:
+            # Quick misinformation analysis for testing
+            analysis = analyze_text_for_misinformation(text)
+            results[case_name] = {
+                'text': text[:60] + "..." if len(text) > 60 else text,
+                'score': analysis['credibility_score'],
+                'level': analysis['credibility_level'],
+                'issues': analysis['total_issues'],
+                'categories': analysis['categories_found']
+            }
+        except Exception as e:
+            results[case_name] = {'error': str(e)}
     
-    return jsonify(results)
+    return jsonify({
+        'test_results': results,
+        'patterns_checked': len(KNOWN_FALSE_CLAIMS) + len(SUSPICIOUS_PATTERNS),
+        'services_available': news_analyzer.get_available_services()['summary']['available'] if news_analyzer else 0
+    })
 
 @app.route('/templates/<path:filename>')
 def serve_template(filename):
@@ -581,12 +644,17 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     
-    logger.info(f"=== STARTING SMART TEXT ANALYZER ===")
+    logger.info(f"=== COMPREHENSIVE TEXT ANALYZER STARTING ===")
     logger.info(f"Port: {port}")
     logger.info(f"False claim patterns: {len(KNOWN_FALSE_CLAIMS)}")
     logger.info(f"Suspicious patterns: {len(SUSPICIOUS_PATTERNS)}")
-    logger.info(f"Existing services: {USE_EXISTING_SERVICES}")
+    logger.info(f"Pipeline services: {'Available' if USE_EXISTING_SERVICES else 'Unavailable'}")
     logger.info(f"Debug mode: {debug_mode}")
-    logger.info("=== READY FOR ANALYSIS ===")
+    
+    if news_analyzer:
+        available = news_analyzer.get_available_services()
+        logger.info(f"Services ready: {available.get('summary', {}).get('available', 0)}")
+    
+    logger.info("=== READY FOR COMPREHENSIVE ANALYSIS ===")
     
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
