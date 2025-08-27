@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="Instantly analyze the credibility of any news article with our AI-powered system. Get trust scores, bias detection, and comprehensive analysis.">
+    <meta name="description" content="AI-powered analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
@@ -51,7 +51,6 @@
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
             
             /* Border radius */
             --radius-sm: 0.375rem;
@@ -63,7 +62,6 @@
             
             /* Transitions */
             --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -145,21 +143,6 @@
             color: var(--primary);
         }
 
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--primary);
-            transition: var(--transition);
-        }
-
-        .nav-link:hover::after {
-            width: 100%;
-        }
-
         .cta-button {
             background: var(--primary);
             color: white;
@@ -228,13 +211,13 @@
 
         .trust-badges {
             display: flex;
-            justify-content: center;
             gap: 2rem;
-            margin-bottom: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .trust-badge {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
@@ -247,7 +230,7 @@
         }
 
         .trust-badge i {
-            color: var(--success);
+            color: var(--primary);
         }
 
         /* Input Form */
@@ -283,10 +266,6 @@
             box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
         }
 
-        .input-field::placeholder {
-            color: var(--gray-400);
-        }
-
         .textarea-field {
             min-height: 120px;
             resize: vertical;
@@ -305,17 +284,11 @@
             cursor: pointer;
             transition: var(--transition);
             box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
         }
 
         .analyze-button:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-xl);
-        }
-
-        .analyze-button:active {
-            transform: translateY(0);
         }
 
         .analyze-button:disabled {
@@ -336,7 +309,7 @@
             cursor: pointer;
             transition: var(--transition);
             margin-top: 1rem;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
@@ -345,10 +318,6 @@
         .reset-button:hover {
             background: var(--gray-700);
             transform: translateY(-1px);
-        }
-
-        .reset-button:active {
-            transform: translateY(0);
         }
 
         .button-content {
@@ -370,6 +339,14 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        .loading .spinner {
+            display: block;
+        }
+
+        .loading .button-text {
+            display: none;
         }
 
         /* Results Section */
@@ -409,12 +386,6 @@
             margin-bottom: 0.5rem;
         }
 
-        .results-subtitle {
-            color: var(--gray-600);
-            font-size: 1rem;
-        }
-
-        /* Trust Score Display */
         .trust-score-card {
             background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
             border: 2px solid var(--gray-200);
@@ -444,18 +415,16 @@
             line-height: 1;
         }
 
+        .trust-high { color: var(--success); }
+        .trust-medium { color: var(--warning); }
+        .trust-low { color: var(--danger); }
+
         .trust-score-label {
             font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
 
-        .trust-score-description {
-            color: var(--gray-600);
-            font-size: 0.875rem;
-        }
-
-        /* Results Grid */
         .results-grid {
             display: grid;
             gap: 1.5rem;
@@ -518,12 +487,53 @@
             box-shadow: var(--shadow-md);
         }
 
+        .dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1rem;
+            transition: var(--transition);
+        }
+
+        .dropdown-header:hover {
+            color: var(--primary);
+        }
+
         .sidebar-title {
             font-family: var(--font-display);
             font-size: 1.25rem;
             font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: 1rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dropdown-icon {
+            transition: transform var(--transition);
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .dropdown-content {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease-out;
+        }
+
+        .dropdown-content.open {
+            max-height: 500px;
+            opacity: 1;
+            transition: all 0.3s ease-in;
+        }
+
+        .dropdown-header.open .dropdown-icon {
+            transform: rotate(180deg);
         }
 
         .feature-list {
@@ -593,34 +603,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* Trust Score Colors */
-        .trust-high {
-            color: var(--success);
-        }
-
-        .trust-medium {
-            color: var(--warning);
-        }
-
-        .trust-low {
-            color: var(--danger);
-        }
-
-        .trust-high .result-icon {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-        }
-
-        .trust-medium .result-icon {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .trust-low .result-icon {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
         /* Responsive Design */
         @media (max-width: 1024px) {
             .main-container {
@@ -664,34 +646,6 @@
                 grid-template-columns: 1fr;
             }
         }
-
-        @media (max-width: 480px) {
-            .header-content {
-                padding: 1rem;
-            }
-
-            .main-title {
-                font-size: 1.875rem;
-            }
-
-            .subtitle {
-                font-size: 1.125rem;
-            }
-        }
-
-        /* Loading States */
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .loading .analyze-button .spinner {
-            display: block;
-        }
-
-        .loading .analyze-button .button-text {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -721,7 +675,7 @@
         <section class="analysis-section">
             <div class="section-header">
                 <h1 class="main-title">
-                    Instant <span class="gradient-text">News Credibility</span> Analysis
+                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
                 </h1>
                 <p class="subtitle">
                     Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
@@ -734,7 +688,7 @@
                     </div>
                     <div class="trust-badge">
                         <i class="fas fa-bolt"></i>
-                        <span>Instant Results</span>
+                        <span>Real-time Analysis</span>
                     </div>
                     <div class="trust-badge">
                         <i class="fas fa-chart-line"></i>
@@ -765,7 +719,9 @@
                     <textarea 
                         id="textInput" 
                         class="input-field textarea-field" 
-                        placeholder="Paste the article text here for analysis..."
+                        placeholder="Paste the article text here for analysis...
+
+Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
                     ></textarea>
                 </div>
 
@@ -779,7 +735,7 @@
                     </div>
                 </button>
 
-                <button type="button" class="reset-button" id="resetBtn" style="display: none;">
+                <button type="button" class="reset-button" id="resetBtn">
                     <i class="fas fa-redo"></i>
                     Reset & Analyze New Article
                 </button>
@@ -858,65 +814,75 @@
         <aside class="sidebar">
             <!-- Features Card -->
             <div class="sidebar-card">
-                <h3 class="sidebar-title">
-                    <i class="fas fa-star"></i>
-                    Professional Features
-                </h3>
-                <ul class="feature-list">
-                    <li class="feature-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>AI-powered bias detection</span>
-                    </li>
-                    <li class="feature-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Source credibility scoring</span>
-                    </li>
-                    <li class="feature-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Author reputation analysis</span>
-                    </li>
-                    <li class="feature-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Fact-checking integration</span>
-                    </li>
-                    <li class="feature-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Manipulation detection</span>
-                    </li>
-                </ul>
-                <a href="#upgrade" class="upgrade-button">
-                    <i class="fas fa-crown"></i>
-                    Upgrade to Pro
-                </a>
+                <div class="dropdown-header" onclick="toggleDropdown('features')">
+                    <h3 class="sidebar-title">
+                        <i class="fas fa-star"></i>
+                        Professional Features
+                    </h3>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </div>
+                <div class="dropdown-content" id="features-dropdown">
+                    <ul class="feature-list">
+                        <li class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>AI-powered bias detection</span>
+                        </li>
+                        <li class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Source credibility scoring</span>
+                        </li>
+                        <li class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Author reputation analysis</span>
+                        </li>
+                        <li class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Fact-checking integration</span>
+                        </li>
+                        <li class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Manipulation detection</span>
+                        </li>
+                    </ul>
+                    <a href="#upgrade" class="upgrade-button">
+                        <i class="fas fa-crown"></i>
+                        Upgrade to Pro
+                    </a>
+                </div>
             </div>
 
             <!-- Stats Card -->
             <div class="sidebar-card">
-                <h3 class="sidebar-title">
-                    <i class="fas fa-chart-bar"></i>
-                    Platform Stats
-                </h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number">Beta</span>
-                        <span class="stat-label">Development Phase</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">10+</span>
-                        <span class="stat-label">Analysis Factors</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">7</span>
-                        <span class="stat-label">AI Services</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">24/7</span>
-                        <span class="stat-label">Available</span>
-                    </div>
+                <div class="dropdown-header" onclick="toggleDropdown('stats')">
+                    <h3 class="sidebar-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Platform Stats
+                    </h3>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
                 </div>
-                <p style="color: var(--gray-600); font-size: 0.875rem; text-align: center;">
-                    Advanced AI-powered news credibility analysis platform in development.
-                </p>
+                <div class="dropdown-content" id="stats-dropdown">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number">Beta</span>
+                            <span class="stat-label">Development Phase</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">10+</span>
+                            <span class="stat-label">Analysis Factors</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">7</span>
+                            <span class="stat-label">AI Services</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">Available</span>
+                        </div>
+                    </div>
+                    <p style="color: var(--gray-600); font-size: 0.875rem; text-align: center; margin-top: 1rem;">
+                        Advanced AI-powered news credibility analysis platform in development.
+                    </p>
+                </div>
             </div>
 
             <!-- Contact Card -->
@@ -1070,7 +1036,6 @@
             updateTrustScore(score) {
                 const scoreElement = document.getElementById('trustScore');
                 const labelElement = document.getElementById('trustLabel');
-                const cardElement = document.getElementById('trustScoreCard');
                 
                 scoreElement.textContent = Math.round(score);
                 
@@ -1121,10 +1086,7 @@
             }
 
             showError(message) {
-                // Simple alert for now - you could make this more sophisticated
                 alert('Analysis Error: ' + message);
-                
-                // Also log to console for debugging
                 console.error('Analysis error:', message);
             }
         }
@@ -1134,16 +1096,19 @@
             new TruthLensAnalyzer();
         });
 
-        // Add some visual feedback for better UX
-        document.querySelectorAll('.result-card').forEach(card => {
-            card.addEventListener('mouseenter', () => {
-                card.style.transform = 'translateY(-2px)';
-            });
+        // Dropdown functionality for sidebar
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id + '-dropdown');
+            const header = dropdown.previousElementSibling;
             
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'translateY(0)';
-            });
-        });
+            if (dropdown.classList.contains('open')) {
+                dropdown.classList.remove('open');
+                header.classList.remove('open');
+            } else {
+                dropdown.classList.add('open');
+                header.classList.add('open');
+            }
+        }
     </script>
 </body>
 </html>
