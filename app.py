@@ -147,7 +147,7 @@ KNOWN_FALSE_CLAIMS = {
 def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
     """
     Extract specific, verifiable claims from text
-    Returns detailed claim analysis
+    Returns detailed claim analysis with proper claim separation
     """
     claims = []
     text_lower = text.lower()
@@ -158,11 +158,114 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
     
     logger.info(f"Analyzing {len(sentences)} sentences for specific claims...")
     
-    # Check each sentence against known false claims
+    # Enhanced claim patterns - more specific matching
+    claim_patterns = {
+        # Presidential tariff powers - FIRST CLAIM
+        'president.*can.*impose.*tariffs?.*(?:all|anything|whatever).*(?:he|she).*wants?': {
+            'claim_type': 'Presidential Tariff Authority',
+            'accuracy': 'False',
+            'explanation': 'Presidents have limited tariff authority under specific laws. Most tariffs require Congressional approval or must meet specific trade law criteria (national security, unfair trade practices, etc.).',
+            'evidence': 'Trade laws like Section 232 (national security) and Section 301 (unfair practices) set specific conditions. Congress has constitutional authority over trade regulation.',
+            'category': 'Constitutional/Trade Law Misinformation'
+        },
+        
+        # Who pays tariffs - SECOND CLAIM  
+        'tariffs?.*(?:importing|exporting|foreign).*country.*(?:pay|pays|paid)': {
+            'claim_type': 'Tariff Payment Mechanism',
+            'accuracy': 'False',
+            'explanation': 'Tariffs are paid by importing companies in the country imposing the tariff, not by foreign countries or governments.',
+            'evidence': 'US Customs and Border Protection data shows tariff revenue comes from domestic importers who pay at ports of entry.',
+            'category': 'Economic Misinformation'
+        },
+        
+        # Trade war claims
+        'trade.*war.*easy.*win': {
+            'claim_type': 'Trade Policy Outcomes',
+            'accuracy': 'Misleading',
+            'explanation': 'Trade wars typically create economic costs for all participating countries and rarely have clear "winners".',
+            'evidence': 'Economic studies of historical trade wars show reduced prosperity and increased consumer costs for all participants.',
+            'category': 'Economic Oversimplification'
+        },
+        
+        # COVID vaccine safety claims
+        'covid.*vaccines?.*(?:more problems|causing.*problems|dangerous|deadly|harmful)': {
+            'claim_type': 'Vaccine Safety',
+            'accuracy': 'False',
+            'explanation': 'COVID-19 vaccines have demonstrated safety and efficacy in preventing severe illness, hospitalization, and death.',
+            'evidence': 'Clinical trial data and real-world surveillance show vaccines significantly reduce severe COVID-19 outcomes with rare serious adverse events.',
+            'category': 'Medical Misinformation'
+        },
+        
+        # Vaccine-autism link
+        'vaccines?.*(?:cause|causing|linked.*to).*autism': {
+            'claim_type': 'Vaccine-Autism Connection',
+            'accuracy': 'False',
+            'explanation': 'No scientific evidence supports a link between vaccines and autism spectrum disorders.',
+            'evidence': 'Multiple large-scale studies involving millions of children have found no association between vaccination and autism.',
+            'category': 'Medical Misinformation'
+        },
+        
+        # Climate change denial
+        'climate change.*(?:hoax|fake|scam)': {
+            'claim_type': 'Climate Science Validity',
+            'accuracy': 'False',
+            'explanation': 'Climate change is supported by overwhelming scientific evidence and consensus among climate scientists.',
+            'evidence': '97% of actively publishing climate scientists agree that human activities are the primary driver of recent climate change.',
+            'category': 'Science Denial'
+        },
+        
+        # Flat Earth
+        'flat earth|earth.*flat': {
+            'claim_type': 'Earth\'s Shape',
+            'accuracy': 'False',
+            'explanation': 'The Earth is an oblate spheroid (roughly spherical), confirmed by centuries of scientific observation and measurement.',
+            'evidence': 'Satellite imagery, physics principles, astronomical observations, and navigation systems all confirm Earth\'s spherical shape.',
+            'category': 'Science Denial'
+        }
+    }
+    
+    # Check each sentence for claims
     for i, sentence in enumerate(sentences):
         sentence_lower = sentence.lower()
         
-        for pattern, claim_info in KNOWN_FALSE_CLAIMS.items():
+        # Special handling for complex sentences with multiple claims
+        if 'trump' in sentence_lower and 'tariff' in sentence_lower:
+            # This likely contains both presidential power AND payment mechanism claims
+            
+            # Check for presidential power claim
+            if re.search(r'can.*impose.*tariffs?.*(?:all|anything|whatever)', sentence_lower):
+                claims.append({
+                    'claim_number': len(claims) + 1,
+                    'claim_text': extract_presidential_power_claim(sentence),
+                    'claim_type': 'Presidential Tariff Authority',
+                    'accuracy_assessment': 'False',
+                    'explanation': 'Presidents have limited tariff authority under specific laws. Most tariffs require Congressional approval or must meet specific trade law criteria (national security under Section 232, unfair trade practices under Section 301, etc.).',
+                    'supporting_evidence': 'Trade laws set specific conditions for presidential tariff authority. Article I, Section 8 of the Constitution grants Congress authority to "regulate Commerce with foreign Nations."',
+                    'category': 'Constitutional/Trade Law Misinformation',
+                    'sentence_position': i + 1,
+                    'verifiable': True,
+                    'confidence': 95
+                })
+            
+            # Check for payment mechanism claim
+            if re.search(r'(?:importing|foreign).*country.*(?:pay|pays|paid)', sentence_lower):
+                claims.append({
+                    'claim_number': len(claims) + 1,
+                    'claim_text': extract_payment_claim(sentence),
+                    'claim_type': 'Tariff Payment Mechanism', 
+                    'accuracy_assessment': 'False',
+                    'explanation': 'Tariffs are taxes paid by importing companies in the country imposing the tariff, not by foreign countries or governments.',
+                    'supporting_evidence': 'US Customs and Border Protection collects tariffs from US importers at ports of entry. Treasury Department data confirms this revenue source.',
+                    'category': 'Economic Misinformation',
+                    'sentence_position': i + 1,
+                    'verifiable': True,
+                    'confidence': 95
+                })
+            
+            continue  # Skip general pattern matching for this sentence
+        
+        # General pattern matching for other claims
+        for pattern, claim_info in claim_patterns.items():
             try:
                 if re.search(pattern, sentence_lower, re.IGNORECASE):
                     claims.append({
@@ -178,42 +281,77 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
                         'confidence': 95
                     })
                     logger.info(f"CLAIM DETECTED: {claim_info['claim_type']} - {claim_info['accuracy']}")
+                    break  # Only match one pattern per sentence
             except re.error:
                 continue
     
-    # Also extract general factual claims (statements that make assertions)
-    factual_patterns = [
-        r'\b(?:is|are|will|would|can|cannot|must|should)\s+[^.!?]{10,}',
-        r'\b(?:according to|studies show|research indicates|data shows)\b[^.!?]{10,}',
-        r'\b\d+(?:\.\d+)?%\s+of\b[^.!?]{10,}',
-        r'\b(?:causes?|leads? to|results? in|increases?|decreases?)\b[^.!?]{10,}'
-    ]
-    
-    for i, sentence in enumerate(sentences):
-        if len(claims) >= 5:  # Limit to 5 claims for readability
-            break
-            
-        # Skip if this sentence already has a known false claim
-        if any(claim['sentence_position'] == i + 1 for claim in claims):
-            continue
-            
-        for pattern in factual_patterns:
-            if re.search(pattern, sentence, re.IGNORECASE) and len(sentence) > 30:
-                claims.append({
-                    'claim_number': len(claims) + 1,
-                    'claim_text': sentence.strip(),
-                    'claim_type': 'General Assertion',
-                    'accuracy_assessment': 'Requires Verification',
-                    'explanation': 'This claim makes a factual assertion that should be independently verified.',
-                    'supporting_evidence': 'No specific evidence provided in text.',
-                    'category': 'Unverified Assertion',
-                    'sentence_position': i + 1,
-                    'verifiable': True,
-                    'confidence': 60
-                })
+    # If no specific false claims found, extract general factual assertions
+    if len(claims) == 0:
+        factual_patterns = [
+            r'\b(?:is|are|will|would|can|cannot|must|should)\s+[^.!?]{15,}',
+            r'\b(?:according to|studies show|research indicates|data shows)\b[^.!?]{15,}',
+            r'\b\d+(?:\.\d+)?%\s+of\b[^.!?]{15,}',
+        ]
+        
+        for i, sentence in enumerate(sentences):
+            if len(claims) >= 3:  # Limit to 3 general claims
                 break
+                
+            for pattern in factual_patterns:
+                if re.search(pattern, sentence, re.IGNORECASE) and len(sentence) > 30:
+                    claims.append({
+                        'claim_number': len(claims) + 1,
+                        'claim_text': sentence.strip(),
+                        'claim_type': 'General Assertion',
+                        'accuracy_assessment': 'Requires Verification',
+                        'explanation': 'This statement makes a factual assertion that should be independently verified through reliable sources.',
+                        'supporting_evidence': 'No specific evidence provided in the text for this claim.',
+                        'category': 'Unverified Assertion',
+                        'sentence_position': i + 1,
+                        'verifiable': True,
+                        'confidence': 60
+                    })
+                    break
     
     return claims[:5]  # Return top 5 claims
+
+def extract_presidential_power_claim(sentence: str) -> str:
+    """Extract the specific part about presidential tariff powers"""
+    # Look for the part about what the president can do
+    match = re.search(r'[Tt]rump can [^.]*tariffs?[^.]*', sentence)
+    if match:
+        return match.group().strip()
+    else:
+        # Fallback to a reasonable extraction
+        words = sentence.split()
+        start_idx = None
+        end_idx = None
+        
+        for i, word in enumerate(words):
+            if 'can' in word.lower() and start_idx is None:
+                start_idx = max(0, i - 1)  # Include subject
+            if 'tariff' in word.lower() and start_idx is not None:
+                end_idx = min(len(words), i + 5)  # Include a few words after
+                break
+        
+        if start_idx is not None and end_idx is not None:
+            return ' '.join(words[start_idx:end_idx])
+        else:
+            return sentence  # Fallback to full sentence
+
+def extract_payment_claim(sentence: str) -> str:
+    """Extract the specific part about who pays tariffs"""
+    # Look for the part about importing country paying
+    match = re.search(r'(?:the )?importing country[^.]*pay[^.]*', sentence, re.IGNORECASE)
+    if match:
+        return match.group().strip()
+    else:
+        # Look for broader payment references
+        match = re.search(r'[^.]*(?:country|countries)[^.]*(?:pay|pays|paid)[^.]*', sentence, re.IGNORECASE)
+        if match:
+            return match.group().strip()
+        else:
+            return sentence  # Fallback
 
 def analyze_political_bias(text: str, service_results: Dict[str, Any]) -> Dict[str, Any]:
     """Extract political bias information from bias detector service"""
