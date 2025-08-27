@@ -1,7 +1,7 @@
 """
 News Analyzer API - Complete Fixed Version
 Delivers exactly 5 things: Trust Score, Article Summary, Source, Author, Findings Summary
-FIXED: Data structure matches frontend expectations
+DRY RUN TESTED AND FIXED - All issues resolved
 """
 import os
 import sys
@@ -180,99 +180,7 @@ def extract_article_summary(pipeline_results: Dict[str, Any]) -> str:
         logger.error(f"Summary extraction error: {e}")
         return "Error extracting summary"
 
-def extract_author_details(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Extract comprehensive author details from pipeline results
-    """
-    author_details = {
-        'author': 'Unknown',
-        'author_bio': '',
-        'author_position': '',
-        'author_credibility': 0,
-        'author_score': 0,
-        'author_photo': None,
-        'author_articles': 0,
-        'author_expertise': [],
-        'author_awards': [],
-        'author_linkedin': None,
-        'author_twitter': None,
-        'author_link': None,
-        'author_recent_articles': []
-    }
-    
-    try:
-        # Check in data.detailed_analysis.author_analyzer
-        if ('data' in pipeline_results and 
-            'detailed_analysis' in pipeline_results['data'] and
-            'author_analyzer' in pipeline_results['data']['detailed_analysis']):
-            
-            author_data = pipeline_results['data']['detailed_analysis']['author_analyzer']
-            
-            # Extract author name
-            author_details['author'] = author_data.get('author_name', 'Unknown')
-            
-            # Extract bio
-            author_details['author_bio'] = author_data.get('bio', '')
-            
-            # Extract position
-            author_details['author_position'] = author_data.get('position', '')
-            
-            # Extract credibility scores
-            author_details['author_credibility'] = author_data.get('credibility_score', 0)
-            author_details['author_score'] = author_data.get('score', author_data.get('credibility_score', 0))
-            
-            # Extract photo
-            author_details['author_photo'] = author_data.get('author_photo')
-            
-            # Extract article count
-            author_details['author_articles'] = author_data.get('article_count', 0)
-            
-            # Extract expertise areas
-            author_details['author_expertise'] = author_data.get('expertise_areas', [])
-            
-            # Extract awards
-            author_details['author_awards'] = author_data.get('awards', [])
-            
-            # Extract social media
-            author_details['author_linkedin'] = author_data.get('linkedin_profile')
-            author_details['author_twitter'] = author_data.get('twitter_profile')
-            
-            # Extract author link
-            author_details['author_link'] = author_data.get('author_link')
-            
-            # Extract recent articles
-            author_details['author_recent_articles'] = author_data.get('recent_articles', [])
-        
-        # Also check direct author_analyzer results
-        elif 'author_analyzer' in pipeline_results and isinstance(pipeline_results['author_analyzer'], dict):
-            author_data = pipeline_results['author_analyzer']
-            
-            if author_data.get('success'):
-                author_details['author'] = author_data.get('author_name', 'Unknown')
-                author_details['author_bio'] = author_data.get('bio', '')
-                author_details['author_position'] = author_data.get('position', '')
-                author_details['author_credibility'] = author_data.get('credibility_score', 0)
-                author_details['author_score'] = author_data.get('score', 0)
-                author_details['author_photo'] = author_data.get('author_photo')
-                author_details['author_articles'] = author_data.get('article_count', 0)
-                author_details['author_expertise'] = author_data.get('expertise_areas', [])
-                author_details['author_awards'] = author_data.get('awards', [])
-                author_details['author_linkedin'] = author_data.get('linkedin_profile')
-                author_details['author_twitter'] = author_data.get('twitter_profile')
-                author_details['author_link'] = author_data.get('author_link')
-                author_details['author_recent_articles'] = author_data.get('recent_articles', [])
-        
-        # Check in article info
-        if author_details['author'] == 'Unknown':
-            if 'data' in pipeline_results and 'article' in pipeline_results['data']:
-                author_details['author'] = pipeline_results['data']['article'].get('author', 'Unknown')
-            elif 'article' in pipeline_results and isinstance(pipeline_results['article'], dict):
-                author_details['author'] = pipeline_results['article'].get('author', 'Unknown')
-    
-    except Exception as e:
-        logger.error(f"Error extracting author details: {e}")
-    
-    return author_details
+def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
     """
     Extract article basic info (source, author) from pipeline results
     """
@@ -295,6 +203,18 @@ def extract_author_details(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
                 'url': article.get('url', ''),
                 'domain': article.get('domain', '')
             })
+        
+        # Try article_extractor results
+        if 'article_extractor' in pipeline_results and isinstance(pipeline_results['article_extractor'], dict):
+            extractor = pipeline_results['article_extractor']
+            if extractor.get('success'):
+                article_info.update({
+                    'source': extractor.get('domain', article_info['source']),
+                    'author': extractor.get('author', article_info['author']),
+                    'title': extractor.get('title', article_info['title']),
+                    'url': extractor.get('url', article_info['url']),
+                    'domain': extractor.get('domain', article_info['domain'])
+                })
         
         # Try data.article_info (from NewsAnalyzer)
         if ('data' in pipeline_results and 
@@ -345,6 +265,104 @@ def extract_author_details(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
         article_info['source'] = article_info['domain']
     
     return article_info
+
+def extract_author_details(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract comprehensive author details from pipeline results
+    """
+    author_details = {
+        'author': 'Unknown',
+        'author_bio': '',
+        'author_position': '',
+        'author_credibility': 0,
+        'author_score': 0,
+        'author_photo': None,
+        'author_articles': 0,
+        'author_expertise': [],
+        'author_awards': [],
+        'author_linkedin': None,
+        'author_twitter': None,
+        'author_link': None,
+        'author_recent_articles': []
+    }
+    
+    try:
+        # First check direct author_analyzer results (from pipeline)
+        if 'author_analyzer' in pipeline_results and isinstance(pipeline_results['author_analyzer'], dict):
+            author_data = pipeline_results['author_analyzer']
+            
+            if author_data.get('success'):
+                # Extract all available author data
+                author_details['author'] = author_data.get('author_name') or author_data.get('author') or 'Unknown'
+                author_details['author_bio'] = author_data.get('bio', '')
+                author_details['author_position'] = author_data.get('position', '')
+                author_details['author_credibility'] = author_data.get('credibility_score', author_data.get('score', 0))
+                author_details['author_score'] = author_data.get('score', author_data.get('credibility_score', 0))
+                author_details['author_photo'] = author_data.get('author_photo')
+                author_details['author_articles'] = author_data.get('article_count', 0)
+                author_details['author_expertise'] = author_data.get('expertise_areas', [])
+                author_details['author_awards'] = author_data.get('awards', [])
+                author_details['author_linkedin'] = author_data.get('linkedin_profile')
+                author_details['author_twitter'] = author_data.get('twitter_profile')
+                author_details['author_link'] = author_data.get('author_link')
+                author_details['author_recent_articles'] = author_data.get('recent_articles', [])
+        
+        # Check in data.detailed_analysis.author_analyzer
+        elif ('data' in pipeline_results and 
+            'detailed_analysis' in pipeline_results['data'] and
+            'author_analyzer' in pipeline_results['data']['detailed_analysis']):
+            
+            author_data = pipeline_results['data']['detailed_analysis']['author_analyzer']
+            
+            author_details['author'] = author_data.get('author_name', 'Unknown')
+            author_details['author_bio'] = author_data.get('bio', '')
+            author_details['author_position'] = author_data.get('position', '')
+            author_details['author_credibility'] = author_data.get('credibility_score', 0)
+            author_details['author_score'] = author_data.get('score', 0)
+            author_details['author_photo'] = author_data.get('author_photo')
+            author_details['author_articles'] = author_data.get('article_count', 0)
+            author_details['author_expertise'] = author_data.get('expertise_areas', [])
+            author_details['author_awards'] = author_data.get('awards', [])
+            author_details['author_linkedin'] = author_data.get('linkedin_profile')
+            author_details['author_twitter'] = author_data.get('twitter_profile')
+            author_details['author_link'] = author_data.get('author_link')
+            author_details['author_recent_articles'] = author_data.get('recent_articles', [])
+        
+        # If author name is still unknown, try to extract from article_extractor
+        if author_details['author'] == 'Unknown' or author_details['author'] is None:
+            # Check article_extractor
+            if 'article_extractor' in pipeline_results and isinstance(pipeline_results['article_extractor'], dict):
+                extracted_author = pipeline_results['article_extractor'].get('author')
+                if extracted_author and extracted_author != 'Unknown':
+                    author_details['author'] = extracted_author
+            
+            # Check article field
+            if author_details['author'] == 'Unknown' and 'article' in pipeline_results:
+                article = pipeline_results['article']
+                if isinstance(article, dict):
+                    extracted_author = article.get('author')
+                    if extracted_author and extracted_author != 'Unknown':
+                        author_details['author'] = extracted_author
+            
+            # Check in data structures
+            if author_details['author'] == 'Unknown' and 'data' in pipeline_results:
+                if 'article' in pipeline_results['data']:
+                    extracted_author = pipeline_results['data']['article'].get('author')
+                    if extracted_author and extracted_author != 'Unknown':
+                        author_details['author'] = extracted_author
+        
+        # Clean up None values to empty strings/defaults
+        if author_details['author'] is None:
+            author_details['author'] = 'Unknown'
+        
+        logger.info(f"Extracted author details: name={author_details['author']}, "
+                   f"credibility={author_details['author_credibility']}, "
+                   f"bio_length={len(author_details.get('author_bio', ''))}")
+    
+    except Exception as e:
+        logger.error(f"Error extracting author details: {e}")
+    
+    return author_details
 
 def generate_findings_summary(pipeline_results: Dict[str, Any], trust_score: int) -> str:
     """
@@ -397,7 +415,7 @@ def generate_findings_summary(pipeline_results: Dict[str, Any], trust_score: int
                     findings.append(f"Fact-checked {verified + disputed} claims")
             
             elif service_name == 'author_analyzer':
-                author_score = service_data.get('author_score', 0)
+                author_score = service_data.get('author_score', service_data.get('score', 0))
                 if author_score >= 70:
                     findings.append("Author has strong credentials")
                 elif author_score >= 40:
@@ -489,6 +507,7 @@ def analyze():
     3. Source
     4. Author
     5. Findings Summary
+    Plus comprehensive author details for the author card
     """
     if not news_analyzer:
         logger.error("NewsAnalyzer not initialized")
