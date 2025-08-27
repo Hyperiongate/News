@@ -1,7 +1,7 @@
 """
 News Analyzer API - Complete Fixed Version
 Delivers exactly 5 things: Trust Score, Article Summary, Source, Author, Findings Summary
-FIXED: Syntax errors and ensured ScraperAPI integration
+FIXED: Data structure matches frontend expectations
 """
 import os
 import sys
@@ -86,6 +86,7 @@ def calculate_trust_score(pipeline_results: Dict[str, Any]) -> int:
     }
     
     try:
+        # Check data.detailed_analysis first (from NewsAnalyzer)
         if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
             detailed = pipeline_results['data']['detailed_analysis']
             
@@ -100,10 +101,25 @@ def calculate_trust_score(pipeline_results: Dict[str, Any]) -> int:
                         
                         scores.append((score, weights[service_name]))
         
+        # Also check direct service results (from pipeline)
+        for service_name in weights:
+            if service_name in pipeline_results and isinstance(pipeline_results[service_name], dict):
+                service_data = pipeline_results[service_name]
+                if service_data.get('success'):
+                    score = extract_score_from_service(service_data)
+                    if score is not None:
+                        if service_name in ['bias_detector', 'manipulation_detector']:
+                            score = 100 - score
+                        scores.append((score, weights[service_name]))
+        
         if scores:
             weighted_sum = sum(score * weight for score, weight in scores)
             total_weight = sum(weight for _, weight in scores)
             return max(0, min(100, int(weighted_sum / total_weight)))
+        
+        # Check if trust_score was already calculated by pipeline
+        if 'trust_score' in pipeline_results:
+            return int(pipeline_results['trust_score'])
         
         return 50  # Default middle score if no services available
         
@@ -117,45 +133,46 @@ def extract_article_summary(pipeline_results: Dict[str, Any]) -> str:
     """
     try:
         # Try OpenAI enhancer first (best quality)
+        if 'openai_enhancer' in pipeline_results and pipeline_results['openai_enhancer'].get('success'):
+            ai_summary = pipeline_results['openai_enhancer'].get('ai_summary', '')
+            if ai_summary and len(ai_summary) > 50:
+                return ai_summary
+        
+        # Try from data.detailed_analysis
         if ('data' in pipeline_results and 
             'detailed_analysis' in pipeline_results['data'] and
             'openai_enhancer' in pipeline_results['data']['detailed_analysis']):
             
             openai_data = pipeline_results['data']['detailed_analysis']['openai_enhancer']
-            if isinstance(openai_data, dict) and 'data' in openai_data:
-                ai_summary = openai_data['data'].get('summary')
+            if isinstance(openai_data, dict):
+                ai_summary = openai_data.get('ai_summary', openai_data.get('summary', ''))
                 if ai_summary and len(ai_summary) > 50:
                     return ai_summary
         
-        # Try article extractor summary
-        if ('data' in pipeline_results and 
-            'detailed_analysis' in pipeline_results['data'] and
-            'article_extractor' in pipeline_results['data']['detailed_analysis']):
-            
-            extractor_data = pipeline_results['data']['detailed_analysis']['article_extractor']
-            if isinstance(extractor_data, dict) and 'data' in extractor_data:
-                summary = extractor_data['data'].get('summary')
-                if summary and len(summary) > 50:
-                    return summary
-        
-        # Try main analysis summary
-        if ('data' in pipeline_results and 
-            'analysis' in pipeline_results['data']):
-            summary = pipeline_results['data']['analysis'].get('summary')
-            if summary and len(summary) > 50:
-                return summary
-        
-        # Fallback to content excerpt
-        if ('data' in pipeline_results and 
-            'article_info' in pipeline_results['data']):
-            content = pipeline_results['data']['article_info'].get('content', '')
-            if content and len(content) > 200:
-                # Create summary from first paragraph
-                sentences = content.split('. ')
+        # Try article summary
+        if 'article' in pipeline_results and isinstance(pipeline_results['article'], dict):
+            article_text = pipeline_results['article'].get('text', '')
+            if article_text and len(article_text) > 200:
+                # Create summary from first part of article
+                sentences = article_text.split('. ')
                 if len(sentences) > 2:
                     return '. '.join(sentences[:3]) + '.'
-                elif len(sentences) == 1 and len(sentences[0]) > 100:
-                    return sentences[0][:200] + '...'
+                elif len(article_text) > 100:
+                    return article_text[:200] + '...'
+        
+        # Try from data.article
+        if 'data' in pipeline_results and 'article' in pipeline_results['data']:
+            article = pipeline_results['data']['article']
+            if isinstance(article, dict):
+                text = article.get('text', '')
+                if text and len(text) > 200:
+                    sentences = text.split('. ')
+                    if len(sentences) > 2:
+                        return '. '.join(sentences[:3]) + '.'
+        
+        # Try summary field
+        if 'summary' in pipeline_results:
+            return pipeline_results['summary']
         
         return "Article summary not available"
         
@@ -176,53 +193,46 @@ def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
     }
     
     try:
-        # Try article_info first
+        # Try article field first (from pipeline)
+        if 'article' in pipeline_results and isinstance(pipeline_results['article'], dict):
+            article = pipeline_results['article']
+            article_info.update({
+                'source': article.get('domain', article.get('source', 'Unknown')),
+                'author': article.get('author', 'Unknown'),
+                'title': article.get('title', ''),
+                'url': article.get('url', ''),
+                'domain': article.get('domain', '')
+            })
+        
+        # Try data.article_info (from NewsAnalyzer)
         if ('data' in pipeline_results and 
             'article_info' in pipeline_results['data']):
             
             info = pipeline_results['data']['article_info']
-            article_info.update({
-                'source': info.get('source', 'Unknown'),
-                'author': info.get('author', 'Unknown'),
-                'title': info.get('title', ''),
-                'url': info.get('url', ''),
-                'domain': info.get('domain', '')
-            })
+            if article_info['source'] == 'Unknown':
+                article_info['source'] = info.get('source', info.get('domain', 'Unknown'))
+            if article_info['author'] == 'Unknown':
+                article_info['author'] = info.get('author', 'Unknown')
+            if not article_info['title']:
+                article_info['title'] = info.get('title', '')
+            if not article_info['url']:
+                article_info['url'] = info.get('url', '')
+            if not article_info['domain']:
+                article_info['domain'] = info.get('domain', '')
         
-        # Try article extractor data as fallback
+        # Try data.article (from NewsAnalyzer)
         if ('data' in pipeline_results and 
-            'detailed_analysis' in pipeline_results['data'] and
-            'article_extractor' in pipeline_results['data']['detailed_analysis']):
+            'article' in pipeline_results['data'] and
+            isinstance(pipeline_results['data']['article'], dict)):
             
-            extractor_data = pipeline_results['data']['detailed_analysis']['article_extractor']
-            if isinstance(extractor_data, dict) and 'data' in extractor_data:
-                data = extractor_data['data']
-                
-                if article_info['source'] == 'Unknown':
-                    article_info['source'] = data.get('source', 'Unknown')
-                if article_info['author'] == 'Unknown':
-                    article_info['author'] = data.get('author', 'Unknown')
-                if not article_info['title']:
-                    article_info['title'] = data.get('title', '')
-                if not article_info['url']:
-                    article_info['url'] = data.get('url', '')
+            article = pipeline_results['data']['article']
+            if article_info['source'] == 'Unknown':
+                article_info['source'] = article.get('domain', article.get('source', 'Unknown'))
+            if article_info['author'] == 'Unknown':
+                article_info['author'] = article.get('author', 'Unknown')
     
     except Exception as e:
         logger.error(f"Error extracting article info: {e}")
-    
-    # Enhanced author extraction
-    if article_info['author'] == 'Unknown':
-        # Try various author fields
-        author_fields = ['author', 'authors', 'by', 'writer', 'journalist', 'reporter', 'contributor']
-        for field in author_fields:
-            if field in pipeline_results.get('data', {}).get('article_info', {}):
-                author_value = pipeline_results['data']['article_info'][field]
-                if isinstance(author_value, list) and author_value:
-                    article_info['author'] = ', '.join(author_value)
-                    break
-                elif isinstance(author_value, str) and author_value.strip():
-                    article_info['author'] = author_value.strip()
-                    break
     
     # Clean up author if it's a list
     if isinstance(article_info['author'], list):
@@ -246,22 +256,28 @@ def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
 
 def generate_findings_summary(pipeline_results: Dict[str, Any], trust_score: int) -> str:
     """
-    Generate a simple summary of what the analysis found
+    Generate a conversational summary of what the analysis found
     """
     findings = []
     
     # Get all service results
     services = {}
     
-    # Collect services from all locations
-    if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
-        services.update(pipeline_results['data']['detailed_analysis'])
+    # Collect services from pipeline results
+    for key in ['source_credibility', 'author_analyzer', 'bias_detector', 
+                'fact_checker', 'transparency_analyzer', 'manipulation_detector']:
+        if key in pipeline_results and isinstance(pipeline_results[key], dict):
+            if pipeline_results[key].get('success'):
+                services[key] = pipeline_results[key]
     
-    # Process each service
+    # Also check in data.detailed_analysis
+    if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
+        for key, value in pipeline_results['data']['detailed_analysis'].items():
+            if key not in services and isinstance(value, dict) and value.get('success'):
+                services[key] = value
+    
+    # Process each service for findings
     for service_name, service_data in services.items():
-        if not isinstance(service_data, dict) or not service_data.get('success'):
-            continue
-        
         try:
             if service_name == 'source_credibility':
                 score = extract_score_from_service(service_data)
@@ -274,40 +290,37 @@ def generate_findings_summary(pipeline_results: Dict[str, Any], trust_score: int
                         findings.append("Source has questionable credibility")
             
             elif service_name == 'bias_detector':
-                if 'data' in service_data and 'bias_level' in service_data['data']:
-                    bias_level = service_data['data']['bias_level']
-                    if bias_level == 'minimal':
-                        findings.append("Minimal bias detected")
-                    elif bias_level == 'moderate':
-                        findings.append("Moderate bias detected")
-                    elif bias_level == 'high':
-                        findings.append("High bias detected")
+                bias_score = service_data.get('bias_score', 0)
+                if bias_score < 30:
+                    findings.append("Minimal bias detected")
+                elif bias_score < 60:
+                    findings.append("Moderate bias detected")
+                else:
+                    findings.append("High bias detected")
             
             elif service_name == 'fact_checker':
-                if 'data' in service_data and 'claims_checked' in service_data['data']:
-                    claims_checked = service_data['data']['claims_checked']
-                    if claims_checked > 0:
-                        findings.append(f"Fact-checked {claims_checked} claims")
+                verified = service_data.get('verified_claims', 0)
+                disputed = service_data.get('disputed_claims', 0)
+                if verified > 0 or disputed > 0:
+                    findings.append(f"Fact-checked {verified + disputed} claims")
             
             elif service_name == 'author_analyzer':
-                if 'data' in service_data and 'credibility_level' in service_data['data']:
-                    cred_level = service_data['data']['credibility_level']
-                    if cred_level == 'high':
-                        findings.append("Author has strong credentials")
-                    elif cred_level == 'medium':
-                        findings.append("Author has moderate credentials")
-                    else:
-                        findings.append("Limited author information available")
+                author_score = service_data.get('author_score', 0)
+                if author_score >= 70:
+                    findings.append("Author has strong credentials")
+                elif author_score >= 40:
+                    findings.append("Author has moderate credentials")
+                else:
+                    findings.append("Limited author information available")
             
             elif service_name == 'manipulation_detector':
-                if 'data' in service_data and 'manipulation_score' in service_data['data']:
-                    manip_score = service_data['data']['manipulation_score']
-                    if manip_score < 30:
-                        findings.append("No significant manipulation detected")
-                    elif manip_score < 60:
-                        findings.append("Some manipulation tactics detected")
-                    else:
-                        findings.append("Significant manipulation detected")
+                manip_score = service_data.get('manipulation_score', 0)
+                if manip_score < 30:
+                    findings.append("No significant manipulation detected")
+                elif manip_score < 60:
+                    findings.append("Some manipulation tactics detected")
+                else:
+                    findings.append("Significant manipulation detected")
         
         except Exception as e:
             logger.error(f"Error processing {service_name} for findings: {e}")
@@ -336,25 +349,26 @@ def extract_score_from_service(service_data: Any) -> Optional[float]:
     if not isinstance(service_data, dict):
         return None
     
-    # Check in data wrapper
-    if 'data' in service_data and isinstance(service_data['data'], dict):
-        data = service_data['data']
-        for key in ['score', 'credibility_score', 'bias_score', 'transparency_score', 
-                   'author_score', 'manipulation_score', 'overall_score']:
-            if key in data:
-                try:
-                    return float(data[key])
-                except (ValueError, TypeError):
-                    continue
+    # Direct score fields
+    score_fields = ['score', 'credibility_score', 'bias_score', 'transparency_score', 
+                   'author_score', 'manipulation_score', 'overall_score', 'content_score',
+                   'quality_score', 'trust_score']
     
-    # Check directly
-    for key in ['score', 'credibility_score', 'bias_score', 'transparency_score', 
-               'author_score', 'manipulation_score', 'overall_score']:
-        if key in service_data:
+    for field in score_fields:
+        if field in service_data:
             try:
-                return float(service_data[key])
+                return float(service_data[field])
             except (ValueError, TypeError):
                 continue
+    
+    # Check in data wrapper
+    if 'data' in service_data and isinstance(service_data['data'], dict):
+        for field in score_fields:
+            if field in service_data['data']:
+                try:
+                    return float(service_data['data'][field])
+                except (ValueError, TypeError):
+                    continue
     
     return None
 
@@ -389,29 +403,11 @@ def analyze():
         return jsonify({
             'success': False,
             'error': 'Analysis service not available',
-            'data': {
-                'analysis': {
-                    'trust_score': 0,
-                    'trust_level': 'Error',
-                    'summary': 'Service initialization failed',
-                    'key_findings': []
-                },
-                'article_info': {
-                    'source': 'Unknown',
-                    'author': 'Unknown',
-                    'title': 'Error',
-                    'url': '',
-                    'extraction_successful': False
-                },
-                'detailed_analysis': {}
-            },
-            'simple': {
-                'trust_score': 0,
-                'article_summary': 'Analysis service not available',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': 'Service initialization failed'
-            }
+            'trust_score': 0,
+            'article_summary': 'Service initialization failed',
+            'source': 'Unknown',
+            'author': 'Unknown',
+            'findings_summary': 'Service initialization failed'
         }), 503
     
     try:
@@ -444,33 +440,19 @@ def analyze():
         article_info = extract_article_info(pipeline_results)
         findings_summary = generate_findings_summary(pipeline_results, trust_score)
         
-        # Create response with both formats for compatibility
+        # Create simplified response that frontend expects
         response_data = {
             'success': True,
+            'trust_score': trust_score,
+            'article_summary': article_summary,
+            'source': article_info['source'],
+            'author': article_info['author'],
+            'findings_summary': findings_summary,
             'analysis_time': analysis_time,
-            'timestamp': datetime.now().isoformat(),
-            'data': pipeline_results.get('data', {}),
-            'simple': {
-                'trust_score': trust_score,
-                'article_summary': article_summary,
-                'source': article_info['source'],
-                'author': article_info['author'],
-                'findings_summary': findings_summary
-            }
+            'timestamp': datetime.now().isoformat()
         }
         
-        # Ensure data structure includes analysis summary
-        if 'analysis' not in response_data['data']:
-            response_data['data']['analysis'] = {
-                'trust_score': trust_score,
-                'trust_level': 'High' if trust_score >= 80 else 'Medium' if trust_score >= 60 else 'Low',
-                'summary': article_summary,
-                'key_findings': findings_summary.split('. ') if findings_summary else []
-            }
-        
-        # Ensure article_info is present
-        if 'article_info' not in response_data['data']:
-            response_data['data']['article_info'] = article_info
+        logger.info(f"Sending response with trust_score: {trust_score}, source: {article_info['source']}, author: {article_info['author']}")
         
         return jsonify(response_data)
         
@@ -479,30 +461,11 @@ def analyze():
         return jsonify({
             'success': False,
             'error': f'Analysis failed: {str(e)}',
-            'timestamp': datetime.now().isoformat(),
-            'data': {
-                'article_info': {
-                    'source': 'Unknown',
-                    'author': 'Unknown',
-                    'title': 'Error',
-                    'url': content if content_type == 'url' else '',
-                    'extraction_successful': False
-                },
-                'analysis': {
-                    'trust_score': 0,
-                    'trust_level': 'Error',
-                    'summary': f'Analysis failed: {str(e)}',
-                    'key_findings': []
-                },
-                'detailed_analysis': {}
-            },
-            'simple': {
-                'trust_score': 0,
-                'article_summary': 'Error analyzing article',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': f'Analysis could not be completed: {str(e)}'
-            }
+            'trust_score': 0,
+            'article_summary': 'Error analyzing article',
+            'source': 'Unknown',
+            'author': 'Unknown',
+            'findings_summary': f'Analysis could not be completed: {str(e)}'
         }), 200  # Return 200 so frontend can handle it
 
 @app.route('/api/test', methods=['GET', 'POST'])
@@ -532,48 +495,6 @@ def test_endpoint():
         'scraperapi': scraperapi_status,
         'timestamp': datetime.now().isoformat()
     })
-
-@app.route('/api/simple', methods=['POST'])
-def simple_analyze():
-    """
-    Simplified endpoint that ONLY returns the 5 things you want
-    """
-    try:
-        data = request.get_json()
-        url = data.get('url')
-        text = data.get('text')
-        
-        if not url and not text:
-            return jsonify({'error': 'Provide URL or text'}), 400
-        
-        content = url if url else text
-        content_type = 'url' if url else 'text'
-        
-        # Run analysis
-        pipeline_results = news_analyzer.analyze(content, content_type, pro_mode=True)
-        
-        # Extract exactly what you want
-        trust_score = calculate_trust_score(pipeline_results)
-        article_summary = extract_article_summary(pipeline_results)
-        article_info = extract_article_info(pipeline_results)
-        findings_summary = generate_findings_summary(pipeline_results, trust_score)
-        
-        return jsonify({
-            'trust_score': trust_score,
-            'article_summary': article_summary,
-            'source': article_info['source'],
-            'author': article_info['author'],
-            'findings_summary': findings_summary
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'trust_score': 0,
-            'article_summary': 'Error',
-            'source': 'Unknown',
-            'author': 'Unknown',
-            'findings_summary': str(e)
-        }), 500
 
 @app.route('/api/status')
 def api_status():
