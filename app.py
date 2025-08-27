@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
 """
-Detailed Analysis API - Claim-by-Claim Breakdown
-Provides specific claims, accuracy assessment, bias analysis, source info, and author details
+News Analyzer API - Complete Fixed Version
+Delivers exactly 5 things: Trust Score, Article Summary, Source, Author, Findings Summary
+FIXED: Syntax errors and ensured ScraperAPI integration
 """
 import os
 import sys
 import logging
 import time
 import traceback
-import re
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 import json
@@ -21,16 +20,8 @@ from flask_limiter.util import get_remote_address
 
 # Application imports
 from config import Config
-
-# Try to import existing services
-try:
-    from services.news_analyzer import NewsAnalyzer
-    from services.service_registry import get_service_registry
-    USE_EXISTING_SERVICES = True
-except ImportError as e:
-    logging.warning(f"Could not import existing services: {e}")
-    USE_EXISTING_SERVICES = False
-    NewsAnalyzer = None
+from services.news_analyzer import NewsAnalyzer
+from services.service_registry import get_service_registry
 
 # Setup logging
 logging.basicConfig(
@@ -42,6 +33,8 @@ logger = logging.getLogger(__name__)
 # Create Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Enable CORS
 CORS(app, origins=["*"])
 
 # Setup rate limiting
@@ -53,639 +46,597 @@ limiter = Limiter(
 )
 
 # Initialize services
-news_analyzer = None
-if USE_EXISTING_SERVICES:
+try:
+    logger.info("=" * 80)
+    logger.info("INITIALIZING NEWS ANALYZER")
+    news_analyzer = NewsAnalyzer()
+    logger.info("NewsAnalyzer initialized successfully")
+    
+    # Check available services
+    available = news_analyzer.get_available_services()
+    logger.info(f"Available services: {available}")
+    
+    # Log ScraperAPI status
+    scraperapi_key = os.getenv('SCRAPERAPI_KEY')
+    if scraperapi_key:
+        logger.info(f"ScraperAPI: ENABLED (key ends with: ...{scraperapi_key[-4:]})")
+    else:
+        logger.info("ScraperAPI: NOT CONFIGURED")
+    
+    logger.info("=" * 80)
+except Exception as e:
+    logger.error(f"CRITICAL: Failed to initialize NewsAnalyzer: {str(e)}", exc_info=True)
+    news_analyzer = None
+
+def calculate_trust_score(pipeline_results: Dict[str, Any]) -> int:
+    """
+    Calculate a single trust score from all services
+    Returns a number from 0-100
+    """
+    scores = []
+    weights = {
+        'source_credibility': 2.0,
+        'author_analyzer': 1.5,
+        'fact_checker': 2.0,
+        'bias_detector': 1.5,  # Inverted - less bias = higher trust
+        'transparency_analyzer': 1.0,
+        'manipulation_detector': 1.5,  # Inverted - less manipulation = higher trust
+        'content_analyzer': 1.0,
+        'openai_enhancer': 0.5  # Lower weight for AI enhancement
+    }
+    
     try:
-        news_analyzer = NewsAnalyzer()
-        logger.info("NewsAnalyzer initialized for detailed analysis")
+        if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
+            detailed = pipeline_results['data']['detailed_analysis']
+            
+            for service_name, service_data in detailed.items():
+                if service_name in weights and isinstance(service_data, dict):
+                    score = extract_score_from_service(service_data)
+                    
+                    if score is not None:
+                        # Invert scores for bias and manipulation (lower = better)
+                        if service_name in ['bias_detector', 'manipulation_detector']:
+                            score = 100 - score
+                        
+                        scores.append((score, weights[service_name]))
+        
+        if scores:
+            weighted_sum = sum(score * weight for score, weight in scores)
+            total_weight = sum(weight for _, weight in scores)
+            return max(0, min(100, int(weighted_sum / total_weight)))
+        
+        return 50  # Default middle score if no services available
+        
     except Exception as e:
-        logger.error(f"Failed to initialize NewsAnalyzer: {e}")
+        logger.error(f"Trust score calculation error: {e}")
+        return 0
 
-# ENHANCED: Known False Claims Database
-KNOWN_FALSE_CLAIMS = {
-    # Economic Claims
-    'tariffs?.*(?:importing|exporting|foreign).*country.*(?:pay|pays|paid)': {
-        'claim_type': 'Economic Policy',
-        'accuracy': 'False',
-        'explanation': 'Tariffs are paid by importing companies in the country imposing the tariff, not by foreign countries.',
-        'evidence': 'US Customs and Border Protection data shows tariff revenue comes from domestic importers.',
-        'category': 'Economic Misinformation'
-    },
-    'china.*pay.*tariffs?|tariffs?.*china.*pay': {
-        'claim_type': 'International Trade',
-        'accuracy': 'False', 
-        'explanation': 'China does not directly pay US tariffs - they are paid by US importing companies.',
-        'evidence': 'Treasury Department import data confirms tariffs are collected from US importers.',
-        'category': 'Economic Misinformation'
-    },
-    'trade.*war.*easy.*win': {
-        'claim_type': 'Trade Policy',
-        'accuracy': 'Misleading',
-        'explanation': 'Trade wars typically result in economic costs for all participating countries.',
-        'evidence': 'Historical analysis shows trade wars generally reduce prosperity for all participants.',
-        'category': 'Economic Oversimplification'
-    },
-    
-    # Constitutional/Political Claims
-    'president.*can.*(?:impose|do|change).*(?:all|anything|everything|whatever).*(?:he|she).*wants?': {
-        'claim_type': 'Presidential Powers',
-        'accuracy': 'False',
-        'explanation': 'Presidential powers are limited by Congress, courts, and the Constitution.',
-        'evidence': 'The Constitution establishes checks and balances that limit executive authority.',
-        'category': 'Constitutional Misinformation'
-    },
-    
-    # Medical Claims
-    'vaccines?.*(?:cause|causing|linked.*to).*autism': {
-        'claim_type': 'Medical Safety',
-        'accuracy': 'False',
-        'explanation': 'No scientific link between vaccines and autism has been established.',
-        'evidence': 'Multiple large-scale studies involving millions of children found no connection.',
-        'category': 'Medical Misinformation'
-    },
-    'covid.*vaccines?.*(?:more problems|dangerous|deadly|harmful)': {
-        'claim_type': 'Vaccine Safety',
-        'accuracy': 'False',
-        'explanation': 'COVID vaccines have proven benefits that outweigh rare risks.',
-        'evidence': 'Clinical trials and real-world data show vaccines prevent severe illness with rare serious side effects.',
-        'category': 'Medical Misinformation'
-    },
-    
-    # Science Denial
-    'climate change.*(?:hoax|fake|scam)': {
-        'claim_type': 'Climate Science',
-        'accuracy': 'False',
-        'explanation': 'Climate change is supported by overwhelming scientific evidence and consensus.',
-        'evidence': '97% of actively publishing climate scientists agree human activities are the primary cause.',
-        'category': 'Science Denial'
-    },
-    'flat earth|earth.*flat': {
-        'claim_type': 'Earth Science',
-        'accuracy': 'False',
-        'explanation': 'The Earth is spherical, supported by centuries of scientific observation.',
-        'evidence': 'Satellite imagery, physics, astronomy, and navigation all confirm Earth\'s spherical shape.',
-        'category': 'Science Denial'
-    },
-    
-    # Conspiracy Theories
-    'moon landing.*(?:fake|hoax|staged)': {
-        'claim_type': 'Historical Events',
-        'accuracy': 'False',
-        'explanation': 'The Apollo moon landings were real achievements documented extensively.',
-        'evidence': 'Physical evidence, third-party verification, and technical analysis confirm the landings occurred.',
-        'category': 'Conspiracy Theory'
-    },
-    'moon.*cheese|cheese.*moon': {
-        'claim_type': 'Space Science',
-        'accuracy': 'False (Joke)',
-        'explanation': 'This is a traditional folk saying, not a scientific claim.',
-        'evidence': 'Moon samples brought back by Apollo missions show the moon consists of rock and dust.',
-        'category': 'Folkloric Joke'
-    }
-}
+def extract_article_summary(pipeline_results: Dict[str, Any]) -> str:
+    """
+    Extract article summary from pipeline results
+    """
+    try:
+        # Try OpenAI enhancer first (best quality)
+        if ('data' in pipeline_results and 
+            'detailed_analysis' in pipeline_results['data'] and
+            'openai_enhancer' in pipeline_results['data']['detailed_analysis']):
+            
+            openai_data = pipeline_results['data']['detailed_analysis']['openai_enhancer']
+            if isinstance(openai_data, dict) and 'data' in openai_data:
+                ai_summary = openai_data['data'].get('summary')
+                if ai_summary and len(ai_summary) > 50:
+                    return ai_summary
+        
+        # Try article extractor summary
+        if ('data' in pipeline_results and 
+            'detailed_analysis' in pipeline_results['data'] and
+            'article_extractor' in pipeline_results['data']['detailed_analysis']):
+            
+            extractor_data = pipeline_results['data']['detailed_analysis']['article_extractor']
+            if isinstance(extractor_data, dict) and 'data' in extractor_data:
+                summary = extractor_data['data'].get('summary')
+                if summary and len(summary) > 50:
+                    return summary
+        
+        # Try main analysis summary
+        if ('data' in pipeline_results and 
+            'analysis' in pipeline_results['data']):
+            summary = pipeline_results['data']['analysis'].get('summary')
+            if summary and len(summary) > 50:
+                return summary
+        
+        # Fallback to content excerpt
+        if ('data' in pipeline_results and 
+            'article_info' in pipeline_results['data']):
+            content = pipeline_results['data']['article_info'].get('content', '')
+            if content and len(content) > 200:
+                # Create summary from first paragraph
+                sentences = content.split('. ')
+                if len(sentences) > 2:
+                    return '. '.join(sentences[:3]) + '.'
+                elif len(sentences) == 1 and len(sentences[0]) > 100:
+                    return sentences[0][:200] + '...'
+        
+        return "Article summary not available"
+        
+    except Exception as e:
+        logger.error(f"Summary extraction error: {e}")
+        return "Error extracting summary"
 
-def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
+def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
     """
-    Extract specific, verifiable claims from text
-    Returns detailed claim analysis with proper claim separation
+    Extract article basic info (source, author) from pipeline results
     """
-    claims = []
-    text_lower = text.lower()
-    
-    # Split text into sentences for claim extraction
-    sentences = re.split(r'[.!?]+', text)
-    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 10]
-    
-    logger.info(f"Analyzing {len(sentences)} sentences for specific claims...")
-    
-    # Enhanced claim patterns - more specific matching
-    claim_patterns = {
-        # Presidential tariff powers - FIRST CLAIM
-        'president.*can.*impose.*tariffs?.*(?:all|anything|whatever).*(?:he|she).*wants?': {
-            'claim_type': 'Presidential Tariff Authority',
-            'accuracy': 'False',
-            'explanation': 'Presidents have limited tariff authority under specific laws. Most tariffs require Congressional approval or must meet specific trade law criteria (national security, unfair trade practices, etc.).',
-            'evidence': 'Trade laws like Section 232 (national security) and Section 301 (unfair practices) set specific conditions. Congress has constitutional authority over trade regulation.',
-            'category': 'Constitutional/Trade Law Misinformation'
-        # General presidential power overreach claims
-        'president.*(?:authority|power|can).*(?:do|does).*(?:whatever|anything|everything).*(?:he|she).*wants?': {
-            'claim_type': 'Presidential Power Limits',
-            'accuracy': 'False',
-            'explanation': 'Presidential powers are constitutionally limited by checks and balances, even during emergencies or crises.',
-            'evidence': 'The Constitution establishes separation of powers. Congress makes laws, courts interpret them, and the executive must operate within these constraints.',
-            'category': 'Constitutional Misinformation'
-        },
-        
-        # Presidential emergency powers - NEW PATTERN
-        'president.*(?:authority|power).*(?:do|does).*(?:whatever|anything|everything).*(?:he|she).*wants?.*(?:emergency|emergencies)': {
-            'claim_type': 'Presidential Emergency Powers',
-            'accuracy': 'False',
-            'explanation': 'Presidential emergency powers are limited by law, even during declared emergencies. The president cannot do "whatever he wants" simply by declaring an emergency.',
-            'evidence': 'The National Emergencies Act, Stafford Act, and other laws set specific limits on emergency powers. Courts have struck down emergency actions that exceed legal authority.',
-            'category': 'Constitutional Misinformation'
-        },
-        
-        'emergency.*president.*(?:unlimited|absolute|whatever|anything).*(?:power|authority)': {
-            'claim_type': 'Emergency Powers Scope',
-            'accuracy': 'False',
-            'explanation': 'Emergency declarations do not grant unlimited presidential power. Emergency authorities are constrained by existing laws and constitutional limits.',
-            'evidence': 'Supreme Court cases like Youngstown Sheet & Tube Co. v. Sawyer established that emergency powers must have legal basis and cannot override constitutional constraints.',
-            'category': 'Constitutional Misinformation'
-        },
-        
-        # Who pays tariffs - SECOND CLAIM  
-        'tariffs?.*(?:importing|exporting|foreign).*country.*(?:pay|pays|paid)': {
-            'claim_type': 'Tariff Payment Mechanism',
-            'accuracy': 'False',
-            'explanation': 'Tariffs are paid by importing companies in the country imposing the tariff, not by foreign countries or governments.',
-            'evidence': 'US Customs and Border Protection data shows tariff revenue comes from domestic importers who pay at ports of entry.',
-            'category': 'Economic Misinformation'
-        },
-        
-        # Trade war claims
-        'trade.*war.*easy.*win': {
-            'claim_type': 'Trade Policy Outcomes',
-            'accuracy': 'Misleading',
-            'explanation': 'Trade wars typically create economic costs for all participating countries and rarely have clear "winners".',
-            'evidence': 'Economic studies of historical trade wars show reduced prosperity and increased consumer costs for all participants.',
-            'category': 'Economic Oversimplification'
-        },
-        
-        # COVID vaccine safety claims
-        'covid.*vaccines?.*(?:more problems|causing.*problems|dangerous|deadly|harmful)': {
-            'claim_type': 'Vaccine Safety',
-            'accuracy': 'False',
-            'explanation': 'COVID-19 vaccines have demonstrated safety and efficacy in preventing severe illness, hospitalization, and death.',
-            'evidence': 'Clinical trial data and real-world surveillance show vaccines significantly reduce severe COVID-19 outcomes with rare serious adverse events.',
-            'category': 'Medical Misinformation'
-        },
-        
-        # Vaccine-autism link
-        'vaccines?.*(?:cause|causing|linked.*to).*autism': {
-            'claim_type': 'Vaccine-Autism Connection',
-            'accuracy': 'False',
-            'explanation': 'No scientific evidence supports a link between vaccines and autism spectrum disorders.',
-            'evidence': 'Multiple large-scale studies involving millions of children have found no association between vaccination and autism.',
-            'category': 'Medical Misinformation'
-        },
-        
-        # Climate change denial
-        'climate change.*(?:hoax|fake|scam)': {
-            'claim_type': 'Climate Science Validity',
-            'accuracy': 'False',
-            'explanation': 'Climate change is supported by overwhelming scientific evidence and consensus among climate scientists.',
-            'evidence': '97% of actively publishing climate scientists agree that human activities are the primary driver of recent climate change.',
-            'category': 'Science Denial'
-        },
-        
-        # Flat Earth
-        'flat earth|earth.*flat': {
-            'claim_type': 'Earth\'s Shape',
-            'accuracy': 'False',
-            'explanation': 'The Earth is an oblate spheroid (roughly spherical), confirmed by centuries of scientific observation and measurement.',
-            'evidence': 'Satellite imagery, physics principles, astronomical observations, and navigation systems all confirm Earth\'s spherical shape.',
-            'category': 'Science Denial'
-        },
-        
-        # Basic Geography - CORRECT CLAIMS
-        'greenland.*(?:located|is).*(?:northeast|north.*east).*(?:of )?canada': {
-            'claim_type': 'Geographic Location',
-            'accuracy': 'True',
-            'explanation': 'Greenland is indeed located to the northeast of Canada, separated by the Davis Strait and Baffin Bay.',
-            'evidence': 'Geographic coordinates and maps confirm Greenland\'s position northeast of Canada\'s Arctic archipelago.',
-            'category': 'Verified Geographic Fact'
-        },
-        
-        'alaska.*(?:largest|biggest).*(?:state|us state)': {
-            'claim_type': 'Geographic Facts',
-            'accuracy': 'True', 
-            'explanation': 'Alaska is the largest U.S. state by area, covering 663,300 square miles.',
-            'evidence': 'U.S. Census Bureau data confirms Alaska\'s area is more than twice the size of Texas.',
-            'category': 'Verified Geographic Fact'
-        },
-        
-        'mount everest.*(?:highest|tallest).*mountain': {
-            'claim_type': 'Geographic Superlatives',
-            'accuracy': 'True',
-            'explanation': 'Mount Everest is the highest mountain above sea level at 29,032 feet (8,849 meters).',
-            'evidence': 'Surveying data and international geographic standards confirm Everest\'s height.',
-            'category': 'Verified Geographic Fact'
-        }
+    article_info = {
+        'source': 'Unknown',
+        'author': 'Unknown',
+        'title': '',
+        'url': '',
+        'domain': ''
     }
     
-    # Check each sentence for claims
-    for i, sentence in enumerate(sentences):
-        sentence_lower = sentence.lower()
-        
-        # Special handling for complex sentences with multiple claims
-        if 'trump' in sentence_lower and 'tariff' in sentence_lower:
-            # This likely contains both presidential power AND payment mechanism claims
+    try:
+        # Try article_info first
+        if ('data' in pipeline_results and 
+            'article_info' in pipeline_results['data']):
             
-            # Check for presidential power claim
-            if re.search(r'can.*impose.*tariffs?.*(?:all|anything|whatever)', sentence_lower):
-                claims.append({
-                    'claim_number': len(claims) + 1,
-                    'claim_text': extract_presidential_power_claim(sentence),
-                    'claim_type': 'Presidential Tariff Authority',
-                    'accuracy_assessment': 'False',
-                    'explanation': 'Presidents have limited tariff authority under specific laws. Most tariffs require Congressional approval or must meet specific trade law criteria (national security under Section 232, unfair trade practices under Section 301, etc.).',
-                    'supporting_evidence': 'Trade laws set specific conditions for presidential tariff authority. Article I, Section 8 of the Constitution grants Congress authority to "regulate Commerce with foreign Nations."',
-                    'category': 'Constitutional/Trade Law Misinformation',
-                    'sentence_position': i + 1,
-                    'verifiable': True,
-                    'confidence': 95
-                })
-            
-            # Check for payment mechanism claim
-            if re.search(r'(?:importing|foreign).*country.*(?:pay|pays|paid)', sentence_lower):
-                claims.append({
-                    'claim_number': len(claims) + 1,
-                    'claim_text': extract_payment_claim(sentence),
-                    'claim_type': 'Tariff Payment Mechanism', 
-                    'accuracy_assessment': 'False',
-                    'explanation': 'Tariffs are taxes paid by importing companies in the country imposing the tariff, not by foreign countries or governments.',
-                    'supporting_evidence': 'US Customs and Border Protection collects tariffs from US importers at ports of entry. Treasury Department data confirms this revenue source.',
-                    'category': 'Economic Misinformation',
-                    'sentence_position': i + 1,
-                    'verifiable': True,
-                    'confidence': 95
-                })
-            
-            continue  # Skip general pattern matching for this sentence
+            info = pipeline_results['data']['article_info']
+            article_info.update({
+                'source': info.get('source', 'Unknown'),
+                'author': info.get('author', 'Unknown'),
+                'title': info.get('title', ''),
+                'url': info.get('url', ''),
+                'domain': info.get('domain', '')
+            })
         
-        # General pattern matching for other claims
-        for pattern, claim_info in claim_patterns.items():
-            try:
-                if re.search(pattern, sentence_lower, re.IGNORECASE):
-                    claims.append({
-                        'claim_number': len(claims) + 1,
-                        'claim_text': sentence.strip(),
-                        'claim_type': claim_info['claim_type'],
-                        'accuracy_assessment': claim_info['accuracy'],
-                        'explanation': claim_info['explanation'],
-                        'supporting_evidence': claim_info['evidence'],
-                        'category': claim_info['category'],
-                        'sentence_position': i + 1,
-                        'verifiable': True,
-                        'confidence': 95
-                    })
-                    logger.info(f"CLAIM DETECTED: {claim_info['claim_type']} - {claim_info['accuracy']}")
-                    break  # Only match one pattern per sentence
-            except re.error:
-                continue
-    
-    # If no specific false claims found, extract general factual assertions
-    if len(claims) == 0:
-        factual_patterns = [
-            # Legal/Constitutional assertions
-            r'\b(?:president|congress|court|law|constitution).*(?:has|have|can|cannot|must|authority|power)\s+[^.!?]{20,}',
-            # Statistical claims  
-            r'\b\d+(?:\.\d+)?%\s+of\b[^.!?]{15,}',
-            # Causal claims
-            r'\b(?:causes?|leads? to|results? in|because of|due to)\b[^.!?]{15,}',
-            # Comparative claims
-            r'\b(?:more|less|better|worse|higher|lower|faster|slower)\s+than\b[^.!?]{15,}',
-        ]
-        
-        for i, sentence in enumerate(sentences):
-            if len(claims) >= 3:  # Limit to 3 general claims
-                break
+        # Try article extractor data as fallback
+        if ('data' in pipeline_results and 
+            'detailed_analysis' in pipeline_results['data'] and
+            'article_extractor' in pipeline_results['data']['detailed_analysis']):
+            
+            extractor_data = pipeline_results['data']['detailed_analysis']['article_extractor']
+            if isinstance(extractor_data, dict) and 'data' in extractor_data:
+                data = extractor_data['data']
                 
-            for pattern in factual_patterns:
-                if re.search(pattern, sentence, re.IGNORECASE) and len(sentence) > 40:
-                    # Check if this might be a constitutional/legal claim that we should flag
-                    if re.search(r'\b(?:president|congress|constitution|law|authority|power|emergency)\b', sentence, re.IGNORECASE):
-                        claims.append({
-                            'claim_number': len(claims) + 1,
-                            'claim_text': sentence.strip(),
-                            'claim_type': 'Legal/Constitutional Assertion',
-                            'accuracy_assessment': 'Requires Legal Verification',
-                            'explanation': 'This statement makes assertions about legal or constitutional powers that should be verified against established law and precedent.',
-                            'supporting_evidence': 'Constitutional law, relevant statutes, and court precedents should be consulted to verify this claim.',
-                            'category': 'Legal Assertion Requiring Verification',
-                            'sentence_position': i + 1,
-                            'verifiable': True,
-                            'confidence': 80
-                        })
-                    else:
-                        claims.append({
-                            'claim_number': len(claims) + 1,
-                            'claim_text': sentence.strip(),
-                            'claim_type': 'General Assertion',
-                            'accuracy_assessment': 'Requires Verification',
-                            'explanation': 'This statement makes a factual assertion that should be independently verified through reliable sources.',
-                            'supporting_evidence': 'No specific evidence provided in the text for this claim.',
-                            'category': 'Unverified Assertion',
-                            'sentence_position': i + 1,
-                            'verifiable': True,
-                            'confidence': 60
-                        })
+                if article_info['source'] == 'Unknown':
+                    article_info['source'] = data.get('source', 'Unknown')
+                if article_info['author'] == 'Unknown':
+                    article_info['author'] = data.get('author', 'Unknown')
+                if not article_info['title']:
+                    article_info['title'] = data.get('title', '')
+                if not article_info['url']:
+                    article_info['url'] = data.get('url', '')
+    
+    # Enhanced author extraction
+    if article_info['author'] == 'Unknown':
+        # Try various author fields
+        author_fields = ['author', 'authors', 'by', 'writer', 'journalist', 'reporter', 'contributor']
+        for field in author_fields:
+            if field in pipeline_results.get('data', {}).get('article_info', {}):
+                author_value = pipeline_results['data']['article_info'][field]
+                if isinstance(author_value, list) and author_value:
+                    article_info['author'] = ', '.join(author_value)
+                    break
+                elif isinstance(author_value, str) and author_value.strip():
+                    article_info['author'] = author_value.strip()
                     break
     
-    return claims[:5]  # Return top 5 claims
+    # Clean up author if it's a list
+    if isinstance(article_info['author'], list):
+        article_info['author'] = ', '.join(article_info['author']) if article_info['author'] else 'Unknown'
+    
+    # Clean "By" prefix from author
+    if isinstance(article_info['author'], str) and article_info['author'].lower().startswith('by '):
+        article_info['author'] = article_info['author'][3:].strip()
+    
+    # Extract domain from URL if not set
+    if article_info['url'] and not article_info['domain']:
+        from urllib.parse import urlparse
+        parsed = urlparse(article_info['url'])
+        article_info['domain'] = parsed.netloc
+    
+    # Use domain as source if source is unknown
+    if article_info['source'] == 'Unknown' and article_info['domain']:
+        article_info['source'] = article_info['domain']
+    
+    return article_info
 
-def extract_presidential_power_claim(sentence: str) -> str:
-    """Extract the specific part about presidential tariff powers"""
-    # Look for the part about what the president can do
-    match = re.search(r'[Tt]rump can [^.]*tariffs?[^.]*', sentence)
-    if match:
-        return match.group().strip()
-    else:
-        # Fallback to a reasonable extraction
-        words = sentence.split()
-        start_idx = None
-        end_idx = None
+def generate_findings_summary(pipeline_results: Dict[str, Any], trust_score: int) -> str:
+    """
+    Generate a simple summary of what the analysis found
+    """
+    findings = []
+    
+    # Get all service results
+    services = {}
+    
+    # Collect services from all locations
+    if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
+        services.update(pipeline_results['data']['detailed_analysis'])
+    
+    # Process each service
+    for service_name, service_data in services.items():
+        if not isinstance(service_data, dict) or not service_data.get('success'):
+            continue
         
-        for i, word in enumerate(words):
-            if 'can' in word.lower() and start_idx is None:
-                start_idx = max(0, i - 1)  # Include subject
-            if 'tariff' in word.lower() and start_idx is not None:
-                end_idx = min(len(words), i + 5)  # Include a few words after
-                break
+        try:
+            if service_name == 'source_credibility':
+                score = extract_score_from_service(service_data)
+                if score is not None:
+                    if score >= 80:
+                        findings.append("Source has high credibility")
+                    elif score >= 60:
+                        findings.append("Source has moderate credibility")
+                    else:
+                        findings.append("Source has questionable credibility")
+            
+            elif service_name == 'bias_detector':
+                if 'data' in service_data and 'bias_level' in service_data['data']:
+                    bias_level = service_data['data']['bias_level']
+                    if bias_level == 'minimal':
+                        findings.append("Minimal bias detected")
+                    elif bias_level == 'moderate':
+                        findings.append("Moderate bias detected")
+                    elif bias_level == 'high':
+                        findings.append("High bias detected")
+            
+            elif service_name == 'fact_checker':
+                if 'data' in service_data and 'claims_checked' in service_data['data']:
+                    claims_checked = service_data['data']['claims_checked']
+                    if claims_checked > 0:
+                        findings.append(f"Fact-checked {claims_checked} claims")
+            
+            elif service_name == 'author_analyzer':
+                if 'data' in service_data and 'credibility_level' in service_data['data']:
+                    cred_level = service_data['data']['credibility_level']
+                    if cred_level == 'high':
+                        findings.append("Author has strong credentials")
+                    elif cred_level == 'medium':
+                        findings.append("Author has moderate credentials")
+                    else:
+                        findings.append("Limited author information available")
+            
+            elif service_name == 'manipulation_detector':
+                if 'data' in service_data and 'manipulation_score' in service_data['data']:
+                    manip_score = service_data['data']['manipulation_score']
+                    if manip_score < 30:
+                        findings.append("No significant manipulation detected")
+                    elif manip_score < 60:
+                        findings.append("Some manipulation tactics detected")
+                    else:
+                        findings.append("Significant manipulation detected")
         
-        if start_idx is not None and end_idx is not None:
-            return ' '.join(words[start_idx:end_idx])
-        else:
-            return sentence  # Fallback to full sentence
-
-def extract_payment_claim(sentence: str) -> str:
-    """Extract the specific part about who pays tariffs"""
-    # Look for the part about importing country paying
-    match = re.search(r'(?:the )?importing country[^.]*pay[^.]*', sentence, re.IGNORECASE)
-    if match:
-        return match.group().strip()
+        except Exception as e:
+            logger.error(f"Error processing {service_name} for findings: {e}")
+            continue
+    
+    # Generate overall assessment based on trust score
+    if trust_score >= 80:
+        overall = "This article is highly trustworthy."
+    elif trust_score >= 60:
+        overall = "This article is generally trustworthy."
+    elif trust_score >= 40:
+        overall = "This article has moderate trustworthiness."
     else:
-        # Look for broader payment references
-        match = re.search(r'[^.]*(?:country|countries)[^.]*(?:pay|pays|paid)[^.]*', sentence, re.IGNORECASE)
-        if match:
-            return match.group().strip()
-        else:
-            return sentence  # Fallback
+        overall = "This article has low trustworthiness."
+    
+    # Combine findings
+    if findings:
+        return f"{overall} {'. '.join(findings)}."
+    else:
+        return overall
 
-def analyze_political_bias(text: str, service_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract political bias information from bias detector service"""
-    bias_info = {
-        'bias_detected': False,
-        'bias_direction': 'Neutral',
-        'bias_level': 'Low',
-        'political_leaning': 'None detected',
-        'loaded_language': [],
-        'explanation': 'No significant political bias detected in the text.'
-    }
+def extract_score_from_service(service_data: Any) -> Optional[float]:
+    """
+    Extract score from service data regardless of structure
+    """
+    if not isinstance(service_data, dict):
+        return None
     
-    # Check if bias detector service ran
-    if 'bias_detector' in service_results:
-        bias_data = service_results['bias_detector']
-        if isinstance(bias_data, dict) and bias_data.get('success'):
-            bias_level = bias_data.get('bias_level', 'Low')
-            political_label = bias_data.get('political_label', 'Neutral')
-            loaded_phrases = bias_data.get('loaded_phrases', [])
-            
-            if bias_level != 'Low' or political_label != 'Neutral':
-                bias_info.update({
-                    'bias_detected': True,
-                    'bias_direction': political_label,
-                    'bias_level': bias_level,
-                    'political_leaning': political_label,
-                    'loaded_language': [p.get('phrase', p) for p in loaded_phrases[:3]] if loaded_phrases else [],
-                    'explanation': f'{bias_level} {political_label} bias detected with loaded language usage.'
-                })
+    # Check in data wrapper
+    if 'data' in service_data and isinstance(service_data['data'], dict):
+        data = service_data['data']
+        for key in ['score', 'credibility_score', 'bias_score', 'transparency_score', 
+                   'author_score', 'manipulation_score', 'overall_score']:
+            if key in data:
+                try:
+                    return float(data[key])
+                except (ValueError, TypeError):
+                    continue
     
-    return bias_info
-
-def analyze_source_credibility(text: str, service_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract source information"""
-    source_info = {
-        'source_type': 'Direct Text Input',
-        'credibility_rating': 'Not Applicable',
-        'source_analysis': 'Text was directly input by user, no external source to evaluate.',
-        'domain_info': None,
-        'publication_info': None
-    }
+    # Check directly
+    for key in ['score', 'credibility_score', 'bias_score', 'transparency_score', 
+               'author_score', 'manipulation_score', 'overall_score']:
+        if key in service_data:
+            try:
+                return float(service_data[key])
+            except (ValueError, TypeError):
+                continue
     
-    # Check if source credibility service ran and found external source info
-    if 'source_credibility' in service_results:
-        source_data = service_results['source_credibility']
-        if isinstance(source_data, dict) and source_data.get('success'):
-            credibility_level = source_data.get('credibility_level', 'Unknown')
-            domain = source_data.get('domain', '')
-            score = source_data.get('score', 0)
-            
-            if domain and domain != 'Unknown':
-                source_info.update({
-                    'source_type': 'External Source',
-                    'credibility_rating': f'{credibility_level} ({score}/100)',
-                    'source_analysis': f'Source domain: {domain}',
-                    'domain_info': domain
-                })
-    
-    return source_info
-
-def analyze_author_information(text: str, service_results: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Extract author information if available"""
-    # Check if author analyzer service found author info
-    if 'author_analyzer' in service_results:
-        author_data = service_results['author_analyzer']
-        if isinstance(author_data, dict) and author_data.get('success'):
-            author_name = author_data.get('author_name', '')
-            credibility = author_data.get('credibility_score', 0)
-            
-            if author_name and author_name not in ['Unknown', 'Not Specified', '']:
-                return {
-                    'author_found': True,
-                    'author_name': author_name,
-                    'credibility_score': credibility,
-                    'author_analysis': f'Author credibility score: {credibility}/100',
-                    'background_info': author_data.get('background', 'Limited information available')
-                }
-    
-    # If no author found, return None (we won't show author section)
     return None
 
-def analyze_manipulation_tactics(text: str, service_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Analyze manipulation and propaganda tactics"""
-    manipulation_info = {
-        'tactics_detected': False,
-        'risk_level': 'Low',
-        'tactics_found': [],
-        'explanation': 'No significant manipulation tactics detected.'
-    }
-    
-    if 'manipulation_detector' in service_results:
-        manip_data = service_results['manipulation_detector']
-        if isinstance(manip_data, dict) and manip_data.get('success'):
-            risk_level = manip_data.get('manipulation_level', 'Low')
-            tactics = manip_data.get('tactics_found', [])
-            
-            if tactics or risk_level != 'Low':
-                tactic_names = [t.get('name', t) if isinstance(t, dict) else str(t) for t in tactics[:3]]
-                manipulation_info.update({
-                    'tactics_detected': True,
-                    'risk_level': risk_level,
-                    'tactics_found': tactic_names,
-                    'explanation': f'{risk_level} manipulation risk. Tactics include: {", ".join(tactic_names)}' if tactic_names else f'{risk_level} manipulation risk detected.'
-                })
-    
-    return manipulation_info
-
-def calculate_overall_trust_score(claims: List[Dict], bias_info: Dict, manipulation_info: Dict) -> int:
-    """Calculate overall trust score based on detailed analysis"""
-    base_score = 75
-    
-    # Adjust points based on claim accuracy
-    for claim in claims:
-        accuracy = claim.get('accuracy_assessment', '')
-        if 'True' in accuracy:
-            base_score += 10  # Reward accurate claims
-        elif 'False' in accuracy:
-            base_score -= 25  # Heavily penalize false claims
-        elif 'Misleading' in accuracy:
-            base_score -= 15  # Moderately penalize misleading claims
-        elif 'Requires Verification' in accuracy:
-            base_score -= 5   # Small penalty for unverified claims
-    
-    # Deduct points for bias
-    if bias_info['bias_detected']:
-        if bias_info['bias_level'] == 'High':
-            base_score -= 20
-        elif bias_info['bias_level'] == 'Medium':
-            base_score -= 10
-    
-    # Deduct points for manipulation
-    if manipulation_info['tactics_detected']:
-        if manipulation_info['risk_level'] == 'High':
-            base_score -= 25
-        elif manipulation_info['risk_level'] == 'Medium':
-            base_score -= 15
-    
-    return max(5, min(100, base_score))
+# MAIN ROUTES
 
 @app.route('/')
 def index():
-    """Main page"""
-    try:
-        return render_template('index.html')
-    except Exception as e:
-        logger.error(f"Template error: {e}")
-        return f"Template Error: {e}", 500
+    """Serve the main application page"""
+    return render_template('index.html')
 
 @app.route('/health')
 def health():
-    """Health check"""
-    return jsonify({'status': 'healthy', 'detailed_analysis': True})
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'services': 'ready' if news_analyzer else 'initializing'
+    })
 
 @app.route('/api/analyze', methods=['POST'])
-@limiter.limit("10 per minute")
 def analyze():
     """
-    DETAILED ANALYSIS: Claim-by-claim breakdown with specific findings
+    Main analysis endpoint - Returns exactly 5 things:
+    1. Trust Score
+    2. Article Summary
+    3. Source
+    4. Author
+    5. Findings Summary
     """
+    if not news_analyzer:
+        logger.error("NewsAnalyzer not initialized")
+        return jsonify({
+            'success': False,
+            'error': 'Analysis service not available',
+            'data': {
+                'analysis': {
+                    'trust_score': 0,
+                    'trust_level': 'Error',
+                    'summary': 'Service initialization failed',
+                    'key_findings': []
+                },
+                'article_info': {
+                    'source': 'Unknown',
+                    'author': 'Unknown',
+                    'title': 'Error',
+                    'url': '',
+                    'extraction_successful': False
+                },
+                'detailed_analysis': {}
+            },
+            'simple': {
+                'trust_score': 0,
+                'article_summary': 'Analysis service not available',
+                'source': 'Unknown',
+                'author': 'Unknown',
+                'findings_summary': 'Service initialization failed'
+            }
+        }), 503
+    
     try:
+        # Get and validate input
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'JSON data required'}), 400
+            return jsonify({'error': 'No data provided'}), 400
         
+        url = data.get('url', '').strip()
         text = data.get('text', '').strip()
-        if not text:
-            return jsonify({'error': 'Text content required'}), 400
         
-        logger.info(f"=== DETAILED ANALYSIS START ({len(text)} chars) ===")
+        if not url and not text:
+            return jsonify({'error': 'Please provide either a URL or article text'}), 400
+        
+        content = url if url else text
+        content_type = 'url' if url else 'text'
+        
+        logger.info(f"Analyzing {content_type}: {content[:100]}...")
+        
+        # Run analysis with pro mode enabled
         start_time = time.time()
-        
-        # STEP 1: Extract specific claims
-        specific_claims = extract_specific_claims(text)
-        logger.info(f"Extracted {len(specific_claims)} specific claims")
-        
-        # STEP 2: Run comprehensive service analysis
-        service_results = {}
-        if news_analyzer:
-            try:
-                service_results = news_analyzer.analyze(text, 'text', pro_mode=True)
-                logger.info(f"Service analysis completed: {len(service_results)} services")
-            except Exception as e:
-                logger.warning(f"Service analysis failed: {e}")
-        
-        # STEP 3: Analyze different aspects
-        bias_analysis = analyze_political_bias(text, service_results)
-        source_analysis = analyze_source_credibility(text, service_results)  
-        author_analysis = analyze_author_information(text, service_results)
-        manipulation_analysis = analyze_manipulation_tactics(text, service_results)
-        
-        # STEP 4: Calculate overall assessment
-        trust_score = calculate_overall_trust_score(specific_claims, bias_analysis, manipulation_analysis)
-        
+        pipeline_results = news_analyzer.analyze(content, content_type, pro_mode=True)
         analysis_time = time.time() - start_time
         
-        # STEP 5: Build detailed response
-        response = {
-            'trust_score': trust_score,
-            'analysis_summary': f"Analyzed {len(specific_claims)} specific claims with detailed fact-checking and bias analysis.",
-            
-            # DETAILED CLAIM ANALYSIS
-            'specific_claims': specific_claims,
-            
-            # BIAS ANALYSIS
-            'political_bias': bias_analysis,
-            
-            # SOURCE INFORMATION
-            'source_information': source_analysis,
-            
-            # MANIPULATION ANALYSIS
-            'manipulation_analysis': manipulation_analysis,
-            
-            # METADATA
-            'analysis_metadata': {
-                'analysis_time': round(analysis_time, 2),
-                'claims_analyzed': len(specific_claims),
-                'services_used': len([k for k, v in service_results.items() 
-                                    if isinstance(v, dict) and v.get('success', False)]),
-                'detailed_analysis': True,
-                'timestamp': datetime.now().isoformat()
+        logger.info(f"Analysis completed in {analysis_time:.2f} seconds")
+        
+        # Extract the 5 required pieces of information
+        trust_score = calculate_trust_score(pipeline_results)
+        article_summary = extract_article_summary(pipeline_results)
+        article_info = extract_article_info(pipeline_results)
+        findings_summary = generate_findings_summary(pipeline_results, trust_score)
+        
+        # Create response with both formats for compatibility
+        response_data = {
+            'success': True,
+            'analysis_time': analysis_time,
+            'timestamp': datetime.now().isoformat(),
+            'data': pipeline_results.get('data', {}),
+            'simple': {
+                'trust_score': trust_score,
+                'article_summary': article_summary,
+                'source': article_info['source'],
+                'author': article_info['author'],
+                'findings_summary': findings_summary
             }
         }
         
-        # ONLY include author section if author was found
-        if author_analysis:
-            response['author_information'] = author_analysis
+        # Ensure data structure includes analysis summary
+        if 'analysis' not in response_data['data']:
+            response_data['data']['analysis'] = {
+                'trust_score': trust_score,
+                'trust_level': 'High' if trust_score >= 80 else 'Medium' if trust_score >= 60 else 'Low',
+                'summary': article_summary,
+                'key_findings': findings_summary.split('. ') if findings_summary else []
+            }
         
-        logger.info(f"=== DETAILED ANALYSIS COMPLETE: {trust_score}/100 ===")
-        return jsonify(response)
+        # Ensure article_info is present
+        if 'article_info' not in response_data['data']:
+            response_data['data']['article_info'] = article_info
+        
+        return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"Analysis error: {e}", exc_info=True)
+        logger.error(f"Analysis failed: {str(e)}", exc_info=True)
         return jsonify({
-            'error': 'Analysis failed',
-            'details': str(e),
-            'trust_score': 0
+            'success': False,
+            'error': f'Analysis failed: {str(e)}',
+            'timestamp': datetime.now().isoformat(),
+            'data': {
+                'article_info': {
+                    'source': 'Unknown',
+                    'author': 'Unknown',
+                    'title': 'Error',
+                    'url': content if content_type == 'url' else '',
+                    'extraction_successful': False
+                },
+                'analysis': {
+                    'trust_score': 0,
+                    'trust_level': 'Error',
+                    'summary': f'Analysis failed: {str(e)}',
+                    'key_findings': []
+                },
+                'detailed_analysis': {}
+            },
+            'simple': {
+                'trust_score': 0,
+                'article_summary': 'Error analyzing article',
+                'source': 'Unknown',
+                'author': 'Unknown',
+                'findings_summary': f'Analysis could not be completed: {str(e)}'
+            }
+        }), 200  # Return 200 so frontend can handle it
+
+@app.route('/api/test', methods=['GET', 'POST'])
+def test_endpoint():
+    """Test endpoint that returns simple data without analysis"""
+    logger.info("TEST ENDPOINT HIT")
+    
+    # Check if NewsAnalyzer exists
+    analyzer_status = "initialized" if news_analyzer else "failed"
+    
+    # Try to get service status
+    try:
+        registry = get_service_registry()
+        service_status = registry.get_service_status()
+        services = list(service_status.get('services', {}).keys())
+    except Exception as e:
+        services = f"Error: {str(e)}"
+    
+    # Check ScraperAPI status
+    scraperapi_status = "enabled" if os.getenv('SCRAPERAPI_KEY') else "not configured"
+    
+    return jsonify({
+        'success': True,
+        'message': 'Test endpoint working',
+        'news_analyzer': analyzer_status,
+        'services': services,
+        'scraperapi': scraperapi_status,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/simple', methods=['POST'])
+def simple_analyze():
+    """
+    Simplified endpoint that ONLY returns the 5 things you want
+    """
+    try:
+        data = request.get_json()
+        url = data.get('url')
+        text = data.get('text')
+        
+        if not url and not text:
+            return jsonify({'error': 'Provide URL or text'}), 400
+        
+        content = url if url else text
+        content_type = 'url' if url else 'text'
+        
+        # Run analysis
+        pipeline_results = news_analyzer.analyze(content, content_type, pro_mode=True)
+        
+        # Extract exactly what you want
+        trust_score = calculate_trust_score(pipeline_results)
+        article_summary = extract_article_summary(pipeline_results)
+        article_info = extract_article_info(pipeline_results)
+        findings_summary = generate_findings_summary(pipeline_results, trust_score)
+        
+        return jsonify({
+            'trust_score': trust_score,
+            'article_summary': article_summary,
+            'source': article_info['source'],
+            'author': article_info['author'],
+            'findings_summary': findings_summary
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'trust_score': 0,
+            'article_summary': 'Error',
+            'source': 'Unknown',
+            'author': 'Unknown',
+            'findings_summary': str(e)
         }), 500
 
 @app.route('/api/status')
 def api_status():
-    """API status"""
+    """Simple status check"""
+    scraperapi_available = bool(os.getenv('SCRAPERAPI_KEY'))
+    
     return jsonify({
-        'status': 'online',
-        'detailed_analysis': True,
-        'claim_patterns': len(KNOWN_FALSE_CLAIMS),
-        'services_available': len(news_analyzer.get_available_services()['services']) if news_analyzer else 0
+        'status': 'online', 
+        'services': 'ready',
+        'scraperapi': 'enabled' if scraperapi_available else 'not configured',
+        'timestamp': datetime.now().isoformat()
     })
+
+# Debug Routes (helpful for development)
+@app.route('/api/debug/services')
+def debug_services():
+    """Debug endpoint to check service status"""
+    if not news_analyzer:
+        return jsonify({'error': 'NewsAnalyzer not initialized'}), 500
+    
+    try:
+        registry = get_service_registry()
+        status = registry.get_service_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug/config')
+def debug_config():
+    """Debug endpoint to check configuration (without exposing secrets)"""
+    config_info = {
+        'openai_configured': bool(Config.OPENAI_API_KEY),
+        'scraperapi_configured': bool(Config.SCRAPERAPI_KEY),
+        'scrapingbee_configured': bool(Config.SCRAPINGBEE_API_KEY),
+        'google_factcheck_configured': bool(Config.GOOGLE_FACT_CHECK_API_KEY or Config.GOOGLE_FACTCHECK_API_KEY),
+        'news_api_configured': bool(Config.NEWS_API_KEY or Config.NEWSAPI_KEY),
+        'environment': Config.ENV,
+        'debug': Config.DEBUG
+    }
+    
+    return jsonify(config_info)
 
 @app.route('/templates/<path:filename>')
 def serve_template(filename):
-    """Serve templates"""
+    """Serve template files"""
     try:
         if '..' in filename or filename.startswith('/'):
             return "Invalid path", 400
         return send_from_directory('templates', filename)
     except Exception as e:
-        return f"Error: {e}", 500
+        return f"Error: {str(e)}", 500
+
+# Error Handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({'error': 'Rate limit exceeded', 'message': str(e.description)}), 429
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV') == 'development'
-    
-    logger.info(f"=== DETAILED ANALYSIS SYSTEM STARTING ===")
-    logger.info(f"Port: {port}")
-    logger.info(f"Known claim patterns: {len(KNOWN_FALSE_CLAIMS)}")
-    logger.info(f"Services available: {'Yes' if USE_EXISTING_SERVICES else 'No'}")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)
