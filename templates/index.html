@@ -129,6 +129,25 @@
             cursor: not-allowed;
         }
         
+        .reset-button {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background: var(--gray-500);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .reset-button:hover {
+            background: var(--gray-600);
+            transform: translateY(-1px);
+        }
+        
         .loading-spinner {
             width: 20px;
             height: 20px;
@@ -447,6 +466,10 @@ The system will identify specific claims and evaluate each one for accuracy, bia
             <button class="analyze-button" id="analyze-btn">
                 🔍 Analyze Claims & Credibility
             </button>
+            
+            <button class="reset-button" id="reset-btn" style="display: none;">
+                🔄 Clear Results & Start Over
+            </button>
         </div>
 
         <!-- Results Section -->
@@ -522,12 +545,14 @@ The system will identify specific claims and evaluate each one for accuracy, bia
         
         const textInput = document.getElementById('text-input');
         const analyzeBtn = document.getElementById('analyze-btn');
+        const resetBtn = document.getElementById('reset-btn');
         const resultsSection = document.getElementById('results-section');
         const trustScoreCircle = document.getElementById('trust-score-circle');
         const trustScoreNumber = document.getElementById('trust-score-number');
         const analysisSummary = document.getElementById('analysis-summary');
         
         analyzeBtn.addEventListener('click', analyzeContent);
+        resetBtn.addEventListener('click', resetAnalysis);
         
         async function analyzeContent() {
             if (isAnalyzing) return;
@@ -614,7 +639,43 @@ The system will identify specific claims and evaluate each one for accuracy, bia
                 document.getElementById('author-section').style.display = 'block';
             }
             
+            // Show reset button now that we have results
+            resetBtn.style.display = 'block';
+            
             showResults();
+        }
+        
+        function resetAnalysis() {
+            // Clear text input
+            textInput.value = '';
+            
+            // Hide results section
+            hideResults();
+            
+            // Hide reset button
+            resetBtn.style.display = 'none';
+            
+            // Hide conditional sections
+            document.getElementById('source-section').style.display = 'none';
+            document.getElementById('author-section').style.display = 'none';
+            
+            // Clear all content areas
+            document.getElementById('claims-content').innerHTML = '';
+            document.getElementById('bias-content').innerHTML = '';
+            document.getElementById('manipulation-content').innerHTML = '';
+            document.getElementById('source-content').innerHTML = '';
+            document.getElementById('author-content').innerHTML = '';
+            
+            // Reset trust score display
+            trustScoreNumber.textContent = '--';
+            analysisSummary.textContent = '--';
+            trustScoreCircle.className = 'trust-score-circle';
+            
+            // Remove any error messages
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            
+            // Focus back on text input
+            textInput.focus();
         }
         
         function displayClaims(claims) {
