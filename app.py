@@ -131,45 +131,49 @@ def calculate_trust_score(pipeline_results: Dict[str, Any]) -> int:
 
 def extract_article_summary(pipeline_results: Dict[str, Any]) -> str:
     """
-    Extract or generate a summary of what the article is about
+    Extract or generate a summary of what the article is about (100 words max)
     """
+    summary = None
+    
     # Check for OpenAI enhanced summary
     if 'openai_enhancer' in pipeline_results:
         enhancer = pipeline_results['openai_enhancer']
         if isinstance(enhancer, dict):
             if 'data' in enhancer and enhancer['data'].get('summary'):
-                return enhancer['data']['summary']
+                summary = enhancer['data']['summary']
             elif enhancer.get('summary'):
-                return enhancer['summary']
+                summary = enhancer['summary']
     
     # Check in data.detailed_analysis.openai_enhancer
-    if 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
+    if not summary and 'data' in pipeline_results and 'detailed_analysis' in pipeline_results['data']:
         if 'openai_enhancer' in pipeline_results['data']['detailed_analysis']:
             enhancer = pipeline_results['data']['detailed_analysis']['openai_enhancer']
             if isinstance(enhancer, dict):
                 summary = enhancer.get('summary') or (enhancer.get('data', {}).get('summary'))
-                if summary:
-                    return summary
     
     # Check article extractor for summary or description
-    article_data = extract_article_info(pipeline_results)
-    if article_data.get('summary'):
-        return article_data['summary']
-    if article_data.get('description'):
-        return article_data['description']
+    if not summary:
+        article_data = extract_article_info(pipeline_results)
+        if article_data.get('summary'):
+            summary = article_data['summary']
+        elif article_data.get('description'):
+            summary = article_data['description']
+        elif article_data.get('text'):
+            # Generate from article text - take first few sentences
+            text = article_data['text']
+            sentences = text.replace('\n', ' ').split('.')
+            summary = '. '.join(sentences[:3]) + '.' if sentences else text[:300]
     
-    # Generate from article text if available
-    if article_data.get('text'):
-        text = article_data['text']
-        # Take first 500 characters and clean up
-        if len(text) > 500:
-            summary = text[:497] + "..."
-        else:
-            summary = text
-        return summary.replace('\n', ' ').strip()
+    # If no summary found
+    if not summary:
+        return "Article content could not be summarized. Please check the source directly."
     
-    # Fallback
-    return "Article content could not be summarized. Please check the source directly."
+    # Limit to 100 words
+    words = summary.split()
+    if len(words) > 100:
+        summary = ' '.join(words[:97]) + '...'
+    
+    return summary.strip()
 
 def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -224,9 +228,27 @@ def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
             'description': article_data.get('description', '')
         })
     
+    # Enhanced author extraction
+    if article_info['author'] == 'Unknown' and article_data:
+        # Try various author fields
+        author_fields = ['author', 'authors', 'by', 'writer', 'journalist', 'reporter', 'contributor']
+        for field in author_fields:
+            if field in article_data and article_data[field]:
+                author_value = article_data[field]
+                if isinstance(author_value, list) and author_value:
+                    article_info['author'] = ', '.join(author_value)
+                    break
+                elif isinstance(author_value, str) and author_value.strip():
+                    article_info['author'] = author_value.strip()
+                    break
+    
     # Clean up author if it's a list
     if isinstance(article_info['author'], list):
         article_info['author'] = ', '.join(article_info['author']) if article_info['author'] else 'Unknown'
+    
+    # Clean "By" prefix from author
+    if isinstance(article_info['author'], str) and article_info['author'].lower().startswith('by '):
+        article_info['author'] = article_info['author'][3:].strip()
     
     # Extract domain from URL if not set
     if article_info['url'] and not article_info['domain']:
