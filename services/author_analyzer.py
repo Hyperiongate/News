@@ -1439,3 +1439,351 @@ Format as JSON with keys:
                 'a[href*="linkedin.com"]',
                 'a[href*="facebook.com"]'
             ]
+            
+            for selector in social_selectors:
+                try:
+                    elements = soup.select(selector)
+                    for element in elements:
+                        href = element.get('href', '')
+                        if 'twitter.com' in href:
+                            bio_data['social_media']['twitter'] = href
+                        elif 'linkedin.com' in href:
+                            bio_data['social_media']['linkedin'] = href
+                        elif 'facebook.com' in href:
+                            bio_data['social_media']['facebook'] = href
+                except:
+                    continue
+            
+            return bio_data if bio_data['full_bio'] else None
+            
+        except Exception as e:
+            logger.warning(f"Failed to scrape author bio from {author_url}: {e}")
+            return None
+    
+    def _extract_author_info_from_text(self, text: str, author_name: str) -> Dict[str, Any]:
+        """Extract basic author info from article text"""
+        info = {}
+        
+        # Look for author description in the text
+        author_patterns = [
+            rf"{re.escape(author_name)}\s+is\s+([^.]+)",
+            rf"{re.escape(author_name)},\s+([^.]+)",
+            rf"^([^.]+)\s+{re.escape(author_name)}"
+        ]
+        
+        for pattern in author_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                description = match.group(1).strip()
+                if len(description) > 10 and len(description) < 200:
+                    info['bio'] = description
+                    break
+        
+        return info
+    
+    def _extract_expertise_from_bio(self, bio_text: str) -> List[str]:
+        """Extract expertise areas from bio text"""
+        expertise = []
+        
+        # Patterns to identify expertise
+        expertise_patterns = [
+            r'(?:specializes?|covers?|focuses?|reports?)\s+(?:in|on)\s+([^,.]+)',
+            r'(?:expert|expertise)\s+(?:in|on)\s+([^,.]+)',
+            r'beat:?\s*([^,.]+)',
+            r'covers?\s+([^,.]+)'
+        ]
+        
+        for pattern in expertise_patterns:
+            matches = re.finditer(pattern, bio_text, re.IGNORECASE)
+            for match in matches:
+                area = match.group(1).strip()
+                if len(area) > 3 and len(area) < 50:
+                    expertise.append(area.title())
+        
+        return expertise[:5]  # Limit to 5 expertise areas
+    
+    def _calculate_credibility_score(self, author_data: Dict[str, Any]) -> int:
+        """Calculate author credibility score (preserve existing logic)"""
+        score = 30  # Base score for having a byline
+        
+        # Bio available
+        if author_data.get('bio'):
+            score += 20
+            
+        # Bio scraped from dedicated page
+        if author_data.get('bio_scraped'):
+            score += 15
+            
+        # Has position/title
+        if author_data.get('position'):
+            score += 10
+            
+        # Has organization
+        if author_data.get('organization'):
+            score += 10
+            
+        # Article count
+        article_count = author_data.get('article_count', 0)
+        if article_count > 50:
+            score += 15
+        elif article_count > 10:
+            score += 10
+        elif article_count > 0:
+            score += 5
+        
+        # Has expertise areas
+        if author_data.get('expertise_areas'):
+            score += 10
+        
+        # Social media presence
+        if author_data.get('social_media'):
+            score += 5
+        
+        # Has author link (verified presence)
+        if author_data.get('author_link'):
+            score += 10
+        
+        return min(100, score)
+    
+    def _generate_enhanced_findings(self, author_data: Dict[str, Any], score: int, 
+                                  research_data: Dict[str, Any], ai_analysis: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate enhanced findings with research and AI insights"""
+        findings = []
+        
+        author_name = author_data.get('author_name', 'Unknown')
+        
+        # Basic credibility assessment (preserve existing logic)
+        if score >= 70:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Well-documented author: {author_name}',
+                'explanation': 'Author has comprehensive biographical information available'
+            })
+        elif score >= 40:
+            findings.append({
+                'type': 'info',
+                'severity': 'medium',
+                'text': f'Partially documented author: {author_name}',
+                'explanation': 'Some author information available'
+            })
+        else:
+            findings.append({
+                'type': 'warning',
+                'severity': 'medium',
+                'text': f'Limited author information: {author_name}',
+                'explanation': 'Minimal biographical details available'
+            })
+        
+        # Enhanced findings from comprehensive research
+        if research_data and not research_data.get('error'):
+            # Publication history
+            pub_count = len(research_data.get('publication_history', []))
+            if pub_count > 20:
+                findings.append({
+                    'type': 'positive',
+                    'severity': 'positive',
+                    'text': f'Extensive publication history ({pub_count} articles)',
+                    'explanation': 'Strong track record of published work indicates experience'
+                })
+            
+            # Awards and recognition
+            awards = research_data.get('awards_recognition', [])
+            if awards:
+                prestigious_awards = [a for a in awards if a.get('prestige_level') in ['highest', 'high']]
+                if prestigious_awards:
+                    award_names = [a.get('award', '') for a in prestigious_awards[:3]]
+                    findings.append({
+                        'type': 'positive',
+                        'severity': 'positive',
+                        'text': f'Award recognition: {", ".join(award_names)}',
+                        'explanation': 'Professional recognition enhances credibility'
+                    })
+            
+            # Political bias analysis
+            political_analysis = research_data.get('political_lean_analysis', {})
+            overall_lean = political_analysis.get('overall_lean', 'center')
+            if overall_lean != 'center' and political_analysis.get('confidence') == 'high':
+                lean_text = overall_lean.replace('_', ' ').title()
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'medium',
+                    'text': f'Political lean detected: {lean_text}',
+                    'explanation': 'Publication history suggests potential political bias'
+                })
+            
+            # Controversy alerts
+            controversies = research_data.get('controversy_alerts', [])
+            if controversies:
+                high_severity = [c for c in controversies if c.get('severity') == 'high']
+                if high_severity:
+                    findings.append({
+                        'type': 'warning',
+                        'severity': 'high',
+                        'text': 'Potential controversies found',
+                        'explanation': 'Author mentioned in connection with controversial topics'
+                    })
+            
+            # Verification status
+            verification = research_data.get('verification_status', 'unverified')
+            if verification == 'verified_high':
+                findings.append({
+                    'type': 'positive',
+                    'severity': 'positive',
+                    'text': 'Highly verified author',
+                    'explanation': 'Multiple sources confirm author identity and credentials'
+                })
+            elif verification in ['unverified_minimal', 'unverified_some_info']:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'medium',
+                    'text': 'Limited verification possible',
+                    'explanation': 'Unable to verify author credentials through multiple sources'
+                })
+        
+        # AI analysis findings
+        if ai_analysis:
+            ai_red_flags = ai_analysis.get('red_flags', [])
+            for flag in ai_red_flags[:3]:  # Limit to top 3 red flags
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'medium',
+                    'text': f'AI Alert: {flag}',
+                    'explanation': 'Potential concern identified through AI analysis'
+                })
+            
+            ai_bias_indicators = ai_analysis.get('bias_indicators', [])
+            if ai_bias_indicators:
+                findings.append({
+                    'type': 'info',
+                    'severity': 'medium',
+                    'text': f'Bias indicators: {", ".join(ai_bias_indicators[:3])}',
+                    'explanation': 'AI analysis detected potential bias patterns'
+                })
+        
+        # Preserve existing specific findings
+        if author_data.get('bio_scraped'):
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': 'Author has dedicated bio page',
+                'explanation': 'Indicates established presence at publication'
+            })
+        
+        if author_data.get('expertise_areas'):
+            areas = ', '.join(author_data['expertise_areas'][:3])
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Specialized expertise: {areas}',
+                'explanation': 'Author has identified areas of specialization'
+            })
+        
+        return findings
+    
+    def _generate_enhanced_summary(self, author_data: Dict[str, Any], score: int,
+                                 research_data: Dict[str, Any], ai_analysis: Optional[Dict[str, Any]]) -> str:
+        """Generate enhanced summary with research and AI insights"""
+        author_name = author_data.get('author_name', 'Unknown author')
+        
+        # Base summary (preserve existing logic)
+        if score >= 70:
+            summary = f"{author_name} is a well-documented author with comprehensive information available. "
+        elif score >= 40:
+            summary = f"{author_name} has moderate biographical information available. "
+        else:
+            summary = f"{author_name} has limited available information. "
+        
+        # Add research insights
+        if research_data and not research_data.get('error'):
+            verification = research_data.get('verification_status', 'unverified')
+            if verification.startswith('verified'):
+                summary += "Identity verified through multiple sources. "
+            
+            pub_count = len(research_data.get('publication_history', []))
+            if pub_count > 0:
+                summary += f"Published {pub_count} articles. "
+            
+            awards = research_data.get('awards_recognition', [])
+            if awards:
+                summary += f"Recognized with {len(awards)} professional awards. "
+            
+            political_analysis = research_data.get('political_lean_analysis', {})
+            overall_lean = political_analysis.get('overall_lean', 'center')
+            if overall_lean != 'center':
+                lean_text = overall_lean.replace('_', ' ')
+                summary += f"Shows {lean_text} political tendency in publication choices. "
+            
+            controversies = research_data.get('controversy_alerts', [])
+            if controversies:
+                summary += f"Note: {len(controversies)} potential controversy indicators found. "
+        
+        # Add AI insights
+        if ai_analysis:
+            trustworthiness = ai_analysis.get('overall_trustworthiness', score)
+            summary += f"AI assessment: {trustworthiness}/100 trustworthiness. "
+            
+            trust_rec = ai_analysis.get('trust_recommendation', '')
+            if trust_rec:
+                summary += f"Recommendation: {trust_rec}. "
+        
+        # Preserve existing details
+        if author_data.get('position'):
+            summary += f"Listed as {author_data['position']}. "
+        
+        if author_data.get('expertise_areas'):
+            areas = ', '.join(author_data['expertise_areas'][:2])
+            summary += f"Specializes in {areas}. "
+        
+        summary += f"Overall credibility score: {score}/100."
+        
+        return summary
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get comprehensive service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Author name extraction from multiple sources',
+                'Author bio page discovery and scraping',
+                'Comprehensive multi-platform author research',
+                'Political bias analysis from publication history',
+                'Awards and recognition tracking',
+                'Social media verification',
+                'Professional credentials validation',
+                'Controversy and ethics monitoring',
+                'AI-powered credibility assessment',
+                'Expertise area identification',
+                'Publication history analysis',
+                'Fact-checking history lookup',
+                'Byline verification',
+                'Trust score calculation'
+            ],
+            'extraction_methods': [
+                'HTML meta tags',
+                'Schema.org markup',
+                'Byline patterns',
+                'Author links',
+                'Bio page scraping'
+            ],
+            'research_capabilities': [
+                'Google search integration',
+                'News API publication history',
+                'Social media profile verification',
+                'Awards database searches',
+                'Political bias analysis',
+                'Controversy monitoring',
+                'Professional credential verification'
+            ],
+            'ai_features': [
+                'Comprehensive credibility assessment',
+                'Bias pattern detection',
+                'Trust recommendations',
+                'Red flag identification',
+                'Expertise validation'
+            ],
+            'enhanced_features': True,
+            'comprehensive_research': True,
+            'ai_powered': self._ai_available
+        })
+        return info
