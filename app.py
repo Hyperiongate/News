@@ -207,6 +207,9 @@ def extract_article_info(pipeline_results: Dict[str, Any]) -> Dict[str, str]:
                 if not article_info['url']:
                     article_info['url'] = data.get('url', '')
     
+    except Exception as e:
+        logger.error(f"Error extracting article info: {e}")
+    
     # Enhanced author extraction
     if article_info['author'] == 'Unknown':
         # Try various author fields
