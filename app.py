@@ -167,6 +167,30 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
             'explanation': 'Presidents have limited tariff authority under specific laws. Most tariffs require Congressional approval or must meet specific trade law criteria (national security, unfair trade practices, etc.).',
             'evidence': 'Trade laws like Section 232 (national security) and Section 301 (unfair practices) set specific conditions. Congress has constitutional authority over trade regulation.',
             'category': 'Constitutional/Trade Law Misinformation'
+        # General presidential power overreach claims
+        'president.*(?:authority|power|can).*(?:do|does).*(?:whatever|anything|everything).*(?:he|she).*wants?': {
+            'claim_type': 'Presidential Power Limits',
+            'accuracy': 'False',
+            'explanation': 'Presidential powers are constitutionally limited by checks and balances, even during emergencies or crises.',
+            'evidence': 'The Constitution establishes separation of powers. Congress makes laws, courts interpret them, and the executive must operate within these constraints.',
+            'category': 'Constitutional Misinformation'
+        },
+        
+        # Presidential emergency powers - NEW PATTERN
+        'president.*(?:authority|power).*(?:do|does).*(?:whatever|anything|everything).*(?:he|she).*wants?.*(?:emergency|emergencies)': {
+            'claim_type': 'Presidential Emergency Powers',
+            'accuracy': 'False',
+            'explanation': 'Presidential emergency powers are limited by law, even during declared emergencies. The president cannot do "whatever he wants" simply by declaring an emergency.',
+            'evidence': 'The National Emergencies Act, Stafford Act, and other laws set specific limits on emergency powers. Courts have struck down emergency actions that exceed legal authority.',
+            'category': 'Constitutional Misinformation'
+        },
+        
+        'emergency.*president.*(?:unlimited|absolute|whatever|anything).*(?:power|authority)': {
+            'claim_type': 'Emergency Powers Scope',
+            'accuracy': 'False',
+            'explanation': 'Emergency declarations do not grant unlimited presidential power. Emergency authorities are constrained by existing laws and constitutional limits.',
+            'evidence': 'Supreme Court cases like Youngstown Sheet & Tube Co. v. Sawyer established that emergency powers must have legal basis and cannot override constitutional constraints.',
+            'category': 'Constitutional Misinformation'
         },
         
         # Who pays tariffs - SECOND CLAIM  
@@ -313,9 +337,14 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
     # If no specific false claims found, extract general factual assertions
     if len(claims) == 0:
         factual_patterns = [
-            r'\b(?:is|are|will|would|can|cannot|must|should)\s+[^.!?]{15,}',
-            r'\b(?:according to|studies show|research indicates|data shows)\b[^.!?]{15,}',
+            # Legal/Constitutional assertions
+            r'\b(?:president|congress|court|law|constitution).*(?:has|have|can|cannot|must|authority|power)\s+[^.!?]{20,}',
+            # Statistical claims  
             r'\b\d+(?:\.\d+)?%\s+of\b[^.!?]{15,}',
+            # Causal claims
+            r'\b(?:causes?|leads? to|results? in|because of|due to)\b[^.!?]{15,}',
+            # Comparative claims
+            r'\b(?:more|less|better|worse|higher|lower|faster|slower)\s+than\b[^.!?]{15,}',
         ]
         
         for i, sentence in enumerate(sentences):
@@ -323,19 +352,34 @@ def extract_specific_claims(text: str) -> List[Dict[str, Any]]:
                 break
                 
             for pattern in factual_patterns:
-                if re.search(pattern, sentence, re.IGNORECASE) and len(sentence) > 30:
-                    claims.append({
-                        'claim_number': len(claims) + 1,
-                        'claim_text': sentence.strip(),
-                        'claim_type': 'General Assertion',
-                        'accuracy_assessment': 'Requires Verification',
-                        'explanation': 'This statement makes a factual assertion that should be independently verified through reliable sources.',
-                        'supporting_evidence': 'No specific evidence provided in the text for this claim.',
-                        'category': 'Unverified Assertion',
-                        'sentence_position': i + 1,
-                        'verifiable': True,
-                        'confidence': 60
-                    })
+                if re.search(pattern, sentence, re.IGNORECASE) and len(sentence) > 40:
+                    # Check if this might be a constitutional/legal claim that we should flag
+                    if re.search(r'\b(?:president|congress|constitution|law|authority|power|emergency)\b', sentence, re.IGNORECASE):
+                        claims.append({
+                            'claim_number': len(claims) + 1,
+                            'claim_text': sentence.strip(),
+                            'claim_type': 'Legal/Constitutional Assertion',
+                            'accuracy_assessment': 'Requires Legal Verification',
+                            'explanation': 'This statement makes assertions about legal or constitutional powers that should be verified against established law and precedent.',
+                            'supporting_evidence': 'Constitutional law, relevant statutes, and court precedents should be consulted to verify this claim.',
+                            'category': 'Legal Assertion Requiring Verification',
+                            'sentence_position': i + 1,
+                            'verifiable': True,
+                            'confidence': 80
+                        })
+                    else:
+                        claims.append({
+                            'claim_number': len(claims) + 1,
+                            'claim_text': sentence.strip(),
+                            'claim_type': 'General Assertion',
+                            'accuracy_assessment': 'Requires Verification',
+                            'explanation': 'This statement makes a factual assertion that should be independently verified through reliable sources.',
+                            'supporting_evidence': 'No specific evidence provided in the text for this claim.',
+                            'category': 'Unverified Assertion',
+                            'sentence_position': i + 1,
+                            'verifiable': True,
+                            'confidence': 60
+                        })
                     break
     
     return claims[:5]  # Return top 5 claims
