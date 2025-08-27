@@ -3,880 +3,1146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detailed Text Analysis - Claim-by-Claim Breakdown</title>
+    <title>TruthLens - AI-Powered News Credibility Analysis</title>
+    <meta name="description" content="Instantly analyze the credibility of any news article with our AI-powered system. Get trust scores, bias detection, and comprehensive analysis.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary-color: #1e40af;
-            --secondary-color: #059669;
-            --accent-color: #dc2626;
-            --warning-color: #d97706;
-            --success-color: #059669;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
+            /* Brand Colors */
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            
+            /* Neutrals */
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            /* Typography */
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            
+            /* Border radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --radius-full: 9999px;
+            
+            /* Transitions */
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, var(--gray-50) 0%, #ffffff 100%);
-            min-height: 100vh;
+            font-family: var(--font-sans);
             line-height: 1.6;
             color: var(--gray-800);
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+            min-height: 100vh;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
+
         /* Header */
         .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--gray-900);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            padding: 0.5rem 0;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: var(--transition);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* Analysis Section */
+        .analysis-section {
+            background: var(--white);
+            padding: 3rem;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-100);
+        }
+
+        .section-header {
             text-align: center;
             margin-bottom: 3rem;
         }
-        
+
         .main-title {
-            font-size: 2.5rem;
+            font-family: var(--font-display);
+            font-size: 3rem;
             font-weight: 800;
-            color: var(--gray-900);
             margin-bottom: 1rem;
+            line-height: 1.1;
         }
-        
+
         .gradient-text {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
+
         .subtitle {
             font-size: 1.25rem;
             color: var(--gray-600);
             margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
-        
-        /* Input Section */
-        .analysis-section {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-        
-        .text-input {
-            width: 100%;
-            min-height: 160px;
-            padding: 1rem;
-            border: 2px solid var(--gray-300);
-            border-radius: 12px;
-            font-size: 1rem;
-            font-family: inherit;
-            line-height: 1.5;
-            resize: vertical;
-            transition: all 0.2s ease;
-        }
-        
-        .text-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-        }
-        
-        .analyze-button {
-            width: 100%;
-            padding: 1rem 2rem;
-            background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a8a 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.125rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: all 0.2s ease;
-        }
-        
-        .analyze-button:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.3);
-        }
-        
-        .analyze-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        .reset-button {
-            width: 100%;
-            padding: 0.75rem 1.5rem;
-            background: var(--gray-500);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            margin-top: 0.75rem;
-            transition: all 0.2s ease;
-        }
-        
-        .reset-button:hover {
-            background: var(--gray-600);
-            transform: translateY(-1px);
-        }
-        
-        .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Results Section */
-        .results-section {
-            display: none;
-        }
-        
-        .results-section.visible {
-            display: block;
-            animation: slideUp 0.4s ease;
-        }
-        
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Trust Score Display */
-        .trust-score-header {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        
-        .trust-score-circle {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin: 0 auto 1rem;
+
+        .trust-badges {
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: white;
-        }
-        
-        .trust-very-high { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
-        .trust-high { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); }
-        .trust-moderate { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
-        .trust-low { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
-        .trust-very-low { background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); }
-        
-        /* Analysis Sections */
-        .analysis-section-box {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-            padding: 2rem;
+            gap: 2rem;
             margin-bottom: 2rem;
         }
-        
-        .analysis-section-header {
+
+        .trust-badge {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid var(--gray-200);
-        }
-        
-        .analysis-section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--gray-900);
-        }
-        
-        .section-icon {
-            font-size: 1.5rem;
-        }
-        
-        /* Claims Analysis */
-        .claim-item {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid var(--gray-400);
-        }
-        
-        .claim-item.true-claim {
-            border-left-color: var(--success-color);
-            background: #f0fdf4;
-        }
-        
-        .claim-item.false-claim {
-            border-left-color: var(--accent-color);
-            background: #fef2f2;
-        }
-        
-        .claim-item.misleading-claim {
-            border-left-color: var(--warning-color);
-            background: #fffbeb;
-        }
-        
-        .claim-item.unverified-claim {
-            border-left-color: var(--gray-400);
-            background: var(--gray-50);
-        }
-        
-        .claim-header {
-            display: flex;
-            justify-content: between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-        
-        .claim-number {
-            background: var(--primary-color);
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-            font-weight: 600;
-            flex-shrink: 0;
-            margin-right: 1rem;
-        }
-        
-        .claim-content {
-            flex: 1;
-        }
-        
-        .claim-text {
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--gray-800);
-            margin-bottom: 0.75rem;
-            line-height: 1.5;
-        }
-        
-        .claim-type {
-            display: inline-block;
-            background: var(--primary-color);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-            margin-bottom: 0.75rem;
-        }
-        
-        .accuracy-status {
-            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
-            border-radius: 20px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-full);
             font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .trust-badge i {
+            color: var(--success);
+        }
+
+        /* Input Form */
+        .input-form {
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-label {
+            display: block;
             font-weight: 600;
-            margin-bottom: 1rem;
-        }
-        
-        .accuracy-true { background: var(--success-color); color: white; }
-        .accuracy-false { background: var(--accent-color); color: white; }
-        .accuracy-misleading { background: var(--warning-color); color: white; }
-        .accuracy-unverified { background: var(--gray-400); color: white; }
-        
-        .claim-explanation {
-            margin-bottom: 0.75rem;
-        }
-        
-        .explanation-text {
-            font-size: 0.9375rem;
             color: var(--gray-700);
             margin-bottom: 0.5rem;
         }
-        
-        .evidence-text {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            font-style: italic;
+
+        .input-field {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--white);
         }
-        
-        /* Analysis Cards */
-        .analysis-card {
-            background: var(--gray-50);
-            border-radius: 10px;
-            padding: 1.25rem;
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+        }
+
+        .input-field::placeholder {
+            color: var(--gray-400);
+        }
+
+        .textarea-field {
+            min-height: 120px;
+            resize: vertical;
+            font-family: var(--font-sans);
+        }
+
+        .analyze-button {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 1.25rem 2rem;
+            border-radius: var(--radius-lg);
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analyze-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .analyze-button:active {
+            transform: translateY(0);
+        }
+
+        .analyze-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reset-button {
+            width: 100%;
+            background: var(--gray-600);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .reset-button:hover {
+            background: var(--gray-700);
+            transform: translateY(-1px);
+        }
+
+        .reset-button:active {
+            transform: translateY(0);
+        }
+
+        .button-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            margin-top: 3rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .results-section.show {
+            display: block;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-title {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .results-subtitle {
+            color: var(--gray-600);
+            font-size: 1rem;
+        }
+
+        /* Trust Score Display */
+        .trust-score-card {
+            background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trust-score-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--danger) 0%, var(--warning) 50%, var(--success) 100%);
+        }
+
+        .trust-score-number {
+            font-size: 4rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .trust-score-label {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .trust-score-description {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        /* Results Grid */
+        .results-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .result-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .result-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--gray-300);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             margin-bottom: 1rem;
         }
-        
-        .analysis-card-header {
+
+        .result-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .result-title {
             font-weight: 600;
             color: var(--gray-800);
-            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
         }
-        
-        .analysis-card-content {
+
+        .result-content {
             color: var(--gray-700);
-            font-size: 0.9375rem;
+            line-height: 1.6;
         }
-        
-        .bias-indicator {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
         }
-        
-        .bias-high { background: var(--accent-color); color: white; }
-        .bias-medium { background: var(--warning-color); color: white; }
-        .bias-low { background: var(--success-color); color: white; }
-        .bias-none { background: var(--gray-300); color: var(--gray-700); }
-        
-        .loaded-language-list {
+
+        .sidebar-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .sidebar-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+
+        .feature-list {
             list-style: none;
-            padding: 0;
-            margin: 0.5rem 0;
+            margin-bottom: 1.5rem;
         }
-        
-        .loaded-language-item {
-            display: inline-block;
-            background: var(--gray-200);
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
             color: var(--gray-700);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            margin: 0.25rem 0.25rem 0.25rem 0;
-            font-size: 0.8125rem;
         }
-        
-        /* Responsive */
+
+        .feature-item i {
+            color: var(--success);
+            font-size: 0.875rem;
+        }
+
+        .upgrade-button {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            text-align: center;
+            display: block;
+        }
+
+        .upgrade-button:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            font-family: var(--font-display);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Trust Score Colors */
+        .trust-high {
+            color: var(--success);
+        }
+
+        .trust-medium {
+            color: var(--warning);
+        }
+
+        .trust-low {
+            color: var(--danger);
+        }
+
+        .trust-high .result-icon {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .trust-medium .result-icon {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .trust-low .result-icon {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+
         @media (max-width: 768px) {
-            .container {
+            .main-container {
+                padding: 2rem 1rem;
+            }
+
+            .analysis-section {
+                padding: 2rem;
+            }
+
+            .main-title {
+                font-size: 2.25rem;
+            }
+
+            .trust-score-number {
+                font-size: 3rem;
+            }
+
+            .trust-badges {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
                 padding: 1rem;
             }
-            
+
             .main-title {
-                font-size: 2rem;
+                font-size: 1.875rem;
             }
-            
-            .analysis-section,
-            .analysis-section-box,
-            .trust-score-header {
-                padding: 1.5rem;
-            }
-            
-            .claim-header {
-                flex-direction: column;
-            }
-            
-            .claim-number {
-                align-self: flex-start;
-                margin-bottom: 0.5rem;
+
+            .subtitle {
+                font-size: 1.125rem;
             }
         }
-        
-        /* Error states */
-        .error-message {
-            background: var(--accent-color);
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            text-align: center;
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
-        
-        /* No claims message */
-        .no-claims {
-            text-align: center;
-            padding: 2rem;
-            color: var(--gray-500);
-            font-style: italic;
+
+        .loading .analyze-button .spinner {
+            display: block;
+        }
+
+        .loading .analyze-button .button-text {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1 class="main-title">
-                <span class="gradient-text">Detailed Text Analysis</span>
-            </h1>
-            <p class="subtitle">
-                Get claim-by-claim analysis with accuracy assessment, bias detection, and source evaluation
-            </p>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+                <span class="logo-text">TruthLens</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
+            </nav>
         </div>
+    </header>
 
-        <!-- Input Section -->
-        <div class="analysis-section">
-            <h2 class="section-title">📝 Enter Text for Detailed Analysis</h2>
-            
-            <textarea 
-                id="text-input" 
-                class="text-input" 
-                placeholder="Paste your text here for detailed claim-by-claim analysis...
-
-Example: &quot;Trump can impose tariffs all that he wants and the importing country will have to pay them. The COVID-19 vaccines are causing more problems than they solve.&quot;
-
-The system will identify specific claims and evaluate each one for accuracy, bias, and credibility."
-                maxlength="50000">
-            </textarea>
-            
-            <button class="analyze-button" id="analyze-btn">
-                🔍 Analyze Claims & Credibility
-            </button>
-            
-            <button class="reset-button" id="reset-btn" style="display: none;">
-                🔄 Clear Results & Start Over
-            </button>
-        </div>
-
-        <!-- Results Section -->
-        <div class="results-section" id="results-section">
-            <!-- Trust Score Header -->
-            <div class="trust-score-header">
-                <div class="trust-score-circle" id="trust-score-circle">
-                    <span id="trust-score-number">--</span>
-                </div>
-                <h3>Overall Credibility Score</h3>
-                <p id="analysis-summary">--</p>
-            </div>
-
-            <!-- Specific Claims Analysis -->
-            <div class="analysis-section-box" id="claims-section">
-                <div class="analysis-section-header">
-                    <span class="section-icon">📋</span>
-                    <h3 class="analysis-section-title">Specific Claims Analysis</h3>
-                </div>
-                <div id="claims-content">
-                    <!-- Claims will be populated here -->
-                </div>
-            </div>
-
-            <!-- Political Bias Analysis -->
-            <div class="analysis-section-box" id="bias-section">
-                <div class="analysis-section-header">
-                    <span class="section-icon">⚖️</span>
-                    <h3 class="analysis-section-title">Political Bias Analysis</h3>
-                </div>
-                <div id="bias-content">
-                    <!-- Bias analysis will be populated here -->
-                </div>
-            </div>
-
-            <!-- Manipulation Analysis -->
-            <div class="analysis-section-box" id="manipulation-section">
-                <div class="analysis-section-header">
-                    <span class="section-icon">🎭</span>
-                    <h3 class="analysis-section-title">Manipulation & Propaganda Analysis</h3>
-                </div>
-                <div id="manipulation-content">
-                    <!-- Manipulation analysis will be populated here -->
-                </div>
-            </div>
-
-            <!-- Source Information (only shown if external source) -->
-            <div class="analysis-section-box" id="source-section" style="display: none;">
-                <div class="analysis-section-header">
-                    <span class="section-icon">🔗</span>
-                    <h3 class="analysis-section-title">Source Information</h3>
-                </div>
-                <div id="source-content">
-                    <!-- Source analysis will be populated here -->
-                </div>
-            </div>
-
-            <!-- Author Information (only shown if author detected) -->
-            <div class="analysis-section-box" id="author-section" style="display: none;">
-                <div class="analysis-section-header">
-                    <span class="section-icon">✍️</span>
-                    <h3 class="analysis-section-title">Author Information</h3>
-                </div>
-                <div id="author-content">
-                    <!-- Author analysis will be populated here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let isAnalyzing = false;
-        
-        const textInput = document.getElementById('text-input');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const resultsSection = document.getElementById('results-section');
-        const trustScoreCircle = document.getElementById('trust-score-circle');
-        const trustScoreNumber = document.getElementById('trust-score-number');
-        const analysisSummary = document.getElementById('analysis-summary');
-        
-        analyzeBtn.addEventListener('click', analyzeContent);
-        resetBtn.addEventListener('click', resetAnalysis);
-        
-        async function analyzeContent() {
-            if (isAnalyzing) return;
-            
-            const content = textInput.value.trim();
-            if (!content) {
-                showError('Please enter some text to analyze.');
-                return;
-            }
-            
-            if (content.length < 10) {
-                showError('Please enter at least 10 characters for meaningful analysis.');
-                return;
-            }
-            
-            setLoadingState(true);
-            hideResults();
-            
-            try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        text: content
-                    })
-                });
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Analysis Section -->
+        <section class="analysis-section">
+            <div class="section-header">
+                <h1 class="main-title">
+                    Instant <span class="gradient-text">News Credibility</span> Analysis
+                </h1>
+                <p class="subtitle">
+                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
+                </p>
                 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Analysis failed');
-                }
-                
-                displayDetailedResults(data);
-                
-            } catch (error) {
-                console.error('Analysis error:', error);
-                showError('Analysis failed: ' + error.message);
-            } finally {
-                setLoadingState(false);
-            }
-        }
-        
-        function displayDetailedResults(data) {
-            // Update trust score
-            const trustScore = data.trust_score || 0;
-            trustScoreNumber.textContent = trustScore;
-            analysisSummary.textContent = data.analysis_summary || 'Analysis completed';
-            
-            // Set trust score color
-            trustScoreCircle.className = 'trust-score-circle';
-            if (trustScore >= 80) {
-                trustScoreCircle.classList.add('trust-very-high');
-            } else if (trustScore >= 65) {
-                trustScoreCircle.classList.add('trust-high');
-            } else if (trustScore >= 50) {
-                trustScoreCircle.classList.add('trust-moderate');
-            } else if (trustScore >= 30) {
-                trustScoreCircle.classList.add('trust-low');
-            } else {
-                trustScoreCircle.classList.add('trust-very-low');
-            }
-            
-            // Display specific claims
-            displayClaims(data.specific_claims || []);
-            
-            // Display bias analysis
-            displayBiasAnalysis(data.political_bias || {});
-            
-            // Display manipulation analysis
-            displayManipulationAnalysis(data.manipulation_analysis || {});
-            
-            // Display source information if available
-            if (data.source_information && data.source_information.source_type !== 'Direct Text Input') {
-                displaySourceInfo(data.source_information);
-                document.getElementById('source-section').style.display = 'block';
-            }
-            
-            // Display author information if available
-            if (data.author_information && data.author_information.author_found) {
-                displayAuthorInfo(data.author_information);
-                document.getElementById('author-section').style.display = 'block';
-            }
-            
-            // Show reset button now that we have results
-            resetBtn.style.display = 'block';
-            
-            showResults();
-        }
-        
-        function resetAnalysis() {
-            // Clear text input
-            textInput.value = '';
-            
-            // Hide results section
-            hideResults();
-            
-            // Hide reset button
-            resetBtn.style.display = 'none';
-            
-            // Hide conditional sections
-            document.getElementById('source-section').style.display = 'none';
-            document.getElementById('author-section').style.display = 'none';
-            
-            // Clear all content areas
-            document.getElementById('claims-content').innerHTML = '';
-            document.getElementById('bias-content').innerHTML = '';
-            document.getElementById('manipulation-content').innerHTML = '';
-            document.getElementById('source-content').innerHTML = '';
-            document.getElementById('author-content').innerHTML = '';
-            
-            // Reset trust score display
-            trustScoreNumber.textContent = '--';
-            analysisSummary.textContent = '--';
-            trustScoreCircle.className = 'trust-score-circle';
-            
-            // Remove any error messages
-            document.querySelectorAll('.error-message').forEach(el => el.remove());
-            
-            // Focus back on text input
-            textInput.focus();
-        }
-        
-        function displayClaims(claims) {
-            const claimsContent = document.getElementById('claims-content');
-            
-            if (!claims.length) {
-                claimsContent.innerHTML = '<div class="no-claims">No specific verifiable claims detected in the text.</div>';
-                return;
-            }
-            
-            claimsContent.innerHTML = claims.map(claim => `
-                <div class="claim-item ${getClaimClass(claim.accuracy_assessment)}">
-                    <div class="claim-header">
-                        <div class="claim-number">${claim.claim_number}</div>
-                        <div class="claim-content">
-                            <div class="claim-text">"${claim.claim_text}"</div>
-                            <div class="claim-type">${claim.claim_type}</div>
-                            <div class="accuracy-status ${getAccuracyClass(claim.accuracy_assessment)}">
-                                ${getAccuracyIcon(claim.accuracy_assessment)} ${claim.accuracy_assessment}
+                <div class="trust-badges">
+                    <div class="trust-badge">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>AI-Powered</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-bolt"></i>
+                        <span>Instant Results</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Multi-Factor Analysis</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form class="input-form" id="analysisForm">
+                <div class="input-group">
+                    <label class="input-label" for="urlInput">
+                        <i class="fas fa-link"></i> Article URL
+                    </label>
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        class="input-field" 
+                        placeholder="https://example.com/news-article"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" for="textInput">
+                        <i class="fas fa-file-text"></i> Or Paste Article Text
+                    </label>
+                    <textarea 
+                        id="textInput" 
+                        class="input-field textarea-field" 
+                        placeholder="Paste the article text here for analysis..."
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="analyze-button" id="analyzeBtn">
+                    <div class="button-content">
+                        <div class="spinner"></div>
+                        <span class="button-text">
+                            <i class="fas fa-search"></i>
+                            Analyze Article
+                        </span>
+                    </div>
+                </button>
+
+                <button type="button" class="reset-button" id="resetBtn" style="display: none;">
+                    <i class="fas fa-redo"></i>
+                    Reset & Analyze New Article
+                </button>
+            </form>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="results-header">
+                    <h2 class="results-title">Analysis Complete</h2>
+                    <p class="results-subtitle">Here's what we found about this article</p>
+                </div>
+
+                <!-- Trust Score -->
+                <div class="trust-score-card" id="trustScoreCard">
+                    <div class="trust-score-number" id="trustScore">85</div>
+                    <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
+                    <div class="trust-score-description">
+                        This article demonstrates strong credibility indicators
+                    </div>
+                </div>
+
+                <!-- Results Grid -->
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-icon" style="background: rgba(37, 99, 235, 0.1); color: var(--primary);">
+                                <i class="fas fa-newspaper"></i>
                             </div>
+                            <h3 class="result-title">Article Summary</h3>
+                        </div>
+                        <div class="result-content" id="articleSummary">
+                            Loading article summary...
                         </div>
                     </div>
-                    <div class="claim-explanation">
-                        <div class="explanation-text"><strong>Analysis:</strong> ${claim.explanation}</div>
-                        <div class="evidence-text"><strong>Evidence:</strong> ${claim.supporting_evidence}</div>
+
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <h3 class="result-title">Source</h3>
+                        </div>
+                        <div class="result-content" id="articleSource">
+                            Loading source information...
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                <i class="fas fa-user-edit"></i>
+                            </div>
+                            <h3 class="result-title">Author</h3>
+                        </div>
+                        <div class="result-content" id="articleAuthor">
+                            Loading author information...
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h3 class="result-title">Key Findings</h3>
+                        </div>
+                        <div class="result-content" id="keyFindings">
+                            Loading analysis findings...
+                        </div>
                     </div>
                 </div>
-            `).join('');
-        }
-        
-        function displayBiasAnalysis(biasData) {
-            const biasContent = document.getElementById('bias-content');
-            
-            const biasLevel = biasData.bias_level || 'Low';
-            const biasDirection = biasData.political_leaning || 'None detected';
-            const loadedLanguage = biasData.loaded_language || [];
-            
-            biasContent.innerHTML = `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Bias Level</div>
-                    <div class="analysis-card-content">
-                        <span class="bias-indicator ${getBiasClass(biasLevel)}">${biasLevel} Bias</span>
-                        ${biasDirection !== 'None detected' ? ` - ${biasDirection} leaning` : ''}
+            </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Features Card -->
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">
+                    <i class="fas fa-star"></i>
+                    Professional Features
+                </h3>
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>AI-powered bias detection</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Source credibility scoring</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Author reputation analysis</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Fact-checking integration</span>
+                    </li>
+                    <li class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Manipulation detection</span>
+                    </li>
+                </ul>
+                <a href="#upgrade" class="upgrade-button">
+                    <i class="fas fa-crown"></i>
+                    Upgrade to Pro
+                </a>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Platform Stats
+                </h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">Beta</span>
+                        <span class="stat-label">Development Phase</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">10+</span>
+                        <span class="stat-label">Analysis Factors</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">7</span>
+                        <span class="stat-label">AI Services</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Available</span>
                     </div>
                 </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Analysis</div>
-                    <div class="analysis-card-content">${biasData.explanation || 'No significant bias detected.'}</div>
-                </div>
-                ${loadedLanguage.length ? `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Loaded Language Detected</div>
-                    <div class="analysis-card-content">
-                        <ul class="loaded-language-list">
-                            ${loadedLanguage.map(phrase => `<li class="loaded-language-item">"${phrase}"</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-                ` : ''}
-            `;
-        }
-        
-        function displayManipulationAnalysis(manipData) {
-            const manipContent = document.getElementById('manipulation-content');
-            
-            const riskLevel = manipData.risk_level || 'Low';
-            const tacticsFound = manipData.tactics_found || [];
-            
-            manipContent.innerHTML = `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Manipulation Risk Level</div>
-                    <div class="analysis-card-content">
-                        <span class="bias-indicator ${getBiasClass(riskLevel)}">${riskLevel} Risk</span>
-                    </div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Analysis</div>
-                    <div class="analysis-card-content">${manipData.explanation || 'No significant manipulation tactics detected.'}</div>
-                </div>
-                ${tacticsFound.length ? `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Tactics Detected</div>
-                    <div class="analysis-card-content">
-                        <ul class="loaded-language-list">
-                            ${tacticsFound.map(tactic => `<li class="loaded-language-item">${tactic}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-                ` : ''}
-            `;
-        }
-        
-        function displaySourceInfo(sourceData) {
-            const sourceContent = document.getElementById('source-content');
-            
-            sourceContent.innerHTML = `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Source Type</div>
-                    <div class="analysis-card-content">${sourceData.source_type}</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Credibility Rating</div>
-                    <div class="analysis-card-content">${sourceData.credibility_rating}</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Analysis</div>
-                    <div class="analysis-card-content">${sourceData.source_analysis}</div>
-                </div>
-            `;
-        }
-        
-        function displayAuthorInfo(authorData) {
-            const authorContent = document.getElementById('author-content');
-            
-            authorContent.innerHTML = `
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Author</div>
-                    <div class="analysis-card-content">${authorData.author_name}</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Credibility Assessment</div>
-                    <div class="analysis-card-content">${authorData.author_analysis}</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-header">Background</div>
-                    <div class="analysis-card-content">${authorData.background_info}</div>
-                </div>
-            `;
-        }
-        
-        // Helper functions
-        function getClaimClass(accuracy) {
-            if (accuracy.includes('True')) return 'true-claim';
-            if (accuracy.includes('False')) return 'false-claim';
-            if (accuracy.includes('Misleading')) return 'misleading-claim';
-            return 'unverified-claim';
-        }
-        
-        function getAccuracyClass(accuracy) {
-            if (accuracy.includes('True')) return 'accuracy-true';
-            if (accuracy.includes('False')) return 'accuracy-false';
-            if (accuracy.includes('Misleading')) return 'accuracy-misleading';
-            return 'accuracy-unverified';
-        }
-        
-        function getAccuracyIcon(accuracy) {
-            if (accuracy.includes('True')) return '✅';
-            if (accuracy.includes('False')) return '❌';
-            if (accuracy.includes('Misleading')) return '⚠️';
-            return '❓';
-        }
-        
-        function getBiasClass(level) {
-            const l = level.toLowerCase();
-            if (l.includes('high')) return 'bias-high';
-            if (l.includes('medium') || l.includes('moderate')) return 'bias-medium';
-            if (l.includes('low')) return 'bias-low';
-            return 'bias-none';
-        }
-        
-        function setLoadingState(loading) {
-            isAnalyzing = loading;
-            
-            if (loading) {
-                analyzeBtn.disabled = true;
-                analyzeBtn.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    Analyzing Claims...
-                `;
-            } else {
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '🔍 Analyze Claims & Credibility';
+                <p style="color: var(--gray-600); font-size: 0.875rem; text-align: center;">
+                    Advanced AI-powered news credibility analysis platform in development.
+                </p>
+            </div>
+
+            <!-- Contact Card -->
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">
+                    <i class="fas fa-headset"></i>
+                    Need Help?
+                </h3>
+                <p style="color: var(--gray-600); margin-bottom: 1rem; font-size: 0.875rem;">
+                    Our team is here to support you with enterprise solutions and custom integrations.
+                </p>
+                <a href="mailto:support@truthlens.ai" class="upgrade-button" style="background: var(--gray-600);">
+                    <i class="fas fa-envelope"></i>
+                    Contact Support
+                </a>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        class TruthLensAnalyzer {
+            constructor() {
+                this.form = document.getElementById('analysisForm');
+                this.urlInput = document.getElementById('urlInput');
+                this.textInput = document.getElementById('textInput');
+                this.analyzeBtn = document.getElementById('analyzeBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.resultsSection = document.getElementById('resultsSection');
+                
+                this.init();
+            }
+
+            init() {
+                this.form.addEventListener('submit', this.handleSubmit.bind(this));
+                this.resetBtn.addEventListener('click', this.handleReset.bind(this));
+                
+                // Clear other input when one is filled
+                this.urlInput.addEventListener('input', () => {
+                    if (this.urlInput.value) {
+                        this.textInput.value = '';
+                    }
+                });
+                
+                this.textInput.addEventListener('input', () => {
+                    if (this.textInput.value) {
+                        this.urlInput.value = '';
+                    }
+                });
+            }
+
+            handleReset() {
+                // Clear inputs
+                this.urlInput.value = '';
+                this.textInput.value = '';
+                
+                // Hide results
+                this.resultsSection.classList.remove('show');
+                
+                // Hide reset button
+                this.resetBtn.style.display = 'none';
+                
+                // Focus on URL input
+                this.urlInput.focus();
+                
+                // Scroll to top of form
+                this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                const url = this.urlInput.value.trim();
+                const text = this.textInput.value.trim();
+                
+                if (!url && !text) {
+                    this.showError('Please provide either a URL or article text');
+                    return;
+                }
+
+                this.setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url || undefined,
+                            text: text || undefined
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success !== false) {
+                        this.displayResults(data);
+                    } else {
+                        this.showError(data.error || 'Analysis failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    this.showError('Network error. Please try again.');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            displayResults(data) {
+                // Extract data from both possible structures
+                let trustScore, articleSummary, source, author, findingsSummary;
+                
+                if (data.simple) {
+                    // Simple structure
+                    trustScore = data.simple.trust_score || 0;
+                    articleSummary = data.simple.article_summary || 'No summary available';
+                    source = data.simple.source || 'Unknown';
+                    author = data.simple.author || 'Unknown';
+                    findingsSummary = data.simple.findings_summary || 'No findings available';
+                } else if (data.data && data.data.analysis) {
+                    // Complex structure
+                    const analysis = data.data.analysis;
+                    trustScore = analysis.trust_score || 0;
+                    articleSummary = analysis.summary || 'No summary available';
+                    
+                    // Try to extract from article info
+                    if (data.data.article_info) {
+                        source = data.data.article_info.source || 'Unknown';
+                        author = data.data.article_info.author || 'Unknown';
+                    } else {
+                        source = 'Unknown';
+                        author = 'Unknown';
+                    }
+                    
+                    findingsSummary = this.generateFindings(analysis.key_findings || []);
+                } else {
+                    // Fallback
+                    trustScore = 0;
+                    articleSummary = 'Analysis completed but no detailed results available';
+                    source = 'Unknown';
+                    author = 'Unknown';
+                    findingsSummary = 'No specific findings available';
+                }
+
+                this.updateTrustScore(trustScore);
+                this.updateResults(articleSummary, source, author, findingsSummary);
+                this.showResults();
+            }
+
+            updateTrustScore(score) {
+                const scoreElement = document.getElementById('trustScore');
+                const labelElement = document.getElementById('trustLabel');
+                const cardElement = document.getElementById('trustScoreCard');
+                
+                scoreElement.textContent = Math.round(score);
+                
+                // Update label and styling based on score
+                if (score >= 80) {
+                    labelElement.textContent = 'Highly Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-high';
+                } else if (score >= 60) {
+                    labelElement.textContent = 'Moderately Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else if (score >= 40) {
+                    labelElement.textContent = 'Questionable';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else {
+                    labelElement.textContent = 'Low Trustworthiness';
+                    scoreElement.className = 'trust-score-number trust-low';
+                }
+            }
+
+            updateResults(summary, source, author, findings) {
+                document.getElementById('articleSummary').textContent = summary;
+                document.getElementById('articleSource').textContent = source;
+                document.getElementById('articleAuthor').textContent = author;
+                document.getElementById('keyFindings').textContent = findings;
+            }
+
+            generateFindings(keyFindings) {
+                if (Array.isArray(keyFindings) && keyFindings.length > 0) {
+                    return keyFindings.join('. ');
+                }
+                return 'Analysis completed successfully.';
+            }
+
+            showResults() {
+                this.resultsSection.classList.add('show');
+                this.resetBtn.style.display = 'block';
+                this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            setLoading(loading) {
+                if (loading) {
+                    this.analyzeBtn.disabled = true;
+                    this.form.classList.add('loading');
+                } else {
+                    this.analyzeBtn.disabled = false;
+                    this.form.classList.remove('loading');
+                }
+            }
+
+            showError(message) {
+                // Simple alert for now - you could make this more sophisticated
+                alert('Analysis Error: ' + message);
+                
+                // Also log to console for debugging
+                console.error('Analysis error:', message);
             }
         }
-        
-        function showResults() {
-            resultsSection.classList.add('visible');
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function hideResults() {
-            resultsSection.classList.remove('visible');
-        }
-        
-        function showError(message) {
-            document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+        // Initialize the analyzer when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TruthLensAnalyzer();
+        });
+
+        // Add some visual feedback for better UX
+        document.querySelectorAll('.result-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-2px)';
+            });
             
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.innerHTML = `⚠️ ${message}`;
-            
-            analyzeBtn.parentNode.insertBefore(errorDiv, analyzeBtn.nextSibling);
-            
-            setTimeout(() => {
-                errorDiv.remove();
-            }, 5000);
-        }
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            textInput.focus();
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
         });
     </script>
 </body>
