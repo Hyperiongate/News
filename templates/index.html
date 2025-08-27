@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Text Analysis - Misinformation Detection</title>
+    <title>Detailed Text Analysis - Claim-by-Claim Breakdown</title>
     <style>
         :root {
             --primary-color: #1e40af;
-            --primary-dark: #1e3a8a;
             --secondary-color: #059669;
             --accent-color: #dc2626;
             --warning-color: #d97706;
+            --success-color: #059669;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -21,8 +21,6 @@
             --gray-700: #374151;
             --gray-800: #1f2937;
             --gray-900: #111827;
-            --success-color: #059669;
-            --danger-color: #dc2626;
         }
         
         * {
@@ -40,7 +38,7 @@
         }
         
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -56,7 +54,6 @@
             font-weight: 800;
             color: var(--gray-900);
             margin-bottom: 1rem;
-            letter-spacing: -0.02em;
         }
         
         .gradient-text {
@@ -70,36 +67,9 @@
             font-size: 1.25rem;
             color: var(--gray-600);
             margin-bottom: 2rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
         }
         
-        .feature-badges {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
-        
-        .feature-badge {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: 1px solid var(--gray-200);
-        }
-        
-        .feature-badge.critical {
-            background: var(--danger-color);
-            color: white;
-            border-color: var(--danger-color);
-        }
-        
-        /* Analysis Section */
+        /* Input Section */
         .analysis-section {
             background: white;
             border-radius: 16px;
@@ -116,22 +86,9 @@
             text-align: center;
         }
         
-        /* Text Input */
-        .text-input-container {
-            margin-bottom: 1.5rem;
-        }
-        
-        .input-label {
-            display: block;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-        }
-        
         .text-input {
             width: 100%;
-            min-height: 180px;
+            min-height: 160px;
             padding: 1rem;
             border: 2px solid var(--gray-300);
             border-radius: 12px;
@@ -140,7 +97,6 @@
             line-height: 1.5;
             resize: vertical;
             transition: all 0.2s ease;
-            background: white;
         }
         
         .text-input:focus {
@@ -149,72 +105,18 @@
             box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
         }
         
-        .text-input::placeholder {
-            color: var(--gray-400);
-            font-style: italic;
-        }
-        
-        .input-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-500);
-        }
-        
-        .char-counter {
-            font-weight: 500;
-        }
-        
-        /* Examples */
-        .examples-section {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-color);
-        }
-        
-        .examples-title {
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-        
-        .examples-list {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            line-height: 1.6;
-        }
-        
-        .example-item {
-            margin-bottom: 0.25rem;
-        }
-        
-        .example-false {
-            color: var(--danger-color);
-            font-weight: 500;
-        }
-        
-        /* Analyze Button */
         .analyze-button {
             width: 100%;
             padding: 1rem 2rem;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a8a 100%);
             color: white;
             border: none;
             border-radius: 12px;
             font-size: 1.125rem;
             font-weight: 600;
             cursor: pointer;
+            margin-top: 1rem;
             transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
         }
         
         .analyze-button:hover:not(:disabled) {
@@ -225,11 +127,6 @@
         .analyze-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
-        }
-        
-        .analyze-button.loading {
-            background: var(--gray-400);
         }
         
         .loading-spinner {
@@ -248,10 +145,6 @@
         
         /* Results Section */
         .results-section {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-            padding: 2.5rem;
             display: none;
         }
         
@@ -265,135 +158,215 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .trust-score-display {
-            text-align: center;
+        /* Trust Score Display */
+        .trust-score-header {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
             margin-bottom: 2rem;
+            text-align: center;
         }
         
         .trust-score-circle {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             margin: 0 auto 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 800;
             color: white;
-            position: relative;
         }
         
-        .trust-score-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--gray-600);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        /* Enhanced Trust Score Colors */
         .trust-very-high { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
         .trust-high { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); }
         .trust-moderate { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
         .trust-low { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
         .trust-very-low { background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); }
-        .trust-extremely-low { background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); }
         
-        /* Clean Results Display */
-        .results-content {
+        /* Analysis Sections */
+        .analysis-section-box {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
             margin-bottom: 2rem;
         }
         
-        .result-section {
-            margin-bottom: 2rem;
-        }
-        
-        .result-title {
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
+        .analysis-section-header {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .result-content {
-            background: var(--gray-50);
-            padding: 1.25rem;
-            border-radius: 10px;
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .result-content.critical {
-            background: #fef2f2;
-            border-left-color: var(--danger-color);
-        }
-        
-        .result-content.warning {
-            background: #fffbeb;
-            border-left-color: var(--warning-color);
-        }
-        
-        .result-text {
-            font-size: 1rem;
-            color: var(--gray-800);
-            line-height: 1.6;
-            margin: 0;
-        }
-        
-        /* Analysis Stats */
-        .analysis-stats {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-        }
-        
-        .stats-title {
-            font-size: 1.125rem;
-            font-weight: 600;
+            gap: 0.75rem;
             margin-bottom: 1.5rem;
-            text-align: center;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--gray-200);
         }
         
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.75rem;
+        .analysis-section-title {
+            font-size: 1.25rem;
             font-weight: 700;
-            display: block;
-            margin-bottom: 0.25rem;
+            color: var(--gray-900);
         }
         
-        .stat-label {
-            font-size: 0.75rem;
-            opacity: 0.9;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .section-icon {
+            font-size: 1.5rem;
         }
         
-        /* Error States */
-        .error-message {
-            background: var(--danger-color);
+        /* Claims Analysis */
+        .claim-item {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--gray-400);
+        }
+        
+        .claim-item.false-claim {
+            border-left-color: var(--accent-color);
+            background: #fef2f2;
+        }
+        
+        .claim-item.misleading-claim {
+            border-left-color: var(--warning-color);
+            background: #fffbeb;
+        }
+        
+        .claim-item.unverified-claim {
+            border-left-color: var(--gray-400);
+            background: var(--gray-50);
+        }
+        
+        .claim-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .claim-number {
+            background: var(--primary-color);
             color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            text-align: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            margin-right: 1rem;
         }
         
-        /* Responsive Design */
+        .claim-content {
+            flex: 1;
+        }
+        
+        .claim-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--gray-800);
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+        
+        .claim-type {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 0.75rem;
+        }
+        
+        .accuracy-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .accuracy-false { background: var(--accent-color); color: white; }
+        .accuracy-misleading { background: var(--warning-color); color: white; }
+        .accuracy-unverified { background: var(--gray-400); color: white; }
+        
+        .claim-explanation {
+            margin-bottom: 0.75rem;
+        }
+        
+        .explanation-text {
+            font-size: 0.9375rem;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+        
+        .evidence-text {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-style: italic;
+        }
+        
+        /* Analysis Cards */
+        .analysis-card {
+            background: var(--gray-50);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .analysis-card-header {
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 0.5rem;
+        }
+        
+        .analysis-card-content {
+            color: var(--gray-700);
+            font-size: 0.9375rem;
+        }
+        
+        .bias-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .bias-high { background: var(--accent-color); color: white; }
+        .bias-medium { background: var(--warning-color); color: white; }
+        .bias-low { background: var(--success-color); color: white; }
+        .bias-none { background: var(--gray-300); color: var(--gray-700); }
+        
+        .loaded-language-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0;
+        }
+        
+        .loaded-language-item {
+            display: inline-block;
+            background: var(--gray-200);
+            color: var(--gray-700);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin: 0.25rem 0.25rem 0.25rem 0;
+            font-size: 0.8125rem;
+        }
+        
+        /* Responsive */
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -404,198 +377,166 @@
             }
             
             .analysis-section,
-            .results-section {
+            .analysis-section-box,
+            .trust-score-header {
                 padding: 1.5rem;
             }
             
-            .feature-badges {
+            .claim-header {
                 flex-direction: column;
-                align-items: center;
             }
             
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
+            .claim-number {
+                align-self: flex-start;
+                margin-bottom: 0.5rem;
             }
         }
         
-        /* Status indicators */
-        .status-critical { color: var(--danger-color); }
-        .status-warning { color: var(--warning-color); }
-        .status-good { color: var(--success-color); }
+        /* Error states */
+        .error-message {
+            background: var(--accent-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        
+        /* No claims message */
+        .no-claims {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-500);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header Section -->
+        <!-- Header -->
         <div class="header">
             <h1 class="main-title">
-                <span class="gradient-text">Smart Text Analysis</span>
+                <span class="gradient-text">Detailed Text Analysis</span>
             </h1>
             <p class="subtitle">
-                Advanced detection of false claims, conspiracy theories, and misinformation patterns. 
-                Get instant credibility analysis with detailed explanations.
+                Get claim-by-claim analysis with accuracy assessment, bias detection, and source evaluation
             </p>
-            <div class="feature-badges">
-                <span class="feature-badge critical">
-                    🚨 False Claim Detection
-                </span>
-                <span class="feature-badge">
-                    🔍 Conspiracy Theory Recognition
-                </span>
-                <span class="feature-badge">
-                    ⚠️ Manipulation Analysis
-                </span>
-                <span class="feature-badge">
-                    📊 Evidence-Based Scoring
-                </span>
-            </div>
         </div>
 
-        <!-- Analysis Section -->
+        <!-- Input Section -->
         <div class="analysis-section">
-            <h2 class="section-title">
-                🔬 Analyze Text for Misinformation
-            </h2>
+            <h2 class="section-title">📝 Enter Text for Detailed Analysis</h2>
+            
+            <textarea 
+                id="text-input" 
+                class="text-input" 
+                placeholder="Paste your text here for detailed claim-by-claim analysis...
 
-            <div class="text-input-container">
-                <label class="input-label" for="text-input">
-                    📝 Paste your text content here:
-                </label>
-                <textarea 
-                    id="text-input" 
-                    class="text-input" 
-                    placeholder="Paste any text here for credibility analysis...
+Example: &quot;Trump can impose tariffs all that he wants and the importing country will have to pay them. The COVID-19 vaccines are causing more problems than they solve.&quot;
 
-Try these test examples:
-• &quot;The COVID-19 vaccines are causing more problems than they solve&quot;
-• &quot;The moon is made of cheese and the earth is flat&quot;  
-• &quot;Climate change is a hoax perpetrated by scientists&quot;
-• &quot;Local government announces new road improvements for downtown&quot;
-
-The system will detect known false claims and suspicious patterns."
-                    maxlength="50000"></textarea>
-                <div class="input-info">
-                    <span class="input-tips">
-                        💡 Detects misinformation patterns and false claims
-                    </span>
-                    <span class="char-counter" id="char-counter">0 / 50,000</span>
-                </div>
-            </div>
-
-            <!-- Examples Section -->
-            <div class="examples-section">
-                <div class="examples-title">🎯 What gets flagged:</div>
-                <div class="examples-list">
-                    <div class="example-item">
-                        <span class="example-false">❌ Known false claims:</span> Flat Earth, vaccine-autism links, moon landing denial
-                    </div>
-                    <div class="example-item">
-                        <span class="example-false">⚠️ Conspiracy patterns:</span> "They don't want you to know", "wake up", "hidden truth"
-                    </div>
-                    <div class="example-item">
-                        <span class="example-false">🎭 Manipulation tactics:</span> Fear mongering, false authority, absolute claims
-                    </div>
-                </div>
-            </div>
-
+The system will identify specific claims and evaluate each one for accuracy, bias, and credibility."
+                maxlength="50000">
+            </textarea>
+            
             <button class="analyze-button" id="analyze-btn">
-                🔍 Analyze for Misinformation
+                🔍 Analyze Claims & Credibility
             </button>
         </div>
 
         <!-- Results Section -->
         <div class="results-section" id="results-section">
-            <div class="trust-score-display">
+            <!-- Trust Score Header -->
+            <div class="trust-score-header">
                 <div class="trust-score-circle" id="trust-score-circle">
                     <span id="trust-score-number">--</span>
                 </div>
-                <div class="trust-score-label">Credibility Score</div>
+                <h3>Overall Credibility Score</h3>
+                <p id="analysis-summary">--</p>
             </div>
 
-            <div class="results-content">
-                <div class="result-section">
-                    <div class="result-title">
-                        📄 Content Analysis
-                    </div>
-                    <div class="result-content" id="summary-content">
-                        <p class="result-text" id="article-summary">--</p>
-                    </div>
+            <!-- Specific Claims Analysis -->
+            <div class="analysis-section-box" id="claims-section">
+                <div class="analysis-section-header">
+                    <span class="section-icon">📋</span>
+                    <h3 class="analysis-section-title">Specific Claims Analysis</h3>
                 </div>
-                
-                <div class="result-section">
-                    <div class="result-title">
-                        🔍 Key Findings
-                    </div>
-                    <div class="result-content" id="findings-content">
-                        <p class="result-text" id="findings-summary">--</p>
-                    </div>
+                <div id="claims-content">
+                    <!-- Claims will be populated here -->
+                </div>
+            </div>
+
+            <!-- Political Bias Analysis -->
+            <div class="analysis-section-box" id="bias-section">
+                <div class="analysis-section-header">
+                    <span class="section-icon">⚖️</span>
+                    <h3 class="analysis-section-title">Political Bias Analysis</h3>
+                </div>
+                <div id="bias-content">
+                    <!-- Bias analysis will be populated here -->
+                </div>
+            </div>
+
+            <!-- Manipulation Analysis -->
+            <div class="analysis-section-box" id="manipulation-section">
+                <div class="analysis-section-header">
+                    <span class="section-icon">🎭</span>
+                    <h3 class="analysis-section-title">Manipulation & Propaganda Analysis</h3>
+                </div>
+                <div id="manipulation-content">
+                    <!-- Manipulation analysis will be populated here -->
+                </div>
+            </div>
+
+            <!-- Source Information (only shown if external source) -->
+            <div class="analysis-section-box" id="source-section" style="display: none;">
+                <div class="analysis-section-header">
+                    <span class="section-icon">🔗</span>
+                    <h3 class="analysis-section-title">Source Information</h3>
+                </div>
+                <div id="source-content">
+                    <!-- Source analysis will be populated here -->
+                </div>
+            </div>
+
+            <!-- Author Information (only shown if author detected) -->
+            <div class="analysis-section-box" id="author-section" style="display: none;">
+                <div class="analysis-section-header">
+                    <span class="section-icon">✍️</span>
+                    <h3 class="analysis-section-title">Author Information</h3>
+                </div>
+                <div id="author-content">
+                    <!-- Author analysis will be populated here -->
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Application state
         let isAnalyzing = false;
         
-        // DOM elements
         const textInput = document.getElementById('text-input');
-        const charCounter = document.getElementById('char-counter');
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultsSection = document.getElementById('results-section');
-        
-        // Result elements
         const trustScoreCircle = document.getElementById('trust-score-circle');
         const trustScoreNumber = document.getElementById('trust-score-number');
-        const articleSummary = document.getElementById('article-summary');
-        const findingsSummary = document.getElementById('findings-summary');
-        const summaryContent = document.getElementById('summary-content');
-        const findingsContent = document.getElementById('findings-content');
+        const analysisSummary = document.getElementById('analysis-summary');
         
-        // Stats elements - removed since we removed the stats section
-        
-        // Character counter
-        textInput.addEventListener('input', function() {
-            const length = this.value.length;
-            charCounter.textContent = length + ' / 50,000';
-            
-            if (length > 45000) {
-                charCounter.style.color = 'var(--warning-color)';
-            } else if (length > 48000) {
-                charCounter.style.color = 'var(--danger-color)';
-            } else {
-                charCounter.style.color = 'var(--gray-500)';
-            }
-        });
-        
-        // Analyze button
         analyzeBtn.addEventListener('click', analyzeContent);
         
-        // Keyboard support
-        textInput.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'Enter' && !isAnalyzing) {
-                analyzeContent();
-            }
-        });
-        
-        // Main analysis function
         async function analyzeContent() {
             if (isAnalyzing) return;
             
             const content = textInput.value.trim();
-            
             if (!content) {
-                showError('Please paste some text content to analyze.');
+                showError('Please enter some text to analyze.');
                 return;
             }
             
-            if (content.length < 5) {
-                showError('Please provide at least 5 characters of text for analysis.');
+            if (content.length < 10) {
+                showError('Please enter at least 10 characters for meaningful analysis.');
                 return;
             }
             
-            // Start analysis
             setLoadingState(true);
             hideResults();
             
@@ -616,7 +557,7 @@ The system will detect known false claims and suspicious patterns."
                     throw new Error(data.error || 'Analysis failed');
                 }
                 
-                displayResults(data);
+                displayDetailedResults(data);
                 
             } catch (error) {
                 console.error('Analysis error:', error);
@@ -626,13 +567,13 @@ The system will detect known false claims and suspicious patterns."
             }
         }
         
-        // Display results
-        function displayResults(data) {
+        function displayDetailedResults(data) {
+            // Update trust score
             const trustScore = data.trust_score || 0;
-            
-            // Update trust score display with enhanced colors
             trustScoreNumber.textContent = trustScore;
+            analysisSummary.textContent = data.analysis_summary || 'Analysis completed';
             
+            // Set trust score color
             trustScoreCircle.className = 'trust-score-circle';
             if (trustScore >= 80) {
                 trustScoreCircle.classList.add('trust-very-high');
@@ -642,54 +583,201 @@ The system will detect known false claims and suspicious patterns."
                 trustScoreCircle.classList.add('trust-moderate');
             } else if (trustScore >= 30) {
                 trustScoreCircle.classList.add('trust-low');
-            } else if (trustScore >= 15) {
-                trustScoreCircle.classList.add('trust-very-low');
             } else {
-                trustScoreCircle.classList.add('trust-extremely-low');
+                trustScoreCircle.classList.add('trust-very-low');
             }
             
-            // Update content
-            articleSummary.textContent = data.article_summary || 'No summary available';
-            findingsSummary.textContent = data.findings_summary || 'No findings available';
+            // Display specific claims
+            displayClaims(data.specific_claims || []);
             
-            // Update content styling based on severity
-            updateContentStyling(data, trustScore);
+            // Display bias analysis
+            displayBiasAnalysis(data.political_bias || {});
+            
+            // Display manipulation analysis
+            displayManipulationAnalysis(data.manipulation_analysis || {});
+            
+            // Display source information if available
+            if (data.source_information && data.source_information.source_type !== 'Direct Text Input') {
+                displaySourceInfo(data.source_information);
+                document.getElementById('source-section').style.display = 'block';
+            }
+            
+            // Display author information if available
+            if (data.author_information && data.author_information.author_found) {
+                displayAuthorInfo(data.author_information);
+                document.getElementById('author-section').style.display = 'block';
+            }
             
             showResults();
         }
         
-        function updateContentStyling(data, trustScore) {
-            // Reset styles
-            summaryContent.classList.remove('critical', 'warning');
-            findingsContent.classList.remove('critical', 'warning');
+        function displayClaims(claims) {
+            const claimsContent = document.getElementById('claims-content');
             
-            // Apply styling based on analysis
-            if (trustScore < 30) {
-                summaryContent.classList.add('critical');
-                findingsContent.classList.add('critical');
-            } else if (trustScore < 50) {
-                summaryContent.classList.add('warning');
-                findingsContent.classList.add('warning');
+            if (!claims.length) {
+                claimsContent.innerHTML = '<div class="no-claims">No specific verifiable claims detected in the text.</div>';
+                return;
             }
+            
+            claimsContent.innerHTML = claims.map(claim => `
+                <div class="claim-item ${getClaimClass(claim.accuracy_assessment)}">
+                    <div class="claim-header">
+                        <div class="claim-number">${claim.claim_number}</div>
+                        <div class="claim-content">
+                            <div class="claim-text">"${claim.claim_text}"</div>
+                            <div class="claim-type">${claim.claim_type}</div>
+                            <div class="accuracy-status ${getAccuracyClass(claim.accuracy_assessment)}">
+                                ${getAccuracyIcon(claim.accuracy_assessment)} ${claim.accuracy_assessment}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="claim-explanation">
+                        <div class="explanation-text"><strong>Analysis:</strong> ${claim.explanation}</div>
+                        <div class="evidence-text"><strong>Evidence:</strong> ${claim.supporting_evidence}</div>
+                    </div>
+                </div>
+            `).join('');
         }
         
-        // Utility functions
+        function displayBiasAnalysis(biasData) {
+            const biasContent = document.getElementById('bias-content');
+            
+            const biasLevel = biasData.bias_level || 'Low';
+            const biasDirection = biasData.political_leaning || 'None detected';
+            const loadedLanguage = biasData.loaded_language || [];
+            
+            biasContent.innerHTML = `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Bias Level</div>
+                    <div class="analysis-card-content">
+                        <span class="bias-indicator ${getBiasClass(biasLevel)}">${biasLevel} Bias</span>
+                        ${biasDirection !== 'None detected' ? ` - ${biasDirection} leaning` : ''}
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Analysis</div>
+                    <div class="analysis-card-content">${biasData.explanation || 'No significant bias detected.'}</div>
+                </div>
+                ${loadedLanguage.length ? `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Loaded Language Detected</div>
+                    <div class="analysis-card-content">
+                        <ul class="loaded-language-list">
+                            ${loadedLanguage.map(phrase => `<li class="loaded-language-item">"${phrase}"</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function displayManipulationAnalysis(manipData) {
+            const manipContent = document.getElementById('manipulation-content');
+            
+            const riskLevel = manipData.risk_level || 'Low';
+            const tacticsFound = manipData.tactics_found || [];
+            
+            manipContent.innerHTML = `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Manipulation Risk Level</div>
+                    <div class="analysis-card-content">
+                        <span class="bias-indicator ${getBiasClass(riskLevel)}">${riskLevel} Risk</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Analysis</div>
+                    <div class="analysis-card-content">${manipData.explanation || 'No significant manipulation tactics detected.'}</div>
+                </div>
+                ${tacticsFound.length ? `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Tactics Detected</div>
+                    <div class="analysis-card-content">
+                        <ul class="loaded-language-list">
+                            ${tacticsFound.map(tactic => `<li class="loaded-language-item">${tactic}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        function displaySourceInfo(sourceData) {
+            const sourceContent = document.getElementById('source-content');
+            
+            sourceContent.innerHTML = `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Source Type</div>
+                    <div class="analysis-card-content">${sourceData.source_type}</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Credibility Rating</div>
+                    <div class="analysis-card-content">${sourceData.credibility_rating}</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Analysis</div>
+                    <div class="analysis-card-content">${sourceData.source_analysis}</div>
+                </div>
+            `;
+        }
+        
+        function displayAuthorInfo(authorData) {
+            const authorContent = document.getElementById('author-content');
+            
+            authorContent.innerHTML = `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Author</div>
+                    <div class="analysis-card-content">${authorData.author_name}</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Credibility Assessment</div>
+                    <div class="analysis-card-content">${authorData.author_analysis}</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-card-header">Background</div>
+                    <div class="analysis-card-content">${authorData.background_info}</div>
+                </div>
+            `;
+        }
+        
+        // Helper functions
+        function getClaimClass(accuracy) {
+            if (accuracy.includes('False')) return 'false-claim';
+            if (accuracy.includes('Misleading')) return 'misleading-claim';
+            return 'unverified-claim';
+        }
+        
+        function getAccuracyClass(accuracy) {
+            if (accuracy.includes('False')) return 'accuracy-false';
+            if (accuracy.includes('Misleading')) return 'accuracy-misleading';
+            return 'accuracy-unverified';
+        }
+        
+        function getAccuracyIcon(accuracy) {
+            if (accuracy.includes('False')) return '❌';
+            if (accuracy.includes('Misleading')) return '⚠️';
+            return '❓';
+        }
+        
+        function getBiasClass(level) {
+            const l = level.toLowerCase();
+            if (l.includes('high')) return 'bias-high';
+            if (l.includes('medium') || l.includes('moderate')) return 'bias-medium';
+            if (l.includes('low')) return 'bias-low';
+            return 'bias-none';
+        }
+        
         function setLoadingState(loading) {
             isAnalyzing = loading;
             
             if (loading) {
                 analyzeBtn.disabled = true;
-                analyzeBtn.classList.add('loading');
                 analyzeBtn.innerHTML = `
                     <div class="loading-spinner"></div>
-                    Analyzing Content...
+                    Analyzing Claims...
                 `;
             } else {
                 analyzeBtn.disabled = false;
-                analyzeBtn.classList.remove('loading');
-                analyzeBtn.innerHTML = `
-                    🔍 Analyze for Misinformation
-                `;
+                analyzeBtn.innerHTML = '🔍 Analyze Claims & Credibility';
             }
         }
         
@@ -703,7 +791,6 @@ The system will detect known false claims and suspicious patterns."
         }
         
         function showError(message) {
-            // Remove existing errors
             document.querySelectorAll('.error-message').forEach(el => el.remove());
             
             const errorDiv = document.createElement('div');
@@ -720,19 +807,6 @@ The system will detect known false claims and suspicious patterns."
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             textInput.focus();
-            
-            // Check system status
-            fetch('/api/status')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('System status:', data);
-                    if (data.status !== 'online') {
-                        showError('Analysis service unavailable. Please try again later.');
-                    }
-                })
-                .catch(() => {
-                    showError('Unable to connect to analysis service.');
-                });
         });
     </script>
 </body>
