@@ -525,33 +525,10 @@ The system will detect known false claims and suspicious patterns."
                 
                 <div class="result-section">
                     <div class="result-title">
-                        🔍 Detailed Findings
+                        🔍 Key Findings
                     </div>
                     <div class="result-content" id="findings-content">
                         <p class="result-text" id="findings-summary">--</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="analysis-stats">
-                <div class="stats-title">📊 Analysis Summary</div>
-                
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-value" id="issues-found">--</span>
-                        <span class="stat-label">Issues Found</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="credibility-level">--</span>
-                        <span class="stat-label">Credibility Level</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="patterns-checked">--</span>
-                        <span class="stat-label">Patterns Checked</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="analysis-time">--</span>
-                        <span class="stat-label">Analysis Time</span>
                     </div>
                 </div>
             </div>
@@ -576,11 +553,7 @@ The system will detect known false claims and suspicious patterns."
         const summaryContent = document.getElementById('summary-content');
         const findingsContent = document.getElementById('findings-content');
         
-        // Stats elements
-        const issuesFound = document.getElementById('issues-found');
-        const credibilityLevel = document.getElementById('credibility-level');
-        const patternsChecked = document.getElementById('patterns-checked');
-        const analysisTime = document.getElementById('analysis-time');
+        // Stats elements - removed since we removed the stats section
         
         // Character counter
         textInput.addEventListener('input', function() {
@@ -681,32 +654,6 @@ The system will detect known false claims and suspicious patterns."
             
             // Update content styling based on severity
             updateContentStyling(data, trustScore);
-            
-            // Update stats
-            if (data.detailed_analysis) {
-                const detailed = data.detailed_analysis;
-                issuesFound.textContent = detailed.issues_found || 0;
-                credibilityLevel.textContent = detailed.credibility_level || 'Unknown';
-                
-                // Add status color to credibility level
-                const level = detailed.credibility_level || '';
-                if (level.includes('Extremely Low') || level.includes('Very Low')) {
-                    document.getElementById('credibility-level').className = 'stat-value status-critical';
-                } else if (level.includes('Low') || level.includes('Moderate')) {
-                    document.getElementById('credibility-level').className = 'stat-value status-warning';  
-                } else {
-                    document.getElementById('credibility-level').className = 'stat-value status-good';
-                }
-            }
-            
-            // Update metadata
-            if (data.analysis_metadata) {
-                const metadata = data.analysis_metadata;
-                analysisTime.textContent = (metadata.analysis_time || 0) + 's';
-                const totalPatterns = (metadata.false_claim_patterns_checked || 0) + 
-                                   (metadata.suspicious_patterns_checked || 0);
-                patternsChecked.textContent = totalPatterns;
-            }
             
             showResults();
         }
