@@ -224,6 +224,11 @@
             border-left: 4px solid var(--gray-400);
         }
         
+        .claim-item.true-claim {
+            border-left-color: var(--success-color);
+            background: #f0fdf4;
+        }
+        
         .claim-item.false-claim {
             border-left-color: var(--accent-color);
             background: #fef2f2;
@@ -297,6 +302,7 @@
             margin-bottom: 1rem;
         }
         
+        .accuracy-true { background: var(--success-color); color: white; }
         .accuracy-false { background: var(--accent-color); color: white; }
         .accuracy-misleading { background: var(--warning-color); color: white; }
         .accuracy-unverified { background: var(--gray-400); color: white; }
@@ -741,18 +747,21 @@ The system will identify specific claims and evaluate each one for accuracy, bia
         
         // Helper functions
         function getClaimClass(accuracy) {
+            if (accuracy.includes('True')) return 'true-claim';
             if (accuracy.includes('False')) return 'false-claim';
             if (accuracy.includes('Misleading')) return 'misleading-claim';
             return 'unverified-claim';
         }
         
         function getAccuracyClass(accuracy) {
+            if (accuracy.includes('True')) return 'accuracy-true';
             if (accuracy.includes('False')) return 'accuracy-false';
             if (accuracy.includes('Misleading')) return 'accuracy-misleading';
             return 'accuracy-unverified';
         }
         
         function getAccuracyIcon(accuracy) {
+            if (accuracy.includes('True')) return '✅';
             if (accuracy.includes('False')) return '❌';
             if (accuracy.includes('Misleading')) return '⚠️';
             return '❓';
