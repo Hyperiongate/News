@@ -1,6 +1,6 @@
 """
 Enhanced Article Extraction Service - Universal Scraper with Progressive Escalation
-COMPLETE VERSION - All original functionality preserved, just added _check_availability()
+COMPLETE VERSION - All original functionality preserved with syntax errors fixed
 """
 
 import json
@@ -443,116 +443,6 @@ class UniversalScraper:
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
-                element.decompose()
-            
-            # Extract basic title
-            title_elem = soup.find('title') or soup.find('h1')
-            title = title_elem.get_text(strip=True) if title_elem else 'Untitled'
-            
-            # Extract content - try multiple strategies
-            content = None
-            
-            # Strategy 1: Article tags
-            article = soup.find('article')
-            if article:
-                paragraphs = article.find_all('p')
-                if paragraphs and len(paragraphs) >= 2:
-                    content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
-                                        if len(p.get_text(strip=True).split()) >= 5)
-            
-            # Strategy 2: Main content containers
-            if not content:
-                for selector in ['main', '[role="main"]', '.article-body', '.story-body', '.content']:
-                    try:
-                        element = soup.select_one(selector)
-                        if element:
-                            paragraphs = element.find_all('p')
-                            if paragraphs and len(paragraphs) >= 2:
-                                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
-                                                    if len(p.get_text(strip=True).split()) >= 5)
-                                break
-                    except:
-                        continue
-            
-            # Strategy 3: All paragraphs as fallback
-            if not content:
-                all_paragraphs = soup.find_all('p')
-                valid_paragraphs = []
-                for p in all_paragraphs:
-                    text = p.get_text(strip=True)
-                    if len(text.split()) >= 10:  # Longer paragraphs only
-                        valid_paragraphs.append(text)
-                
-                if len(valid_paragraphs) >= 2:
-                    content = '\n\n'.join(valid_paragraphs[:20])  # Limit to first 20
-            
-            if not content or len(content.strip()) < 100:
-                return {
-                    'success': False,
-                    'error': 'Could not extract sufficient content'
-                }
-            
-            word_count = len(content.split())
-            
-            return {
-                'success': True,
-                'title': title,
-                'text': content,
-                'author': None,
-                'publish_date': None,
-                'url': url,
-                'domain': urlparse(url).netloc,
-                'description': None,
-                'image': None,
-                'keywords': [],
-                'word_count': word_count,
-                'extraction_metadata': {
-                    'method': 'basic_fallback',
-                    'libraries_available': OPTIONAL_LIBRARIES
-                },
-                'extracted_at': datetime.now().isoformat(),
-                'html': response.text
-            }
-            
-        except Exception as e:
-            logger.error(f"Basic extraction fallback failed: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': f'Basic extraction failed: {str(e)}'
-            }
-    
-    def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
-        info = super().get_service_info()
-        info.update({
-            'extraction_strategies': [
-                'basic_requests',
-                'enhanced_headers',
-                'session_with_cookies',
-                'social_referer',
-                'search_referer',
-                'cloudscraper',
-                'curl_cffi_stealth',
-                'mobile_headers',
-                'consent_cookies',
-                'undetected_chrome',
-                'selenium_stealth',
-                'playwright_stealth',
-                'archive_fallback'
-            ],
-            'libraries_available': OPTIONAL_LIBRARIES,
-            'supports_anti_bot_bypass': True,
-            'supports_progressive_escalation': True,
-            'supports_universal_scraping': True,
-            'supports_live_news': True,
-            'supports_text_input': True,
-            'circuit_breaker_enabled': True,
-            'success_rate_optimization': True
-        })
-        return infohtml.parser')
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked or invalid'}
             
@@ -1559,4 +1449,114 @@ class ArticleExtractor(BaseAnalyzer):
             response = requests.get(url, headers=headers, timeout=15, verify=False)
             response.raise_for_status()
             
-            soup = BeautifulSoup(response.text, '
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Remove unwanted elements
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
+                element.decompose()
+            
+            # Extract basic title
+            title_elem = soup.find('title') or soup.find('h1')
+            title = title_elem.get_text(strip=True) if title_elem else 'Untitled'
+            
+            # Extract content - try multiple strategies
+            content = None
+            
+            # Strategy 1: Article tags
+            article = soup.find('article')
+            if article:
+                paragraphs = article.find_all('p')
+                if paragraphs and len(paragraphs) >= 2:
+                    content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
+                                        if len(p.get_text(strip=True).split()) >= 5)
+            
+            # Strategy 2: Main content containers
+            if not content:
+                for selector in ['main', '[role="main"]', '.article-body', '.story-body', '.content']:
+                    try:
+                        element = soup.select_one(selector)
+                        if element:
+                            paragraphs = element.find_all('p')
+                            if paragraphs and len(paragraphs) >= 2:
+                                content = '\n\n'.join(p.get_text(strip=True) for p in paragraphs 
+                                                    if len(p.get_text(strip=True).split()) >= 5)
+                                break
+                    except:
+                        continue
+            
+            # Strategy 3: All paragraphs as fallback
+            if not content:
+                all_paragraphs = soup.find_all('p')
+                valid_paragraphs = []
+                for p in all_paragraphs:
+                    text = p.get_text(strip=True)
+                    if len(text.split()) >= 10:  # Longer paragraphs only
+                        valid_paragraphs.append(text)
+                
+                if len(valid_paragraphs) >= 2:
+                    content = '\n\n'.join(valid_paragraphs[:20])  # Limit to first 20
+            
+            if not content or len(content.strip()) < 100:
+                return {
+                    'success': False,
+                    'error': 'Could not extract sufficient content'
+                }
+            
+            word_count = len(content.split())
+            
+            return {
+                'success': True,
+                'title': title,
+                'text': content,
+                'author': None,
+                'publish_date': None,
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'description': None,
+                'image': None,
+                'keywords': [],
+                'word_count': word_count,
+                'extraction_metadata': {
+                    'method': 'basic_fallback',
+                    'libraries_available': OPTIONAL_LIBRARIES
+                },
+                'extracted_at': datetime.now().isoformat(),
+                'html': response.text
+            }
+            
+        except Exception as e:
+            logger.error(f"Basic extraction fallback failed: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Basic extraction failed: {str(e)}'
+            }
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'extraction_strategies': [
+                'basic_requests',
+                'enhanced_headers',
+                'session_with_cookies',
+                'social_referer',
+                'search_referer',
+                'cloudscraper',
+                'curl_cffi_stealth',
+                'mobile_headers',
+                'consent_cookies',
+                'undetected_chrome',
+                'selenium_stealth',
+                'playwright_stealth',
+                'archive_fallback'
+            ],
+            'libraries_available': OPTIONAL_LIBRARIES,
+            'supports_anti_bot_bypass': True,
+            'supports_progressive_escalation': True,
+            'supports_universal_scraping': True,
+            'supports_live_news': True,
+            'supports_text_input': True,
+            'circuit_breaker_enabled': True,
+            'success_rate_optimization': True
+        })
+        return info
