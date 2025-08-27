@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Text Analysis - Detect False Claims & Misinformation</title>
+    <title>Smart Text Analysis - Misinformation Detection</title>
     <style>
         :root {
             --primary-color: #1e40af;
@@ -40,7 +40,7 @@
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -131,7 +131,7 @@
         
         .text-input {
             width: 100%;
-            min-height: 200px;
+            min-height: 180px;
             padding: 1rem;
             border: 2px solid var(--gray-300);
             border-radius: 12px;
@@ -167,11 +167,7 @@
             font-weight: 500;
         }
         
-        .input-tips {
-            color: var(--gray-400);
-        }
-        
-        /* Examples Section */
+        /* Examples */
         .examples-section {
             margin-top: 1rem;
             padding: 1rem;
@@ -199,11 +195,6 @@
         
         .example-false {
             color: var(--danger-color);
-            font-weight: 500;
-        }
-        
-        .example-suspicious {
-            color: var(--warning-color);
             font-weight: 500;
         }
         
@@ -301,72 +292,77 @@
             letter-spacing: 0.05em;
         }
         
-        /* Trust score colors - more extreme for false claims */
+        /* Enhanced Trust Score Colors */
         .trust-very-high { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
         .trust-high { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); }
         .trust-moderate { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
         .trust-low { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
-        .trust-very-low { background: linear-gradient(135deg, #7c2d12 0%, #991b1b 100%); }
+        .trust-very-low { background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); }
+        .trust-extremely-low { background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); }
         
-        /* Enhanced Results Grid */
-        .results-grid {
-            display: grid;
-            gap: 1.5rem;
+        /* Clean Results Display */
+        .results-content {
             margin-bottom: 2rem;
         }
         
-        .result-item {
-            padding: 1.5rem;
+        .result-section {
+            margin-bottom: 2rem;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .result-content {
             background: var(--gray-50);
-            border-radius: 12px;
+            padding: 1.25rem;
+            border-radius: 10px;
             border-left: 4px solid var(--primary-color);
         }
         
-        .result-item.critical {
-            border-left-color: var(--danger-color);
+        .result-content.critical {
             background: #fef2f2;
+            border-left-color: var(--danger-color);
         }
         
-        .result-item.warning {
-            border-left-color: var(--warning-color);
+        .result-content.warning {
             background: #fffbeb;
+            border-left-color: var(--warning-color);
         }
         
-        .result-label {
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .result-value {
+        .result-text {
             font-size: 1rem;
             color: var(--gray-800);
-            line-height: 1.5;
+            line-height: 1.6;
+            margin: 0;
         }
         
-        /* Detailed Analysis Section */
-        .detailed-analysis {
+        /* Analysis Stats */
+        .analysis-stats {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 1.5rem;
+            padding: 2rem;
             border-radius: 12px;
-            margin-top: 1.5rem;
+            margin-top: 2rem;
         }
         
-        .detailed-analysis h3 {
+        .stats-title {
             font-size: 1.125rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
         }
         
-        .analysis-stats {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1.5rem;
         }
         
         .stat-item {
@@ -374,9 +370,10 @@
         }
         
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             display: block;
+            margin-bottom: 0.25rem;
         }
         
         .stat-label {
@@ -384,18 +381,6 @@
             opacity: 0.9;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        }
-        
-        .findings-summary {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-        }
-        
-        .findings-summary p {
-            line-height: 1.6;
-            margin: 0;
         }
         
         /* Error States */
@@ -406,34 +391,6 @@
             border-radius: 8px;
             margin: 1rem 0;
             text-align: center;
-        }
-        
-        /* Alert Badges */
-        .alert-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-        
-        .alert-critical {
-            background: var(--danger-color);
-            color: white;
-        }
-        
-        .alert-warning {
-            background: var(--warning-color);
-            color: white;
-        }
-        
-        .alert-info {
-            background: var(--primary-color);
-            color: white;
         }
         
         /* Responsive Design */
@@ -456,14 +413,17 @@
                 align-items: center;
             }
             
-            .analysis-stats {
+            .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
             }
         }
+        
+        /* Status indicators */
+        .status-critical { color: var(--danger-color); }
+        .status-warning { color: var(--warning-color); }
+        .status-good { color: var(--success-color); }
     </style>
-    <!-- Font Awesome with fallback -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" 
-          onerror="this.onerror=null; this.remove();">
 </head>
 <body>
     <div class="container">
@@ -474,7 +434,7 @@
             </h1>
             <p class="subtitle">
                 Advanced detection of false claims, conspiracy theories, and misinformation patterns. 
-                Paste any text to get instant credibility analysis with detailed explanations.
+                Get instant credibility analysis with detailed explanations.
             </p>
             <div class="feature-badges">
                 <span class="feature-badge critical">
@@ -484,7 +444,7 @@
                     🔍 Conspiracy Theory Recognition
                 </span>
                 <span class="feature-badge">
-                    ⚠️ Manipulation Pattern Analysis
+                    ⚠️ Manipulation Analysis
                 </span>
                 <span class="feature-badge">
                     📊 Evidence-Based Scoring
@@ -505,19 +465,19 @@
                 <textarea 
                     id="text-input" 
                     class="text-input" 
-                    placeholder="Paste any text content here for analysis...
+                    placeholder="Paste any text here for credibility analysis...
 
-Try these examples to see how the system works:
-• &quot;The moon is made of cheese and the earth is flat&quot;
-• &quot;Vaccines cause autism according to studies&quot;
+Try these test examples:
+• &quot;The COVID-19 vaccines are causing more problems than they solve&quot;
+• &quot;The moon is made of cheese and the earth is flat&quot;  
 • &quot;Climate change is a hoax perpetrated by scientists&quot;
-• &quot;They don't want you to know the hidden truth about 5G&quot;
+• &quot;Local government announces new road improvements for downtown&quot;
 
-Or paste legitimate news content to see how it scores differently."
+The system will detect known false claims and suspicious patterns."
                     maxlength="50000"></textarea>
                 <div class="input-info">
                     <span class="input-tips">
-                        💡 The system checks against known false claims and suspicious patterns
+                        💡 Detects misinformation patterns and false claims
                     </span>
                     <span class="char-counter" id="char-counter">0 / 50,000</span>
                 </div>
@@ -525,26 +485,22 @@ Or paste legitimate news content to see how it scores differently."
 
             <!-- Examples Section -->
             <div class="examples-section">
-                <div class="examples-title">🎯 What the system detects:</div>
+                <div class="examples-title">🎯 What gets flagged:</div>
                 <div class="examples-list">
                     <div class="example-item">
-                        <span class="example-false">❌ Known false claims:</span> Flat Earth, moon made of cheese, vaccine-autism links
+                        <span class="example-false">❌ Known false claims:</span> Flat Earth, vaccine-autism links, moon landing denial
                     </div>
                     <div class="example-item">
-                        <span class="example-suspicious">⚠️ Suspicious patterns:</span> "They don't want you to know", "secret truth", "wake up sheeple"
+                        <span class="example-false">⚠️ Conspiracy patterns:</span> "They don't want you to know", "wake up", "hidden truth"
                     </div>
                     <div class="example-item">
-                        <span class="example-suspicious">🎭 Manipulation tactics:</span> Fear mongering, false authority, absolute claims
-                    </div>
-                    <div class="example-item">
-                        <span style="color: var(--secondary-color); font-weight: 500;">✅ Evidence-based content:</span> Gets higher credibility scores
+                        <span class="example-false">🎭 Manipulation tactics:</span> Fear mongering, false authority, absolute claims
                     </div>
                 </div>
             </div>
 
-            <!-- Analyze Button -->
             <button class="analyze-button" id="analyze-btn">
-                🔍 Analyze Text for False Claims
+                🔍 Analyze for Misinformation
             </button>
         </div>
 
@@ -557,27 +513,30 @@ Or paste legitimate news content to see how it scores differently."
                 <div class="trust-score-label">Credibility Score</div>
             </div>
 
-            <div class="results-grid">
-                <div class="result-item" id="summary-item">
-                    <div class="result-label">📄 Content Summary</div>
-                    <div class="result-value" id="article-summary">--</div>
+            <div class="results-content">
+                <div class="result-section">
+                    <div class="result-title">
+                        📄 Content Analysis
+                    </div>
+                    <div class="result-content" id="summary-content">
+                        <p class="result-text" id="article-summary">--</p>
+                    </div>
                 </div>
                 
-                <div class="result-item" id="source-item">
-                    <div class="result-label">📍 Source</div>
-                    <div class="result-value" id="source-info">--</div>
-                </div>
-                
-                <div class="result-item" id="author-item">
-                    <div class="result-label">✍️ Author</div>
-                    <div class="result-value" id="author-info">--</div>
+                <div class="result-section">
+                    <div class="result-title">
+                        🔍 Detailed Findings
+                    </div>
+                    <div class="result-content" id="findings-content">
+                        <p class="result-text" id="findings-summary">--</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="detailed-analysis">
-                <h3>🔬 Detailed Analysis Results</h3>
+            <div class="analysis-stats">
+                <div class="stats-title">📊 Analysis Summary</div>
                 
-                <div class="analysis-stats">
+                <div class="stats-grid">
                     <div class="stat-item">
                         <span class="stat-value" id="issues-found">--</span>
                         <span class="stat-label">Issues Found</span>
@@ -587,17 +546,13 @@ Or paste legitimate news content to see how it scores differently."
                         <span class="stat-label">Credibility Level</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-value" id="analysis-time">--</span>
-                        <span class="stat-label">Analysis Time</span>
-                    </div>
-                    <div class="stat-item">
                         <span class="stat-value" id="patterns-checked">--</span>
                         <span class="stat-label">Patterns Checked</span>
                     </div>
-                </div>
-                
-                <div class="findings-summary">
-                    <p id="findings-summary">--</p>
+                    <div class="stat-item">
+                        <span class="stat-value" id="analysis-time">--</span>
+                        <span class="stat-label">Analysis Time</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -617,15 +572,15 @@ Or paste legitimate news content to see how it scores differently."
         const trustScoreCircle = document.getElementById('trust-score-circle');
         const trustScoreNumber = document.getElementById('trust-score-number');
         const articleSummary = document.getElementById('article-summary');
-        const sourceInfo = document.getElementById('source-info');
-        const authorInfo = document.getElementById('author-info');
         const findingsSummary = document.getElementById('findings-summary');
+        const summaryContent = document.getElementById('summary-content');
+        const findingsContent = document.getElementById('findings-content');
         
-        // Detailed analysis elements
+        // Stats elements
         const issuesFound = document.getElementById('issues-found');
         const credibilityLevel = document.getElementById('credibility-level');
-        const analysisTime = document.getElementById('analysis-time');
         const patternsChecked = document.getElementById('patterns-checked');
+        const analysisTime = document.getElementById('analysis-time');
         
         // Character counter
         textInput.addEventListener('input', function() {
@@ -641,10 +596,10 @@ Or paste legitimate news content to see how it scores differently."
             }
         });
         
-        // Analyze button functionality
+        // Analyze button
         analyzeBtn.addEventListener('click', analyzeContent);
         
-        // Enter key support (Ctrl+Enter for textarea)
+        // Keyboard support
         textInput.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter' && !isAnalyzing) {
                 analyzeContent();
@@ -662,8 +617,8 @@ Or paste legitimate news content to see how it scores differently."
                 return;
             }
             
-            if (content.length < 10) {
-                showError('Please provide at least 10 characters of text for meaningful analysis.');
+            if (content.length < 5) {
+                showError('Please provide at least 5 characters of text for analysis.');
                 return;
             }
             
@@ -698,38 +653,50 @@ Or paste legitimate news content to see how it scores differently."
             }
         }
         
-        // Display results with enhanced information
+        // Display results
         function displayResults(data) {
             const trustScore = data.trust_score || 0;
             
-            // Update trust score display
+            // Update trust score display with enhanced colors
             trustScoreNumber.textContent = trustScore;
             
-            // Set trust score color based on enhanced thresholds
             trustScoreCircle.className = 'trust-score-circle';
             if (trustScore >= 80) {
                 trustScoreCircle.classList.add('trust-very-high');
-            } else if (trustScore >= 60) {
+            } else if (trustScore >= 65) {
                 trustScoreCircle.classList.add('trust-high');
-            } else if (trustScore >= 40) {
+            } else if (trustScore >= 50) {
                 trustScoreCircle.classList.add('trust-moderate');
-            } else if (trustScore >= 20) {
+            } else if (trustScore >= 30) {
                 trustScoreCircle.classList.add('trust-low');
-            } else {
+            } else if (trustScore >= 15) {
                 trustScoreCircle.classList.add('trust-very-low');
+            } else {
+                trustScoreCircle.classList.add('trust-extremely-low');
             }
             
-            // Update basic results
+            // Update content
             articleSummary.textContent = data.article_summary || 'No summary available';
-            sourceInfo.textContent = data.source || 'Unknown source';
-            authorInfo.textContent = data.author || 'Not specified';
-            findingsSummary.textContent = data.findings_summary || 'No findings to report';
+            findingsSummary.textContent = data.findings_summary || 'No findings available';
             
-            // Update detailed analysis if available
+            // Update content styling based on severity
+            updateContentStyling(data, trustScore);
+            
+            // Update stats
             if (data.detailed_analysis) {
                 const detailed = data.detailed_analysis;
                 issuesFound.textContent = detailed.issues_found || 0;
                 credibilityLevel.textContent = detailed.credibility_level || 'Unknown';
+                
+                // Add status color to credibility level
+                const level = detailed.credibility_level || '';
+                if (level.includes('Extremely Low') || level.includes('Very Low')) {
+                    document.getElementById('credibility-level').className = 'stat-value status-critical';
+                } else if (level.includes('Low') || level.includes('Moderate')) {
+                    document.getElementById('credibility-level').className = 'stat-value status-warning';  
+                } else {
+                    document.getElementById('credibility-level').className = 'stat-value status-good';
+                }
             }
             
             // Update metadata
@@ -741,39 +708,21 @@ Or paste legitimate news content to see how it scores differently."
                 patternsChecked.textContent = totalPatterns;
             }
             
-            // Update result item styling based on severity
-            updateResultStyling(data);
-            
-            // Show results with animation
             showResults();
         }
         
-        function updateResultStyling(data) {
-            const summaryItem = document.getElementById('summary-item');
-            const sourceItem = document.getElementById('source-item');
-            const authorItem = document.getElementById('author-item');
+        function updateContentStyling(data, trustScore) {
+            // Reset styles
+            summaryContent.classList.remove('critical', 'warning');
+            findingsContent.classList.remove('critical', 'warning');
             
-            // Reset classes
-            [summaryItem, sourceItem, authorItem].forEach(item => {
-                item.classList.remove('critical', 'warning');
-            });
-            
-            // Apply styling based on analysis results
-            if (data.detailed_analysis) {
-                const issueCount = data.detailed_analysis.issues_found || 0;
-                const credibilityLevel = data.detailed_analysis.credibility_level || '';
-                
-                if (issueCount > 0 && (credibilityLevel.includes('Low') || credibilityLevel.includes('Critical'))) {
-                    summaryItem.classList.add('critical');
-                } else if (issueCount > 0) {
-                    summaryItem.classList.add('warning');
-                }
-            }
-            
-            // Highlight if trust score is very low
-            if ((data.trust_score || 0) < 30) {
-                sourceItem.classList.add('critical');
-                authorItem.classList.add('critical');
+            // Apply styling based on analysis
+            if (trustScore < 30) {
+                summaryContent.classList.add('critical');
+                findingsContent.classList.add('critical');
+            } else if (trustScore < 50) {
+                summaryContent.classList.add('warning');
+                findingsContent.classList.add('warning');
             }
         }
         
@@ -786,13 +735,13 @@ Or paste legitimate news content to see how it scores differently."
                 analyzeBtn.classList.add('loading');
                 analyzeBtn.innerHTML = `
                     <div class="loading-spinner"></div>
-                    Analyzing for False Claims...
+                    Analyzing Content...
                 `;
             } else {
                 analyzeBtn.disabled = false;
                 analyzeBtn.classList.remove('loading');
                 analyzeBtn.innerHTML = `
-                    🔍 Analyze Text for False Claims
+                    🔍 Analyze for Misinformation
                 `;
             }
         }
@@ -807,7 +756,7 @@ Or paste legitimate news content to see how it scores differently."
         }
         
         function showError(message) {
-            // Remove existing error messages
+            // Remove existing errors
             document.querySelectorAll('.error-message').forEach(el => el.remove());
             
             const errorDiv = document.createElement('div');
@@ -816,25 +765,23 @@ Or paste legitimate news content to see how it scores differently."
             
             analyzeBtn.parentNode.insertBefore(errorDiv, analyzeBtn.nextSibling);
             
-            // Auto-remove error after 5 seconds
             setTimeout(() => {
                 errorDiv.remove();
             }, 5000);
         }
         
-        // Initialize application
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            // Focus on text input
             textInput.focus();
             
-            // Check API status
+            // Check system status
             fetch('/api/status')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('System status:', data);
                     if (data.status !== 'online') {
-                        showError('Service is currently unavailable. Please try again later.');
+                        showError('Analysis service unavailable. Please try again later.');
                     }
-                    console.log('System ready:', data);
                 })
                 .catch(() => {
                     showError('Unable to connect to analysis service.');
