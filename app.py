@@ -1,6 +1,6 @@
 """
 News Analyzer API - Main Flask Application
-BULLETPROOF FIX: Proper service data extraction from pipeline
+FIXED: Ensures all services send data to frontend properly
 """
 import os
 import sys
@@ -52,14 +52,19 @@ news_analyzer = NewsAnalyzer()
 # Performance tracking storage
 performance_stats = {}
 
-def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Dict[str, Any]:
     """
-    BULLETPROOF service data extraction that handles all possible formats
-    Returns None if service failed or has no meaningful data
+    FIXED: Always returns data, never None - ensures frontend gets all services
     """
     if not isinstance(service_result, dict):
         logger.warning(f"Service result is not a dict: {type(service_result)}")
-        return None
+        # Return minimal data instead of None
+        return {
+            'score': 0,
+            'level': 'Unknown',
+            'status': 'error',
+            'message': 'Invalid service result format'
+        }
     
     logger.debug(f"Extracting from service result with keys: {list(service_result.keys())}")
     
@@ -84,10 +89,26 @@ def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Optional
         
         logger.debug(f"Extracted {len(extracted_data)} direct fields: {list(extracted_data.keys())}")
     
-    # CRITICAL FIX: Check if service actually failed or has no meaningful data
-    if service_result.get('success') == False or len(extracted_data) == 0:
-        logger.debug("Service failed or has no meaningful data - excluding")
-        return None
+    # FIXED: Always provide data, even for failed services
+    if service_result.get('success') == False:
+        logger.debug("Service failed - providing error data")
+        # Still return the data with error information
+        if not extracted_data:
+            extracted_data = {}
+        extracted_data['status'] = 'error'
+        extracted_data['error'] = service_result.get('error', 'Service failed')
+        extracted_data['score'] = extracted_data.get('score', 0)
+        extracted_data['level'] = extracted_data.get('level', 'Error')
+    
+    # If completely empty, provide minimal structure
+    if len(extracted_data) == 0:
+        logger.debug("No data extracted - providing minimal structure")
+        extracted_data = {
+            'score': 0,
+            'level': 'Not Available',
+            'status': 'no_data',
+            'message': 'No analysis data available'
+        }
     
     # Field normalization for frontend compatibility
     if 'score' not in extracted_data:
@@ -95,25 +116,43 @@ def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Optional
             'credibility_score', 'author_score', 'trust_score',
             'bias_score', 'objectivity_score', 'transparency_score',
             'manipulation_score', 'content_score', 'quality_score',
-            'reliability_score', 'factual_score'
+            'reliability_score', 'factual_score', 'overall_score'
         ]
         
         for candidate in score_candidates:
             if candidate in extracted_data and isinstance(extracted_data[candidate], (int, float)):
                 extracted_data['score'] = int(extracted_data[candidate])
                 break
+        
+        # If still no score, default to 0
+        if 'score' not in extracted_data:
+            extracted_data['score'] = 0
     
     # Level field normalization
     if 'level' not in extracted_data:
         level_candidates = [
             'credibility_level', 'trust_level', 'bias_level',
-            'transparency_level', 'quality_level'
+            'transparency_level', 'quality_level', 'risk_level'
         ]
         
         for candidate in level_candidates:
             if candidate in extracted_data and extracted_data[candidate]:
                 extracted_data['level'] = str(extracted_data[candidate])
                 break
+        
+        # If still no level, derive from score
+        if 'level' not in extracted_data:
+            score = extracted_data.get('score', 0)
+            if score >= 80:
+                extracted_data['level'] = 'High'
+            elif score >= 60:
+                extracted_data['level'] = 'Good'
+            elif score >= 40:
+                extracted_data['level'] = 'Moderate'
+            elif score >= 20:
+                extracted_data['level'] = 'Low'
+            else:
+                extracted_data['level'] = 'Very Low'
     
     # Ensure numeric scores are valid
     if 'score' in extracted_data:
@@ -123,12 +162,16 @@ def extract_service_data_bulletproof(service_result: Dict[str, Any]) -> Optional
         except (ValueError, TypeError):
             extracted_data['score'] = 0
     
+    # Ensure service has a status
+    if 'status' not in extracted_data:
+        extracted_data['status'] = 'completed' if extracted_data.get('score', 0) > 0 else 'no_data'
+    
     return extracted_data
 
 def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
     """
-    CRITICAL FIX: Extract individual services from pipeline results
-    Handles the actual data structure from your logs
+    FIXED: Extract individual services from pipeline results
+    Always returns data for all known services
     """
     logger.info("=" * 80)
     logger.info("EXTRACTING INDIVIDUAL SERVICES")
@@ -143,7 +186,6 @@ def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str
     
     logger.info(f"Pipeline result keys: {list(pipeline_results.keys())}")
     
-    # CRITICAL FIX: Based on your latest logs showing data.detailed_analysis structure
     # Strategy 1: Check data.detailed_analysis (where services actually are)
     if 'data' in pipeline_results and isinstance(pipeline_results['data'], dict):
         data_container = pipeline_results['data']
@@ -155,52 +197,53 @@ def extract_services_from_pipeline(pipeline_results: Dict[str, Any]) -> Dict[str
             
             for service_name, service_data in detailed_analysis.items():
                 if isinstance(service_data, dict):
-                    logger.info(f"Processing service: {service_name}")
+                    logger.info(f"Processing service from data.detailed_analysis: {service_name}")
                     extracted = extract_service_data_bulletproof(service_data)
-                    
-                    if extracted:
-                        service_results[service_name] = extracted
-                        logger.info(f"✓ {service_name}: extracted {len(extracted)} fields")
-                    else:
-                        logger.warning(f"✗ {service_name}: excluded (failed or no data)")
+                    service_results[service_name] = extracted
+                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields")
         
         # Also check for services directly in data container
         for service_name in known_services:
             if service_name in data_container and service_name not in service_results:
                 service_data = data_container[service_name]
                 if isinstance(service_data, dict):
-                    logger.info(f"Found data container service: {service_name}")
+                    logger.info(f"Found service in data container: {service_name}")
                     extracted = extract_service_data_bulletproof(service_data)
-                    
-                    if extracted:
-                        service_results[service_name] = extracted
-                        logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from data container")
+                    service_results[service_name] = extracted
+                    logger.info(f"✓ {service_name}: extracted from data container")
     
-    # Strategy 2: Check top-level services (fallback)
+    # Strategy 2: Check top-level services
     for service_name in known_services:
         if service_name in pipeline_results and service_name not in service_results:
             service_data = pipeline_results[service_name]
             if isinstance(service_data, dict):
                 logger.info(f"Found top-level service: {service_name}")
                 extracted = extract_service_data_bulletproof(service_data)
-                
-                if extracted:
-                    service_results[service_name] = extracted
-                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from top level")
+                service_results[service_name] = extracted
+                logger.info(f"✓ {service_name}: extracted from top level")
     
     # Strategy 3: Check if there's a detailed_analysis at top level
     if 'detailed_analysis' in pipeline_results and isinstance(pipeline_results['detailed_analysis'], dict):
         detailed_analysis = pipeline_results['detailed_analysis']
-        logger.info(f"Also checking top-level detailed_analysis with keys: {list(detailed_analysis.keys())}")
+        logger.info(f"Checking top-level detailed_analysis with keys: {list(detailed_analysis.keys())}")
         
         for service_name, service_data in detailed_analysis.items():
             if service_name not in service_results and isinstance(service_data, dict):
-                logger.info(f"Found top-level detailed_analysis service: {service_name}")
+                logger.info(f"Found service in top-level detailed_analysis: {service_name}")
                 extracted = extract_service_data_bulletproof(service_data)
-                
-                if extracted:
-                    service_results[service_name] = extracted
-                    logger.info(f"✓ {service_name}: extracted {len(extracted)} fields from top-level detailed_analysis")
+                service_results[service_name] = extracted
+                logger.info(f"✓ {service_name}: extracted from top-level detailed_analysis")
+    
+    # FIXED: Ensure all known services have at least minimal data
+    for service_name in known_services:
+        if service_name not in service_results:
+            logger.warning(f"Service {service_name} not found - adding minimal data")
+            service_results[service_name] = {
+                'score': 0,
+                'level': 'Not Available',
+                'status': 'not_run',
+                'message': 'Service not available or did not run'
+            }
     
     logger.info(f"Final services extracted: {list(service_results.keys())}")
     logger.info("=" * 80)
@@ -216,17 +259,19 @@ def extract_key_findings_from_services(service_results: Dict[str, Any]) -> List[
         data = service_results['source_credibility']
         score = data.get('score', 0)
         if isinstance(score, (int, float)):
-            if score < 40:
+            if score < 40 and score > 0:
                 findings.append({
                     'type': 'warning',
                     'text': f'Low source credibility: {score}/100',
-                    'service': 'source_credibility'
+                    'service': 'source_credibility',
+                    'severity': 'high'
                 })
             elif score > 80:
                 findings.append({
                     'type': 'positive',
                     'text': f'High source credibility: {score}/100',
-                    'service': 'source_credibility'
+                    'service': 'source_credibility',
+                    'severity': 'low'
                 })
     
     # Check bias
@@ -237,28 +282,40 @@ def extract_key_findings_from_services(service_results: Dict[str, Any]) -> List[
             findings.append({
                 'type': 'warning',
                 'text': f'High bias detected: {score}/100',
-                'service': 'bias_detector'
+                'service': 'bias_detector',
+                'severity': 'medium'
             })
     
     # Check author credibility
     if 'author_analyzer' in service_results:
         data = service_results['author_analyzer']
         score = data.get('score', 0)
-        if isinstance(score, (int, float)) and score > 80:
-            findings.append({
-                'type': 'positive',
-                'text': f'High author credibility: {score}/100',
-                'service': 'author_analyzer'
-            })
+        if isinstance(score, (int, float)):
+            if score > 80:
+                findings.append({
+                    'type': 'positive',
+                    'text': f'High author credibility: {score}/100',
+                    'service': 'author_analyzer',
+                    'severity': 'low'
+                })
+            elif score < 40 and score > 0:
+                findings.append({
+                    'type': 'warning',
+                    'text': f'Low author credibility: {score}/100',
+                    'service': 'author_analyzer',
+                    'severity': 'medium'
+                })
     
     # Check manipulation
     if 'manipulation_detector' in service_results:
         data = service_results['manipulation_detector']
-        if data.get('tactics_found') and len(data['tactics_found']) > 0:
+        tactics_found = data.get('tactics_found', [])
+        if tactics_found and len(tactics_found) > 0:
             findings.append({
                 'type': 'critical',
-                'text': f'Manipulation tactics detected: {len(data["tactics_found"])}',
-                'service': 'manipulation_detector'
+                'text': f'Manipulation tactics detected: {len(tactics_found)}',
+                'service': 'manipulation_detector',
+                'severity': 'high'
             })
     
     # Check fact checking
@@ -272,23 +329,45 @@ def extract_key_findings_from_services(service_results: Dict[str, Any]) -> List[
                 findings.append({
                     'type': 'warning',
                     'text': f'Low fact accuracy: {accuracy:.0f}% verified',
-                    'service': 'fact_checker'
+                    'service': 'fact_checker',
+                    'severity': 'high'
                 })
             elif accuracy > 90:
                 findings.append({
                     'type': 'positive',
                     'text': f'High fact accuracy: {accuracy:.0f}% verified',
-                    'service': 'fact_checker'
+                    'service': 'fact_checker',
+                    'severity': 'low'
                 })
     
+    # Sort by severity (high first)
+    severity_order = {'high': 0, 'medium': 1, 'low': 2}
+    findings.sort(key=lambda x: severity_order.get(x.get('severity', 'medium'), 1))
+    
+    # Limit to top 5 findings
     return findings[:5]
 
 def extract_article_data(pipeline_results: Dict[str, Any], content: str, content_type: str) -> Dict[str, Any]:
     """Extract article data with multiple fallback strategies"""
     
-    # Strategy 1: Check top-level article (based on your logs)
-    if 'article' in pipeline_results:
-        return pipeline_results['article']
+    # Default article structure
+    default_article = {
+        'title': 'Unknown Title',
+        'url': content if content_type == 'url' else '',
+        'text': content if content_type == 'text' else content[:500] if content else '',
+        'extraction_successful': False,
+        'author': 'Unknown',
+        'publish_date': None,
+        'domain': '',
+        'word_count': 0
+    }
+    
+    # Strategy 1: Check top-level article
+    if 'article' in pipeline_results and isinstance(pipeline_results['article'], dict):
+        article = pipeline_results['article']
+        default_article.update(article)
+        default_article['extraction_successful'] = True
+        return default_article
     
     # Strategy 2: Check article_extractor service data
     if 'article_extractor' in pipeline_results and isinstance(pipeline_results['article_extractor'], dict):
@@ -296,45 +375,49 @@ def extract_article_data(pipeline_results: Dict[str, Any], content: str, content
         
         # Check if it has 'data' wrapper
         if 'data' in extractor_data and isinstance(extractor_data['data'], dict):
-            return extractor_data['data']
+            default_article.update(extractor_data['data'])
+            default_article['extraction_successful'] = True
+            return default_article
         else:
             # Return the whole thing if it looks like article data
             if 'title' in extractor_data or 'text' in extractor_data:
-                return extractor_data
+                default_article.update(extractor_data)
+                default_article['extraction_successful'] = True
+                return default_article
     
     # Strategy 3: Check in data.article
     if 'data' in pipeline_results and isinstance(pipeline_results['data'], dict):
-        if 'article' in pipeline_results['data']:
-            return pipeline_results['data']['article']
+        if 'article' in pipeline_results['data'] and isinstance(pipeline_results['data']['article'], dict):
+            default_article.update(pipeline_results['data']['article'])
+            default_article['extraction_successful'] = True
+            return default_article
     
-    # Strategy 4: Check detailed_analysis.data.article
-    if ('detailed_analysis' in pipeline_results and 
-        isinstance(pipeline_results['detailed_analysis'], dict) and
-        'data' in pipeline_results['detailed_analysis']):
-        wrapped_data = pipeline_results['detailed_analysis']['data']
-        if isinstance(wrapped_data, dict) and 'article' in wrapped_data:
-            return wrapped_data['article']
+    # Strategy 4: Check services in detailed_analysis
+    if 'detailed_analysis' in pipeline_results and isinstance(pipeline_results['detailed_analysis'], dict):
+        if 'article_extractor' in pipeline_results['detailed_analysis']:
+            extractor = pipeline_results['detailed_analysis']['article_extractor']
+            if isinstance(extractor, dict):
+                if 'data' in extractor:
+                    default_article.update(extractor['data'])
+                else:
+                    default_article.update(extractor)
+                default_article['extraction_successful'] = True
+                return default_article
     
-    # Fallback
-    return {
-        'title': 'Unknown Title',
-        'url': content if content_type == 'url' else '',
-        'text': content if content_type == 'text' else '',
-        'extraction_successful': False,
-        'error': 'Could not extract article data'
-    }
+    # Return default with whatever we have
+    return default_article
 
-def extract_analysis_data(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract analysis data with fallback strategies"""
+def extract_analysis_data(pipeline_results: Dict[str, Any], service_results: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract analysis data with enhanced calculations"""
     
     analysis_data = {
         'trust_score': 50,
-        'trust_level': 'Unknown', 
+        'trust_level': 'Moderate', 
         'key_findings': [],
         'summary': 'Analysis completed'
     }
     
-    # Strategy 1: Check top-level fields (based on your logs)
+    # Strategy 1: Check top-level fields
     if 'trust_score' in pipeline_results:
         analysis_data['trust_score'] = pipeline_results['trust_score']
     if 'trust_level' in pipeline_results:
@@ -344,16 +427,50 @@ def extract_analysis_data(pipeline_results: Dict[str, Any]) -> Dict[str, Any]:
     
     # Strategy 2: Check in data.analysis
     if 'data' in pipeline_results and isinstance(pipeline_results['data'], dict):
-        if 'analysis' in pipeline_results['data']:
+        if 'analysis' in pipeline_results['data'] and isinstance(pipeline_results['data']['analysis'], dict):
             analysis_data.update(pipeline_results['data']['analysis'])
     
-    # Strategy 3: Check detailed_analysis.data.analysis
-    if ('detailed_analysis' in pipeline_results and 
-        isinstance(pipeline_results['detailed_analysis'], dict) and
-        'data' in pipeline_results['detailed_analysis']):
-        wrapped_data = pipeline_results['detailed_analysis']['data']
-        if isinstance(wrapped_data, dict) and 'analysis' in wrapped_data:
-            analysis_data.update(wrapped_data['analysis'])
+    # If no trust score, calculate from services
+    if analysis_data['trust_score'] == 50 and service_results:
+        scores = []
+        weights = {
+            'source_credibility': 2.0,
+            'author_analyzer': 1.5,
+            'fact_checker': 2.0,
+            'bias_detector': 1.5,
+            'transparency_analyzer': 1.0,
+            'manipulation_detector': 1.5,
+            'content_analyzer': 0.5
+        }
+        
+        total_weight = 0
+        weighted_sum = 0
+        
+        for service_name, service_data in service_results.items():
+            if isinstance(service_data, dict) and 'score' in service_data:
+                score = service_data['score']
+                if isinstance(score, (int, float)) and score > 0:
+                    weight = weights.get(service_name, 1.0)
+                    weighted_sum += score * weight
+                    total_weight += weight
+        
+        if total_weight > 0:
+            analysis_data['trust_score'] = round(weighted_sum / total_weight)
+    
+    # Calculate trust level from score
+    trust_score = analysis_data['trust_score']
+    if trust_score >= 80:
+        analysis_data['trust_level'] = 'Very High'
+    elif trust_score >= 70:
+        analysis_data['trust_level'] = 'High'
+    elif trust_score >= 60:
+        analysis_data['trust_level'] = 'Good'
+    elif trust_score >= 40:
+        analysis_data['trust_level'] = 'Moderate'
+    elif trust_score >= 20:
+        analysis_data['trust_level'] = 'Low'
+    else:
+        analysis_data['trust_level'] = 'Very Low'
     
     return analysis_data
 
@@ -382,35 +499,35 @@ def generate_enhanced_summary(service_results: Dict[str, Any], analysis_data: Di
         cred_score = service_results['source_credibility'].get('score', 0)
         if cred_score >= 80:
             findings.append("highly credible source")
-        elif cred_score < 40:
+        elif cred_score < 40 and cred_score > 0:
             findings.append("questionable source credibility")
     
     if 'bias_detector' in service_results:
         bias_score = service_results['bias_detector'].get('score', 0)
         if bias_score >= 70:
             findings.append("significant bias detected")
-        elif bias_score < 30:
+        elif bias_score < 30 and bias_score > 0:
             findings.append("minimal bias")
     
     if 'author_analyzer' in service_results:
         author_score = service_results['author_analyzer'].get('score', 0)
         if author_score >= 80:
             findings.append("authoritative author")
-        elif author_score < 40:
+        elif author_score < 40 and author_score > 0:
             findings.append("limited author credentials")
     
     if 'transparency_analyzer' in service_results:
         trans_score = service_results['transparency_analyzer'].get('score', 0)
         if trans_score >= 80:
             findings.append("excellent transparency")
-        elif trans_score < 40:
+        elif trans_score < 40 and trans_score > 0:
             findings.append("poor transparency")
     
-    # GRAMMAR FIX: Combine findings properly
+    # Combine findings properly
     if findings:
         summary_parts.append("with " + ", ".join(findings))
     
-    # GRAMMAR FIX: Add recommendation with proper punctuation
+    # Add recommendation
     recommendation = ""
     if trust_score >= 70:
         recommendation = "This content can be considered reliable for informational purposes."
@@ -419,7 +536,7 @@ def generate_enhanced_summary(service_results: Dict[str, Any], analysis_data: Di
     else:
         recommendation = "Approach this content with significant caution and verify claims independently."
     
-    # GRAMMAR FIX: Properly join with period
+    # Join with proper punctuation
     base_summary = " ".join(summary_parts)
     return f"{base_summary}. {recommendation}"
 
@@ -446,7 +563,7 @@ def health():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Main analysis endpoint - BULLETPROOF VERSION
+    Main analysis endpoint - FIXED VERSION
     """
     try:
         # Parse request data
@@ -493,11 +610,12 @@ def analyze():
         
         total_time = time.time() - start_time
         
-        # Check if analysis failed
-        if not pipeline_results.get('success', False):
+        # Check if analysis completely failed
+        if not pipeline_results or (not pipeline_results.get('success', True) and 'data' not in pipeline_results):
             logger.warning("Pipeline reported failure")
-            error_msg = pipeline_results.get('error', 'Analysis failed')
+            error_msg = pipeline_results.get('error', 'Analysis failed') if pipeline_results else 'Analysis failed'
             
+            # Still provide a response structure for frontend
             return jsonify({
                 'success': False,
                 'error': error_msg,
@@ -523,19 +641,19 @@ def analyze():
                 }
             }), 200
         
-        # CRITICAL FIX: Extract all data components using the corrected methods
+        # Extract all data components
         service_results = extract_services_from_pipeline(pipeline_results)
         article_data = extract_article_data(pipeline_results, content, content_type)
-        analysis_data = extract_analysis_data(pipeline_results)
+        analysis_data = extract_analysis_data(pipeline_results, service_results)
+        
+        # Generate key findings
+        key_findings = extract_key_findings_from_services(service_results)
+        if key_findings:
+            analysis_data['key_findings'] = key_findings
         
         # Generate enhanced summary
         if not analysis_data.get('summary') or analysis_data['summary'] == 'Analysis completed':
             analysis_data['summary'] = generate_enhanced_summary(service_results, analysis_data)
-        
-        # Generate key findings from services
-        key_findings = extract_key_findings_from_services(service_results)
-        if key_findings:
-            analysis_data['key_findings'] = key_findings
         
         # Build response
         response_data = {
@@ -543,10 +661,10 @@ def analyze():
             'data': {
                 'article': article_data,
                 'analysis': analysis_data,
-                'detailed_analysis': service_results
+                'detailed_analysis': service_results  # All services included
             },
             'metadata': {
-                'analysis_time': total_time,
+                'analysis_time': round(total_time, 2),
                 'timestamp': datetime.now().isoformat(),
                 'services_available': len(service_results),
                 'services_with_data': sum(1 for s in service_results.values() if s.get('score', 0) > 0),
@@ -561,17 +679,20 @@ def analyze():
         logger.info(f"Success: {response_data['success']}")
         logger.info(f"Article title: {response_data['data']['article'].get('title', 'N/A')}")
         logger.info(f"Trust score: {response_data['data']['analysis'].get('trust_score', 'N/A')}")
+        logger.info(f"Trust level: {response_data['data']['analysis'].get('trust_level', 'N/A')}")
         logger.info(f"Services in detailed_analysis: {list(response_data['data']['detailed_analysis'].keys())}")
         
         services_with_scores = 0
         for service_name, service_data in response_data['data']['detailed_analysis'].items():
             score = service_data.get('score', 'N/A')
             level = service_data.get('level', 'N/A')
+            status = service_data.get('status', 'unknown')
             if isinstance(score, (int, float)) and score > 0:
                 services_with_scores += 1
-            logger.info(f"  {service_name}: score={score}, level={level}")
+            logger.info(f"  {service_name}: score={score}, level={level}, status={status}")
         
         logger.info(f"Services with valid scores: {services_with_scores}")
+        logger.info(f"Key findings: {len(key_findings)}")
         logger.info("=" * 100)
         
         return jsonify(response_data)
@@ -591,7 +712,7 @@ def analyze():
 # Debug endpoints
 @app.route('/api/debug/test-extraction', methods=['POST'])
 def test_extraction():
-    """Debug endpoint"""
+    """Debug endpoint for testing article extraction"""
     try:
         data = request.get_json() or {}
         url = data.get('url', 'https://www.reuters.com/technology/')
@@ -620,22 +741,68 @@ def test_extraction():
 
 @app.route('/api/status')
 def api_status():
-    """Get API status"""
-    return jsonify(news_analyzer.get_available_services())
+    """Get API and services status"""
+    registry = get_service_registry()
+    service_status = registry.get_service_status()
+    
+    return jsonify({
+        'api': 'online',
+        'timestamp': datetime.now().isoformat(),
+        'services': service_status,
+        'available_services': news_analyzer.get_available_services()
+    })
 
 @app.route('/api/debug/services')
 def debug_services():
-    """Get service debug info"""
+    """Get detailed service debug information"""
     registry = get_service_registry()
+    status = registry.get_service_status()
+    
+    # Add more detailed information
+    for service_name, service_info in status['services'].items():
+        if registry.is_service_available(service_name):
+            # Test the service with minimal data
+            test_result = registry.analyze_with_service(service_name, {'text': 'test'})
+            service_info['test_successful'] = test_result.get('success', False)
+        else:
+            service_info['test_successful'] = False
+    
     return jsonify({
-        'status': registry.get_service_status(),
-        'performance': performance_stats
+        'status': status,
+        'performance': performance_stats,
+        'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/debug/pipeline-test', methods=['POST'])
+def pipeline_test():
+    """Test the full pipeline with debug output"""
+    try:
+        data = request.get_json() or {}
+        url = data.get('url', 'https://www.reuters.com/')
+        
+        # Run minimal analysis
+        pipeline_results = news_analyzer.analyze(url, 'url', False)
+        
+        # Extract services
+        service_results = extract_services_from_pipeline(pipeline_results)
+        
+        return jsonify({
+            'success': True,
+            'pipeline_keys': list(pipeline_results.keys()),
+            'services_extracted': list(service_results.keys()),
+            'service_scores': {
+                name: data.get('score', 'N/A') 
+                for name, data in service_results.items()
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/templates/<path:filename>')
 def serve_template(filename):
-    """Serve template files"""
+    """Serve template files for frontend pages"""
     try:
+        # Security check
         if '..' in filename or filename.startswith('/'):
             return "Invalid path", 400
         return send_from_directory('templates', filename)
