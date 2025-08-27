@@ -83,6 +83,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             position: relative;
+            padding-top: 60px; /* Add padding to account for fixed header */
         }
 
         /* Animated Background */
@@ -113,8 +114,10 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: var(--shadow-sm);
-            position: sticky;
+            position: fixed; /* Changed from sticky to fixed */
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 100;
         }
 
@@ -203,7 +206,7 @@
         .main-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 3rem 2rem;
+            padding: 2rem 2rem 3rem 2rem; /* Reduced top padding since body has padding now */
         }
 
         /* Analysis Section */
@@ -1045,6 +1048,14 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             startProgress() {
                 this.progressContainer.classList.add('active');
                 this.resetProgress();
+                
+                // Scroll to show progress bar when it appears
+                setTimeout(() => {
+                    this.progressContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center'
+                    });
+                }, 100);
                 
                 let currentStep = 0;
                 let progress = 0;
