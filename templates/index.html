@@ -733,6 +733,223 @@
             line-height: 1.6;
         }
 
+        /* Author Card Styles */
+        .author-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .author-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--purple) 0%, var(--indigo) 50%, var(--primary) 100%);
+        }
+
+        .author-card-header {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .author-photo-container {
+            flex-shrink: 0;
+        }
+
+        .author-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--purple);
+        }
+
+        .author-photo-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .author-header-info {
+            flex: 1;
+        }
+
+        .author-name {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+
+        .author-position {
+            color: var(--gray-600);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .author-credibility {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: var(--radius-full);
+        }
+
+        .credibility-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .credibility-score {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--purple);
+        }
+
+        .author-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .author-bio {
+            margin-bottom: 1.5rem;
+        }
+
+        #authorBioText {
+            color: var(--gray-700);
+            line-height: 1.6;
+        }
+
+        .author-credentials {
+            margin-bottom: 1.5rem;
+        }
+
+        .credentials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .credential-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+        }
+
+        .credential-item i {
+            color: var(--purple);
+            font-size: 1.25rem;
+        }
+
+        .author-social {
+            margin-bottom: 1.5rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .social-link.linkedin {
+            background: rgba(10, 102, 194, 0.1);
+            color: #0a66c2;
+            border-color: #0a66c2;
+        }
+
+        .social-link.linkedin:hover {
+            background: #0a66c2;
+            color: white;
+        }
+
+        .social-link.twitter {
+            background: rgba(29, 155, 240, 0.1);
+            color: #1d9bf0;
+            border-color: #1d9bf0;
+        }
+
+        .social-link.twitter:hover {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .social-link.profile {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--purple);
+            border-color: var(--purple);
+        }
+
+        .social-link.profile:hover {
+            background: var(--purple);
+            color: white;
+        }
+
+        .recent-articles-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .recent-article-item {
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--purple);
+        }
+
+        .recent-article-title {
+            font-weight: 500;
+            color: var(--gray-800);
+            margin-bottom: 0.25rem;
+        }
+
+        .recent-article-meta {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .main-container {
@@ -941,6 +1158,69 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                         <div class="findings-summary" id="findingsSummary">
                             Loading analysis findings...
                         </div>
+                    </div>
+                </div>
+
+                <!-- Author Details Card -->
+                <div class="author-card" id="authorCard" style="display: none;">
+                    <div class="author-card-header">
+                        <div class="author-photo-container">
+                            <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
+                            <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                        <div class="author-header-info">
+                            <h3 class="author-name" id="authorName">Author Name</h3>
+                            <p class="author-position" id="authorPosition"></p>
+                            <div class="author-credibility">
+                                <span class="credibility-label">Credibility Score:</span>
+                                <span class="credibility-score" id="authorCredibility">0/100</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="author-bio" id="authorBio" style="display: none;">
+                        <h4 class="author-section-title">Biography</h4>
+                        <p id="authorBioText"></p>
+                    </div>
+                    
+                    <div class="author-credentials" id="authorCredentials" style="display: none;">
+                        <h4 class="author-section-title">Professional Details</h4>
+                        <div class="credentials-grid">
+                            <div class="credential-item" id="articleCountItem" style="display: none;">
+                                <i class="fas fa-newspaper"></i>
+                                <span id="articleCount">0 articles</span>
+                            </div>
+                            <div class="credential-item" id="expertiseItem" style="display: none;">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span id="expertiseAreas">No expertise listed</span>
+                            </div>
+                            <div class="credential-item" id="awardsItem" style="display: none;">
+                                <i class="fas fa-trophy"></i>
+                                <span id="awards">No awards listed</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="author-social" id="authorSocial" style="display: none;">
+                        <h4 class="author-section-title">Professional Profiles</h4>
+                        <div class="social-links">
+                            <a id="linkedinLink" class="social-link linkedin" href="#" target="_blank" style="display: none;">
+                                <i class="fab fa-linkedin"></i> LinkedIn
+                            </a>
+                            <a id="twitterLink" class="social-link twitter" href="#" target="_blank" style="display: none;">
+                                <i class="fab fa-twitter"></i> Twitter
+                            </a>
+                            <a id="authorProfileLink" class="social-link profile" href="#" target="_blank" style="display: none;">
+                                <i class="fas fa-user-circle"></i> Author Profile
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="author-recent-work" id="authorRecentWork" style="display: none;">
+                        <h4 class="author-section-title">Recent Articles</h4>
+                        <ul id="recentArticlesList" class="recent-articles-list"></ul>
                     </div>
                 </div>
             </div>
@@ -1167,8 +1447,158 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 document.getElementById('articleAuthor').textContent = author;
                 document.getElementById('findingsSummary').textContent = findingsSummary;
                 
+                // Populate author card if author data is available
+                this.displayAuthorCard(data);
+                
                 // Show results
                 this.showResults();
+            }
+
+            displayAuthorCard(data) {
+                const authorCard = document.getElementById('authorCard');
+                
+                // Check if we have author data
+                if (!data.author || data.author === 'Unknown') {
+                    authorCard.style.display = 'none';
+                    return;
+                }
+                
+                // Show the card
+                authorCard.style.display = 'block';
+                
+                // Set author name
+                const authorNameEl = document.getElementById('authorName');
+                authorNameEl.textContent = data.author;
+                
+                // Set position if available
+                const authorPositionEl = document.getElementById('authorPosition');
+                if (data.author_position) {
+                    authorPositionEl.textContent = data.author_position;
+                    authorPositionEl.style.display = 'block';
+                } else {
+                    authorPositionEl.style.display = 'none';
+                }
+                
+                // Set credibility score
+                const credibilityScore = data.author_credibility || data.author_score || 0;
+                document.getElementById('authorCredibility').textContent = `${credibilityScore}/100`;
+                
+                // Set author photo
+                const authorPhoto = document.getElementById('authorPhoto');
+                const photoPlaceholder = document.getElementById('authorPhotoPlaceholder');
+                if (data.author_photo) {
+                    authorPhoto.src = data.author_photo;
+                    authorPhoto.style.display = 'block';
+                    photoPlaceholder.style.display = 'none';
+                } else {
+                    authorPhoto.style.display = 'none';
+                    photoPlaceholder.style.display = 'flex';
+                }
+                
+                // Set biography
+                const authorBioSection = document.getElementById('authorBio');
+                if (data.author_bio) {
+                    document.getElementById('authorBioText').textContent = data.author_bio;
+                    authorBioSection.style.display = 'block';
+                } else {
+                    authorBioSection.style.display = 'none';
+                }
+                
+                // Set credentials section
+                const credentialsSection = document.getElementById('authorCredentials');
+                let hasCredentials = false;
+                
+                // Article count
+                const articleCountItem = document.getElementById('articleCountItem');
+                if (data.author_articles && data.author_articles > 0) {
+                    document.getElementById('articleCount').textContent = `${data.author_articles} articles published`;
+                    articleCountItem.style.display = 'flex';
+                    hasCredentials = true;
+                } else {
+                    articleCountItem.style.display = 'none';
+                }
+                
+                // Expertise areas
+                const expertiseItem = document.getElementById('expertiseItem');
+                if (data.author_expertise && data.author_expertise.length > 0) {
+                    const expertiseText = data.author_expertise.slice(0, 3).join(', ');
+                    document.getElementById('expertiseAreas').textContent = expertiseText;
+                    expertiseItem.style.display = 'flex';
+                    hasCredentials = true;
+                } else {
+                    expertiseItem.style.display = 'none';
+                }
+                
+                // Awards
+                const awardsItem = document.getElementById('awardsItem');
+                if (data.author_awards && data.author_awards.length > 0) {
+                    const awardsCount = data.author_awards.length;
+                    document.getElementById('awards').textContent = `${awardsCount} professional recognition${awardsCount > 1 ? 's' : ''}`;
+                    awardsItem.style.display = 'flex';
+                    hasCredentials = true;
+                } else {
+                    awardsItem.style.display = 'none';
+                }
+                
+                credentialsSection.style.display = hasCredentials ? 'block' : 'none';
+                
+                // Set social links
+                const socialSection = document.getElementById('authorSocial');
+                let hasSocial = false;
+                
+                // LinkedIn
+                const linkedinLink = document.getElementById('linkedinLink');
+                if (data.author_linkedin) {
+                    linkedinLink.href = data.author_linkedin;
+                    linkedinLink.style.display = 'inline-flex';
+                    hasSocial = true;
+                } else {
+                    linkedinLink.style.display = 'none';
+                }
+                
+                // Twitter
+                const twitterLink = document.getElementById('twitterLink');
+                if (data.author_twitter) {
+                    twitterLink.href = data.author_twitter;
+                    twitterLink.style.display = 'inline-flex';
+                    hasSocial = true;
+                } else {
+                    twitterLink.style.display = 'none';
+                }
+                
+                // Author profile
+                const profileLink = document.getElementById('authorProfileLink');
+                if (data.author_link) {
+                    profileLink.href = data.author_link;
+                    profileLink.style.display = 'inline-flex';
+                    hasSocial = true;
+                } else {
+                    profileLink.style.display = 'none';
+                }
+                
+                socialSection.style.display = hasSocial ? 'block' : 'none';
+                
+                // Set recent articles
+                const recentWorkSection = document.getElementById('authorRecentWork');
+                const recentArticlesList = document.getElementById('recentArticlesList');
+                
+                if (data.author_recent_articles && data.author_recent_articles.length > 0) {
+                    recentArticlesList.innerHTML = '';
+                    data.author_recent_articles.slice(0, 5).forEach(article => {
+                        const li = document.createElement('li');
+                        li.className = 'recent-article-item';
+                        li.innerHTML = `
+                            <div class="recent-article-title">${article.title || 'Untitled'}</div>
+                            <div class="recent-article-meta">
+                                ${article.source || ''} ${article.published_at ? '• ' + new Date(article.published_at).toLocaleDateString() : ''}
+                            </div>
+                        `;
+                        recentArticlesList.appendChild(li);
+                    });
+                    recentWorkSection.style.display = 'block';
+                } else {
+                    recentWorkSection.style.display = 'none';
+                }
             }
 
             updateTrustScore(score) {
