@@ -83,7 +83,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             position: relative;
-            padding-top: 60px; /* Add padding to account for fixed header */
+            padding-top: 80px; /* Increased padding to prevent header overlap */
         }
 
         /* Animated Background */
@@ -114,11 +114,12 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: var(--shadow-sm);
-            position: fixed; /* Changed from sticky to fixed */
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 100;
+            height: 70px; /* Fixed header height */
         }
 
         .header-content {
@@ -128,6 +129,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 100%;
         }
 
         .logo {
@@ -206,7 +208,7 @@
         .main-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem 2rem 3rem 2rem; /* Reduced top padding since body has padding now */
+            padding: 2rem 2rem 3rem 2rem;
         }
 
         /* Analysis Section */
@@ -361,8 +363,15 @@
             font-family: var(--font-sans);
         }
 
+        /* Button Container */
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
         .analyze-button {
-            width: 100%;
+            flex: 1;
             background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
             color: white;
             border: none;
@@ -386,27 +395,28 @@
             transform: none;
         }
 
+        /* Smaller Reset Button */
         .reset-button {
-            width: 100%;
-            background: linear-gradient(135deg, var(--gray-600) 0%, var(--gray-700) 100%);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
+            padding: 1rem 1.5rem;
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
             border-radius: var(--radius-lg);
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-            margin-top: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            white-space: nowrap;
         }
 
         .reset-button:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
             transform: translateY(-1px);
-            box-shadow: 0 8px 15px rgba(71, 85, 105, 0.3);
         }
 
         .button-content {
@@ -517,17 +527,21 @@
             margin-bottom: 1rem;
         }
 
+        /* Progress Steps - Fixed Layout */
         .progress-steps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: flex;
+            justify-content: space-between;
             gap: 1rem;
+            flex-wrap: wrap;
         }
 
         .progress-step {
+            flex: 1;
+            min-width: 130px;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            gap: 0.5rem;
+            padding: 0.5rem;
             border-radius: var(--radius-lg);
             background: rgba(255, 255, 255, 0.5);
             border: 1px solid transparent;
@@ -555,6 +569,7 @@
             background: var(--gray-300);
             color: var(--gray-600);
             transition: var(--transition);
+            flex-shrink: 0;
         }
 
         .progress-step.active .step-icon {
@@ -574,9 +589,10 @@
         }
 
         .step-text {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: var(--gray-700);
+            line-height: 1.2;
         }
 
         .progress-step.active .step-text {
@@ -614,11 +630,11 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Analysis Overview Container */
+        /* Analysis Overview Container - With Colored Border */
         .analysis-overview {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid transparent;
             border-radius: var(--radius-2xl);
             padding: 2rem;
             margin-bottom: 2rem;
@@ -627,6 +643,23 @@
             display: flex;
             gap: 2rem;
             align-items: center;
+            background-clip: padding-box;
+        }
+
+        /* Dynamic border color based on trust score */
+        .analysis-overview.trust-high {
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .analysis-overview.trust-medium {
+            border-color: var(--warning);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+        }
+
+        .analysis-overview.trust-low {
+            border-color: var(--danger);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
         }
 
         .analysis-overview::before {
@@ -660,21 +693,21 @@
             background-clip: text;
         }
 
-        .trust-high { 
+        .trust-high .trust-score-number { 
             background: linear-gradient(135deg, var(--success) 0%, var(--teal) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
         
-        .trust-medium { 
+        .trust-medium .trust-score-number { 
             background: linear-gradient(135deg, var(--warning) 0%, var(--orange) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
         
-        .trust-low { 
+        .trust-low .trust-score-number { 
             background: linear-gradient(135deg, var(--danger) 0%, var(--pink) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -733,17 +766,74 @@
             line-height: 1.6;
         }
 
-        /* Author Card Styles */
+        /* Author Analysis Dropdown */
+        .author-dropdown {
+            margin-top: 2rem;
+        }
+
+        .author-dropdown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
+            color: white;
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+        }
+
+        .author-dropdown-header:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .author-dropdown-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .dropdown-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .author-dropdown.expanded .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Author Card - Hidden by default, shown when dropdown expanded */
         .author-card {
+            display: none;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 2px solid rgba(139, 92, 246, 0.2);
             border-radius: var(--radius-xl);
             padding: 2rem;
-            margin-top: 2rem;
+            margin-top: 1rem;
             box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .author-dropdown.expanded .author-card {
+            display: block;
         }
 
         .author-card::before {
@@ -975,6 +1065,10 @@
 
         /* Responsive Design */
         @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+
             .main-container {
                 padding: 2rem 1rem;
             }
@@ -997,8 +1091,20 @@
                 gap: 1rem;
             }
 
+            .button-container {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .analyze-button,
+            .reset-button {
+                width: 100%;
+            }
+
             .progress-steps {
-                grid-template-columns: 1fr;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
             }
 
             .nav-links {
@@ -1093,19 +1199,20 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                     ></textarea>
                 </div>
 
-                <button type="submit" class="analyze-button" id="analyzeBtn">
-                    <div class="button-content">
-                        <span class="button-text">
-                            <i class="fas fa-search"></i>
-                            Analyze Article
-                        </span>
-                    </div>
-                </button>
-
-                <button type="button" class="reset-button" id="resetBtn">
-                    <i class="fas fa-redo"></i>
-                    Reset & Analyze New Article
-                </button>
+                <div class="button-container">
+                    <button type="submit" class="analyze-button" id="analyzeBtn">
+                        <div class="button-content">
+                            <span class="button-text">
+                                <i class="fas fa-search"></i>
+                                Analyze Article
+                            </span>
+                        </div>
+                    </button>
+                    <button type="button" class="reset-button" id="resetBtn">
+                        <i class="fas fa-redo"></i>
+                        Reset
+                    </button>
+                </div>
             </form>
 
             <!-- Progress Container -->
@@ -1124,27 +1231,27 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 <div class="progress-steps" id="progressSteps">
                     <div class="progress-step" data-step="0">
                         <div class="step-icon">1</div>
-                        <div class="step-text">Extracting Content</div>
+                        <div class="step-text">Extracting</div>
                     </div>
                     <div class="progress-step" data-step="1">
                         <div class="step-icon">2</div>
-                        <div class="step-text">Source Analysis</div>
+                        <div class="step-text">Source</div>
                     </div>
                     <div class="progress-step" data-step="2">
                         <div class="step-icon">3</div>
-                        <div class="step-text">Bias Detection</div>
+                        <div class="step-text">Bias</div>
                     </div>
                     <div class="progress-step" data-step="3">
                         <div class="step-icon">4</div>
-                        <div class="step-text">Fact Checking</div>
+                        <div class="step-text">Facts</div>
                     </div>
                     <div class="progress-step" data-step="4">
                         <div class="step-icon">5</div>
-                        <div class="step-text">Author Verification</div>
+                        <div class="step-text">Author</div>
                     </div>
                     <div class="progress-step" data-step="5">
                         <div class="step-icon">6</div>
-                        <div class="step-text">Final Analysis</div>
+                        <div class="step-text">Final</div>
                     </div>
                 </div>
             </div>
@@ -1156,7 +1263,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 </div>
 
                 <!-- Analysis Overview -->
-                <div class="analysis-overview">
+                <div class="analysis-overview" id="analysisOverview">
                     <div class="trust-score-graphic">
                         <div class="trust-score-number" id="trustScore">85</div>
                         <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
@@ -1184,66 +1291,77 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                     </div>
                 </div>
 
-                <!-- Author Details Card -->
-                <div class="author-card" id="authorCard" style="display: none;">
-                    <div class="author-card-header">
-                        <div class="author-photo-container">
-                            <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
-                            <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
-                                <i class="fas fa-user"></i>
-                            </div>
-                        </div>
-                        <div class="author-header-info">
-                            <h3 class="author-name" id="authorName">Author Name</h3>
-                            <p class="author-position" id="authorPosition"></p>
-                            <div class="author-credibility">
-                                <span class="credibility-label">Credibility Score:</span>
-                                <span class="credibility-score" id="authorCredibility">0/100</span>
-                            </div>
-                        </div>
+                <!-- Author Analysis Dropdown -->
+                <div class="author-dropdown" id="authorDropdown">
+                    <div class="author-dropdown-header" onclick="toggleAuthorDropdown()">
+                        <h3>
+                            <i class="fas fa-user-shield"></i>
+                            Author Analysis
+                        </h3>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
                     </div>
                     
-                    <div class="author-bio" id="authorBio" style="display: none;">
-                        <h4 class="author-section-title">Biography</h4>
-                        <p id="authorBioText"></p>
-                    </div>
-                    
-                    <div class="author-credentials" id="authorCredentials" style="display: none;">
-                        <h4 class="author-section-title">Professional Details</h4>
-                        <div class="credentials-grid">
-                            <div class="credential-item" id="articleCountItem" style="display: none;">
-                                <i class="fas fa-newspaper"></i>
-                                <span id="articleCount">0 articles</span>
+                    <!-- Author Details Card (Hidden by default) -->
+                    <div class="author-card" id="authorCard">
+                        <div class="author-card-header">
+                            <div class="author-photo-container">
+                                <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
+                                <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
+                                    <i class="fas fa-user"></i>
+                                </div>
                             </div>
-                            <div class="credential-item" id="expertiseItem" style="display: none;">
-                                <i class="fas fa-graduation-cap"></i>
-                                <span id="expertiseAreas">No expertise listed</span>
-                            </div>
-                            <div class="credential-item" id="awardsItem" style="display: none;">
-                                <i class="fas fa-trophy"></i>
-                                <span id="awards">No awards listed</span>
+                            <div class="author-header-info">
+                                <h3 class="author-name" id="authorName">Author Name</h3>
+                                <p class="author-position" id="authorPosition"></p>
+                                <div class="author-credibility">
+                                    <span class="credibility-label">Credibility Score:</span>
+                                    <span class="credibility-score" id="authorCredibility">0/100</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="author-social" id="authorSocial" style="display: none;">
-                        <h4 class="author-section-title">Professional Profiles</h4>
-                        <div class="social-links">
-                            <a id="linkedinLink" class="social-link linkedin" href="#" target="_blank" style="display: none;">
-                                <i class="fab fa-linkedin"></i> LinkedIn
-                            </a>
-                            <a id="twitterLink" class="social-link twitter" href="#" target="_blank" style="display: none;">
-                                <i class="fab fa-twitter"></i> Twitter
-                            </a>
-                            <a id="authorProfileLink" class="social-link profile" href="#" target="_blank" style="display: none;">
-                                <i class="fas fa-user-circle"></i> Author Profile
-                            </a>
+                        
+                        <div class="author-bio" id="authorBio" style="display: none;">
+                            <h4 class="author-section-title">Biography</h4>
+                            <p id="authorBioText"></p>
                         </div>
-                    </div>
-                    
-                    <div class="author-recent-work" id="authorRecentWork" style="display: none;">
-                        <h4 class="author-section-title">Recent Articles</h4>
-                        <ul id="recentArticlesList" class="recent-articles-list"></ul>
+                        
+                        <div class="author-credentials" id="authorCredentials" style="display: none;">
+                            <h4 class="author-section-title">Professional Details</h4>
+                            <div class="credentials-grid">
+                                <div class="credential-item" id="articleCountItem" style="display: none;">
+                                    <i class="fas fa-newspaper"></i>
+                                    <span id="articleCount">0 articles</span>
+                                </div>
+                                <div class="credential-item" id="expertiseItem" style="display: none;">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <span id="expertiseAreas">No expertise listed</span>
+                                </div>
+                                <div class="credential-item" id="awardsItem" style="display: none;">
+                                    <i class="fas fa-trophy"></i>
+                                    <span id="awards">No awards listed</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="author-social" id="authorSocial" style="display: none;">
+                            <h4 class="author-section-title">Professional Profiles</h4>
+                            <div class="social-links">
+                                <a id="linkedinLink" class="social-link linkedin" href="#" target="_blank" style="display: none;">
+                                    <i class="fab fa-linkedin"></i> LinkedIn
+                                </a>
+                                <a id="twitterLink" class="social-link twitter" href="#" target="_blank" style="display: none;">
+                                    <i class="fab fa-twitter"></i> Twitter
+                                </a>
+                                <a id="authorProfileLink" class="social-link profile" href="#" target="_blank" style="display: none;">
+                                    <i class="fas fa-user-circle"></i> Author Profile
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="author-recent-work" id="authorRecentWork" style="display: none;">
+                            <h4 class="author-section-title">Recent Articles</h4>
+                            <ul id="recentArticlesList" class="recent-articles-list"></ul>
+                        </div>
                     </div>
                 </div>
 
@@ -1257,6 +1375,12 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
     </main>
 
     <script>
+        // Toggle Author Dropdown
+        function toggleAuthorDropdown() {
+            const dropdown = document.getElementById('authorDropdown');
+            dropdown.classList.toggle('expanded');
+        }
+
         class TruthLensAnalyzer {
             constructor() {
                 this.form = document.getElementById('analysisForm');
@@ -1302,6 +1426,9 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 
                 // Reset progress
                 this.resetProgress();
+                
+                // Collapse author dropdown
+                document.getElementById('authorDropdown').classList.remove('expanded');
                 
                 // Hide debug info
                 document.getElementById('debugInfo').style.display = 'none';
@@ -1475,6 +1602,17 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 // Update trust score and label
                 this.updateTrustScore(trustScore);
                 
+                // Update trust score border color
+                const overviewEl = document.getElementById('analysisOverview');
+                overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
+                if (trustScore >= 70) {
+                    overviewEl.classList.add('trust-high');
+                } else if (trustScore >= 40) {
+                    overviewEl.classList.add('trust-medium');
+                } else {
+                    overviewEl.classList.add('trust-low');
+                }
+                
                 // Update the overview content
                 document.getElementById('articleSummary').textContent = 
                     articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
@@ -1490,8 +1628,6 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             }
 
             displayAuthorCard(data) {
-                const authorCard = document.getElementById('authorCard');
-                
                 console.log('displayAuthorCard called with:', {
                     author: data.author,
                     author_bio: data.author_bio,
@@ -1505,14 +1641,14 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 
                 // Check if we have author data
                 if (!data.author || data.author === 'Unknown') {
-                    console.log('No author data, hiding card');
-                    authorCard.style.display = 'none';
+                    console.log('No author data, hiding dropdown');
+                    document.getElementById('authorDropdown').style.display = 'none';
                     return;
                 }
                 
-                // Show the card
-                authorCard.style.display = 'block';
-                console.log('Showing author card');
+                // Show the dropdown
+                document.getElementById('authorDropdown').style.display = 'block';
+                console.log('Showing author dropdown');
                 
                 // Set author name
                 const authorNameEl = document.getElementById('authorName');
@@ -1818,3 +1954,4 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
     </script>
 </body>
 </html>
+                        
