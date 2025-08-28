@@ -393,9 +393,9 @@ def analyze():
         
         # Run analysis through NewsAnalyzer
         try:
-            pipeline_results = news_analyzer.analyze_article(
-                url=url if url else None,
-                text=text if text else None
+            pipeline_results = news_analyzer.analyze(
+                content=url if url else text,
+                content_type='url' if url else 'text'
             )
             
             logger.info(f"Pipeline completed. Keys: {list(pipeline_results.keys())}")
