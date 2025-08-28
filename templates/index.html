@@ -1809,14 +1809,42 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 const debugInfo = document.getElementById('debugInfo');
                 const debugData = document.getElementById('debugData');
                 
+                // Extract article text from multiple possible locations
+                let articleText = '';
+                
+                // Try to get text from various places in the response
+                if (data.text && data.text !== 'No text') {
+                    articleText = data.text;
+                } else if (data.detailed_analysis && data.detailed_analysis.article_extractor) {
+                    const extractor = data.detailed_analysis.article_extractor;
+                    if (extractor.data && extractor.data.text) {
+                        articleText = extractor.data.text;
+                    } else if (extractor.text) {
+                        articleText = extractor.text;
+                    }
+                } else if (data.detailed_analysis && data.detailed_analysis.data && data.detailed_analysis.data.article) {
+                    const article = data.detailed_analysis.data.article;
+                    if (article.text) {
+                        articleText = article.text;
+                    }
+                }
+                
+                // Store the article text for author extraction
+                if (articleText) {
+                    data.text = articleText;
+                    console.log('Found article text for extraction:', articleText.length, 'characters');
+                }
+                
                 // Only show in development (you can remove this in production)
                 if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
                     debugData.textContent = JSON.stringify({
                         author: data.author,
                         detailed_analysis: data.detailed_analysis,
                         article: data.article,
-                        text_preview: data.text ? data.text.substring(0, 200) + '...' : 'No text',
-                        title: data.title
+                        text_preview: articleText ? articleText.substring(0, 200) + '...' : 'No text',
+                        title: data.title,
+                        text_found: !!articleText,
+                        text_length: articleText ? articleText.length : 0
                     }, null, 2);
                     debugInfo.style.display = 'block';
                 }
@@ -1876,8 +1904,8 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             
             console.log('Extracted author name:', authorName);
             
-            // Check if we have valid author data
-            if (!authorName || authorName === 'Unknown' || authorName === 'Unknown Author' || authorName.trim() === '') {
+            // Only hide card if we truly cannot extract any author information
+            if (!authorName || authorName.trim() === '') {
                 console.log('No valid author data available, hiding card');
                 authorCard.style.display = 'none';
                 return;
