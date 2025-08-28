@@ -1301,69 +1301,93 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                         <i class="fas fa-chevron-down dropdown-arrow"></i>
                     </div>
                     
-                    <!-- Author Details Card (Hidden by default) -->
-                    <div class="author-card" id="authorCard">
-                        <div class="author-card-header">
-                            <div class="author-photo-container">
-                                <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
-                                <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                            </div>
-                            <div class="author-header-info">
-                                <h3 class="author-name" id="authorName">Author Name</h3>
-                                <p class="author-position" id="authorPosition"></p>
-                                <div class="author-credibility">
-                                    <span class="credibility-label">Credibility Score:</span>
-                                    <span class="credibility-score" id="authorCredibility">0/100</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="author-bio" id="authorBio" style="display: none;">
-                            <h4 class="author-section-title">Biography</h4>
-                            <p id="authorBioText"></p>
-                        </div>
-                        
-                        <div class="author-credentials" id="authorCredentials" style="display: none;">
-                            <h4 class="author-section-title">Professional Details</h4>
-                            <div class="credentials-grid">
-                                <div class="credential-item" id="articleCountItem" style="display: none;">
-                                    <i class="fas fa-newspaper"></i>
-                                    <span id="articleCount">0 articles</span>
-                                </div>
-                                <div class="credential-item" id="expertiseItem" style="display: none;">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <span id="expertiseAreas">No expertise listed</span>
-                                </div>
-                                <div class="credential-item" id="awardsItem" style="display: none;">
-                                    <i class="fas fa-trophy"></i>
-                                    <span id="awards">No awards listed</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="author-social" id="authorSocial" style="display: none;">
-                            <h4 class="author-section-title">Professional Profiles</h4>
-                            <div class="social-links">
-                                <a id="linkedinLink" class="social-link linkedin" href="#" target="_blank" style="display: none;">
-                                    <i class="fab fa-linkedin"></i> LinkedIn
-                                </a>
-                                <a id="twitterLink" class="social-link twitter" href="#" target="_blank" style="display: none;">
-                                    <i class="fab fa-twitter"></i> Twitter
-                                </a>
-                                <a id="authorProfileLink" class="social-link profile" href="#" target="_blank" style="display: none;">
-                                    <i class="fas fa-user-circle"></i> Author Profile
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="author-recent-work" id="authorRecentWork" style="display: none;">
-                            <h4 class="author-section-title">Recent Articles</h4>
-                            <ul id="recentArticlesList" class="recent-articles-list"></ul>
-                        </div>
-                    </div>
-                </div>
+                    <!-- Enhanced Author Details Card -->
+<div class="author-card" id="authorCard">
+    <!-- Header with Photo and Basic Info -->
+    <div class="author-card-header">
+        <div class="author-photo-container">
+            <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
+            <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
+                <i class="fas fa-user"></i>
+            </div>
+            <div id="verificationBadge" class="verification-badge" style="display: none;">
+                <i class="fas fa-check"></i>
+            </div>
+        </div>
+        <div class="author-header-info">
+            <h3 class="author-name" id="authorName">Author Name</h3>
+            <p class="author-position" id="authorPosition">Professional Journalist</p>
+            <div class="author-credibility">
+                <span class="credibility-label">Credibility:</span>
+                <span class="credibility-score" id="authorCredibilityScore">0/100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Profile Links -->
+    <div class="author-profiles" id="authorProfiles" style="display: none;">
+        <h4 class="author-section-title">
+            <i class="fas fa-link"></i>
+            Professional Profiles
+        </h4>
+        <div class="profiles-grid" id="profilesGrid">
+            <!-- Profile links will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="author-stats" id="authorStats">
+        <div class="stat-item">
+            <span class="stat-number" id="articleCount">0</span>
+            <span class="stat-label">Articles</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="profilesCount">0</span>
+            <span class="stat-label">Profiles</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="awardsCount">0</span>
+            <span class="stat-label">Awards</span>
+        </div>
+    </div>
+
+    <!-- Biography -->
+    <div class="author-bio" id="authorBio" style="display: none;">
+        <h4 class="author-section-title">
+            <i class="fas fa-user-circle"></i>
+            Biography
+        </h4>
+        <p class="author-bio-text" id="authorBioText"></p>
+    </div>
+
+    <!-- Areas of Expertise -->
+    <div class="expertise-section" id="expertiseSection" style="display: none;">
+        <h4 class="author-section-title">
+            <i class="fas fa-brain"></i>
+            Areas of Expertise
+        </h4>
+        <div class="expertise-tags" id="expertiseTags">
+            <!-- Expertise tags will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Awards (if any) -->
+    <div class="awards-section" id="awardsSection" style="display: none;">
+        <h4 class="author-section-title">
+            <i class="fas fa-trophy"></i>
+            Awards & Recognition
+        </h4>
+        <div class="awards-list" id="awardsList">
+            <!-- Awards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- View Full Profile Button -->
+    <a href="/templates/author-analysis.html" class="view-profile-btn" id="viewProfileBtn">
+        <i class="fas fa-external-link-alt"></i>
+        View Full Author Profile
+    </a>
+</div>
 
                 <!-- Debug Info Section (for development) -->
                 <div class="debug-info" id="debugInfo" style="display: none;">
