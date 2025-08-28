@@ -1955,13 +1955,19 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
          */
         function extractAuthorFromText(text) {
             const bylinePatterns = [
-                // ALL-CAPS patterns (for AP style like your article)
+                // ALL-CAPS patterns (for AP style)
                 /^BY\s+([A-Z][A-Z\s]+?)(?:AND|&)\s+([A-Z][A-Z\s]+?)(?:\n|$|Updated)/m,
                 /^BY\s+([A-Z\s]+?)(?:\n|$|Updated)/m,
                 
-                // Standard mixed-case patterns
+                // Standard mixed-case patterns WITH space
                 /^By\s+([A-Z][a-zA-Z\s]+?)(?:\s+and\s+|\s+&\s+)([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
                 /^By\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                
+                // NEW: Patterns WITHOUT space (like "ByMegan Forrester")
+                /^By([A-Z][a-zA-Z\s]+?)(?:\s+and\s+|\s+&\s+)([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                /^By([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                
+                // Other common patterns
                 /By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
                 /Written by\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
                 /Author:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
