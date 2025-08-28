@@ -70,334 +70,6 @@
             --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        class TruthLensAnalyzer {
-            constructor() {
-                this.form = document.getElementById('analysisForm');
-                this.urlInput = document.getElementById('urlInput');
-                this.textInput = document.getElementById('textInput');
-                this.analyzeBtn = document.getElementById('analyzeBtn');
-                this.resetBtn = document.getElementById('resetBtn');
-                this.resultsSection = document.getElementById('resultsSection');
-                this.progressContainer = document.getElementById('progressContainer');
-                this.progressBar = document.getElementById('progressBar');
-                this.progressPercentage = document.getElementById('progressPercentage');
-                this.progressSteps = document.getElementById('progressSteps');
-                
-                this.init();
-            }
-
-            init() {
-                this.form.addEventListener('submit', this.handleSubmit.bind(this));
-                this.resetBtn.addEventListener('click', this.handleReset.bind(this));
-                
-                // Clear other input when one is filled
-                this.urlInput.addEventListener('input', () => {
-                    if (this.urlInput.value) {
-                        this.textInput.value = '';
-                    }
-                });
-                
-                this.textInput.addEventListener('input', () => {
-                    if (this.textInput.value) {
-                        this.urlInput.value = '';
-                    }
-                });
-            }
-
-            handleReset() {
-                // Clear inputs
-                this.urlInput.value = '';
-                this.textInput.value = '';
-                
-                // Hide results and progress
-                this.resultsSection.classList.remove('show');
-                this.progressContainer.classList.remove('active');
-                
-                // Reset progress
-                this.resetProgress();
-                
-                // Collapse author dropdown
-                document.getElementById('authorDropdown').classList.remove('expanded');
-                
-                // Hide debug info
-                document.getElementById('debugInfo').style.display = 'none';
-                
-                // Focus on URL input
-                this.urlInput.focus();
-                
-                // Scroll to top of form
-                this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-
-            async handleSubmit(e) {
-                e.preventDefault();
-                
-                const url = this.urlInput.value.trim();
-                const text = this.textInput.value.trim();
-                
-                if (!url && !text) {
-                    this.showError('Please provide either a URL or article text');
-                    return;
-                }
-
-                this.setLoading(true);
-                this.startProgress();
-                
-                try {
-                    const response = await fetch('/api/analyze', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            url: url || undefined,
-                            text: text || undefined
-                        })
-                    });
-
-                    const data = await response.json();
-                    
-                    console.log('Response received:', data);
-                    
-                    if (data.success !== false) {
-                        this.displayResults(data);
-                    } else {
-                        this.showError(data.error || 'Analysis failed');
-                    }
-                    
-                } catch (error) {
-                    console.error('Analysis error:', error);
-                    this.showError('Network error. Please try again.');
-                } finally {
-                    this.setLoading(false);
-                }
-            }
-
-            startProgress() {
-                this.progressContainer.classList.add('active');
-                this.resetProgress();
-                
-                // Scroll to show progress bar when it appears
-                setTimeout(() => {
-                    this.progressContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center'
-                    });
-                }, 100);
-                
-                let currentStep = 0;
-                let progress = 0;
-                
-                const steps = [
-                    { progress: 15, duration: 2000 },  // Extracting Content
-                    { progress: 30, duration: 3000 },  // Source Analysis
-                    { progress: 50, duration: 4000 },  // Bias Detection
-                    { progress: 70, duration: 3500 },  // Fact Checking
-                    { progress: 85, duration: 2500 },  // Author Verification
-                    { progress: 100, duration: 2000 }  // Final Analysis
-                ];
-
-                const updateProgress = () => {
-                    if (currentStep < steps.length) {
-                        const step = steps[currentStep];
-                        const startProgress = progress;
-                        const endProgress = step.progress;
-                        const duration = step.duration;
-                        const startTime = Date.now();
-                        
-                        // Mark current step as active
-                        this.setActiveStep(currentStep);
-                        
-                        const animate = () => {
-                            const elapsed = Date.now() - startTime;
-                            const progressRatio = Math.min(elapsed / duration, 1);
-                            
-                            // Use easing for smooth animation
-                            const easeOut = 1 - Math.pow(1 - progressRatio, 3);
-                            progress = startProgress + (endProgress - startProgress) * easeOut;
-                            
-                            this.updateProgressBar(progress);
-                            
-                            if (progressRatio < 1) {
-                                requestAnimationFrame(animate);
-                            } else {
-                                // Mark step as completed
-                                this.setStepCompleted(currentStep);
-                                currentStep++;
-                                
-                                if (currentStep < steps.length) {
-                                    setTimeout(updateProgress, 200);
-                                }
-                            }
-                        };
-                        
-                        animate();
-                    }
-                };
-                
-                updateProgress();
-            }
-
-            resetProgress() {
-                this.updateProgressBar(0);
-                const steps = this.progressSteps.querySelectorAll('.progress-step');
-                steps.forEach(step => {
-                    step.classList.remove('active', 'completed');
-                });
-            }
-
-            updateProgressBar(progress) {
-                this.progressBar.style.width = progress + '%';
-                this.progressPercentage.textContent = Math.round(progress) + '%';
-            }
-
-            setActiveStep(stepIndex) {
-                const steps = this.progressSteps.querySelectorAll('.progress-step');
-                steps.forEach((step, index) => {
-                    if (index === stepIndex) {
-                        step.classList.add('active');
-                    } else {
-                        step.classList.remove('active');
-                    }
-                });
-            }
-
-            setStepCompleted(stepIndex) {
-                const step = this.progressSteps.querySelector(`[data-step="${stepIndex}"]`);
-                if (step) {
-                    step.classList.remove('active');
-                    step.classList.add('completed');
-                    step.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
-                }
-            }
-
-            displayResults(data) {
-                // Hide progress
-                this.progressContainer.classList.remove('active');
-                
-                // Show debug info in development
-                this.showDebugInfo(data);
-                
-                // Log the data structure for debugging
-                console.log('Displaying results with data:', data);
-                
-                // Extract data - the backend now sends it directly at root level
-                let trustScore = data.trust_score || 0;
-                let articleSummary = data.article_summary || 'No summary available';
-                let source = data.source || 'Unknown';
-                let author = data.author || 'Unknown';
-                let findingsSummary = data.findings_summary || 'No findings available';
-                
-                // Update trust score and label
-                this.updateTrustScore(trustScore);
-                
-                // Update trust score border color
-                const overviewEl = document.getElementById('analysisOverview');
-                overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
-                if (trustScore >= 70) {
-                    overviewEl.classList.add('trust-high');
-                } else if (trustScore >= 40) {
-                    overviewEl.classList.add('trust-medium');
-                } else {
-                    overviewEl.classList.add('trust-low');
-                }
-                
-                // Update the overview content
-                document.getElementById('articleSummary').textContent = 
-                    articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
-                document.getElementById('articleSource').textContent = source;
-                document.getElementById('articleAuthor').textContent = author;
-                document.getElementById('findingsSummary').textContent = findingsSummary;
-                
-                // Populate author card if author data is available - USE THE NEW FUNCTION
-                displayAuthorCard(data);
-                
-                // Show results
-                this.showResults();
-            }
-
-            updateTrustScore(score) {
-                const scoreElement = document.getElementById('trustScore');
-                const labelElement = document.getElementById('trustLabel');
-                
-                scoreElement.textContent = Math.round(score);
-                
-                // Update label and styling based on score
-                if (score >= 80) {
-                    labelElement.textContent = 'Highly Trustworthy';
-                    scoreElement.className = 'trust-score-number trust-high';
-                } else if (score >= 60) {
-                    labelElement.textContent = 'Generally Trustworthy';
-                    scoreElement.className = 'trust-score-number trust-medium';
-                } else if (score >= 40) {
-                    labelElement.textContent = 'Moderate Trust';
-                    scoreElement.className = 'trust-score-number trust-medium';
-                } else {
-                    labelElement.textContent = 'Low Trustworthiness';
-                    scoreElement.className = 'trust-score-number trust-low';
-                }
-            }
-
-            showDebugInfo(data) {
-                // Show debug information in development
-                const debugInfo = document.getElementById('debugInfo');
-                const debugData = document.getElementById('debugData');
-                
-                // Only show in development (you can remove this in production)
-                if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
-                    debugData.textContent = JSON.stringify({
-                        author: data.author,
-                        detailed_analysis: data.detailed_analysis,
-                        article: data.article,
-                        text_preview: data.text ? data.text.substring(0, 200) + '...' : 'No text',
-                        title: data.title
-                    }, null, 2);
-                    debugInfo.style.display = 'block';
-                }
-            }
-
-            showResults() {
-                this.resultsSection.classList.add('show');
-                this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-
-            setLoading(loading) {
-                this.analyzeBtn.disabled = loading;
-                if (loading) {
-                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
-                } else {
-                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
-                }
-            }
-
-            showError(message) {
-                // Hide progress
-                this.progressContainer.classList.remove('active');
-                
-                // Show error in results section
-                document.getElementById('articleSummary').textContent = 'Error occurred';
-                document.getElementById('articleSource').textContent = 'Unknown';
-                document.getElementById('articleAuthor').textContent = 'Unknown';
-                document.getElementById('findingsSummary').textContent = message;
-                
-                // Set trust score to 0
-                this.updateTrustScore(0);
-                
-                // Show results section with error
-                this.showResults();
-                
-                console.error('Analysis error:', message);
-            }
-        }
-
-        // Initialize the analyzer when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new TruthLensAnalyzer();
-        });
-    </script>
-</body>
-</html>
-
         * {
             margin: 0;
             padding: 0;
@@ -1864,6 +1536,326 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
     </main>
 
     <script>
+        class TruthLensAnalyzer {
+            constructor() {
+                this.form = document.getElementById('analysisForm');
+                this.urlInput = document.getElementById('urlInput');
+                this.textInput = document.getElementById('textInput');
+                this.analyzeBtn = document.getElementById('analyzeBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressPercentage = document.getElementById('progressPercentage');
+                this.progressSteps = document.getElementById('progressSteps');
+                
+                this.init();
+            }
+
+            init() {
+                this.form.addEventListener('submit', this.handleSubmit.bind(this));
+                this.resetBtn.addEventListener('click', this.handleReset.bind(this));
+                
+                // Clear other input when one is filled
+                this.urlInput.addEventListener('input', () => {
+                    if (this.urlInput.value) {
+                        this.textInput.value = '';
+                    }
+                });
+                
+                this.textInput.addEventListener('input', () => {
+                    if (this.textInput.value) {
+                        this.urlInput.value = '';
+                    }
+                });
+            }
+
+            handleReset() {
+                // Clear inputs
+                this.urlInput.value = '';
+                this.textInput.value = '';
+                
+                // Hide results and progress
+                this.resultsSection.classList.remove('show');
+                this.progressContainer.classList.remove('active');
+                
+                // Reset progress
+                this.resetProgress();
+                
+                // Collapse author dropdown
+                document.getElementById('authorDropdown').classList.remove('expanded');
+                
+                // Hide debug info
+                document.getElementById('debugInfo').style.display = 'none';
+                
+                // Focus on URL input
+                this.urlInput.focus();
+                
+                // Scroll to top of form
+                this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                const url = this.urlInput.value.trim();
+                const text = this.textInput.value.trim();
+                
+                if (!url && !text) {
+                    this.showError('Please provide either a URL or article text');
+                    return;
+                }
+
+                this.setLoading(true);
+                this.startProgress();
+                
+                try {
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url || undefined,
+                            text: text || undefined
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    console.log('Response received:', data);
+                    
+                    if (data.success !== false) {
+                        this.displayResults(data);
+                    } else {
+                        this.showError(data.error || 'Analysis failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    this.showError('Network error. Please try again.');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            startProgress() {
+                this.progressContainer.classList.add('active');
+                this.resetProgress();
+                
+                // Scroll to show progress bar when it appears
+                setTimeout(() => {
+                    this.progressContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center'
+                    });
+                }, 100);
+                
+                let currentStep = 0;
+                let progress = 0;
+                
+                const steps = [
+                    { progress: 15, duration: 2000 },  // Extracting Content
+                    { progress: 30, duration: 3000 },  // Source Analysis
+                    { progress: 50, duration: 4000 },  // Bias Detection
+                    { progress: 70, duration: 3500 },  // Fact Checking
+                    { progress: 85, duration: 2500 },  // Author Verification
+                    { progress: 100, duration: 2000 }  // Final Analysis
+                ];
+
+                const updateProgress = () => {
+                    if (currentStep < steps.length) {
+                        const step = steps[currentStep];
+                        const startProgress = progress;
+                        const endProgress = step.progress;
+                        const duration = step.duration;
+                        const startTime = Date.now();
+                        
+                        // Mark current step as active
+                        this.setActiveStep(currentStep);
+                        
+                        const animate = () => {
+                            const elapsed = Date.now() - startTime;
+                            const progressRatio = Math.min(elapsed / duration, 1);
+                            
+                            // Use easing for smooth animation
+                            const easeOut = 1 - Math.pow(1 - progressRatio, 3);
+                            progress = startProgress + (endProgress - startProgress) * easeOut;
+                            
+                            this.updateProgressBar(progress);
+                            
+                            if (progressRatio < 1) {
+                                requestAnimationFrame(animate);
+                            } else {
+                                // Mark step as completed
+                                this.setStepCompleted(currentStep);
+                                currentStep++;
+                                
+                                if (currentStep < steps.length) {
+                                    setTimeout(updateProgress, 200);
+                                }
+                            }
+                        };
+                        
+                        animate();
+                    }
+                };
+                
+                updateProgress();
+            }
+
+            resetProgress() {
+                this.updateProgressBar(0);
+                const steps = this.progressSteps.querySelectorAll('.progress-step');
+                steps.forEach(step => {
+                    step.classList.remove('active', 'completed');
+                });
+            }
+
+            updateProgressBar(progress) {
+                this.progressBar.style.width = progress + '%';
+                this.progressPercentage.textContent = Math.round(progress) + '%';
+            }
+
+            setActiveStep(stepIndex) {
+                const steps = this.progressSteps.querySelectorAll('.progress-step');
+                steps.forEach((step, index) => {
+                    if (index === stepIndex) {
+                        step.classList.add('active');
+                    } else {
+                        step.classList.remove('active');
+                    }
+                });
+            }
+
+            setStepCompleted(stepIndex) {
+                const step = this.progressSteps.querySelector(`[data-step="${stepIndex}"]`);
+                if (step) {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                    step.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+                }
+            }
+
+            displayResults(data) {
+                // Hide progress
+                this.progressContainer.classList.remove('active');
+                
+                // Show debug info in development
+                this.showDebugInfo(data);
+                
+                // Log the data structure for debugging
+                console.log('Displaying results with data:', data);
+                
+                // Extract data - the backend now sends it directly at root level
+                let trustScore = data.trust_score || 0;
+                let articleSummary = data.article_summary || 'No summary available';
+                let source = data.source || 'Unknown';
+                let author = data.author || 'Unknown';
+                let findingsSummary = data.findings_summary || 'No findings available';
+                
+                // Update trust score and label
+                this.updateTrustScore(trustScore);
+                
+                // Update trust score border color
+                const overviewEl = document.getElementById('analysisOverview');
+                overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
+                if (trustScore >= 70) {
+                    overviewEl.classList.add('trust-high');
+                } else if (trustScore >= 40) {
+                    overviewEl.classList.add('trust-medium');
+                } else {
+                    overviewEl.classList.add('trust-low');
+                }
+                
+                // Update the overview content
+                document.getElementById('articleSummary').textContent = 
+                    articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
+                document.getElementById('articleSource').textContent = source;
+                document.getElementById('articleAuthor').textContent = author;
+                document.getElementById('findingsSummary').textContent = findingsSummary;
+                
+                // Populate author card if author data is available - USE THE NEW FUNCTION
+                displayAuthorCard(data);
+                
+                // Show results
+                this.showResults();
+            }
+
+            updateTrustScore(score) {
+                const scoreElement = document.getElementById('trustScore');
+                const labelElement = document.getElementById('trustLabel');
+                
+                scoreElement.textContent = Math.round(score);
+                
+                // Update label and styling based on score
+                if (score >= 80) {
+                    labelElement.textContent = 'Highly Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-high';
+                } else if (score >= 60) {
+                    labelElement.textContent = 'Generally Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else if (score >= 40) {
+                    labelElement.textContent = 'Moderate Trust';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else {
+                    labelElement.textContent = 'Low Trustworthiness';
+                    scoreElement.className = 'trust-score-number trust-low';
+                }
+            }
+
+            showDebugInfo(data) {
+                // Show debug information in development
+                const debugInfo = document.getElementById('debugInfo');
+                const debugData = document.getElementById('debugData');
+                
+                // Only show in development (you can remove this in production)
+                if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
+                    debugData.textContent = JSON.stringify({
+                        author: data.author,
+                        detailed_analysis: data.detailed_analysis,
+                        article: data.article,
+                        text_preview: data.text ? data.text.substring(0, 200) + '...' : 'No text',
+                        title: data.title
+                    }, null, 2);
+                    debugInfo.style.display = 'block';
+                }
+            }
+
+            showResults() {
+                this.resultsSection.classList.add('show');
+                this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            setLoading(loading) {
+                this.analyzeBtn.disabled = loading;
+                if (loading) {
+                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+                } else {
+                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
+                }
+            }
+
+            showError(message) {
+                // Hide progress
+                this.progressContainer.classList.remove('active');
+                
+                // Show error in results section
+                document.getElementById('articleSummary').textContent = 'Error occurred';
+                document.getElementById('articleSource').textContent = 'Unknown';
+                document.getElementById('articleAuthor').textContent = 'Unknown';
+                document.getElementById('findingsSummary').textContent = message;
+                
+                // Set trust score to 0
+                this.updateTrustScore(0);
+                
+                // Show results section with error
+                this.showResults();
+                
+                console.error('Analysis error:', message);
+            }
+        }
+
         // Toggle Author Dropdown
         function toggleAuthorDropdown() {
             const dropdown = document.getElementById('authorDropdown');
@@ -2263,3 +2255,11 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 awardsSection.style.display = 'none';
             }
         }
+
+        // Initialize the analyzer when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TruthLensAnalyzer();
+        });
+    </script>
+</body>
+</html>
