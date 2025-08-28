@@ -525,19 +525,32 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         """
         Analyze author with real web search and data retrieval
         """
+        logger.error(f"DEBUG: AuthorAnalyzer.analyze() called with data keys: {list(data.keys())}")
+        logger.error(f"DEBUG: data.get('author'): {data.get('author')}")
+        logger.error(f"DEBUG: data.get('text'): {data.get('text', '')[:100]}...")
+        logger.error(f"DEBUG: data.get('html'): {bool(data.get('html'))}")
+        logger.error(f"DEBUG: data.get('title'): {data.get('title')}")
+        logger.error(f"DEBUG: data.get('url'): {data.get('url')}")
+        
         try:
             text = data.get('text', '')
             title = data.get('title', '')
             url = data.get('url', '')
             html = data.get('html', '')
             
+            logger.error(f"DEBUG: Variables set - text length: {len(text)}, title: {bool(title)}, url: {bool(url)}, html: {bool(html)}")
+            
             if not text and not title:
+                logger.error("DEBUG: Returning error - no text or title")
                 return self.get_error_result("No text or title provided for author analysis")
             
             # Extract author name
+            logger.error("DEBUG: About to extract author name")
             author_name = self._extract_author_name(data)
+            logger.error(f"DEBUG: Extracted author name: {author_name}")
             
             if not author_name:
+                logger.error("DEBUG: No author name found - returning early result")
                 return self.get_success_result({
                     'score': 0,
                     'level': 'Unknown',
@@ -568,8 +581,12 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'author_url': author_url
             }
             
+            logger.error(f"DEBUG: About to start comprehensive research for: {author_name}")
+            
             # Perform comprehensive research
             research = self.researcher.comprehensive_author_research(author_name, article_data)
+            
+            logger.error(f"DEBUG: Research returned: {research}")
             
             # Build response
             author_data = {
@@ -615,22 +632,30 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             author_data['summary'] = summary
             
             logger.info(f"Author analysis complete: {author_name} -> {score}/100")
+            logger.error(f"DEBUG: Final author_data: {author_data}")
             
             return self.get_success_result(author_data)
             
         except Exception as e:
             logger.error(f"Author analysis failed: {e}", exc_info=True)
+            logger.error(f"DEBUG: Exception occurred in AuthorAnalyzer.analyze(): {str(e)}")
             return self.get_error_result(str(e))
     
     def _extract_author_name(self, data: Dict[str, Any]) -> Optional[str]:
         """Extract author name from various sources"""
+        logger.error(f"DEBUG: _extract_author_name called with data keys: {list(data.keys())}")
+        
         # Check if author is directly provided
         author = data.get('author', '')
+        logger.error(f"DEBUG: data.get('author') = '{author}'")
         if author and isinstance(author, str) and len(author.strip()) > 0:
-            return self._clean_author_name(author.strip())
+            cleaned = self._clean_author_name(author.strip())
+            logger.error(f"DEBUG: Cleaned direct author: '{cleaned}'")
+            return cleaned
         
         # Extract from HTML if available
         html = data.get('html', '')
+        logger.error(f"DEBUG: HTML available: {bool(html)}")
         if html:
             soup = BeautifulSoup(html, 'html.parser')
             
@@ -647,12 +672,16 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             ]
             
             for selector in author_selectors:
+                logger.error(f"DEBUG: Trying selector: {selector}")
                 if selector.startswith('meta'):
                     element = soup.select_one(selector)
                     if element:
                         content = element.get('content', '').strip()
+                        logger.error(f"DEBUG: Meta selector {selector} found: '{content}'")
                         if content:
-                            return self._clean_author_name(content)
+                            cleaned = self._clean_author_name(content)
+                            logger.error(f"DEBUG: Meta cleaned result: '{cleaned}'")
+                            return cleaned
                 else:
                     element = soup.select_one(selector)
                     if element:
@@ -662,20 +691,28 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                             text = link.get_text(strip=True)
                         else:
                             text = element.get_text(strip=True)
+                        logger.error(f"DEBUG: Element selector {selector} found: '{text}'")
                         if text:
-                            return self._clean_author_name(text)
+                            cleaned = self._clean_author_name(text)
+                            logger.error(f"DEBUG: Element cleaned result: '{cleaned}'")
+                            return cleaned
         
         # Extract from text content
         text = data.get('text', '')
+        logger.error(f"DEBUG: Text available for pattern matching: {bool(text)}")
         if text:
-            for pattern in self._byline_patterns:
+            for i, pattern in enumerate(self._byline_patterns):
+                logger.error(f"DEBUG: Trying pattern {i}: {pattern.pattern}")
                 match = pattern.search(text)
                 if match:
                     author = match.group(1).strip()
+                    logger.error(f"DEBUG: Pattern {i} matched: '{author}'")
                     cleaned = self._clean_author_name(author)
+                    logger.error(f"DEBUG: Pattern cleaned result: '{cleaned}'")
                     if cleaned:
                         return cleaned
         
+        logger.error("DEBUG: No author found by any method")
         return None
     
     def _extract_author_url(self, soup: BeautifulSoup, author_name: str, article_url: str) -> Optional[str]:
