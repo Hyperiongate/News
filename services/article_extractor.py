@@ -1,6 +1,7 @@
 """
 Enhanced Article Extraction Service - FIXED with ScraperAPI Integration
 CRITICAL FIX: Now properly utilizes upgraded ScraperAPI for web scraping
+UNIVERSAL AUTHOR FIX: Robust author extraction for all news sites
 """
 
 import json
@@ -561,8 +562,8 @@ class UniversalScraper:
                 if content_parts:
                     content = ' '.join(content_parts[:20])  # Take first 20 meaningful parts
             
-            # Extract metadata
-            author = self._extract_author(soup)
+            # Extract metadata - UNIVERSAL AUTHOR EXTRACTION
+            author = self._extract_author(soup, url)
             publish_date = self._extract_publish_date(soup)
             description = self._extract_description(soup)
             
@@ -643,27 +644,269 @@ class UniversalScraper:
         
         return content if content else soup.get_text(separator=' ', strip=True)
     
-    def _extract_author(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract article author"""
-        author_selectors = [
+    def _extract_author(self, soup: BeautifulSoup, url: str) -> Optional[str]:
+        """UNIVERSAL author extraction that works for all news sites"""
+        
+        # Step 1: Try structured data (JSON-LD, microdata, meta tags)
+        author = self._extract_author_structured(soup)
+        if author:
+            logger.info(f"Author found via structured data: {author}")
+            return author
+        
+        # Step 2: Try standard author selectors
+        author = self._extract_author_selectors(soup)
+        if author:
+            logger.info(f"Author found via selectors: {author}")
+            return author
+        
+        # Step 3: Try text pattern matching (universal approach)
+        author = self._extract_author_text_patterns(soup)
+        if author:
+            logger.info(f"Author found via text patterns: {author}")
+            return author
+        
+        # Step 4: Try positional extraction (near headline)
+        author = self._extract_author_positional(soup)
+        if author:
+            logger.info(f"Author found via positional extraction: {author}")
+            return author
+        
+        logger.info("No author found by any method")
+        return None
+    
+    def _extract_author_structured(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract author from structured data"""
+        # JSON-LD structured data
+        json_ld_scripts = soup.find_all('script', {'type': 'application/ld+json'})
+        for script in json_ld_scripts:
+            try:
+                data = json.loads(script.string)
+                if isinstance(data, list):
+                    data = data[0] if data else {}
+                
+                if isinstance(data, dict):
+                    # Check for author field
+                    if 'author' in data:
+                        author_data = data['author']
+                        if isinstance(author_data, dict) and 'name' in author_data:
+                            return self._clean_author_name(author_data['name'])
+                        elif isinstance(author_data, str):
+                            return self._clean_author_name(author_data)
+                        elif isinstance(author_data, list) and author_data:
+                            first_author = author_data[0]
+                            if isinstance(first_author, dict) and 'name' in first_author:
+                                return self._clean_author_name(first_author['name'])
+                            elif isinstance(first_author, str):
+                                return self._clean_author_name(first_author)
+            except:
+                continue
+        
+        # Meta tags
+        meta_selectors = [
             '[name="author"]',
             '[property="article:author"]',
-            '[rel="author"]',
-            '.author',
-            '.byline',
-            '.article-author'
+            '[name="article:author"]',
+            '[property="author"]'
+        ]
+        
+        for selector in meta_selectors:
+            element = soup.select_one(selector)
+            if element:
+                author = element.get('content', '').strip()
+                if author:
+                    return self._clean_author_name(author)
+        
+        return None
+    
+    def _extract_author_selectors(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract author using CSS selectors"""
+        author_selectors = [
+            # Standard author classes
+            '.author', '.byline', '.article-author', '.author-name', '.byline-author',
+            '.post-author', '.entry-author', '.writer', '.journalist',
+            
+            # Microdata and semantic markup
+            '[rel="author"]', '[itemprop="author"]', '[class*="author"]', '[class*="byline"]',
+            
+            # Common news site patterns
+            '.author-bio', '.author-info', '.author-details', '.byline-name',
+            '.article-byline', '.story-byline', '.news-byline',
+            
+            # Generic content selectors that might contain author
+            '.meta-author', '.post-meta .author', '.article-meta .author'
         ]
         
         for selector in author_selectors:
-            element = soup.select_one(selector)
-            if element:
-                author = element.get('content') if element.name == 'meta' else element.get_text(strip=True)
-                if author:
-                    # Clean up author name
-                    author = re.sub(r'^by\s+', '', author, flags=re.IGNORECASE)
-                    return author[:100]  # Limit length
+            elements = soup.select(selector)
+            for element in elements:
+                # Skip if element is inside navigation, footer, or sidebar
+                if element.find_parent(['nav', 'footer', 'aside', '.sidebar', '.navigation']):
+                    continue
+                
+                # Get text content
+                author_text = element.get_text(strip=True)
+                if author_text and len(author_text) < 100:  # Authors shouldn't be very long
+                    cleaned = self._clean_author_name(author_text)
+                    if cleaned and self._is_valid_author_name(cleaned):
+                        return cleaned
+                
+                # Check for links within author elements
+                author_link = element.find('a')
+                if author_link:
+                    link_text = author_link.get_text(strip=True)
+                    if link_text and len(link_text) < 100:
+                        cleaned = self._clean_author_name(link_text)
+                        if cleaned and self._is_valid_author_name(cleaned):
+                            return cleaned
         
         return None
+    
+    def _extract_author_text_patterns(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract author using text pattern matching - works for BBC and similar sites"""
+        
+        # Get the full text content
+        full_text = soup.get_text()
+        
+        # Universal author patterns (works for most news sites)
+        author_patterns = [
+            # Standard byline patterns
+            r'By\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
+            r'BY\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
+            r'by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
+            
+            # "Written by" patterns
+            r'Written by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            r'Story by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            r'Report by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            
+            # Author: patterns
+            r'Author:\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            r'Reporter:\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            
+            # BBC-style patterns (Author Name BBC News, Location)
+            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+BBC News',
+            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+CNN',
+            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+Reuters',
+            
+            # Multiple authors patterns
+            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)',
+            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+,\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)',
+        ]
+        
+        for pattern in author_patterns:
+            match = re.search(pattern, full_text)
+            if match:
+                author_name = match.group(1).strip()
+                cleaned = self._clean_author_name(author_name)
+                if cleaned and self._is_valid_author_name(cleaned):
+                    return cleaned
+        
+        return None
+    
+    def _extract_author_positional(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract author by looking near the headline - universal approach"""
+        
+        # Find the main headline
+        headline_selectors = ['h1', '.headline', '.title', '.entry-title', '.post-title']
+        headline = None
+        
+        for selector in headline_selectors:
+            headline = soup.select_one(selector)
+            if headline:
+                break
+        
+        if not headline:
+            return None
+        
+        # Look in elements immediately following the headline
+        elements_to_check = []
+        
+        # Check next siblings
+        current = headline
+        for _ in range(5):  # Check next 5 siblings
+            current = current.next_sibling
+            if current and hasattr(current, 'get_text'):
+                elements_to_check.append(current)
+        
+        # Check parent's next siblings (common pattern)
+        if headline.parent:
+            current = headline.parent
+            for _ in range(3):
+                current = current.next_sibling
+                if current and hasattr(current, 'get_text'):
+                    elements_to_check.append(current)
+        
+        # Look for author patterns in these elements
+        for element in elements_to_check:
+            text = element.get_text(strip=True)
+            if text and len(text) < 200:  # Author info is usually short
+                
+                # Try pattern matching on this text
+                author_patterns = [
+                    r'^([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)(?:\s+BBC|\s+CNN|\s+Reuters|$|,)',
+                    r'By\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+                    r'^([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)(?:\s|$|,)',
+                ]
+                
+                for pattern in author_patterns:
+                    match = re.search(pattern, text)
+                    if match:
+                        author_name = match.group(1).strip()
+                        cleaned = self._clean_author_name(author_name)
+                        if cleaned and self._is_valid_author_name(cleaned):
+                            return cleaned
+        
+        return None
+    
+    def _clean_author_name(self, author: str) -> Optional[str]:
+        """Clean and normalize author name"""
+        if not author:
+            return None
+        
+        # Remove common prefixes and suffixes
+        author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*$', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters).*$', '', author, flags=re.IGNORECASE)
+        
+        # Clean up whitespace
+        author = re.sub(r'\s+', ' ', author).strip()
+        
+        # Remove trailing punctuation
+        author = re.sub(r'[,\.\:;]+$', '', author)
+        
+        return author if author else None
+    
+    def _is_valid_author_name(self, author: str) -> bool:
+        """Validate that the extracted text looks like a real author name"""
+        if not author or len(author) < 3 or len(author) > 100:
+            return False
+        
+        # Must have at least 2 words (first and last name)
+        words = author.split()
+        if len(words) < 2:
+            return False
+        
+        # Check for reasonable author name patterns
+        # Should start with capital letter
+        if not author[0].isupper():
+            return False
+        
+        # Shouldn't contain numbers or special characters (except spaces, hyphens, apostrophes)
+        if re.search(r'[0-9@#$%^&*()_+={}|\[\]\\:";\'<>?,./]', author):
+            return False
+        
+        # Common false positives to reject
+        false_positives = [
+            'read more', 'click here', 'share this', 'comments', 'subscribe',
+            'advertisement', 'sponsored', 'trending', 'popular', 'related',
+            'breaking news', 'latest news', 'top stories', 'social media'
+        ]
+        
+        author_lower = author.lower()
+        if any(fp in author_lower for fp in false_positives):
+            return False
+        
+        return True
     
     def _extract_publish_date(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract publish date"""
@@ -726,7 +969,7 @@ class ArticleExtractor(BaseAnalyzer):
         super().__init__('article_extractor')
         
         logger.info("=" * 60)
-        logger.info("FIXED ArticleExtractor with ScraperAPI Integration")
+        logger.info("FIXED ArticleExtractor with UNIVERSAL Author Detection")
         logger.info("=" * 60)
         
         # Initialize universal scraper with ScraperAPI
@@ -878,11 +1121,15 @@ class ArticleExtractor(BaseAnalyzer):
             
             word_count = len(content.split())
             
+            # UNIVERSAL AUTHOR EXTRACTION - Apply same logic as main extractor
+            universal_scraper = UniversalScraper()
+            author = universal_scraper._extract_author(soup, url)
+            
             return {
                 'success': True,
                 'title': title,
                 'text': content,
-                'author': None,
+                'author': author,
                 'publish_date': None,
                 'url': url,
                 'domain': urlparse(url).netloc,
