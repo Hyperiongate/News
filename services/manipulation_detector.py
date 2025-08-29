@@ -1,6 +1,7 @@
 """
 Manipulation Detector Service - BULLETPROOF AI ENHANCED VERSION
 Detects propaganda techniques and manipulation tactics with bulletproof AI insights
+FIXED: Proper data structure and scoring calculations
 """
 
 import re
@@ -122,13 +123,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Detect manipulation tactics WITH BULLETPROOF AI ENHANCEMENT
-        
-        Expected input:
-            - text: Article text to analyze
-            - title: (optional) Article title
-            
-        Returns:
-            Standardized response with manipulation analysis
+        FIXED: Proper data structure and scoring
         """
         try:
             start_time = time.time()
@@ -189,30 +184,30 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                     'type': 'manipulation',
                     'severity': tactic.get('severity', 'medium'),
                     'text': f"{tactic['name']}: {tactic.get('description', '')}",
-                    'finding': tactic['name']
+                    'explanation': f"Found {tactic['name'].lower()} in the content"
                 })
             
             # Generate summary
             summary = self._generate_summary(manipulation_score, level, all_tactics)
             
-            # Build response
+            # FIXED: Ensure consistent data structure
             result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
                     'score': manipulation_score,
                     'level': level,
+                    'manipulation_score': manipulation_score,
+                    'manipulation_level': level,
                     'findings': findings,
                     'assessment': assessment,
                     'summary': summary,
-                    'tactics_found': all_tactics[:10],  # Top 10 tactics
+                    'tactics_found': all_tactics[:10],
                     'tactic_count': len(all_tactics),
                     'propaganda_techniques': propaganda,
                     'logical_fallacies': logical_fallacies,
                     'clickbait_analysis': clickbait,
                     'emotional_score': emotional_score,
-                    'manipulation_score': manipulation_score,  # Backward compatibility
-                    'manipulation_level': level,  # Backward compatibility
                     'persuasion_score': manipulation_score,  # Backward compatibility
                     'details': {
                         'total_tactics': len(all_tactics),
@@ -221,7 +216,9 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                         'low_severity_count': sum(1 for t in all_tactics if t.get('severity') == 'low'),
                         'has_clickbait': clickbait['is_clickbait'],
                         'emotional_intensity': emotional_score,
-                        'word_count': len(full_text.split())
+                        'word_count': len(full_text.split()),
+                        'fear_tactics': len([t for t in tactics_found if t.get('type') == 'fear_mongering']),
+                        'emotional_appeals': len([t for t in tactics_found if t.get('type') == 'emotional_manipulation'])
                     }
                 },
                 'metadata': {
@@ -437,12 +434,13 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
         # Add scores for tactics based on severity
         for tactic in tactics:
             severity = tactic.get('severity', 'medium')
+            instances = tactic.get('instances', 1)
             if severity == 'high':
-                base_score += 15
+                base_score += 15 * min(instances, 3)  # Cap instances to prevent bloating
             elif severity == 'medium':
-                base_score += 10
+                base_score += 10 * min(instances, 3)
             elif severity == 'low':
-                base_score += 5
+                base_score += 5 * min(instances, 3)
         
         # Add propaganda score
         base_score += len(propaganda) * 12
