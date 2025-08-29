@@ -1,12 +1,12 @@
 """
-REAL Fixed Analysis Pipeline
-CRITICAL: Works with your actual service return formats
+REAL Fixed Analysis Pipeline - TIMEOUT ISSUE RESOLVED
+CRITICAL: Fixed parallel execution timeout that was causing pipeline failures
 """
 import asyncio
 import time
 import logging
 from typing import Dict, Any, List, Optional, Set
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import traceback
 
 from .service_registry import get_service_registry
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class AnalysisPipeline:
     """
-    REAL FIXED: Pipeline compatible with your service return formats
+    REAL FIXED: Pipeline with proper timeout handling for parallel services
     """
     
     # Service groups for parallel execution
@@ -94,19 +94,19 @@ class AnalysisPipeline:
             enriched_data.update(article_info)  # Add article fields to data
             enriched_data['article'] = article_info  # Also provide as nested object
             
-            # Stage 2: Core Analysis Services (parallel)
+            # Stage 2: Core Analysis Services (parallel) - FIXED TIMEOUT HANDLING
             logger.info("STAGE 2: Core Analysis Services (Parallel)")
-            stage2_results = self._run_stage_parallel(self.STAGE_2_SERVICES, enriched_data)
+            stage2_results = self._run_stage_parallel_fixed(self.STAGE_2_SERVICES, enriched_data)
             
-            # Stage 3: Fact Checking
+            # Stage 3: Fact Checking - FIXED TIMEOUT HANDLING
             logger.info("STAGE 3: Fact Checking")
-            stage3_results = self._run_stage_parallel(self.STAGE_3_SERVICES, enriched_data)
+            stage3_results = self._run_stage_parallel_fixed(self.STAGE_3_SERVICES, enriched_data)
             
-            # Stage 4: AI Enhancement (if pro mode)
+            # Stage 4: AI Enhancement (if pro mode) - FIXED TIMEOUT HANDLING
             stage4_results = {}
             if data.get('is_pro', False):
                 logger.info("STAGE 4: AI Enhancement")
-                stage4_results = self._run_stage_parallel(self.STAGE_4_SERVICES, enriched_data)
+                stage4_results = self._run_stage_parallel_fixed(self.STAGE_4_SERVICES, enriched_data)
             
             # REAL FIX: Combine all service results and flatten nested data
             all_service_results = {}
@@ -201,8 +201,11 @@ class AnalysisPipeline:
                 
         return stage_results
     
-    def _run_stage_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run services in parallel with timeout protection"""
+    def _run_stage_parallel_fixed(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL FIX: Run services in parallel with INDIVIDUAL timeouts, not collection timeout
+        This prevents one slow service from killing the entire batch
+        """
         stage_results = {}
         futures = {}
         
@@ -215,14 +218,45 @@ class AnalysisPipeline:
             future = self.executor.submit(self._run_service_with_timeout, service_name, data)
             futures[future] = service_name
         
-        # Collect results with timeout
-        timeout = 45  # Increased timeout for better reliability
-        for future in as_completed(futures, timeout=timeout):
+        # CRITICAL FIX: Collect results with individual service handling
+        # Instead of applying timeout to the entire collection, handle each service individually
+        
+        completed_count = 0
+        total_futures = len(futures)
+        max_wait_time = 60  # Maximum time to wait for all services
+        start_time = time.time()
+        
+        # Wait for each future individually
+        for future in futures:
             service_name = futures[future]
+            remaining_time = max_wait_time - (time.time() - start_time)
+            
+            if remaining_time <= 0:
+                logger.warning(f"Service {service_name} timed out (pipeline max time exceeded)")
+                stage_results[service_name] = {
+                    'success': False,
+                    'error': 'Pipeline timeout exceeded',
+                    'service': service_name,
+                    'available': False
+                }
+                continue
+            
             try:
-                result, duration = future.result()
+                # Wait for individual service with remaining time
+                result, duration = future.result(timeout=min(remaining_time, 45))
                 stage_results[service_name] = result
-                logger.info(f"Service {service_name} completed in {duration:.2f}s")
+                completed_count += 1
+                logger.info(f"Service {service_name} completed in {duration:.2f}s ({completed_count}/{total_futures})")
+                
+            except TimeoutError:
+                logger.warning(f"Service {service_name} timed out after 45s")
+                stage_results[service_name] = {
+                    'success': False,
+                    'error': 'Service timeout (45s)',
+                    'service': service_name,
+                    'available': False
+                }
+                
             except Exception as e:
                 logger.error(f"Service {service_name} failed: {str(e)}", exc_info=True)
                 stage_results[service_name] = {
@@ -232,6 +266,7 @@ class AnalysisPipeline:
                     'available': False
                 }
         
+        logger.info(f"Parallel stage completed: {completed_count}/{total_futures} services successful")
         return stage_results
     
     def _run_service_with_timeout(self, service_name: str, data: Dict[str, Any]) -> tuple:
