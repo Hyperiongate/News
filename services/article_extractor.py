@@ -1,7 +1,6 @@
 """
-Enhanced Article Extraction Service - FIXED with ScraperAPI Integration
-CRITICAL FIX: Now properly utilizes upgraded ScraperAPI for web scraping
-UNIVERSAL AUTHOR FIX: Robust author extraction for all news sites
+Enhanced Article Extraction Service - WITH DEBUG LOGGING
+CRITICAL DEBUG: Added comprehensive logging to identify author extraction failures
 """
 
 import json
@@ -69,7 +68,7 @@ class ScraperAPIIntegration:
         logger.info(f"ScraperAPI Integration - ScraperAPI: {bool(self.scraperapi_key)}, ScrapingBee: {bool(self.scrapingbee_key)}")
     
     def scraperapi_request(self, url: str, **kwargs) -> requests.Response:
-        """Make request through ScraperAPI - FIXED: This is the key method that was missing!"""
+        """Make request through ScraperAPI"""
         if not self.scraperapi_key:
             raise Exception("ScraperAPI key not configured")
         
@@ -177,7 +176,7 @@ class UniversalScraper:
         self.max_retries = 2
         self.methods_tried = []
         
-        # Initialize ScraperAPI integration - CRITICAL FIX!
+        # Initialize ScraperAPI integration
         self.scraper_apis = ScraperAPIIntegration()
         
         # Initialize optional libraries
@@ -247,7 +246,7 @@ class UniversalScraper:
         
         strategies = []
         
-        # LEVEL 1: ScraperAPI (highest success rate) - CRITICAL FIX!
+        # LEVEL 1: ScraperAPI (highest success rate)
         if self.scraper_apis.scraperapi_key:
             strategies.append(('scraperapi_basic', self._scraperapi_basic_extract))
             strategies.append(('scraperapi_premium', self._scraperapi_premium_extract))
@@ -271,10 +270,10 @@ class UniversalScraper:
         
         return strategies
     
-    # SCRAPERAPI EXTRACTION METHODS - CRITICAL FIX!
+    # SCRAPERAPI EXTRACTION METHODS
     
     def _scraperapi_basic_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using ScraperAPI basic - ENHANCED with better timeout handling"""
+        """Extract using ScraperAPI basic"""
         try:
             response = self.scraper_apis.scraperapi_request(url)
             response.raise_for_status()
@@ -286,7 +285,7 @@ class UniversalScraper:
             result = self._parse_content(response.text, url)
             result['extraction_metadata']['method'] = 'scraperapi_basic'
             result['extraction_metadata']['api_used'] = True
-            logger.info("✅ SUCCESS: ScraperAPI basic extraction succeeded!")
+            logger.info("SUCCESS: ScraperAPI basic extraction succeeded!")
             return result
             
         except requests.exceptions.Timeout:
@@ -324,7 +323,7 @@ class UniversalScraper:
             result['extraction_metadata']['method'] = 'scraperapi_premium'
             result['extraction_metadata']['api_used'] = True
             result['extraction_metadata']['javascript_rendered'] = True
-            logger.info("✅ SUCCESS: ScraperAPI premium extraction succeeded!")
+            logger.info("SUCCESS: ScraperAPI premium extraction succeeded!")
             return result
             
         except requests.exceptions.Timeout:
@@ -489,7 +488,7 @@ class UniversalScraper:
         return base_headers
     
     def _is_valid_content(self, soup: BeautifulSoup) -> bool:
-        """Check if scraped content is valid - RELAXED for ScraperAPI responses"""
+        """Check if scraped content is valid"""
         if not soup:
             return False
         
@@ -534,7 +533,7 @@ class UniversalScraper:
         return True
     
     def _parse_content(self, html: str, url: str) -> Dict[str, Any]:
-        """Parse HTML content and extract article data - ENHANCED for ScraperAPI responses"""
+        """Parse HTML content and extract article data"""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
@@ -562,7 +561,7 @@ class UniversalScraper:
                 if content_parts:
                     content = ' '.join(content_parts[:20])  # Take first 20 meaningful parts
             
-            # Extract metadata - UNIVERSAL AUTHOR EXTRACTION
+            # Extract metadata - UNIVERSAL AUTHOR EXTRACTION WITH DEBUG
             author = self._extract_author(soup, url)
             publish_date = self._extract_publish_date(soup)
             description = self._extract_description(soup)
@@ -645,33 +644,131 @@ class UniversalScraper:
         return content if content else soup.get_text(separator=' ', strip=True)
     
     def _extract_author(self, soup: BeautifulSoup, url: str) -> Optional[str]:
-        """UNIVERSAL author extraction that works for all news sites"""
+        """UNIVERSAL author extraction with COMPREHENSIVE DEBUG LOGGING"""
+        
+        logger.info("=" * 80)
+        logger.info("AUTHOR EXTRACTION DEBUG START")
+        logger.info(f"URL: {url}")
+        logger.info("=" * 80)
+        
+        # DEBUG: Check if we even have HTML
+        if not soup:
+            logger.error("CRITICAL: No soup object - HTML extraction failed")
+            return None
+        
+        # DEBUG: Log basic HTML stats
+        full_text = soup.get_text()
+        logger.info(f"Total HTML text length: {len(full_text)} characters")
+        
+        # DEBUG: Check if specific author names appear in the text
+        test_authors = ["Edward-Isaac Dovere", "Megan Forrester", "By Edward-Isaac", "By Megan"]
+        for test_name in test_authors:
+            if test_name in full_text:
+                logger.info(f"FOUND: '{test_name}' appears in HTML text")
+            else:
+                logger.info(f"NOT FOUND: '{test_name}' does not appear in HTML text")
+        
+        # DEBUG: Log first 1000 characters of text
+        text_sample = full_text[:1000].replace('\n', ' ').replace('\r', ' ')
+        logger.info(f"First 1000 chars: {text_sample}")
+        
+        # DEBUG: Find all elements with author/byline related classes or attributes
+        author_elements = []
+        
+        # Check for common author selectors
+        selectors_to_check = [
+            '.byline', '.author', '.byline-name', '.author-name',
+            '[rel="author"]', '[itemprop="author"]',
+            '.article-author', '.post-author', '.writer'
+        ]
+        
+        for selector in selectors_to_check:
+            elements = soup.select(selector)
+            if elements:
+                logger.info(f"SELECTOR '{selector}': Found {len(elements)} elements")
+                for i, elem in enumerate(elements[:3]):  # Max 3 per selector
+                    text = elem.get_text(strip=True)
+                    logger.info(f"  [{i}] {elem.name}.{elem.get('class', [])} = '{text[:100]}'")
+                    author_elements.extend(elements)
+        
+        # DEBUG: Check meta tags
+        meta_selectors = [
+            '[name="author"]', '[property="article:author"]',
+            '[name="article:author"]', '[property="author"]'
+        ]
+        
+        for selector in meta_selectors:
+            element = soup.select_one(selector)
+            if element:
+                content = element.get('content', '')
+                logger.info(f"META '{selector}': content='{content}'")
+        
+        # DEBUG: Check structured data (JSON-LD)
+        json_scripts = soup.find_all('script', {'type': 'application/ld+json'})
+        logger.info(f"Found {len(json_scripts)} JSON-LD scripts")
+        for i, script in enumerate(json_scripts[:2]):  # Check first 2
+            try:
+                data = json.loads(script.string)
+                if isinstance(data, dict) and 'author' in data:
+                    logger.info(f"JSON-LD [{i}]: author = {data['author']}")
+                elif isinstance(data, list) and data and isinstance(data[0], dict) and 'author' in data[0]:
+                    logger.info(f"JSON-LD [{i}]: author = {data[0]['author']}")
+            except:
+                logger.info(f"JSON-LD [{i}]: Failed to parse")
+        
+        # DEBUG: Look for "By" patterns in raw text
+        by_patterns = [
+            r'By\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+            r'BY\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)'
+        ]
+        
+        for pattern in by_patterns:
+            matches = re.findall(pattern, full_text)
+            if matches:
+                logger.info(f"PATTERN '{pattern}': Found matches: {matches}")
+            else:
+                logger.info(f"PATTERN '{pattern}': No matches")
+        
+        logger.info("=" * 80)
+        logger.info("NOW RUNNING ACTUAL EXTRACTION METHODS...")
+        logger.info("=" * 80)
         
         # Step 1: Try structured data (JSON-LD, microdata, meta tags)
         author = self._extract_author_structured(soup)
         if author:
-            logger.info(f"Author found via structured data: {author}")
+            logger.info(f"SUCCESS: Author found via structured data: '{author}'")
             return author
+        else:
+            logger.info("FAILED: No author found via structured data")
         
         # Step 2: Try standard author selectors
         author = self._extract_author_selectors(soup)
         if author:
-            logger.info(f"Author found via selectors: {author}")
+            logger.info(f"SUCCESS: Author found via selectors: '{author}'")
             return author
+        else:
+            logger.info("FAILED: No author found via selectors")
         
         # Step 3: Try text pattern matching (universal approach)
         author = self._extract_author_text_patterns(soup)
         if author:
-            logger.info(f"Author found via text patterns: {author}")
+            logger.info(f"SUCCESS: Author found via text patterns: '{author}'")
             return author
+        else:
+            logger.info("FAILED: No author found via text patterns")
         
         # Step 4: Try positional extraction (near headline)
         author = self._extract_author_positional(soup)
         if author:
-            logger.info(f"Author found via positional extraction: {author}")
+            logger.info(f"SUCCESS: Author found via positional extraction: '{author}'")
             return author
+        else:
+            logger.info("FAILED: No author found via positional extraction")
         
-        logger.info("No author found by any method")
+        logger.info("=" * 80)
+        logger.info("AUTHOR EXTRACTION COMPLETE: NO AUTHOR FOUND")
+        logger.info("=" * 80)
+        
         return None
     
     def _extract_author_structured(self, soup: BeautifulSoup) -> Optional[str]:
@@ -762,35 +859,35 @@ class UniversalScraper:
         return None
     
     def _extract_author_text_patterns(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract author using text pattern matching - works for BBC and similar sites"""
+        """Extract author using text pattern matching"""
         
         # Get the full text content
         full_text = soup.get_text()
         
-        # Universal author patterns (works for most news sites)
+        # Universal author patterns
         author_patterns = [
             # Standard byline patterns
-            r'By\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
-            r'BY\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
-            r'by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)(?:\s|$|,|\.|:)',
+            r'By\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:)',
+            r'BY\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:)',
+            r'by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:)',
             
             # "Written by" patterns
-            r'Written by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
-            r'Story by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
-            r'Report by\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            r'Written by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+            r'Story by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+            r'Report by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
             
             # Author: patterns
-            r'Author:\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
-            r'Reporter:\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
+            r'Author:\s*([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+            r'Reporter:\s*([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
             
-            # BBC-style patterns (Author Name BBC News, Location)
-            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+BBC News',
-            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+CNN',
-            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)\s+Reuters',
+            # News organization patterns
+            r'([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+(?:\s+and\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)?)\s+BBC News',
+            r'([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+(?:\s+and\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)?)\s+CNN',
+            r'([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+(?:\s+and\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)?)\s+Reuters',
             
             # Multiple authors patterns
-            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)',
-            r'([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+,\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)',
+            r'([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+\s+and\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)',
+            r'([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+,\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)',
         ]
         
         for pattern in author_patterns:
@@ -804,7 +901,7 @@ class UniversalScraper:
         return None
     
     def _extract_author_positional(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract author by looking near the headline - universal approach"""
+        """Extract author by looking near the headline"""
         
         # Find the main headline
         headline_selectors = ['h1', '.headline', '.title', '.entry-title', '.post-title']
@@ -843,9 +940,9 @@ class UniversalScraper:
                 
                 # Try pattern matching on this text
                 author_patterns = [
-                    r'^([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+and\s+[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)?)(?:\s+BBC|\s+CNN|\s+Reuters|$|,)',
-                    r'By\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)',
-                    r'^([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)(?:\s|$|,)',
+                    r'^([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+(?:\s+and\s+[A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)?)(?:\s+BBC|\s+CNN|\s+Reuters|$|,)',
+                    r'By\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+                    r'^([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)(?:\s|$|,)',
                 ]
                 
                 for pattern in author_patterns:
@@ -891,7 +988,7 @@ class UniversalScraper:
         if not author[0].isupper():
             return False
         
-        # Shouldn't contain numbers or special characters (except spaces, hyphens, apostrophes)
+        # Allow hyphens in names (like Edward-Isaac)
         if re.search(r'[0-9@#$%^&*()_+={}|\[\]\\:";\'<>?,./]', author):
             return False
         
@@ -963,13 +1060,13 @@ class UniversalScraper:
 
 # Main ArticleExtractor class that inherits from BaseAnalyzer
 class ArticleExtractor(BaseAnalyzer):
-    """Article extraction service with ScraperAPI integration - FIXED VERSION"""
+    """Article extraction service with ScraperAPI integration and DEBUG LOGGING"""
     
     def __init__(self):
         super().__init__('article_extractor')
         
         logger.info("=" * 60)
-        logger.info("FIXED ArticleExtractor with UNIVERSAL Author Detection")
+        logger.info("ArticleExtractor with COMPREHENSIVE DEBUG LOGGING")
         logger.info("=" * 60)
         
         # Initialize universal scraper with ScraperAPI
@@ -981,9 +1078,9 @@ class ArticleExtractor(BaseAnalyzer):
             logger.info(f"UniversalScraper initialized - ScraperAPI: {scraperapi_available}")
             
             if scraperapi_available:
-                logger.info("🚀 ScraperAPI integration ACTIVE - upgraded key will be used!")
+                logger.info("ScraperAPI integration ACTIVE")
             else:
-                logger.warning("⚠️  ScraperAPI key not found - will use fallback methods")
+                logger.warning("ScraperAPI key not found - will use fallback methods")
                 
         except Exception as e:
             logger.error(f"Failed to initialize UniversalScraper: {e}")
@@ -994,9 +1091,9 @@ class ArticleExtractor(BaseAnalyzer):
         return True  # Always available with fallback methods
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Main analysis method - FIXED to use ScraperAPI"""
+        """Main analysis method with DEBUG LOGGING"""
         logger.info("=" * 60)
-        logger.info("FIXED ArticleExtractor.analyze() - WITH SCRAPERAPI")
+        logger.info("ArticleExtractor.analyze() - WITH DEBUG LOGGING")
         logger.info("=" * 60)
         
         try:
@@ -1027,11 +1124,11 @@ class ArticleExtractor(BaseAnalyzer):
                         
                         # Log ScraperAPI usage
                         if result.get('success') and result.get('extraction_metadata', {}).get('api_used'):
-                            logger.info("✅ SUCCESS: ScraperAPI successfully extracted content!")
+                            logger.info("SUCCESS: ScraperAPI successfully extracted content!")
                         elif result.get('success'):
-                            logger.info("✅ SUCCESS: Fallback method extracted content")
+                            logger.info("SUCCESS: Fallback method extracted content")
                         else:
-                            logger.warning("❌ All extraction methods failed")
+                            logger.warning("All extraction methods failed")
                             
                     except Exception as e:
                         logger.warning(f"Universal scraper failed: {e}")
