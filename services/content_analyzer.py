@@ -1,6 +1,7 @@
 """
 Content Analyzer Service - BULLETPROOF AI ENHANCED VERSION
 Analyzes writing quality, structure, and professionalism with bulletproof AI insights
+FIXED: Proper data structure and scoring calculations
 """
 
 import re
@@ -36,10 +37,7 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze content quality WITH BULLETPROOF AI ENHANCEMENT
-        
-        Expected input:
-            - text: Article text to analyze (required)
-            - title: Article title (optional)
+        FIXED: Proper data structure and score calculations
         """
         try:
             start_time = time.time()
@@ -80,7 +78,7 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             # Generate summary
             summary = self._generate_summary(content_metrics, overall_score, quality_level)
             
-            # Build response
+            # FIXED: Ensure consistent data structure
             result = {
                 'service': self.service_name,
                 'success': True,
@@ -100,14 +98,18 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'coherence_score': coherence.get('score', 0),
                     'word_count': len(text.split()),
                     'sentence_count': len(re.findall(r'[.!?]+', text)),
-                    'paragraph_count': len(text.split('\n\n')),
+                    'paragraph_count': len([p for p in text.split('\n\n') if p.strip()]),
                     'details': {
                         'avg_sentence_length': readability.get('avg_sentence_length', 0),
                         'vocabulary_diversity': vocabulary.get('diversity_score', 0),
                         'complex_words': vocabulary.get('complex_word_count', 0),
                         'grammar_issues': grammar.get('issue_count', 0),
                         'structure_elements': len(structure.get('elements_found', [])),
-                        'professionalism_indicators': len(professionalism.get('indicators', []))
+                        'professionalism_indicators': len(professionalism.get('indicators', [])),
+                        'readability_level': readability.get('level', 'Unknown'),
+                        'transition_words': structure.get('transition_count', 0),
+                        'citation_found': professionalism.get('citation_found', False),
+                        'statistics_found': professionalism.get('statistics_found', False)
                     }
                 },
                 'metadata': {
@@ -186,10 +188,14 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         
         # Adjust for very short or very long sentences
         sentence_lengths = [len(s.split()) for s in sentences]
-        if sentence_lengths:
-            length_variance = statistics.stdev(sentence_lengths) if len(sentence_lengths) > 1 else 0
-            if length_variance > 15:  # High variance is good
-                readability_score += 10
+        length_variance = 0
+        if sentence_lengths and len(sentence_lengths) > 1:
+            try:
+                length_variance = statistics.stdev(sentence_lengths)
+                if length_variance > 15:  # High variance is good
+                    readability_score += 10
+            except:
+                length_variance = 0
         
         readability_level = self._get_readability_level(readability_score)
         
@@ -199,15 +205,14 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             'avg_sentence_length': round(avg_sentence_length, 1),
             'sentence_count': len(sentences),
             'word_count': len(words),
-            'length_variance': round(length_variance, 1) if sentence_lengths else 0
+            'length_variance': round(length_variance, 1) if length_variance else 0
         }
     
     def _analyze_structure(self, text: str) -> Dict[str, Any]:
         """Analyze text structure"""
         
         text_lower = text.lower()
-        paragraphs = text.split('\n\n')
-        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         
         elements_found = []
         structure_indicators = []
@@ -227,7 +232,7 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             structure_indicators.append("Poor paragraph structure")
         
         # Check for transitions
-        transition_words = ['however', 'therefore', 'moreover', 'furthermore', 'additionally']
+        transition_words = ['however', 'therefore', 'moreover', 'furthermore', 'additionally', 'consequently']
         transition_count = sum(1 for word in transition_words if word in text_lower)
         if transition_count >= 2:
             structure_indicators.append("Good use of transitions")
@@ -240,13 +245,18 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                             20  # Base score
                             )
         
+        avg_paragraph_length = 0
+        if paragraphs:
+            total_words = sum(len(p.split()) for p in paragraphs)
+            avg_paragraph_length = total_words / len(paragraphs)
+        
         return {
             'score': int(structure_score),
             'paragraph_count': len(paragraphs),
             'elements_found': elements_found,
             'transition_count': transition_count,
             'indicators': structure_indicators,
-            'avg_paragraph_length': sum(len(p.split()) for p in paragraphs) / max(len(paragraphs), 1)
+            'avg_paragraph_length': round(avg_paragraph_length, 1)
         }
     
     def _analyze_vocabulary(self, text: str) -> Dict[str, Any]:
@@ -286,26 +296,31 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         issue_count = 0
         
         # Check for multiple spaces
-        if re.search(r'\s{2,}', text):
+        multiple_spaces = re.findall(r'\s{2,}', text)
+        if multiple_spaces:
             issues_found.append("Multiple spaces found")
-            issue_count += len(re.findall(r'\s{2,}', text))
+            issue_count += len(multiple_spaces)
         
         # Check for multiple punctuation
-        if re.search(r'[.!?]{2,}', text):
+        multiple_punct = re.findall(r'[.!?]{2,}', text)
+        if multiple_punct:
             issues_found.append("Multiple punctuation marks")
-            issue_count += len(re.findall(r'[.!?]{2,}', text))
+            issue_count += len(multiple_punct)
         
         # Check capitalization after periods
         sentences = re.split(r'[.!?]+', text)
+        cap_issues = 0
         for sentence in sentences[1:]:  # Skip first
             sentence = sentence.strip()
             if sentence and sentence[0].islower():
-                issues_found.append("Capitalization issues")
-                issue_count += 1
-                break
+                cap_issues += 1
+                if cap_issues == 1:  # Only add once
+                    issues_found.append("Capitalization issues")
+        issue_count += cap_issues
         
         # Simple grammar score based on issues found
         word_count = len(text.split())
+        error_rate = 0
         if word_count > 0:
             error_rate = issue_count / word_count
             grammar_score = max(0, 100 - (error_rate * 1000))  # Penalize errors
@@ -333,12 +348,14 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 professional_score += 5
         
         # Check for citations or references
-        if re.search(r'\([^)]*\d{4}[^)]*\)', text):  # Year in parentheses
+        citation_found = bool(re.search(r'\([^)]*\d{4}[^)]*\)', text))  # Year in parentheses
+        if citation_found:
             indicators.append("Contains citations")
             professional_score += 15
         
         # Check for statistics or data
-        if re.search(r'\d+%|\d+\s*percent', text):
+        statistics_found = bool(re.search(r'\d+%|\d+\s*percent', text))
+        if statistics_found:
             indicators.append("Includes statistical data")
             professional_score += 10
         
@@ -358,23 +375,22 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             'score': int(professional_score),
             'indicators': indicators,
             'unprofessional_count': unprofessional_count,
-            'citation_found': bool(re.search(r'\([^)]*\d{4}[^)]*\)', text)),
-            'statistics_found': bool(re.search(r'\d+%|\d+\s*percent', text))
+            'citation_found': citation_found,
+            'statistics_found': statistics_found
         }
     
     def _analyze_coherence(self, text: str) -> Dict[str, Any]:
         """Analyze text coherence and flow"""
         
-        paragraphs = text.split('\n\n')
-        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         
         coherence_indicators = []
         coherence_score = 50  # Base score
+        consistency_ratio = 1.0
         
         # Check paragraph consistency
         if len(paragraphs) > 1:
             paragraph_lengths = [len(p.split()) for p in paragraphs]
-            avg_length = sum(paragraph_lengths) / len(paragraph_lengths)
             
             # Penalize extremely short or long paragraphs
             reasonable_paragraphs = sum(1 for length in paragraph_lengths 
@@ -422,7 +438,7 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             'score': int(coherence_score),
             'indicators': coherence_indicators,
             'connector_count': connector_count,
-            'paragraph_consistency': consistency_ratio if len(paragraphs) > 1 else 1.0
+            'paragraph_consistency': consistency_ratio
         }
     
     def _calculate_content_score(self, metrics: Dict[str, Any]) -> int:
