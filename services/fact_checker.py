@@ -1,6 +1,6 @@
 """
-Fact Checker Service - FIXED VERSION  
-Fixed AIEnhancementMixin._ai_analyze_claims() method call
+Fact Checker Service - BULLETPROOF AI ENHANCED VERSION
+Fixed AIEnhancementMixin method calls and data structure warnings
 """
 
 import re
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class FactChecker(BaseAnalyzer, AIEnhancementMixin):
     """
     Fact-check article claims using multiple sources
-    FIXED: Corrected AI enhancement method calls
+    FIXED: Corrected AI enhancement method calls and data structure warnings
     """
     
     def __init__(self):
@@ -49,7 +49,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze article for fact-checkable claims
-        FIXED: Removed invalid 'context' parameter from AI method call
+        FIXED: Corrected AI method call and data structure warnings
         """
         try:
             start_time = time.time()
@@ -69,17 +69,28 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             # 1. Extract claims from content
             extracted_claims = self._extract_claims(content)
             
-            # 2. AI Enhancement - FIXED: Removed invalid 'context' parameter
+            # 2. AI Enhancement - FIXED: Using correct method without invalid parameters
             ai_enhanced_claims = []
             if extracted_claims:
                 logger.info("Enhancing fact checking with AI")
                 try:
-                    # Use the correct method signature without 'context' parameter
-                    ai_claims = self._ai_analyze_claims(extracted_claims, content)
-                    if ai_claims and isinstance(ai_claims, list):
-                        ai_enhanced_claims = ai_claims[:10]  # Limit to top 10
+                    # Use the correct AI method with proper parameters
+                    ai_result = self._safely_enhance_service_result(
+                        {'claims': extracted_claims, 'content': content[:1500]},
+                        '_ai_analyze_claims',
+                        claims=extracted_claims[:5],
+                        article_text=content[:1500]
+                    )
+                    
+                    if ai_result and ai_result.get('ai_insights', {}).get('enhanced_claims'):
+                        enhanced_claims_data = ai_result['ai_insights']['enhanced_claims']
+                        if isinstance(enhanced_claims_data, list):
+                            ai_enhanced_claims = enhanced_claims_data[:10]
+                        else:
+                            ai_enhanced_claims = extracted_claims[:10]
                     else:
                         ai_enhanced_claims = extracted_claims[:10]
+                        
                 except Exception as e:
                     logger.warning(f"AI enhancement failed, using basic claims: {e}")
                     ai_enhanced_claims = extracted_claims[:10]
@@ -102,19 +113,34 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             # 6. Identify sources used
             sources_used = self._get_sources_used(fact_checks)
             
+            # FIXED: Ensure all data structure elements are properly defined
             result = {
                 'service': self.service_name,
                 'success': True,
                 'data': {
+                    'score': verification_score,
+                    'level': verification_level,
                     'verification_score': verification_score,
                     'verification_level': verification_level,
+                    'findings': self._generate_findings(fact_checks, verification_score),
+                    'summary': summary,
                     'claims_found': len(extracted_claims),
                     'claims_checked': len(fact_checks),
-                    'fact_checks': fact_checks,
-                    'summary': summary,
+                    'fact_checks': fact_checks[:10],  # Limit to prevent data bloat
                     'sources_used': sources_used,
                     'google_api_used': bool(self.google_api_key),
-                    'analysis_time': time.time() - start_time
+                    'details': {
+                        'total_claims': len(extracted_claims),
+                        'verified_claims': len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']]),
+                        'disputed_claims': len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']]),
+                        'unverified_claims': len([fc for fc in fact_checks if fc.get('verdict') == 'unverified']),
+                        'average_confidence': sum(fc.get('confidence', 0) for fc in fact_checks) / max(len(fact_checks), 1)
+                    }
+                },
+                'metadata': {
+                    'analysis_time': time.time() - start_time,
+                    'content_length': len(content),
+                    'api_available': bool(self.google_api_key)
                 }
             }
             
@@ -485,6 +511,54 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             summary += "Many claims appear to be false or misleading."
         
         return summary
+    
+    def _generate_findings(self, fact_checks: List[Dict[str, Any]], score: int) -> List[Dict[str, Any]]:
+        """Generate findings for UI display"""
+        findings = []
+        
+        if score >= 80:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'High verification score ({score}/100)',
+                'explanation': 'Most claims are well-supported by evidence'
+            })
+        elif score >= 60:
+            findings.append({
+                'type': 'info',
+                'severity': 'medium',
+                'text': f'Moderate verification ({score}/100)',
+                'explanation': 'Mixed accuracy with some questionable claims'
+            })
+        else:
+            findings.append({
+                'type': 'warning',
+                'severity': 'high',
+                'text': f'Low verification score ({score}/100)',
+                'explanation': 'Many claims lack verification or are disputed'
+            })
+        
+        # Add specific fact check findings
+        verified_count = len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']])
+        disputed_count = len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']])
+        
+        if verified_count > 0:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'{verified_count} claims verified as accurate',
+                'explanation': 'These claims are supported by fact-checking sources'
+            })
+        
+        if disputed_count > 0:
+            findings.append({
+                'type': 'warning',
+                'severity': 'high',
+                'text': f'{disputed_count} claims disputed or false',
+                'explanation': 'These claims are contradicted by fact-checking sources'
+            })
+        
+        return findings
     
     def _get_verification_level(self, score: int) -> str:
         """Convert verification score to level"""
