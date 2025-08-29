@@ -1,6 +1,7 @@
 """
 Transparency Analyzer Service - BULLETPROOF AI ENHANCED VERSION
 Analyzes transparency indicators in news articles with bulletproof AI insights
+FIXED: Proper data structure and AI enhancement integration
 """
 
 import re
@@ -33,12 +34,7 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze transparency indicators WITH BULLETPROOF AI ENHANCEMENT
-        
-        Expected input:
-            - text: Article text to analyze (required)
-            - title: Article title (optional)
-            - author: Author name (optional)
-            - domain: Source domain (optional)
+        FIXED: Proper data structure and AI integration
         """
         try:
             start_time = time.time()
@@ -89,7 +85,7 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 missing = component_data.get('missing', [])
                 missing_elements.extend(missing)
             
-            # Build response
+            # FIXED: Ensure consistent data structure
             result = {
                 'service': self.service_name,
                 'success': True,
@@ -101,7 +97,7 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'findings': findings,
                     'summary': summary,
                     'indicators': all_indicators,
-                    'missing_elements': missing_elements[:10],  # Top 10 missing items
+                    'missing_elements': missing_elements[:10],
                     'components': transparency_components,
                     'source_count': source_attribution.get('source_count', 0),
                     'quote_count': source_attribution.get('quote_count', 0),
@@ -113,7 +109,10 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                         'quotes_used': source_attribution.get('quote_count', 0),
                         'disclosures_found': len(disclosure_analysis.get('types_found', [])),
                         'transparency_indicators': len(all_indicators),
-                        'missing_elements_count': len(missing_elements)
+                        'missing_elements_count': len(missing_elements),
+                        'author_identified': author_transparency.get('author_present', False),
+                        'has_corrections': correction_indicators.get('has_corrections', False),
+                        'methodology_elements': len(methodology_transparency.get('methodology_elements', []))
                     }
                 },
                 'metadata': {
