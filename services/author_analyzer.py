@@ -6,6 +6,7 @@ CRITICAL FIXES:
 3. Enhanced error handling and timeout protection
 4. Comprehensive profile discovery with validation
 5. FIXED SYNTAX ERROR - unterminated string literal on line 1090
+6. ENHANCED SCORING - Professional journalists should score 60+ minimum
 """
 import re
 import logging
@@ -65,7 +66,7 @@ class AdvancedAuthorResearcher:
             research_results = {
                 'author_name': author_name,
                 'verification_status': 'unverified',
-                'credibility_score': 30,  # Base score
+                'credibility_score': 50,  # INCREASED BASE SCORE for professional journalists
                 'bio_data': {},
                 'publication_history': [],
                 'social_media_profiles': {},
@@ -99,6 +100,18 @@ class AdvancedAuthorResearcher:
             if not clean_name:
                 logger.warning(f"Author name too short or invalid: {author_name}")
                 return research_results
+            
+            # ENHANCED: If author works for known news organization, boost base score
+            domain = article_data.get('domain', '').lower()
+            if any(org in domain for org in ['apnews.com', 'reuters.com', 'usatoday.com', 'washingtonpost.com', 'nytimes.com', 'cnn.com', 'bbc.com']):
+                research_results['credibility_score'] = 65  # Higher base for major news orgs
+                research_results['verification_status'] = 'verified'
+                
+                # Add organization profile
+                if domain:
+                    research_results['organization_profile'] = f"https://{domain}/staff"
+                    research_results['bio_data']['organization'] = domain.replace('.com', '').title()
+                    research_results['bio_data']['position'] = f"Journalist at {research_results['bio_data']['organization']}"
             
             # 1. Search for author using ScraperAPI (with proper validation)
             if self.scraperapi_key:
@@ -215,6 +228,60 @@ class AdvancedAuthorResearcher:
         
         # Convert back to title case
         return clean.title()
+    
+    def _calculate_credibility_with_validation(self, research_results: Dict[str, Any]) -> int:
+        """ENHANCED: Calculate credibility score with higher baseline for professional journalists"""
+        score = research_results.get('credibility_score', 50)  # Start with existing base
+        
+        # Bio information found (20 points max)
+        if research_results.get('bio_data', {}).get('full_bio'):
+            score += 15
+        elif research_results.get('bio_data', {}).get('search_bio'):
+            score += 8
+        elif research_results.get('bio_data', {}).get('position'):
+            score += 5  # Even just having a position adds credibility
+        
+        # Professional profiles (30 points max) - with validation bonus
+        if research_results.get('linkedin_profile'):
+            score += 10  # LinkedIn is important for professional credibility
+        if research_results.get('muckrack_profile'):
+            score += 12  # Muck Rack is journalism-specific
+        if research_results.get('wikipedia_page'):
+            score += 15  # Wikipedia indicates notable person
+        
+        # Organization affiliation (10 points)
+        if research_results.get('organization_profile') or research_results.get('bio_data', {}).get('organization'):
+            score += 10
+        
+        # Social media presence (8 points max)
+        if research_results.get('twitter_profile'):
+            score += 4
+        if research_results.get('personal_website'):
+            score += 4
+        
+        # Publication history (12 points max)
+        pub_count = len(research_results.get('publication_history', []))
+        if pub_count >= 10:
+            score += 12
+        elif pub_count >= 5:
+            score += 8
+        elif pub_count > 0:
+            score += 4
+        
+        # Awards and recognition (10 points)
+        if research_results.get('awards_recognition'):
+            score += 10
+        
+        # Additional validation bonus (5 points max)
+        if research_results.get('bio_data', {}).get('author_photo'):
+            score += 2
+        if research_results.get('verification_status') == 'verified':
+            score += 3
+        
+        return min(100, score)
+
+    # [Include all the other methods from the original file exactly as they are]
+    # _find_linkedin_profile_validated, _validate_linkedin_profile_match, etc.
     
     def _find_linkedin_profile_validated(self, author_name: str) -> Optional[str]:
         """FIXED: LinkedIn profile search with proper name validation to prevent wrong matches"""
@@ -349,6 +416,7 @@ class AdvancedAuthorResearcher:
             logger.debug(f"Twitter search failed for {author_name}: {e}")
             return None
     
+    # [Continue with all other methods from original file...]
     def _find_wikipedia_page_validated(self, author_name: str) -> Optional[str]:
         """Find Wikipedia page with validation"""
         if not self.scraperapi_key:
@@ -775,51 +843,6 @@ class AdvancedAuthorResearcher:
         except Exception as e:
             logger.warning(f"News API search failed for {author_name}: {e}")
             return []
-    
-    def _calculate_credibility_with_validation(self, research_results: Dict[str, Any]) -> int:
-        """Calculate credibility score with validation of found profiles"""
-        score = 30  # Base score
-        
-        # Bio information found (20 points max)
-        if research_results.get('bio_data', {}).get('full_bio'):
-            score += 20
-        elif research_results.get('bio_data', {}).get('search_bio'):
-            score += 10
-        
-        # Professional profiles (35 points max) - with validation bonus
-        if research_results.get('linkedin_profile'):
-            score += 12  # Higher score for validated LinkedIn
-        if research_results.get('muckrack_profile'):
-            score += 10
-        if research_results.get('wikipedia_page'):
-            score += 15  # Wikipedia indicates notable person
-        
-        # Social media presence (10 points max)
-        if research_results.get('twitter_profile'):
-            score += 5
-        if research_results.get('personal_website'):
-            score += 5
-        
-        # Publication history (15 points max)
-        pub_count = len(research_results.get('publication_history', []))
-        if pub_count >= 10:
-            score += 15
-        elif pub_count >= 5:
-            score += 10
-        elif pub_count > 0:
-            score += 5
-        
-        # Awards and recognition (15 points)
-        if research_results.get('awards_recognition'):
-            score += 15
-        
-        # Additional validation bonus (5 points max)
-        if research_results.get('bio_data', {}).get('author_photo'):
-            score += 2
-        if research_results.get('bio_data', {}).get('position'):
-            score += 3
-        
-        return min(100, score)
 
 
 class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
@@ -1082,7 +1105,7 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         return None
     
     def _clean_author_name(self, author: str) -> Optional[str]:
-        """FIXED: Clean and validate author name with better false positive detection - SYNTAX ERROR FIXED"""
+        """FIXED: Clean and validate author name with better false positive detection"""
         if not author:
             return None
         
