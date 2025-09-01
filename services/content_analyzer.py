@@ -13,9 +13,17 @@ from collections import Counter
 import statistics
 
 from services.base_analyzer import BaseAnalyzer
-from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
+
+# Import AI enhancement mixin if available
+try:
+    from services.ai_enhancement_mixin import AIEnhancementMixin
+    AI_MIXIN_AVAILABLE = True
+except ImportError:
+    logger.info("AI Enhancement Mixin not available - running without AI enhancement")
+    AIEnhancementMixin = object
+    AI_MIXIN_AVAILABLE = False
 
 
 class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
@@ -23,7 +31,11 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     
     def __init__(self):
         super().__init__('content_analyzer')
-        AIEnhancementMixin.__init__(self)
+        if AI_MIXIN_AVAILABLE:
+            AIEnhancementMixin.__init__(self)
+            self._ai_available = getattr(self, '_ai_available', False)
+        else:
+            self._ai_available = False
         
         # Initialize analysis patterns
         self._initialize_content_patterns()
@@ -82,6 +94,8 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             result = {
                 'service': self.service_name,
                 'success': True,
+                'available': True,
+                'timestamp': time.time(),
                 'data': {
                     'score': overall_score,
                     'level': quality_level,
@@ -119,16 +133,22 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 }
             }
             
-            # BULLETPROOF AI ENHANCEMENT
-            if text:
+            # BULLETPROOF AI ENHANCEMENT (if available)
+            if text and self._ai_available and AI_MIXIN_AVAILABLE:
                 logger.info("Enhancing content analysis with AI insights")
                 
-                result = self._safely_enhance_service_result(
-                    result,
-                    '_ai_analyze_content_quality',
-                    text=text[:1000],
-                    metrics=content_metrics
-                )
+                try:
+                    result = self._safely_enhance_service_result(
+                        result,
+                        '_ai_analyze_content_quality',
+                        text=text[:1000],
+                        metrics=content_metrics
+                    )
+                    if result:
+                        result['metadata']['ai_enhancement_applied'] = True
+                except Exception as ai_error:
+                    logger.warning(f"AI enhancement failed safely: {ai_error}")
+                    result['metadata']['ai_enhancement_failed'] = str(ai_error)
             
             logger.info(f"Content analysis complete: {overall_score}/100 ({quality_level})")
             return result
@@ -591,7 +611,7 @@ class ContentAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'Grammar and mechanics checking',
                 'Professional writing analysis',
                 'Coherence and flow evaluation',
-                'BULLETPROOF AI-enhanced content quality assessment'
+                'AI-enhanced content quality assessment' if self._ai_available else 'Pattern-based content analysis'
             ],
             'metrics_analyzed': [
                 'readability',
