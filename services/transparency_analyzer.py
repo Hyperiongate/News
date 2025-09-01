@@ -10,9 +10,17 @@ import time
 import os
 from typing import Dict, Any, Optional, List
 from services.base_analyzer import BaseAnalyzer
-from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
+
+# Import AI enhancement mixin if available
+try:
+    from services.ai_enhancement_mixin import AIEnhancementMixin
+    AI_MIXIN_AVAILABLE = True
+except ImportError:
+    logger.info("AI Enhancement Mixin not available - running without AI enhancement")
+    AIEnhancementMixin = object
+    AI_MIXIN_AVAILABLE = False
 
 
 class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
@@ -20,7 +28,11 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     
     def __init__(self):
         super().__init__('transparency_analyzer')
-        AIEnhancementMixin.__init__(self)
+        if AI_MIXIN_AVAILABLE:
+            AIEnhancementMixin.__init__(self)
+            self._ai_available = getattr(self, '_ai_available', False)
+        else:
+            self._ai_available = False
         
         # Initialize transparency patterns
         self._initialize_transparency_patterns()
@@ -89,6 +101,8 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             result = {
                 'service': self.service_name,
                 'success': True,
+                'available': True,
+                'timestamp': time.time(),
                 'data': {
                     'score': overall_score,
                     'level': transparency_level,
@@ -123,8 +137,8 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 }
             }
             
-            # BULLETPROOF AI ENHANCEMENT
-            if text:
+            # BULLETPROOF AI ENHANCEMENT (if available)
+            if text and self._ai_available and AI_MIXIN_AVAILABLE:
                 logger.info("Enhancing transparency analysis with AI insights")
                 
                 # Prepare data for AI analysis
@@ -141,12 +155,18 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                     'source': domain
                 }
                 
-                result = self._safely_enhance_service_result(
-                    result,
-                    '_ai_analyze_transparency',
-                    transparency_data=transparency_data,
-                    article_data=article_data
-                )
+                try:
+                    result = self._safely_enhance_service_result(
+                        result,
+                        '_ai_analyze_transparency',
+                        transparency_data=transparency_data,
+                        article_data=article_data
+                    )
+                    if result:
+                        result['metadata']['ai_enhancement_applied'] = True
+                except Exception as ai_error:
+                    logger.warning(f"AI enhancement failed safely: {ai_error}")
+                    result['metadata']['ai_enhancement_failed'] = str(ai_error)
             
             logger.info(f"Transparency analysis complete: {overall_score}/100 ({transparency_level})")
             return result
@@ -183,9 +203,6 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     
     def _analyze_source_attribution(self, text: str) -> Dict[str, Any]:
         """Analyze how well sources are attributed"""
-        
-        # Count quoted sources
-        quote_count = text.count('"') // 2  # Pairs of quotes
         
         # Count source attributions
         source_count = 0
@@ -489,7 +506,7 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
                 'Methodology transparency evaluation',
                 'Correction policy analysis',
                 'Statistical transparency verification',
-                'BULLETPROOF AI-enhanced transparency assessment'
+                'AI-enhanced transparency assessment' if self._ai_available else 'Pattern-based transparency analysis'
             ],
             'transparency_elements': [
                 'source_attribution',
@@ -500,4 +517,7 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             ],
             'ai_enhanced': self._ai_available
         })
-        return info
+        return info quoted sources
+        quote_count = text.count('"') // 2  # Pairs of quotes
+        
+        # Count
