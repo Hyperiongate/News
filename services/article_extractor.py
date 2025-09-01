@@ -5,6 +5,7 @@ CRITICAL FIXES:
 2. Enhanced timeout handling to prevent worker shutdowns
 3. Comprehensive author extraction with debug logging
 4. ScraperAPI integration prioritized for maximum success
+5. FIXED SYNTAX ERRORS - unterminated string literals
 """
 
 import json
@@ -850,18 +851,20 @@ class UniversalScraper:
         return None
     
     def _clean_author_name(self, author: str) -> Optional[str]:
-        """Clean and normalize author name"""
+        """Clean and normalize author name - FIXED SYNTAX ERRORS"""
         if not author:
             return None
         
         # Remove common prefixes and suffixes
         author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
+        # FIXED: Added missing quote before comma
         author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author, flags=re.IGNORECASE)
         author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters|Associated Press|AP).*', '', author, flags=re.IGNORECASE)
         
         # Clean up whitespace and punctuation
         author = re.sub(r'\s+', ' ', author).strip()
-        author = re.sub(r'[,\.\:;]+, '', author)
+        # FIXED: Added missing quote before comma
+        author = re.sub(r'[,\.\:;]+', '', author)
         
         return author if author else None
     
