@@ -16,9 +16,17 @@ from collections import Counter
 import statistics
 
 from services.base_analyzer import BaseAnalyzer
-from services.ai_enhancement_mixin import AIEnhancementMixin
 
 logger = logging.getLogger(__name__)
+
+# Import AI enhancement mixin if available
+try:
+    from services.ai_enhancement_mixin import AIEnhancementMixin
+    AI_MIXIN_AVAILABLE = True
+except ImportError:
+    logger.info("AI Enhancement Mixin not available - running without AI enhancement")
+    AIEnhancementMixin = object
+    AI_MIXIN_AVAILABLE = False
 
 
 class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
@@ -29,7 +37,11 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     def __init__(self):
         """Initialize bias detector with comprehensive pattern database"""
         super().__init__('bias_detector')
-        AIEnhancementMixin.__init__(self)
+        if AI_MIXIN_AVAILABLE:
+            AIEnhancementMixin.__init__(self)
+            self._ai_available = getattr(self, '_ai_available', False)
+        else:
+            self._ai_available = False
         
         # Initialize all bias patterns and indicators
         self._initialize_bias_patterns()
@@ -131,8 +143,8 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 }
             }
             
-            # BULLETPROOF AI ENHANCEMENT
-            if full_text and self._ai_available:
+            # BULLETPROOF AI ENHANCEMENT (if available)
+            if full_text and self._ai_available and AI_MIXIN_AVAILABLE:
                 logger.info("Enhancing bias detection with AI insights")
                 try:
                     enhanced_result = self._safely_enhance_service_result(
@@ -586,7 +598,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'Loaded language extraction',
                 'Framing analysis',
                 'Source diversity assessment',
-                'BULLETPROOF AI-enhanced bias detection',
+                'AI-enhanced bias detection' if self._ai_available else 'Pattern-based bias detection',
                 'Timeout-protected analysis'
             ],
             'dimensions_analyzed': 5,
