@@ -204,6 +204,9 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
     def _analyze_source_attribution(self, text: str) -> Dict[str, Any]:
         """Analyze how well sources are attributed"""
         
+        # Count quoted sources
+        quote_count = text.count('"') // 2  # Pairs of quotes
+        
         # Count source attributions
         source_count = 0
         source_mentions = []
@@ -517,7 +520,4 @@ class TransparencyAnalyzer(BaseAnalyzer, AIEnhancementMixin):
             ],
             'ai_enhanced': self._ai_available
         })
-        return info quoted sources
-        quote_count = text.count('"') // 2  # Pairs of quotes
-        
-        # Count
+        return info
