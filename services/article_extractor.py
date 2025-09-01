@@ -1,11 +1,10 @@
 """
-Article Extraction Service - COMPLETE FIXED VERSION
+Article Extraction Service - FIXED DATA WRAPPER FORMAT
 CRITICAL FIXES:
-1. Proper data structure with consistent wrapper format
-2. Enhanced timeout handling to prevent worker shutdowns
-3. Comprehensive author extraction with debug logging
-4. ScraperAPI integration prioritized for maximum success
-5. FIXED SYNTAX ERRORS - unterminated string literals
+1. Returns data in exact 'data' wrapper format that pipeline expects
+2. Enhanced author extraction with comprehensive debugging
+3. Proper error handling with consistent return format
+4. ScraperAPI integration with timeout protection
 """
 
 import json
@@ -56,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 
 class ScraperAPIIntegration:
-    """FIXED: ScraperAPI Integration with proper timeout handling"""
+    """ScraperAPI Integration with proper timeout handling"""
     
     def __init__(self):
         from config import Config
@@ -70,7 +69,7 @@ class ScraperAPIIntegration:
         logger.info(f"ScraperAPI Integration - ScraperAPI: {bool(self.scraperapi_key)}, ScrapingBee: {bool(self.scrapingbee_key)}")
     
     def scraperapi_request(self, url: str, **kwargs) -> requests.Response:
-        """FIXED: Make request through ScraperAPI with proper timeout handling"""
+        """Make request through ScraperAPI with proper timeout handling"""
         if not self.scraperapi_key:
             raise Exception("ScraperAPI key not configured")
         
@@ -102,12 +101,11 @@ class ScraperAPIIntegration:
             for key, value in headers.items():
                 params[f'custom_headers[{key}]'] = value
         
-        # FIXED: Proper timeout handling with retries
+        # Proper timeout handling with retries
         logger.info(f"Using ScraperAPI for: {url}")
         
         for attempt in range(2):
             try:
-                # Increase timeout to prevent worker shutdowns
                 timeout = 60 if attempt == 0 else 90
                 response = requests.get(self.scraperapi_base, params=params, timeout=timeout)
                 
@@ -130,51 +128,13 @@ class ScraperAPIIntegration:
                     raise
         
         raise Exception("ScraperAPI request failed after retries")
-    
-    def scrapingbee_request(self, url: str, **kwargs) -> requests.Response:
-        """FIXED: Make request through ScrapingBee with timeout handling"""
-        if not self.scrapingbee_key:
-            raise Exception("ScrapingBee key not configured")
-        
-        params = {
-            'api_key': self.scrapingbee_key,
-            'url': url,
-            'render_js': 'false',
-            'premium_proxy': 'false',
-            'country_code': 'us'
-        }
-        
-        # Add parameters
-        if kwargs.get('render_js'):
-            params['render_js'] = 'true'
-        
-        if kwargs.get('premium'):
-            params['premium_proxy'] = 'true'
-        
-        # Custom headers
-        headers = kwargs.get('headers', {})
-        for key, value in headers.items():
-            params[f'custom_headers[{key}]'] = value
-        
-        logger.info(f"Using ScrapingBee for: {url}")
-        response = requests.get(self.scrapingbee_base, params=params, timeout=60)
-        
-        # Create mock response
-        mock_response = requests.Response()
-        mock_response._content = response.content
-        mock_response.status_code = response.status_code
-        mock_response.headers.update(response.headers)
-        mock_response.url = url
-        mock_response.encoding = response.encoding
-        
-        return mock_response
 
 
 class UniversalScraper:
-    """FIXED: Universal web scraper with proper timeout handling and author extraction"""
+    """Universal web scraper with enhanced author extraction"""
     
     def __init__(self):
-        self.timeout = 30  # Increased timeout
+        self.timeout = 30
         self.max_retries = 2
         self.methods_tried = []
         
@@ -199,7 +159,7 @@ class UniversalScraper:
         logger.info(f"UniversalScraper initialized with ScraperAPI: {bool(self.scraper_apis.scraperapi_key)}")
     
     def extract_from_url(self, url: str) -> Dict[str, Any]:
-        """FIXED: Extract article from URL with ScraperAPI prioritized and proper timeout handling"""
+        """Extract article from URL with ScraperAPI prioritized"""
         self.methods_tried = []
         domain = urlparse(url).netloc
         
@@ -223,7 +183,7 @@ class UniversalScraper:
                         result['extraction_metadata']['methods_tried'] = self.methods_tried
                         result['extraction_metadata']['successful_method'] = strategy_name
                         
-                        logger.info(f"SUCCESS: {strategy_name} extracted {result.get('word_count', 0)} words in {execution_time:.2f}s")
+                        logger.info(f"SUCCESS: {strategy_name} extracted {result.get('data', {}).get('word_count', 0)} words in {execution_time:.2f}s")
                         return result
                     else:
                         logger.warning(f"{strategy_name} returned insufficient content")
@@ -249,7 +209,7 @@ class UniversalScraper:
         return self._create_user_friendly_error(url, domain, last_error or 'All extraction methods failed')
     
     def _build_escalation_strategies(self, preferred_methods: List[str]) -> List[Tuple[str, callable]]:
-        """FIXED: Build extraction strategies with ScraperAPI first for maximum success"""
+        """Build extraction strategies with ScraperAPI first"""
         
         strategies = []
         
@@ -278,7 +238,7 @@ class UniversalScraper:
         return strategies
     
     def _scraperapi_basic_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Extract using ScraperAPI basic with proper timeout handling"""
+        """Extract using ScraperAPI basic with proper data wrapper"""
         try:
             response = self.scraper_apis.scraperapi_request(url)
             response.raise_for_status()
@@ -287,7 +247,7 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked'}
             
-            result = self._parse_content_with_fixed_author_extraction(response.text, url)
+            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
             result['extraction_metadata']['method'] = 'scraperapi_basic'
             result['extraction_metadata']['api_used'] = True
             logger.info("SUCCESS: ScraperAPI basic extraction succeeded!")
@@ -304,7 +264,7 @@ class UniversalScraper:
             return {'success': False, 'error': f'ScraperAPI basic failed: {str(e)}'}
     
     def _scraperapi_premium_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Extract using ScraperAPI premium with timeout protection"""
+        """Extract using ScraperAPI premium"""
         try:
             response = self.scraper_apis.scraperapi_request(
                 url, 
@@ -324,7 +284,7 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked despite premium ScraperAPI'}
             
-            result = self._parse_content_with_fixed_author_extraction(response.text, url)
+            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
             result['extraction_metadata']['method'] = 'scraperapi_premium'
             result['extraction_metadata']['api_used'] = True
             result['extraction_metadata']['javascript_rendered'] = True
@@ -337,7 +297,7 @@ class UniversalScraper:
             return {'success': False, 'error': f'ScraperAPI premium failed: {str(e)}'}
     
     def _scrapingbee_basic_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Extract using ScrapingBee with timeout handling"""
+        """Extract using ScrapingBee"""
         try:
             response = self.scraper_apis.scrapingbee_request(url)
             response.raise_for_status()
@@ -346,7 +306,7 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked'}
             
-            result = self._parse_content_with_fixed_author_extraction(response.text, url)
+            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
             result['extraction_metadata']['method'] = 'scrapingbee_basic'
             result['extraction_metadata']['api_used'] = True
             return result
@@ -355,7 +315,7 @@ class UniversalScraper:
             return {'success': False, 'error': f'ScrapingBee failed: {str(e)}'}
     
     def _enhanced_headers_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Enhanced headers extraction with timeout protection"""
+        """Enhanced headers extraction"""
         try:
             headers = self._get_enhanced_headers(url)
             response = requests.get(url, headers=headers, timeout=self.timeout, verify=False, allow_redirects=True)
@@ -365,13 +325,13 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked'}
             
-            return self._parse_content_with_fixed_author_extraction(response.text, url)
+            return self._parse_content_with_enhanced_author_extraction(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'Enhanced headers failed: {str(e)}'}
     
     def _session_with_cookies_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Session with cookies extraction"""
+        """Session with cookies extraction"""
         try:
             session = requests.Session()
             session.headers.update(self._get_enhanced_headers(url))
@@ -390,13 +350,13 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked'}
             
-            return self._parse_content_with_fixed_author_extraction(response.text, url)
+            return self._parse_content_with_enhanced_author_extraction(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'Session with cookies failed: {str(e)}'}
     
     def _cloudscraper_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: CloudScraper extraction"""
+        """CloudScraper extraction"""
         try:
             if not self.cloudscraper_session:
                 return {'success': False, 'error': 'Cloudscraper not available'}
@@ -408,13 +368,13 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content blocked despite Cloudscraper'}
             
-            return self._parse_content_with_fixed_author_extraction(response.text, url)
+            return self._parse_content_with_enhanced_author_extraction(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'Cloudscraper failed: {str(e)}'}
     
     def _curl_cffi_stealth_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: curl_cffi extraction"""
+        """curl_cffi extraction"""
         try:
             headers = self._get_enhanced_headers(url, strategy="stealth")
             
@@ -432,13 +392,13 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content blocked despite curl_cffi stealth'}
             
-            return self._parse_content_with_fixed_author_extraction(response.text, url)
+            return self._parse_content_with_enhanced_author_extraction(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'curl_cffi stealth failed: {str(e)}'}
     
     def _basic_requests_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Basic requests fallback"""
+        """Basic requests fallback"""
         try:
             headers = self._get_enhanced_headers(url)
             response = requests.get(url, headers=headers, timeout=self.timeout, verify=False, allow_redirects=True)
@@ -448,7 +408,7 @@ class UniversalScraper:
             if not self._is_valid_content(soup):
                 return {'success': False, 'error': 'Content appears to be blocked or invalid'}
             
-            return self._parse_content_with_fixed_author_extraction(response.text, url)
+            return self._parse_content_with_enhanced_author_extraction(response.text, url)
             
         except Exception as e:
             return {'success': False, 'error': f'Basic requests failed: {str(e)}'}
@@ -511,18 +471,19 @@ class UniversalScraper:
         if not result.get('success'):
             return False
         
-        text = result.get('text', '')
+        data = result.get('data', {})
+        text = data.get('text', '')
         if not text or len(text.strip()) < 200:
             return False
         
-        word_count = result.get('word_count', 0)
+        word_count = data.get('word_count', 0)
         if word_count < 50:
             return False
         
         return True
     
-    def _parse_content_with_fixed_author_extraction(self, html: str, url: str) -> Dict[str, Any]:
-        """FIXED: Parse HTML content with comprehensive author extraction and proper data structure"""
+    def _parse_content_with_enhanced_author_extraction(self, html: str, url: str) -> Dict[str, Any]:
+        """CRITICAL FIX: Parse HTML content and return in exact data wrapper format expected by pipeline"""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
@@ -549,8 +510,8 @@ class UniversalScraper:
                 if content_parts:
                     content = ' '.join(content_parts[:20])
             
-            # FIXED: Comprehensive author extraction with debug logging
-            author = self._extract_author_comprehensive_with_debug(soup, url)
+            # ENHANCED: Comprehensive author extraction with detailed logging
+            author = self._extract_author_comprehensive_debug(soup, url)
             
             # Extract other metadata
             publish_date = self._extract_publish_date(soup)
@@ -559,7 +520,7 @@ class UniversalScraper:
             # Calculate word count
             word_count = len(content.split()) if content else 0
             
-            # FIXED: Return with proper data structure wrapper
+            # CRITICAL FIX: Return in exact 'data' wrapper format that pipeline expects
             return {
                 'success': True,
                 'data': {
@@ -579,7 +540,7 @@ class UniversalScraper:
                     'extracted_at': datetime.now().isoformat(),
                     'limited_extraction': word_count < 100,
                     'author_extraction_attempted': True,
-                    'author_found': bool(author),
+                    'author_found': bool(author and author != 'Unknown'),
                     'content_length': len(content) if content else 0
                 }
             }
@@ -639,36 +600,19 @@ class UniversalScraper:
         
         return content if content else soup.get_text(separator=' ', strip=True)
     
-    def _extract_author_comprehensive_with_debug(self, soup: BeautifulSoup, url: str) -> Optional[str]:
+    def _extract_author_comprehensive_debug(self, soup: BeautifulSoup, url: str) -> str:
         """
-        FIXED: Comprehensive author extraction with debug logging
-        This addresses the author extraction issues from your logs
+        ENHANCED: Comprehensive author extraction with detailed debugging
         """
         
         logger.info("=" * 80)
-        logger.info("COMPREHENSIVE AUTHOR EXTRACTION WITH DEBUG")
+        logger.info("ENHANCED AUTHOR EXTRACTION WITH DEBUG")
         logger.info(f"URL: {url}")
         logger.info("=" * 80)
         
         if not soup:
             logger.error("CRITICAL: No soup object - HTML extraction failed")
-            return None
-        
-        # Log basic HTML stats
-        full_text = soup.get_text()
-        logger.info(f"Total HTML text length: {len(full_text)} characters")
-        
-        # Test for specific patterns from your logs
-        test_patterns = ["Edward-Isaac Dovere", "By Edward-Isaac", "By Megan"]
-        for pattern in test_patterns:
-            if pattern in full_text:
-                logger.info(f"FOUND: '{pattern}' appears in HTML text")
-            else:
-                logger.info(f"NOT FOUND: '{pattern}' does not appear in HTML text")
-        
-        # Log first 1000 characters
-        text_sample = full_text[:1000].replace('\n', ' ').replace('\r', ' ')
-        logger.info(f"First 1000 chars: {text_sample}")
+            return 'Unknown'
         
         # Strategy 1: Try structured data (JSON-LD, microdata, meta tags)
         author = self._extract_author_structured_data(soup)
@@ -695,13 +639,13 @@ class UniversalScraper:
             return author
         
         logger.info("=" * 80)
-        logger.info("COMPREHENSIVE AUTHOR EXTRACTION COMPLETE: NO AUTHOR FOUND")
+        logger.info("ENHANCED AUTHOR EXTRACTION COMPLETE: NO AUTHOR FOUND")
         logger.info("=" * 80)
         
-        return None
+        return 'Unknown'
     
     def _extract_author_structured_data(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract author from structured data (JSON-LD, meta tags)"""
+        """Extract author from structured data"""
         # JSON-LD structured data
         json_ld_scripts = soup.find_all('script', {'type': 'application/ld+json'})
         for script in json_ld_scripts:
@@ -851,20 +795,19 @@ class UniversalScraper:
         return None
     
     def _clean_author_name(self, author: str) -> Optional[str]:
-        """Clean and normalize author name - FIXED SYNTAX ERRORS"""
+        """Clean and normalize author name"""
         if not author:
             return None
         
         # Remove common prefixes and suffixes
         author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
-        # FIXED: Added missing quote before comma
         author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author, flags=re.IGNORECASE)
         author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters|Associated Press|AP).*', '', author, flags=re.IGNORECASE)
         
         # Clean up whitespace and punctuation
         author = re.sub(r'\s+', ' ', author).strip()
-        # FIXED: Added missing quote before comma
-        author = re.sub(r'[,\.\:;]+', '', author)
+        author = re.sub(r'[,\.\:;]+
+    , '', author)
         
         return author if author else None
     
@@ -937,12 +880,18 @@ class UniversalScraper:
         return None
     
     def _create_user_friendly_error(self, url: str, domain: str, technical_error: str) -> Dict[str, Any]:
-        """Create user-friendly error message"""
+        """Create user-friendly error message in proper format"""
         return {
             'success': False,
             'error': f"Could not extract content from {domain}. The site may be blocking automated requests.",
-            'url': url,
-            'domain': domain,
+            'data': {
+                'url': url,
+                'domain': domain,
+                'title': 'Extraction Failed',
+                'text': '',
+                'author': 'Unknown',
+                'extraction_successful': False
+            },
             'extraction_metadata': {
                 'all_methods_failed': True,
                 'methods_tried': self.methods_tried,
@@ -953,13 +902,13 @@ class UniversalScraper:
 
 
 class ArticleExtractor(BaseAnalyzer):
-    """FIXED: Article extraction service with proper data structure and timeout handling"""
+    """FIXED: Article extraction service with proper data wrapper format"""
     
     def __init__(self):
         super().__init__('article_extractor')
         
         logger.info("=" * 60)
-        logger.info("ArticleExtractor - COMPLETE FIXED VERSION")
+        logger.info("ArticleExtractor - FIXED DATA WRAPPER VERSION")
         logger.info("=" * 60)
         
         # Initialize universal scraper
@@ -984,9 +933,9 @@ class ArticleExtractor(BaseAnalyzer):
         return True  # Always available with fallback methods
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """FIXED: Main analysis method with proper data structure and timeout protection"""
+        """CRITICAL FIX: Return data in exact wrapper format pipeline expects"""
         logger.info("=" * 60)
-        logger.info("ArticleExtractor.analyze() - FIXED VERSION")
+        logger.info("ArticleExtractor.analyze() - FIXED WRAPPER FORMAT")
         logger.info("=" * 60)
         
         try:
@@ -1010,9 +959,9 @@ class ArticleExtractor(BaseAnalyzer):
             if url:
                 logger.info(f"Extracting from URL: {url}")
                 
-                result = None
                 if self._extractor:
                     try:
+                        # CRITICAL: This returns data in wrapper format already
                         extraction_result = self._extractor.extract_from_url(url)
                         
                         if extraction_result.get('success'):
@@ -1025,8 +974,18 @@ class ArticleExtractor(BaseAnalyzer):
                             else:
                                 logger.info("SUCCESS: Fallback method extracted content")
                             
-                            # FIXED: Return with proper success result wrapper
-                            return self.get_success_result(extraction_result.get('data', extraction_result))
+                            # CRITICAL FIX: Return in BaseAnalyzer success format with data wrapper preserved
+                            result = self.get_success_result({'data': extraction_result.get('data', {})})
+                            result['extraction_metadata'] = metadata
+                            
+                            # DEBUG: Verify data structure
+                            article_data = result.get('data', {})
+                            logger.info(f"✓ FINAL WRAPPER CHECK:")
+                            logger.info(f"  - Title: {article_data.get('title', 'NOT FOUND')}")
+                            logger.info(f"  - Author: {article_data.get('author', 'NOT FOUND')}")
+                            logger.info(f"  - Word count: {article_data.get('word_count', 0)}")
+                            
+                            return result
                         else:
                             logger.warning("Extraction failed - trying basic fallback")
                             result = self._basic_fallback_extract(url)
@@ -1040,7 +999,7 @@ class ArticleExtractor(BaseAnalyzer):
                     logger.warning("All extraction methods failed")
                     return self.get_error_result("Unable to extract content from the provided URL")
                 
-                return self.get_success_result(result.get('data', result))
+                return result
             
             elif text:
                 logger.info("Analyzing provided text content")
@@ -1054,21 +1013,22 @@ class ArticleExtractor(BaseAnalyzer):
                     'title': title,
                     'text': text,
                     'word_count': word_count,
-                    'author': None,
+                    'author': 'Unknown',
                     'url': '',
                     'domain': '',
                     'language': 'en',
                     'extraction_successful': True
                 }
                 
-                return self.get_success_result(text_data)
+                # Return in proper wrapper format
+                return self.get_success_result({'data': text_data})
             
         except Exception as e:
             logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
     def _basic_fallback_extract(self, url: str) -> Dict[str, Any]:
-        """FIXED: Basic fallback extraction with proper data structure"""
+        """Basic fallback extraction with proper data wrapper"""
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -1118,38 +1078,37 @@ class ArticleExtractor(BaseAnalyzer):
                 content = soup.get_text(separator=' ', strip=True)
             
             if not content or len(content) < 100:
-                return {'success': False, 'error': 'Insufficient content extracted'}
+                return self.get_error_result('Insufficient content extracted')
             
             word_count = len(content.split())
             
             # Try to extract author
             universal_scraper = UniversalScraper()
-            author = universal_scraper._extract_author_comprehensive_with_debug(soup, url)
+            author = universal_scraper._extract_author_comprehensive_debug(soup, url)
             
-            return {
-                'success': True,
-                'data': {
-                    'title': title,
-                    'text': content,
-                    'author': author,
-                    'publish_date': None,
-                    'url': url,
-                    'domain': urlparse(url).netloc,
-                    'description': None,
-                    'word_count': word_count,
-                    'language': 'en',
-                    'extraction_successful': True
-                },
-                'extraction_metadata': {
-                    'method': 'basic_fallback',
-                    'api_used': False,
-                    'extracted_at': datetime.now().isoformat()
-                }
+            # CRITICAL: Return in proper wrapper format
+            fallback_data = {
+                'title': title,
+                'text': content,
+                'author': author,
+                'publish_date': None,
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'description': None,
+                'word_count': word_count,
+                'language': 'en',
+                'extraction_successful': True
             }
+            
+            result = self.get_success_result({'data': fallback_data})
+            result['extraction_metadata'] = {
+                'method': 'basic_fallback',
+                'api_used': False,
+                'extracted_at': datetime.now().isoformat()
+            }
+            
+            return result
             
         except Exception as e:
             logger.error(f"Basic extraction fallback failed: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': f'Basic extraction failed: {str(e)}'
-            }
+            return self.get_error_result(f'Basic extraction failed: {str(e)}')
