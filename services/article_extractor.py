@@ -1,10 +1,10 @@
 """
-Article Extraction Service - FIXED DATA WRAPPER FORMAT
+Article Extractor - DATA WRAPPER FORMAT FIX
 CRITICAL FIXES:
-1. Returns data in exact 'data' wrapper format that pipeline expects
-2. Enhanced author extraction with comprehensive debugging
-3. Proper error handling with consistent return format
-4. ScraperAPI integration with timeout protection
+1. Returns data in proper 'data' wrapper format that pipeline expects
+2. Enhanced author extraction with comprehensive strategies
+3. Proper domain cleaning and URL handling
+4. Consistent success/error response format
 """
 
 import json
@@ -14,570 +14,258 @@ import logging
 import requests
 import urllib3
 from bs4 import BeautifulSoup
-from typing import Dict, List, Optional, Tuple, Any
-from urllib.parse import urlparse, urljoin, quote
+from typing import Dict, Optional, Any
+from urllib.parse import urlparse
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
-import os
-import ssl
-import socket
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from services.base_analyzer import BaseAnalyzer
 
-# Disable SSL warnings for development/testing
+# Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-# Optional imports with better error handling
-OPTIONAL_LIBRARIES = {}
-
-try:
-    from fake_useragent import UserAgent
-    OPTIONAL_LIBRARIES['fake_useragent'] = True
-except ImportError:
-    OPTIONAL_LIBRARIES['fake_useragent'] = False
-
-try:
-    import cloudscraper
-    OPTIONAL_LIBRARIES['cloudscraper'] = True
-except ImportError:
-    OPTIONAL_LIBRARIES['cloudscraper'] = False
-
-try:
-    from curl_cffi import requests as curl_requests
-    OPTIONAL_LIBRARIES['curl_cffi'] = True
-except ImportError:
-    OPTIONAL_LIBRARIES['curl_cffi'] = False
 
 logger = logging.getLogger(__name__)
 
-
-class ScraperAPIIntegration:
-    """ScraperAPI Integration with proper timeout handling"""
+class ArticleExtractor(BaseAnalyzer):
+    """
+    FIXED: Article extraction with proper data wrapper format
+    """
     
     def __init__(self):
-        from config import Config
-        self.scraperapi_key = Config.SCRAPERAPI_KEY
-        self.scrapingbee_key = Config.SCRAPINGBEE_API_KEY
+        super().__init__('article_extractor')
         
-        # ScraperAPI configuration
-        self.scraperapi_base = "http://api.scraperapi.com"
-        self.scrapingbee_base = "https://app.scrapingbee.com/api/v1"
+        # Get ScraperAPI key from config
+        try:
+            from config import Config
+            self.scraperapi_key = Config.SCRAPERAPI_KEY
+            logger.info(f"ArticleExtractor initialized - ScraperAPI: {bool(self.scraperapi_key)}")
+        except:
+            self.scraperapi_key = None
+            logger.warning("ScraperAPI key not available")
         
-        logger.info(f"ScraperAPI Integration - ScraperAPI: {bool(self.scraperapi_key)}, ScrapingBee: {bool(self.scrapingbee_key)}")
+        # Initialize session for requests
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive'
+        })
     
-    def scraperapi_request(self, url: str, **kwargs) -> requests.Response:
-        """Make request through ScraperAPI with proper timeout handling"""
-        if not self.scraperapi_key:
-            raise Exception("ScraperAPI key not configured")
-        
-        # ScraperAPI parameters
-        params = {
-            'api_key': self.scraperapi_key,
-            'url': url,
-            'render': 'false',
-            'country_code': 'us',
-            'premium': 'false',
-            'session_number': random.randint(1, 100),
-            'keep_headers': 'true',
-            'autoparse': 'false'
-        }
-        
-        # Add custom parameters if specified
-        if 'render_js' in kwargs and kwargs['render_js']:
-            params['render'] = 'true'
-        
-        if 'country' in kwargs:
-            params['country_code'] = kwargs['country']
-        
-        if 'premium' in kwargs:
-            params['premium'] = 'true' if kwargs['premium'] else 'false'
-        
-        # Custom headers through ScraperAPI
-        headers = kwargs.get('headers', {})
-        if headers:
-            for key, value in headers.items():
-                params[f'custom_headers[{key}]'] = value
-        
-        # Proper timeout handling with retries
-        logger.info(f"Using ScraperAPI for: {url}")
-        
-        for attempt in range(2):
-            try:
-                timeout = 60 if attempt == 0 else 90
-                response = requests.get(self.scraperapi_base, params=params, timeout=timeout)
-                
-                # Create mock response object
-                mock_response = requests.Response()
-                mock_response._content = response.content
-                mock_response.status_code = response.status_code
-                mock_response.headers.update(response.headers)
-                mock_response.url = url
-                mock_response.encoding = response.encoding
-                
-                return mock_response
-                
-            except requests.exceptions.Timeout:
-                if attempt == 0:
-                    logger.warning(f"ScraperAPI timeout on attempt {attempt + 1}, retrying...")
-                    time.sleep(2)
-                    continue
-                else:
-                    raise
-        
-        raise Exception("ScraperAPI request failed after retries")
-
-
-class UniversalScraper:
-    """Universal web scraper with enhanced author extraction"""
+    def _check_availability(self) -> bool:
+        """Check if service is available"""
+        return True  # Always available with fallback methods
     
-    def __init__(self):
-        self.timeout = 30
-        self.max_retries = 2
-        self.methods_tried = []
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL FIX: Main analysis method that returns proper data wrapper format
+        """
+        logger.info("=" * 60)
+        logger.info("ARTICLE EXTRACTOR - DATA WRAPPER FORMAT FIX")
+        logger.info("=" * 60)
         
-        # Initialize ScraperAPI integration
-        self.scraper_apis = ScraperAPIIntegration()
-        
-        # Initialize optional libraries
-        self.user_agent = None
-        if OPTIONAL_LIBRARIES.get('fake_useragent'):
-            try:
-                self.user_agent = UserAgent()
-            except:
-                pass
-        
-        self.cloudscraper_session = None
-        if OPTIONAL_LIBRARIES.get('cloudscraper'):
-            try:
-                self.cloudscraper_session = cloudscraper.create_scraper()
-            except:
-                pass
-        
-        logger.info(f"UniversalScraper initialized with ScraperAPI: {bool(self.scraper_apis.scraperapi_key)}")
+        try:
+            # Parse input
+            url = data.get('url')
+            text = data.get('text')
+            
+            if url:
+                logger.info(f"Extracting from URL: {url}")
+                result = self._extract_from_url(url)
+            elif text:
+                logger.info("Processing provided text")
+                result = self._process_text(text)
+            else:
+                return self.get_error_result("No URL or text provided")
+            
+            # CRITICAL FIX: Ensure proper wrapper format
+            if result.get('success'):
+                # Return using BaseAnalyzer format with data wrapper
+                return self.get_success_result(result)
+            else:
+                return self.get_error_result(result.get('error', 'Extraction failed'))
+                
+        except Exception as e:
+            logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
+            return self.get_error_result(str(e))
     
-    def extract_from_url(self, url: str) -> Dict[str, Any]:
-        """Extract article from URL with ScraperAPI prioritized"""
-        self.methods_tried = []
-        domain = urlparse(url).netloc
+    def _extract_from_url(self, url: str) -> Dict[str, Any]:
+        """Extract article content from URL with multiple strategies"""
         
-        # Build strategies with ScraperAPI FIRST
-        strategies = self._build_escalation_strategies([])
+        strategies = [
+            ('scraperapi', self._extract_with_scraperapi),
+            ('enhanced_requests', self._extract_with_requests),
+            ('basic_fallback', self._extract_basic_fallback)
+        ]
         
         last_error = None
-        start_time = time.time()
         
         for strategy_name, strategy_func in strategies:
             try:
-                self.methods_tried.append(strategy_name)
-                logger.info(f"Trying extraction method: {strategy_name}")
-                
+                logger.info(f"Trying {strategy_name}...")
                 result = strategy_func(url)
                 
-                if result.get('success'):
-                    if self._is_sufficient_content(result):
-                        execution_time = time.time() - start_time
-                        result['extraction_metadata']['execution_time'] = execution_time
-                        result['extraction_metadata']['methods_tried'] = self.methods_tried
-                        result['extraction_metadata']['successful_method'] = strategy_name
-                        
-                        logger.info(f"SUCCESS: {strategy_name} extracted {result.get('data', {}).get('word_count', 0)} words in {execution_time:.2f}s")
-                        return result
-                    else:
-                        logger.warning(f"{strategy_name} returned insufficient content")
+                if result.get('success') and self._validate_extraction(result):
+                    logger.info(f"SUCCESS: {strategy_name} extracted content")
+                    return result
                 else:
-                    last_error = result.get('error', f'{strategy_name} failed')
+                    last_error = result.get('error', f'{strategy_name} returned insufficient content')
                     logger.warning(f"{strategy_name} failed: {last_error}")
-                
-                # Small delay between attempts
-                time.sleep(random.uniform(0.5, 1.0))
-                
-                # TIMEOUT PROTECTION: Don't let total time exceed 90 seconds
-                if time.time() - start_time > 90:
-                    logger.warning("Total extraction time exceeded 90 seconds - stopping")
-                    break
-                
+                    
             except Exception as e:
                 last_error = str(e)
                 logger.error(f"{strategy_name} threw exception: {e}")
                 continue
         
-        # All methods failed
-        logger.error(f"All extraction strategies failed for {url}")
-        return self._create_user_friendly_error(url, domain, last_error or 'All extraction methods failed')
-    
-    def _build_escalation_strategies(self, preferred_methods: List[str]) -> List[Tuple[str, callable]]:
-        """Build extraction strategies with ScraperAPI first"""
-        
-        strategies = []
-        
-        # LEVEL 1: ScraperAPI (highest success rate)
-        if self.scraper_apis.scraperapi_key:
-            strategies.append(('scraperapi_basic', self._scraperapi_basic_extract))
-            strategies.append(('scraperapi_premium', self._scraperapi_premium_extract))
-        
-        if self.scraper_apis.scrapingbee_key:
-            strategies.append(('scrapingbee_basic', self._scrapingbee_basic_extract))
-        
-        # LEVEL 2: Enhanced requests
-        strategies.append(('enhanced_headers', self._enhanced_headers_extract))
-        strategies.append(('session_with_cookies', self._session_with_cookies_extract))
-        
-        # LEVEL 3: Anti-bot libraries
-        if self.cloudscraper_session:
-            strategies.append(('cloudscraper', self._cloudscraper_extract))
-        
-        if OPTIONAL_LIBRARIES.get('curl_cffi'):
-            strategies.append(('curl_cffi_stealth', self._curl_cffi_stealth_extract))
-        
-        # LEVEL 4: Fallback
-        strategies.append(('basic_requests', self._basic_requests_extract))
-        
-        return strategies
-    
-    def _scraperapi_basic_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using ScraperAPI basic with proper data wrapper"""
-        try:
-            response = self.scraper_apis.scraperapi_request(url)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked'}
-            
-            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
-            result['extraction_metadata']['method'] = 'scraperapi_basic'
-            result['extraction_metadata']['api_used'] = True
-            logger.info("SUCCESS: ScraperAPI basic extraction succeeded!")
-            return result
-            
-        except requests.exceptions.Timeout:
-            return {'success': False, 'error': 'ScraperAPI timeout - site may be slow to respond'}
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 403:
-                return {'success': False, 'error': 'Site is blocking ScraperAPI requests (403 Forbidden)'}
-            else:
-                return {'success': False, 'error': f'ScraperAPI HTTP error: {e.response.status_code}'}
-        except Exception as e:
-            return {'success': False, 'error': f'ScraperAPI basic failed: {str(e)}'}
-    
-    def _scraperapi_premium_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using ScraperAPI premium"""
-        try:
-            response = self.scraper_apis.scraperapi_request(
-                url, 
-                render_js=True, 
-                premium=True,
-                country='us',
-                headers={
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                }
-            )
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked despite premium ScraperAPI'}
-            
-            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
-            result['extraction_metadata']['method'] = 'scraperapi_premium'
-            result['extraction_metadata']['api_used'] = True
-            result['extraction_metadata']['javascript_rendered'] = True
-            logger.info("SUCCESS: ScraperAPI premium extraction succeeded!")
-            return result
-            
-        except requests.exceptions.Timeout:
-            return {'success': False, 'error': 'ScraperAPI premium timeout - site may be very slow'}
-        except Exception as e:
-            return {'success': False, 'error': f'ScraperAPI premium failed: {str(e)}'}
-    
-    def _scrapingbee_basic_extract(self, url: str) -> Dict[str, Any]:
-        """Extract using ScrapingBee"""
-        try:
-            response = self.scraper_apis.scrapingbee_request(url)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked'}
-            
-            result = self._parse_content_with_enhanced_author_extraction(response.text, url)
-            result['extraction_metadata']['method'] = 'scrapingbee_basic'
-            result['extraction_metadata']['api_used'] = True
-            return result
-            
-        except Exception as e:
-            return {'success': False, 'error': f'ScrapingBee failed: {str(e)}'}
-    
-    def _enhanced_headers_extract(self, url: str) -> Dict[str, Any]:
-        """Enhanced headers extraction"""
-        try:
-            headers = self._get_enhanced_headers(url)
-            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False, allow_redirects=True)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked'}
-            
-            return self._parse_content_with_enhanced_author_extraction(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'Enhanced headers failed: {str(e)}'}
-    
-    def _session_with_cookies_extract(self, url: str) -> Dict[str, Any]:
-        """Session with cookies extraction"""
-        try:
-            session = requests.Session()
-            session.headers.update(self._get_enhanced_headers(url))
-            
-            # Set some common cookies
-            session.cookies.update({
-                'accepted_cookies': 'true',
-                'cookie_consent': 'accepted',
-                'gdpr_consent': 'true'
-            })
-            
-            response = session.get(url, timeout=self.timeout, verify=False, allow_redirects=True)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked'}
-            
-            return self._parse_content_with_enhanced_author_extraction(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'Session with cookies failed: {str(e)}'}
-    
-    def _cloudscraper_extract(self, url: str) -> Dict[str, Any]:
-        """CloudScraper extraction"""
-        try:
-            if not self.cloudscraper_session:
-                return {'success': False, 'error': 'Cloudscraper not available'}
-            
-            response = self.cloudscraper_session.get(url, timeout=self.timeout)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content blocked despite Cloudscraper'}
-            
-            return self._parse_content_with_enhanced_author_extraction(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'Cloudscraper failed: {str(e)}'}
-    
-    def _curl_cffi_stealth_extract(self, url: str) -> Dict[str, Any]:
-        """curl_cffi extraction"""
-        try:
-            headers = self._get_enhanced_headers(url, strategy="stealth")
-            
-            response = curl_requests.get(
-                url,
-                headers=headers,
-                timeout=self.timeout,
-                impersonate="chrome120",
-                verify=False,
-                allow_redirects=True
-            )
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content blocked despite curl_cffi stealth'}
-            
-            return self._parse_content_with_enhanced_author_extraction(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'curl_cffi stealth failed: {str(e)}'}
-    
-    def _basic_requests_extract(self, url: str) -> Dict[str, Any]:
-        """Basic requests fallback"""
-        try:
-            headers = self._get_enhanced_headers(url)
-            response = requests.get(url, headers=headers, timeout=self.timeout, verify=False, allow_redirects=True)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            if not self._is_valid_content(soup):
-                return {'success': False, 'error': 'Content appears to be blocked or invalid'}
-            
-            return self._parse_content_with_enhanced_author_extraction(response.text, url)
-            
-        except Exception as e:
-            return {'success': False, 'error': f'Basic requests failed: {str(e)}'}
-    
-    def _get_enhanced_headers(self, url: str, strategy: str = "default") -> Dict[str, str]:
-        """Get enhanced headers based on strategy"""
-        base_headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Cache-Control': 'max-age=0',
+        return {
+            'success': False,
+            'error': f'All extraction methods failed. Last error: {last_error}'
         }
-        
-        # User-Agent selection
-        if self.user_agent and strategy == "stealth":
-            try:
-                base_headers['User-Agent'] = self.user_agent.random
-            except:
-                base_headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        else:
-            base_headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        
-        return base_headers
     
-    def _is_valid_content(self, soup: BeautifulSoup) -> bool:
-        """Check if scraped content is valid"""
-        if not soup:
-            return False
+    def _extract_with_scraperapi(self, url: str) -> Dict[str, Any]:
+        """Extract using ScraperAPI if available"""
+        if not self.scraperapi_key:
+            return {'success': False, 'error': 'ScraperAPI key not available'}
         
-        text = soup.get_text().lower()
-        
-        # Basic validation - must have reasonable amount of text
-        if len(text.strip()) < 100:
-            return False
-        
-        # Check for severe blocking indicators
-        severe_blocking = [
-            'access denied',
-            'forbidden',
-            'page not found',
-            '404 not found',
-            '503 service unavailable',
-            'this site is blocked'
-        ]
-        
-        # Only reject if severe blocking and very little content
-        severe_block_found = any(indicator in text for indicator in severe_blocking)
-        if severe_block_found and len(text.strip()) < 200:
-            return False
-        
-        return True
+        try:
+            params = {
+                'api_key': self.scraperapi_key,
+                'url': url,
+                'render': 'false',
+                'country_code': 'us'
+            }
+            
+            response = requests.get('http://api.scraperapi.com', params=params, timeout=60)
+            response.raise_for_status()
+            
+            return self._parse_html_content(response.text, url, 'scraperapi')
+            
+        except Exception as e:
+            return {'success': False, 'error': f'ScraperAPI failed: {str(e)}'}
     
-    def _is_sufficient_content(self, result: Dict[str, Any]) -> bool:
-        """Check if extraction result has sufficient content"""
-        if not result.get('success'):
-            return False
-        
-        data = result.get('data', {})
-        text = data.get('text', '')
-        if not text or len(text.strip()) < 200:
-            return False
-        
-        word_count = data.get('word_count', 0)
-        if word_count < 50:
-            return False
-        
-        return True
+    def _extract_with_requests(self, url: str) -> Dict[str, Any]:
+        """Extract using enhanced requests session"""
+        try:
+            # Add some randomization to avoid detection
+            self.session.headers['User-Agent'] = self._get_random_user_agent()
+            
+            response = self.session.get(url, timeout=30, verify=False, allow_redirects=True)
+            response.raise_for_status()
+            
+            return self._parse_html_content(response.text, url, 'requests')
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Enhanced requests failed: {str(e)}'}
     
-    def _parse_content_with_enhanced_author_extraction(self, html: str, url: str) -> Dict[str, Any]:
-        """CRITICAL FIX: Parse HTML content and return in exact data wrapper format expected by pipeline"""
+    def _extract_basic_fallback(self, url: str) -> Dict[str, Any]:
+        """Basic fallback extraction method"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30, verify=False)
+            response.raise_for_status()
+            
+            return self._parse_html_content(response.text, url, 'basic_fallback')
+            
+        except Exception as e:
+            return {'success': False, 'error': f'Basic fallback failed: {str(e)}'}
+    
+    def _parse_html_content(self, html: str, url: str, method: str) -> Dict[str, Any]:
+        """
+        CRITICAL FIX: Parse HTML and return in proper data structure
+        """
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
             # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header', 'advertisement']):
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
                 element.decompose()
             
-            # Extract title
+            # Extract components
             title = self._extract_title(soup)
-            
-            # Extract main content
-            content = self._extract_main_content(soup)
-            
-            # Fallback content extraction if needed
-            if not content or len(content.strip()) < 200:
-                all_paragraphs = soup.find_all(['p', 'div', 'article', 'section'])
-                content_parts = []
-                
-                for elem in all_paragraphs:
-                    text = elem.get_text(strip=True)
-                    if text and len(text) > 30:
-                        content_parts.append(text)
-                
-                if content_parts:
-                    content = ' '.join(content_parts[:20])
-            
-            # ENHANCED: Comprehensive author extraction with detailed logging
-            author = self._extract_author_comprehensive_debug(soup, url)
-            
-            # Extract other metadata
+            content = self._extract_content(soup)
+            author = self._extract_author_comprehensive(soup, url)
             publish_date = self._extract_publish_date(soup)
             description = self._extract_description(soup)
             
-            # Calculate word count
+            # Calculate metrics
             word_count = len(content.split()) if content else 0
+            domain = self._clean_domain(urlparse(url).netloc)
             
-            # CRITICAL FIX: Return in exact 'data' wrapper format that pipeline expects
+            # CRITICAL FIX: Return in exact format expected by pipeline
             return {
                 'success': True,
-                'data': {
-                    'title': title or 'Article',
-                    'text': content or 'Content extraction was limited by site protection',
+                'data': {  # This is the wrapper format pipeline expects
+                    'title': title,
+                    'text': content,
                     'author': author,
                     'publish_date': publish_date,
                     'url': url,
-                    'domain': urlparse(url).netloc,
+                    'domain': domain,
                     'description': description,
                     'word_count': word_count,
                     'language': 'en',
-                    'extraction_successful': bool(content and len(content) > 200)
+                'extraction_successful': True
+            }
+        }en',
+                    'extraction_successful': bool(content and len(content) > 100)
                 },
                 'extraction_metadata': {
-                    'method': 'content_parsing',
+                    'method': method,
                     'extracted_at': datetime.now().isoformat(),
-                    'limited_extraction': word_count < 100,
-                    'author_extraction_attempted': True,
+                    'content_length': len(content) if content else 0,
                     'author_found': bool(author and author != 'Unknown'),
-                    'content_length': len(content) if content else 0
+                    'title_found': bool(title and title != 'Unknown Title')
                 }
             }
             
         except Exception as e:
-            logger.error(f"Content parsing failed: {e}", exc_info=True)
-            return {'success': False, 'error': f'Content parsing failed: {str(e)}'}
+            logger.error(f"HTML parsing failed: {e}", exc_info=True)
+            return {'success': False, 'error': f'HTML parsing failed: {str(e)}'}
     
     def _extract_title(self, soup: BeautifulSoup) -> str:
         """Extract article title"""
-        title_selectors = [
+        # Try multiple selectors in order of preference
+        selectors = [
             'h1',
-            'title',
+            'title', 
             '[property="og:title"]',
             '[name="twitter:title"]',
             '.entry-title',
             '.post-title',
-            '.article-title'
+            '.article-title',
+            '.headline'
         ]
         
-        for selector in title_selectors:
+        for selector in selectors:
             element = soup.select_one(selector)
             if element:
-                title = element.get('content') if element.name in ['meta'] else element.get_text(strip=True)
-                if title and len(title) > 10:
-                    return title[:200]
+                if element.name == 'meta':
+                    title = element.get('content', '').strip()
+                else:
+                    title = element.get_text(strip=True)
+                
+                if title and len(title) > 5:
+                    # Clean up title
+                    title = re.sub(r'\s+', ' ', title)
+                    return title[:200]  # Limit length
         
-        return 'Untitled Article'
+        return 'Unknown Title'
     
-    def _extract_main_content(self, soup: BeautifulSoup) -> str:
+    def _extract_content(self, soup: BeautifulSoup) -> str:
         """Extract main article content"""
+        # Try content selectors in order of preference
         content_selectors = [
             'article',
-            '[role="article"]',
+            '[role="article"]', 
             '.entry-content',
             '.post-content',
             '.article-body',
+            '.article-content',
             '.content',
             'main',
             '.main-content'
@@ -586,89 +274,93 @@ class UniversalScraper:
         for selector in content_selectors:
             element = soup.select_one(selector)
             if element:
-                # Remove unwanted nested elements
-                for unwanted in element.find_all(['aside', 'nav', 'advertisement', '.ad', '.sidebar']):
+                # Remove ads and unwanted nested content
+                for unwanted in element.find_all(['.ad', '.advertisement', '.sidebar', 'aside']):
                     unwanted.decompose()
                 
                 text = element.get_text(separator=' ', strip=True)
-                if text and len(text) > 200:
+                if text and len(text) > 200:  # Must have substantial content
                     return text
         
-        # Fallback: get all paragraph text
+        # Fallback: extract all paragraph text
         paragraphs = soup.find_all('p')
-        content = ' '.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
+        if paragraphs:
+            content_parts = []
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if text and len(text) > 20:  # Skip very short paragraphs
+                    content_parts.append(text)
+            
+            if content_parts:
+                return ' '.join(content_parts)
         
-        return content if content else soup.get_text(separator=' ', strip=True)
+        # Final fallback: all text
+        return soup.get_text(separator=' ', strip=True) or ''
     
-    def _extract_author_comprehensive_debug(self, soup: BeautifulSoup, url: str) -> str:
+    def _extract_author_comprehensive(self, soup: BeautifulSoup, url: str) -> str:
         """
-        ENHANCED: Comprehensive author extraction with detailed debugging
+        CRITICAL FIX: Comprehensive author extraction with multiple strategies
         """
+        logger.info(f"=== COMPREHENSIVE AUTHOR EXTRACTION for {url} ===")
         
-        logger.info("=" * 80)
-        logger.info("ENHANCED AUTHOR EXTRACTION WITH DEBUG")
-        logger.info(f"URL: {url}")
-        logger.info("=" * 80)
-        
-        if not soup:
-            logger.error("CRITICAL: No soup object - HTML extraction failed")
-            return 'Unknown'
-        
-        # Strategy 1: Try structured data (JSON-LD, microdata, meta tags)
-        author = self._extract_author_structured_data(soup)
+        # Strategy 1: Structured data (JSON-LD, microdata)
+        author = self._extract_author_structured(soup)
         if author:
-            logger.info(f"SUCCESS: Author found via structured data: '{author}'")
+            logger.info(f"✓ Author from structured data: {author}")
             return author
         
-        # Strategy 2: Try standard author selectors
+        # Strategy 2: Meta tags
+        author = self._extract_author_meta(soup)
+        if author:
+            logger.info(f"✓ Author from meta tags: {author}")
+            return author
+        
+        # Strategy 3: CSS selectors
         author = self._extract_author_selectors(soup)
         if author:
-            logger.info(f"SUCCESS: Author found via selectors: '{author}'")
+            logger.info(f"✓ Author from CSS selectors: {author}")
             return author
         
-        # Strategy 3: Try text pattern matching
-        author = self._extract_author_text_patterns(soup)
+        # Strategy 4: Text pattern matching
+        author = self._extract_author_patterns(soup)
         if author:
-            logger.info(f"SUCCESS: Author found via text patterns: '{author}'")
+            logger.info(f"✓ Author from text patterns: {author}")
             return author
         
-        # Strategy 4: Try positional extraction
-        author = self._extract_author_positional(soup)
-        if author:
-            logger.info(f"SUCCESS: Author found via positional extraction: '{author}'")
-            return author
-        
-        logger.info("=" * 80)
-        logger.info("ENHANCED AUTHOR EXTRACTION COMPLETE: NO AUTHOR FOUND")
-        logger.info("=" * 80)
-        
+        logger.info("✗ No author found with any method")
         return 'Unknown'
     
-    def _extract_author_structured_data(self, soup: BeautifulSoup) -> Optional[str]:
+    def _extract_author_structured(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author from structured data"""
-        # JSON-LD structured data
-        json_ld_scripts = soup.find_all('script', {'type': 'application/ld+json'})
-        for script in json_ld_scripts:
+        # JSON-LD
+        scripts = soup.find_all('script', {'type': 'application/ld+json'})
+        for script in scripts:
             try:
                 data = json.loads(script.string)
                 if isinstance(data, list):
-                    data = data[0] if data else {}
+                    data = data[0]
                 
                 if isinstance(data, dict) and 'author' in data:
                     author_data = data['author']
-                    if isinstance(author_data, dict) and 'name' in author_data:
-                        return self._clean_author_name(author_data['name'])
+                    if isinstance(author_data, dict):
+                        name = author_data.get('name')
+                        if name:
+                            return self._clean_author_name(name)
                     elif isinstance(author_data, str):
                         return self._clean_author_name(author_data)
             except:
                 continue
         
-        # Meta tags
+        return None
+    
+    def _extract_author_meta(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract author from meta tags"""
         meta_selectors = [
             '[name="author"]',
-            '[property="article:author"]',
+            '[property="article:author"]', 
             '[name="article:author"]',
-            '[property="author"]'
+            '[property="author"]',
+            '[name="byl"]'
         ]
         
         for selector in meta_selectors:
@@ -683,136 +375,82 @@ class UniversalScraper:
     def _extract_author_selectors(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author using CSS selectors"""
         author_selectors = [
-            '.author', '.byline', '.article-author', '.author-name', '.byline-author',
-            '.post-author', '.entry-author', '.writer', '.journalist',
-            '[rel="author"]', '[itemprop="author"]', '[class*="author"]', '[class*="byline"]',
-            '.author-bio', '.author-info', '.author-details', '.byline-name',
-            '.article-byline', '.story-byline', '.news-byline',
-            '.meta-author', '.post-meta .author', '.article-meta .author'
+            '.author', '.byline', '.author-name', '.byline-author',
+            '.article-author', '.post-author', '.entry-author',
+            '.writer', '.journalist', '.reporter',
+            '[rel="author"]', '[itemprop="author"]',
+            '.author-info', '.author-details', '.byline-name',
+            '.article-byline', '.story-byline', '.news-byline'
         ]
         
         for selector in author_selectors:
             elements = soup.select(selector)
             for element in elements:
-                # Skip if inside nav, footer, sidebar
-                if element.find_parent(['nav', 'footer', 'aside', '.sidebar', '.navigation']):
+                # Skip if inside navigation or footer
+                if element.find_parent(['nav', 'footer', 'aside']):
                     continue
                 
-                # Get text content
+                # Try text content first
                 author_text = element.get_text(strip=True)
                 if author_text and len(author_text) < 100:
                     cleaned = self._clean_author_name(author_text)
-                    if cleaned and self._is_valid_author_name(cleaned):
+                    if self._is_valid_author_name(cleaned):
                         return cleaned
                 
-                # Check for links within author elements
-                author_link = element.find('a')
-                if author_link:
-                    link_text = author_link.get_text(strip=True)
+                # Try links within author elements
+                link = element.find('a')
+                if link:
+                    link_text = link.get_text(strip=True)
                     if link_text and len(link_text) < 100:
                         cleaned = self._clean_author_name(link_text)
-                        if cleaned and self._is_valid_author_name(cleaned):
+                        if self._is_valid_author_name(cleaned):
                             return cleaned
         
         return None
     
-    def _extract_author_text_patterns(self, soup: BeautifulSoup) -> Optional[str]:
+    def _extract_author_patterns(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author using text pattern matching"""
         full_text = soup.get_text()
         
-        # Universal author patterns
-        author_patterns = [
-            r'By\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:|;|\n)',
-            r'BY\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:|;|\n)',
-            r'by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)(?:\s|$|,|\.|:|;|\n)',
-            r'Written by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
-            r'Story by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
-            r'Report by\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
-            r'Author:\s*([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
-            r'Reporter:\s*([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
+        patterns = [
+            r'By\s+([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)(?:\s|$|,|\.|:|;)',
+            r'BY\s+([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)(?:\s|$|,|\.|:|;)', 
+            r'Written by\s+([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)',
+            r'Story by\s+([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)',
+            r'Author:\s*([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)',
+            r'Reporter:\s*([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z\-\']+)+)'
         ]
         
-        for pattern in author_patterns:
+        for pattern in patterns:
             match = re.search(pattern, full_text)
             if match:
                 author_name = match.group(1).strip()
                 cleaned = self._clean_author_name(author_name)
-                if cleaned and self._is_valid_author_name(cleaned):
+                if self._is_valid_author_name(cleaned):
                     return cleaned
         
         return None
     
-    def _extract_author_positional(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract author by looking near the headline"""
-        # Find the main headline
-        headline_selectors = ['h1', '.headline', '.title', '.entry-title', '.post-title']
-        headline = None
-        
-        for selector in headline_selectors:
-            headline = soup.select_one(selector)
-            if headline:
-                break
-        
-        if not headline:
-            return None
-        
-        # Look in elements immediately following the headline
-        elements_to_check = []
-        
-        # Check next siblings
-        current = headline
-        for _ in range(5):
-            current = current.next_sibling
-            if current and hasattr(current, 'get_text'):
-                elements_to_check.append(current)
-        
-        # Check parent's next siblings
-        if headline.parent:
-            current = headline.parent
-            for _ in range(3):
-                current = current.next_sibling
-                if current and hasattr(current, 'get_text'):
-                    elements_to_check.append(current)
-        
-        # Look for author patterns in these elements
-        for element in elements_to_check:
-            text = element.get_text(strip=True)
-            if text and len(text) < 200:
-                # Try pattern matching
-                author_patterns = [
-                    r'By\s+([A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)+)',
-                    r'^([A-Z][a-zA-Z\-]+\s+[A-Z][a-zA-Z\-]+)(?:\s|$|,)',
-                ]
-                
-                for pattern in author_patterns:
-                    match = re.search(pattern, text)
-                    if match:
-                        author_name = match.group(1).strip()
-                        cleaned = self._clean_author_name(author_name)
-                        if cleaned and self._is_valid_author_name(cleaned):
-                            return cleaned
-        
-        return None
-    
-    def _clean_author_name(self, author: str) -> Optional[str]:
+    def _clean_author_name(self, author: str) -> str:
         """Clean and normalize author name"""
         if not author:
-            return None
+            return ''
         
-        # Remove common prefixes and suffixes
-        author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters|Associated Press|AP).*', '', author, flags=re.IGNORECASE)
+        # Remove common prefixes
+        author = re.sub(r'^(By|by|BY|Written by|Story by|Author:|Reporter:)\s+', '', author)
         
-        # Clean up whitespace and punctuation
+        # Remove suffixes and publication info
+        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author)
+        author = re.sub(r'\s*,\s*(CNN|BBC|Reuters|Associated Press|AP).*', '', author)
+        
+        # Clean whitespace and punctuation
         author = re.sub(r'\s+', ' ', author).strip()
-        author = re.sub(r'[,\.\:;]+
-    , '', author)
+        author = re.sub(r'[,\.\:;]+$', '', author)
         
-        return author if author else None
+        return author
     
     def _is_valid_author_name(self, author: str) -> bool:
-        """Validate that extracted text looks like a real author name"""
+        """Validate author name"""
         if not author or len(author) < 3 or len(author) > 100:
             return False
         
@@ -825,15 +463,14 @@ class UniversalScraper:
         if not author[0].isupper():
             return False
         
-        # Allow hyphens but reject other special characters
-        if re.search(r'[0-9@#$%^&*()_+={}|\[\]\\:";\'<>?,./]', author):
+        # No numbers or most special characters
+        if re.search(r'[0-9@#$%^&*()_+={}|\[\]\\";\'<>?,./]', author):
             return False
         
-        # Common false positives
+        # Reject common false positives
         false_positives = [
-            'read more', 'click here', 'share this', 'comments', 'subscribe',
-            'advertisement', 'sponsored', 'trending', 'popular', 'related',
-            'breaking news', 'latest news', 'top stories', 'social media'
+            'read more', 'click here', 'share this', 'comments',
+            'breaking news', 'latest news', 'social media'
         ]
         
         author_lower = author.lower()
@@ -842,27 +479,30 @@ class UniversalScraper:
         
         return True
     
-    def _extract_publish_date(self, soup: BeautifulSoup) -> Optional[str]:
+    def _extract_publish_date(self, soup: BeautifulSoup) -> str:
         """Extract publish date"""
         date_selectors = [
             '[property="article:published_time"]',
             '[name="publish_date"]',
-            '[name="date"]',
+            '[name="date"]', 
             'time[datetime]',
             '.publish-date',
-            '.article-date'
+            '.article-date',
+            '.post-date'
         ]
         
         for selector in date_selectors:
             element = soup.select_one(selector)
             if element:
-                date = element.get('content') or element.get('datetime') or element.get_text(strip=True)
+                date = (element.get('content') or 
+                       element.get('datetime') or 
+                       element.get_text(strip=True))
                 if date:
                     return date[:50]
         
-        return None
+        return ''
     
-    def _extract_description(self, soup: BeautifulSoup) -> Optional[str]:
+    def _extract_description(self, soup: BeautifulSoup) -> str:
         """Extract article description"""
         desc_selectors = [
             '[name="description"]',
@@ -877,238 +517,57 @@ class UniversalScraper:
                 if desc:
                     return desc[:500]
         
-        return None
+        return ''
     
-    def _create_user_friendly_error(self, url: str, domain: str, technical_error: str) -> Dict[str, Any]:
-        """Create user-friendly error message in proper format"""
+    def _clean_domain(self, domain: str) -> str:
+        """Clean domain for display"""
+        if not domain:
+            return ''
+        
+        # Remove www prefix
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        
+        return domain.lower()
+    
+    def _get_random_user_agent(self) -> str:
+        """Get random user agent to avoid detection"""
+        agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0'
+        ]
+        return random.choice(agents)
+    
+    def _validate_extraction(self, result: Dict[str, Any]) -> bool:
+        """Validate extraction result has sufficient content"""
+        if not result.get('success') or not result.get('data'):
+            return False
+        
+        data = result['data']
+        text = data.get('text', '')
+        title = data.get('title', '')
+        
+        # Must have either substantial text or at least a title
+        return (text and len(text.strip()) > 100) or (title and title != 'Unknown Title')
+    
+    def _process_text(self, text: str) -> Dict[str, Any]:
+        """Process direct text input"""
+        lines = text.strip().split('\n')
+        title = lines[0][:100] if lines else 'Text Analysis'
+        
+        word_count = len(text.split())
+        
         return {
-            'success': False,
-            'error': f"Could not extract content from {domain}. The site may be blocking automated requests.",
+            'success': True,
             'data': {
-                'url': url,
-                'domain': domain,
-                'title': 'Extraction Failed',
-                'text': '',
-                'author': 'Unknown',
-                'extraction_successful': False
-            },
-            'extraction_metadata': {
-                'all_methods_failed': True,
-                'methods_tried': self.methods_tried,
-                'technical_error': technical_error,
-                'suggestion': 'Try copying the article text directly from your browser'
-            }
-        }
-
-
-class ArticleExtractor(BaseAnalyzer):
-    """FIXED: Article extraction service with proper data wrapper format"""
-    
-    def __init__(self):
-        super().__init__('article_extractor')
-        
-        logger.info("=" * 60)
-        logger.info("ArticleExtractor - FIXED DATA WRAPPER VERSION")
-        logger.info("=" * 60)
-        
-        # Initialize universal scraper
-        self._extractor = None
-        
-        try:
-            self._extractor = UniversalScraper()
-            scraperapi_available = bool(self._extractor.scraper_apis.scraperapi_key)
-            logger.info(f"UniversalScraper initialized - ScraperAPI: {scraperapi_available}")
-            
-            if scraperapi_available:
-                logger.info("ScraperAPI integration ACTIVE - prioritized for extraction")
-            else:
-                logger.warning("ScraperAPI key not found - using fallback methods only")
-                
-        except Exception as e:
-            logger.error(f"Failed to initialize UniversalScraper: {e}")
-            self._extractor = None
-    
-    def _check_availability(self) -> bool:
-        """Check if service is available"""
-        return True  # Always available with fallback methods
-    
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """CRITICAL FIX: Return data in exact wrapper format pipeline expects"""
-        logger.info("=" * 60)
-        logger.info("ArticleExtractor.analyze() - FIXED WRAPPER FORMAT")
-        logger.info("=" * 60)
-        
-        try:
-            # Handle input formats
-            url = None
-            text = None
-            
-            if 'url' in data:
-                url = data['url']
-            elif 'text' in data:
-                text = data['text']
-            elif 'content' in data and 'content_type' in data:
-                if data['content_type'] == 'url':
-                    url = data['content']
-                else:
-                    text = data['content']
-            else:
-                return self.get_error_result("Invalid input format - need 'url' or 'text'")
-            
-            # Extract content
-            if url:
-                logger.info(f"Extracting from URL: {url}")
-                
-                if self._extractor:
-                    try:
-                        # CRITICAL: This returns data in wrapper format already
-                        extraction_result = self._extractor.extract_from_url(url)
-                        
-                        if extraction_result.get('success'):
-                            logger.info("SUCCESS: Content extraction completed!")
-                            
-                            # Check if ScraperAPI was used
-                            metadata = extraction_result.get('extraction_metadata', {})
-                            if metadata.get('api_used'):
-                                logger.info("SUCCESS: ScraperAPI successfully extracted content!")
-                            else:
-                                logger.info("SUCCESS: Fallback method extracted content")
-                            
-                            # CRITICAL FIX: Return in BaseAnalyzer success format with data wrapper preserved
-                            result = self.get_success_result({'data': extraction_result.get('data', {})})
-                            result['extraction_metadata'] = metadata
-                            
-                            # DEBUG: Verify data structure
-                            article_data = result.get('data', {})
-                            logger.info(f"✓ FINAL WRAPPER CHECK:")
-                            logger.info(f"  - Title: {article_data.get('title', 'NOT FOUND')}")
-                            logger.info(f"  - Author: {article_data.get('author', 'NOT FOUND')}")
-                            logger.info(f"  - Word count: {article_data.get('word_count', 0)}")
-                            
-                            return result
-                        else:
-                            logger.warning("Extraction failed - trying basic fallback")
-                            result = self._basic_fallback_extract(url)
-                            
-                    except Exception as e:
-                        logger.warning(f"Universal scraper failed: {e}")
-                        result = self._basic_fallback_extract(url)
-                
-                # If extraction failed, try basic fallback
-                if not result or not result.get('success'):
-                    logger.warning("All extraction methods failed")
-                    return self.get_error_result("Unable to extract content from the provided URL")
-                
-                return result
-            
-            elif text:
-                logger.info("Analyzing provided text content")
-                
-                # Simple text analysis
-                lines = text.strip().split('\n')
-                title = lines[0][:100] if lines else 'Text Analysis'
-                word_count = len(text.split())
-                
-                text_data = {
-                    'title': title,
-                    'text': text,
-                    'word_count': word_count,
-                    'author': 'Unknown',
-                    'url': '',
-                    'domain': '',
-                    'language': 'en',
-                    'extraction_successful': True
-                }
-                
-                # Return in proper wrapper format
-                return self.get_success_result({'data': text_data})
-            
-        except Exception as e:
-            logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
-    def _basic_fallback_extract(self, url: str) -> Dict[str, Any]:
-        """Basic fallback extraction with proper data wrapper"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-            }
-            
-            response = requests.get(url, headers=headers, timeout=30, verify=False)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
-                element.decompose()
-            
-            # Extract basic title
-            title_elem = soup.find('title') or soup.find('h1')
-            title = title_elem.get_text(strip=True) if title_elem else 'Untitled'
-            
-            # Extract content
-            content = None
-            
-            # Try article tags
-            article = soup.find('article')
-            if article:
-                content = article.get_text(separator=' ', strip=True)
-            
-            # Try content divs
-            if not content:
-                content_selectors = ['.content', '.entry-content', '.post-content', '.article-body', 'main']
-                for selector in content_selectors:
-                    elem = soup.select_one(selector)
-                    if elem:
-                        content = elem.get_text(separator=' ', strip=True)
-                        break
-            
-            # Try all paragraphs
-            if not content:
-                paragraphs = soup.find_all('p')
-                content = ' '.join([p.get_text(strip=True) for p in paragraphs])
-            
-            # All text fallback
-            if not content:
-                content = soup.get_text(separator=' ', strip=True)
-            
-            if not content or len(content) < 100:
-                return self.get_error_result('Insufficient content extracted')
-            
-            word_count = len(content.split())
-            
-            # Try to extract author
-            universal_scraper = UniversalScraper()
-            author = universal_scraper._extract_author_comprehensive_debug(soup, url)
-            
-            # CRITICAL: Return in proper wrapper format
-            fallback_data = {
                 'title': title,
-                'text': content,
-                'author': author,
-                'publish_date': None,
-                'url': url,
-                'domain': urlparse(url).netloc,
-                'description': None,
+                'text': text,
+                'author': 'Unknown',
+                'publish_date': '',
+                'url': '',
+                'domain': '',
+                'description': '',
                 'word_count': word_count,
-                'language': 'en',
-                'extraction_successful': True
-            }
-            
-            result = self.get_success_result({'data': fallback_data})
-            result['extraction_metadata'] = {
-                'method': 'basic_fallback',
-                'api_used': False,
-                'extracted_at': datetime.now().isoformat()
-            }
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Basic extraction fallback failed: {e}", exc_info=True)
-            return self.get_error_result(f'Basic extraction failed: {str(e)}')
+                'language': '
