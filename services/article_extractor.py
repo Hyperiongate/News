@@ -856,8 +856,8 @@ class UniversalScraper:
         
         # Remove common prefixes and suffixes
         author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*, '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters|Associated Press|AP).*, '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s*,\s*(BBC News|CNN|Reuters|Associated Press|AP).*', '', author, flags=re.IGNORECASE)
         
         # Clean up whitespace and punctuation
         author = re.sub(r'\s+', ' ', author).strip()
