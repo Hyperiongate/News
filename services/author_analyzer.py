@@ -5,6 +5,7 @@ CRITICAL FIXES:
 2. Proper data structure with consistent wrapper format
 3. Enhanced error handling and timeout protection
 4. Comprehensive profile discovery with validation
+5. FIXED SYNTAX ERROR - unterminated string literal on line 1090
 """
 import re
 import logging
@@ -1081,24 +1082,25 @@ class AuthorAnalyzer(BaseAnalyzer, AIEnhancementMixin):
         return None
     
     def _clean_author_name(self, author: str) -> Optional[str]:
-        """ENHANCED: Clean and validate author name with better false positive detection"""
+        """FIXED: Clean and validate author name with better false positive detection - SYNTAX ERROR FIXED"""
         if not author:
             return None
         
         # Remove common prefixes
         author = re.sub(r'^(By|by|BY|Written by|Author:|Reporter:)\s+', '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*, '', author, flags=re.IGNORECASE)
+        # FIXED: Added missing quote before comma - this was line 1090 that was causing the syntax error
+        author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author, flags=re.IGNORECASE)
         
         # Remove web UI elements and sharing buttons
         author = re.sub(r'^(ShareSave|Share|Save|Print|Email|Tweet|Pin|Comment)', '', author, flags=re.IGNORECASE)
-        author = re.sub(r'(ShareSave|Share|Save|Print|Email), '', author, flags=re.IGNORECASE)
+        author = re.sub(r'(ShareSave|Share|Save|Print|Email)', '', author, flags=re.IGNORECASE)
         
         # Remove news organization names and suffixes
-        author = re.sub(r'\s*,?\s*(BBC News|BBC|CNN|Reuters|Associated Press|AP|Fox News|NBC|ABC|CBS).*, '', author, flags=re.IGNORECASE)
-        author = re.sub(r'\s+(News|Reporter|Correspondent|Writer|Editor|Staff), '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s*,?\s*(BBC News|BBC|CNN|Reuters|Associated Press|AP|Fox News|NBC|ABC|CBS).*', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\s+(News|Reporter|Correspondent|Writer|Editor|Staff)', '', author, flags=re.IGNORECASE)
         
         # Remove trailing punctuation and special characters
-        author = re.sub(r'[,\.\:;]+, '', author)
+        author = re.sub(r'[,\.\:;]+', '', author)
         
         # Clean up whitespace
         author = re.sub(r'\s+', ' ', author).strip()
