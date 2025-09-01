@@ -1,6 +1,10 @@
 """
-REAL Fixed Analysis Pipeline - TIMEOUT ISSUE RESOLVED
-CRITICAL: Fixed parallel execution timeout that was causing pipeline failures
+COMPLETE FIXED Analysis Pipeline - DATA FLOW SOLUTION
+CRITICAL FIXES:
+1. Fixed service data extraction to handle your actual service return format
+2. Corrected author data extraction from nested structures
+3. Ensured all services return data in format frontend expects
+4. Fixed timeout handling to prevent worker shutdowns
 """
 import asyncio
 import time
@@ -16,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class AnalysisPipeline:
     """
-    REAL FIXED: Pipeline with proper timeout handling for parallel services
+    COMPLETE FIXED: Pipeline with proper data extraction for your service format
     """
     
     # Service groups for parallel execution
@@ -38,7 +42,7 @@ class AnalysisPipeline:
         
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Run analysis pipeline with REAL service data handling
+        FIXED: Run analysis pipeline with proper data structure handling
         """
         start_time = time.time()
         
@@ -60,7 +64,7 @@ class AnalysisPipeline:
         
         try:
             logger.info("=" * 80)
-            logger.info("STARTING REAL ANALYSIS PIPELINE")
+            logger.info("STARTING COMPLETE FIXED ANALYSIS PIPELINE")
             logger.info(f"Input data keys: {list(data.keys())}")
             logger.info("=" * 80)
             
@@ -75,7 +79,7 @@ class AnalysisPipeline:
                 results['summary'] = 'Article extraction failed'
                 return results
             
-            # REAL FIX: Handle your actual service return format
+            # FIXED: Handle your actual service return format
             extractor_result = article_data['article_extractor']
             if not extractor_result.get('success', False):
                 logger.error(f"Article extraction failed: {extractor_result.get('error', 'Unknown error')}")
@@ -84,12 +88,12 @@ class AnalysisPipeline:
                 results['summary'] = 'Could not extract article content'
                 return results
             
-            # REAL FIX: Extract article from your service's actual structure
-            article_info = self._extract_article_data_real(extractor_result)
+            # FIXED: Extract article from your service's actual structure
+            article_info = self._extract_article_data_fixed(extractor_result)
             results['article'] = article_info
             logger.info(f"Article extracted: '{article_info.get('title', 'No title')[:100]}...'")
             
-            # REAL FIX: Create enriched data for subsequent services
+            # FIXED: Create enriched data for subsequent services
             enriched_data = {**data}
             enriched_data.update(article_info)  # Add article fields to data
             enriched_data['article'] = article_info  # Also provide as nested object
@@ -108,45 +112,53 @@ class AnalysisPipeline:
                 logger.info("STAGE 4: AI Enhancement")
                 stage4_results = self._run_stage_parallel_fixed(self.STAGE_4_SERVICES, enriched_data)
             
-            # REAL FIX: Combine all service results and flatten nested data
+            # FIXED: Combine all service results with proper data extraction
             all_service_results = {}
             all_service_results.update(article_data)  # Stage 1
             all_service_results.update(stage2_results)  # Stage 2
             all_service_results.update(stage3_results)  # Stage 3
             all_service_results.update(stage4_results)  # Stage 4
             
-            # REAL FIX: Process results in format frontend expects
+            # FIXED: Process results in format frontend expects - THIS IS THE KEY FIX
             processed_results = {}
             successful_services = 0
             
             for service_name, service_result in all_service_results.items():
-                logger.info(f"\nProcessing {service_name} result:")
-                logger.info(f"  Success: {service_result.get('success', False)}")
-                logger.info(f"  Has data key: {'data' in service_result}")
-                logger.info(f"  Keys: {list(service_result.keys())}")
+                logger.info(f"\n=== PROCESSING {service_name.upper()} RESULT ===")
+                logger.info(f"Success: {service_result.get('success', False)}")
+                logger.info(f"Has data key: {'data' in service_result}")
+                logger.info(f"Result keys: {list(service_result.keys())}")
                 
                 if service_result.get('success', False):
-                    # REAL FIX: Handle your actual service data structure
-                    clean_data = self._extract_service_data_real(service_name, service_result)
+                    # CRITICAL FIX: Extract data using your actual service structure
+                    clean_data = self._extract_service_data_fixed(service_name, service_result)
                     processed_results[service_name] = clean_data
                     successful_services += 1
-                    logger.info(f"  Processed data keys: {list(clean_data.keys())}")
+                    logger.info(f"✓ {service_name}: Successfully processed {len(clean_data)} data fields")
+                    
+                    # DEBUG: Log some key fields to verify extraction
+                    if service_name == 'author_analyzer' and 'author_name' in clean_data:
+                        logger.info(f"✓ AUTHOR EXTRACTED: {clean_data['author_name']}")
+                    if 'score' in clean_data:
+                        logger.info(f"✓ SCORE EXTRACTED: {clean_data['score']}")
+                        
                 else:
                     # Keep failed service info for debugging
                     processed_results[service_name] = {
                         'success': False,
                         'error': service_result.get('error', 'Service failed'),
-                        'available': service_result.get('available', False)
+                        'available': service_result.get('available', False),
+                        'service': service_name
                     }
                     error_msg = f"Service {service_name} failed: {service_result.get('error', 'Unknown error')}"
                     results['errors'].append(error_msg)
-                    logger.warning(f"  {error_msg}")
+                    logger.warning(f"✗ {service_name}: {error_msg}")
             
-            # REAL FIX: Store processed results in the format frontend expects
+            # FIXED: Store processed results in the format frontend expects
             results.update(processed_results)  # Merge service results directly into main results
             
             # Calculate trust score from successful services
-            results['trust_score'] = self._calculate_trust_score_real(processed_results)
+            results['trust_score'] = self._calculate_trust_score_fixed(processed_results)
             results['trust_level'] = self._get_trust_level(results['trust_score'])
             results['summary'] = f"Analysis complete. {successful_services} services provided data."
             
@@ -157,11 +169,18 @@ class AnalysisPipeline:
             results['services_available'] = successful_services
             
             logger.info("=" * 80)
-            logger.info("REAL PIPELINE COMPLETION SUMMARY:")
+            logger.info("COMPLETE FIXED PIPELINE SUMMARY:")
             logger.info(f"Total time: {total_time:.2f}s")
             logger.info(f"Successful services: {successful_services}")
             logger.info(f"Trust score: {results['trust_score']}")
             logger.info(f"Final result keys: {list(results.keys())}")
+            
+            # DEBUG: Log author data for verification
+            if 'author_analyzer' in processed_results:
+                auth_data = processed_results['author_analyzer']
+                if isinstance(auth_data, dict) and auth_data.get('success'):
+                    logger.info(f"✓ FINAL AUTHOR DATA: {auth_data.get('author_name', 'NOT FOUND')}")
+                    
             logger.info("=" * 80)
             
         except Exception as e:
@@ -204,7 +223,6 @@ class AnalysisPipeline:
     def _run_stage_parallel_fixed(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Any]:
         """
         CRITICAL FIX: Run services in parallel with INDIVIDUAL timeouts, not collection timeout
-        This prevents one slow service from killing the entire batch
         """
         stage_results = {}
         futures = {}
@@ -219,8 +237,6 @@ class AnalysisPipeline:
             futures[future] = service_name
         
         # CRITICAL FIX: Collect results with individual service handling
-        # Instead of applying timeout to the entire collection, handle each service individually
-        
         completed_count = 0
         total_futures = len(futures)
         max_wait_time = 60  # Maximum time to wait for all services
@@ -287,8 +303,8 @@ class AnalysisPipeline:
                 'available': False
             }, duration
     
-    def _extract_article_data_real(self, extraction_result: Dict[str, Any]) -> Dict[str, Any]:
-        """REAL FIX: Extract article data from your actual service format"""
+    def _extract_article_data_fixed(self, extraction_result: Dict[str, Any]) -> Dict[str, Any]:
+        """FIXED: Extract article data from your actual service format"""
         if not extraction_result.get('success'):
             return {
                 'title': 'Unknown Title',
@@ -298,8 +314,8 @@ class AnalysisPipeline:
                 'extraction_successful': False
             }
         
-        # REAL FIX: Your services return data under 'data' key
-        article_data = extraction_result.get('data', extraction_result)
+        # FIXED: Your services return data under 'data' key
+        article_data = extraction_result.get('data', {})
         
         # Handle different extraction result formats
         if 'article' in article_data:
@@ -321,93 +337,138 @@ class AnalysisPipeline:
         logger.info(f"Extracted article: {extracted['title'][:50]}... ({extracted['word_count']} words)")
         return extracted
     
-    def _extract_service_data_real(self, service_name: str, service_result: Dict[str, Any]) -> Dict[str, Any]:
-        """REAL FIX: Extract data from your actual service formats"""
+    def _extract_service_data_fixed(self, service_name: str, service_result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL FIX: Extract data from your actual service formats
+        This is the key method that fixes the data flow issue
+        """
+        logger.info(f"=== EXTRACTING DATA FROM {service_name.upper()} ===")
+        
         # Start with base service info
         extracted = {
             'success': service_result.get('success', False),
             'service': service_name,
-            'timestamp': service_result.get('timestamp', time.time())
+            'timestamp': service_result.get('timestamp', time.time()),
+            'available': service_result.get('available', True)
         }
         
         # If service failed, return minimal info
         if not service_result.get('success', False):
             extracted['error'] = service_result.get('error', 'Service failed')
-            extracted['available'] = service_result.get('available', False)
+            logger.info(f"Service {service_name} failed: {extracted['error']}")
             return extracted
         
-        # REAL FIX: Your services return data under 'data' key
+        # CRITICAL FIX: Your services return data under 'data' key
         service_data = service_result.get('data', {})
         if not service_data:
-            logger.warning(f"No 'data' key in {service_name} result")
-            # Fallback to extracting from top level
-            service_data = service_result
+            logger.warning(f"No 'data' key in {service_name} result, using top-level data")
+            # Fallback: extract from top level, excluding metadata
+            service_data = {k: v for k, v in service_result.items() 
+                          if k not in ['success', 'service', 'timestamp', 'available', 'metadata']}
         
-        # REAL FIX: Extract all data from the service's data object
+        logger.info(f"Service data keys for {service_name}: {list(service_data.keys())}")
+        
+        # CRITICAL FIX: Copy ALL data from the service's data object
         for key, value in service_data.items():
-            if key not in ['success', 'service', 'timestamp', 'available', 'analysis_complete']:
+            if key not in ['success', 'service', 'timestamp', 'available']:
                 extracted[key] = value
         
-        # REAL FIX: Service-specific field mapping for your actual services
+        # CRITICAL FIX: Service-specific field mapping for your actual services
         if service_name == 'source_credibility':
-            # Your service returns score, level, etc. under data
+            # Ensure all expected fields exist
             extracted.update({
                 'credibility_score': service_data.get('score', service_data.get('credibility_score', 50)),
                 'credibility_level': service_data.get('level', service_data.get('credibility_level', 'Unknown')),
                 'source_type': service_data.get('source_type', 'Unknown'),
+                'source_name': service_data.get('source_name', 'Unknown Source'),
                 'trust_indicators': service_data.get('trust_indicators', []),
-                'findings': service_data.get('findings', [])
+                'findings': service_data.get('findings', []),
+                'score': service_data.get('score', service_data.get('credibility_score', 50))
             })
             
         elif service_name == 'author_analyzer':
+            # CRITICAL FIX: Ensure author_name is properly extracted
+            author_name = (service_data.get('author_name') or 
+                          service_data.get('name') or 
+                          service_data.get('author') or 
+                          'Unknown')
+            
             extracted.update({
-                'author_name': service_data.get('author_name', 'Unknown'),
+                'author_name': author_name,
                 'author_score': service_data.get('author_score', service_data.get('score', 50)),
+                'score': service_data.get('score', service_data.get('author_score', 50)),
+                'credibility_score': service_data.get('credibility_score', service_data.get('score', 50)),
+                'verified': service_data.get('verified', False),
+                'bio': service_data.get('bio', ''),
+                'position': service_data.get('position', ''),
                 'credentials': service_data.get('credentials', {}),
-                'publishing_history': service_data.get('publishing_history', [])
+                'social_media': service_data.get('social_media', {}),
+                'linkedin_profile': service_data.get('linkedin_profile'),
+                'twitter_profile': service_data.get('twitter_profile'),
+                'wikipedia_page': service_data.get('wikipedia_page'),
+                'personal_website': service_data.get('personal_website'),
+                'muckrack_profile': service_data.get('muckrack_profile'),
+                'publishing_history': service_data.get('publishing_history', []),
+                'additional_links': service_data.get('additional_links', {}),
+                'level': service_data.get('level', 'Unknown')
             })
+            
+            logger.info(f"✓ AUTHOR DATA EXTRACTED: {author_name} (score: {extracted['score']})")
             
         elif service_name == 'bias_detector':
             extracted.update({
                 'bias_score': service_data.get('bias_score', service_data.get('score', 0)),
+                'score': service_data.get('score', service_data.get('bias_score', 0)),
                 'bias_direction': service_data.get('bias_direction', 'neutral'),
+                'bias_level': service_data.get('bias_level', service_data.get('level', 'Unknown')),
                 'political_leaning': service_data.get('political_leaning', 'center'),
                 'loaded_phrases': service_data.get('loaded_phrases', []),
-                'patterns': service_data.get('patterns', [])
+                'patterns': service_data.get('patterns', []),
+                'level': service_data.get('level', service_data.get('bias_level', 'Unknown'))
             })
             
         elif service_name == 'fact_checker':
             extracted.update({
                 'fact_checks': service_data.get('fact_checks', []),
+                'verification_score': service_data.get('verification_score', service_data.get('score', 50)),
+                'score': service_data.get('score', service_data.get('verification_score', 50)),
                 'verified_claims': service_data.get('verified_claims', 0),
                 'disputed_claims': service_data.get('disputed_claims', 0),
-                'total_claims': service_data.get('total_claims', 0)
+                'total_claims': service_data.get('total_claims', 0),
+                'claims_checked': service_data.get('claims_checked', 0),
+                'level': service_data.get('level', service_data.get('verification_level', 'Unknown'))
             })
             
         elif service_name == 'transparency_analyzer':
             extracted.update({
                 'transparency_score': service_data.get('transparency_score', service_data.get('score', 50)),
-                'transparency_level': service_data.get('transparency_level', 'Unknown'),
+                'score': service_data.get('score', service_data.get('transparency_score', 50)),
+                'transparency_level': service_data.get('transparency_level', service_data.get('level', 'Unknown')),
                 'checklist_results': service_data.get('checklist_results', {}),
                 'recommendations': service_data.get('recommendations', []),
-                'indicators': service_data.get('transparency_indicators', service_data.get('indicators', []))
+                'indicators': service_data.get('transparency_indicators', service_data.get('indicators', [])),
+                'level': service_data.get('level', service_data.get('transparency_level', 'Unknown'))
             })
             
         elif service_name == 'manipulation_detector':
             extracted.update({
                 'manipulation_score': service_data.get('manipulation_score', service_data.get('score', 0)),
+                'score': service_data.get('score', service_data.get('manipulation_score', 0)),
                 'tactics_found': service_data.get('tactics_found', []),
                 'emotional_language': service_data.get('emotional_language', []),
-                'risk_level': service_data.get('risk_level', 'Low')
+                'risk_level': service_data.get('risk_level', service_data.get('level', 'Low')),
+                'level': service_data.get('level', service_data.get('risk_level', 'Low'))
             })
             
         elif service_name == 'content_analyzer':
             extracted.update({
                 'content_score': service_data.get('content_score', service_data.get('score', 50)),
+                'score': service_data.get('score', service_data.get('content_score', 50)),
                 'quality_score': service_data.get('quality_score', service_data.get('score', 50)),
                 'readability_score': service_data.get('readability_score', 50),
                 'quality_metrics': service_data.get('quality_metrics', {}),
-                'content_structure': service_data.get('content_structure', {})
+                'content_structure': service_data.get('content_structure', {}),
+                'level': service_data.get('level', 'Unknown')
             })
             
         elif service_name == 'openai_enhancer':
@@ -415,13 +476,15 @@ class AnalysisPipeline:
                 'ai_summary': service_data.get('enhanced_summary', service_data.get('ai_summary', '')),
                 'key_insights': service_data.get('key_points', service_data.get('key_insights', [])),
                 'credibility_assessment': service_data.get('credibility_assessment', ''),
-                'enhancement_score': service_data.get('enhancement_score', service_data.get('score', 50))
+                'enhancement_score': service_data.get('enhancement_score', service_data.get('score', 50)),
+                'score': service_data.get('score', service_data.get('enhancement_score', 50))
             })
         
+        logger.info(f"✓ {service_name}: Extracted {len(extracted)} total fields")
         return extracted
     
-    def _calculate_trust_score_real(self, service_results: Dict[str, Any]) -> int:
-        """Calculate trust score from REAL service results"""
+    def _calculate_trust_score_fixed(self, service_results: Dict[str, Any]) -> int:
+        """Calculate trust score from FIXED service results"""
         scores = []
         weights = {
             'source_credibility': 0.25,
@@ -434,7 +497,7 @@ class AnalysisPipeline:
         
         for service, weight in weights.items():
             if service in service_results and service_results[service].get('success'):
-                score = self._extract_service_score_real(service, service_results[service])
+                score = self._extract_service_score_fixed(service, service_results[service])
                 if score is not None:
                     scores.append((score, weight))
                     logger.info(f"Trust score component - {service}: {score} (weight: {weight})")
@@ -451,28 +514,35 @@ class AnalysisPipeline:
         logger.info(f"Final trust score: {final_score} (from {len(scores)} services)")
         return final_score
     
-    def _extract_service_score_real(self, service_name: str, data: Dict[str, Any]) -> Optional[int]:
-        """Extract score from REAL service data"""
-        # REAL FIX: Handle your actual field names
-        score_fields = ['credibility_score', 'author_score', 'transparency_score', 
-                       'score', 'trust_score', 'overall_score']
+    def _extract_service_score_fixed(self, service_name: str, data: Dict[str, Any]) -> Optional[int]:
+        """Extract score from FIXED service data"""
+        # FIXED: Handle your actual field names with proper fallbacks
+        score_fields = ['score', 'credibility_score', 'author_score', 'transparency_score', 
+                       'verification_score', 'trust_score', 'overall_score']
         
         # Check common fields first
         for field in score_fields:
             if field in data and isinstance(data[field], (int, float)):
-                return int(data[field])
+                score = int(data[field])
+                logger.info(f"Found score for {service_name}: {field} = {score}")
+                return score
         
         # Service-specific logic for your actual services
         if service_name == 'bias_detector':
             bias_score = data.get('bias_score', 0)
-            return max(0, min(100, 100 - int(bias_score)))  # Invert bias score
+            if isinstance(bias_score, (int, float)):
+                inverted = max(0, min(100, 100 - int(bias_score)))  # Invert bias score
+                logger.info(f"Inverted bias score for {service_name}: {bias_score} -> {inverted}")
+                return inverted
             
         elif service_name == 'fact_checker':
             verified = data.get('verified_claims', 0)
             disputed = data.get('disputed_claims', 0)
             total = verified + disputed
             if total > 0:
-                return int((verified / total) * 100)
+                score = int((verified / total) * 100)
+                logger.info(f"Calculated fact check score: {verified}/{total} = {score}")
+                return score
             return 75  # Default if no claims
             
         elif service_name == 'manipulation_detector':
@@ -482,8 +552,10 @@ class AnalysisPipeline:
                 return 20
             elif tactics_count > 2:
                 return 50
-            else:
-                return max(0, min(100, 100 - int(manipulation_score)))
+            elif isinstance(manipulation_score, (int, float)):
+                inverted = max(0, min(100, 100 - int(manipulation_score)))
+                logger.info(f"Inverted manipulation score: {manipulation_score} -> {inverted}")
+                return inverted
         
         logger.warning(f"No score found for {service_name}")
         return None
