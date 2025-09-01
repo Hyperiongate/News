@@ -1,10 +1,10 @@
 """
-Article Extractor - DATA WRAPPER FORMAT FIX
+Article Extractor - SYNTAX ERROR FIXED
 CRITICAL FIXES:
-1. Returns data in proper 'data' wrapper format that pipeline expects
-2. Enhanced author extraction with comprehensive strategies
-3. Proper domain cleaning and URL handling
-4. Consistent success/error response format
+1. Fixed unterminated string literal causing deployment failure
+2. Returns data in proper 'data' wrapper format that pipeline expects
+3. Enhanced author extraction with comprehensive strategies
+4. Proper domain cleaning and URL handling
 """
 
 import json
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class ArticleExtractor(BaseAnalyzer):
     """
-    FIXED: Article extraction with proper data wrapper format
+    FIXED: Article extraction with proper data wrapper format and syntax fixes
     """
     
     def __init__(self):
@@ -62,7 +62,7 @@ class ArticleExtractor(BaseAnalyzer):
         CRITICAL FIX: Main analysis method that returns proper data wrapper format
         """
         logger.info("=" * 60)
-        logger.info("ARTICLE EXTRACTOR - DATA WRAPPER FORMAT FIX")
+        logger.info("ARTICLE EXTRACTOR - SYNTAX FIXED VERSION")
         logger.info("=" * 60)
         
         try:
@@ -209,9 +209,6 @@ class ArticleExtractor(BaseAnalyzer):
                     'description': description,
                     'word_count': word_count,
                     'language': 'en',
-                'extraction_successful': True
-            }
-        }en',
                     'extraction_successful': bool(content and len(content) > 100)
                 },
                 'extraction_metadata': {
@@ -432,7 +429,7 @@ class ArticleExtractor(BaseAnalyzer):
         return None
     
     def _clean_author_name(self, author: str) -> str:
-        """Clean and normalize author name"""
+        """Clean and normalize author name - SYNTAX FIXED"""
         if not author:
             return ''
         
@@ -443,7 +440,7 @@ class ArticleExtractor(BaseAnalyzer):
         author = re.sub(r'\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*', '', author)
         author = re.sub(r'\s*,\s*(CNN|BBC|Reuters|Associated Press|AP).*', '', author)
         
-        # Clean whitespace and punctuation
+        # SYNTAX FIX: Clean whitespace and punctuation - properly terminated string
         author = re.sub(r'\s+', ' ', author).strip()
         author = re.sub(r'[,\.\:;]+$', '', author)
         
@@ -570,4 +567,7 @@ class ArticleExtractor(BaseAnalyzer):
                 'domain': '',
                 'description': '',
                 'word_count': word_count,
-                'language': '
+                'language': 'en',
+                'extraction_successful': True
+            }
+        }
