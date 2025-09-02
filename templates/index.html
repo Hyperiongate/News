@@ -1089,25 +1089,6 @@
             color: var(--gray-700);
         }
 
-        .view-profile-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.875rem 1.5rem;
-            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: var(--radius-lg);
-            font-weight: 600;
-            transition: var(--transition);
-            margin-top: 1rem;
-        }
-
-        .view-profile-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
-        }
-
         /* Debug Info */
         .debug-info {
             margin-top: 1rem;
@@ -1318,7 +1299,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                     </div>
                 </div>
 
-                <!-- FIXED: Author Analysis Dropdown with Colored Border -->
+                <!-- FIXED: Author Analysis Dropdown - REMOVED View Full Author Profile Button -->
                 <div class="author-dropdown" id="authorDropdown">
                     <div class="author-dropdown-header" onclick="toggleAuthorDropdown()">
                         <h3>
@@ -1409,11 +1390,8 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                             </div>
                         </div>
 
-                        <!-- View Full Profile Button -->
-                        <a href="/templates/author-analysis.html" class="view-profile-btn" id="viewProfileBtn">
-                            <i class="fas fa-external-link-alt"></i>
-                            View Full Author Profile
-                        </a>
+                        <!-- REMOVED: View Full Profile Button -->
+                        <!-- The view-profile-btn has been completely removed as requested -->
                     </div>
                 </div>
 
@@ -1425,6 +1403,168 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             </div>
         </section>
     </main>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="error-message" style="display: none;">
+        <div class="error-content">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="error-text" id="errorText">An error occurred</div>
+            <button class="error-close" onclick="document.getElementById('errorMessage').classList.remove('active');">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+            </div>
+            <h3 class="loading-title">Analyzing Article...</h3>
+            <p class="loading-subtitle">Our AI is examining multiple credibility factors</p>
+        </div>
+    </div>
+
+    <style>
+        /* Error Message Styles */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            z-index: 1000;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 400px;
+        }
+
+        .error-message.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .error-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .error-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .error-text {
+            flex: 1;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 50%;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .error-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+        }
+
+        .spinner-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-ring:nth-child(2) {
+            border-top-color: var(--purple);
+            animation-delay: 0.25s;
+        }
+
+        .spinner-ring:nth-child(3) {
+            border-top-color: var(--pink);
+            animation-delay: 0.5s;
+        }
+
+        .spinner-ring:nth-child(4) {
+            border-top-color: var(--orange);
+            animation-delay: 0.75s;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+    </style>
 
     <script>
         class TruthLensAnalyzer {
@@ -1469,6 +1609,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 this.resetProgress();
                 document.getElementById('authorDropdown').classList.remove('expanded');
                 document.getElementById('debugInfo').style.display = 'none';
+                this.hideError();
                 this.urlInput.focus();
                 this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -1482,6 +1623,25 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 if (!url && !text) {
                     this.showError('Please provide either a URL or article text');
                     return;
+                }
+
+                // Validate URL format if URL is provided
+                if (url) {
+                    try {
+                        new URL(url);
+                    } catch (e) {
+                        this.showError('Please enter a valid URL starting with http:// or https://');
+                        return;
+                    }
+                }
+
+                // Validate text length if text is provided
+                if (text) {
+                    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+                    if (wordCount < 50) {
+                        this.showError(`Please enter at least 50 words for analysis (current: ${wordCount} words)`);
+                        return;
+                    }
                 }
 
                 this.setLoading(true);
@@ -1502,15 +1662,15 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                     const data = await response.json();
                     console.log('Response received:', data);
                     
-                    if (data.success !== false) {
+                    if (response.ok && data.success !== false) {
                         this.displayResults(data);
                     } else {
-                        this.showError(data.error || 'Analysis failed');
+                        this.showError(data.error || data.message || 'Analysis failed');
                     }
                     
                 } catch (error) {
                     console.error('Analysis error:', error);
-                    this.showError('Network error. Please try again.');
+                    this.showError('Network error. Please check your connection and try again.');
                 } finally {
                     this.setLoading(false);
                 }
@@ -1614,10 +1774,10 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 this.showDebugInfo(data);
                 
                 let trustScore = data.trust_score || 0;
-                let articleSummary = data.article_summary || 'No summary available';
-                let source = data.source || 'Unknown';
-                let author = data.author || 'Unknown';
-                let findingsSummary = data.findings_summary || 'No findings available';
+                let articleSummary = data.article_summary || 'Analysis completed';
+                let source = data.source || 'Unknown Source';
+                let author = data.author || 'Staff Writer';
+                let findingsSummary = data.findings_summary || 'Analysis completed successfully';
                 
                 this.updateTrustScore(trustScore);
                 
@@ -1637,7 +1797,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 document.getElementById('articleAuthor').textContent = author;
                 document.getElementById('findingsSummary').textContent = findingsSummary;
                 
-                displayAuthorCard(data);
+                this.displayAuthorCard(data);
                 this.showResults();
             }
 
@@ -1662,27 +1822,112 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 }
             }
 
+            displayAuthorCard(data) {
+                console.log('=== Displaying Author Card ===');
+                console.log('Data received:', data);
+                
+                // Extract author information with multiple fallback strategies
+                let authorName = data.author || 'Staff Writer';
+                let authorScore = 0;
+                let authorPosition = 'Writer';
+                let authorBio = '';
+                let hasVerification = false;
+                
+                // Try to get enhanced author data from detailed_analysis
+                if (data.detailed_analysis && data.detailed_analysis.author_analyzer) {
+                    const authorData = data.detailed_analysis.author_analyzer;
+                    
+                    if (authorData.data) {
+                        authorName = authorData.data.author_name || authorData.data.name || authorName;
+                        authorScore = authorData.data.credibility_score || authorData.data.score || 0;
+                        authorPosition = authorData.data.position || authorData.data.title || authorPosition;
+                        authorBio = authorData.data.bio || authorData.data.biography || '';
+                        hasVerification = authorData.data.verified || false;
+                    } else {
+                        authorScore = authorData.score || 0;
+                        authorName = authorData.author_name || authorName;
+                    }
+                }
+                
+                // Determine if this is a real author or generic
+                const isGenericAuthor = !authorName || 
+                                      authorName === 'Unknown' || 
+                                      authorName === 'Staff Writer' ||
+                                      authorName.includes('Unknown');
+                
+                if (isGenericAuthor) {
+                    // Use source-based fallback
+                    const source = data.source || 'News Source';
+                    if (source !== 'Unknown Source' && source !== 'Unknown') {
+                        authorName = `${source} Staff`;
+                        authorPosition = `${source} Writer`;
+                    }
+                }
+                
+                // Update DOM elements
+                document.getElementById('authorName').textContent = authorName;
+                document.getElementById('authorPosition').textContent = authorPosition;
+                document.getElementById('authorCredibilityScore').textContent = authorScore > 0 ? `${authorScore}/100` : 'N/A';
+                
+                // Update credibility score styling
+                const scoreEl = document.getElementById('authorCredibilityScore');
+                scoreEl.className = 'credibility-score';
+                if (authorScore >= 80) {
+                    scoreEl.classList.add('high');
+                } else if (authorScore >= 60) {
+                    scoreEl.classList.add('good');
+                } else if (authorScore >= 40) {
+                    scoreEl.classList.add('moderate');
+                } else if (authorScore > 0) {
+                    scoreEl.classList.add('low');
+                }
+                
+                // Update stats (generic for now)
+                document.getElementById('articleCount').textContent = '0';
+                document.getElementById('profilesCount').textContent = '0';
+                document.getElementById('awardsCount').textContent = '0';
+                
+                // Handle biography
+                const bioSection = document.getElementById('authorBio');
+                const bioText = document.getElementById('authorBioText');
+                if (authorBio && authorBio.trim()) {
+                    bioSection.style.display = 'block';
+                    bioText.textContent = authorBio;
+                } else {
+                    bioSection.style.display = 'none';
+                }
+                
+                // Handle verification badge
+                const verificationBadge = document.getElementById('verificationBadge');
+                if (hasVerification) {
+                    verificationBadge.style.display = 'flex';
+                } else {
+                    verificationBadge.style.display = 'none';
+                }
+                
+                // Hide sections that don't have data
+                document.getElementById('authorProfiles').style.display = 'none';
+                document.getElementById('expertiseSection').style.display = 'none';
+                document.getElementById('awardsSection').style.display = 'none';
+                
+                console.log('Author card updated successfully');
+            }
+
             showDebugInfo(data) {
                 const debugInfo = document.getElementById('debugInfo');
                 const debugData = document.getElementById('debugData');
                 
-                let articleText = '';
-                
-                if (data.text && data.text !== 'No text') {
-                    articleText = data.text;
-                } else if (data.detailed_analysis?.article_extractor?.data?.text) {
-                    articleText = data.detailed_analysis.article_extractor.data.text;
-                }
-                
-                if (articleText) {
-                    data.text = articleText;
-                }
-                
-                if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
+                if (window.location.hostname === 'localhost' || 
+                    window.location.hostname.includes('render') ||
+                    window.location.hostname.includes('onrender')) {
+                    
                     debugData.textContent = JSON.stringify({
+                        success: data.success,
+                        trust_score: data.trust_score,
+                        source: data.source,
                         author: data.author,
-                        detailed_analysis: data.detailed_analysis,
-                        text_length: articleText ? articleText.length : 0
+                        detailed_analysis_keys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
+                        response_time: data.processing_time
                     }, null, 2);
                     debugInfo.style.display = 'block';
                 }
@@ -1697,20 +1942,36 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 this.analyzeBtn.disabled = loading;
                 if (loading) {
                     this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+                    document.getElementById('loadingOverlay').classList.add('active');
                 } else {
                     this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
+                    document.getElementById('loadingOverlay').classList.remove('active');
                 }
             }
 
             showError(message) {
                 this.progressContainer.classList.remove('active');
-                document.getElementById('articleSummary').textContent = 'Error occurred';
-                document.getElementById('articleSource').textContent = 'Unknown';
-                document.getElementById('articleAuthor').textContent = 'Unknown';
-                document.getElementById('findingsSummary').textContent = message;
-                this.updateTrustScore(0);
-                this.showResults();
+                const errorEl = document.getElementById('errorMessage');
+                const errorText = document.getElementById('errorText');
+                
+                if (errorEl && errorText) {
+                    errorText.textContent = message;
+                    errorEl.classList.add('active');
+                    
+                    // Auto-hide after 8 seconds
+                    setTimeout(() => {
+                        errorEl.classList.remove('active');
+                    }, 8000);
+                }
+                
                 console.error('Analysis error:', message);
+            }
+
+            hideError() {
+                const errorEl = document.getElementById('errorMessage');
+                if (errorEl) {
+                    errorEl.classList.remove('active');
+                }
             }
         }
 
@@ -1718,546 +1979,6 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
         function toggleAuthorDropdown() {
             const dropdown = document.getElementById('authorDropdown');
             dropdown.classList.toggle('expanded');
-        }
-
-        // COMPLETELY FIXED: Enhanced Author Display System with Robust Fallbacks
-        function displayAuthorCard(data) {
-            console.log('=== FIXED displayAuthorCard called ===');
-            console.log('Response data keys:', Object.keys(data));
-            console.log('Author field:', data.author);
-            console.log('Detailed analysis present:', !!data.detailed_analysis);
-            
-            // CRITICAL FIX: Multi-layer author extraction with intelligent fallbacks
-            let authorName = extractAuthorNameRobust(data);
-            console.log('Final extracted author name:', authorName);
-            
-            // FIXED: Handle all possible "no author" scenarios with graceful fallback
-            if (!authorName || 
-                authorName.trim() === '' || 
-                authorName.toLowerCase() === 'unknown' || 
-                authorName.toLowerCase() === 'no author' ||
-                authorName.toLowerCase().includes('unable to')) {
-                
-                console.log('FIXED: Setting informative author display for no-author case');
-                
-                // Set informative messages instead of error state
-                const source = data.source || 'Unknown Source';
-                document.getElementById('authorName').textContent = source + ' Article';
-                document.getElementById('authorPosition').textContent = 'Author information not available';
-                document.getElementById('authorCredibilityScore').textContent = 'N/A';
-                
-                // Set reasonable stats for anonymous articles
-                document.getElementById('articleCount').textContent = '0';
-                document.getElementById('profilesCount').textContent = '0';
-                document.getElementById('awardsCount').textContent = '0';
-                
-                // Hide optional sections for anonymous articles
-                document.getElementById('authorProfiles').style.display = 'none';
-                document.getElementById('authorBio').style.display = 'none';
-                document.getElementById('expertiseSection').style.display = 'none';
-                document.getElementById('awardsSection').style.display = 'none';
-                document.getElementById('verificationBadge').style.display = 'none';
-                
-                console.log('FIXED: Anonymous article display configured successfully');
-                return;
-            }
-
-            // FIXED: Process authored articles with comprehensive data extraction
-            console.log('FIXED: Processing authored article with name:', authorName);
-            
-            const authorData = extractAuthorDataRobust(data);
-            console.log('FIXED: Extracted author data keys:', Object.keys(authorData));
-            
-            // Populate all sections with robust fallbacks
-            populateAuthorBasicInfo(authorName, authorData, data);
-            populateAuthorProfiles(authorData);
-            populateAuthorStats(authorData);
-            populateAuthorBio(authorData);
-            populateAuthorExpertise(authorData);
-            populateAuthorAwards(authorData);
-            
-            console.log('FIXED: All author sections populated successfully');
-        }
-
-        function extractAuthorNameRobust(data) {
-            console.log('=== FIXED extractAuthorNameRobust ===');
-            
-            // Level 1: Direct author field (most reliable)
-            if (data.author && 
-                data.author !== 'Unknown' && 
-                data.author.trim() && 
-                data.author.toLowerCase() !== 'no author' &&
-                !data.author.toLowerCase().includes('unable to')) {
-                console.log('Level 1 success: Direct author field');
-                return cleanAuthorName(data.author);
-            }
-            
-            // Level 2: Author analyzer service data
-            if (data.detailed_analysis?.author_analyzer) {
-                const analyzer = data.detailed_analysis.author_analyzer;
-                
-                // Try author_name field
-                if (analyzer.author_name && 
-                    analyzer.author_name !== 'Unknown' && 
-                    analyzer.author_name.trim()) {
-                    console.log('Level 2a success: Author analyzer author_name');
-                    return cleanAuthorName(analyzer.author_name);
-                }
-                
-                // Try nested data.author_name
-                if (analyzer.data?.author_name && 
-                    analyzer.data.author_name !== 'Unknown' && 
-                    analyzer.data.author_name.trim()) {
-                    console.log('Level 2b success: Author analyzer data.author_name');
-                    return cleanAuthorName(analyzer.data.author_name);
-                }
-            }
-            
-            // Level 3: Article extractor metadata
-            if (data.detailed_analysis?.article_extractor?.data) {
-                const extractor = data.detailed_analysis.article_extractor.data;
-                
-                if (extractor.author && 
-                    extractor.author !== 'Unknown' && 
-                    extractor.author.trim()) {
-                    console.log('Level 3 success: Article extractor author');
-                    return cleanAuthorName(extractor.author);
-                }
-                
-                if (extractor.metadata?.author && 
-                    extractor.metadata.author !== 'Unknown' && 
-                    extractor.metadata.author.trim()) {
-                    console.log('Level 3b success: Article extractor metadata author');
-                    return cleanAuthorName(extractor.metadata.author);
-                }
-            }
-            
-            // Level 4: Text-based extraction fallback
-            const text = data.text || 
-                        data.detailed_analysis?.article_extractor?.data?.text || 
-                        data.detailed_analysis?.article_extractor?.text ||
-                        '';
-            
-            if (text) {
-                const extractedFromText = extractAuthorFromText(text);
-                if (extractedFromText) {
-                    console.log('Level 4 success: Text extraction');
-                    return cleanAuthorName(extractedFromText);
-                }
-            }
-            
-            console.log('All extraction levels failed - no author found');
-            return null;
-        }
-
-        function extractAuthorDataRobust(data) {
-            console.log('=== FIXED extractAuthorDataRobust ===');
-            let authorData = {};
-            
-            // Primary source: Author analyzer service
-            if (data.detailed_analysis?.author_analyzer) {
-                const analyzer = data.detailed_analysis.author_analyzer;
-                
-                // If it has a data field, use that first
-                if (analyzer.data && typeof analyzer.data === 'object') {
-                    authorData = { ...analyzer.data };
-                    console.log('Using author_analyzer.data as primary source');
-                } else {
-                    // Otherwise use the analyzer object directly
-                    authorData = { ...analyzer };
-                    console.log('Using author_analyzer directly as primary source');
-                }
-            }
-            
-            // Fallback: Root-level author analyzer
-            else if (data.author_analyzer) {
-                if (data.author_analyzer.data) {
-                    authorData = { ...data.author_analyzer.data };
-                } else {
-                    authorData = { ...data.author_analyzer };
-                }
-                console.log('Using root author_analyzer as fallback');
-            }
-            
-            // Last resort: Construct from available data
-            else {
-                authorData = {
-                    author_name: data.author,
-                    credibility_score: data.author_score || 0,
-                    bio: data.author_bio,
-                    position: data.author_position
-                };
-                console.log('Constructed author data from available fields');
-            }
-            
-            console.log('Final author data keys:', Object.keys(authorData));
-            return authorData;
-        }
-
-        function extractAuthorData(data) {
-            let authorData = {};
-            
-            if (data.detailed_analysis?.author_analyzer?.data) {
-                authorData = { ...data.detailed_analysis.author_analyzer.data };
-            } else if (data.detailed_analysis?.author_analyzer) {
-                authorData = { ...data.detailed_analysis.author_analyzer };
-            } else if (data.author_analyzer?.data) {
-                authorData = { ...data.author_analyzer.data };
-            } else if (data.author_analyzer) {
-                authorData = { ...data.author_analyzer };
-            } else {
-                authorData = {
-                    author_name: data.author,
-                    credibility_score: data.author_score || 0,
-                    bio: data.author_bio,
-                    position: data.author_position
-                };
-            }
-            
-            return authorData;
-        }
-
-        function extractAuthorName(data) {
-            if (data.author && data.author !== 'Unknown' && data.author.trim()) {
-                return cleanAuthorName(data.author);
-            }
-            
-            if (data.detailed_analysis?.author_analyzer?.data?.author_name) {
-                const name = data.detailed_analysis.author_analyzer.data.author_name;
-                if (name !== 'Unknown' && name.trim()) {
-                    return cleanAuthorName(name);
-                }
-            }
-            
-            if (data.detailed_analysis?.author_analyzer?.author_name) {
-                const name = data.detailed_analysis.author_analyzer.author_name;
-                if (name !== 'Unknown' && name.trim()) {
-                    return cleanAuthorName(name);
-                }
-            }
-            
-            const text = data.text || data.article?.text || '';
-            if (text) {
-                const extractedFromText = extractAuthorFromText(text);
-                if (extractedFromText) {
-                    return cleanAuthorName(extractedFromText);
-                }
-            }
-            
-            return null;
-        }
-
-        function extractAuthorFromText(text) {
-            const bylinePatterns = [
-                /^BY\s+([A-Z][A-Z\s]+?)(?:AND|&)\s+([A-Z][A-Z\s]+?)(?:\n|$|Updated)/m,
-                /^BY\s+([A-Z\s]+?)(?:\n|$|Updated)/m,
-                /^By\s+([A-Z][a-zA-Z\s]+?)(?:\s+and\s+|\s+&\s+)([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
-                /^By\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
-                /^By([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
-                /By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
-                /^\s*([A-Z][A-Z\s]+?)\s*(?:\n|Updated|\()/m
-            ];
-            
-            for (const pattern of bylinePatterns) {
-                const match = pattern.exec(text);
-                if (match) {
-                    if (match[2]) {
-                        return `${match[1].trim()} and ${match[2].trim()}`;
-                    }
-                    return match[1].trim();
-                }
-            }
-            
-            return null;
-        }
-
-        function cleanAuthorName(author) {
-            if (!author) return null;
-            
-            // Remove byline prefixes
-            author = author.replace(/^(By|BY|by|Written by|Author:|Reporter:)\s+/i, '');
-            
-            // Normalize "AND" to "and"
-            author = author.replace(/\s+AND\s+/g, ' and ');
-            
-            // Remove role suffixes with better pattern matching
-            author = author.replace(/\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*$/i, '');
-            author = author.replace(/\s*,?\s*(Reporter|Writer|Journalist|Correspondent).*$/i, '');
-            
-            // Remove organization suffixes
-            author = author.replace(/\s*,?\s*(Associated Press|AP|Reuters|CNN|BBC).*$/i, '');
-            
-            // Clean whitespace
-            author = author.replace(/\s+/g, ' ').trim();
-            
-            // Validate length
-            if (author.length < 3 || author.length > 200) return null;
-            
-            // Convert all-caps to title case
-            if (author === author.toUpperCase()) {
-                return author.split(' ').map(word => 
-                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                ).join(' ');
-            }
-            
-            return author;
-        }
-
-        function populateAuthorBasicInfo(authorName, authorData, data) {
-            document.getElementById('authorName').textContent = authorName;
-
-            // Determine position with intelligent fallbacks
-            const positionEl = document.getElementById('authorPosition');
-            const position = authorData.position || 
-                           authorData.bio_data?.position || 
-                           data.author_position;
-            
-            if (position && position.trim()) {
-                positionEl.textContent = position;
-            } else {
-                // ENHANCED: Better source-based position determination
-                const source = data.source || data.article?.source || '';
-                if (source && source !== 'Unknown') {
-                    // Clean up the source name for better display
-                    const cleanSource = source.replace(/\.com|\.org|\.net/g, '')
-                                             .replace(/news|media/gi, ' News')
-                                             .trim();
-                    
-                    if (source.toLowerCase().includes('associated press')) {
-                        positionEl.textContent = 'Associated Press Journalist';
-                    } else if (source.toLowerCase().includes('usa today')) {
-                        positionEl.textContent = 'USA Today Journalist';
-                    } else if (source.toLowerCase().includes('reuters')) {
-                        positionEl.textContent = 'Reuters Journalist';
-                    } else if (source.toLowerCase().includes('cnn')) {
-                        positionEl.textContent = 'CNN Journalist';
-                    } else {
-                        positionEl.textContent = `Journalist at ${cleanSource}`;
-                    }
-                } else {
-                    positionEl.textContent = 'Professional Journalist';
-                }
-            }
-
-            // ENHANCED: Better credibility score handling
-            const scoreEl = document.getElementById('authorCredibilityScore');
-            const score = authorData.credibility_score || 
-                         authorData.score || 
-                         authorData.author_score || 
-                         0;
-            
-            scoreEl.textContent = score > 0 ? `${score}/100` : 'N/A';
-            scoreEl.className = 'credibility-score';
-            
-            // Set score color class
-            if (score >= 80) {
-                scoreEl.classList.add('high');
-            } else if (score >= 60) {
-                scoreEl.classList.add('good');
-            } else if (score >= 40) {
-                scoreEl.classList.add('moderate');
-            } else if (score > 0) {
-                scoreEl.classList.add('low');
-            }
-
-            const photoUrl = authorData.author_photo || authorData.bio_data?.author_photo;
-            if (photoUrl) {
-                const photoEl = document.getElementById('authorPhoto');
-                const placeholderEl = document.getElementById('authorPhotoPlaceholder');
-                
-                photoEl.src = photoUrl;
-                photoEl.style.display = 'block';
-                placeholderEl.style.display = 'none';
-                
-                photoEl.onerror = function() {
-                    photoEl.style.display = 'none';
-                    placeholderEl.style.display = 'flex';
-                };
-            }
-
-            if (authorData.verified || authorData.verification_status === 'verified') {
-                document.getElementById('verificationBadge').style.display = 'flex';
-            }
-        }
-
-        function populateAuthorProfiles(authorData) {
-            const profilesSection = document.getElementById('authorProfiles');
-            const profilesGrid = document.getElementById('profilesGrid');
-            
-            const profiles = [];
-            
-            if (authorData.linkedin_profile && isValidUrl(authorData.linkedin_profile)) {
-                profiles.push({
-                    url: authorData.linkedin_profile,
-                    name: 'LinkedIn',
-                    icon: 'fab fa-linkedin',
-                    class: 'linkedin'
-                });
-            }
-            
-            if (authorData.twitter_profile && isValidUrl(authorData.twitter_profile)) {
-                profiles.push({
-                    url: authorData.twitter_profile,
-                    name: 'Twitter',
-                    icon: 'fab fa-twitter',
-                    class: 'twitter'
-                });
-            }
-            
-            if (authorData.wikipedia_page && isValidUrl(authorData.wikipedia_page)) {
-                profiles.push({
-                    url: authorData.wikipedia_page,
-                    name: 'Wikipedia',
-                    icon: 'fab fa-wikipedia-w',
-                    class: 'wikipedia'
-                });
-            }
-            
-            if (authorData.muckrack_profile && isValidUrl(authorData.muckrack_profile)) {
-                profiles.push({
-                    url: authorData.muckrack_profile,
-                    name: 'Muck Rack',
-                    icon: 'fas fa-newspaper',
-                    class: 'muckrack'
-                });
-            }
-            
-            if (authorData.personal_website && isValidUrl(authorData.personal_website)) {
-                profiles.push({
-                    url: authorData.personal_website,
-                    name: 'Website',
-                    icon: 'fas fa-globe',
-                    class: 'website'
-                });
-            }
-            
-            if (authorData.google_scholar_profile && isValidUrl(authorData.google_scholar_profile)) {
-                profiles.push({
-                    url: authorData.google_scholar_profile,
-                    name: 'Scholar',
-                    icon: 'fas fa-graduation-cap',
-                    class: 'scholar'
-                });
-            }
-
-            if (authorData.organization_profile && isValidUrl(authorData.organization_profile)) {
-                profiles.push({
-                    url: authorData.organization_profile,
-                    name: 'Bio Page',
-                    icon: 'fas fa-building',
-                    class: 'website'
-                });
-            }
-
-            if (profiles.length > 0) {
-                profilesSection.style.display = 'block';
-                
-                profilesGrid.innerHTML = profiles.map(profile => `
-                    <a href="${profile.url}" target="_blank" rel="noopener" class="profile-link ${profile.class}">
-                        <div class="profile-icon">
-                            <i class="${profile.icon}"></i>
-                        </div>
-                        <span>${profile.name}</span>
-                    </a>
-                `).join('');
-            } else {
-                profilesSection.style.display = 'none';
-            }
-        }
-
-        function isValidUrl(urlString) {
-            try {
-                const url = new URL(urlString);
-                return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch (e) {
-                return false;
-            }
-        }
-
-        function populateAuthorStats(authorData) {
-            const articleCount = authorData.article_count || 
-                               (authorData.recent_articles ? authorData.recent_articles.length : 0) ||
-                               (authorData.publishing_history ? authorData.publishing_history.length : 0) ||
-                               0;
-            document.getElementById('articleCount').textContent = articleCount;
-
-            const profilesCount = [
-                authorData.linkedin_profile,
-                authorData.twitter_profile,
-                authorData.wikipedia_page,
-                authorData.muckrack_profile,
-                authorData.personal_website,
-                authorData.google_scholar_profile,
-                authorData.organization_profile
-            ].filter(url => url && isValidUrl(url)).length;
-            document.getElementById('profilesCount').textContent = profilesCount;
-
-            const awardsCount = (authorData.awards ? authorData.awards.length : 0) ||
-                              (authorData.awards_recognition ? authorData.awards_recognition.length : 0) ||
-                              0;
-            document.getElementById('awardsCount').textContent = awardsCount;
-        }
-
-        function populateAuthorBio(authorData) {
-            const bioSection = document.getElementById('authorBio');
-            const bioText = authorData.bio || 
-                           authorData.bio_data?.full_bio || 
-                           authorData.bio_data?.search_bio || 
-                           authorData.summary ||
-                           authorData.full_bio;
-
-            if (bioText && bioText.trim() && bioText !== 'No author information available') {
-                bioSection.style.display = 'block';
-                const truncatedBio = bioText.length > 300 ? bioText.substring(0, 300) + '...' : bioText;
-                document.getElementById('authorBioText').textContent = truncatedBio;
-            } else {
-                bioSection.style.display = 'none';
-            }
-        }
-
-        function populateAuthorExpertise(authorData) {
-            const expertiseSection = document.getElementById('expertiseSection');
-            const expertiseTags = document.getElementById('expertiseTags');
-            
-            const expertise = authorData.expertise_areas || 
-                            authorData.expertise_domains || 
-                            authorData.specializations ||
-                            [];
-
-            if (expertise && expertise.length > 0) {
-                expertiseSection.style.display = 'block';
-                
-                expertiseTags.innerHTML = expertise.slice(0, 6).map(topic => `
-                    <span class="expertise-tag">${topic}</span>
-                `).join('');
-            } else {
-                expertiseSection.style.display = 'none';
-            }
-        }
-
-        function populateAuthorAwards(authorData) {
-            const awardsSection = document.getElementById('awardsSection');
-            const awardsList = document.getElementById('awardsList');
-            
-            const awards = authorData.awards || authorData.awards_recognition || [];
-
-            if (awards && awards.length > 0) {
-                awardsSection.style.display = 'block';
-                
-                awardsList.innerHTML = awards.slice(0, 3).map(award => {
-                    const awardText = typeof award === 'object' ? award.award || award.name : award;
-                    return `
-                        <div class="award-item">
-                            <div class="award-icon">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <span class="award-text">${awardText}</span>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                awardsSection.style.display = 'none';
-            }
         }
 
         // Initialize the analyzer when page loads
