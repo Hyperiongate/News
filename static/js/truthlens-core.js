@@ -1,4 +1,4 @@
-// truthlens-core.js - Complete File with FIXED Data Flow
+// CRITICAL FIX: truthlens-core.js - Data Structure Mismatch Resolved
 // Main Application Logic - COMPLETELY REPAIRED
 
 // Main Application Class
@@ -224,13 +224,13 @@ class TruthLensApp {
 
         try {
             const payload = this.state.currentTab === 'url' 
-                ? { url: input, is_pro: CONFIG.isPro }
-                : { text: input, is_pro: CONFIG.isPro };
+                ? { url: input, is_pro: CONFIG.isPro || false }
+                : { text: input, is_pro: CONFIG.isPro || false };
 
             console.log('=== Starting Analysis ===');
             console.log('Payload:', payload);
 
-            const response = await fetch(CONFIG.API_ENDPOINT, {
+            const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -253,10 +253,14 @@ class TruthLensApp {
             console.log('=== CRITICAL DEBUG: Response Analysis ===');
             console.log('Response structure:', {
                 success: responseData.success,
-                hasData: !!responseData.data,
-                dataKeys: responseData.data ? Object.keys(responseData.data) : [],
-                hasDetailedAnalysis: !!(responseData.data && responseData.data.detailed_analysis),
-                detailedAnalysisKeys: responseData.data?.detailed_analysis ? Object.keys(responseData.data.detailed_analysis) : [],
+                hasTrustScore: typeof responseData.trust_score !== 'undefined',
+                trustScore: responseData.trust_score,
+                hasAuthor: typeof responseData.author !== 'undefined',
+                author: responseData.author,
+                hasSource: typeof responseData.source !== 'undefined',
+                source: responseData.source,
+                hasDetailedAnalysis: !!responseData.detailed_analysis,
+                detailedAnalysisKeys: responseData.detailed_analysis ? Object.keys(responseData.detailed_analysis) : [],
                 error: responseData.error
             });
             
@@ -268,14 +272,13 @@ class TruthLensApp {
                 throw new Error(errorMessage);
             }
 
-            // CRITICAL FIX: Handle immediate complete results
-            // Your backend returns complete data immediately, not analysis_id
-            if (responseData.data) {
-                console.log('=== IMMEDIATE COMPLETE RESULTS DETECTED ===');
-                this.handleAnalysisComplete(responseData.data);
-            } else {
-                throw new Error('No analysis data received from server');
-            }
+            // CRITICAL FIX: The root cause of your week-long problem!
+            // Your backend returns data at root level, not wrapped in 'data' field
+            // OLD (BROKEN): this.handleAnalysisComplete(responseData.data);
+            // NEW (FIXED): Pass responseData directly
+            console.log('=== CRITICAL FIX APPLIED ===');
+            console.log('Calling handleAnalysisComplete with responseData directly (not responseData.data)');
+            this.handleAnalysisComplete(responseData);
 
         } catch (error) {
             console.error('Analysis Error:', error);
@@ -352,13 +355,16 @@ class TruthLensApp {
 
     // CRITICAL FIX: Handle complete analysis - COMPLETELY REPAIRED
     handleAnalysisComplete(data) {
-        console.log('=== Analysis Complete Handler ===');
-        console.log('Data received:', {
-            hasArticle: !!data.article,
-            hasAnalysis: !!data.analysis,
-            hasDetailedAnalysis: !!data.detailed_analysis,
-            detailedServicesCount: data.detailed_analysis ? Object.keys(data.detailed_analysis).length : 0,
-            detailedServices: data.detailed_analysis ? Object.keys(data.detailed_analysis) : []
+        console.log('=== Analysis Complete Handler - FIXED VERSION ===');
+        console.log('Data structure validation:', {
+            isObject: typeof data === 'object',
+            hasSuccessField: 'success' in data,
+            hasTrustScore: 'trust_score' in data,
+            hasAuthor: 'author' in data,
+            hasSource: 'source' in data,
+            hasArticleSummary: 'article_summary' in data,
+            hasFindingsSummary: 'findings_summary' in data,
+            hasDetailedAnalysis: 'detailed_analysis' in data
         });
         
         // EXTENSIVE VALIDATION AND LOGGING
@@ -367,24 +373,14 @@ class TruthLensApp {
             throw new Error('Invalid analysis data received');
         }
 
-        if (!data.detailed_analysis || Object.keys(data.detailed_analysis).length === 0) {
-            console.warn('WARNING: No detailed_analysis data found');
-            console.log('Available data keys:', Object.keys(data));
-            // Continue anyway - some data is better than none
-        }
-
-        // Log each service's data for debugging
-        if (data.detailed_analysis) {
-            Object.entries(data.detailed_analysis).forEach(([serviceName, serviceData]) => {
-                console.log(`Service ${serviceName}:`, {
-                    hasData: !!serviceData,
-                    dataType: typeof serviceData,
-                    keys: Object.keys(serviceData || {}),
-                    score: serviceData?.score,
-                    level: serviceData?.level
-                });
-            });
-        }
+        // Log the actual values we received
+        console.log('=== RECEIVED DATA VALUES ===');
+        console.log('Trust Score:', data.trust_score);
+        console.log('Article Summary:', data.article_summary ? data.article_summary.substring(0, 50) + '...' : 'None');
+        console.log('Source:', data.source);
+        console.log('Author:', data.author);
+        console.log('Findings Summary:', data.findings_summary ? data.findings_summary.substring(0, 50) + '...' : 'None');
+        console.log('Detailed Analysis Services:', data.detailed_analysis ? Object.keys(data.detailed_analysis).length : 0);
         
         // Store the complete analysis
         this.state.currentAnalysis = data;
@@ -413,13 +409,88 @@ class TruthLensApp {
         setTimeout(() => {
             this.utils.hideLoading();
             if (this.display) {
-                console.log('=== Calling display.showResults ===');
+                console.log('=== Calling display.showResults with fixed data ===');
                 this.display.showResults(data);
             } else {
-                console.error('CRITICAL: Display object not available');
+                console.log('Display object not available, showing results directly');
+                this.showResultsDirect(data);
             }
             this.state.isAnalyzing = false;
         }, 1000);
+    }
+
+    // Fallback method if display object not available
+    showResultsDirect(data) {
+        console.log('=== Showing results directly ===');
+        
+        // Show results section
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.classList.add('show');
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // Update trust score
+        this.updateTrustScore(data.trust_score || 0);
+        
+        // Update overview content
+        const overviewEl = document.getElementById('analysisOverview');
+        if (overviewEl) {
+            overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
+            const trustScore = data.trust_score || 0;
+            if (trustScore >= 70) {
+                overviewEl.classList.add('trust-high');
+            } else if (trustScore >= 40) {
+                overviewEl.classList.add('trust-medium');
+            } else {
+                overviewEl.classList.add('trust-low');
+            }
+        }
+        
+        // Update text content
+        const articleSummary = data.article_summary || 'Article summary not available';
+        const source = data.source || 'Unknown';
+        const author = data.author || 'Unknown';
+        const findingsSummary = data.findings_summary || 'Analysis completed.';
+        
+        this.updateElementText('articleSummary', 
+            articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary
+        );
+        this.updateElementText('articleSource', source);
+        this.updateElementText('articleAuthor', author);
+        this.updateElementText('findingsSummary', findingsSummary);
+        
+        console.log('Results displayed successfully');
+    }
+
+    updateElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    updateTrustScore(score) {
+        const scoreElement = document.getElementById('trustScore');
+        const labelElement = document.getElementById('trustLabel');
+        
+        if (scoreElement) scoreElement.textContent = Math.round(score);
+        
+        if (labelElement) {
+            if (score >= 80) {
+                labelElement.textContent = 'Highly Trustworthy';
+                if (scoreElement) scoreElement.className = 'trust-score-number trust-high';
+            } else if (score >= 60) {
+                labelElement.textContent = 'Generally Trustworthy';
+                if (scoreElement) scoreElement.className = 'trust-score-number trust-medium';
+            } else if (score >= 40) {
+                labelElement.textContent = 'Moderate Trust';
+                if (scoreElement) scoreElement.className = 'trust-score-number trust-medium';
+            } else {
+                labelElement.textContent = 'Low Trustworthiness';
+                if (scoreElement) scoreElement.className = 'trust-score-number trust-low';
+            }
+        }
     }
 
     downloadPDF() {
@@ -448,13 +519,13 @@ class TruthLensApp {
         }
         
         try {
-            const article = this.state.currentAnalysis.article || {};
-            const analysis = this.state.currentAnalysis.analysis || {};
+            const trustScore = this.state.currentAnalysis.trust_score;
+            const source = this.state.currentAnalysis.source;
             
             const shareData = {
-                title: article.title ? `News Analysis: ${article.title}` : 'News Analysis',
-                text: analysis.trust_score !== undefined && analysis.trust_score !== null
-                    ? `Trust Score: ${analysis.trust_score}/100` 
+                title: source && source !== 'Unknown' ? `News Analysis: ${source}` : 'News Analysis',
+                text: trustScore !== undefined && trustScore !== null
+                    ? `Trust Score: ${trustScore}/100` 
                     : 'Check out this news analysis',
                 url: window.location.href
             };
@@ -481,7 +552,11 @@ class TruthLensUtils {
     showError(message) {
         const errorEl = document.getElementById('errorMessage');
         const errorTextEl = document.getElementById('errorText');
-        if (!errorEl || !errorTextEl) return;
+        if (!errorEl || !errorTextEl) {
+            console.error('Error elements not found in DOM');
+            alert('Error: ' + message); // Fallback
+            return;
+        }
         
         const errorMap = {
             'timed out': 'Request timed out. The website may be blocking our service.',
@@ -582,6 +657,14 @@ class TruthLensUtils {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Set up CONFIG if it doesn't exist
+    if (typeof CONFIG === 'undefined') {
+        window.CONFIG = {
+            API_ENDPOINT: '/api/analyze',
+            isPro: false
+        };
+    }
+    
     window.truthLensApp = new TruthLensApp();
-    console.log('TruthLens App initialized');
+    console.log('TruthLens App initialized with CRITICAL FIX applied');
 });
