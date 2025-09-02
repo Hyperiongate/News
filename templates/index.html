@@ -726,30 +726,112 @@
             line-height: 1.6;
         }
 
-        /* FIXED: Author Analysis Dropdown */
-        .author-dropdown {
-            margin-top: 2rem;
+        /* Service Dropdowns Container */
+        .service-analyses {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
 
-        .author-dropdown-header {
+        .service-analyses-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .service-analyses-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .service-analyses-subtitle {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        /* Individual Service Dropdown */
+        .service-dropdown {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+        }
+
+        .service-dropdown:hover {
+            box-shadow: var(--shadow-xl);
+        }
+
+        .service-dropdown-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1rem 1.5rem;
-            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
-            color: white;
-            border-radius: var(--radius-xl);
+            padding: 1.25rem 1.5rem;
             cursor: pointer;
             transition: var(--transition);
-            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
         }
 
-        .author-dropdown-header:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .service-dropdown-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
         }
 
-        .author-dropdown-header h3 {
+        /* Service-specific colors */
+        .service-dropdown.source-credibility .service-dropdown-header {
+            background: linear-gradient(135deg, var(--indigo) 0%, var(--primary) 100%);
+            color: white;
+        }
+
+        .service-dropdown.author-analyzer .service-dropdown-header {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--teal) 100%);
+            color: white;
+        }
+
+        .service-dropdown.bias-detector .service-dropdown-header {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--orange) 100%);
+            color: white;
+        }
+
+        .service-dropdown.fact-checker .service-dropdown-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
+            color: white;
+        }
+
+        .service-dropdown.transparency-analyzer .service-dropdown-header {
+            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
+            color: white;
+        }
+
+        .service-dropdown.manipulation-detector .service-dropdown-header {
+            background: linear-gradient(135deg, var(--danger) 0%, var(--pink) 100%);
+            color: white;
+        }
+
+        .service-dropdown.content-analyzer .service-dropdown-header {
+            background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
+            color: white;
+        }
+
+        .service-dropdown.plagiarism-detector .service-dropdown-header {
+            background: linear-gradient(135deg, var(--teal) 0%, var(--cyan) 100%);
+            color: white;
+        }
+
+        .service-dropdown-header:hover {
+            transform: translateY(-1px);
+        }
+
+        .service-dropdown-header h3 {
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -758,26 +840,35 @@
             margin: 0;
         }
 
-        .dropdown-arrow {
-            transition: transform 0.3s ease;
+        .service-dropdown-header .service-score {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            opacity: 0.9;
         }
 
-        .author-dropdown.expanded .dropdown-arrow {
+        .score-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .dropdown-arrow {
+            transition: transform 0.3s ease;
+            margin-left: 0.5rem;
+        }
+
+        .service-dropdown.expanded .dropdown-arrow {
             transform: rotate(180deg);
         }
 
-        /* Author Card - Hidden by default */
-        .author-card {
+        /* Service Card Content */
+        .service-card {
             display: none;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(139, 92, 246, 0.2);
-            border-radius: var(--radius-xl);
             padding: 2rem;
-            margin-top: 1rem;
-            box-shadow: var(--shadow-lg);
             position: relative;
-            overflow: hidden;
             animation: slideDown 0.3s ease;
         }
 
@@ -786,115 +877,54 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .author-dropdown.expanded .author-card {
+        .service-dropdown.expanded .service-card {
             display: block;
         }
 
-        .author-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--purple) 0%, var(--indigo) 50%, var(--primary) 100%);
-        }
-
-        .author-card-header {
-            display: flex;
-            gap: 1.5rem;
-            align-items: flex-start;
+        .service-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
             margin-bottom: 1.5rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--gray-200);
         }
 
-        .author-photo-container {
-            flex-shrink: 0;
-            position: relative;
+        .service-metric {
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            border-left: 4px solid var(--primary);
         }
 
-        .author-photo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid var(--purple);
+        .metric-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
         }
 
-        .author-photo-placeholder {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 2rem;
-        }
-
-        .author-header-info {
-            flex: 1;
-        }
-
-        .author-name {
-            font-family: var(--font-display);
+        .metric-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--gray-900);
             margin-bottom: 0.25rem;
         }
 
-        .author-position {
-            color: var(--gray-600);
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .author-credibility {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--gray-100);
-            border-radius: var(--radius-full);
-        }
-
-        .credibility-label {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-
-        .credibility-score {
-            font-weight: 700;
-            font-size: 1rem;
-            color: var(--purple);
-        }
-
-        .credibility-score.high { color: var(--success); }
-        .credibility-score.good { color: var(--primary); }
-        .credibility-score.moderate { color: var(--warning); }
-        .credibility-score.low { color: var(--danger); }
-
-        .verification-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 24px;
-            height: 24px;
-            background: var(--success);
-            border-radius: 50%;
-            color: white;
+        .metric-description {
             font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid var(--white);
+            color: var(--gray-600);
         }
 
-        .author-section-title {
-            font-size: 1.125rem;
+        .service-findings {
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .findings-title {
+            font-size: 1rem;
             font-weight: 600;
             color: var(--gray-800);
             margin-bottom: 1rem;
@@ -903,190 +933,87 @@
             gap: 0.5rem;
         }
 
-        .author-bio {
-            margin-bottom: 1.5rem;
-        }
-
-        #authorBioText {
-            color: var(--gray-700);
-            line-height: 1.6;
-        }
-
-        .author-stats {
-            display: flex;
-            gap: 2rem;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: var(--gray-50);
-            border-radius: var(--radius-lg);
-        }
-
-        .stat-item {
-            text-align: center;
-            flex: 1;
-        }
-
-        .stat-number {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--purple);
-            line-height: 1;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 0.25rem;
-        }
-
-        .author-profiles {
-            margin-bottom: 1.5rem;
-        }
-
-        .profiles-grid {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .profile-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius-full);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.875rem;
-            transition: var(--transition);
-            border: 2px solid transparent;
-        }
-
-        .profile-link.linkedin {
-            background: rgba(10, 102, 194, 0.1);
-            color: #0a66c2;
-            border-color: #0a66c2;
-        }
-
-        .profile-link.linkedin:hover {
-            background: #0a66c2;
-            color: white;
-        }
-
-        .profile-link.twitter {
-            background: rgba(29, 155, 240, 0.1);
-            color: #1d9bf0;
-            border-color: #1d9bf0;
-        }
-
-        .profile-link.twitter:hover {
-            background: #1d9bf0;
-            color: white;
-        }
-
-        .profile-link.wikipedia {
-            background: rgba(0, 0, 0, 0.1);
-            color: #333;
-            border-color: #333;
-        }
-
-        .profile-link.wikipedia:hover {
-            background: #333;
-            color: white;
-        }
-
-        .profile-link.muckrack {
-            background: rgba(245, 101, 101, 0.1);
-            color: #f56565;
-            border-color: #f56565;
-        }
-
-        .profile-link.muckrack:hover {
-            background: #f56565;
-            color: white;
-        }
-
-        .profile-link.website {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--purple);
-            border-color: var(--purple);
-        }
-
-        .profile-link.website:hover {
-            background: var(--purple);
-            color: white;
-        }
-
-        .profile-link.scholar {
-            background: rgba(66, 133, 244, 0.1);
-            color: #4285f4;
-            border-color: #4285f4;
-        }
-
-        .profile-link.scholar:hover {
-            background: #4285f4;
-            color: white;
-        }
-
-        .expertise-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .expertise-tags {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .expertise-tag {
-            padding: 0.375rem 0.75rem;
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--purple);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: var(--radius-full);
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .awards-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .awards-list {
+        .findings-list {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
         }
 
-        .award-item {
+        .finding-item {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.75rem;
             padding: 0.75rem;
-            background: var(--gray-50);
+            background: white;
             border-radius: var(--radius-md);
-            border-left: 3px solid var(--warning);
+            border: 1px solid var(--gray-200);
         }
 
-        .award-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--warning) 0%, var(--orange) 100%);
+        .finding-icon {
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            margin-top: 0.125rem;
         }
 
-        .award-text {
+        .finding-positive .finding-icon {
+            background: var(--success);
+            color: white;
+        }
+
+        .finding-warning .finding-icon {
+            background: var(--warning);
+            color: white;
+        }
+
+        .finding-negative .finding-icon {
+            background: var(--danger);
+            color: white;
+        }
+
+        .finding-content {
+            flex: 1;
+        }
+
+        .finding-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-800);
+            margin-bottom: 0.25rem;
+        }
+
+        .finding-explanation {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            line-height: 1.4;
+        }
+
+        .service-interpretation {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: var(--radius-lg);
+        }
+
+        .interpretation-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        .interpretation-text {
             font-size: 0.875rem;
             color: var(--gray-700);
+            line-height: 1.6;
         }
 
         /* Debug Info */
@@ -1126,7 +1053,140 @@
             .nav-links { display: none; }
             .analysis-overview { flex-direction: column; text-align: center; }
             .overview-grid { grid-template-columns: 1fr; }
-            .author-stats { gap: 1rem; }
+            .service-card-grid { grid-template-columns: 1fr; gap: 1rem; }
+        }
+
+        /* Error Message Styles */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            z-index: 1000;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 400px;
+        }
+
+        .error-message.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .error-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .error-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .error-text {
+            flex: 1;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 50%;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .error-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+        }
+
+        .spinner-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-ring:nth-child(2) {
+            border-top-color: var(--purple);
+            animation-delay: 0.25s;
+        }
+
+        .spinner-ring:nth-child(3) {
+            border-top-color: var(--pink);
+            animation-delay: 0.5s;
+        }
+
+        .spinner-ring:nth-child(4) {
+            border-top-color: var(--orange);
+            animation-delay: 0.75s;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -1299,99 +1359,379 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                     </div>
                 </div>
 
-                <!-- FIXED: Author Analysis Dropdown - REMOVED View Full Author Profile Button -->
-                <div class="author-dropdown" id="authorDropdown">
-                    <div class="author-dropdown-header" onclick="toggleAuthorDropdown()">
-                        <h3>
-                            <i class="fas fa-user-shield"></i>
-                            Author Analysis
-                        </h3>
-                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                <!-- Service Analyses -->
+                <div class="service-analyses" id="serviceAnalyses">
+                    <div class="service-analyses-header">
+                        <h3 class="service-analyses-title">Detailed Analysis Breakdown</h3>
+                        <p class="service-analyses-subtitle">Explore each analysis component for comprehensive insights</p>
                     </div>
-                    
-                    <!-- Enhanced Author Details Card - HIDDEN BY DEFAULT -->
-                    <div class="author-card" id="authorCard">
-                        <!-- Header with Photo and Basic Info -->
-                        <div class="author-card-header">
-                            <div class="author-photo-container">
-                                <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
-                                <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
-                                    <i class="fas fa-user"></i>
+
+                    <!-- Source Credibility Dropdown -->
+                    <div class="service-dropdown source-credibility" id="sourceCredibilityDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('sourceCredibility')">
+                            <h3>
+                                <i class="fas fa-shield-alt"></i>
+                                Source Credibility Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Score: <span class="score-value" id="sourceCredibilityScore">0/100</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="sourceCredibilityCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Credibility Rating</div>
+                                    <div class="metric-value" id="sourceCredibilityRating">Unknown</div>
+                                    <div class="metric-description">Overall source reliability assessment</div>
                                 </div>
-                                <div id="verificationBadge" class="verification-badge" style="display: none;">
-                                    <i class="fas fa-check"></i>
+                                <div class="service-metric">
+                                    <div class="metric-label">Bias Level</div>
+                                    <div class="metric-value" id="sourceBiasLevel">Unknown</div>
+                                    <div class="metric-description">Political/ideological bias tendency</div>
                                 </div>
                             </div>
-                            <div class="author-header-info">
-                                <h3 class="author-name" id="authorName">Author Name</h3>
-                                <p class="author-position" id="authorPosition">Professional Journalist</p>
-                                <div class="author-credibility">
-                                    <span class="credibility-label">Credibility:</span>
-                                    <span class="credibility-score" id="authorCredibilityScore">0/100</span>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="sourceCredibilityFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="sourceCredibilityInterpretation">
+                                    Loading source credibility analysis...
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Professional Profile Links -->
-                        <div class="author-profiles" id="authorProfiles" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-link"></i>
-                                Professional Profiles
-                            </h4>
-                            <div class="profiles-grid" id="profilesGrid">
-                                <!-- Profile links will be inserted here -->
+                    <!-- Author Analysis Dropdown -->
+                    <div class="service-dropdown author-analyzer" id="authorAnalyzerDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('authorAnalyzer')">
+                            <h3>
+                                <i class="fas fa-user-shield"></i>
+                                Author Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Score: <span class="score-value" id="authorAnalyzerScore">0/100</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
                             </div>
                         </div>
-
-                        <!-- Quick Stats -->
-                        <div class="author-stats" id="authorStats">
-                            <div class="stat-item">
-                                <span class="stat-number" id="articleCount">0</span>
-                                <span class="stat-label">Articles</span>
+                        
+                        <div class="service-card" id="authorAnalyzerCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Author Name</div>
+                                    <div class="metric-value" id="authorName">Unknown</div>
+                                    <div class="metric-description">Identified article author</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Credibility Score</div>
+                                    <div class="metric-value" id="authorCredibilityScore">N/A</div>
+                                    <div class="metric-description">Author expertise and reliability</div>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-number" id="profilesCount">0</span>
-                                <span class="stat-label">Profiles</span>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="authorAnalyzerFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-number" id="awardsCount">0</span>
-                                <span class="stat-label">Awards</span>
-                            </div>
-                        </div>
-
-                        <!-- Biography -->
-                        <div class="author-bio" id="authorBio" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-user-circle"></i>
-                                Biography
-                            </h4>
-                            <p class="author-bio-text" id="authorBioText"></p>
-                        </div>
-
-                        <!-- Areas of Expertise -->
-                        <div class="expertise-section" id="expertiseSection" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-brain"></i>
-                                Areas of Expertise
-                            </h4>
-                            <div class="expertise-tags" id="expertiseTags">
-                                <!-- Expertise tags will be inserted here -->
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="authorAnalyzerInterpretation">
+                                    Loading author analysis...
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Awards (if any) -->
-                        <div class="awards-section" id="awardsSection" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-trophy"></i>
-                                Awards & Recognition
-                            </h4>
-                            <div class="awards-list" id="awardsList">
-                                <!-- Awards will be inserted here -->
+                    <!-- Bias Detection Dropdown -->
+                    <div class="service-dropdown bias-detector" id="biasDetectorDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('biasDetector')">
+                            <h3>
+                                <i class="fas fa-balance-scale"></i>
+                                Bias Detection Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Bias Level: <span class="score-value" id="biasDetectorScore">Low</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
                             </div>
                         </div>
+                        
+                        <div class="service-card" id="biasDetectorCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Overall Bias</div>
+                                    <div class="metric-value" id="overallBias">Minimal</div>
+                                    <div class="metric-description">General bias assessment</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Political Lean</div>
+                                    <div class="metric-value" id="politicalLean">Neutral</div>
+                                    <div class="metric-description">Political orientation tendency</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="biasDetectorFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="biasDetectorInterpretation">
+                                    Loading bias detection analysis...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- REMOVED: View Full Profile Button -->
-                        <!-- The view-profile-btn has been completely removed as requested -->
+                    <!-- Fact Checking Dropdown -->
+                    <div class="service-dropdown fact-checker" id="factCheckerDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('factChecker')">
+                            <h3>
+                                <i class="fas fa-check-double"></i>
+                                Fact Checking Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Accuracy: <span class="score-value" id="factCheckerScore">0%</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="factCheckerCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Claims Checked</div>
+                                    <div class="metric-value" id="claimsChecked">0</div>
+                                    <div class="metric-description">Number of verifiable claims analyzed</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Verification Level</div>
+                                    <div class="metric-value" id="verificationLevel">Unknown</div>
+                                    <div class="metric-description">Overall fact verification assessment</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="factCheckerFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="factCheckerInterpretation">
+                                    Loading fact checking analysis...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transparency Analysis Dropdown -->
+                    <div class="service-dropdown transparency-analyzer" id="transparencyAnalyzerDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('transparencyAnalyzer')">
+                            <h3>
+                                <i class="fas fa-eye"></i>
+                                Transparency Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Score: <span class="score-value" id="transparencyAnalyzerScore">0/100</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="transparencyAnalyzerCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Sources Cited</div>
+                                    <div class="metric-value" id="sourcesCited">0</div>
+                                    <div class="metric-description">Number of sources referenced</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Disclosure Level</div>
+                                    <div class="metric-value" id="disclosureLevel">Unknown</div>
+                                    <div class="metric-description">Transparency and disclosure quality</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="transparencyAnalyzerFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="transparencyAnalyzerInterpretation">
+                                    Loading transparency analysis...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manipulation Detection Dropdown -->
+                    <div class="service-dropdown manipulation-detector" id="manipulationDetectorDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('manipulationDetector')">
+                            <h3>
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Manipulation Detection
+                            </h3>
+                            <div class="service-score">
+                                <span>Risk: <span class="score-value" id="manipulationDetectorScore">Low</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="manipulationDetectorCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Manipulation Score</div>
+                                    <div class="metric-value" id="manipulationScore">0/100</div>
+                                    <div class="metric-description">Overall manipulation risk assessment</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Techniques Found</div>
+                                    <div class="metric-value" id="techniquesFound">0</div>
+                                    <div class="metric-description">Number of manipulation techniques detected</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="manipulationDetectorFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="manipulationDetectorInterpretation">
+                                    Loading manipulation detection analysis...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Analysis Dropdown -->
+                    <div class="service-dropdown content-analyzer" id="contentAnalyzerDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('contentAnalyzer')">
+                            <h3>
+                                <i class="fas fa-file-alt"></i>
+                                Content Analysis
+                            </h3>
+                            <div class="service-score">
+                                <span>Quality: <span class="score-value" id="contentAnalyzerScore">0/100</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="contentAnalyzerCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Content Quality</div>
+                                    <div class="metric-value" id="contentQuality">Unknown</div>
+                                    <div class="metric-description">Overall content quality assessment</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Readability</div>
+                                    <div class="metric-value" id="contentReadability">Unknown</div>
+                                    <div class="metric-description">Content readability and structure</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="contentAnalyzerFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="contentAnalyzerInterpretation">
+                                    Loading content analysis...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plagiarism Detection Dropdown -->
+                    <div class="service-dropdown plagiarism-detector" id="plagiarismDetectorDropdown">
+                        <div class="service-dropdown-header" onclick="toggleServiceDropdown('plagiarismDetector')">
+                            <h3>
+                                <i class="fas fa-copy"></i>
+                                Plagiarism Detection
+                            </h3>
+                            <div class="service-score">
+                                <span>Originality: <span class="score-value" id="plagiarismDetectorScore">0%</span></span>
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="service-card" id="plagiarismDetectorCard">
+                            <div class="service-card-grid">
+                                <div class="service-metric">
+                                    <div class="metric-label">Originality Score</div>
+                                    <div class="metric-value" id="originalityScore">0%</div>
+                                    <div class="metric-description">Percentage of original content</div>
+                                </div>
+                                <div class="service-metric">
+                                    <div class="metric-label">Matches Found</div>
+                                    <div class="metric-value" id="matchesFound">0</div>
+                                    <div class="metric-description">Number of potential matches detected</div>
+                                </div>
+                            </div>
+                            
+                            <div class="service-findings">
+                                <div class="findings-title">
+                                    <i class="fas fa-search"></i>
+                                    Key Findings
+                                </div>
+                                <div class="findings-list" id="plagiarismDetectorFindings">
+                                    <!-- Dynamic findings will be inserted here -->
+                                </div>
+                            </div>
+                            
+                            <div class="service-interpretation">
+                                <div class="interpretation-title">Analysis Summary</div>
+                                <div class="interpretation-text" id="plagiarismDetectorInterpretation">
+                                    Loading plagiarism detection analysis...
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1430,141 +1770,6 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             <p class="loading-subtitle">Our AI is examining multiple credibility factors</p>
         </div>
     </div>
-
-    <style>
-        /* Error Message Styles */
-        .error-message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            z-index: 1000;
-            transform: translateX(400px);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            max-width: 400px;
-        }
-
-        .error-message.active {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        .error-content {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .error-icon {
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-
-        .error-text {
-            flex: 1;
-            font-weight: 500;
-            line-height: 1.4;
-        }
-
-        .error-close {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 50%;
-            transition: var(--transition);
-            flex-shrink: 0;
-        }
-
-        .error-close:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Loading Overlay Styles */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .loading-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .loading-content {
-            text-align: center;
-            color: white;
-        }
-
-        .loading-spinner {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 2rem;
-        }
-
-        .spinner-ring {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 3px solid transparent;
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .spinner-ring:nth-child(2) {
-            border-top-color: var(--purple);
-            animation-delay: 0.25s;
-        }
-
-        .spinner-ring:nth-child(3) {
-            border-top-color: var(--pink);
-            animation-delay: 0.5s;
-        }
-
-        .spinner-ring:nth-child(4) {
-            border-top-color: var(--orange);
-            animation-delay: 0.75s;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-title {
-            font-family: var(--font-display);
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .loading-subtitle {
-            font-size: 1rem;
-            opacity: 0.8;
-        }
-    </style>
 
     <script>
         class TruthLensAnalyzer {
@@ -1607,7 +1812,13 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 this.resultsSection.classList.remove('show');
                 this.progressContainer.classList.remove('active');
                 this.resetProgress();
-                document.getElementById('authorDropdown').classList.remove('expanded');
+                
+                // Reset all service dropdowns
+                const dropdowns = document.querySelectorAll('.service-dropdown');
+                dropdowns.forEach(dropdown => {
+                    dropdown.classList.remove('expanded');
+                });
+                
                 document.getElementById('debugInfo').style.display = 'none';
                 this.hideError();
                 this.urlInput.focus();
@@ -1797,7 +2008,8 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 document.getElementById('articleAuthor').textContent = author;
                 document.getElementById('findingsSummary').textContent = findingsSummary;
                 
-                this.displayAuthorCard(data);
+                // Display all service analyses
+                this.displayAllServiceAnalyses(data);
                 this.showResults();
             }
 
@@ -1822,95 +2034,237 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 }
             }
 
-            displayAuthorCard(data) {
-                console.log('=== Displaying Author Card ===');
+            displayAllServiceAnalyses(data) {
+                console.log('=== Displaying All Service Analyses ===');
                 console.log('Data received:', data);
                 
-                // Extract author information with multiple fallback strategies
-                let authorName = data.author || 'Staff Writer';
-                let authorScore = 0;
-                let authorPosition = 'Writer';
-                let authorBio = '';
-                let hasVerification = false;
+                const detailed_analysis = data.detailed_analysis || {};
                 
-                // Try to get enhanced author data from detailed_analysis
-                if (data.detailed_analysis && data.detailed_analysis.author_analyzer) {
-                    const authorData = data.detailed_analysis.author_analyzer;
-                    
-                    if (authorData.data) {
-                        authorName = authorData.data.author_name || authorData.data.name || authorName;
-                        authorScore = authorData.data.credibility_score || authorData.data.score || 0;
-                        authorPosition = authorData.data.position || authorData.data.title || authorPosition;
-                        authorBio = authorData.data.bio || authorData.data.biography || '';
-                        hasVerification = authorData.data.verified || false;
-                    } else {
-                        authorScore = authorData.score || 0;
-                        authorName = authorData.author_name || authorName;
-                    }
-                }
+                // Source Credibility
+                this.displaySourceCredibility(detailed_analysis.source_credibility || {});
                 
-                // Determine if this is a real author or generic
-                const isGenericAuthor = !authorName || 
-                                      authorName === 'Unknown' || 
-                                      authorName === 'Staff Writer' ||
-                                      authorName.includes('Unknown');
+                // Author Analysis
+                this.displayAuthorAnalysis(detailed_analysis.author_analyzer || {}, data.author);
                 
-                if (isGenericAuthor) {
-                    // Use source-based fallback
-                    const source = data.source || 'News Source';
-                    if (source !== 'Unknown Source' && source !== 'Unknown') {
-                        authorName = `${source} Staff`;
-                        authorPosition = `${source} Writer`;
-                    }
-                }
+                // Bias Detection
+                this.displayBiasDetection(detailed_analysis.bias_detector || {});
                 
-                // Update DOM elements
+                // Fact Checking
+                this.displayFactChecking(detailed_analysis.fact_checker || {});
+                
+                // Transparency Analysis
+                this.displayTransparencyAnalysis(detailed_analysis.transparency_analyzer || {});
+                
+                // Manipulation Detection
+                this.displayManipulationDetection(detailed_analysis.manipulation_detector || {});
+                
+                // Content Analysis
+                this.displayContentAnalysis(detailed_analysis.content_analyzer || {});
+                
+                // Plagiarism Detection
+                this.displayPlagiarismDetection(detailed_analysis.plagiarism_detector || {});
+            }
+
+            displaySourceCredibility(data) {
+                const score = data.score || data.credibility_score || 0;
+                const rating = data.credibility || data.rating || 'Unknown';
+                const biasLevel = data.bias || data.bias_level || 'Unknown';
+                
+                document.getElementById('sourceCredibilityScore').textContent = `${score}/100`;
+                document.getElementById('sourceCredibilityRating').textContent = rating;
+                document.getElementById('sourceBiasLevel').textContent = biasLevel;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('sourceCredibilityFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `This source has ${rating.toLowerCase()} credibility with a score of ${score}/100.`;
+                document.getElementById('sourceCredibilityInterpretation').textContent = interpretation;
+            }
+
+            displayAuthorAnalysis(data, fallbackAuthor) {
+                const score = data.score || data.credibility_score || 0;
+                const authorName = data.author_name || data.name || fallbackAuthor || 'Unknown';
+                const credibilityScore = score > 0 ? `${score}/100` : 'N/A';
+                
+                document.getElementById('authorAnalyzerScore').textContent = `${score}/100`;
                 document.getElementById('authorName').textContent = authorName;
-                document.getElementById('authorPosition').textContent = authorPosition;
-                document.getElementById('authorCredibilityScore').textContent = authorScore > 0 ? `${authorScore}/100` : 'N/A';
+                document.getElementById('authorCredibilityScore').textContent = credibilityScore;
                 
-                // Update credibility score styling
-                const scoreEl = document.getElementById('authorCredibilityScore');
-                scoreEl.className = 'credibility-score';
-                if (authorScore >= 80) {
-                    scoreEl.classList.add('high');
-                } else if (authorScore >= 60) {
-                    scoreEl.classList.add('good');
-                } else if (authorScore >= 40) {
-                    scoreEl.classList.add('moderate');
-                } else if (authorScore > 0) {
-                    scoreEl.classList.add('low');
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('authorAnalyzerFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Author analysis complete. ${authorName} has ${score > 0 ? 'a credibility score of ' + score + '/100' : 'no verifiable credentials found'}.`;
+                document.getElementById('authorAnalyzerInterpretation').textContent = interpretation;
+            }
+
+            displayBiasDetection(data) {
+                const biasScore = data.bias_score || data.score || 0;
+                const overallBias = data.overall_bias || data.bias_level || 'Minimal';
+                const politicalLean = data.political_lean || data.political_bias || 'Neutral';
+                
+                document.getElementById('biasDetectorScore').textContent = overallBias;
+                document.getElementById('overallBias').textContent = overallBias;
+                document.getElementById('politicalLean').textContent = politicalLean;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('biasDetectorFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Bias analysis detected ${overallBias.toLowerCase()} bias with ${politicalLean.toLowerCase()} political lean.`;
+                document.getElementById('biasDetectorInterpretation').textContent = interpretation;
+            }
+
+            displayFactChecking(data) {
+                const score = data.score || data.verification_score || 0;
+                const accuracyRate = data.accuracy_rate || score;
+                const claimsChecked = data.claims_checked || 0;
+                const verificationLevel = data.level || data.verification_level || 'Unknown';
+                
+                document.getElementById('factCheckerScore').textContent = `${accuracyRate}%`;
+                document.getElementById('claimsChecked').textContent = claimsChecked;
+                document.getElementById('verificationLevel').textContent = verificationLevel;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('factCheckerFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Fact checking analysis verified ${claimsChecked} claims with ${accuracyRate}% accuracy rate.`;
+                document.getElementById('factCheckerInterpretation').textContent = interpretation;
+            }
+
+            displayTransparencyAnalysis(data) {
+                const score = data.score || data.transparency_score || 0;
+                const sourcesCited = data.source_count || data.sources_cited || 0;
+                const disclosureLevel = data.level || data.transparency_level || 'Unknown';
+                
+                document.getElementById('transparencyAnalyzerScore').textContent = `${score}/100`;
+                document.getElementById('sourcesCited').textContent = sourcesCited;
+                document.getElementById('disclosureLevel').textContent = disclosureLevel;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('transparencyAnalyzerFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Transparency analysis found ${sourcesCited} sources cited with ${disclosureLevel.toLowerCase()} disclosure level.`;
+                document.getElementById('transparencyAnalyzerInterpretation').textContent = interpretation;
+            }
+
+            displayManipulationDetection(data) {
+                const score = data.score || data.manipulation_score || 0;
+                const riskLevel = this.getManipulationRiskLevel(score);
+                const techniquesFound = data.techniques_found || data.manipulation_techniques?.length || 0;
+                
+                document.getElementById('manipulationDetectorScore').textContent = riskLevel;
+                document.getElementById('manipulationScore').textContent = `${score}/100`;
+                document.getElementById('techniquesFound').textContent = techniquesFound;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('manipulationDetectorFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Manipulation detection found ${techniquesFound} techniques with ${riskLevel.toLowerCase()} risk level.`;
+                document.getElementById('manipulationDetectorInterpretation').textContent = interpretation;
+            }
+
+            displayContentAnalysis(data) {
+                const score = data.score || data.quality_score || 0;
+                const contentQuality = this.getQualityLevel(score);
+                const readability = data.readability || data.readability_score || 'Unknown';
+                
+                document.getElementById('contentAnalyzerScore').textContent = `${score}/100`;
+                document.getElementById('contentQuality').textContent = contentQuality;
+                document.getElementById('contentReadability').textContent = readability;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('contentAnalyzerFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Content analysis shows ${contentQuality.toLowerCase()} quality with ${readability} readability.`;
+                document.getElementById('contentAnalyzerInterpretation').textContent = interpretation;
+            }
+
+            displayPlagiarismDetection(data) {
+                const originalityScore = data.originality || data.originality_score || 0;
+                const matchesFound = data.matches_found || data.matches?.length || 0;
+                
+                document.getElementById('plagiarismDetectorScore').textContent = `${originalityScore}%`;
+                document.getElementById('originalityScore').textContent = `${originalityScore}%`;
+                document.getElementById('matchesFound').textContent = matchesFound;
+                
+                // Display findings
+                const findings = data.findings || [];
+                this.displayFindings('plagiarismDetectorFindings', findings);
+                
+                // Display interpretation
+                const interpretation = data.summary || `Plagiarism detection found ${originalityScore}% originality with ${matchesFound} potential matches.`;
+                document.getElementById('plagiarismDetectorInterpretation').textContent = interpretation;
+            }
+
+            displayFindings(containerId, findings) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                if (!findings || findings.length === 0) {
+                    container.innerHTML = '<div class="finding-item finding-neutral"><div class="finding-icon"><i class="fas fa-info"></i></div><div class="finding-content"><div class="finding-text">No specific findings available</div></div></div>';
+                    return;
                 }
                 
-                // Update stats (generic for now)
-                document.getElementById('articleCount').textContent = '0';
-                document.getElementById('profilesCount').textContent = '0';
-                document.getElementById('awardsCount').textContent = '0';
-                
-                // Handle biography
-                const bioSection = document.getElementById('authorBio');
-                const bioText = document.getElementById('authorBioText');
-                if (authorBio && authorBio.trim()) {
-                    bioSection.style.display = 'block';
-                    bioText.textContent = authorBio;
-                } else {
-                    bioSection.style.display = 'none';
+                findings.slice(0, 5).forEach(finding => {
+                    const findingEl = document.createElement('div');
+                    const severity = finding.severity || 'neutral';
+                    const icon = this.getFindingIcon(severity);
+                    
+                    findingEl.className = `finding-item finding-${severity}`;
+                    findingEl.innerHTML = `
+                        <div class="finding-icon">${icon}</div>
+                        <div class="finding-content">
+                            <div class="finding-text">${finding.text || finding.finding || finding.message || 'Finding available'}</div>
+                            ${finding.explanation ? `<div class="finding-explanation">${finding.explanation}</div>` : ''}
+                        </div>
+                    `;
+                    
+                    container.appendChild(findingEl);
+                });
+            }
+
+            getFindingIcon(severity) {
+                switch (severity) {
+                    case 'positive':
+                    case 'low':
+                        return '<i class="fas fa-check"></i>';
+                    case 'warning':
+                    case 'medium':
+                        return '<i class="fas fa-exclamation"></i>';
+                    case 'negative':
+                    case 'high':
+                        return '<i class="fas fa-times"></i>';
+                    default:
+                        return '<i class="fas fa-info"></i>';
                 }
-                
-                // Handle verification badge
-                const verificationBadge = document.getElementById('verificationBadge');
-                if (hasVerification) {
-                    verificationBadge.style.display = 'flex';
-                } else {
-                    verificationBadge.style.display = 'none';
-                }
-                
-                // Hide sections that don't have data
-                document.getElementById('authorProfiles').style.display = 'none';
-                document.getElementById('expertiseSection').style.display = 'none';
-                document.getElementById('awardsSection').style.display = 'none';
-                
-                console.log('Author card updated successfully');
+            }
+
+            getManipulationRiskLevel(score) {
+                if (score >= 70) return 'High';
+                if (score >= 40) return 'Medium';
+                return 'Low';
+            }
+
+            getQualityLevel(score) {
+                if (score >= 80) return 'Excellent';
+                if (score >= 60) return 'Good';
+                if (score >= 40) return 'Fair';
+                return 'Poor';
             }
 
             showDebugInfo(data) {
@@ -1975,10 +2329,12 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             }
         }
 
-        // Toggle Author Dropdown
-        function toggleAuthorDropdown() {
-            const dropdown = document.getElementById('authorDropdown');
-            dropdown.classList.toggle('expanded');
+        // Toggle Service Dropdown
+        function toggleServiceDropdown(serviceName) {
+            const dropdown = document.getElementById(serviceName + 'Dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('expanded');
+            }
         }
 
         // Initialize the analyzer when page loads
