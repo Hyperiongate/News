@@ -1,4 +1,947 @@
-<!DOCTYPE html>
+</style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+                <span class="logo-text">TruthLens</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Analysis Section -->
+        <section class="analysis-section">
+            <div class="section-header">
+                <h1 class="main-title">
+                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
+                </h1>
+                <p class="subtitle">
+                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
+                </p>
+                
+                <div class="trust-badges">
+                    <div class="trust-badge">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>AI-Powered</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-bolt"></i>
+                        <span>Real-time Analysis</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Multi-Factor Analysis</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form class="input-form" id="analysisForm">
+                <div class="input-group">
+                    <label class="input-label" for="urlInput">
+                        <i class="fas fa-link"></i> Article URL
+                    </label>
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        class="input-field" 
+                        placeholder="https://example.com/news-article"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" for="textInput">
+                        <i class="fas fa-file-text"></i> Or Paste Article Text
+                    </label>
+                    <textarea 
+                        id="textInput" 
+                        class="input-field textarea-field" 
+                        placeholder="Paste the article text here for analysis...
+
+Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
+                    ></textarea>
+                </div>
+
+                <div class="button-container">
+                    <button type="submit" class="analyze-button" id="analyzeBtn">
+                        <div class="button-content">
+                            <span class="button-text">
+                                <i class="fas fa-search"></i>
+                                Analyze Article
+                            </span>
+                        </div>
+                    </button>
+                    <button type="button" class="reset-button" id="resetBtn">
+                        <i class="fas fa-redo"></i>
+                        Reset
+                    </button>
+                </div>
+            </form>
+
+            <!-- Progress Container -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-header">
+                    <h3 class="progress-title">Analyzing Article...</h3>
+                    <p class="progress-subtitle">Our AI is examining multiple credibility factors</p>
+                </div>
+                
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                
+                <div class="progress-steps" id="progressSteps">
+                    <div class="progress-step" data-step="0">
+                        <div class="step-icon">1</div>
+                        <div class="step-text">Extracting</div>
+                    </div>
+                    <div class="progress-step" data-step="1">
+                        <div class="step-icon">2</div>
+                        <div class="step-text">Source</div>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-icon">3</div>
+                        <div class="step-text">Bias</div>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <div class="step-icon">4</div>
+                        <div class="step-text">Facts</div>
+                    </div>
+                    <div class="progress-step" data-step="4">
+                        <div class="step-icon">5</div>
+                        <div class="step-text">Author</div>
+                    </div>
+                    <div class="progress-step" data-step="5">
+                        <div class="step-icon">6</div>
+                        <div class="step-text">Final</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="results-header">
+                    <h2 class="results-title">Analysis Complete</h2>
+                </div>
+
+                <!-- Analysis Overview -->
+                <div class="analysis-overview" id="analysisOverview">
+                    <div class="trust-score-graphic">
+                        <div class="trust-score-number" id="trustScore">85</div>
+                        <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
+                    </div>
+                    
+                    <div class="overview-content">
+                        <h3 class="overview-title">Analysis Overview</h3>
+                        <div class="overview-grid">
+                            <div class="overview-item">
+                                <span class="overview-label">Article Summary</span>
+                                <span class="overview-value" id="articleSummary">Loading...</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="overview-label">Source</span>
+                                <span class="overview-value" id="articleSource">Loading...</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="overview-label">Author</span>
+                                <span class="overview-value" id="articleAuthor">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="findings-summary" id="findingsSummary">
+                            Loading analysis findings...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FIXED: Author Analysis Dropdown with Colored Border -->
+                <div class="author-dropdown" id="authorDropdown">
+                    <div class="author-dropdown-header" onclick="toggleAuthorDropdown()">
+                        <h3>
+                            <i class="fas fa-user-shield"></i>
+                            Author Analysis
+                        </h3>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </div>
+                    
+                    <!-- Enhanced Author Details Card - HIDDEN BY DEFAULT -->
+                    <div class="author-card" id="authorCard">
+                        <!-- Header with Photo and Basic Info -->
+                        <div class="author-card-header">
+                            <div class="author-photo-container">
+                                <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
+                                <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div id="verificationBadge" class="verification-badge" style="display: none;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </div>
+                            <div class="author-header-info">
+                                <h3 class="author-name" id="authorName">Author Name</h3>
+                                <p class="author-position" id="authorPosition">Professional Journalist</p>
+                                <div class="author-credibility">
+                                    <span class="credibility-label">Credibility:</span>
+                                    <span class="credibility-score" id="authorCredibilityScore">0/100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Profile Links -->
+                        <div class="author-profiles" id="authorProfiles" style="display: none;">
+                            <h4 class="author-section-title">
+                                <i class="fas fa-link"></i>
+                                Professional Profiles
+                            </h4>
+                            <div class="profiles-grid" id="profilesGrid">
+                                <!-- Profile links will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="author-stats" id="authorStats">
+                            <div class="stat-item">
+                                <span class="stat-number" id="articleCount">0</span>
+                                <span class="stat-label">Articles</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="profilesCount">0</span>
+                                <span class="stat-label">Profiles</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="awardsCount">0</span>
+                                <span class="stat-label">Awards</span>
+                            </div>
+                        </div>
+
+                        <!-- Biography -->
+                        <div class="author-bio" id="authorBio" style="display: none;">
+                            <h4 class="author-section-title">
+                                <i class="fas fa-user-circle"></i>
+                                Biography
+                            </h4>
+                            <p class="author-bio-text" id="authorBioText"></p>
+                        </div>
+
+                        <!-- Areas of Expertise -->
+                        <div class="expertise-section" id="expertiseSection" style="display: none;">
+                            <h4 class="author-section-title">
+                                <i class="fas fa-brain"></i>
+                                Areas of Expertise
+                            </h4>
+                            <div class="expertise-tags" id="expertiseTags">
+                                <!-- Expertise tags will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Awards (if any) -->
+                        <div class="awards-section" id="awardsSection" style="display: none;">
+                            <h4 class="author-section-title">
+                                <i class="fas fa-trophy"></i>
+                                Awards & Recognition
+                            </h4>
+                            <div class="awards-list" id="awardsList">
+                                <!-- Awards will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- View Full Profile Button -->
+                        <a href="/templates/author-analysis.html" class="view-profile-btn" id="viewProfileBtn">
+                            <i class="fas fa-external-link-alt"></i>
+                            View Full Author Profile
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Debug Info Section -->
+                <div class="debug-info" id="debugInfo" style="display: none;">
+                    <h5>Debug Information (Development Only):</h5>
+                    <pre id="debugData"></pre>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        class TruthLensAnalyzer {
+            constructor() {
+                this.form = document.getElementById('analysisForm');
+                this.urlInput = document.getElementById('urlInput');
+                this.textInput = document.getElementById('textInput');
+                this.analyzeBtn = document.getElementById('analyzeBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressPercentage = document.getElementById('progressPercentage');
+                this.progressSteps = document.getElementById('progressSteps');
+                
+                this.init();
+            }
+
+            init() {
+                this.form.addEventListener('submit', this.handleSubmit.bind(this));
+                this.resetBtn.addEventListener('click', this.handleReset.bind(this));
+                
+                // Clear other input when one is filled
+                this.urlInput.addEventListener('input', () => {
+                    if (this.urlInput.value) {
+                        this.textInput.value = '';
+                    }
+                });
+                
+                this.textInput.addEventListener('input', () => {
+                    if (this.textInput.value) {
+                        this.urlInput.value = '';
+                    }
+                });
+            }
+
+            handleReset() {
+                this.urlInput.value = '';
+                this.textInput.value = '';
+                this.resultsSection.classList.remove('show');
+                this.progressContainer.classList.remove('active');
+                this.resetProgress();
+                document.getElementById('authorDropdown').classList.remove('expanded');
+                document.getElementById('debugInfo').style.display = 'none';
+                this.urlInput.focus();
+                this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                const url = this.urlInput.value.trim();
+                const text = this.textInput.value.trim();
+                
+                if (!url && !text) {
+                    this.showError('Please provide either a URL or article text');
+                    return;
+                }
+
+                this.setLoading(true);
+                this.startProgress();
+                
+                try {
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url || undefined,
+                            text: text || undefined
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log('Response received:', data);
+                    
+                    if (data.success !== false) {
+                        this.displayResults(data);
+                    } else {
+                        this.showError(data.error || 'Analysis failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    this.showError('Network error. Please try again.');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            startProgress() {
+                this.progressContainer.classList.add('active');
+                this.resetProgress();
+                
+                setTimeout(() => {
+                    this.progressContainer.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center'
+                    });
+                }, 100);
+                
+                let currentStep = 0;
+                let progress = 0;
+                
+                const steps = [
+                    { progress: 15, duration: 2000 },
+                    { progress: 30, duration: 3000 },
+                    { progress: 50, duration: 4000 },
+                    { progress: 70, duration: 3500 },
+                    { progress: 85, duration: 2500 },
+                    { progress: 100, duration: 2000 }
+                ];
+
+                const updateProgress = () => {
+                    if (currentStep < steps.length) {
+                        const step = steps[currentStep];
+                        const startProgress = progress;
+                        const endProgress = step.progress;
+                        const duration = step.duration;
+                        const startTime = Date.now();
+                        
+                        this.setActiveStep(currentStep);
+                        
+                        const animate = () => {
+                            const elapsed = Date.now() - startTime;
+                            const progressRatio = Math.min(elapsed / duration, 1);
+                            const easeOut = 1 - Math.pow(1 - progressRatio, 3);
+                            progress = startProgress + (endProgress - startProgress) * easeOut;
+                            
+                            this.updateProgressBar(progress);
+                            
+                            if (progressRatio < 1) {
+                                requestAnimationFrame(animate);
+                            } else {
+                                this.setStepCompleted(currentStep);
+                                currentStep++;
+                                
+                                if (currentStep < steps.length) {
+                                    setTimeout(updateProgress, 200);
+                                }
+                            }
+                        };
+                        
+                        animate();
+                    }
+                };
+                
+                updateProgress();
+            }
+
+            resetProgress() {
+                this.updateProgressBar(0);
+                const steps = this.progressSteps.querySelectorAll('.progress-step');
+                steps.forEach(step => {
+                    step.classList.remove('active', 'completed');
+                });
+            }
+
+            updateProgressBar(progress) {
+                this.progressBar.style.width = progress + '%';
+                this.progressPercentage.textContent = Math.round(progress) + '%';
+            }
+
+            setActiveStep(stepIndex) {
+                const steps = this.progressSteps.querySelectorAll('.progress-step');
+                steps.forEach((step, index) => {
+                    if (index === stepIndex) {
+                        step.classList.add('active');
+                    } else {
+                        step.classList.remove('active');
+                    }
+                });
+            }
+
+            setStepCompleted(stepIndex) {
+                const step = this.progressSteps.querySelector(`[data-step="${stepIndex}"]`);
+                if (step) {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                    step.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
+                }
+            }
+
+            displayResults(data) {
+                this.progressContainer.classList.remove('active');
+                this.showDebugInfo(data);
+                
+                let trustScore = data.trust_score || 0;
+                let articleSummary = data.article_summary || 'No summary available';
+                let source = data.source || 'Unknown';
+                let author = data.author || 'Unknown';
+                let findingsSummary = data.findings_summary || 'No findings available';
+                
+                this.updateTrustScore(trustScore);
+                
+                const overviewEl = document.getElementById('analysisOverview');
+                overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
+                if (trustScore >= 70) {
+                    overviewEl.classList.add('trust-high');
+                } else if (trustScore >= 40) {
+                    overviewEl.classList.add('trust-medium');
+                } else {
+                    overviewEl.classList.add('trust-low');
+                }
+                
+                document.getElementById('articleSummary').textContent = 
+                    articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
+                document.getElementById('articleSource').textContent = source;
+                document.getElementById('articleAuthor').textContent = author;
+                document.getElementById('findingsSummary').textContent = findingsSummary;
+                
+                displayAuthorCard(data);
+                this.showResults();
+            }
+
+            updateTrustScore(score) {
+                const scoreElement = document.getElementById('trustScore');
+                const labelElement = document.getElementById('trustLabel');
+                
+                scoreElement.textContent = Math.round(score);
+                
+                if (score >= 80) {
+                    labelElement.textContent = 'Highly Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-high';
+                } else if (score >= 60) {
+                    labelElement.textContent = 'Generally Trustworthy';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else if (score >= 40) {
+                    labelElement.textContent = 'Moderate Trust';
+                    scoreElement.className = 'trust-score-number trust-medium';
+                } else {
+                    labelElement.textContent = 'Low Trustworthiness';
+                    scoreElement.className = 'trust-score-number trust-low';
+                }
+            }
+
+            showDebugInfo(data) {
+                const debugInfo = document.getElementById('debugInfo');
+                const debugData = document.getElementById('debugData');
+                
+                let articleText = '';
+                
+                if (data.text && data.text !== 'No text') {
+                    articleText = data.text;
+                } else if (data.detailed_analysis?.article_extractor?.data?.text) {
+                    articleText = data.detailed_analysis.article_extractor.data.text;
+                }
+                
+                if (articleText) {
+                    data.text = articleText;
+                }
+                
+                if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
+                    debugData.textContent = JSON.stringify({
+                        author: data.author,
+                        detailed_analysis: data.detailed_analysis,
+                        text_length: articleText ? articleText.length : 0
+                    }, null, 2);
+                    debugInfo.style.display = 'block';
+                }
+            }
+
+            showResults() {
+                this.resultsSection.classList.add('show');
+                this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            setLoading(loading) {
+                this.analyzeBtn.disabled = loading;
+                if (loading) {
+                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+                } else {
+                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
+                }
+            }
+
+            showError(message) {
+                this.progressContainer.classList.remove('active');
+                document.getElementById('articleSummary').textContent = 'Error occurred';
+                document.getElementById('articleSource').textContent = 'Unknown';
+                document.getElementById('articleAuthor').textContent = 'Unknown';
+                document.getElementById('findingsSummary').textContent = message;
+                this.updateTrustScore(0);
+                this.showResults();
+                console.error('Analysis error:', message);
+            }
+        }
+
+        // Toggle Author Dropdown
+        function toggleAuthorDropdown() {
+            const dropdown = document.getElementById('authorDropdown');
+            dropdown.classList.toggle('expanded');
+        }
+
+        // Enhanced Author Display System
+        function displayAuthorCard(data) {
+            console.log('displayAuthorCard called with:', data);
+            
+            let authorName = extractAuthorName(data);
+            console.log('Extracted author name:', authorName);
+            
+            if (!authorName || authorName.trim() === '') {
+                document.getElementById('authorName').textContent = 'No Author Information Available';
+                document.getElementById('authorPosition').textContent = 'Unable to identify article author';
+                document.getElementById('authorCredibilityScore').textContent = '0/100';
+                return;
+            }
+
+            const authorData = extractAuthorData(data);
+            populateAuthorBasicInfo(authorName, authorData, data);
+            populateAuthorProfiles(authorData);
+            populateAuthorStats(authorData);
+            populateAuthorBio(authorData);
+            populateAuthorExpertise(authorData);
+            populateAuthorAwards(authorData);
+        }
+
+        function extractAuthorData(data) {
+            let authorData = {};
+            
+            if (data.detailed_analysis?.author_analyzer?.data) {
+                authorData = { ...data.detailed_analysis.author_analyzer.data };
+            } else if (data.detailed_analysis?.author_analyzer) {
+                authorData = { ...data.detailed_analysis.author_analyzer };
+            } else if (data.author_analyzer?.data) {
+                authorData = { ...data.author_analyzer.data };
+            } else if (data.author_analyzer) {
+                authorData = { ...data.author_analyzer };
+            } else {
+                authorData = {
+                    author_name: data.author,
+                    credibility_score: data.author_score || 0,
+                    bio: data.author_bio,
+                    position: data.author_position
+                };
+            }
+            
+            return authorData;
+        }
+
+        function extractAuthorName(data) {
+            if (data.author && data.author !== 'Unknown' && data.author.trim()) {
+                return cleanAuthorName(data.author);
+            }
+            
+            if (data.detailed_analysis?.author_analyzer?.data?.author_name) {
+                const name = data.detailed_analysis.author_analyzer.data.author_name;
+                if (name !== 'Unknown' && name.trim()) {
+                    return cleanAuthorName(name);
+                }
+            }
+            
+            if (data.detailed_analysis?.author_analyzer?.author_name) {
+                const name = data.detailed_analysis.author_analyzer.author_name;
+                if (name !== 'Unknown' && name.trim()) {
+                    return cleanAuthorName(name);
+                }
+            }
+            
+            const text = data.text || data.article?.text || '';
+            if (text) {
+                const extractedFromText = extractAuthorFromText(text);
+                if (extractedFromText) {
+                    return cleanAuthorName(extractedFromText);
+                }
+            }
+            
+            return null;
+        }
+
+        function extractAuthorFromText(text) {
+            const bylinePatterns = [
+                /^BY\s+([A-Z][A-Z\s]+?)(?:AND|&)\s+([A-Z][A-Z\s]+?)(?:\n|$|Updated)/m,
+                /^BY\s+([A-Z\s]+?)(?:\n|$|Updated)/m,
+                /^By\s+([A-Z][a-zA-Z\s]+?)(?:\s+and\s+|\s+&\s+)([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                /^By\s+([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                /^By([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                /By:\s*([A-Z][a-zA-Z\s]+?)(?:\n|$|,|\|)/m,
+                /^\s*([A-Z][A-Z\s]+?)\s*(?:\n|Updated|\()/m
+            ];
+            
+            for (const pattern of bylinePatterns) {
+                const match = pattern.exec(text);
+                if (match) {
+                    if (match[2]) {
+                        return `${match[1].trim()} and ${match[2].trim()}`;
+                    }
+                    return match[1].trim();
+                }
+            }
+            
+            return null;
+        }
+
+        function cleanAuthorName(author) {
+            if (!author) return null;
+            
+            author = author.replace(/^(By|BY|by|Written by|Author:|Reporter:)\s+/i, '');
+            author = author.replace(/\s+AND\s+/g, ' and ');
+            author = author.replace(/\s*[\|\-]\s*(Reporter|Writer|Journalist|Correspondent).*$/i, '');
+            author = author.replace(/\s*,?\s*(Associated Press|AP|Reuters|CNN|BBC).*$/i, '');
+            author = author.replace(/\s+/g, ' ').trim();
+            
+            if (author.length < 3 || author.length > 200) return null;
+            
+            if (author === author.toUpperCase()) {
+                return author.split(' ').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' ');
+            }
+            
+            return author;
+        }
+
+        function populateAuthorBasicInfo(authorName, authorData, data) {
+            document.getElementById('authorName').textContent = authorName;
+
+            const positionEl = document.getElementById('authorPosition');
+            const position = authorData.position || 
+                           authorData.bio_data?.position || 
+                           data.author_position;
+            
+            if (position && position.trim()) {
+                positionEl.textContent = position;
+            } else {
+                const source = data.source || data.article?.source || '';
+                if (source && source !== 'Unknown') {
+                    if (source.toLowerCase().includes('associated press')) {
+                        positionEl.textContent = 'Associated Press Journalist';
+                    } else if (source.toLowerCase().includes('usa today')) {
+                        positionEl.textContent = 'USA Today Journalist';
+                    } else {
+                        positionEl.textContent = `Journalist at ${source}`;
+                    }
+                } else {
+                    positionEl.textContent = 'Professional Journalist';
+                }
+            }
+
+            const scoreEl = document.getElementById('authorCredibilityScore');
+            const score = authorData.credibility_score || 
+                         authorData.score || 
+                         authorData.author_score || 
+                         0;
+            
+            scoreEl.textContent = `${score}/100`;
+            scoreEl.className = 'credibility-score';
+            
+            if (score >= 80) {
+                scoreEl.classList.add('high');
+            } else if (score >= 60) {
+                scoreEl.classList.add('good');
+            } else if (score >= 40) {
+                scoreEl.classList.add('moderate');
+            } else {
+                scoreEl.classList.add('low');
+            }
+
+            const photoUrl = authorData.author_photo || authorData.bio_data?.author_photo;
+            if (photoUrl) {
+                const photoEl = document.getElementById('authorPhoto');
+                const placeholderEl = document.getElementById('authorPhotoPlaceholder');
+                
+                photoEl.src = photoUrl;
+                photoEl.style.display = 'block';
+                placeholderEl.style.display = 'none';
+                
+                photoEl.onerror = function() {
+                    photoEl.style.display = 'none';
+                    placeholderEl.style.display = 'flex';
+                };
+            }
+
+            if (authorData.verified || authorData.verification_status === 'verified') {
+                document.getElementById('verificationBadge').style.display = 'flex';
+            }
+        }
+
+        function populateAuthorProfiles(authorData) {
+            const profilesSection = document.getElementById('authorProfiles');
+            const profilesGrid = document.getElementById('profilesGrid');
+            
+            const profiles = [];
+            
+            if (authorData.linkedin_profile && isValidUrl(authorData.linkedin_profile)) {
+                profiles.push({
+                    url: authorData.linkedin_profile,
+                    name: 'LinkedIn',
+                    icon: 'fab fa-linkedin',
+                    class: 'linkedin'
+                });
+            }
+            
+            if (authorData.twitter_profile && isValidUrl(authorData.twitter_profile)) {
+                profiles.push({
+                    url: authorData.twitter_profile,
+                    name: 'Twitter',
+                    icon: 'fab fa-twitter',
+                    class: 'twitter'
+                });
+            }
+            
+            if (authorData.wikipedia_page && isValidUrl(authorData.wikipedia_page)) {
+                profiles.push({
+                    url: authorData.wikipedia_page,
+                    name: 'Wikipedia',
+                    icon: 'fab fa-wikipedia-w',
+                    class: 'wikipedia'
+                });
+            }
+            
+            if (authorData.muckrack_profile && isValidUrl(authorData.muckrack_profile)) {
+                profiles.push({
+                    url: authorData.muckrack_profile,
+                    name: 'Muck Rack',
+                    icon: 'fas fa-newspaper',
+                    class: 'muckrack'
+                });
+            }
+            
+            if (authorData.personal_website && isValidUrl(authorData.personal_website)) {
+                profiles.push({
+                    url: authorData.personal_website,
+                    name: 'Website',
+                    icon: 'fas fa-globe',
+                    class: 'website'
+                });
+            }
+            
+            if (authorData.google_scholar_profile && isValidUrl(authorData.google_scholar_profile)) {
+                profiles.push({
+                    url: authorData.google_scholar_profile,
+                    name: 'Scholar',
+                    icon: 'fas fa-graduation-cap',
+                    class: 'scholar'
+                });
+            }
+
+            if (authorData.organization_profile && isValidUrl(authorData.organization_profile)) {
+                profiles.push({
+                    url: authorData.organization_profile,
+                    name: 'Bio Page',
+                    icon: 'fas fa-building',
+                    class: 'website'
+                });
+            }
+
+            if (profiles.length > 0) {
+                profilesSection.style.display = 'block';
+                
+                profilesGrid.innerHTML = profiles.map(profile => `
+                    <a href="${profile.url}" target="_blank" rel="noopener" class="profile-link ${profile.class}">
+                        <div class="profile-icon">
+                            <i class="${profile.icon}"></i>
+                        </div>
+                        <span>${profile.name}</span>
+                    </a>
+                `).join('');
+            } else {
+                profilesSection.style.display = 'none';
+            }
+        }
+
+        function isValidUrl(urlString) {
+            try {
+                const url = new URL(urlString);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function populateAuthorStats(authorData) {
+            const articleCount = authorData.article_count || 
+                               (authorData.recent_articles ? authorData.recent_articles.length : 0) ||
+                               (authorData.publishing_history ? authorData.publishing_history.length : 0) ||
+                               0;
+            document.getElementById('articleCount').textContent = articleCount;
+
+            const profilesCount = [
+                authorData.linkedin_profile,
+                authorData.twitter_profile,
+                authorData.wikipedia_page,
+                authorData.muckrack_profile,
+                authorData.personal_website,
+                authorData.google_scholar_profile,
+                authorData.organization_profile
+            ].filter(url => url && isValidUrl(url)).length;
+            document.getElementById('profilesCount').textContent = profilesCount;
+
+            const awardsCount = (authorData.awards ? authorData.awards.length : 0) ||
+                              (authorData.awards_recognition ? authorData.awards_recognition.length : 0) ||
+                              0;
+            document.getElementById('awardsCount').textContent = awardsCount;
+        }
+
+        function populateAuthorBio(authorData) {
+            const bioSection = document.getElementById('authorBio');
+            const bioText = authorData.bio || 
+                           authorData.bio_data?.full_bio || 
+                           authorData.bio_data?.search_bio || 
+                           authorData.summary ||
+                           authorData.full_bio;
+
+            if (bioText && bioText.trim() && bioText !== 'No author information available') {
+                bioSection.style.display = 'block';
+                const truncatedBio = bioText.length > 300 ? bioText.substring(0, 300) + '...' : bioText;
+                document.getElementById('authorBioText').textContent = truncatedBio;
+            } else {
+                bioSection.style.display = 'none';
+            }
+        }
+
+        function populateAuthorExpertise(authorData) {
+            const expertiseSection = document.getElementById('expertiseSection');
+            const expertiseTags = document.getElementById('expertiseTags');
+            
+            const expertise = authorData.expertise_areas || 
+                            authorData.expertise_domains || 
+                            authorData.specializations ||
+                            [];
+
+            if (expertise && expertise.length > 0) {
+                expertiseSection.style.display = 'block';
+                
+                expertiseTags.innerHTML = expertise.slice(0, 6).map(topic => `
+                    <span class="expertise-tag">${topic}</span>
+                `).join('');
+            } else {
+                expertiseSection.style.display = 'none';
+            }
+        }
+
+        function populateAuthorAwards(authorData) {
+            const awardsSection = document.getElementById('awardsSection');
+            const awardsList = document.getElementById('awardsList');
+            
+            const awards = authorData.awards || authorData.awards_recognition || [];
+
+            if (awards && awards.length > 0) {
+                awardsSection.style.display = 'block';
+                
+                awardsList.innerHTML = awards.slice(0, 3).map(award => {
+                    const awardText = typeof award === 'object' ? award.award || award.name : award;
+                    return `
+                        <div class="award-item">
+                            <div class="award-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <span class="award-text">${awardText}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                awardsSection.style.display = 'none';
+            }
+        }
+
+        // Initialize the analyzer when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TruthLensAnalyzer();
+        });
+    </script>
+</body>
+</html><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -726,7 +1669,7 @@
             line-height: 1.6;
         }
 
-        /* Author Analysis Dropdown */
+        /* FIXED: Author Analysis Dropdown */
         .author-dropdown {
             margin-top: 2rem;
         }
@@ -1116,7 +2059,6 @@
             border-radius: var(--radius-md);
             border-left: 3px solid var(--warning);
             font-size: 0.875rem;
-            display: none;
         }
 
         .debug-info h5 {
@@ -1148,596 +2090,3 @@
             .overview-grid { grid-template-columns: 1fr; }
             .author-stats { gap: 1rem; }
         }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="#" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
-                <span class="logo-text">TruthLens</span>
-            </a>
-            
-            <nav class="nav-links">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#pricing" class="nav-link">Pricing</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#contact" class="nav-link">Contact</a>
-                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Analysis Section -->
-        <section class="analysis-section">
-            <div class="section-header">
-                <h1 class="main-title">
-                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
-                </h1>
-                <p class="subtitle">
-                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
-                </p>
-                
-                <div class="trust-badges">
-                    <div class="trust-badge">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>AI-Powered</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-bolt"></i>
-                        <span>Real-time Analysis</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Multi-Factor Analysis</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Input Form -->
-            <form class="input-form" id="analysisForm">
-                <div class="input-group">
-                    <label class="input-label" for="urlInput">
-                        <i class="fas fa-link"></i> Article URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        class="input-field" 
-                        placeholder="https://example.com/news-article"
-                        required
-                    >
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label" for="textInput">
-                        <i class="fas fa-file-text"></i> Or Paste Article Text
-                    </label>
-                    <textarea 
-                        id="textInput" 
-                        class="input-field textarea-field" 
-                        placeholder="Paste the article text here for analysis...
-
-Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
-                    ></textarea>
-                </div>
-
-                <div class="button-container">
-                    <button type="submit" class="analyze-button" id="analyzeBtn">
-                        <div class="button-content">
-                            <span class="button-text">
-                                <i class="fas fa-search"></i>
-                                Analyze Article
-                            </span>
-                        </div>
-                    </button>
-                    <button type="button" class="reset-button" id="resetBtn">
-                        <i class="fas fa-redo"></i>
-                        Reset
-                    </button>
-                </div>
-            </form>
-
-            <!-- Progress Container -->
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-header">
-                    <h3 class="progress-title">Analyzing Article...</h3>
-                    <p class="progress-subtitle">Our AI is examining multiple credibility factors</p>
-                </div>
-                
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-                
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                
-                <div class="progress-steps" id="progressSteps">
-                    <div class="progress-step" data-step="0">
-                        <div class="step-icon">1</div>
-                        <div class="step-text">Extracting</div>
-                    </div>
-                    <div class="progress-step" data-step="1">
-                        <div class="step-icon">2</div>
-                        <div class="step-text">Source</div>
-                    </div>
-                    <div class="progress-step" data-step="2">
-                        <div class="step-icon">3</div>
-                        <div class="step-text">Bias</div>
-                    </div>
-                    <div class="progress-step" data-step="3">
-                        <div class="step-icon">4</div>
-                        <div class="step-text">Facts</div>
-                    </div>
-                    <div class="progress-step" data-step="4">
-                        <div class="step-icon">5</div>
-                        <div class="step-text">Author</div>
-                    </div>
-                    <div class="progress-step" data-step="5">
-                        <div class="step-icon">6</div>
-                        <div class="step-text">Final</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="results-section" id="resultsSection">
-                <div class="results-header">
-                    <h2 class="results-title">Analysis Complete</h2>
-                </div>
-
-                <!-- Analysis Overview -->
-                <div class="analysis-overview" id="analysisOverview">
-                    <div class="trust-score-graphic">
-                        <div class="trust-score-number" id="trustScore">85</div>
-                        <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
-                    </div>
-                    
-                    <div class="overview-content">
-                        <h3 class="overview-title">Analysis Overview</h3>
-                        <div class="overview-grid">
-                            <div class="overview-item">
-                                <span class="overview-label">Article Summary</span>
-                                <span class="overview-value" id="articleSummary">Loading...</span>
-                            </div>
-                            <div class="overview-item">
-                                <span class="overview-label">Source</span>
-                                <span class="overview-value" id="articleSource">Loading...</span>
-                            </div>
-                            <div class="overview-item">
-                                <span class="overview-label">Author</span>
-                                <span class="overview-value" id="articleAuthor">Loading...</span>
-                            </div>
-                        </div>
-                        <div class="findings-summary" id="findingsSummary">
-                            Loading analysis findings...
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Author Analysis Dropdown -->
-                <div class="author-dropdown" id="authorDropdown">
-                    <div class="author-dropdown-header" onclick="toggleAuthorDropdown()">
-                        <h3>
-                            <i class="fas fa-user-shield"></i>
-                            Author Analysis
-                        </h3>
-                        <i class="fas fa-chevron-down dropdown-arrow"></i>
-                    </div>
-                    
-                    <!-- Enhanced Author Details Card - HIDDEN BY DEFAULT -->
-                    <div class="author-card" id="authorCard">
-                        <!-- Header with Photo and Basic Info -->
-                        <div class="author-card-header">
-                            <div class="author-photo-container">
-                                <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
-                                <div id="authorPhotoPlaceholder" class="author-photo-placeholder">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div id="verificationBadge" class="verification-badge" style="display: none;">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                            </div>
-                            <div class="author-header-info">
-                                <h3 class="author-name" id="authorName">Author Name</h3>
-                                <p class="author-position" id="authorPosition">Professional Journalist</p>
-                                <div class="author-credibility">
-                                    <span class="credibility-label">Credibility:</span>
-                                    <span class="credibility-score" id="authorCredibilityScore">0/100</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Professional Profile Links -->
-                        <div class="author-profiles" id="authorProfiles" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-link"></i>
-                                Professional Profiles
-                            </h4>
-                            <div class="profiles-grid" id="profilesGrid">
-                                <!-- Profile links will be inserted here -->
-                            </div>
-                        </div>
-
-                        <!-- Quick Stats -->
-                        <div class="author-stats" id="authorStats">
-                            <div class="stat-item">
-                                <span class="stat-number" id="articleCount">0</span>
-                                <span class="stat-label">Articles</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number" id="profilesCount">0</span>
-                                <span class="stat-label">Profiles</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number" id="awardsCount">0</span>
-                                <span class="stat-label">Awards</span>
-                            </div>
-                        </div>
-
-                        <!-- Biography -->
-                        <div class="author-bio" id="authorBio" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-user-circle"></i>
-                                Biography
-                            </h4>
-                            <p class="author-bio-text" id="authorBioText"></p>
-                        </div>
-
-                        <!-- Areas of Expertise -->
-                        <div class="expertise-section" id="expertiseSection" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-brain"></i>
-                                Areas of Expertise
-                            </h4>
-                            <div class="expertise-tags" id="expertiseTags">
-                                <!-- Expertise tags will be inserted here -->
-                            </div>
-                        </div>
-
-                        <!-- Awards (if any) -->
-                        <div class="awards-section" id="awardsSection" style="display: none;">
-                            <h4 class="author-section-title">
-                                <i class="fas fa-trophy"></i>
-                                Awards & Recognition
-                            </h4>
-                            <div class="awards-list" id="awardsList">
-                                <!-- Awards will be inserted here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Debug Info (hidden by default) -->
-                <div id="debugInfo" class="debug-info" style="display: none;">
-                    <h5>Debug Information:</h5>
-                    <pre id="debugData"></pre>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <script>
-        class TruthLensAnalyzer {
-            constructor() {
-                this.form = document.getElementById('analysisForm');
-                this.urlInput = document.getElementById('urlInput');
-                this.textInput = document.getElementById('textInput');
-                this.analyzeBtn = document.getElementById('analyzeBtn');
-                this.resetBtn = document.getElementById('resetBtn');
-                this.resultsSection = document.getElementById('resultsSection');
-                this.progressContainer = document.getElementById('progressContainer');
-                this.progressBar = document.getElementById('progressBar');
-                this.progressPercentage = document.getElementById('progressPercentage');
-                this.progressSteps = document.getElementById('progressSteps');
-                
-                this.init();
-            }
-
-            init() {
-                this.form.addEventListener('submit', this.handleSubmit.bind(this));
-                this.resetBtn.addEventListener('click', this.handleReset.bind(this));
-                
-                // Clear other input when one is filled
-                this.urlInput.addEventListener('input', () => {
-                    if (this.urlInput.value) {
-                        this.textInput.value = '';
-                    }
-                });
-                
-                this.textInput.addEventListener('input', () => {
-                    if (this.textInput.value) {
-                        this.urlInput.value = '';
-                    }
-                });
-            }
-
-            handleReset() {
-                this.urlInput.value = '';
-                this.textInput.value = '';
-                this.resultsSection.classList.remove('show');
-                this.progressContainer.classList.remove('active');
-                this.resetProgress();
-                document.getElementById('authorDropdown').classList.remove('expanded');
-                this.urlInput.focus();
-                this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-
-            async handleSubmit(e) {
-                e.preventDefault();
-                
-                const url = this.urlInput.value.trim();
-                const text = this.textInput.value.trim();
-                
-                if (!url && !text) {
-                    this.showError('Please provide either a URL or article text');
-                    return;
-                }
-
-                this.setLoading(true);
-                this.startProgress();
-                
-                try {
-                    const response = await fetch('/api/analyze', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            url: url || undefined,
-                            text: text || undefined
-                        })
-                    });
-
-                    const data = await response.json();
-                    console.log('Response received:', data);
-                    
-                    if (data.success !== false) {
-                        this.displayResults(data);
-                    } else {
-                        this.showError(data.error || 'Analysis failed');
-                    }
-                    
-                } catch (error) {
-                    console.error('Analysis error:', error);
-                    this.showError('Network error. Please try again.');
-                } finally {
-                    this.setLoading(false);
-                }
-            }
-
-            startProgress() {
-                this.progressContainer.classList.add('active');
-                this.resetProgress();
-                
-                setTimeout(() => {
-                    this.progressContainer.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center'
-                    });
-                }, 100);
-                
-                let currentStep = 0;
-                let progress = 0;
-                
-                const steps = [
-                    { progress: 15, duration: 2000 },
-                    { progress: 30, duration: 3000 },
-                    { progress: 50, duration: 4000 },
-                    { progress: 70, duration: 3500 },
-                    { progress: 85, duration: 2500 },
-                    { progress: 100, duration: 2000 }
-                ];
-
-                const updateProgress = () => {
-                    if (currentStep < steps.length) {
-                        const step = steps[currentStep];
-                        const startProgress = progress;
-                        const endProgress = step.progress;
-                        const duration = step.duration;
-                        const startTime = Date.now();
-                        
-                        this.setActiveStep(currentStep);
-                        
-                        const animate = () => {
-                            const elapsed = Date.now() - startTime;
-                            const progressRatio = Math.min(elapsed / duration, 1);
-                            const easeOut = 1 - Math.pow(1 - progressRatio, 3);
-                            progress = startProgress + (endProgress - startProgress) * easeOut;
-                            
-                            this.updateProgressBar(progress);
-                            
-                            if (progressRatio < 1) {
-                                requestAnimationFrame(animate);
-                            } else {
-                                this.setStepCompleted(currentStep);
-                                currentStep++;
-                                
-                                if (currentStep < steps.length) {
-                                    setTimeout(updateProgress, 200);
-                                }
-                            }
-                        };
-                        
-                        animate();
-                    }
-                };
-                
-                updateProgress();
-            }
-
-            resetProgress() {
-                this.updateProgressBar(0);
-                const steps = this.progressSteps.querySelectorAll('.progress-step');
-                steps.forEach(step => {
-                    step.classList.remove('active', 'completed');
-                });
-            }
-
-            updateProgressBar(progress) {
-                this.progressBar.style.width = progress + '%';
-                this.progressPercentage.textContent = Math.round(progress) + '%';
-            }
-
-            setActiveStep(stepIndex) {
-                const steps = this.progressSteps.querySelectorAll('.progress-step');
-                steps.forEach((step, index) => {
-                    if (index === stepIndex) {
-                        step.classList.add('active');
-                    } else {
-                        step.classList.remove('active');
-                    }
-                });
-            }
-
-            setStepCompleted(stepIndex) {
-                const step = this.progressSteps.querySelector(`[data-step="${stepIndex}"]`);
-                if (step) {
-                    step.classList.remove('active');
-                    step.classList.add('completed');
-                    step.querySelector('.step-icon').innerHTML = '<i class="fas fa-check"></i>';
-                }
-            }
-
-            displayResults(data) {
-                this.progressContainer.classList.remove('active');
-                this.showDebugInfo(data);
-                
-                let trustScore = data.trust_score || 0;
-                let articleSummary = data.article_summary || 'No summary available';
-                let source = data.source || 'Unknown';
-                let author = data.author || 'Unknown';
-                let findingsSummary = data.findings_summary || 'No findings available';
-                
-                this.updateTrustScore(trustScore);
-                
-                const overviewEl = document.getElementById('analysisOverview');
-                overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
-                if (trustScore >= 70) {
-                    overviewEl.classList.add('trust-high');
-                } else if (trustScore >= 40) {
-                    overviewEl.classList.add('trust-medium');
-                } else {
-                    overviewEl.classList.add('trust-low');
-                }
-                
-                document.getElementById('articleSummary').textContent = 
-                    articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
-                document.getElementById('articleSource').textContent = source;
-                document.getElementById('articleAuthor').textContent = author;
-                document.getElementById('findingsSummary').textContent = findingsSummary;
-                
-                displayAuthorCard(data);
-                this.showResults();
-            }
-
-            updateTrustScore(score) {
-                const scoreElement = document.getElementById('trustScore');
-                const labelElement = document.getElementById('trustLabel');
-                
-                scoreElement.textContent = Math.round(score);
-                
-                if (score >= 80) {
-                    labelElement.textContent = 'Highly Trustworthy';
-                    scoreElement.className = 'trust-score-number trust-high';
-                } else if (score >= 60) {
-                    labelElement.textContent = 'Generally Trustworthy';
-                    scoreElement.className = 'trust-score-number trust-medium';
-                } else if (score >= 40) {
-                    labelElement.textContent = 'Moderate Trust';
-                    scoreElement.className = 'trust-score-number trust-medium';
-                } else {
-                    labelElement.textContent = 'Low Trustworthiness';
-                    scoreElement.className = 'trust-score-number trust-low';
-                }
-            }
-
-            showDebugInfo(data) {
-                const debugInfo = document.getElementById('debugInfo');
-                const debugData = document.getElementById('debugData');
-                
-                let articleText = '';
-                
-                if (data.text && data.text !== 'No text') {
-                    articleText = data.text;
-                } else if (data.detailed_analysis?.article_extractor?.data?.text) {
-                    articleText = data.detailed_analysis.article_extractor.data.text;
-                }
-                
-                if (articleText) {
-                    data.text = articleText;
-                }
-                
-                if (window.location.hostname === 'localhost' || window.location.hostname.includes('render')) {
-                    debugData.textContent = JSON.stringify({
-                        author: data.author,
-                        detailed_analysis: data.detailed_analysis,
-                        text_length: articleText ? articleText.length : 0
-                    }, null, 2);
-                    debugInfo.style.display = 'block';
-                }
-            }
-
-            showResults() {
-                this.resultsSection.classList.add('show');
-                this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-
-            setLoading(loading) {
-                this.analyzeBtn.disabled = loading;
-                if (loading) {
-                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
-                } else {
-                    this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
-                }
-            }
-
-            showError(message) {
-                this.progressContainer.classList.remove('active');
-                document.getElementById('articleSummary').textContent = 'Error occurred';
-                document.getElementById('articleSource').textContent = 'Unknown';
-                document.getElementById('articleAuthor').textContent = 'Unknown';
-                document.getElementById('findingsSummary').textContent = message;
-                this.updateTrustScore(0);
-                this.showResults();
-                console.error('Analysis error:', message);
-            }
-        }
-
-        // Toggle Author Dropdown
-        function toggleAuthorDropdown() {
-            const dropdown = document.getElementById('authorDropdown');
-            dropdown.classList.toggle('expanded');
-        }
-
-        // Enhanced Author Display System
-        function displayAuthorCard(data) {
-            console.log('displayAuthorCard called with:', data);
-            
-            let authorName = extractAuthorName(data);
-            console.log('Extracted author name:', authorName);
-            
-            if (!authorName || authorName.trim() === '') {
-                document.getElementById('authorName').textContent = 'No Author Information Available';
-                document.getElementById('authorPosition').textContent = 'Unable to identify article author';
-                document.getElementById('authorCredibilityScore').textContent = '0/100';
-                return;
-            }
-
-            const authorData = extractAuthorData(data);
-            populateAuthorBasicInfo(authorName, authorData, data);
-            populateAuthorProfiles(authorData);
-            populateAuthorStats(authorData);
-            populateAuthorBio(authorData);
-            populateAuthorExpertise(authorData);
-            populateAuthorAwards(authorData);
-        }
-
-        function extractAuthorData(data) {
-            let authorData = {};
-            
-            if (data.detailed_
