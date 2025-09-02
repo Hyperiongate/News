@@ -260,18 +260,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                             </div>
                         </div>
 
-                        <!-- View Full Profile Button -->
-                        <a href="/templates/author-analysis.html" class="view-profile-btn" id="viewProfileBtn">
-                            <i class="fas fa-external-link-alt"></i>
-                            View Full Author Profile
-                        </a>
                     </div>
-                </div>
-
-                <!-- Debug Info Section -->
-                <div class="debug-info" id="debugInfo" style="display: none;">
-                    <h5>Debug Information (Development Only):</h5>
-                    <pre id="debugData"></pre>
                 </div>
             </div>
         </section>
@@ -319,7 +308,6 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 this.progressContainer.classList.remove('active');
                 this.resetProgress();
                 document.getElementById('authorDropdown').classList.remove('expanded');
-                document.getElementById('debugInfo').style.display = 'none';
                 this.urlInput.focus();
                 this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
