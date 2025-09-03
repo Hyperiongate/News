@@ -1142,4 +1142,84 @@ class TruthLensAnalyzer {
             'linkedin': 'LinkedIn',
             'twitter': 'Twitter',
             'wikipedia': 'Wikipedia',
-            'm
+            'muckrack': 'MuckRack',
+            'website': 'Website',
+            'personal_website': 'Website',
+            'scholar': 'Google Scholar'
+        };
+        const key = platform.toLowerCase().replace(/[_\s]/g, '');
+        return names[key] || platform;
+    }
+
+    showDebugInfo(data) {
+        const debugInfo = document.getElementById('debugInfo');
+        const debugData = document.getElementById('debugData');
+        
+        if (window.location.hostname === 'localhost' || 
+            window.location.hostname.includes('render') ||
+            window.location.hostname.includes('onrender')) {
+            
+            debugData.textContent = JSON.stringify({
+                success: data.success,
+                trust_score: data.trust_score,
+                source: data.source,
+                author: data.author,
+                detailed_analysis_keys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
+                response_time: data.processing_time
+            }, null, 2);
+            debugInfo.style.display = 'block';
+        }
+    }
+
+    showResults() {
+        this.resultsSection.classList.add('show');
+        this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    setLoading(loading) {
+        this.analyzeBtn.disabled = loading;
+        if (loading) {
+            this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
+            document.getElementById('loadingOverlay').classList.add('active');
+        } else {
+            this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+    }
+
+    showError(message) {
+        this.progressContainer.classList.remove('active');
+        const errorEl = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        
+        if (errorEl && errorText) {
+            errorText.textContent = message;
+            errorEl.classList.add('active');
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 8000);
+        }
+        
+        console.error('Analysis error:', message);
+    }
+
+    hideError() {
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.classList.remove('active');
+        }
+    }
+}
+
+// Global function for toggling service dropdowns
+window.toggleServiceDropdown = function(serviceName) {
+    const dropdown = document.getElementById(serviceName + 'Dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('expanded');
+    }
+}
+
+// Export for use in other files
+window.TruthLensAnalyzer = TruthLensAnalyzer;
