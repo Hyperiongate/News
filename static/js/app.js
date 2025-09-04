@@ -894,12 +894,17 @@ class TruthLensAnalyzer {
         const sourcesCited = data.source_count || data.sources_cited || 0;
         const quotesUsed = data.quote_count || data.quotes_used || 0;
         
-        // FIXED: Calculate proper transparency score
-        let transparencyScore = data.score || data.transparency_score || 0;
-        if (!transparencyScore && (sourcesCited > 0 || quotesUsed > 0)) {
-            const sourceScore = Math.min(sourcesCited * 8, 50);
-            const quoteScore = Math.min(quotesUsed * 10, 50);
-            transparencyScore = sourceScore + quoteScore;
+        // FIXED: Always calculate transparency score based on sources and quotes
+        // Ignore backend score if we have source/quote data
+        let transparencyScore;
+        if (sourcesCited > 0 || quotesUsed > 0) {
+            // Calculate based on actual sources and quotes
+            const sourceScore = Math.min(sourcesCited * 8, 50);  // Max 50 points
+            const quoteScore = Math.min(quotesUsed * 10, 50);   // Max 50 points
+            transparencyScore = Math.min(sourceScore + quoteScore, 100);
+        } else {
+            // Only use backend score if no source/quote data
+            transparencyScore = data.score || data.transparency_score || 0;
         }
         
         const disclosureLevel = this.getTransparencyLevel(transparencyScore, sourcesCited, quotesUsed);
