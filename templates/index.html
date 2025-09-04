@@ -922,13 +922,14 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
         </div>
     </div>
 
-    <!-- Load Service Templates -->
+    <!-- UPDATED: Load the two JavaScript files in the correct order -->
+    <!-- Load Service Templates FIRST -->
     <script src="/static/js/service-templates.js"></script>
     
-    <!-- Main Application JavaScript -->
-    <script src="/static/js/app.js"></script>
+    <!-- Load Main Application Core SECOND -->
+    <script src="/static/js/app-core.js"></script>
     
-    <!-- Source Rankings JavaScript -->
+    <!-- Source Rankings JavaScript (keep existing) -->
     <script>
         // Top news sources with their typical credibility scores
         const TOP_SOURCES = [
@@ -1194,7 +1195,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             return data.score || data.transparency_score || 0;
         }
 
-        // Override the existing displayResults method to include enhanced display
+        // Initialize application with updated file structure
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize the TruthLens analyzer when the page loads
             const analyzer = new TruthLensAnalyzer();
