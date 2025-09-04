@@ -2,7 +2,7 @@
  * TruthLens News Analyzer - Complete Enhanced Version with Source Rankings
  * All 7 issues fixed with AI-powered analysis display + Source Rankings Feature
  */
-
+ 
 class TruthLensAnalyzer {
     constructor() {
         this.form = document.getElementById('analysisForm');
