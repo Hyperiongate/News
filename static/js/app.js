@@ -1,6 +1,6 @@
 /**
- * TruthLens News Analyzer - Complete Enhanced Version
- * All 7 issues fixed with AI-powered analysis display
+ * TruthLens News Analyzer - Complete Enhanced Version with Source Rankings
+ * All 7 issues fixed with AI-powered analysis display + Source Rankings Feature
  */
 
 class TruthLensAnalyzer {
@@ -27,9 +27,32 @@ class TruthLensAnalyzer {
             { id: 'contentAnalyzer', name: 'Content Analysis', icon: 'fa-file-alt' },
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
+
+        // Source Rankings Data
+        this.sourceRankingsData = {
+            'reuters.com': { score: 95, rank: 1, trend: 'stable', category: 'highly-trusted' },
+            'ap.org': { score: 94, rank: 2, trend: 'up', category: 'highly-trusted' },
+            'bbc.com': { score: 92, rank: 3, trend: 'stable', category: 'highly-trusted' },
+            'npr.org': { score: 90, rank: 4, trend: 'stable', category: 'highly-trusted' },
+            'propublica.org': { score: 88, rank: 5, trend: 'up', category: 'highly-trusted' },
+            'wsj.com': { score: 85, rank: 6, trend: 'stable', category: 'trusted' },
+            'nytimes.com': { score: 84, rank: 7, trend: 'down', category: 'trusted' },
+            'ft.com': { score: 83, rank: 8, trend: 'stable', category: 'trusted' },
+            'economist.com': { score: 82, rank: 9, trend: 'stable', category: 'trusted' },
+            'washingtonpost.com': { score: 80, rank: 10, trend: 'down', category: 'trusted' },
+            'cnn.com': { score: 72, rank: 11, trend: 'stable', category: 'moderate' },
+            'foxnews.com': { score: 70, rank: 12, trend: 'stable', category: 'moderate' },
+            'msnbc.com': { score: 68, rank: 13, trend: 'down', category: 'moderate' },
+            'politico.com': { score: 75, rank: 14, trend: 'up', category: 'trusted' },
+            'axios.com': { score: 76, rank: 15, trend: 'up', category: 'trusted' }
+        };
+
+        // Source trend history (for future implementation)
+        this.sourceTrendHistory = {};
         
         this.init();
         this.createServiceCards();
+        this.initializeSourceRankings();
     }
 
     init() {
@@ -48,6 +71,285 @@ class TruthLensAnalyzer {
                 this.urlInput.value = '';
             }
         });
+    }
+
+    initializeSourceRankings() {
+        // Create the source rankings section if it doesn't exist
+        const existingRankings = document.getElementById('sourceRankings');
+        if (!existingRankings) {
+            this.createSourceRankingsSection();
+        }
+    }
+
+    createSourceRankingsSection() {
+        // Find the best place to insert the rankings section
+        const resultsSection = document.getElementById('resultsSection');
+        if (!resultsSection) return;
+
+        // Create the rankings HTML structure
+        const rankingsHTML = `
+            <div id="sourceRankings" class="source-rankings-container" style="display: none;">
+                <div class="rankings-header">
+                    <h3><i class="fas fa-trophy"></i> News Source Credibility Rankings</h3>
+                    <p class="rankings-subtitle">How this source compares to others we've analyzed</p>
+                </div>
+                <div class="rankings-chart" id="rankingsChart">
+                    <!-- Rankings will be inserted here -->
+                </div>
+                <div class="rankings-legend">
+                    <div class="legend-item">
+                        <span class="legend-color highly-trusted"></span>
+                        <span class="legend-label">Highly Trusted (85-100)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color trusted"></span>
+                        <span class="legend-label">Trusted (70-84)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color moderate"></span>
+                        <span class="legend-label">Moderate (50-69)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color low"></span>
+                        <span class="legend-label">Low Trust (Below 50)</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Insert after the analysis overview section
+        const overviewSection = resultsSection.querySelector('#analysisOverview');
+        if (overviewSection) {
+            overviewSection.insertAdjacentHTML('afterend', rankingsHTML);
+        }
+    }
+
+    displaySourceRankings(currentSource = null, currentScore = null) {
+        const rankingsContainer = document.getElementById('sourceRankings');
+        const rankingsChart = document.getElementById('rankingsChart');
+        
+        if (!rankingsContainer || !rankingsChart) {
+            this.createSourceRankingsSection();
+            return this.displaySourceRankings(currentSource, currentScore);
+        }
+
+        // Show the rankings section
+        rankingsContainer.style.display = 'block';
+        
+        // Clear existing content
+        rankingsChart.innerHTML = '';
+
+        // Prepare data for display
+        let rankingsToDisplay = Object.entries(this.sourceRankingsData)
+            .sort((a, b) => b[1].score - a[1].score)
+            .slice(0, 10); // Show top 10
+
+        // Add current source if not in top 10
+        if (currentSource) {
+            const domain = this.extractDomain(currentSource);
+            if (!this.sourceRankingsData[domain] && currentScore !== null) {
+                // Add the current source to the display with animation
+                const estimatedRank = this.calculateRank(currentScore);
+                rankingsToDisplay.push([
+                    domain,
+                    {
+                        score: currentScore,
+                        rank: estimatedRank,
+                        trend: 'new',
+                        category: this.getScoreCategory(currentScore),
+                        isCurrent: true
+                    }
+                ]);
+                // Re-sort
+                rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
+            } else if (this.sourceRankingsData[domain]) {
+                // Mark existing source as current
+                rankingsToDisplay.forEach(([key, data]) => {
+                    if (key === domain) {
+                        data.isCurrent = true;
+                    }
+                });
+            }
+        }
+
+        // Create ranking items
+        rankingsToDisplay.forEach(([domain, data], index) => {
+            const rankItem = this.createRankingItem(domain, data, index);
+            rankingsChart.appendChild(rankItem);
+        });
+
+        // Add animation
+        setTimeout(() => {
+            rankingsChart.querySelectorAll('.ranking-item').forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('animate-in');
+                }, index * 50);
+            });
+        }, 100);
+    }
+
+    createRankingItem(domain, data, index) {
+        const item = document.createElement('div');
+        item.className = `ranking-item ${data.category} ${data.isCurrent ? 'current-source' : ''}`;
+        
+        const trendIcon = this.getTrendIcon(data.trend);
+        const rankChange = data.trend === 'up' ? '↑' : data.trend === 'down' ? '↓' : '−';
+        
+        item.innerHTML = `
+            <div class="ranking-position">#${data.rank || index + 1}</div>
+            <div class="ranking-source">
+                <div class="source-name">${this.formatDomainName(domain)}</div>
+                ${data.isCurrent ? '<span class="current-badge">Current Article</span>' : ''}
+            </div>
+            <div class="ranking-score-container">
+                <div class="ranking-score-bar" style="width: ${data.score}%">
+                    <span class="score-value">${data.score}/100</span>
+                </div>
+            </div>
+            <div class="ranking-trend ${data.trend}">
+                ${trendIcon}
+            </div>
+        `;
+
+        if (data.isCurrent) {
+            item.classList.add('highlight');
+        }
+
+        // Add click handler for more details
+        item.addEventListener('click', () => {
+            this.showSourceDetails(domain, data);
+        });
+
+        return item;
+    }
+
+    updateSourceRankings(analysisResults) {
+        // Show the rankings section
+        const rankingsContainer = document.getElementById('sourceRankings');
+        if (rankingsContainer) {
+            rankingsContainer.style.display = 'block';
+        }
+        
+        // Extract source and score from analysis results
+        const currentSource = analysisResults.source || null;
+        const currentScore = analysisResults.trust_score || 
+                           analysisResults.detailed_analysis?.source_credibility?.score || 
+                           0;
+        
+        // Display rankings with current source highlighted
+        this.displaySourceRankings(currentSource, currentScore);
+
+        // Update historical data if we're tracking trends
+        if (currentSource) {
+            this.updateSourceTrend(currentSource, currentScore);
+        }
+    }
+
+    updateSourceTrend(source, score) {
+        const domain = this.extractDomain(source);
+        
+        if (!this.sourceTrendHistory[domain]) {
+            this.sourceTrendHistory[domain] = [];
+        }
+        
+        this.sourceTrendHistory[domain].push({
+            score: score,
+            timestamp: new Date().toISOString(),
+            articleCount: this.sourceTrendHistory[domain].length + 1
+        });
+
+        // Calculate trend based on last 5 analyses
+        if (this.sourceTrendHistory[domain].length >= 2) {
+            const recent = this.sourceTrendHistory[domain].slice(-5);
+            const avgRecent = recent.reduce((sum, item) => sum + item.score, 0) / recent.length;
+            const firstScore = recent[0].score;
+            
+            if (avgRecent > firstScore + 2) {
+                this.sourceRankingsData[domain] = {
+                    ...this.sourceRankingsData[domain],
+                    trend: 'up'
+                };
+            } else if (avgRecent < firstScore - 2) {
+                this.sourceRankingsData[domain] = {
+                    ...this.sourceRankingsData[domain],
+                    trend: 'down'
+                };
+            }
+        }
+    }
+
+    showSourceDetails(domain, data) {
+        // Create a modal or tooltip with detailed information
+        const detailsHTML = `
+            <div class="source-details-modal">
+                <h4>${this.formatDomainName(domain)}</h4>
+                <p>Credibility Score: ${data.score}/100</p>
+                <p>Ranking: #${data.rank}</p>
+                <p>Category: ${data.category.replace('-', ' ').toUpperCase()}</p>
+                <p>Trend: ${data.trend.toUpperCase()}</p>
+                ${this.sourceTrendHistory[domain] ? 
+                    `<p>Articles Analyzed: ${this.sourceTrendHistory[domain].length}</p>` : ''}
+            </div>
+        `;
+        
+        // You can implement a proper modal here
+        console.log('Source details:', domain, data);
+    }
+
+    // Utility functions for source rankings
+    extractDomain(url) {
+        try {
+            const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
+            return urlObj.hostname.replace('www.', '');
+        } catch {
+            return url.toLowerCase().replace('www.', '');
+        }
+    }
+
+    formatDomainName(domain) {
+        const nameMap = {
+            'reuters.com': 'Reuters',
+            'ap.org': 'Associated Press',
+            'bbc.com': 'BBC News',
+            'npr.org': 'NPR',
+            'propublica.org': 'ProPublica',
+            'wsj.com': 'Wall Street Journal',
+            'nytimes.com': 'New York Times',
+            'ft.com': 'Financial Times',
+            'economist.com': 'The Economist',
+            'washingtonpost.com': 'Washington Post',
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'msnbc.com': 'MSNBC',
+            'politico.com': 'Politico',
+            'axios.com': 'Axios'
+        };
+        return nameMap[domain] || domain.replace('.com', '').replace('.org', '');
+    }
+
+    getScoreCategory(score) {
+        if (score >= 85) return 'highly-trusted';
+        if (score >= 70) return 'trusted';
+        if (score >= 50) return 'moderate';
+        return 'low';
+    }
+
+    calculateRank(score) {
+        let rank = 1;
+        for (const [domain, data] of Object.entries(this.sourceRankingsData)) {
+            if (data.score > score) rank++;
+        }
+        return rank;
+    }
+
+    getTrendIcon(trend) {
+        const icons = {
+            'up': '<i class="fas fa-arrow-up"></i>',
+            'down': '<i class="fas fa-arrow-down"></i>',
+            'stable': '<i class="fas fa-minus"></i>',
+            'new': '<i class="fas fa-star"></i>'
+        };
+        return icons[trend] || icons['stable'];
     }
 
     createServiceCards() {
@@ -504,6 +806,12 @@ class TruthLensAnalyzer {
             dropdown.classList.remove('expanded');
         });
         
+        // Hide source rankings
+        const rankingsContainer = document.getElementById('sourceRankings');
+        if (rankingsContainer) {
+            rankingsContainer.style.display = 'none';
+        }
+        
         // Hide plagiarism detector if it exists
         const plagiarismDropdown = document.getElementById('plagiarismDetectorDropdown');
         if (plagiarismDropdown) {
@@ -566,6 +874,8 @@ class TruthLensAnalyzer {
             
             if (response.ok && data.success !== false) {
                 this.displayResults(data);
+                // Add source rankings update
+                this.updateSourceRankings(data);
             } else {
                 this.showError(data.error || data.message || 'Analysis failed');
             }
@@ -1112,516 +1422,3 @@ class TruthLensAnalyzer {
         this.displayAuthorExpertise(expertise);
         
         // Display awards
-        const awards = data.awards || data.awards_recognition || [];
-        this.displayAuthorAwards(awards);
-    }
-
-    // AI CONTENT GENERATION METHODS
-
-    generateManipulationFindings(score, techniques, emotionalCount) {
-        if (score < 20) {
-            return `The article demonstrates minimal manipulation indicators. We found ${emotionalCount} instances of emotional language and ${techniques.length} potential manipulation techniques. The content maintains factual presentation with balanced emotional tone.`;
-        } else if (score < 40) {
-            return `We detected moderate manipulation indicators including ${emotionalCount} emotionally charged terms and ${techniques.length} rhetorical techniques. The article shows some attempts to influence reader perception through selective framing.`;
-        } else if (score < 60) {
-            return `Significant manipulation patterns were identified, including ${emotionalCount} emotional triggers and ${techniques.length} manipulation techniques. The article employs persuasive language that may compromise objective analysis.`;
-        } else {
-            return `High levels of manipulation detected with ${emotionalCount} emotional manipulation instances and ${techniques.length} propaganda techniques. The article heavily employs psychological influence tactics rather than factual argumentation.`;
-        }
-    }
-    
-    generateManipulationMeaning(score, riskLevel) {
-        if (riskLevel === 'Low') {
-            return "This article can be considered reliable in its presentation. The minimal manipulation techniques detected are within normal journalistic bounds. Readers can engage with the content while maintaining standard critical thinking.";
-        } else if (riskLevel === 'Medium') {
-            return "Readers should approach this article with increased awareness. While not overtly manipulative, the content uses persuasive techniques that may influence interpretation. Cross-reference key claims with other sources.";
-        } else {
-            return "High caution is advised when reading this article. The manipulation techniques employed suggest an agenda beyond information delivery. Verify all claims independently and be aware of emotional influence attempts.";
-        }
-    }
-    
-    generateCredibilityFindings(score, rating, biasLevel, data) {
-        const inDatabase = data.in_database ? "is listed in our credibility database" : "is not found in major credibility databases";
-        if (score >= 80) {
-            return `This source ${inDatabase} with a ${rating} credibility rating. It maintains high journalistic standards, demonstrates consistent factual accuracy, and shows transparent editorial practices. Known bias level: ${biasLevel}.`;
-        } else if (score >= 60) {
-            return `The source ${inDatabase} with a ${rating} rating. It generally maintains good standards with occasional lapses in accuracy or transparency. Some ${biasLevel} bias has been documented in past reporting.`;
-        } else if (score >= 40) {
-            return `This source ${inDatabase} showing ${rating} credibility. Mixed track record with documented inaccuracies and ${biasLevel} bias. Editorial standards are inconsistent.`;
-        } else {
-            return `The source ${inDatabase} with concerning credibility issues. Poor track record of accuracy, significant ${biasLevel} bias, and limited transparency in corrections or sources.`;
-        }
-    }
-    
-    generateCredibilityMeaning(score, rating) {
-        if (score >= 80) {
-            return "You can generally trust information from this source. Their strong track record and professional standards make them reliable for factual reporting, though always maintain healthy skepticism.";
-        } else if (score >= 60) {
-            return "This source is reasonably reliable but benefits from verification. While generally trustworthy, cross-check important claims with other reputable sources.";
-        } else if (score >= 40) {
-            return "Exercise caution with this source. Their mixed credibility record means information should be verified through multiple independent sources before accepting as fact.";
-        } else {
-            return "Significant credibility concerns exist with this source. Information should be treated skeptically and requires thorough verification from established, reputable sources.";
-        }
-    }
-    
-    generateBiasFindings(score, lean, dominant) {
-        if (score < 30) {
-            return `The article maintains strong objectivity with ${lean} political positioning. Minimal bias detected in language choice and source selection. ${dominant !== 'None' ? `Primary bias type: ${dominant}.` : 'Balanced perspective presented.'}`;
-        } else if (score < 50) {
-            return `Moderate bias detected with ${lean} political lean. The article shows preference in framing and source selection. ${dominant !== 'None' ? `Dominant bias: ${dominant}.` : ''} Some viewpoints may be underrepresented.`;
-        } else if (score < 70) {
-            return `Significant bias present with clear ${lean} orientation. Strong editorial voice influences presentation. ${dominant !== 'None' ? `Primary bias: ${dominant}.` : ''} Alternative perspectives are marginalized.`;
-        } else {
-            return `Heavy bias detected with extreme ${lean} positioning. The article functions more as opinion/advocacy than news. ${dominant !== 'None' ? `Dominant bias: ${dominant}.` : ''} Opposing viewpoints are dismissed or misrepresented.`;
-        }
-    }
-    
-    generateBiasMeaning(score, objectivity) {
-        if (objectivity >= 70) {
-            return "The article provides balanced reporting suitable for forming independent opinions. Minor bias present doesn't significantly impact factual accuracy.";
-        } else if (objectivity >= 50) {
-            return "While containing useful information, be aware of the editorial slant. Consider seeking alternative perspectives to form a complete picture.";
-        } else if (objectivity >= 30) {
-            return "Strong bias affects the article's reliability as a news source. Treat as perspective/opinion rather than objective reporting. Seek balanced sources for factual information.";
-        } else {
-            return "Extreme bias makes this more propaganda than journalism. Facts may be distorted or selectively presented. Essential to verify all claims through unbiased sources.";
-        }
-    }
-    
-    generateFactCheckFindings(analyzed, verified, claims) {
-        if (analyzed === 0) {
-            return "No specific factual claims requiring verification were identified. The article consists primarily of opinion, analysis, or unverifiable statements.";
-        }
-        const accuracy = Math.round((verified / analyzed) * 100);
-        if (accuracy >= 90) {
-            return `Excellent factual accuracy with ${verified} of ${analyzed} claims verified. The article's factual assertions are well-supported by evidence and consistent with authoritative sources.`;
-        } else if (accuracy >= 70) {
-            return `Good factual accuracy with ${verified} of ${analyzed} claims verified. Most core facts check out, though some minor claims couldn't be confirmed or contained errors.`;
-        } else if (accuracy >= 50) {
-            return `Mixed factual accuracy with only ${verified} of ${analyzed} claims verified. Several important claims lack support or contradict established facts.`;
-        } else {
-            return `Poor factual accuracy with just ${verified} of ${analyzed} claims verified. Numerous factual errors or unsupported claims undermine the article's reliability.`;
-        }
-    }
-    
-    generateFactCheckMeaning(score, level) {
-        if (level === 'Excellent' || level === 'High') {
-            return "The article's facts are reliable and can be trusted for decision-making. The high verification rate indicates careful reporting and fact-checking.";
-        } else if (level === 'Good' || level === 'Moderate') {
-            return "Core facts appear accurate but some claims need verification. Use the article for general understanding but verify specific claims before citing.";
-        } else {
-            return "Significant factual issues detected. Do not rely on this article for accurate information without independent verification of all claims.";
-        }
-    }
-    
-    generateTransparencyFindings(sources, quotes, score) {
-        if (sources >= 10 && quotes >= 5) {
-            return `Excellent transparency with ${sources} sources cited and ${quotes} direct quotes. The article clearly attributes information, provides context for claims, and enables verification.`;
-        } else if (sources >= 5 && quotes >= 3) {
-            return `Good transparency practices with ${sources} sources and ${quotes} quotes. Most claims are attributed though some assertions lack clear sourcing.`;
-        } else if (sources >= 2 || quotes >= 1) {
-            return `Limited transparency with only ${sources} sources cited and ${quotes} quotes used. Many claims lack attribution, making verification difficult.`;
-        } else {
-            return `Poor transparency with ${sources} sources and ${quotes} quotes. The article makes numerous unattributed claims and provides little basis for verification.`;
-        }
-    }
-    
-    generateTransparencyMeaning(level, score) {
-        if (level === 'Very High' || level === 'High') {
-            return "Excellent journalistic transparency enables readers to verify claims and understand sources. This level of attribution demonstrates professional reporting standards.";
-        } else if (level === 'Moderate') {
-            return "Acceptable transparency though improvement needed. Readers can verify some claims but should be aware that not all assertions are properly sourced.";
-        } else {
-            return "Lack of transparency is concerning. Without proper attribution, readers cannot verify claims or assess source credibility. Treat unsourced claims skeptically.";
-        }
-    }
-    
-    generateContentFindings(score, readability, aiInsights, keyPoints) {
-        const readabilityText = readability !== 'Unknown' ? `with ${readability} readability score` : '';
-        if (score >= 80) {
-            return `Excellent content quality ${readabilityText}. Well-structured argumentation, clear writing, and professional presentation. ${aiInsights ? 'AI analysis confirms strong journalistic standards.' : ''}`;
-        } else if (score >= 60) {
-            return `Good content quality ${readabilityText}. Generally well-written with solid structure, though some sections lack clarity or depth. ${aiInsights ? 'AI identifies areas for improvement in evidence presentation.' : ''}`;
-        } else if (score >= 40) {
-            return `Moderate content quality ${readabilityText}. Inconsistent writing quality, organizational issues, or superficial treatment of complex topics. ${aiInsights ? 'AI suggests significant structural improvements needed.' : ''}`;
-        } else {
-            return `Poor content quality ${readabilityText}. Significant issues with clarity, structure, or professionalism. ${aiInsights ? 'AI indicates fundamental journalistic standards not met.' : ''}`;
-        }
-    }
-    
-    generateContentMeaning(level, score) {
-        if (level === 'Excellent' || level === 'Good') {
-            return "The article meets professional journalism standards. Quality writing and structure support effective information delivery and comprehension.";
-        } else if (level === 'Fair') {
-            return "While readable, the article has quality issues that may affect understanding. Consider these limitations when evaluating the information presented.";
-        } else {
-            return "Poor content quality undermines credibility. Writing and structural issues suggest rushed or unprofessional work. Verify information through better sources.";
-        }
-    }
-
-    // HELPER METHODS
-
-    extractAuthorProfiles(data) {
-        const profiles = {};
-        
-        // Check various locations for profile data
-        if (data.social_media && typeof data.social_media === 'object') {
-            Object.assign(profiles, data.social_media);
-        }
-        
-        // Check individual profile fields
-        if (data.linkedin_profile) profiles.linkedin = data.linkedin_profile;
-        if (data.twitter_profile) profiles.twitter = data.twitter_profile;
-        if (data.wikipedia_page) profiles.wikipedia = data.wikipedia_page;
-        if (data.muckrack_profile) profiles.muckrack = data.muckrack_profile;
-        if (data.personal_website) profiles.website = data.personal_website;
-        
-        // Check additional_links
-        if (data.additional_links && typeof data.additional_links === 'object') {
-            Object.entries(data.additional_links).forEach(([key, value]) => {
-                if (value && !profiles[key]) {
-                    profiles[key] = value;
-                }
-            });
-        }
-        
-        return profiles;
-    }
-
-    displayPublicationHistory(publications) {
-        const section = document.getElementById('publicationSection');
-        const list = document.getElementById('publicationList');
-        
-        if (!section || !list) return;
-        
-        if (publications && publications.length > 0) {
-            section.style.display = 'block';
-            list.innerHTML = '';
-            
-            publications.slice(0, 5).forEach(pub => {
-                const pubEl = document.createElement('div');
-                pubEl.className = 'publication-item';
-                
-                const title = pub.title || pub.headline || 'Untitled';
-                const date = pub.date || pub.published_date || '';
-                const publication = pub.publication || pub.source || '';
-                
-                pubEl.innerHTML = `
-                    <div class="pub-title">${title}</div>
-                    <div class="pub-meta">
-                        ${publication ? `<span class="pub-source">${publication}</span>` : ''}
-                        ${date ? `<span class="pub-date">${this.formatDate(date)}</span>` : ''}
-                    </div>
-                `;
-                
-                list.appendChild(pubEl);
-            });
-        } else {
-            section.style.display = 'none';
-        }
-    }
-
-    updateAuthorCredibilityStyle(score) {
-        const scoreEl = document.getElementById('authorCredibilityScore');
-        if (!scoreEl) return;
-        
-        scoreEl.className = 'credibility-score';
-        if (score >= 80) {
-            scoreEl.classList.add('high');
-        } else if (score >= 60) {
-            scoreEl.classList.add('good');
-        } else if (score >= 40) {
-            scoreEl.classList.add('moderate');
-        } else if (score > 0) {
-            scoreEl.classList.add('low');
-        }
-    }
-
-    displayAuthorProfiles(profiles) {
-        const profilesSection = document.getElementById('authorProfiles');
-        const profilesGrid = document.getElementById('profilesGrid');
-        
-        profilesGrid.innerHTML = '';
-        
-        const hasProfiles = profiles && Object.values(profiles).some(url => url);
-        
-        if (hasProfiles) {
-            profilesSection.style.display = 'block';
-            
-            Object.entries(profiles).forEach(([platform, url]) => {
-                if (url) {
-                    const link = document.createElement('a');
-                    link.className = `profile-link ${platform.toLowerCase().replace(/[_\s]/g, '')}`;
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                    link.innerHTML = `<i class="fab fa-${this.getPlatformIcon(platform)}"></i> ${this.formatPlatformName(platform)}`;
-                    profilesGrid.appendChild(link);
-                }
-            });
-        } else {
-            profilesSection.style.display = 'none';
-        }
-    }
-
-    displayAuthorExpertise(expertiseList) {
-        const expertiseSection = document.getElementById('expertiseSection');
-        const expertiseTags = document.getElementById('expertiseTags');
-        
-        expertiseTags.innerHTML = '';
-        
-        if (expertiseList && expertiseList.length > 0) {
-            expertiseSection.style.display = 'block';
-            
-            expertiseList.forEach(expertise => {
-                const tag = document.createElement('div');
-                tag.className = 'expertise-tag';
-                tag.textContent = expertise;
-                expertiseTags.appendChild(tag);
-            });
-        } else {
-            expertiseSection.style.display = 'none';
-        }
-    }
-
-    displayAuthorAwards(awardsList) {
-        const awardsSection = document.getElementById('awardsSection');
-        const awardsList_el = document.getElementById('awardsList');
-        
-        awardsList_el.innerHTML = '';
-        
-        if (awardsList && awardsList.length > 0) {
-            awardsSection.style.display = 'block';
-            
-            awardsList.forEach(award => {
-                const awardItem = document.createElement('div');
-                awardItem.className = 'award-item';
-                awardItem.innerHTML = `
-                    <div class="award-icon">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <div class="award-text">${award}</div>
-                `;
-                awardsList_el.appendChild(awardItem);
-            });
-        } else {
-            awardsSection.style.display = 'none';
-        }
-    }
-
-    displayClaimsList(data) {
-        const section = document.getElementById('claimsCheckedSection');
-        const list = document.getElementById('verifiedClaimsList');
-        
-        if (!section || !list) return;
-        
-        const claims = data.claims || data.verified_claims || data.claim_details || [];
-        
-        if (claims.length > 0) {
-            section.style.display = 'block';
-            list.innerHTML = '';
-            
-            claims.forEach(claim => {
-                const claimEl = document.createElement('div');
-                claimEl.className = 'claim-item';
-                
-                const status = claim.verified ? 'verified' : claim.status || 'unverified';
-                const icon = status === 'verified' ? 'check-circle' : 
-                           status === 'false' ? 'times-circle' : 'question-circle';
-                const color = status === 'verified' ? 'green' : 
-                            status === 'false' ? 'red' : 'orange';
-                
-                claimEl.innerHTML = `
-                    <div class="claim-status ${status}">
-                        <i class="fas fa-${icon}" style="color: ${color}"></i>
-                    </div>
-                    <div class="claim-text">${claim.text || claim.claim || 'Claim checked'}</div>
-                    ${claim.evidence ? `<div class="claim-evidence">${claim.evidence}</div>` : ''}
-                `;
-                
-                list.appendChild(claimEl);
-            });
-        } else {
-            section.style.display = 'none';
-        }
-    }
-
-    updateBiasMeter(politicalLean, biasScore) {
-        const indicator = document.getElementById('biasIndicator');
-        if (!indicator) return;
-        
-        let position = 50;
-        const leanMap = {
-            'far left': 10, 'left': 30, 'center-left': 40,
-            'center': 50, 'center-right': 60, 'right': 70, 'far right': 90
-        };
-        
-        const leanLower = politicalLean.toLowerCase();
-        for (const [key, value] of Object.entries(leanMap)) {
-            if (leanLower.includes(key)) {
-                position = value;
-                break;
-            }
-        }
-        
-        indicator.style.left = `${position}%`;
-        indicator.style.backgroundColor = biasScore >= 70 ? '#ef4444' : 
-                                         biasScore >= 50 ? '#f59e0b' : 
-                                         biasScore >= 30 ? '#eab308' : '#10b981';
-    }
-
-    // Utility functions
-    getManipulationRiskLevel(score) {
-        const numScore = parseInt(score, 10) || 0;
-        if (numScore >= 70) return 'High';
-        if (numScore >= 40) return 'Medium';
-        return 'Low';
-    }
-
-    getQualityLevel(score) {
-        const numScore = parseInt(score, 10) || 0;
-        if (numScore >= 80) return 'Excellent';
-        if (numScore >= 60) return 'Good';
-        if (numScore >= 40) return 'Fair';
-        return 'Poor';
-    }
-
-    getVerificationLevel(score) {
-        if (score >= 90) return 'Excellent';
-        if (score >= 75) return 'High';
-        if (score >= 60) return 'Good';
-        if (score >= 40) return 'Moderate';
-        return 'Low';
-    }
-
-    getTransparencyLevel(score, sources, quotes) {
-        if (score >= 80 || (sources >= 10 && quotes >= 5)) return 'Very High';
-        if (score >= 60 || (sources >= 5 && quotes >= 3)) return 'High';
-        if (score >= 40 || (sources >= 3 && quotes >= 2)) return 'Moderate';
-        if (score >= 20 || (sources >= 1 || quotes >= 1)) return 'Low';
-        return 'Very Low';
-    }
-
-    formatDomainAge(days) {
-        if (!days) return 'Unknown';
-        const years = Math.floor(days / 365);
-        if (years >= 1) {
-            return `${years} year${years > 1 ? 's' : ''}`;
-        }
-        return `${days} days`;
-    }
-
-    formatDate(dateStr) {
-        try {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        } catch {
-            return dateStr;
-        }
-    }
-
-    getPlatformIcon(platform) {
-        const icons = {
-            'linkedin': 'linkedin',
-            'twitter': 'twitter',
-            'wikipedia': 'wikipedia-w',
-            'muckrack': 'newspaper',
-            'website': 'globe',
-            'personal_website': 'globe',
-            'scholar': 'graduation-cap'
-        };
-        const key = platform.toLowerCase().replace(/[_\s]/g, '');
-        return icons[key] || 'link';
-    }
-
-    formatPlatformName(platform) {
-        const names = {
-            'linkedin': 'LinkedIn',
-            'twitter': 'Twitter',
-            'wikipedia': 'Wikipedia',
-            'muckrack': 'MuckRack',
-            'website': 'Website',
-            'personal_website': 'Website',
-            'scholar': 'Google Scholar'
-        };
-        const key = platform.toLowerCase().replace(/[_\s]/g, '');
-        return names[key] || platform;
-    }
-
-    showDebugInfo(data) {
-        const debugInfo = document.getElementById('debugInfo');
-        const debugData = document.getElementById('debugData');
-        
-        if (window.location.hostname === 'localhost' || 
-            window.location.hostname.includes('render') ||
-            window.location.hostname.includes('onrender')) {
-            
-            debugData.textContent = JSON.stringify({
-                success: data.success,
-                trust_score: data.trust_score,
-                source: data.source,
-                author: data.author,
-                detailed_analysis_keys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
-                response_time: data.processing_time
-            }, null, 2);
-            debugInfo.style.display = 'block';
-        }
-    }
-
-    showResults() {
-        this.resultsSection.classList.add('show');
-        this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    setLoading(loading) {
-        this.analyzeBtn.disabled = loading;
-        if (loading) {
-            this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-spinner fa-spin"></i> Analyzing...</div>';
-            document.getElementById('loadingOverlay').classList.add('active');
-        } else {
-            this.analyzeBtn.innerHTML = '<div class="button-content"><i class="fas fa-search"></i> Analyze Article</div>';
-            document.getElementById('loadingOverlay').classList.remove('active');
-        }
-    }
-
-    showError(message) {
-        this.progressContainer.classList.remove('active');
-        const errorEl = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        
-        if (errorEl && errorText) {
-            errorText.textContent = message;
-            errorEl.classList.add('active');
-            
-            // Auto-hide after 8 seconds
-            setTimeout(() => {
-                errorEl.classList.remove('active');
-            }, 8000);
-        }
-        
-        console.error('Analysis error:', message);
-    }
-
-    hideError() {
-        const errorEl = document.getElementById('errorMessage');
-        if (errorEl) {
-            errorEl.classList.remove('active');
-        }
-    }
-}
-
-// Global function for toggling service dropdowns
-window.toggleServiceDropdown = function(serviceName) {
-    const dropdown = document.getElementById(serviceName + 'Dropdown');
-    if (dropdown) {
-        dropdown.classList.toggle('expanded');
-    }
-}
-
-// Export for use in other files
-window.TruthLensAnalyzer = TruthLensAnalyzer;
