@@ -1,6 +1,6 @@
 """
 Complete Enhanced NewsAnalyzer with Backward Compatibility
-CRITICAL: Maintains ALL existing functionality plus enhancements
+CRITICAL FIX: Fixed content extraction check - now looks for 'text' field
 Works with existing app.py without any changes
 """
 
@@ -234,19 +234,24 @@ class NewsAnalyzer:
         )
     
     def _extract_article_data(self, pipeline_results):
-        """Extract article data from pipeline results"""
+        """Extract article data from pipeline results - FIXED"""
         article = pipeline_results.get('article', {})
+        
+        # CRITICAL FIX: Map 'text' to 'content' for backward compatibility
+        content = article.get('text', '') or article.get('content', '')
         
         # Ensure all expected fields exist
         return {
             'title': article.get('title', ''),
-            'content': article.get('content', ''),
+            'content': content,  # This is what the rest of the code expects
+            'text': content,     # Keep both for compatibility
             'source': article.get('source', ''),
             'domain': article.get('domain', ''),
             'author': article.get('author', 'Unknown'),
-            'published_date': article.get('published_date', ''),
+            'published_date': article.get('published_date', '') or article.get('publish_date', ''),
             'url': article.get('url', ''),
-            'excerpt': article.get('excerpt', '') or article.get('content', '')[:500]
+            'excerpt': article.get('excerpt', '') or content[:500] if content else '',
+            'word_count': article.get('word_count', 0)
         }
     
     def _extract_detailed_analysis(self, pipeline_results):
@@ -273,7 +278,8 @@ class NewsAnalyzer:
     def _detect_paywall(self, pipeline_results):
         """Detect if article is behind paywall"""
         article = pipeline_results.get('article', {})
-        content = article.get('content', '')
+        # Check both 'text' and 'content' fields
+        content = article.get('text', '') or article.get('content', '')
         title = article.get('title', '')
         error = pipeline_results.get('error', '').lower()
         
@@ -306,7 +312,7 @@ class NewsAnalyzer:
         return False
     
     def _assess_extraction_quality(self, article_data, detailed_analysis):
-        """Assess quality of extraction"""
+        """Assess quality of extraction - FIXED"""
         # Count successful services
         successful_services = 0
         total_services = len(self.STANDARD_WEIGHTS)
@@ -319,20 +325,26 @@ class NewsAnalyzer:
             if score > 0:
                 successful_services += 1
         
-        # Check content quality
-        content = article_data.get('content', '')
+        # CRITICAL FIX: Check BOTH 'text' and 'content' fields
+        content = article_data.get('content', '') or article_data.get('text', '')
         has_content = bool(content) and len(content) > 200
         has_title = bool(article_data.get('title'))
         has_source = bool(article_data.get('source') or article_data.get('domain'))
         
+        # Also check word_count as additional validation
+        word_count = article_data.get('word_count', 0)
+        if not has_content and word_count > 50:
+            has_content = True  # Trust word count if present
+        
         # Log assessment
         logger.info(f"Extraction quality: {successful_services}/{total_services} services, "
-                   f"content={len(content)} chars, title={has_title}, source={has_source}")
+                   f"content={len(content)} chars, word_count={word_count}, "
+                   f"title={has_title}, source={has_source}")
         
         # Determine quality level
         if successful_services >= total_services - 1 and has_content and has_title:
             return 'full'
-        elif successful_services >= 3 and has_content:
+        elif successful_services >= 3 and (has_content or word_count > 50):
             return 'partial'
         else:
             return 'failed'
@@ -434,7 +446,8 @@ class NewsAnalyzer:
         
         # Build summary from article data
         title = article_data.get('title', '')
-        content = article_data.get('content', '')
+        # Check both content and text fields
+        content = article_data.get('content', '') or article_data.get('text', '')
         excerpt = article_data.get('excerpt', '')
         
         if content and len(content) > 100:
