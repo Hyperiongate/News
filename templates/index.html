@@ -3,302 +3,641 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="AI-powered analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- External Styles -->
-    <link rel="stylesheet" href="/static/css/main.css">
-    
+    <title>Enhanced Trust Score Display</title>
     <style>
-        :root {
-            /* Vibrant Color Palette */
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --primary-light: #60a5fa;
-            --secondary: #10b981;
-            --accent: #f59e0b;
-            --purple: #8b5cf6;
-            --pink: #ec4899;
-            --orange: #f97316;
-            --teal: #14b8a6;
-            --indigo: #6366f1;
-            --cyan: #06b6d4;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
+        /* Enhanced Trust Score Display Styles */
+        .enhanced-analysis-overview {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background effect */
+        .enhanced-analysis-overview::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Trust Score Circular Display */
+        .trust-score-visual {
+            display: flex;
+            gap: 3rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .score-circle-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            flex-shrink: 0;
+        }
+
+        .score-circle-bg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #ef4444 0deg,
+                #f59e0b 72deg,
+                #eab308 144deg,
+                #10b981 216deg,
+                #06b6d4 288deg,
+                #3b82f6 360deg
+            );
+            padding: 8px;
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
+                transform: scale(1.02);
+            }
+        }
+
+        .score-circle-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .trust-score-big {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: score-shimmer 3s ease-in-out infinite;
+        }
+
+        .trust-score-big.high {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .trust-score-big.medium {
+            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .trust-score-big.low {
+            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes score-shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .trust-score-max {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .trust-label-badge {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            white-space: nowrap;
+        }
+
+        .trust-label-badge.high {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        }
+
+        .trust-label-badge.medium {
+            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+        }
+
+        .trust-label-badge.low {
+            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+        }
+
+        /* Score Breakdown Section */
+        .score-details-section {
+            flex: 1;
+        }
+
+        .score-breakdown-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .calculation-method {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .calculation-method-title {
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .calculation-method-text {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        /* Service Contribution Bars */
+        .service-contributions {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .contributions-title {
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .contribution-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .contribution-label {
+            flex: 0 0 140px;
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .contribution-bar-container {
+            flex: 1;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contribution-bar {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contribution-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .contribution-score {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .contribution-weight {
+            margin-left: 0.5rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        /* Service specific colors */
+        .contribution-source { background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%); }
+        .contribution-author { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); }
+        .contribution-bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
+        .contribution-facts { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+        .contribution-transparency { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
+        .contribution-manipulation { background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); }
+        .contribution-content { background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); }
+
+        /* Article Info Section */
+        .article-info-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .findings-text {
+            color: #64748b;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Hover info tooltip */
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            color: white;
+            font-size: 0.7rem;
+            cursor: help;
+            position: relative;
+        }
+
+        .info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 0.75rem;
+            background: #1e293b;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            max-width: 250px;
+            margin-bottom: 4px;
+            z-index: 10;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .trust-score-visual {
+                flex-direction: column;
+                gap: 2rem;
+            }
             
-            /* Neutrals */
-            --white: #ffffff;
-            --gray-50: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --gray-800: #1e293b;
-            --gray-900: #0f172a;
+            .score-circle-container {
+                margin: 0 auto;
+            }
             
-            /* Typography */
-            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            
-            /* Border radius */
-            --radius-sm: 0.375rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            --radius-2xl: 1.5rem;
-            --radius-full: 9999px;
-            
-            /* Transitions */
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="#" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
-                <span class="logo-text">TruthLens</span>
-            </a>
-            
-            <nav class="nav-links">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#pricing" class="nav-link">Pricing</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#contact" class="nav-link">Contact</a>
-                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Analysis Section -->
-        <section class="analysis-section">
-            <div class="section-header">
-                <h1 class="main-title">
-                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
-                </h1>
-                <p class="subtitle">
-                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
-                </p>
-                
-                <div class="trust-badges">
-                    <div class="trust-badge">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>AI-Powered</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-bolt"></i>
-                        <span>Real-time Analysis</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Multi-Factor Analysis</span>
+    <!-- Enhanced Analysis Overview HTML Structure -->
+    <div class="enhanced-analysis-overview" id="enhancedAnalysisOverview">
+        <div class="trust-score-visual">
+            <!-- Circular Trust Score Display -->
+            <div class="score-circle-container">
+                <div class="score-circle-bg">
+                    <div class="score-circle-inner">
+                        <div class="trust-score-big" id="trustScoreBig">85</div>
+                        <div class="trust-score-max">/100</div>
+                        <div class="trust-label-badge" id="trustLabelBadge">Highly Trustworthy</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Form -->
-            <form class="input-form" id="analysisForm">
-                <div class="input-group">
-                    <label class="input-label" for="urlInput">
-                        <i class="fas fa-link"></i> Article URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        class="input-field" 
-                        placeholder="https://example.com/news-article"
-                        required
-                    >
+            <!-- Score Details and Breakdown -->
+            <div class="score-details-section">
+                <h3 class="score-breakdown-title">
+                    <i class="fas fa-chart-line"></i>
+                    Trust Score Analysis
+                </h3>
+
+                <!-- How It's Calculated -->
+                <div class="calculation-method">
+                    <div class="calculation-method-title">How We Calculate Your Score</div>
+                    <div class="calculation-method-text">
+                        Our AI analyzes 7 critical factors using advanced algorithms. Each service contributes a weighted percentage to the final score based on its importance to overall credibility. The score reflects source reputation, factual accuracy, bias levels, transparency, and content quality.
+                    </div>
                 </div>
 
-                <div class="input-group">
-                    <label class="input-label" for="textInput">
-                        <i class="fas fa-file-text"></i> Or Paste Article Text
-                    </label>
-                    <textarea 
-                        id="textInput" 
-                        class="input-field textarea-field" 
-                        placeholder="Paste the article text here for analysis...
-
-Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
-                    ></textarea>
-                </div>
-
-                <div class="button-container">
-                    <button type="submit" class="analyze-button" id="analyzeBtn">
-                        <div class="button-content">
-                            <span class="button-text">
-                                <i class="fas fa-search"></i>
-                                Analyze Article
-                            </span>
-                        </div>
-                    </button>
-                    <button type="button" class="reset-button" id="resetBtn">
-                        <i class="fas fa-redo"></i>
-                        Reset
-                    </button>
-                </div>
-            </form>
-
-            <!-- Progress Container -->
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-header">
-                    <h3 class="progress-title">Analyzing Article...</h3>
-                    <p class="progress-subtitle">Our AI is examining multiple credibility factors</p>
-                </div>
-                
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-                
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                
-                <div class="progress-steps" id="progressSteps">
-                    <div class="progress-step" data-step="0">
-                        <div class="step-icon">1</div>
-                        <div class="step-text">Extracting</div>
-                    </div>
-                    <div class="progress-step" data-step="1">
-                        <div class="step-icon">2</div>
-                        <div class="step-text">Source</div>
-                    </div>
-                    <div class="progress-step" data-step="2">
-                        <div class="step-icon">3</div>
-                        <div class="step-text">Bias</div>
-                    </div>
-                    <div class="progress-step" data-step="3">
-                        <div class="step-icon">4</div>
-                        <div class="step-text">Facts</div>
-                    </div>
-                    <div class="progress-step" data-step="4">
-                        <div class="step-icon">5</div>
-                        <div class="step-text">Author</div>
-                    </div>
-                    <div class="progress-step" data-step="5">
-                        <div class="step-icon">6</div>
-                        <div class="step-text">Final</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="results-section" id="resultsSection">
-                <div class="results-header">
-                    <h2 class="results-title">Analysis Complete</h2>
-                </div>
-
-                <!-- Analysis Overview -->
-                <div class="analysis-overview" id="analysisOverview">
-                    <div class="trust-score-graphic">
-                        <div class="trust-score-number" id="trustScore">85</div>
-                        <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
-                    </div>
+                <!-- Service Contributions -->
+                <div class="service-contributions">
+                    <div class="contributions-title">Score Breakdown by Service</div>
                     
-                    <div class="overview-content">
-                        <h3 class="overview-title">Analysis Overview</h3>
-                        <div class="overview-grid">
-                            <div class="overview-item">
-                                <span class="overview-label">Article Summary</span>
-                                <span class="overview-value" id="articleSummary">Loading...</span>
-                            </div>
-                            <div class="overview-item">
-                                <span class="overview-label">Source</span>
-                                <span class="overview-value" id="articleSource">Loading...</span>
-                            </div>
-                            <div class="overview-item">
-                                <span class="overview-label">Author</span>
-                                <span class="overview-value" id="articleAuthor">Loading...</span>
+                    <div class="contribution-item">
+                        <span class="contribution-label">Source Credibility</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-source" style="width: 85%" id="contribSource">
+                                <span class="contribution-score">21/25</span>
                             </div>
                         </div>
-                        <div class="findings-summary" id="findingsSummary">
-                            Loading analysis findings...
+                        <span class="contribution-weight">25%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Bias Detection</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-bias" style="width: 70%" id="contribBias">
+                                <span class="contribution-score">14/20</span>
+                            </div>
                         </div>
+                        <span class="contribution-weight">20%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Author Analysis</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-author" style="width: 80%" id="contribAuthor">
+                                <span class="contribution-score">12/15</span>
+                            </div>
+                        </div>
+                        <span class="contribution-weight">15%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Fact Checking</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-facts" style="width: 90%" id="contribFacts">
+                                <span class="contribution-score">13.5/15</span>
+                            </div>
+                        </div>
+                        <span class="contribution-weight">15%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Transparency</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-transparency" style="width: 75%" id="contribTransparency">
+                                <span class="contribution-score">7.5/10</span>
+                            </div>
+                        </div>
+                        <span class="contribution-weight">10%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Manipulation Check</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-manipulation" style="width: 85%" id="contribManipulation">
+                                <span class="contribution-score">8.5/10</span>
+                            </div>
+                        </div>
+                        <span class="contribution-weight">10%</span>
+                    </div>
+
+                    <div class="contribution-item">
+                        <span class="contribution-label">Content Quality</span>
+                        <div class="contribution-bar-container">
+                            <div class="contribution-bar contribution-content" style="width: 80%" id="contribContent">
+                                <span class="contribution-score">4/5</span>
+                            </div>
+                        </div>
+                        <span class="contribution-weight">5%</span>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Service Analysis Dropdowns Container -->
-                <div id="serviceAnalysisContainer">
-                    <!-- Service dropdowns will be dynamically inserted here -->
+        <!-- Article Information Section -->
+        <div class="article-info-section">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Article Summary</span>
+                    <span class="info-value" id="enhancedArticleSummary">Loading...</span>
                 </div>
-
-                <!-- Debug Info Section -->
-                <div class="debug-info" id="debugInfo" style="display: none;">
-                    <h5>Debug Information (Development Only):</h5>
-                    <pre id="debugData"></pre>
+                <div class="info-item">
+                    <span class="info-label">Source</span>
+                    <span class="info-value" id="enhancedArticleSource">Loading...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Author</span>
+                    <span class="info-value" id="enhancedArticleAuthor">Loading...</span>
                 </div>
             </div>
-        </section>
-    </main>
-
-    <!-- Error Message -->
-    <div id="errorMessage" class="error-message" style="display: none;">
-        <div class="error-content">
-            <div class="error-icon">
-                <i class="fas fa-exclamation-triangle"></i>
+            <div class="findings-text" id="enhancedFindingsSummary">
+                Loading comprehensive analysis findings...
             </div>
-            <div class="error-text" id="errorText">An error occurred</div>
-            <button class="error-close" onclick="document.getElementById('errorMessage').classList.remove('active');">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="loading-spinner">
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-            </div>
-            <h3 class="loading-title">Analyzing Article...</h3>
-            <p class="loading-subtitle">Our AI is examining multiple credibility factors</p>
-        </div>
-    </div>
-
-    <!-- Load Service Templates -->
-    <script src="/static/js/service-templates.js"></script>
-    
-    <!-- Main Application JavaScript -->
-    <script src="/static/js/app.js"></script>
-    
-    <!-- Initialize Application -->
+    <!-- JavaScript to update the enhanced display -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize the TruthLens analyzer when the page loads
-            const analyzer = new TruthLensAnalyzer();
+        function updateEnhancedTrustDisplay(data) {
+            const trustScore = data.trust_score || 0;
+            const detailed = data.detailed_analysis || {};
             
-            // Make it globally accessible for debugging
-            window.truthLensAnalyzer = analyzer;
-        });
+            // Update main score
+            const scoreEl = document.getElementById('trustScoreBig');
+            const labelEl = document.getElementById('trustLabelBadge');
+            
+            scoreEl.textContent = Math.round(trustScore);
+            
+            // Update styling based on score
+            let label = '';
+            let className = '';
+            if (trustScore >= 80) {
+                label = 'Highly Trustworthy';
+                className = 'high';
+            } else if (trustScore >= 60) {
+                label = 'Generally Trustworthy';
+                className = 'medium';
+            } else if (trustScore >= 40) {
+                label = 'Moderate Trust';
+                className = 'medium';
+            } else {
+                label = 'Low Trustworthiness';
+                className = 'low';
+            }
+            
+            scoreEl.className = 'trust-score-big ' + className;
+            labelEl.className = 'trust-label-badge ' + className;
+            labelEl.textContent = label;
+            
+            // Calculate and update service contributions
+            updateServiceContributions(detailed);
+            
+            // Update article info
+            document.getElementById('enhancedArticleSummary').textContent = 
+                data.article_summary || 'Analysis completed';
+            document.getElementById('enhancedArticleSource').textContent = 
+                data.source || 'Unknown Source';
+            document.getElementById('enhancedArticleAuthor').textContent = 
+                data.author || 'Staff Writer';
+            document.getElementById('enhancedFindingsSummary').textContent = 
+                data.findings_summary || 'Analysis completed successfully';
+        }
+        
+        function updateServiceContributions(detailed) {
+            // Service weights as defined in the backend
+            const weights = {
+                source_credibility: 0.25,
+                author_analyzer: 0.15,
+                bias_detector: 0.20,
+                fact_checker: 0.15,
+                transparency_analyzer: 0.10,
+                manipulation_detector: 0.10,
+                content_analyzer: 0.05
+            };
+            
+            // Update each service contribution bar
+            if (detailed.source_credibility) {
+                const score = detailed.source_credibility.score || 0;
+                const contribution = (score * weights.source_credibility).toFixed(1);
+                updateContributionBar('contribSource', score, contribution, weights.source_credibility * 100);
+            }
+            
+            if (detailed.bias_detector) {
+                const biasScore = detailed.bias_detector.bias_score || 0;
+                const objectivityScore = 100 - biasScore; // Convert bias to objectivity
+                const contribution = (objectivityScore * weights.bias_detector).toFixed(1);
+                updateContributionBar('contribBias', objectivityScore, contribution, weights.bias_detector * 100);
+            }
+            
+            if (detailed.author_analyzer) {
+                const score = detailed.author_analyzer.score || 0;
+                const contribution = (score * weights.author_analyzer).toFixed(1);
+                updateContributionBar('contribAuthor', score, contribution, weights.author_analyzer * 100);
+            }
+            
+            if (detailed.fact_checker) {
+                const score = calculateFactCheckScore(detailed.fact_checker);
+                const contribution = (score * weights.fact_checker).toFixed(1);
+                updateContributionBar('contribFacts', score, contribution, weights.fact_checker * 100);
+            }
+            
+            if (detailed.transparency_analyzer) {
+                const score = calculateTransparencyScore(detailed.transparency_analyzer);
+                const contribution = (score * weights.transparency_analyzer).toFixed(1);
+                updateContributionBar('contribTransparency', score, contribution, weights.transparency_analyzer * 100);
+            }
+            
+            if (detailed.manipulation_detector) {
+                const score = detailed.manipulation_detector.score || 0;
+                const inverseScore = 100 - score; // Lower manipulation = higher trust
+                const contribution = (inverseScore * weights.manipulation_detector).toFixed(1);
+                updateContributionBar('contribManipulation', inverseScore, contribution, weights.manipulation_detector * 100);
+            }
+            
+            if (detailed.content_analyzer) {
+                const score = detailed.content_analyzer.score || 0;
+                const contribution = (score * weights.content_analyzer).toFixed(1);
+                updateContributionBar('contribContent', score, contribution, weights.content_analyzer * 100);
+            }
+        }
+        
+        function updateContributionBar(elementId, score, contribution, maxWeight) {
+            const bar = document.getElementById(elementId);
+            if (bar) {
+                bar.style.width = score + '%';
+                const scoreSpan = bar.querySelector('.contribution-score');
+                if (scoreSpan) {
+                    scoreSpan.textContent = `${contribution}/${maxWeight}`;
+                }
+            }
+        }
+        
+        function calculateFactCheckScore(data) {
+            const claimsAnalyzed = data.claims_found || data.claims_analyzed || 0;
+            const claimsVerified = data.claims_verified || 0;
+            
+            if (claimsAnalyzed > 0) {
+                return Math.round((claimsVerified / claimsAnalyzed) * 100);
+            }
+            return data.score || 0;
+        }
+        
+        function calculateTransparencyScore(data) {
+            const sourcesCited = data.source_count || data.sources_cited || 0;
+            const quotesUsed = data.quote_count || data.quotes_used || 0;
+            
+            if (sourcesCited > 0 || quotesUsed > 0) {
+                const sourceScore = Math.min(sourcesCited * 8, 50);
+                const quoteScore = Math.min(quotesUsed * 10, 50);
+                return Math.min(sourceScore + quoteScore, 100);
+            }
+            return data.score || data.transparency_score || 0;
+        }
     </script>
 </body>
 </html>
