@@ -3,322 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="AI-powered analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- External Styles -->
+    <title>TruthLens - News Credibility Analyzer</title>
     <link rel="stylesheet" href="/static/css/main.css">
-    
     <style>
-        :root {
-            /* Vibrant Color Palette */
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --primary-light: #60a5fa;
-            --secondary: #10b981;
-            --accent: #f59e0b;
-            --purple: #8b5cf6;
-            --pink: #ec4899;
-            --orange: #f97316;
-            --teal: #14b8a6;
-            --indigo: #6366f1;
-            --cyan: #06b6d4;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-            
-            /* Neutrals */
-            --white: #ffffff;
-            --gray-50: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --gray-800: #1e293b;
-            --gray-900: #0f172a;
-            
-            /* Typography */
-            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            
-            /* Border radius */
-            --radius-sm: 0.375rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            --radius-2xl: 1.5rem;
-            --radius-full: 9999px;
-            
-            /* Transitions */
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        /* Enhanced Source Rankings Styles */
+        .source-rankings-container {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 35px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
 
-        /* Enhanced Trust Score Display Styles */
-        .enhanced-analysis-overview {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Animated background effect */
-        .enhanced-analysis-overview::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
-            animation: rotate 30s linear infinite;
-        }
-
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Trust Score Circular Display */
-        .trust-score-visual {
+        .source-rankings-header {
             display: flex;
-            gap: 3rem;
+            justify-content: space-between;
             align-items: center;
-            position: relative;
-            z-index: 1;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
         }
 
-        .score-circle-container {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            flex-shrink: 0;
+        .source-rankings-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
         }
 
-        .score-circle-bg {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: conic-gradient(
-                from 0deg,
-                #ef4444 0deg,
-                #f59e0b 72deg,
-                #eab308 144deg,
-                #10b981 216deg,
-                #06b6d4 288deg,
-                #3b82f6 360deg
-            );
-            padding: 8px;
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
-            animation: pulse-glow 3s ease-in-out infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { 
-                box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
-                transform: scale(1);
-            }
-            50% { 
-                box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
-                transform: scale(1.02);
-            }
-        }
-
-        .score-circle-inner {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: white;
+        .sources-grid {
             display: flex;
             flex-direction: column;
+            gap: 12px;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            padding: 18px 20px;
+            background: white;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .source-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .source-item.current {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .source-item.current .source-rank,
+        .source-item.current .source-name,
+        .source-item.current .source-domain {
+            color: white !important;
+        }
+
+        .source-item.added-source {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            animation: pulseGlow 2s ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3); }
+            50% { box-shadow: 0 8px 30px rgba(253, 203, 110, 0.6); }
+        }
+
+        .source-rank {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #6c757d;
+            min-width: 45px;
+            margin-right: 20px;
+            text-align: center;
+        }
+
+        .source-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            margin-right: 18px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-        }
-
-        .trust-score-big {
-            font-size: 4rem;
-            font-weight: 900;
-            line-height: 1;
-            font-family: var(--font-display);
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: score-shimmer 3s ease-in-out infinite;
-        }
-
-        .trust-score-big.high {
-            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .trust-score-big.medium {
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .trust-score-big.low {
-            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        @keyframes score-shimmer {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.2); }
-        }
-
-        .trust-score-max {
-            font-size: 1.25rem;
-            color: #94a3b8;
-            margin-top: 0.25rem;
-        }
-
-        .trust-label-badge {
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 0.5rem 1.5rem;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            font-weight: 800;
             color: white;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-            white-space: nowrap;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        .trust-label-badge.high {
-            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        .source-info {
+            flex: 0 0 200px;
+            margin-right: 20px;
         }
 
-        .trust-label-badge.medium {
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-        }
-
-        .trust-label-badge.low {
-            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-        }
-
-        /* Score Breakdown Section */
-        .score-details-section {
-            flex: 1;
-        }
-
-        .score-breakdown-title {
-            font-size: 1.5rem;
+        .source-name {
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-family: var(--font-display);
+            color: #2c3e50;
+            margin-bottom: 4px;
+            font-size: 1.05rem;
         }
 
-        .calculation-method {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
+        .source-domain {
+            font-size: 0.85rem;
+            color: #95a5a6;
         }
 
-        .calculation-method-title {
-            font-weight: 600;
-            color: #3b82f6;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .calculation-method-text {
-            color: #64748b;
-            font-size: 0.875rem;
-            line-height: 1.6;
-        }
-
-        /* Service Contribution Bars */
-        .service-contributions {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.25rem;
-        }
-
-        .contributions-title {
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-
-        .contribution-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            position: relative;
-        }
-
-        .contribution-label {
-            flex: 0 0 140px;
-            font-size: 0.8rem;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .contribution-bar-container {
+        .source-score-container {
             flex: 1;
-            height: 24px;
-            background: #e2e8f0;
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
-        .contribution-bar {
+        .source-trust-meter {
+            flex: 1;
+            height: 40px;
+            background: #f0f3f7;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .source-trust-fill {
             height: 100%;
-            border-radius: 12px;
-            transition: width 1s ease-out;
+            border-radius: 20px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 15px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 700;
             position: relative;
             overflow: hidden;
         }
 
-        .contribution-bar::after {
+        /* Animated gradient background for trust bars */
+        .source-trust-fill::before {
             content: '';
             position: absolute;
             top: 0;
             left: -100%;
-            width: 100%;
+            width: 200%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            animation: shimmer 2s infinite;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0) 0%, 
+                rgba(255,255,255,0.3) 50%, 
+                rgba(255,255,255,0) 100%);
+            animation: shimmer 3s infinite;
         }
 
         @keyframes shimmer {
@@ -326,624 +170,145 @@
             100% { left: 100%; }
         }
 
-        .contribution-score {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        /* Colorful gradient fills for different trust levels */
+        .trust-very-high {
+            background: linear-gradient(135deg, #00b894, #00cec9);
         }
 
-        .contribution-weight {
-            margin-left: 0.5rem;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            font-weight: 600;
+        .trust-high {
+            background: linear-gradient(135deg, #0984e3, #74b9ff);
         }
 
-        /* Service specific colors */
-        .contribution-source { background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%); }
-        .contribution-author { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); }
-        .contribution-bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
-        .contribution-facts { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
-        .contribution-transparency { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
-        .contribution-manipulation { background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); }
-        .contribution-content { background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); }
-
-        /* Article Info Section */
-        .article-info-section {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #e2e8f0;
+        .trust-medium {
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
         }
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1rem;
+        .trust-low {
+            background: linear-gradient(135deg, #fab1a0, #e17055);
         }
 
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #94a3b8;
-        }
-
-        .info-value {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #334155;
-        }
-
-        .findings-text {
-            color: #64748b;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-
-        /* Source Credibility Rankings Section */
-        .source-rankings-container {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-top: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .source-rankings-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .source-rankings-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .source-filter-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .filter-btn {
-            padding: 6px 14px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .filter-btn.active {
-            background: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-
-        .sources-grid {
-            display: grid;
-            gap: 15px;
-        }
-
-        .source-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .source-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .source-rank {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #7f8c8d;
-            min-width: 30px;
-            margin-right: 15px;
-        }
-
-        .source-logo {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .source-info {
-            flex: 1;
-        }
-
-        .source-name {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 3px;
-        }
-
-        .source-domain {
-            font-size: 0.85rem;
-            color: #7f8c8d;
-        }
-
-        .source-score-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .source-trust-meter {
-            width: 120px;
-            height: 30px;
-            background: #ecf0f1;
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .source-trust-fill {
-            height: 100%;
-            border-radius: 15px;
-            transition: width 0.6s ease;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 8px;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .trust-very-low {
+            background: linear-gradient(135deg, #ff7675, #d63031);
         }
 
         .source-score-badge {
-            font-size: 1.1rem;
-            font-weight: bold;
-            min-width: 45px;
+            font-size: 1.4rem;
+            font-weight: 800;
+            min-width: 60px;
             text-align: center;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        /* Color coding for scores */
-        .trust-very-high { background: linear-gradient(135deg, #27ae60, #2ecc71); }
-        .trust-high { background: linear-gradient(135deg, #3498db, #5dade2); }
-        .trust-medium { background: linear-gradient(135deg, #f39c12, #f1c40f); }
-        .trust-low { background: linear-gradient(135deg, #e67e22, #d68910); }
-        .trust-very-low { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .score-very-high { 
+            color: #00b894;
+            background: linear-gradient(135deg, rgba(0,184,148,0.1), rgba(0,206,201,0.1));
+        }
+        
+        .score-high { 
+            color: #0984e3;
+            background: linear-gradient(135deg, rgba(9,132,227,0.1), rgba(116,185,255,0.1));
+        }
+        
+        .score-medium { 
+            color: #e17055;
+            background: linear-gradient(135deg, rgba(253,203,110,0.1), rgba(225,112,85,0.1));
+        }
+        
+        .score-low { 
+            color: #e17055;
+            background: linear-gradient(135deg, rgba(250,177,160,0.1), rgba(225,112,85,0.1));
+        }
+        
+        .score-very-low { 
+            color: #d63031;
+            background: linear-gradient(135deg, rgba(255,118,117,0.1), rgba(214,48,49,0.1));
+        }
 
-        .score-very-high { color: #27ae60; }
-        .score-high { color: #3498db; }
-        .score-medium { color: #f39c12; }
-        .score-low { color: #e67e22; }
-        .score-very-low { color: #e74c3c; }
-
-        /* Comparison with current source */
         .current-source-indicator {
-            background: #3498db;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
+            background: white;
+            color: #667eea;
+            padding: 3px 10px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            margin-left: 10px;
+            margin-left: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            animation: pulse 2s infinite;
         }
 
-        .source-item.current {
-            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
-            border: 2px solid #3498db;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
-        /* Responsive Design for Enhanced Overview */
+        .added-source-indicator {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .source-filter-buttons {
+            display: none; /* Hide filters for cleaner look */
+        }
+
+        /* Responsive adjustments */
         @media (max-width: 768px) {
-            .trust-score-visual {
-                flex-direction: column;
-                gap: 2rem;
-            }
-            
-            .score-circle-container {
-                margin: 0 auto;
-            }
-            
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .contribution-label {
-                flex: 0 0 100px;
-                font-size: 0.75rem;
-            }
-
-            .contribution-weight {
-                font-size: 0.7rem;
-            }
-
             .source-rankings-header {
                 flex-direction: column;
-                gap: 1rem;
+                align-items: flex-start;
+                gap: 15px;
             }
 
-            .source-filter-buttons {
-                width: 100%;
-                justify-content: center;
+            .source-info {
+                flex: 0 0 140px;
+            }
+
+            .source-score-badge {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="#" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
-                <span class="logo-text">TruthLens</span>
-            </a>
-            
-            <nav class="nav-links">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#pricing" class="nav-link">Pricing</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#contact" class="nav-link">Contact</a>
-                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
-            </nav>
+    <!-- Keep all your existing HTML here -->
+    <!-- This is just the updated source rankings section and the enhanced JavaScript -->
+    
+    <!-- Updated Source Rankings Section -->
+    <div class="source-rankings-container" id="sourceRankings" style="display: none;">
+        <div class="source-rankings-header">
+            <h2 class="source-rankings-title">📊 News Source Credibility Rankings</h2>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Analysis Section -->
-        <section class="analysis-section">
-            <div class="section-header">
-                <h1 class="main-title">
-                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
-                </h1>
-                <p class="subtitle">
-                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
-                </p>
-                
-                <div class="trust-badges">
-                    <div class="trust-badge">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>AI-Powered</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-bolt"></i>
-                        <span>Real-time Analysis</span>
-                    </div>
-                    <div class="trust-badge">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Multi-Factor Analysis</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Input Form -->
-            <form class="input-form" id="analysisForm">
-                <div class="input-group">
-                    <label class="input-label" for="urlInput">
-                        <i class="fas fa-link"></i> Article URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        class="input-field" 
-                        placeholder="https://example.com/news-article"
-                        required
-                    >
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label" for="textInput">
-                        <i class="fas fa-file-text"></i> Or Paste Article Text
-                    </label>
-                    <textarea 
-                        id="textInput" 
-                        class="input-field textarea-field" 
-                        placeholder="Paste the article text here for analysis...
-
-Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
-                    ></textarea>
-                </div>
-
-                <div class="button-container">
-                    <button type="submit" class="analyze-button" id="analyzeBtn">
-                        <div class="button-content">
-                            <span class="button-text">
-                                <i class="fas fa-search"></i>
-                                Analyze Article
-                            </span>
-                        </div>
-                    </button>
-                    <button type="button" class="reset-button" id="resetBtn">
-                        <i class="fas fa-redo"></i>
-                        Reset
-                    </button>
-                </div>
-            </form>
-
-            <!-- Progress Container -->
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-header">
-                    <h3 class="progress-title">Analyzing Article...</h3>
-                    <p class="progress-subtitle">Our AI is examining multiple credibility factors</p>
-                </div>
-                
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-                
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                
-                <div class="progress-steps" id="progressSteps">
-                    <div class="progress-step" data-step="0">
-                        <div class="step-icon">1</div>
-                        <div class="step-text">Extracting</div>
-                    </div>
-                    <div class="progress-step" data-step="1">
-                        <div class="step-icon">2</div>
-                        <div class="step-text">Source</div>
-                    </div>
-                    <div class="progress-step" data-step="2">
-                        <div class="step-icon">3</div>
-                        <div class="step-text">Bias</div>
-                    </div>
-                    <div class="progress-step" data-step="3">
-                        <div class="step-icon">4</div>
-                        <div class="step-text">Facts</div>
-                    </div>
-                    <div class="progress-step" data-step="4">
-                        <div class="step-icon">5</div>
-                        <div class="step-text">Author</div>
-                    </div>
-                    <div class="progress-step" data-step="5">
-                        <div class="step-icon">6</div>
-                        <div class="step-text">Final</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="results-section" id="resultsSection">
-                <div class="results-header">
-                    <h2 class="results-title">Analysis Complete</h2>
-                </div>
-
-                <!-- Enhanced Analysis Overview -->
-                <div class="enhanced-analysis-overview" id="enhancedAnalysisOverview">
-                    <div class="trust-score-visual">
-                        <!-- Circular Trust Score Display -->
-                        <div class="score-circle-container">
-                            <div class="score-circle-bg">
-                                <div class="score-circle-inner">
-                                    <div class="trust-score-big" id="trustScoreBig">85</div>
-                                    <div class="trust-score-max">/100</div>
-                                    <div class="trust-label-badge" id="trustLabelBadge">Highly Trustworthy</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Score Details and Breakdown -->
-                        <div class="score-details-section">
-                            <h3 class="score-breakdown-title">
-                                <i class="fas fa-chart-line"></i>
-                                Trust Score Analysis
-                            </h3>
-
-                            <!-- How It's Calculated -->
-                            <div class="calculation-method">
-                                <div class="calculation-method-title">How We Calculate Your Score</div>
-                                <div class="calculation-method-text">
-                                    Our AI analyzes 7 critical factors using advanced algorithms. Each service contributes a weighted percentage to the final score based on its importance to overall credibility. The score reflects source reputation, factual accuracy, bias levels, transparency, and content quality.
-                                </div>
-                            </div>
-
-                            <!-- Service Contributions -->
-                            <div class="service-contributions">
-                                <div class="contributions-title">Score Breakdown by Service</div>
-                                
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Source Credibility</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-source" style="width: 0%" id="contribSource">
-                                            <span class="contribution-score">0/25</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">25%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Bias Detection</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-bias" style="width: 0%" id="contribBias">
-                                            <span class="contribution-score">0/20</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">20%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Author Analysis</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-author" style="width: 0%" id="contribAuthor">
-                                            <span class="contribution-score">0/15</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">15%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Fact Checking</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-facts" style="width: 0%" id="contribFacts">
-                                            <span class="contribution-score">0/15</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">15%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Transparency</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-transparency" style="width: 0%" id="contribTransparency">
-                                            <span class="contribution-score">0/10</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">10%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Manipulation Check</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
-                                            <span class="contribution-score">0/10</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">10%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Content Quality</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-content" style="width: 0%" id="contribContent">
-                                            <span class="contribution-score">0/5</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">5%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Article Information Section -->
-                    <div class="article-info-section">
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Article Summary</span>
-                                <span class="info-value" id="articleSummary">Loading...</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Source</span>
-                                <span class="info-value" id="articleSource">Loading...</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Author</span>
-                                <span class="info-value" id="articleAuthor">Loading...</span>
-                            </div>
-                        </div>
-                        <div class="findings-text" id="findingsSummary">
-                            Loading comprehensive analysis findings...
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Source Credibility Rankings Section -->
-                <div class="source-rankings-container" id="sourceRankings" style="display: none;">
-                    <div class="source-rankings-header">
-                        <h2 class="source-rankings-title">News Source Credibility Rankings</h2>
-                        <div class="source-filter-buttons">
-                            <button class="filter-btn active" onclick="filterSources('all')">All Sources</button>
-                            <button class="filter-btn" onclick="filterSources('mainstream')">Mainstream</button>
-                            <button class="filter-btn" onclick="filterSources('independent')">Independent</button>
-                        </div>
-                    </div>
-                    <div class="sources-grid" id="sourcesGrid">
-                        <!-- Populated by JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Keep Old Overview Hidden (for backward compatibility) -->
-                <div class="analysis-overview" id="analysisOverview" style="display: none;">
-                    <div class="trust-score-graphic">
-                        <div class="trust-score-number" id="trustScore">85</div>
-                        <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
-                    </div>
-                </div>
-
-                <!-- Service Analysis Dropdowns Container -->
-                <div id="serviceAnalysisContainer">
-                    <!-- Service dropdowns will be dynamically inserted here -->
-                </div>
-
-                <!-- Debug Info Section -->
-                <div class="debug-info" id="debugInfo" style="display: none;">
-                    <h5>Debug Information (Development Only):</h5>
-                    <pre id="debugData"></pre>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Error Message -->
-    <div id="errorMessage" class="error-message" style="display: none;">
-        <div class="error-content">
-            <div class="error-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="error-text" id="errorText">An error occurred</div>
-            <button class="error-close" onclick="document.getElementById('errorMessage').classList.remove('active');">
-                <i class="fas fa-times"></i>
-            </button>
+        <div class="sources-grid" id="sourcesGrid">
+            <!-- Populated by JavaScript -->
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="loading-spinner">
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-            </div>
-            <h3 class="loading-title">Analyzing Article...</h3>
-            <p class="loading-subtitle">Our AI is examining multiple credibility factors</p>
-        </div>
-    </div>
-
-    <!-- UPDATED: Load the two JavaScript files in the correct order -->
-    <!-- Load Service Templates FIRST -->
-    <script src="/static/js/service-templates.js"></script>
-    
-    <!-- Load Main Application Core SECOND -->
-    <script src="/static/js/app-core.js"></script>
-    
-    <!-- Source Rankings JavaScript (keep existing) -->
+    <!-- Enhanced Source Rankings JavaScript -->
     <script>
-        // Top news sources with their typical credibility scores
+        // Enhanced news sources database with vibrant colors
         const TOP_SOURCES = [
-            { name: 'Reuters', domain: 'reuters.com', score: 85, category: 'mainstream', color: '#FF6B00' },
-            { name: 'Associated Press', domain: 'ap.org', score: 83, category: 'mainstream', color: '#FF0000' },
-            { name: 'BBC News', domain: 'bbc.com', score: 80, category: 'mainstream', color: '#000000' },
-            { name: 'NPR', domain: 'npr.org', score: 78, category: 'mainstream', color: '#0066CC' },
-            { name: 'The Guardian', domain: 'theguardian.com', score: 75, category: 'mainstream', color: '#052962' },
-            { name: 'USA Today', domain: 'usatoday.com', score: 71, category: 'mainstream', color: '#009BFF' },
-            { name: 'Forbes', domain: 'forbes.com', score: 69, category: 'mainstream', color: '#000000' },
-            { name: 'CNN', domain: 'cnn.com', score: 65, category: 'mainstream', color: '#CC0000' },
-            { name: 'Fox News', domain: 'foxnews.com', score: 62, category: 'mainstream', color: '#003366' },
-            { name: 'MSNBC', domain: 'msnbc.com', score: 60, category: 'mainstream', color: '#000000' }
+            { name: 'Reuters', domain: 'reuters.com', score: 85, color: '#FF6B00' },
+            { name: 'Associated Press', domain: 'ap.org', score: 83, color: '#FF0000' },
+            { name: 'BBC News', domain: 'bbc.com', score: 80, color: '#BB1919' },
+            { name: 'NPR', domain: 'npr.org', score: 78, color: '#0066CC' },
+            { name: 'The Guardian', domain: 'theguardian.com', score: 75, color: '#052962' },
+            { name: 'USA Today', domain: 'usatoday.com', score: 71, color: '#009BFF' },
+            { name: 'Forbes', domain: 'forbes.com', score: 69, color: '#231F20' },
+            { name: 'CNN', domain: 'cnn.com', score: 65, color: '#CC0000' },
+            { name: 'Fox News', domain: 'foxnews.com', score: 62, color: '#003366' },
+            { name: 'MSNBC', domain: 'msnbc.com', score: 60, color: '#000000' }
         ];
+
+        // Store the current analyzed source globally
+        let currentAnalyzedSource = null;
 
         function getTrustClass(score) {
             if (score >= 80) return 'very-high';
@@ -953,7 +318,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             return 'very-low';
         }
 
-        function displaySourceRankings(currentDomain = null) {
+        function displaySourceRankings(currentDomain = null, currentScore = null) {
             const container = document.getElementById('sourceRankings');
             const grid = document.getElementById('sourcesGrid');
             
@@ -962,32 +327,70 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             container.style.display = 'block';
             grid.innerHTML = '';
             
-            // Sort sources by score
-            const sortedSources = [...TOP_SOURCES].sort((a, b) => b.score - a.score);
+            // Create a working copy of sources
+            let displaySources = [...TOP_SOURCES];
             
+            // If current source is not in the list, add it
+            if (currentDomain && currentScore !== null) {
+                const cleanDomain = currentDomain.toLowerCase().replace('www.', '');
+                const existingSource = displaySources.find(s => s.domain === cleanDomain);
+                
+                if (!existingSource) {
+                    // Add the new source with a distinct style
+                    const sourceName = cleanDomain.split('.')[0];
+                    const capitalizedName = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+                    
+                    displaySources.push({
+                        name: capitalizedName,
+                        domain: cleanDomain,
+                        score: currentScore,
+                        color: '#9b59b6', // Purple for new sources
+                        isNew: true
+                    });
+                } else {
+                    // Mark existing source as current
+                    existingSource.isCurrent = true;
+                    existingSource.score = currentScore; // Update with actual analyzed score
+                }
+                
+                // Store for reference
+                currentAnalyzedSource = cleanDomain;
+            }
+            
+            // Sort sources by score
+            const sortedSources = displaySources.sort((a, b) => b.score - a.score);
+            
+            // Create source items with animation delay
             sortedSources.forEach((source, index) => {
                 const trustClass = getTrustClass(source.score);
-                const isCurrent = currentDomain && source.domain === currentDomain;
+                const isCurrent = source.isCurrent || source.domain === currentAnalyzedSource;
+                const isNew = source.isNew;
                 
                 const sourceItem = document.createElement('div');
-                sourceItem.className = `source-item ${isCurrent ? 'current' : ''}`;
-                sourceItem.dataset.category = source.category;
+                sourceItem.className = `source-item ${isCurrent ? 'current' : ''} ${isNew ? 'added-source' : ''}`;
+                
+                // Add animation delay for staggered appearance
+                sourceItem.style.animation = `slideIn 0.5s ease-out ${index * 0.05}s forwards`;
+                sourceItem.style.opacity = '0';
                 
                 sourceItem.innerHTML = `
                     <div class="source-rank">#${index + 1}</div>
-                    <div class="source-logo" style="background-color: ${source.color};">
+                    <div class="source-logo" style="background: ${source.color};">
                         ${source.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div class="source-info">
                         <div class="source-name">
                             ${source.name}
-                            ${isCurrent ? '<span class="current-source-indicator">Current Article</span>' : ''}
+                            ${isCurrent && !isNew ? '<span class="current-source-indicator">CURRENT</span>' : ''}
+                            ${isNew ? '<span class="added-source-indicator">NEW</span>' : ''}
                         </div>
                         <div class="source-domain">${source.domain}</div>
                     </div>
                     <div class="source-score-container">
                         <div class="source-trust-meter">
-                            <div class="source-trust-fill trust-${trustClass}" style="width: ${source.score}%;">
+                            <div class="source-trust-fill trust-${trustClass}" 
+                                 style="width: 0%;"
+                                 data-target-width="${source.score}%">
                                 ${source.score}%
                             </div>
                         </div>
@@ -996,220 +399,63 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 `;
                 
                 grid.appendChild(sourceItem);
+                
+                // Animate the trust bar fill after a short delay
+                setTimeout(() => {
+                    const trustFill = sourceItem.querySelector('.source-trust-fill');
+                    if (trustFill) {
+                        trustFill.style.width = trustFill.dataset.targetWidth;
+                    }
+                    sourceItem.style.opacity = '1';
+                }, 100 + (index * 50));
             });
         }
 
-        function filterSources(category) {
-            const buttons = document.querySelectorAll('.filter-btn');
-            const items = document.querySelectorAll('.source-item');
-            
-            // Update active button
-            buttons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent.toLowerCase().includes(category) || 
-                    (category === 'all' && btn.textContent === 'All Sources')) {
-                    btn.classList.add('active');
+        // Add slide-in animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-30px);
                 }
-            });
-            
-            // Filter items
-            items.forEach(item => {
-                if (category === 'all' || item.dataset.category === category) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
                 }
-            });
-        }
+            }
+        `;
+        document.head.appendChild(style);
 
+        // Function to integrate with analysis results
         function integrateWithAnalysis(analysisResults) {
             if (analysisResults && analysisResults.source) {
                 // Extract domain from source
-                const domain = analysisResults.source.toLowerCase().replace('www.', '');
+                const domain = analysisResults.source.toLowerCase().replace('www.', '').replace('https://', '').replace('http://', '').split('/')[0];
                 
-                // Update the current source's score if it's in our list
-                const sourceIndex = TOP_SOURCES.findIndex(s => s.domain === domain);
-                if (sourceIndex !== -1 && analysisResults.detailed_analysis?.source_credibility?.score) {
-                    TOP_SOURCES[sourceIndex].score = analysisResults.detailed_analysis.source_credibility.score;
-                }
+                // Get the trust score
+                const trustScore = analysisResults.trust_score || 
+                                 analysisResults.detailed_analysis?.source_credibility?.score || 
+                                 50; // Default to 50 if no score available
                 
-                // Display rankings with current source highlighted
-                displaySourceRankings(domain);
+                // Display rankings with current source
+                displaySourceRankings(domain, trustScore);
+            }
+        }
+
+        // Function to be called after analysis completes
+        function updateSourceRankings(analysisResults) {
+            const container = document.getElementById('sourceRankings');
+            if (container) {
+                container.style.display = 'block';
+            }
+            
+            if (analysisResults) {
+                integrateWithAnalysis(analysisResults);
             } else {
-                // Just display the rankings
                 displaySourceRankings();
             }
         }
-    </script>
-    
-    <!-- Enhanced Trust Score Display Functions -->
-    <script>
-        function updateEnhancedTrustDisplay(data) {
-            const trustScore = data.trust_score || 0;
-            const detailed = data.detailed_analysis || {};
-            
-            // Update main score
-            const scoreEl = document.getElementById('trustScoreBig');
-            const labelEl = document.getElementById('trustLabelBadge');
-            
-            // Also update the old elements for backward compatibility
-            const oldScoreEl = document.getElementById('trustScore');
-            const oldLabelEl = document.getElementById('trustLabel');
-            
-            scoreEl.textContent = Math.round(trustScore);
-            if (oldScoreEl) oldScoreEl.textContent = Math.round(trustScore);
-            
-            // Update styling based on score
-            let label = '';
-            let className = '';
-            if (trustScore >= 80) {
-                label = 'Highly Trustworthy';
-                className = 'high';
-            } else if (trustScore >= 60) {
-                label = 'Generally Trustworthy';
-                className = 'medium';
-            } else if (trustScore >= 40) {
-                label = 'Moderate Trust';
-                className = 'medium';
-            } else {
-                label = 'Low Trustworthiness';
-                className = 'low';
-            }
-            
-            scoreEl.className = 'trust-score-big ' + className;
-            labelEl.className = 'trust-label-badge ' + className;
-            labelEl.textContent = label;
-            
-            if (oldLabelEl) oldLabelEl.textContent = label;
-            
-            // Calculate and update service contributions with animation
-            setTimeout(() => updateServiceContributions(detailed), 300);
-            
-            // Update article info
-            document.getElementById('articleSummary').textContent = 
-                (data.article_summary || 'Analysis completed').substring(0, 100) + 
-                ((data.article_summary || '').length > 100 ? '...' : '');
-            document.getElementById('articleSource').textContent = 
-                data.source || 'Unknown Source';
-            document.getElementById('articleAuthor').textContent = 
-                data.author || 'Staff Writer';
-            document.getElementById('findingsSummary').textContent = 
-                data.findings_summary || 'Analysis completed successfully';
-            
-            // Display source rankings with current source highlighted
-            integrateWithAnalysis(data);
-        }
-        
-        function updateServiceContributions(detailed) {
-            // Service weights as defined in the backend
-            const weights = {
-                source_credibility: 0.25,
-                author_analyzer: 0.15,
-                bias_detector: 0.20,
-                fact_checker: 0.15,
-                transparency_analyzer: 0.10,
-                manipulation_detector: 0.10,
-                content_analyzer: 0.05
-            };
-            
-            // Update each service contribution bar with animation
-            if (detailed.source_credibility) {
-                const score = detailed.source_credibility.score || detailed.source_credibility.credibility_score || 0;
-                const contribution = (score * weights.source_credibility).toFixed(1);
-                updateContributionBar('contribSource', score, contribution, weights.source_credibility * 100);
-            }
-            
-            if (detailed.bias_detector) {
-                const biasScore = detailed.bias_detector.bias_score || detailed.bias_detector.score || 0;
-                const objectivityScore = 100 - biasScore; // Convert bias to objectivity
-                const contribution = (objectivityScore * weights.bias_detector).toFixed(1);
-                updateContributionBar('contribBias', objectivityScore, contribution, weights.bias_detector * 100);
-            }
-            
-            if (detailed.author_analyzer) {
-                const score = detailed.author_analyzer.score || detailed.author_analyzer.credibility_score || 0;
-                const contribution = (score * weights.author_analyzer).toFixed(1);
-                updateContributionBar('contribAuthor', score, contribution, weights.author_analyzer * 100);
-            }
-            
-            if (detailed.fact_checker) {
-                const score = calculateFactCheckScore(detailed.fact_checker);
-                const contribution = (score * weights.fact_checker).toFixed(1);
-                updateContributionBar('contribFacts', score, contribution, weights.fact_checker * 100);
-            }
-            
-            if (detailed.transparency_analyzer) {
-                const score = calculateTransparencyScore(detailed.transparency_analyzer);
-                const contribution = (score * weights.transparency_analyzer).toFixed(1);
-                updateContributionBar('contribTransparency', score, contribution, weights.transparency_analyzer * 100);
-            }
-            
-            if (detailed.manipulation_detector) {
-                const manipScore = detailed.manipulation_detector.score || detailed.manipulation_detector.manipulation_score || 0;
-                const inverseScore = 100 - manipScore; // Lower manipulation = higher trust
-                const contribution = (inverseScore * weights.manipulation_detector).toFixed(1);
-                updateContributionBar('contribManipulation', inverseScore, contribution, weights.manipulation_detector * 100);
-            }
-            
-            if (detailed.content_analyzer) {
-                const score = detailed.content_analyzer.score || detailed.content_analyzer.quality_score || 0;
-                const contribution = (score * weights.content_analyzer).toFixed(1);
-                updateContributionBar('contribContent', score, contribution, weights.content_analyzer * 100);
-            }
-        }
-        
-        function updateContributionBar(elementId, score, contribution, maxWeight) {
-            const bar = document.getElementById(elementId);
-            if (bar) {
-                // Animate the bar width
-                setTimeout(() => {
-                    bar.style.width = score + '%';
-                }, 100);
-                
-                const scoreSpan = bar.querySelector('.contribution-score');
-                if (scoreSpan) {
-                    scoreSpan.textContent = `${contribution}/${maxWeight}`;
-                }
-            }
-        }
-        
-        function calculateFactCheckScore(data) {
-            const claimsAnalyzed = data.claims_found || data.claims_analyzed || 0;
-            const claimsVerified = data.claims_verified || 0;
-            
-            if (claimsAnalyzed > 0) {
-                return Math.round((claimsVerified / claimsAnalyzed) * 100);
-            }
-            return data.score || 0;
-        }
-        
-        function calculateTransparencyScore(data) {
-            const sourcesCited = data.source_count || data.sources_cited || 0;
-            const quotesUsed = data.quote_count || data.quotes_used || 0;
-            
-            if (sourcesCited > 0 || quotesUsed > 0) {
-                const sourceScore = Math.min(sourcesCited * 8, 50);
-                const quoteScore = Math.min(quotesUsed * 10, 50);
-                return Math.min(sourceScore + quoteScore, 100);
-            }
-            return data.score || data.transparency_score || 0;
-        }
-
-        // Initialize application with updated file structure
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize the TruthLens analyzer when the page loads
-            const analyzer = new TruthLensAnalyzer();
-            
-            // Override displayResults to include enhanced trust display
-            const originalDisplayResults = analyzer.displayResults.bind(analyzer);
-            analyzer.displayResults = function(data) {
-                originalDisplayResults(data);
-                updateEnhancedTrustDisplay(data);
-            };
-            
-            // Make it globally accessible for debugging
-            window.truthLensAnalyzer = analyzer;
-        });
     </script>
 </body>
 </html>
