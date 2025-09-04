@@ -1,6 +1,6 @@
 """
 Complete Enhanced NewsAnalyzer with Backward Compatibility
-CRITICAL FIX: Fixed content extraction check - now looks for 'text' field
+CRITICAL FIX: Fixed extraction quality assessment to properly count services
 Works with existing app.py without any changes
 """
 
@@ -153,18 +153,40 @@ class NewsAnalyzer:
         return input_data
     
     def _process_pipeline_results(self, pipeline_results, url, text, start_time):
-        """Process results from pipeline and build response"""
+        """Process results from pipeline and build response - COMPLETELY FIXED"""
         
         # Check for pipeline failures
         if not pipeline_results.get('success', False):
             return self._handle_pipeline_failure(pipeline_results, url, start_time)
         
-        # Extract data from pipeline results
+        # Extract article data first
         article_data = self._extract_article_data(pipeline_results)
-        detailed_analysis = self._extract_detailed_analysis(pipeline_results)
         
-        # Assess extraction quality
-        extraction_quality = self._assess_extraction_quality(article_data, detailed_analysis)
+        # CRITICAL FIX: Properly extract and organize detailed analysis
+        # The pipeline returns services at the top level AND in 'detailed_analysis'
+        detailed_analysis = {}
+        
+        # First check if there's a 'detailed_analysis' key
+        if 'detailed_analysis' in pipeline_results:
+            detailed_analysis = pipeline_results.get('detailed_analysis', {})
+        
+        # Also check for services at the top level of pipeline_results
+        for service_name in self.STANDARD_WEIGHTS.keys():
+            if service_name in pipeline_results and service_name not in detailed_analysis:
+                service_data = pipeline_results[service_name]
+                if service_data and isinstance(service_data, dict):
+                    detailed_analysis[service_name] = service_data
+        
+        # Normalize the detailed analysis data
+        detailed_analysis = self._normalize_detailed_analysis(detailed_analysis)
+        
+        # CRITICAL: Assess extraction quality CORRECTLY
+        # Simply check if we have article content and services ran
+        extraction_quality = self._assess_extraction_quality_fixed(
+            article_data, 
+            detailed_analysis,
+            pipeline_results
+        )
         
         # Check for insufficient content
         if extraction_quality == 'failed':
@@ -254,6 +276,62 @@ class NewsAnalyzer:
             'word_count': article.get('word_count', 0)
         }
     
+    def _normalize_detailed_analysis(self, detailed_analysis):
+        """Normalize the structure of detailed analysis"""
+        normalized = {}
+        
+        for service_name, service_data in detailed_analysis.items():
+            if service_data is None:
+                normalized[service_name] = {}
+            elif isinstance(service_data, dict):
+                # Already a dict, just use it
+                normalized[service_name] = service_data
+            elif isinstance(service_data, (int, float)):
+                # Just a score
+                normalized[service_name] = {'score': service_data}
+            elif isinstance(service_data, str):
+                # String result
+                normalized[service_name] = {'result': service_data}
+            elif isinstance(service_data, list):
+                # List of findings
+                normalized[service_name] = {'findings': service_data}
+            else:
+                # Unknown type, convert to string
+                normalized[service_name] = {'data': str(service_data)}
+        
+        return normalized
+    
+    def _assess_extraction_quality_fixed(self, article_data, detailed_analysis, pipeline_results):
+        """COMPLETELY FIXED: Assess quality of extraction based on actual data"""
+        
+        # Count services that actually ran (not their scores)
+        successful_services = len(detailed_analysis)
+        total_services = len(self.STANDARD_WEIGHTS)
+        
+        # CRITICAL FIX: Check BOTH 'text' and 'content' fields
+        content = article_data.get('content', '') or article_data.get('text', '')
+        has_content = bool(content) and len(content) > 200
+        has_title = bool(article_data.get('title'))
+        has_source = bool(article_data.get('source') or article_data.get('domain'))
+        
+        # Also check word_count as additional validation
+        word_count = article_data.get('word_count', 0)
+        if not has_content and word_count > 50:
+            has_content = True  # Trust word count if present
+        
+        # Log assessment with ACTUAL VALUES
+        logger.info(f"Extraction quality: {successful_services}/{total_services} services, "
+                   f"content={len(content)} chars, word_count={word_count}, "
+                   f"title={has_title}, source={has_source}")
+        
+        # Determine quality level based on ACTUAL service count
+        if successful_services >= 5 and (has_content or word_count > 50) and has_title:
+            return 'full'
+        elif successful_services >= 3 and (has_content or word_count > 50):
+            return 'partial'
+        else:
+            return 'failed'
+    
     def _extract_detailed_analysis(self, pipeline_results):
         """Extract and normalize detailed analysis from pipeline results"""
         detailed = pipeline_results.get('detailed_analysis', {})
@@ -310,44 +388,6 @@ class NewsAnalyzer:
             return True
             
         return False
-    
-    def _assess_extraction_quality(self, article_data, detailed_analysis):
-        """Assess quality of extraction - FIXED"""
-        # Count successful services
-        successful_services = 0
-        total_services = len(self.STANDARD_WEIGHTS)
-        
-        for service_name in self.STANDARD_WEIGHTS.keys():
-            service_data = detailed_analysis.get(service_name, {})
-            score = self._safe_get(service_data, 'score', 0) or \
-                   self._safe_get(service_data, 'credibility_score', 0) or \
-                   self._safe_get(service_data, 'quality_score', 0)
-            if score > 0:
-                successful_services += 1
-        
-        # CRITICAL FIX: Check BOTH 'text' and 'content' fields
-        content = article_data.get('content', '') or article_data.get('text', '')
-        has_content = bool(content) and len(content) > 200
-        has_title = bool(article_data.get('title'))
-        has_source = bool(article_data.get('source') or article_data.get('domain'))
-        
-        # Also check word_count as additional validation
-        word_count = article_data.get('word_count', 0)
-        if not has_content and word_count > 50:
-            has_content = True  # Trust word count if present
-        
-        # Log assessment
-        logger.info(f"Extraction quality: {successful_services}/{total_services} services, "
-                   f"content={len(content)} chars, word_count={word_count}, "
-                   f"title={has_title}, source={has_source}")
-        
-        # Determine quality level
-        if successful_services >= total_services - 1 and has_content and has_title:
-            return 'full'
-        elif successful_services >= 3 and (has_content or word_count > 50):
-            return 'partial'
-        else:
-            return 'failed'
     
     def _calculate_adaptive_trust_score(self, detailed_analysis, extraction_quality):
         """Calculate trust score with adaptive weights for missing services"""
