@@ -1,6 +1,15 @@
 """
-News Analyzer Service - FIXED VERSION
-Properly handles short content without incorrectly flagging as insufficient
+News Analyzer Service - FIXED VERSION WITH AUTHOR DATA EXTRACTION
+Date: September 2025
+Last Updated: September 5, 2025
+Purpose: Core analysis orchestrator that coordinates all analysis services
+Dependencies: analysis_pipeline, service_registry
+Notes:
+- Properly handles short content without incorrectly flagging as insufficient
+- CRITICAL FIX: Now properly extracts author_analyzer data from BaseAnalyzer wrapper
+- Handles both wrapped (BaseAnalyzer format) and unwrapped service results
+- Special handling for author_analyzer to extract combined_credibility_score
+- Includes author credibility in findings summary
 """
 import logging
 from typing import Dict, Any, Optional, List, Union
@@ -15,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class NewsAnalyzer:
     """
-    News analysis orchestrator with fixed content validation
+    News analysis orchestrator with fixed content validation and author data extraction
     """
     
     # Service weight configuration
@@ -138,13 +147,40 @@ class NewsAnalyzer:
         # Handle both 'text' and 'content' fields
         article_content = article.get('text', '') or article.get('content', '')
         
-        # Extract service results
+        # Extract service results - FIXED TO PROPERLY HANDLE BASEANALYZER WRAPPER
         detailed_analysis = {}
         for service_name in self.STANDARD_WEIGHTS.keys():
             if service_name in pipeline_results:
-                service_data = pipeline_results[service_name]
-                if service_data and isinstance(service_data, dict):
-                    detailed_analysis[service_name] = self._normalize_service_data(service_data)
+                service_result = pipeline_results[service_name]
+                
+                # CRITICAL FIX: Handle BaseAnalyzer wrapped format
+                if service_result and isinstance(service_result, dict):
+                    # Check if this is a BaseAnalyzer wrapped result
+                    if 'success' in service_result and 'data' in service_result:
+                        # This is wrapped - extract the data field
+                        if service_result.get('success'):
+                            actual_data = service_result.get('data', {})
+                            logger.info(f"Extracted {service_name} data from wrapper: {type(actual_data)}")
+                            
+                            # Special handling for author_analyzer
+                            if service_name == 'author_analyzer':
+                                logger.info(f"Author analyzer data keys: {list(actual_data.keys()) if isinstance(actual_data, dict) else 'not a dict'}")
+                                if isinstance(actual_data, dict) and 'combined_credibility_score' in actual_data:
+                                    logger.info(f"Author credibility score: {actual_data.get('combined_credibility_score')}")
+                            
+                            detailed_analysis[service_name] = actual_data
+                        else:
+                            # Service failed - log but don't include
+                            logger.warning(f"Service {service_name} failed: {service_result.get('error')}")
+                    else:
+                        # Not wrapped - use as is
+                        detailed_analysis[service_name] = self._normalize_service_data(service_result)
+        
+        # Log what we have for author_analyzer
+        if 'author_analyzer' in detailed_analysis:
+            logger.info(f"Author analyzer in detailed_analysis: {detailed_analysis['author_analyzer'].get('combined_credibility_score', 'NO SCORE')}")
+        else:
+            logger.warning("Author analyzer NOT in detailed_analysis!")
         
         # Calculate trust score
         trust_score = self._calculate_trust_score(detailed_analysis)
@@ -253,8 +289,20 @@ class NewsAnalyzer:
         if not isinstance(service_data, dict):
             return None
         
-        # Special handling for specific services FIRST
-        if service_name == 'fact_checker':
+        # Special handling for author_analyzer - FIXED
+        if service_name == 'author_analyzer':
+            # The author_analyzer returns combined_credibility_score
+            if 'combined_credibility_score' in service_data:
+                return service_data['combined_credibility_score']
+            # Fallback to other score fields
+            if 'credibility_score' in service_data:
+                return service_data['credibility_score']
+            if 'score' in service_data:
+                return int(service_data['score'])
+            return None
+        
+        # Special handling for fact_checker
+        elif service_name == 'fact_checker':
             # FIXED: Always calculate from claims ratio when available
             checks = service_data.get('claims_checked', 0)
             verified = service_data.get('verified_claims', 0)
@@ -339,6 +387,14 @@ class NewsAnalyzer:
         # Source
         if source and source != 'Unknown':
             findings.append(f"Source: {source}")
+        
+        # Author credibility if available
+        if 'author_analyzer' in detailed_analysis:
+            author_data = detailed_analysis['author_analyzer']
+            if isinstance(author_data, dict):
+                author_score = author_data.get('combined_credibility_score')
+                if author_score is not None:
+                    findings.append(f"Author Credibility: {author_score}/100")
         
         # Key findings from services
         if 'bias_detector' in detailed_analysis:
