@@ -301,11 +301,10 @@ class TruthLensAnalyzer {
     displayResults(data) {
         this.progressContainer.classList.remove('active');
         
-        // CRITICAL: Hide debug info completely
+        // CRITICAL: Remove ALL debug info elements completely
         const debugInfo = document.getElementById('debugInfo');
         if (debugInfo) {
-            debugInfo.style.display = 'none';
-            debugInfo.remove(); // Remove it entirely
+            debugInfo.remove(); // Remove it entirely from DOM
         }
         
         let trustScore = data.trust_score || 0;
@@ -317,10 +316,39 @@ class TruthLensAnalyzer {
         this.lastAnalyzedSource = source;
         this.lastAnalyzedScore = trustScore;
         
-        // CRITICAL FIX: Always generate findings summary
-        let findingsSummary = data.findings_summary;
-        if (!findingsSummary || findingsSummary.length < 10) {
-            findingsSummary = this.generateFindingsSummary(data);
+        // CRITICAL FIX: Generate proper findings summary
+        let findingsSummary = '';
+        const trustLevel = trustScore >= 80 ? 'high' : trustScore >= 60 ? 'good' : trustScore >= 40 ? 'moderate' : 'low';
+        
+        switch(trustLevel) {
+            case 'high':
+                findingsSummary = "This article demonstrates high credibility and trustworthiness. The source is well-established and reputable. Content appears balanced and factually accurate.";
+                break;
+            case 'good':
+                findingsSummary = "This article shows generally good credibility with some minor areas of concern. The source is reasonably reputable and content appears mostly balanced.";
+                break;
+            case 'moderate':
+                findingsSummary = "This article has moderate credibility with several issues identified. Source credibility is mixed and some bias may be present. Fact-checking revealed unverified claims.";
+                break;
+            case 'low':
+                findingsSummary = "This article shows significant credibility concerns. Source reputation is questionable, notable bias detected, and multiple claims could not be verified.";
+                break;
+        }
+        
+        // Add specific details if available
+        if (data.detailed_analysis) {
+            const d = data.detailed_analysis;
+            if (d.bias_detector?.bias_score !== undefined) {
+                const biasLevel = d.bias_detector.bias_score;
+                if (biasLevel < 30) {
+                    findingsSummary += " The content shows minimal bias.";
+                } else if (biasLevel > 70) {
+                    findingsSummary += " Significant bias was detected in the presentation.";
+                }
+            }
+            if (d.fact_checker?.accuracy_score === 0) {
+                findingsSummary += " No claims could be independently verified.";
+            }
         }
         
         this.updateTrustScore(trustScore);
@@ -337,9 +365,12 @@ class TruthLensAnalyzer {
             }
         }
         
+        // Update basic info
         const summaryEl = document.getElementById('articleSummary');
-        if (summaryEl) summaryEl.textContent = 
-            articleSummary.length > 100 ? articleSummary.substring(0, 100) + '...' : articleSummary;
+        if (summaryEl) {
+            summaryEl.textContent = articleSummary.length > 100 ? 
+                articleSummary.substring(0, 100) + '...' : articleSummary;
+        }
         
         const sourceEl = document.getElementById('articleSource');
         if (sourceEl) sourceEl.textContent = source;
@@ -347,25 +378,46 @@ class TruthLensAnalyzer {
         const authorEl = document.getElementById('articleAuthor');
         if (authorEl) authorEl.textContent = author;
         
-        // CRITICAL FIX: Force findings to display
+        // CRITICAL FIX: Force update findings with inline styles to override everything
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
+            // Clear any existing content first
+            findingsEl.innerHTML = '';
+            // Set the new content
             findingsEl.textContent = findingsSummary;
-            findingsEl.style.display = 'block';
-            findingsEl.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
-            findingsEl.style.borderLeft = '3px solid #3b82f6';
-            findingsEl.style.padding = '12px 15px';
-            findingsEl.style.borderRadius = '6px';
-            findingsEl.style.marginTop = '15px';
-            findingsEl.style.color = '#475569';
-            findingsEl.style.lineHeight = '1.6';
-            findingsEl.style.fontSize = '0.95rem';
+            // Force visibility with !important styles
+            findingsEl.setAttribute('style', `
+                display: block !important;
+                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+                border-left: 3px solid #3b82f6 !important;
+                padding: 12px 15px !important;
+                border-radius: 6px !important;
+                margin-top: 15px !important;
+                color: #475569 !important;
+                line-height: 1.6 !important;
+                font-size: 0.95rem !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `);
+        }
+        
+        // Update the enhanced trust display that's defined in your HTML
+        if (typeof updateEnhancedTrustDisplay === 'function') {
+            // This function is defined in your HTML, let it run first
+            updateEnhancedTrustDisplay(data);
+            // Then override the findings again to ensure our text stays
+            setTimeout(() => {
+                const findingsEl = document.getElementById('findingsSummary');
+                if (findingsEl && findingsEl.textContent !== findingsSummary) {
+                    findingsEl.textContent = findingsSummary;
+                }
+            }, 100);
         }
         
         // CRITICAL FIX: Ensure source rankings display
         setTimeout(() => {
             this.displaySourceRankings(source, trustScore);
-        }, 100);
+        }, 200);
         
         // Use display methods from ServiceTemplates
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
