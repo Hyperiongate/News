@@ -1,7 +1,8 @@
 """
-Article Extractor - COMPLETE PRODUCTION VERSION WITH GUARDIAN FIX
-Comprehensive extraction with universal author detection
-Properly integrated with existing codebase
+Article Extractor - COMPLETE PRODUCTION VERSION WITH ABC NEWS & GUARDIAN FIX
+Fixed to properly extract authors from ABC News, Guardian, and all major news sites
+Maintains compatibility with existing pipeline
+Last Updated: September 2025
 """
 
 import json
@@ -27,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 class ArticleExtractor(BaseAnalyzer):
     """
-    Complete article extraction with enhanced Guardian author support
-    Maintains compatibility with existing pipeline while adding robust author extraction
+    Complete article extraction with ABC News, Guardian, and universal author support
+    Properly handles multi-author bylines like "By Author1, Author2, and Author3"
     """
     
     def __init__(self):
@@ -55,10 +56,27 @@ class ArticleExtractor(BaseAnalyzer):
             'Upgrade-Insecure-Requests': '1'
         })
         
-        # Site-specific author selectors - ENHANCED FOR GUARDIAN
+        # Site-specific author selectors - COMPREHENSIVE INCLUDING ABC NEWS
         self.author_selectors = {
+            'abcnews.go.com': [
+                # ABC News specific selectors - CRITICAL FOR YOUR ISSUE
+                '.News__Author',
+                '.News__Byline__Author',
+                'span.Byline__Author',
+                '.byline__authors',
+                '.authors',
+                '.FITT_Article_new__authors',
+                '.FITT_Article_new__byline',
+                '[data-testid="byline"] span',
+                '.ContentRoll__Headline__Author',
+                '.ContentRoll__Headline__Date__Container span',
+                # Meta tags for ABC
+                'meta[name="author"]',
+                'meta[property="article:author"]',
+                'meta[name="DC.creator"]'
+            ],
             'theguardian.com': [
-                # Guardian specific selectors - COMPREHENSIVE
+                # Guardian specific selectors
                 'span[itemprop="name"]',
                 'a[rel="author"] span',
                 'a[data-link-name="auto tag link"] span',
@@ -67,14 +85,11 @@ class ArticleExtractor(BaseAnalyzer):
                 'a[rel="author"]',
                 'span.css-1rv9jn8',
                 'div[data-gu-name="meta"] a span',
-                # Guardian meta tags
                 'meta[name="author"]',
                 'meta[property="article:author"]',
-                # Additional Guardian patterns
                 '.contributor__name',
                 '.byline span',
                 '.content__meta-container span[itemprop="name"]',
-                # Newer Guardian layouts
                 '[data-component="byline"] span',
                 '[data-gu-name="byline"] span'
             ],
@@ -113,6 +128,24 @@ class ArticleExtractor(BaseAnalyzer):
                 'span[data-qa="author-name"]',
                 'a[data-qa="author-name"]',
                 'meta[name="author"]'
+            ],
+            'foxnews.com': [
+                '.author-byline span',
+                '.article-meta-author',
+                'span.author',
+                'meta[name="dc.creator"]'
+            ],
+            'usatoday.com': [
+                '.gnt_ar_by_a',
+                '.gnt_ar_by',
+                'a[data-c-br="native"]',
+                'meta[name="news_keywords"]'
+            ],
+            'apnews.com': [
+                '.CardHeadline-module-byline',
+                '.Component-bylines',
+                'span[data-key="byline"]',
+                'meta[name="author"]'
             ]
         }
     
@@ -125,7 +158,7 @@ class ArticleExtractor(BaseAnalyzer):
         Main analysis method - maintains compatibility with pipeline
         """
         logger.info("=" * 60)
-        logger.info("ARTICLE EXTRACTOR - ENHANCED GUARDIAN VERSION")
+        logger.info("ARTICLE EXTRACTOR - ABC NEWS ENHANCED VERSION")
         logger.info("=" * 60)
         
         try:
@@ -178,8 +211,11 @@ class ArticleExtractor(BaseAnalyzer):
                 result = strategy_func(url)
                 
                 if result.get('success'):
-                    # Special handling for Guardian to ensure author extraction
-                    if 'guardian' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
+                    # Special handling for specific sites
+                    if 'abcnews' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
+                        logger.info("ABC News article detected - enhancing author extraction")
+                        result = self._enhance_abc_extraction(result, url)
+                    elif 'guardian' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
                         logger.info("Guardian article detected - enhancing author extraction")
                         result = self._enhance_guardian_extraction(result, url)
                     
@@ -218,7 +254,7 @@ class ArticleExtractor(BaseAnalyzer):
             params = {
                 'api_key': self.scraperapi_key,
                 'url': url,
-                'render': 'true',  # Enable JS rendering for Guardian and other dynamic sites
+                'render': 'true',  # Enable JS rendering for dynamic sites
                 'country_code': 'us'
             }
             
@@ -315,7 +351,7 @@ class ArticleExtractor(BaseAnalyzer):
     
     def _extract_author_universal(self, soup: BeautifulSoup, url: str) -> str:
         """
-        Universal author extraction with enhanced Guardian support
+        Universal author extraction with ABC News, Guardian, and multi-author support
         """
         domain = urlparse(url).netloc.replace('www.', '')
         logger.info(f"Extracting author for domain: {domain}")
@@ -339,15 +375,21 @@ class ArticleExtractor(BaseAnalyzer):
                 try:
                     if selector.startswith('meta'):
                         # Handle meta tags
-                        element = soup.find('meta', attrs={
-                            'name': selector.split('"')[1] if 'name=' in selector else None,
-                            'property': selector.split('"')[1] if 'property=' in selector else None
-                        })
-                        if element and element.get('content'):
-                            author = element['content'].strip()
-                            if self._validate_author_name(author):
-                                logger.info(f"Found author in meta tag: {author}")
-                                return self._clean_author_name(author)
+                        parts = selector.split('"')
+                        if len(parts) >= 2:
+                            attr_value = parts[1]
+                            if 'name=' in selector:
+                                element = soup.find('meta', attrs={'name': attr_value})
+                            elif 'property=' in selector:
+                                element = soup.find('meta', attrs={'property': attr_value})
+                            else:
+                                element = None
+                            
+                            if element and element.get('content'):
+                                author = element['content'].strip()
+                                if self._validate_author_name(author):
+                                    logger.info(f"Found author in meta tag: {author}")
+                                    return self._clean_author_name(author)
                     else:
                         # CSS selector
                         elements = soup.select(selector)
@@ -357,13 +399,50 @@ class ArticleExtractor(BaseAnalyzer):
                                 logger.info(f"Found author with selector {selector}: {text}")
                                 return self._clean_author_name(text)
                 except Exception as e:
+                    logger.debug(f"Selector {selector} failed: {e}")
                     continue
         
-        # Method 3: Generic meta tags
+        # Method 3: Look for byline patterns (especially for ABC News multi-author format)
+        # ABC News often has "By Author1, Author2, and Author3" format
+        byline_patterns = [
+            # Look for elements containing "By" text
+            lambda s: s.find_all(text=re.compile(r'^By\s+', re.IGNORECASE)),
+            # Look for common byline classes
+            lambda s: s.find_all(class_=re.compile(r'byline|author', re.IGNORECASE))
+        ]
+        
+        for pattern_func in byline_patterns:
+            elements = pattern_func(soup)
+            for element in elements:
+                if hasattr(element, 'parent'):
+                    parent = element.parent
+                    if parent:
+                        full_text = parent.get_text(strip=True)
+                else:
+                    full_text = element.get_text(strip=True) if hasattr(element, 'get_text') else str(element)
+                
+                # Extract author names after "By" with support for multiple authors
+                match = re.match(
+                    r'^By\s+(.+?)(?:\s*[\d,]+\s*(?:January|February|March|April|May|June|July|August|September|October|November|December)|\s*\d{1,2}[:\/]\d{2}|\s*\d{4}|$)',
+                    full_text,
+                    re.IGNORECASE | re.DOTALL
+                )
+                if match:
+                    authors_text = match.group(1).strip()
+                    # Clean up the authors text
+                    authors_text = re.sub(r'\s+', ' ', authors_text)
+                    authors_text = re.sub(r',?\s+and\s+', ', ', authors_text)
+                    if self._validate_author_name(authors_text):
+                        logger.info(f"Found author in byline text: {authors_text}")
+                        return self._clean_author_name(authors_text)
+        
+        # Method 4: Generic meta tags
         meta_selectors = [
             'meta[name="author"]',
             'meta[property="article:author"]',
             'meta[name="byl"]',
+            'meta[name="DC.creator"]',
+            'meta[name="dc.creator"]',
             'meta[name="sailthru.author"]',
             'meta[name="parsely-author"]',
             'meta[name="twitter:creator"]'
@@ -377,13 +456,14 @@ class ArticleExtractor(BaseAnalyzer):
                     logger.info(f"Found author in generic meta: {content}")
                     return self._clean_author_name(content)
         
-        # Method 4: Common byline selectors
+        # Method 5: Common byline selectors
         byline_selectors = [
             '.author', '.author-name', '.byline', '.byline-author',
             '.article-author', '.post-author', '.story-author',
             '[rel="author"]', '.vcard .fn', '.h-card .p-name',
             'span[itemprop="author"]', 'span[itemprop="name"]',
-            '.contributor', '.journalist', '.reporter'
+            '.contributor', '.journalist', '.reporter',
+            '.News__Author', '.News__Byline__Author'  # ABC News specific
         ]
         
         for selector in byline_selectors:
@@ -394,10 +474,11 @@ class ArticleExtractor(BaseAnalyzer):
                     logger.info(f"Found author in byline: {text}")
                     return self._clean_author_name(text)
         
-        # Method 5: Text pattern matching
+        # Method 6: Text pattern matching for remaining cases
         full_text = soup.get_text()
         patterns = [
-            r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
+            # Enhanced pattern for multiple authors
+            r'By\s+([A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*(?:\s*,\s*[A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*)*(?:\s+and\s+[A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*)?)',
             r'Written\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
             r'Author:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})'
         ]
@@ -460,7 +541,7 @@ class ArticleExtractor(BaseAnalyzer):
                         if name:
                             authors.append(name)
                 if authors:
-                    return ' and '.join(authors)
+                    return ', '.join(authors)
         
         # Check @graph structure
         if '@graph' in data:
@@ -469,6 +550,33 @@ class ArticleExtractor(BaseAnalyzer):
                     return self._extract_author_from_json_object({'author': item['author']})
         
         return None
+    
+    def _enhance_abc_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
+        """
+        Special enhancement for ABC News articles
+        """
+        try:
+            # Try to fetch again with better headers for ABC News
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://abcnews.go.com/'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Try ABC-specific extraction
+                author = self._extract_author_universal(soup, url)
+                if author and author != 'Unknown':
+                    result['data']['author'] = author
+                    logger.info(f"Enhanced ABC extraction found author: {author}")
+        except Exception as e:
+            logger.error(f"ABC enhancement failed: {e}")
+        
+        return result
     
     def _enhance_guardian_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
         """
@@ -593,15 +701,39 @@ class ArticleExtractor(BaseAnalyzer):
         return ''
     
     def _clean_author_name(self, author: str) -> str:
-        """Clean and normalize author name"""
+        """Clean and normalize author name - handles multiple authors"""
         if not author:
             return ""
         
         # Remove common prefixes
         author = re.sub(r'^(By\s+|Written\s+by\s+|Author:\s*)', '', author, flags=re.IGNORECASE)
         
-        # Remove publication names
-        for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'Guardian', 'The Guardian']:
+        # Handle multiple authors - preserve commas but clean "and"
+        if ',' in author or ' and ' in author.lower():
+            # Split by comma and "and"
+            parts = re.split(r',|\s+and\s+', author, flags=re.IGNORECASE)
+            # Clean each part
+            cleaned_parts = []
+            for part in parts:
+                part = part.strip()
+                if part and self._validate_author_name(part):
+                    # Remove publication names from individual authors
+                    for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'ABC News', 'Guardian', 'The Guardian']:
+                        part = re.sub(rf'\s*{pub}(?:\s+News)?$', '', part, flags=re.IGNORECASE)
+                    part = part.strip()
+                    if part:
+                        cleaned_parts.append(part)
+            
+            # Rejoin with commas
+            if cleaned_parts:
+                if len(cleaned_parts) > 1:
+                    # Format as "Author1, Author2, and Author3"
+                    return ', '.join(cleaned_parts[:-1]) + ', and ' + cleaned_parts[-1]
+                else:
+                    return cleaned_parts[0]
+        
+        # Single author - remove publication names
+        for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'ABC News', 'Guardian', 'The Guardian']:
             author = re.sub(rf'\s*,?\s*{pub}(?:\s+News)?(?:\s*,.*)?$', '', author, flags=re.IGNORECASE)
         
         # Remove role suffixes
@@ -618,23 +750,39 @@ class ArticleExtractor(BaseAnalyzer):
     
     def _validate_author_name(self, text: str) -> bool:
         """Validate that text looks like a real author name"""
-        if not text or len(text.strip()) < 3 or len(text) > 100:
+        if not text or len(text.strip()) < 3:
             return False
         
-        text = text.strip().lower()
+        # Allow longer text for multiple authors
+        if ',' in text or ' and ' in text.lower():
+            if len(text) > 200:  # Multiple authors can be longer
+                return False
+        elif len(text) > 100:  # Single author shouldn't be too long
+            return False
+        
+        text_lower = text.strip().lower()
         
         # Reject common non-author patterns
         rejected = [
             'staff', 'editor', 'admin', 'correspondent',
-            'associated press', 'reuters', 'unknown',
+            'associated press', 'reuters staff', 'unknown',
             'photo', 'image', 'video', 'copyright',
             'read more', 'continue', 'subscribe',
             'news', 'sports', 'business', 'politics'
         ]
         
-        for pattern in rejected:
-            if pattern in text:
-                return False
+        # For multiple authors, check each part
+        if ',' in text or ' and ' in text_lower:
+            parts = re.split(r',|\s+and\s+', text, flags=re.IGNORECASE)
+            for part in parts:
+                part = part.strip().lower()
+                for pattern in rejected:
+                    if pattern in part:
+                        return False
+        else:
+            for pattern in rejected:
+                if pattern in text_lower:
+                    return False
         
         # Must contain letters
         return bool(re.search(r'[a-zA-Z]', text))
