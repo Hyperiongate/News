@@ -1,10 +1,7 @@
 """
-Article Extractor - COMPLETE UNIVERSAL VERSION WITH FIX
-CRITICAL FIXES:
-1. Fixed data return format - now properly returns article data
-2. Returns data in proper 'data' wrapper format that pipeline expects
-3. Universal author extraction with 40+ patterns and 8 different strategies
-4. Works for BBC, CNN, Reuters, AP, WordPress, and all news sites
+Article Extractor - COMPLETE PRODUCTION VERSION WITH GUARDIAN FIX
+Comprehensive extraction with universal author detection
+Properly integrated with existing codebase
 """
 
 import json
@@ -14,11 +11,13 @@ import logging
 import requests
 import urllib3
 from bs4 import BeautifulSoup
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from urllib.parse import urlparse
 from datetime import datetime
 import random
+import os
 
+# Import the base analyzer that your system uses
 from services.base_analyzer import BaseAnalyzer
 
 # Disable SSL warnings
@@ -28,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 class ArticleExtractor(BaseAnalyzer):
     """
-    COMPLETE: Article extraction with universal author extraction and proper data wrapper format
+    Complete article extraction with enhanced Guardian author support
+    Maintains compatibility with existing pipeline while adding robust author extraction
     """
     
     def __init__(self):
@@ -40,18 +40,81 @@ class ArticleExtractor(BaseAnalyzer):
             self.scraperapi_key = Config.SCRAPERAPI_KEY
             logger.info(f"ArticleExtractor initialized - ScraperAPI: {bool(self.scraperapi_key)}")
         except:
-            self.scraperapi_key = None
-            logger.warning("ScraperAPI key not available")
+            self.scraperapi_key = os.getenv('SCRAPERAPI_KEY')
+            logger.warning("Using environment variable for ScraperAPI key")
         
         # Initialize session for requests
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         })
+        
+        # Site-specific author selectors - ENHANCED FOR GUARDIAN
+        self.author_selectors = {
+            'theguardian.com': [
+                # Guardian specific selectors - COMPREHENSIVE
+                'span[itemprop="name"]',
+                'a[rel="author"] span',
+                'a[data-link-name="auto tag link"] span',
+                'address[aria-label*="author"] span',
+                'div.dcr-1cfvqy6 span',
+                'a[rel="author"]',
+                'span.css-1rv9jn8',
+                'div[data-gu-name="meta"] a span',
+                # Guardian meta tags
+                'meta[name="author"]',
+                'meta[property="article:author"]',
+                # Additional Guardian patterns
+                '.contributor__name',
+                '.byline span',
+                '.content__meta-container span[itemprop="name"]',
+                # Newer Guardian layouts
+                '[data-component="byline"] span',
+                '[data-gu-name="byline"] span'
+            ],
+            'bbc.com': [
+                'span.qa-contributor-name',
+                'p.ssrcss-1rv9jn8-Contributor span',
+                'div[data-component="byline"] span',
+                '.author-unit__text',
+                '.byline__name'
+            ],
+            'cnn.com': [
+                'span.metadata__byline__author',
+                'div.byline__names',
+                '.Article__subtitle',
+                'meta[name="author"]'
+            ],
+            'reuters.com': [
+                'div.author-name',
+                'span[class*="author"]',
+                '.ArticleHeader__author',
+                'meta[name="article:author"]'
+            ],
+            'nytimes.com': [
+                'span.byline-name',
+                'meta[name="byl"]',
+                'p.css-1cjnqko span',
+                'span[itemprop="name"]'
+            ],
+            'npr.org': [
+                '.byline__name',
+                '.byline__name a',
+                '.byline__authors',
+                'span.byline__name'
+            ],
+            'washingtonpost.com': [
+                'span[data-qa="author-name"]',
+                'a[data-qa="author-name"]',
+                'meta[name="author"]'
+            ]
+        }
     
     def _check_availability(self) -> bool:
         """Check if service is available"""
@@ -59,10 +122,10 @@ class ArticleExtractor(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        CRITICAL FIX: Main analysis method that returns proper data wrapper format
+        Main analysis method - maintains compatibility with pipeline
         """
         logger.info("=" * 60)
-        logger.info("ARTICLE EXTRACTOR - UNIVERSAL AUTHOR EXTRACTION VERSION")
+        logger.info("ARTICLE EXTRACTOR - ENHANCED GUARDIAN VERSION")
         logger.info("=" * 60)
         
         try:
@@ -79,19 +142,16 @@ class ArticleExtractor(BaseAnalyzer):
             else:
                 return self.get_error_result("No URL or text provided")
             
-            # CRITICAL FIX: Return the data properly
+            # Return in BaseAnalyzer format
             if result.get('success'):
-                # Extract just the data portion and return it wrapped properly
                 article_data = result.get('data', {})
                 
-                # Log what we're returning
-                logger.info("=== RETURNING ARTICLE DATA ===")
+                logger.info("=== EXTRACTION COMPLETE ===")
                 logger.info(f"Title: {article_data.get('title', 'Unknown')[:50]}...")
                 logger.info(f"Author: {article_data.get('author', 'Unknown')}")
-                logger.info(f"Content length: {len(article_data.get('text', ''))}")
+                logger.info(f"Domain: {article_data.get('domain', 'Unknown')}")
                 logger.info(f"Word count: {article_data.get('word_count', 0)}")
                 
-                # Return using BaseAnalyzer format with data
                 return self.get_success_result(article_data)
             else:
                 return self.get_error_result(result.get('error', 'Extraction failed'))
@@ -110,23 +170,39 @@ class ArticleExtractor(BaseAnalyzer):
         ]
         
         last_error = None
+        best_result = None
         
         for strategy_name, strategy_func in strategies:
             try:
                 logger.info(f"Trying {strategy_name}...")
                 result = strategy_func(url)
                 
-                if result.get('success') and self._validate_extraction(result):
-                    logger.info(f"SUCCESS: {strategy_name} extracted content")
-                    return result
-                else:
-                    last_error = result.get('error', f'{strategy_name} returned insufficient content')
-                    logger.warning(f"{strategy_name} failed: {last_error}")
+                if result.get('success'):
+                    # Special handling for Guardian to ensure author extraction
+                    if 'guardian' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
+                        logger.info("Guardian article detected - enhancing author extraction")
+                        result = self._enhance_guardian_extraction(result, url)
+                    
+                    if self._validate_extraction(result):
+                        logger.info(f"SUCCESS: {strategy_name} extracted content")
+                        return result
+                    
+                # Keep best partial result
+                if result.get('data', {}).get('text'):
+                    if not best_result or len(result['data']['text']) > len(best_result.get('data', {}).get('text', '')):
+                        best_result = result
+                
+                last_error = result.get('error', f'{strategy_name} failed')
                     
             except Exception as e:
                 last_error = str(e)
-                logger.error(f"{strategy_name} threw exception: {e}")
+                logger.error(f"{strategy_name} exception: {e}")
                 continue
+        
+        # Return best partial result if available
+        if best_result:
+            logger.warning("Returning best partial result")
+            return best_result
         
         return {
             'success': False,
@@ -134,7 +210,7 @@ class ArticleExtractor(BaseAnalyzer):
         }
     
     def _extract_with_scraperapi(self, url: str) -> Dict[str, Any]:
-        """Extract using ScraperAPI if available"""
+        """Extract using ScraperAPI with JavaScript rendering for dynamic sites"""
         if not self.scraperapi_key:
             return {'success': False, 'error': 'ScraperAPI key not available'}
         
@@ -142,7 +218,7 @@ class ArticleExtractor(BaseAnalyzer):
             params = {
                 'api_key': self.scraperapi_key,
                 'url': url,
-                'render': 'false',
+                'render': 'true',  # Enable JS rendering for Guardian and other dynamic sites
                 'country_code': 'us'
             }
             
@@ -157,8 +233,12 @@ class ArticleExtractor(BaseAnalyzer):
     def _extract_with_requests(self, url: str) -> Dict[str, Any]:
         """Extract using enhanced requests session"""
         try:
-            # Add some randomization to avoid detection
+            # Randomize user agent
             self.session.headers['User-Agent'] = self._get_random_user_agent()
+            
+            # Add referer for some sites
+            domain = urlparse(url).netloc
+            self.session.headers['Referer'] = f'https://{domain}/'
             
             response = self.session.get(url, timeout=30, verify=False, allow_redirects=True)
             response.raise_for_status()
@@ -185,14 +265,12 @@ class ArticleExtractor(BaseAnalyzer):
             return {'success': False, 'error': f'Basic fallback failed: {str(e)}'}
     
     def _parse_html_content(self, html: str, url: str, method: str) -> Dict[str, Any]:
-        """
-        CRITICAL FIX: Parse HTML and return in proper data structure
-        """
+        """Parse HTML and extract article data"""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
             # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer']):
                 element.decompose()
             
             # Extract components
@@ -206,23 +284,19 @@ class ArticleExtractor(BaseAnalyzer):
             word_count = len(content.split()) if content else 0
             domain = self._clean_domain(urlparse(url).netloc)
             
-            logger.info("=== EXTRACTING ARTICLE DATA ===")
-            logger.info(f"✓ Extracted title: {title[:50]}{'...' if len(title) > 50 else ''}")
-            logger.info(f"✓ Extracted author: {author}")
-            logger.info(f"✓ Extracted domain: {domain}")
-            logger.info(f"✓ Content length: {len(content)}")
-            logger.info(f"✓ Word count: {word_count}")
+            logger.info(f"Extraction results - Author: {author}, Title: {title[:50]}, Words: {word_count}")
             
-            # CRITICAL FIX: Return in exact format expected by pipeline
             return {
                 'success': True,
-                'data': {  # This is the wrapper format pipeline expects
+                'data': {
                     'title': title,
                     'text': content,
+                    'content': content,  # Some services expect 'content' field
                     'author': author,
                     'publish_date': publish_date,
                     'url': url,
                     'domain': domain,
+                    'source': domain,  # Alias for domain
                     'description': description,
                     'word_count': word_count,
                     'language': 'en',
@@ -231,9 +305,7 @@ class ArticleExtractor(BaseAnalyzer):
                 'extraction_metadata': {
                     'method': method,
                     'extracted_at': datetime.now().isoformat(),
-                    'content_length': len(content) if content else 0,
-                    'author_found': bool(author and author != 'Unknown'),
-                    'title_found': bool(title and title != 'Unknown Title')
+                    'author_found': bool(author and author != 'Unknown')
                 }
             }
             
@@ -241,155 +313,60 @@ class ArticleExtractor(BaseAnalyzer):
             logger.error(f"HTML parsing failed: {e}", exc_info=True)
             return {'success': False, 'error': f'HTML parsing failed: {str(e)}'}
     
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract article title"""
-        # Try multiple selectors in order of preference
-        selectors = [
-            'h1',
-            'title', 
-            '[property="og:title"]',
-            '[name="twitter:title"]',
-            '.entry-title',
-            '.post-title',
-            '.article-title',
-            '.headline'
-        ]
-        
-        for selector in selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    title = element.get('content', '').strip()
-                else:
-                    title = element.get_text(strip=True)
-                
-                if title and len(title) > 5:
-                    # Clean up title
-                    title = re.sub(r'\s+', ' ', title)
-                    return title[:200]  # Limit length
-        
-        return 'Unknown Title'
-    
-    def _extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract main article content with improved NPR support"""
-        # Remove elements that definitely aren't content
-        for element in soup.find_all(['script', 'style', 'nav', 'footer', 'header']):
-            element.decompose()
-        
-        # Try content selectors in order of preference
-        content_selectors = [
-            # NPR specific selectors
-            '.storytext',
-            '.story-text',
-            '#storytext',
-            '#res',  # NPR uses this for story content
-            '.transcript.storytext',
-            
-            # Standard article selectors
-            'article',
-            '[role="article"]', 
-            '.entry-content',
-            '.post-content',
-            '.article-body',
-            '.article-content',
-            '.content',
-            'main',
-            '.main-content',
-            
-            # Additional NPR patterns
-            '.story-content',
-            '.article-text',
-            '.prose',
-            '.story'
-        ]
-        
-        for selector in content_selectors:
-            element = soup.select_one(selector)
-            if element:
-                # Remove ads and unwanted nested content
-                for unwanted in element.find_all(['aside', '.ad', '.advertisement', '.sidebar', '.newsletter-signup', '.related-links']):
-                    unwanted.decompose()
-                
-                text = element.get_text(separator=' ', strip=True)
-                if text and len(text) > 200:  # Must have substantial content
-                    # Clean up extra whitespace
-                    text = re.sub(r'\s+', ' ', text)
-                    return text
-        
-        # Fallback: extract all paragraph text
-        paragraphs = soup.find_all('p')
-        if paragraphs:
-            content_parts = []
-            for p in paragraphs:
-                # Skip paragraphs that are likely navigation or ads
-                parent_class = ' '.join(p.parent.get('class', []))
-                if any(skip in parent_class for skip in ['nav', 'footer', 'header', 'sidebar', 'ad']):
-                    continue
-                    
-                text = p.get_text(strip=True)
-                if text and len(text) > 20:  # Skip very short paragraphs
-                    content_parts.append(text)
-            
-            if content_parts:
-                content = ' '.join(content_parts)
-                # Clean up extra whitespace
-                content = re.sub(r'\s+', ' ', content)
-                return content
-        
-        # Final fallback: get all text but try to clean it
-        all_text = soup.get_text(separator=' ', strip=True)
-        # Remove common non-content patterns
-        all_text = re.sub(r'(Cookie Policy|Privacy Policy|Terms of Service|Copyright \d{4})', '', all_text)
-        all_text = re.sub(r'\s+', ' ', all_text)
-        
-        return all_text or ''
-    
     def _extract_author_universal(self, soup: BeautifulSoup, url: str) -> str:
         """
-        UNIVERSAL AUTHOR EXTRACTION - Works for ALL news sites including BBC
-        Enhanced extraction with 40+ patterns and comprehensive fallbacks
+        Universal author extraction with enhanced Guardian support
         """
-        logger.info(f"=== COMPREHENSIVE AUTHOR EXTRACTION for {url} ===")
+        domain = urlparse(url).netloc.replace('www.', '')
+        logger.info(f"Extracting author for domain: {domain}")
         
-        # Method 1: JSON-LD Structured Data (Most reliable)
+        # Method 1: JSON-LD Structured Data
         author = self._extract_author_from_json_ld(soup)
-        if author:
-            logger.info(f"✓ JSON-LD structured data: {author}")
+        if author and author != 'Unknown':
+            logger.info(f"Found author in JSON-LD: {author}")
             return self._clean_author_name(author)
         
-        # Method 2: Meta tags (27 different variations)
+        # Method 2: Site-specific selectors
+        site_key = None
+        for key in self.author_selectors.keys():
+            if key in domain:
+                site_key = key
+                break
+        
+        if site_key:
+            selectors = self.author_selectors[site_key]
+            for selector in selectors:
+                try:
+                    if selector.startswith('meta'):
+                        # Handle meta tags
+                        element = soup.find('meta', attrs={
+                            'name': selector.split('"')[1] if 'name=' in selector else None,
+                            'property': selector.split('"')[1] if 'property=' in selector else None
+                        })
+                        if element and element.get('content'):
+                            author = element['content'].strip()
+                            if self._validate_author_name(author):
+                                logger.info(f"Found author in meta tag: {author}")
+                                return self._clean_author_name(author)
+                    else:
+                        # CSS selector
+                        elements = soup.select(selector)
+                        for element in elements:
+                            text = element.get_text(strip=True)
+                            if text and self._validate_author_name(text):
+                                logger.info(f"Found author with selector {selector}: {text}")
+                                return self._clean_author_name(text)
+                except Exception as e:
+                    continue
+        
+        # Method 3: Generic meta tags
         meta_selectors = [
-            # Standard meta tags
             'meta[name="author"]',
-            'meta[name="Author"]', 
-            'meta[name="article:author"]',
             'meta[property="article:author"]',
+            'meta[name="byl"]',
             'meta[name="sailthru.author"]',
             'meta[name="parsely-author"]',
-            'meta[name="byl"]',
-            'meta[name="twitter:creator"]',
-            'meta[property="twitter:creator"]',
-            'meta[name="author-name"]',
-            'meta[property="author"]',
-            'meta[name="news_keywords"]',
-            # CMS-specific
-            'meta[name="wordpress-author"]',
-            'meta[name="wp-author"]',
-            'meta[name="drupal-author"]',
-            'meta[name="joomla-author"]',
-            # Publisher-specific
-            'meta[name="cnn-author"]',
-            'meta[name="bbc-author"]',
-            'meta[name="nyt-author"]',
-            'meta[name="wapo-author"]',
-            'meta[name="guardian-author"]',
-            'meta[name="reuters-author"]',
-            'meta[name="ap-author"]',
-            # Generic patterns
-            'meta[name*="author"]',
-            'meta[property*="author"]',
-            'meta[name*="byline"]',
-            'meta[property*="byline"]'
+            'meta[name="twitter:creator"]'
         ]
         
         for selector in meta_selectors:
@@ -397,78 +374,45 @@ class ArticleExtractor(BaseAnalyzer):
             if element:
                 content = element.get('content', '').strip()
                 if content and self._validate_author_name(content):
-                    logger.info(f"✓ Meta tag {selector}: {content}")
+                    logger.info(f"Found author in generic meta: {content}")
                     return self._clean_author_name(content)
         
-        # Method 3: Byline selectors (40+ common patterns)
+        # Method 4: Common byline selectors
         byline_selectors = [
-            # Standard classes
             '.author', '.author-name', '.byline', '.byline-author',
             '.article-author', '.post-author', '.story-author',
-            '.writer', '.journalist', '.reporter', '.correspondent',
-            
-            # Specific patterns
-            '.author-info .name', '.author-profile .name',
-            '.byline .name', '.byline-name', '.author-byline',
-            '.article-byline', '.story-byline', '.post-byline',
-            
-            # ID-based
-            '#author', '#author-name', '#byline', '#article-author',
-            '#post-author', '#story-author',
-            
-            # Data attributes
-            '[data-author]', '[data-author-name]', '[data-byline]',
-            
-            # CMS-specific classes
-            '.wp-author', '.wordpress-author', '.drupal-author',
-            '.entry-author', '.post-meta-author',
-            
-            # News site patterns
-            '.cnn-author', '.bbc-author', '.nyt-author', '.wapo-author',
-            '.guardian-author', '.reuters-author', '.ap-author',
-            
-            # Generic patterns that often contain authors
-            '.meta-author', '.attribution', '.credit', '.source-author',
-            '.article-meta .author', '.post-meta .author',
-            '.content-author', '.news-author', '.blog-author',
-            
-            # Newspaper.com patterns
             '[rel="author"]', '.vcard .fn', '.h-card .p-name',
-            
-            # Additional patterns
-            '.author-link', '.author-url', '.byline-link',
-            '.contributor', '.staff-author'
+            'span[itemprop="author"]', 'span[itemprop="name"]',
+            '.contributor', '.journalist', '.reporter'
         ]
         
         for selector in byline_selectors:
             elements = soup.select(selector)
             for element in elements:
-                text = self._extract_text_from_element(element)
+                text = element.get_text(strip=True)
                 if text and self._validate_author_name(text):
-                    logger.info(f"✓ Byline selector {selector}: {text}")
+                    logger.info(f"Found author in byline: {text}")
                     return self._clean_author_name(text)
         
-        # Method 4: Look for byline text patterns
+        # Method 5: Text pattern matching
         full_text = soup.get_text()
-        
-        # Universal byline patterns
-        byline_patterns = [
+        patterns = [
             r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
             r'Written\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-            r'Author:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
+            r'Author:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})'
         ]
         
-        for pattern in byline_patterns:
+        for pattern in patterns:
             match = re.search(pattern, full_text)
             if match:
                 author_name = match.group(1)
                 if self._validate_author_name(author_name):
-                    logger.info(f"✓ Text pattern: {author_name}")
+                    logger.info(f"Found author in text pattern: {author_name}")
                     return self._clean_author_name(author_name)
         
-        logger.info("✗ No author found with any method")
+        logger.info("No author found with any method")
         return 'Unknown'
-
+    
     def _extract_author_from_json_ld(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract author from JSON-LD structured data"""
         json_ld_scripts = soup.find_all('script', {'type': 'application/ld+json'})
@@ -477,7 +421,7 @@ class ArticleExtractor(BaseAnalyzer):
             try:
                 data = json.loads(script.string)
                 
-                # Handle single object or array
+                # Handle different JSON-LD structures
                 if isinstance(data, list):
                     for item in data:
                         author = self._extract_author_from_json_object(item)
@@ -492,149 +436,140 @@ class ArticleExtractor(BaseAnalyzer):
                 continue
         
         return None
-
+    
     def _extract_author_from_json_object(self, data: dict) -> Optional[str]:
         """Extract author from a JSON-LD object"""
         if not isinstance(data, dict):
             return None
         
-        # Look for author field
+        # Direct author field
         if 'author' in data:
             author_data = data['author']
             
-            # Author as string
             if isinstance(author_data, str):
                 return author_data
-            
-            # Author as object with name
-            if isinstance(author_data, dict):
-                if 'name' in author_data:
-                    return author_data['name']
-                # Sometimes it's nested deeper
-                if '@type' in author_data and author_data.get('@type') == 'Person':
-                    return author_data.get('name')
-            
-            # Author as array
-            if isinstance(author_data, list):
+            elif isinstance(author_data, dict):
+                return author_data.get('name')
+            elif isinstance(author_data, list):
                 authors = []
-                for author_item in author_data:
-                    if isinstance(author_item, str):
-                        authors.append(author_item)
-                    elif isinstance(author_item, dict) and 'name' in author_item:
-                        authors.append(author_item['name'])
-                
+                for item in author_data:
+                    if isinstance(item, str):
+                        authors.append(item)
+                    elif isinstance(item, dict):
+                        name = item.get('name')
+                        if name:
+                            authors.append(name)
                 if authors:
                     return ' and '.join(authors)
         
+        # Check @graph structure
+        if '@graph' in data:
+            for item in data['@graph']:
+                if isinstance(item, dict) and 'author' in item:
+                    return self._extract_author_from_json_object({'author': item['author']})
+        
         return None
-
-    def _extract_text_from_element(self, element) -> str:
-        """Safely extract text from BeautifulSoup element"""
-        if not element:
-            return ""
+    
+    def _enhance_guardian_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
+        """
+        Special enhancement for Guardian articles
+        """
+        try:
+            # Try to fetch again with better headers for Guardian
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-GB,en;q=0.9',
+                'Referer': 'https://www.theguardian.com/'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Try Guardian-specific extraction
+                author = self._extract_author_universal(soup, url)
+                if author and author != 'Unknown':
+                    result['data']['author'] = author
+                    logger.info(f"Enhanced Guardian extraction found author: {author}")
+        except Exception as e:
+            logger.error(f"Guardian enhancement failed: {e}")
         
-        # Try different text extraction methods
-        text = ""
-        
-        # Method 1: Direct text content
-        if hasattr(element, 'get_text'):
-            text = element.get_text(strip=True)
-        elif hasattr(element, 'text'):
-            text = element.text.strip()
-        elif hasattr(element, 'string') and element.string:
-            text = element.string.strip()
-        
-        # Method 2: Check for title attribute
-        if not text and hasattr(element, 'get'):
-            text = element.get('title', '').strip()
-        
-        return text
-
-    def _clean_author_name(self, author: str) -> str:
-        """Clean and normalize author name"""
-        if not author:
-            return ""
-        
-        # Remove common prefixes
-        author = re.sub(r'^(By\s+|Written\s+by\s+|Author:\s*|Reporter:\s*)', '', author, flags=re.IGNORECASE)
-        
-        # Remove publication names and common suffixes
-        publications = [
-            r'\s*,?\s*BBC\s+News(?:\s*,.*)?$',
-            r'\s*,?\s*CNN(?:\s*,.*)?$',
-            r'\s*,?\s*Reuters(?:\s*,.*)?$',
-            r'\s*,?\s*NPR(?:\s*,.*)?$',
-            r'\s*,?\s*AP(?:\s*,.*)?$',
-            r'\s+Staff\s+Writer$',
-            r'\s+Correspondent$',
-            r'\s+Reporter$'
+        return result
+    
+    def _extract_title(self, soup: BeautifulSoup) -> str:
+        """Extract article title"""
+        selectors = [
+            'h1',
+            'title',
+            'meta[property="og:title"]',
+            'meta[name="twitter:title"]',
+            '.entry-title',
+            '.post-title',
+            '.article-title'
         ]
         
-        for pattern in publications:
-            author = re.sub(pattern, '', author, flags=re.IGNORECASE)
+        for selector in selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    title = element.get('content', '').strip()
+                else:
+                    title = element.get_text(strip=True)
+                
+                if title and len(title) > 5:
+                    return re.sub(r'\s+', ' ', title)[:200]
         
-        # Clean up whitespace and punctuation
-        author = re.sub(r'\s+', ' ', author)  # Multiple spaces to single
-        author = author.strip(' ,-')  # Remove leading/trailing space, commas, hyphens
-        
-        # Convert ALL CAPS to Title Case
-        if author.isupper():
-            author = author.title()
-        
-        return author.strip()
-
-    def _validate_author_name(self, text: str, strict: bool = False) -> bool:
-        """Validate that text looks like a real author name"""
-        if not text or len(text.strip()) < 3:
-            return False
-        
-        text = text.strip()
-        
-        # Too long to be a reasonable author name
-        if len(text) > 100:
-            return False
-        
-        # Must contain at least one letter
-        if not re.search(r'[a-zA-Z]', text):
-            return False
-        
-        # Common non-author patterns to reject
-        rejected_patterns = [
-            r'^\d+$',  # Just numbers
-            r'^(the|a|an)\s+',  # Articles at start
-            r'(photo|image|picture|video)',  # Media-related
-            r'(copyright|©|\(c\))',  # Copyright
-            r'(read\s+more|continue\s+reading|full\s+story)',  # Navigation
-            r'^(news|sports|business|politics|world)$',  # Generic categories
-            r'(subscribe|newsletter|follow\s+us)',  # Social/marketing
-            r'^\s*-\s*$',  # Just dashes
-            r'^(staff|editorial|admin|editor)$'  # Generic roles
+        return 'Unknown Title'
+    
+    def _extract_content(self, soup: BeautifulSoup) -> str:
+        """Extract main article content"""
+        content_selectors = [
+            'article',
+            '[role="article"]',
+            '.article-body',
+            '.article-content',
+            '.entry-content',
+            '.post-content',
+            '.storytext',  # NPR
+            '#storytext',  # NPR
+            '.story-body',  # BBC
+            'main',
+            '.main-content'
         ]
         
-        for pattern in rejected_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return False
+        for selector in content_selectors:
+            element = soup.select_one(selector)
+            if element:
+                # Remove unwanted nested elements
+                for unwanted in element.find_all(['aside', '.ad', '.advertisement', '.sidebar']):
+                    unwanted.decompose()
+                
+                paragraphs = element.find_all('p')
+                if paragraphs:
+                    text = ' '.join([p.get_text(strip=True) for p in paragraphs])
+                    if len(text) > 100:
+                        return re.sub(r'\s+', ' ', text)
         
-        return True
+        # Fallback to all paragraphs
+        paragraphs = soup.find_all('p')
+        content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
+        return re.sub(r'\s+', ' ', content)
     
     def _extract_publish_date(self, soup: BeautifulSoup) -> str:
         """Extract publish date"""
         date_selectors = [
-            '[property="article:published_time"]',
-            '[name="publish_date"]',
-            '[name="date"]', 
+            'meta[property="article:published_time"]',
+            'meta[name="publish_date"]',
             'time[datetime]',
             '.publish-date',
-            '.article-date',
-            '.post-date'
+            '.article-date'
         ]
         
         for selector in date_selectors:
             element = soup.select_one(selector)
             if element:
-                date = (element.get('content') or 
-                       element.get('datetime') or 
-                       element.get_text(strip=True))
+                date = element.get('content') or element.get('datetime') or element.get_text(strip=True)
                 if date:
                     return date[:50]
         
@@ -643,9 +578,9 @@ class ArticleExtractor(BaseAnalyzer):
     def _extract_description(self, soup: BeautifulSoup) -> str:
         """Extract article description"""
         desc_selectors = [
-            '[name="description"]',
-            '[property="og:description"]',
-            '[name="twitter:description"]'
+            'meta[name="description"]',
+            'meta[property="og:description"]',
+            'meta[name="twitter:description"]'
         ]
         
         for selector in desc_selectors:
@@ -657,44 +592,80 @@ class ArticleExtractor(BaseAnalyzer):
         
         return ''
     
+    def _clean_author_name(self, author: str) -> str:
+        """Clean and normalize author name"""
+        if not author:
+            return ""
+        
+        # Remove common prefixes
+        author = re.sub(r'^(By\s+|Written\s+by\s+|Author:\s*)', '', author, flags=re.IGNORECASE)
+        
+        # Remove publication names
+        for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'Guardian', 'The Guardian']:
+            author = re.sub(rf'\s*,?\s*{pub}(?:\s+News)?(?:\s*,.*)?$', '', author, flags=re.IGNORECASE)
+        
+        # Remove role suffixes
+        author = re.sub(r'\s+(Staff\s+Writer|Correspondent|Reporter|Editor)$', '', author, flags=re.IGNORECASE)
+        
+        # Clean whitespace
+        author = re.sub(r'\s+', ' ', author).strip(' ,-')
+        
+        # Convert ALL CAPS to Title Case
+        if author.isupper():
+            author = author.title()
+        
+        return author.strip()
+    
+    def _validate_author_name(self, text: str) -> bool:
+        """Validate that text looks like a real author name"""
+        if not text or len(text.strip()) < 3 or len(text) > 100:
+            return False
+        
+        text = text.strip().lower()
+        
+        # Reject common non-author patterns
+        rejected = [
+            'staff', 'editor', 'admin', 'correspondent',
+            'associated press', 'reuters', 'unknown',
+            'photo', 'image', 'video', 'copyright',
+            'read more', 'continue', 'subscribe',
+            'news', 'sports', 'business', 'politics'
+        ]
+        
+        for pattern in rejected:
+            if pattern in text:
+                return False
+        
+        # Must contain letters
+        return bool(re.search(r'[a-zA-Z]', text))
+    
     def _clean_domain(self, domain: str) -> str:
         """Clean domain for display"""
-        if not domain:
-            return ''
-        
-        # Remove www prefix
-        if domain.startswith('www.'):
+        if domain and domain.startswith('www.'):
             domain = domain[4:]
-        
-        return domain.lower()
+        return domain.lower() if domain else ''
     
     def _get_random_user_agent(self) -> str:
-        """Get random user agent to avoid detection"""
+        """Get random user agent"""
         agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0'
         ]
         return random.choice(agents)
     
     def _validate_extraction(self, result: Dict[str, Any]) -> bool:
-        """Validate extraction result has sufficient content"""
+        """Validate extraction result"""
         if not result.get('success') or not result.get('data'):
             return False
         
         data = result['data']
-        text = data.get('text', '')
-        title = data.get('title', '')
-        
-        # Must have either substantial text or at least a title
-        return (text and len(text.strip()) > 100) or (title and title != 'Unknown Title')
+        return bool((data.get('text') and len(data['text']) > 100) or data.get('title'))
     
     def _process_text(self, text: str) -> Dict[str, Any]:
         """Process direct text input"""
         lines = text.strip().split('\n')
         title = lines[0][:100] if lines else 'Text Analysis'
-        
         word_count = len(text.split())
         
         return {
@@ -702,10 +673,12 @@ class ArticleExtractor(BaseAnalyzer):
             'data': {
                 'title': title,
                 'text': text,
+                'content': text,
                 'author': 'Unknown',
                 'publish_date': '',
                 'url': '',
                 'domain': '',
+                'source': '',
                 'description': '',
                 'word_count': word_count,
                 'language': 'en',
