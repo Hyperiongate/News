@@ -2,6 +2,7 @@
  * TruthLens News Analyzer - App Core Module (COMPLETE FIXED VERSION)
  * Handles application control flow, user interactions, and API communication
  * FIXES: Added findings summary, compact source rankings, working filter buttons
+ * CRITICAL FIXES: Rankings now visible, findings display properly, debug info hidden
  */
 
 class TruthLensAnalyzer {
@@ -49,8 +50,8 @@ class TruthLensAnalyzer {
             'cnn.com': { score: 72, rank: 15, trend: 'stable', category: 'mainstream' },
             'foxnews.com': { score: 70, rank: 16, trend: 'stable', category: 'mainstream' },
             'msnbc.com': { score: 68, rank: 17, trend: 'down', category: 'mainstream' },
-            'dailywire.com': { score: 65, rank: 18, trend: 'stable', category: 'independent' },
-            'commondreams.org': { score: 63, rank: 19, trend: 'stable', category: 'independent' },
+            'thehill.com': { score: 65, rank: 18, trend: 'stable', category: 'mainstream' },
+            'dailywire.com': { score: 63, rank: 19, trend: 'stable', category: 'independent' },
             'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent' }
         };
 
@@ -92,28 +93,35 @@ class TruthLensAnalyzer {
         const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) return;
 
-        // FIXED: More compact rankings with working filter buttons
-        const rankingsHTML = `
-            <div id="sourceRankings" class="source-rankings-compact" style="display: none;">
-                <div class="rankings-header-compact">
-                    <h4 class="rankings-title-compact">
-                        <i class="fas fa-trophy"></i> Source Rankings
-                    </h4>
-                    <div class="filter-buttons-compact">
-                        <button class="filter-btn active" data-filter="all">All</button>
-                        <button class="filter-btn" data-filter="mainstream">Mainstream</button>
-                        <button class="filter-btn" data-filter="independent">Independent</button>
-                    </div>
-                </div>
-                <div class="rankings-chart-compact" id="rankingsChart"></div>
-            </div>
-        `;
+        // Find the trust score overview section
+        const overviewSection = resultsSection.querySelector('.analysis-overview');
+        if (!overviewSection) return;
 
-        const overviewSection = resultsSection.querySelector('#analysisOverview');
-        if (overviewSection) {
-            overviewSection.insertAdjacentHTML('afterend', rankingsHTML);
-            this.attachFilterListeners();
-        }
+        // Check if rankings already exist
+        if (document.getElementById('sourceRankings')) return;
+
+        // Create compact rankings HTML
+        const rankingsDiv = document.createElement('div');
+        rankingsDiv.id = 'sourceRankings';
+        rankingsDiv.className = 'source-rankings-compact';
+        rankingsDiv.style.display = 'none';
+        rankingsDiv.innerHTML = `
+            <div class="rankings-header-compact">
+                <h4 class="rankings-title-compact">
+                    <i class="fas fa-trophy"></i> Source Rankings
+                </h4>
+                <div class="filter-buttons-compact">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="mainstream">Mainstream</button>
+                    <button class="filter-btn" data-filter="independent">Independent</button>
+                </div>
+            </div>
+            <div class="rankings-chart-compact" id="rankingsChart"></div>
+        `;
+        
+        // Insert after the overview section
+        overviewSection.insertAdjacentElement('afterend', rankingsDiv);
+        this.attachFilterListeners();
     }
 
     attachFilterListeners() {
@@ -205,15 +213,6 @@ class TruthLensAnalyzer {
             
             this.displayResults(data);
             
-            // Store for filter redraws
-            this.lastAnalyzedSource = data.source;
-            this.lastAnalyzedScore = data.trust_score;
-            
-            // Display source rankings with analyzed source
-            if (data.source) {
-                this.displaySourceRankings(data.source, data.trust_score);
-            }
-            
         } catch (error) {
             console.error('Error:', error);
             alert('Error analyzing article: ' + error.message);
@@ -301,13 +300,28 @@ class TruthLensAnalyzer {
 
     displayResults(data) {
         this.progressContainer.classList.remove('active');
-        this.showDebugInfo(data);
+        
+        // CRITICAL: Hide debug info completely
+        const debugInfo = document.getElementById('debugInfo');
+        if (debugInfo) {
+            debugInfo.style.display = 'none';
+            debugInfo.remove(); // Remove it entirely
+        }
         
         let trustScore = data.trust_score || 0;
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
         let author = data.author || 'Staff Writer';
-        let findingsSummary = data.findings_summary || this.generateFindingsSummary(data);
+        
+        // Store for rankings
+        this.lastAnalyzedSource = source;
+        this.lastAnalyzedScore = trustScore;
+        
+        // CRITICAL FIX: Always generate findings summary
+        let findingsSummary = data.findings_summary;
+        if (!findingsSummary || findingsSummary.length < 10) {
+            findingsSummary = this.generateFindingsSummary(data);
+        }
         
         this.updateTrustScore(trustScore);
         
@@ -333,8 +347,25 @@ class TruthLensAnalyzer {
         const authorEl = document.getElementById('articleAuthor');
         if (authorEl) authorEl.textContent = author;
         
+        // CRITICAL FIX: Force findings to display
         const findingsEl = document.getElementById('findingsSummary');
-        if (findingsEl) findingsEl.textContent = findingsSummary;
+        if (findingsEl) {
+            findingsEl.textContent = findingsSummary;
+            findingsEl.style.display = 'block';
+            findingsEl.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+            findingsEl.style.borderLeft = '3px solid #3b82f6';
+            findingsEl.style.padding = '12px 15px';
+            findingsEl.style.borderRadius = '6px';
+            findingsEl.style.marginTop = '15px';
+            findingsEl.style.color = '#475569';
+            findingsEl.style.lineHeight = '1.6';
+            findingsEl.style.fontSize = '0.95rem';
+        }
+        
+        // CRITICAL FIX: Ensure source rankings display
+        setTimeout(() => {
+            this.displaySourceRankings(source, trustScore);
+        }, 100);
         
         // Use display methods from ServiceTemplates
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
@@ -411,17 +442,22 @@ class TruthLensAnalyzer {
         }
     }
 
-    // FIXED: Compact source rankings with filter support
+    // FIXED: Compact source rankings with filter support - FORCE DISPLAY
     displaySourceRankings(currentSource = null, currentScore = null) {
-        const rankingsContainer = document.getElementById('sourceRankings');
-        const rankingsChart = document.getElementById('rankingsChart');
-        
-        if (!rankingsContainer || !rankingsChart) {
+        // Create rankings if they don't exist
+        let rankingsContainer = document.getElementById('sourceRankings');
+        if (!rankingsContainer) {
             this.createSourceRankingsSection();
-            return this.displaySourceRankings(currentSource, currentScore);
+            rankingsContainer = document.getElementById('sourceRankings');
         }
+        
+        const rankingsChart = document.getElementById('rankingsChart');
+        if (!rankingsContainer || !rankingsChart) return;
 
+        // CRITICAL: Force visibility
         rankingsContainer.style.display = 'block';
+        rankingsContainer.style.visibility = 'visible';
+        rankingsContainer.style.opacity = '1';
         rankingsChart.innerHTML = '';
 
         // Filter sources based on current filter
@@ -433,13 +469,19 @@ class TruthLensAnalyzer {
             .sort((a, b) => b[1].score - a[1].score)
             .slice(0, 5); // Show only top 5 for compact display
 
-        // Add current source if analyzing and matches filter
+        // Add or mark current source
         if (currentSource && currentScore !== null) {
             const domain = this.extractDomain(currentSource);
-            if (!this.sourceRankingsData[domain]) {
+            const existingIndex = rankingsToDisplay.findIndex(([d]) => d === domain);
+            
+            if (existingIndex >= 0) {
+                // Mark existing source as current
+                rankingsToDisplay[existingIndex][1].isCurrent = true;
+            } else {
+                // Add new source if not in top 5
                 const category = this.guessCategory(domain);
                 if (this.currentFilter === 'all' || category === this.currentFilter) {
-                    rankingsToDisplay.push([
+                    const newEntry = [
                         domain,
                         {
                             score: currentScore,
@@ -448,19 +490,13 @@ class TruthLensAnalyzer {
                             category: category,
                             isCurrent: true
                         }
-                    ]);
+                    ];
+                    rankingsToDisplay.push(newEntry);
+                    rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
+                    rankingsToDisplay = rankingsToDisplay.slice(0, 5);
                 }
-            } else if (this.sourceRankingsData[domain]) {
-                rankingsToDisplay.forEach(([key, data]) => {
-                    if (key === domain) {
-                        data.isCurrent = true;
-                    }
-                });
             }
         }
-
-        // Re-sort after adding current source
-        rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
 
         // Create compact ranking items
         rankingsToDisplay.forEach(([domain, data], index) => {
@@ -514,7 +550,7 @@ class TruthLensAnalyzer {
     guessCategory(domain) {
         // List of known mainstream domains
         const mainstream = ['cnn', 'fox', 'nbc', 'cbs', 'abc', 'nytimes', 'wsj', 'washingtonpost', 
-                          'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico'];
+                          'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico', 'thehill'];
         
         const domainLower = domain.toLowerCase();
         for (const ms of mainstream) {
@@ -553,8 +589,8 @@ class TruthLensAnalyzer {
             'msnbc.com': 'MSNBC',
             'politico.com': 'Politico',
             'axios.com': 'Axios',
+            'thehill.com': 'The Hill',
             'dailywire.com': 'Daily Wire',
-            'commondreams.org': 'Common Dreams',
             'breitbart.com': 'Breitbart'
         };
         return nameMap[domain] || domain.replace('.com', '').replace('.org', '');
@@ -586,24 +622,8 @@ class TruthLensAnalyzer {
     }
 
     showDebugInfo(data) {
-        // Only show debug info in development environments, not production
-        const debugInfo = document.getElementById('debugInfo');
-        const debugData = document.getElementById('debugData');
-        
-        if (debugInfo && debugData && window.location.hostname === 'localhost') {
-            debugData.textContent = JSON.stringify({
-                success: data.success,
-                trust_score: data.trust_score,
-                source: data.source,
-                author: data.author,
-                detailed_analysis_keys: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
-                response_time: data.processing_time
-            }, null, 2);
-            debugInfo.style.display = 'block';
-        } else if (debugInfo) {
-            // Hide debug info in production
-            debugInfo.style.display = 'none';
-        }
+        // COMPLETELY DISABLED - No debug info in any environment
+        return;
     }
 
     showResults() {
