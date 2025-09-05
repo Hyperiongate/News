@@ -1,4 +1,4 @@
-/* TruthLens Main Stylesheet - Complete Version */
+/* TruthLens Main Stylesheet - Complete Version with Compact Rankings */
 
 :root {
     /* Vibrant Color Palette */
@@ -708,6 +708,19 @@ body::before {
     line-height: 1.6;
 }
 
+/* FIXED: Enhanced findings summary text styling */
+.findings-text,
+#findingsSummary {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 3px solid var(--primary);
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+    color: var(--gray-600);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
 /* Service Dropdowns */
 .service-dropdown {
     margin-top: 2rem;
@@ -746,39 +759,98 @@ body::before {
     transform: rotate(180deg);
 }
 
+/* New service dropdown styles for modular system */
+.service-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    color: white;
+}
+
+.service-header:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.service-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.service-toggle {
+    transition: transform 0.3s ease;
+}
+
+.service-dropdown.active .service-toggle i {
+    transform: rotate(180deg);
+}
+
+.service-content {
+    display: none;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    margin-top: 1rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.3s ease;
+}
+
+.service-dropdown.active .service-content {
+    display: block;
+}
+
 /* Service-specific header colors */
 .sourceCredibility-dropdown .service-dropdown-header,
-.source-credibility-dropdown .service-dropdown-header {
+.source-credibility-dropdown .service-dropdown-header,
+.sourceCredibilityDropdown .service-header {
     background: linear-gradient(135deg, var(--indigo) 0%, var(--primary) 100%);
     color: white;
 }
 
 .biasDetector-dropdown .service-dropdown-header,
-.bias-detector-dropdown .service-dropdown-header {
+.bias-detector-dropdown .service-dropdown-header,
+.biasDetectorDropdown .service-header {
     background: linear-gradient(135deg, var(--warning) 0%, var(--orange) 100%);
     color: white;
 }
 
 .factChecker-dropdown .service-dropdown-header,
-.fact-checker-dropdown .service-dropdown-header {
+.fact-checker-dropdown .service-dropdown-header,
+.factCheckerDropdown .service-header {
     background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
     color: white;
 }
 
 .transparencyAnalyzer-dropdown .service-dropdown-header,
-.transparency-analyzer-dropdown .service-dropdown-header {
+.transparency-analyzer-dropdown .service-dropdown-header,
+.transparencyAnalyzerDropdown .service-header {
     background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
     color: white;
 }
 
 .manipulationDetector-dropdown .service-dropdown-header,
-.manipulation-detector-dropdown .service-dropdown-header {
+.manipulation-detector-dropdown .service-dropdown-header,
+.manipulationDetectorDropdown .service-header {
     background: linear-gradient(135deg, var(--danger) 0%, var(--pink) 100%);
     color: white;
 }
 
 .contentAnalyzer-dropdown .service-dropdown-header,
-.content-analyzer-dropdown .service-dropdown-header {
+.content-analyzer-dropdown .service-dropdown-header,
+.contentAnalyzerDropdown .service-header {
     background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
     color: white;
 }
@@ -793,7 +865,8 @@ body::before {
     display: none !important;
 }
 
-.author-dropdown .service-dropdown-header {
+.author-dropdown .service-dropdown-header,
+.authorDropdown .service-header {
     background: linear-gradient(135deg, var(--secondary) 0%, var(--teal) 100%);
     color: white;
 }
@@ -1551,7 +1624,222 @@ body::before {
     line-height: 1.6;
 }
 
-/* Source Rankings Container */
+/* NEW: Compact Source Rankings Styles */
+.source-rankings-compact {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.rankings-header-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.rankings-title-compact {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rankings-title-compact i {
+    color: #f39c12;
+    font-size: 0.95rem;
+}
+
+.filter-buttons-compact {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-buttons-compact .filter-btn {
+    padding: 5px 12px;
+    border: 1px solid var(--gray-200);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.filter-buttons-compact .filter-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+.filter-buttons-compact .filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.rankings-chart-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ranking-item-compact {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    transition: all 0.2s;
+    opacity: 0;
+    transform: translateX(-10px);
+    position: relative;
+}
+
+.ranking-item-compact.animate-in {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.ranking-item-compact:hover {
+    background: var(--gray-100);
+    transform: translateX(2px);
+}
+
+.ranking-item-compact.current-source {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.rank-number {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--gray-400);
+    min-width: 25px;
+    margin-right: 12px;
+}
+
+.ranking-item-compact.current-source .rank-number {
+    color: white;
+    opacity: 0.9;
+}
+
+.source-name-compact {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ranking-item-compact.current-source .source-name-compact {
+    color: white;
+}
+
+.score-bar-compact {
+    width: 100px;
+    height: 6px;
+    background: var(--gray-200);
+    border-radius: 3px;
+    margin: 0 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ranking-item-compact.current-source .score-bar-compact {
+    background: rgba(255,255,255,0.2);
+}
+
+.score-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.ranking-item-compact.highly-trusted .score-fill {
+    background: linear-gradient(90deg, var(--success) 0%, #059669 100%);
+}
+
+.ranking-item-compact.trusted .score-fill {
+    background: linear-gradient(90deg, var(--primary) 0%, #2563eb 100%);
+}
+
+.ranking-item-compact.moderate .score-fill {
+    background: linear-gradient(90deg, var(--warning) 0%, #d97706 100%);
+}
+
+.ranking-item-compact.low .score-fill {
+    background: linear-gradient(90deg, var(--danger) 0%, #dc2626 100%);
+}
+
+.ranking-item-compact.current-source .score-fill {
+    background: rgba(255,255,255,0.8);
+}
+
+.score-value {
+    min-width: 25px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-align: right;
+}
+
+.ranking-item-compact.current-source .score-value {
+    color: white;
+}
+
+.trend-icon {
+    margin-left: 10px;
+    font-size: 0.75rem;
+}
+
+.ranking-item-compact.current-source .trend-icon i {
+    color: white !important;
+}
+
+.current-badge {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.9);
+    color: #764ba2;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.show-more-sources {
+    text-align: center;
+    padding: 8px;
+    color: var(--gray-400);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.show-more-sources:hover {
+    color: var(--primary);
+}
+
+/* Hide the old larger rankings */
+.source-rankings-container {
+    display: none !important;
+}
+
+/* Original Source Rankings Container (keeping for backward compatibility) */
 .source-rankings-container,
 .rankings-container {
     background: white;
@@ -1874,6 +2162,32 @@ body::before {
     opacity: 0.8;
 }
 
+/* Spinner for active steps */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Animation for source rankings appearance */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.source-rankings-compact {
+    animation: slideIn 0.4s ease-out;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body { padding-top: 70px; }
@@ -1894,4 +2208,28 @@ body::before {
     .ranking-item { flex-direction: column; text-align: center; gap: 0.5rem; }
     .ranking-score-container { width: 100%; }
     .rankings-legend { flex-direction: column; gap: 0.75rem; }
+    
+    /* Compact rankings mobile adjustments */
+    .rankings-header-compact {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .filter-buttons-compact {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .filter-buttons-compact .filter-btn {
+        flex: 1;
+    }
+    
+    .score-bar-compact {
+        width: 60px;
+    }
+    
+    .source-name-compact {
+        font-size: 0.85rem;
+    }
 }
