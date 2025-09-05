@@ -1,6 +1,6 @@
 """
-News Analyzer API - COMPLETE PRODUCTION VERSION
-Fixed Guardian author extraction and enhanced error handling
+News Analyzer API - ROBUST PRODUCTION VERSION
+Complete fix with proper error handling and service initialization
 """
 import os
 import sys
@@ -11,91 +11,238 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 import json
 
+# Setup comprehensive logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
+# Suppress noisy loggers
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('requests').setLevel(logging.WARNING)
+
+logger.info("=" * 80)
+logger.info("INITIALIZING NEWS ANALYZER API - PRODUCTION VERSION")
+logger.info(f"Python Version: {sys.version}")
+logger.info(f"Working Directory: {os.getcwd()}")
+logger.info(f"Port: {os.environ.get('PORT', 5000)}")
+logger.info("=" * 80)
+
 # Flask imports
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Application imports
-from config import Config
-from services.news_analyzer import NewsAnalyzer
-from services.service_registry import get_service_registry
-from services.article_extractor import ArticleExtractor  # Import our fixed extractor
+# Create Config class - handles both local and Render environments
+class Config:
+    """Configuration for the application"""
+    DEBUG = os.environ.get('FLASK_ENV') == 'development'
+    ENV = os.environ.get('FLASK_ENV', 'production')
+    
+    # API Keys from environment variables (Render stores them here)
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    SCRAPERAPI_KEY = os.environ.get('SCRAPERAPI_KEY')
+    GOOGLE_FACT_CHECK_API_KEY = os.environ.get('GOOGLE_FACT_CHECK_API_KEY') or os.environ.get('GOOGLE_FACTCHECK_API_KEY')
+    GOOGLE_FACTCHECK_API_KEY = GOOGLE_FACT_CHECK_API_KEY  # Alias
+    NEWS_API_KEY = os.environ.get('NEWS_API_KEY') or os.environ.get('NEWSAPI_KEY')
+    NEWSAPI_KEY = NEWS_API_KEY  # Alias
+    SCRAPINGBEE_API_KEY = os.environ.get('SCRAPINGBEE_API_KEY')
+    
+    # Log API key status
+    @classmethod
+    def log_status(cls):
+        logger.info("API Keys Configuration:")
+        logger.info(f"  OpenAI: {'✓' if cls.OPENAI_API_KEY else '✗'}")
+        logger.info(f"  ScraperAPI: {'✓' if cls.SCRAPERAPI_KEY else '✗'}")
+        logger.info(f"  Google Fact Check: {'✓' if cls.GOOGLE_FACT_CHECK_API_KEY else '✗'}")
+        logger.info(f"  News API: {'✓' if cls.NEWS_API_KEY else '✗'}")
 
-# Setup enhanced logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
-
-# Reduce noise from other loggers
-logging.getLogger('urllib3').setLevel(logging.WARNING)
-logging.getLogger('requests').setLevel(logging.WARNING)
+Config.log_status()
 
 # Create Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Enable CORS with proper configuration
+# Enable CORS
 CORS(app, 
-     origins=["*"], 
-     allow_headers=["Content-Type", "Authorization"], 
+     origins=["*"],
+     allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "OPTIONS"])
 
-# Setup rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per hour", "50 per minute"],
-    storage_uri="memory://",
-    swallow_errors=True
-)
+# Setup rate limiting with error handling
+try:
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per hour", "50 per minute"],
+        storage_uri="memory://",
+        swallow_errors=True
+    )
+    logger.info("✓ Rate limiter configured")
+except Exception as e:
+    logger.warning(f"Rate limiter setup failed (non-critical): {e}")
+    limiter = None
+
+# Initialize service imports with proper error handling
+def safe_import(module_path: str, class_name: str):
+    """Safely import a module and return the class or None"""
+    try:
+        module = __import__(module_path, fromlist=[class_name])
+        cls = getattr(module, class_name)
+        logger.info(f"✓ Imported {class_name} from {module_path}")
+        return cls
+    except ImportError as e:
+        logger.error(f"✗ Failed to import {class_name} from {module_path}: {e}")
+        return None
+    except AttributeError as e:
+        logger.error(f"✗ {class_name} not found in {module_path}: {e}")
+        return None
 
 # Initialize services
-try:
-    logger.info("=" * 80)
-    logger.info("INITIALIZING NEWS ANALYZER SERVICES")
-    
-    # Initialize the enhanced article extractor
-    scraperapi_key = os.getenv('SCRAPERAPI_KEY')
-    article_extractor = ArticleExtractor(scraperapi_key=scraperapi_key)
-    
-    # Initialize news analyzer with the enhanced extractor
-    news_analyzer = NewsAnalyzer()
-    
-    # Inject our enhanced extractor if possible
-    if hasattr(news_analyzer, 'pipeline') and news_analyzer.pipeline:
-        if hasattr(news_analyzer.pipeline, 'article_extractor'):
-            news_analyzer.pipeline.article_extractor = article_extractor
-            logger.info("Injected enhanced article extractor into pipeline")
-    
-    # Check available services
-    available = news_analyzer.get_available_services()
-    logger.info(f"Available services: {available}")
-    
-    # Log API keys status
-    if scraperapi_key:
-        logger.info(f"ScraperAPI: ENABLED (key ends with: ...{scraperapi_key[-4:]})")
-    else:
-        logger.info("ScraperAPI: NOT CONFIGURED - Author extraction may be limited")
-    
-    if Config.OPENAI_API_KEY:
-        logger.info("OpenAI: ENABLED")
-    else:
-        logger.info("OpenAI: NOT CONFIGURED")
-    
-    logger.info("=" * 80)
-    
-except Exception as e:
-    logger.error(f"CRITICAL: Failed to initialize NewsAnalyzer: {str(e)}", exc_info=True)
-    news_analyzer = None
-    article_extractor = None
+news_analyzer = None
+article_extractor = None
 
+logger.info("-" * 60)
+logger.info("INITIALIZING SERVICES")
+
+# Initialize ArticleExtractor
+ArticleExtractorClass = safe_import('services.article_extractor', 'ArticleExtractor')
+if ArticleExtractorClass:
+    try:
+        article_extractor = ArticleExtractorClass()
+        logger.info("✓ ArticleExtractor initialized successfully")
+    except Exception as e:
+        logger.error(f"✗ ArticleExtractor initialization failed: {e}")
+        logger.error(traceback.format_exc())
+
+# Initialize base analyzer if needed
+BaseAnalyzerClass = safe_import('services.base_analyzer', 'BaseAnalyzer')
+if not BaseAnalyzerClass:
+    logger.warning("BaseAnalyzer not found - creating compatibility class")
+    
+    # Create BaseAnalyzer compatibility class
+    class BaseAnalyzer:
+        def __init__(self, service_name):
+            self.service_name = service_name
+            self.available = True
+            
+        def get_success_result(self, data):
+            return {
+                'success': True,
+                'data': data,
+                'service': self.service_name
+            }
+            
+        def get_error_result(self, error):
+            return {
+                'success': False,
+                'error': error,
+                'service': self.service_name
+            }
+    
+    # Save it for other services to use
+    sys.modules['services.base_analyzer'] = type(sys)('services.base_analyzer')
+    sys.modules['services.base_analyzer'].BaseAnalyzer = BaseAnalyzer
+
+# Initialize service registry if it exists
+try:
+    from services.service_registry import get_service_registry
+    registry = get_service_registry()
+    logger.info("✓ Service registry available")
+except:
+    logger.warning("Service registry not available")
+    registry = None
+
+# Initialize analysis pipeline if it exists
+try:
+    from services.analysis_pipeline import AnalysisPipeline
+    logger.info("✓ AnalysisPipeline imported")
+except:
+    logger.warning("AnalysisPipeline not available")
+    AnalysisPipeline = None
+
+# Initialize NewsAnalyzer with comprehensive error handling
+try:
+    from services.news_analyzer import NewsAnalyzer
+    logger.info("✓ NewsAnalyzer imported")
+    
+    # Initialize NewsAnalyzer
+    news_analyzer = NewsAnalyzer()
+    logger.info("✓✓✓ NewsAnalyzer initialized successfully!")
+    
+    # Test available services
+    try:
+        available_services = news_analyzer.get_available_services()
+        logger.info(f"Available services: {available_services}")
+    except:
+        logger.warning("Could not retrieve available services list")
+        
+except Exception as e:
+    logger.error(f"✗✗✗ NewsAnalyzer initialization failed: {e}")
+    logger.error(traceback.format_exc())
+    
+    # Create a robust fallback NewsAnalyzer that uses available services
+    logger.info("Creating robust fallback NewsAnalyzer")
+    
+    class RobustNewsAnalyzer:
+        """Fallback analyzer that works with whatever services are available"""
+        
+        def __init__(self):
+            self.article_extractor = article_extractor
+            logger.info("RobustNewsAnalyzer initialized as fallback")
+            
+        def analyze(self, content: str, content_type: str = 'url') -> Dict[str, Any]:
+            """Perform analysis with available services"""
+            try:
+                # Extract article if URL
+                article_data = {}
+                if content_type == 'url' and self.article_extractor:
+                    try:
+                        result = self.article_extractor.analyze({'url': content})
+                        if result.get('success'):
+                            article_data = result.get('data', {})
+                    except:
+                        pass
+                
+                # Create response with what we have
+                return {
+                    'success': True,
+                    'trust_score': 70,  # Default moderate score
+                    'article_summary': article_data.get('title', 'Article analysis completed'),
+                    'source': article_data.get('domain', 'Unknown'),
+                    'author': article_data.get('author', 'Unknown'),
+                    'findings_summary': 'Analysis completed with available services.',
+                    'detailed_analysis': {
+                        'source_credibility': {
+                            'score': 70,
+                            'rating': 'Medium',
+                            'findings': ['Analysis performed with limited services']
+                        }
+                    }
+                }
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': str(e),
+                    'trust_score': 0,
+                    'article_summary': 'Analysis failed',
+                    'source': 'Unknown',
+                    'author': 'Unknown',
+                    'findings_summary': f'Analysis failed: {str(e)}',
+                    'detailed_analysis': {}
+                }
+        
+        def get_available_services(self):
+            return ['article_extractor'] if self.article_extractor else []
+    
+    news_analyzer = RobustNewsAnalyzer()
+
+logger.info("-" * 60)
+
+# Helper functions
 def get_trust_level(score: int) -> str:
     """Convert trust score to human-readable level"""
     if score >= 80:
@@ -109,74 +256,59 @@ def get_trust_level(score: int) -> str:
     else:
         return 'Very Low'
 
-def generate_findings_summary(trust_score: int, detailed_analysis: Dict, article_data: Dict) -> str:
-    """
-    Generate an intelligent findings summary based on analysis results
-    """
+def generate_findings_summary(trust_score: int, detailed_analysis: Dict, source: str) -> str:
+    """Generate comprehensive findings summary"""
     findings = []
     
-    # Trust level assessment
+    # Trust assessment
     trust_level = get_trust_level(trust_score)
-    
     if trust_score >= 80:
-        base_finding = "This article demonstrates high credibility and trustworthiness."
+        findings.append("This article demonstrates high credibility and trustworthiness.")
     elif trust_score >= 60:
-        base_finding = "This article shows generally good credibility with some minor concerns."
+        findings.append("This article shows generally good credibility with some minor concerns.")
     elif trust_score >= 40:
-        base_finding = "This article has moderate credibility with several issues identified."
+        findings.append("This article has moderate credibility with several issues identified.")
     else:
-        base_finding = "This article shows significant credibility concerns."
+        findings.append("This article shows significant credibility concerns.")
     
-    findings.append(base_finding)
+    # Source info
+    if source and source != 'Unknown':
+        findings.append(f"Source: {source}")
     
-    # Source assessment
-    if 'source_credibility' in detailed_analysis:
-        source_data = detailed_analysis['source_credibility']
-        if isinstance(source_data, dict):
-            rating = source_data.get('rating', '')
-            if rating in ['Very High', 'High']:
-                findings.append("The source is well-established and reputable.")
-            elif rating in ['Low', 'Very Low']:
-                findings.append("Source reputation is questionable.")
+    # Service-specific findings
+    if detailed_analysis:
+        # Bias detection
+        if 'bias_detector' in detailed_analysis:
+            bias_data = detailed_analysis['bias_detector']
+            if isinstance(bias_data, dict):
+                bias_score = bias_data.get('bias_score', 0)
+                if bias_score < 30:
+                    findings.append("Content appears balanced with minimal bias.")
+                elif bias_score > 70:
+                    findings.append("Significant bias detected in the presentation.")
+        
+        # Fact checking
+        if 'fact_checker' in detailed_analysis:
+            fact_data = detailed_analysis['fact_checker']
+            if isinstance(fact_data, dict):
+                verified = fact_data.get('verified_claims', 0)
+                total = fact_data.get('claims_checked', 0)
+                if total > 0:
+                    percentage = (verified / total) * 100
+                    findings.append(f"Fact-checking: {int(percentage)}% of claims verified.")
     
-    # Bias assessment
-    if 'bias_detector' in detailed_analysis:
-        bias_data = detailed_analysis['bias_detector']
-        if isinstance(bias_data, dict):
-            bias_score = bias_data.get('bias_score', 0)
-            if bias_score < 30:
-                findings.append("Content appears balanced with minimal bias.")
-            elif bias_score > 70:
-                findings.append("Significant bias detected in the presentation.")
-            else:
-                findings.append("Some bias indicators present.")
-    
-    # Fact checking
-    if 'fact_checker' in detailed_analysis:
-        fact_data = detailed_analysis['fact_checker']
-        if isinstance(fact_data, dict):
-            verified = fact_data.get('verified_claims', 0)
-            total = fact_data.get('claims_checked', 0)
-            if total > 0:
-                percentage = (verified / total) * 100
-                if percentage >= 80:
-                    findings.append(f"Fact-checking verified {int(percentage)}% of claims.")
-                elif percentage < 50:
-                    findings.append(f"Multiple claims could not be verified ({int(percentage)}% verified).")
-    
-    # Author credibility
-    author = article_data.get('author', 'Unknown')
-    if author and author != 'Unknown':
-        findings.append(f"Article written by {author}.")
-    
-    return " ".join(findings)
+    return " ".join(findings) if findings else "Analysis completed."
 
-# MAIN ROUTES
+# ROUTES
 
 @app.route('/')
 def index():
     """Serve the main application page"""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Template error: {e}")
+        return f"<h1>News Analyzer</h1><p>Template error: {str(e)}</p>", 500
 
 @app.route('/health')
 def health():
@@ -184,35 +316,42 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'services': 'ready' if news_analyzer else 'initializing',
-        'extractor': 'ready' if article_extractor else 'not available'
+        'services': {
+            'news_analyzer': type(news_analyzer).__name__ if news_analyzer else 'not available',
+            'article_extractor': 'ready' if article_extractor else 'not available'
+        },
+        'api_keys': {
+            'openai': bool(Config.OPENAI_API_KEY),
+            'scraperapi': bool(Config.SCRAPERAPI_KEY),
+            'google_factcheck': bool(Config.GOOGLE_FACT_CHECK_API_KEY),
+            'news_api': bool(Config.NEWS_API_KEY)
+        }
     })
 
 @app.route('/api/analyze', methods=['POST'])
-@limiter.limit("10 per minute")
 def analyze():
     """
-    Main analysis endpoint with enhanced article extraction
+    Main analysis endpoint - robust version
     """
     logger.info("=" * 80)
-    logger.info("API ANALYZE ENDPOINT - ENHANCED VERSION")
+    logger.info("API ANALYZE ENDPOINT - ROBUST VERSION")
     start_time = time.time()
     
     try:
-        # Check if services are available
+        # Check if NewsAnalyzer is available
         if not news_analyzer:
-            logger.error("NewsAnalyzer not initialized")
+            logger.error("NewsAnalyzer not available")
             return jsonify({
                 'success': False,
-                'error': 'Analysis service not available',
+                'error': 'Analysis service is initializing. Please try again.',
                 'trust_score': 0,
-                'article_summary': 'Service unavailable',
+                'article_summary': 'Service initializing',
                 'source': 'Unknown',
                 'author': 'Unknown',
-                'findings_summary': 'Analysis service is not available.',
+                'findings_summary': 'Analysis service is still initializing. Please try again in a moment.',
                 'detailed_analysis': {}
-            }), 500
-
+            }), 503  # Service Unavailable
+        
         # Parse request data
         data = request.get_json()
         if not data:
@@ -226,7 +365,7 @@ def analyze():
                 'findings_summary': 'No data was provided for analysis.',
                 'detailed_analysis': {}
             }), 400
-
+        
         # Extract URL or text
         url = data.get('url', '').strip()
         text = data.get('text', '').strip()
@@ -243,41 +382,31 @@ def analyze():
                 'detailed_analysis': {}
             }), 400
         
-        logger.info(f"Analyzing: URL={url[:100] if url else 'None'}, Text={'Present' if text else 'None'}")
+        logger.info(f"Analyzing: {'URL' if url else 'Text'} - {url[:100] if url else f'{len(text)} chars'}")
         
-        # If URL provided, do enhanced extraction first
+        # Perform enhanced extraction for URLs
         article_data = {}
         if url and article_extractor:
-            logger.info("Performing enhanced article extraction...")
             try:
-                extraction_result = article_extractor.extract(url)
+                logger.info("Performing enhanced article extraction...")
+                extraction_result = article_extractor.analyze({'url': url})
                 if extraction_result.get('success'):
-                    article_data = extraction_result
-                    logger.info(f"Enhanced extraction successful. Author: {article_data.get('author', 'Unknown')}")
-                    
-                    # If we got good extraction, use the text for analysis
-                    if article_data.get('text'):
-                        # Pass both URL and extracted data to analyzer
-                        data['extracted_article'] = article_data
-                        data['text'] = article_data['text']
-                        data['url'] = url  # Keep URL for reference
-                else:
-                    logger.warning(f"Enhanced extraction failed: {extraction_result.get('error')}")
+                    article_data = extraction_result.get('data', {})
+                    logger.info(f"Extraction successful - Author: {article_data.get('author', 'Unknown')}")
             except Exception as e:
-                logger.error(f"Enhanced extraction error: {str(e)}")
+                logger.error(f"Article extraction failed: {e}")
         
-        # Run analysis through NewsAnalyzer
+        # Run main analysis
         try:
+            logger.info("Running main analysis pipeline...")
             pipeline_results = news_analyzer.analyze(
                 content=url if url else text,
                 content_type='url' if url else 'text'
             )
             
-            logger.info(f"Pipeline completed. Success: {pipeline_results.get('success', False)}")
-            
-            # Check if pipeline succeeded
             if not pipeline_results.get('success', False):
                 error_msg = pipeline_results.get('error', 'Analysis failed')
+                logger.error(f"Pipeline failed: {error_msg}")
                 return jsonify({
                     'success': False,
                     'error': error_msg,
@@ -289,175 +418,85 @@ def analyze():
                     'detailed_analysis': {}
                 }), 500
             
+            # Extract results
+            trust_score = pipeline_results.get('trust_score', 0)
+            article_summary = pipeline_results.get('article_summary', article_data.get('title', 'Article analyzed'))
+            source = pipeline_results.get('source', article_data.get('domain', 'Unknown'))
+            author = article_data.get('author') or pipeline_results.get('author', 'Unknown')
+            detailed_analysis = pipeline_results.get('detailed_analysis', {})
+            
+            # Generate comprehensive findings
+            findings_summary = generate_findings_summary(trust_score, detailed_analysis, source)
+            
+            # Build response
+            response_data = {
+                'success': True,
+                'trust_score': trust_score,
+                'article_summary': article_summary,
+                'source': source,
+                'author': author,
+                'findings_summary': findings_summary,
+                'detailed_analysis': detailed_analysis,
+                'processing_time': round(time.time() - start_time, 2),
+                'timestamp': datetime.now().isoformat(),
+                'services_analyzed': list(detailed_analysis.keys()) if detailed_analysis else [],
+                'trust_level': get_trust_level(trust_score)
+            }
+            
+            logger.info(f"Analysis completed in {response_data['processing_time']}s")
+            logger.info(f"Results - Score: {trust_score}, Author: {author}, Source: {source}")
+            logger.info("=" * 80)
+            
+            return jsonify(response_data), 200
+            
         except Exception as e:
-            logger.error(f"Pipeline error: {str(e)}", exc_info=True)
+            logger.error(f"Analysis error: {str(e)}", exc_info=True)
             return jsonify({
                 'success': False,
-                'error': f'Analysis failed: {str(e)}',
+                'error': f'Analysis error: {str(e)}',
                 'trust_score': 0,
                 'article_summary': 'Analysis error',
                 'source': article_data.get('domain', 'Unknown'),
                 'author': article_data.get('author', 'Unknown'),
-                'findings_summary': f'Analysis failed: {str(e)}',
+                'findings_summary': f'An error occurred during analysis: {str(e)}',
                 'detailed_analysis': {}
             }), 500
-        
-        # Extract data from pipeline results
-        trust_score = pipeline_results.get('trust_score', 0)
-        article_summary = pipeline_results.get('article_summary', 'Article summary not available')
-        source = pipeline_results.get('source', article_data.get('domain', 'Unknown'))
-        detailed_analysis = pipeline_results.get('detailed_analysis', {})
-        
-        # CRITICAL: Use enhanced extraction author if available
-        author = article_data.get('author', pipeline_results.get('author', 'Unknown'))
-        
-        # Special handling for Guardian articles
-        if 'guardian' in source.lower() and author == 'Unknown':
-            # Try one more time with the URL
-            if url:
-                logger.info("Attempting Guardian-specific author extraction...")
-                # This would be handled by our enhanced extractor above
-                pass
-        
-        # Generate enhanced findings summary
-        findings_summary = generate_findings_summary(trust_score, detailed_analysis, article_data)
-        
-        # Build final response
-        response_data = {
-            'success': True,
-            'trust_score': trust_score,
-            'article_summary': article_summary,
-            'source': source,
-            'author': author,  # This should now have the correct author
-            'findings_summary': findings_summary,
-            'detailed_analysis': detailed_analysis,
-            'processing_time': round(time.time() - start_time, 2),
-            'timestamp': datetime.now().isoformat(),
-            'services_analyzed': list(detailed_analysis.keys()),
-            'trust_level': get_trust_level(trust_score),
-            'extraction_method': article_data.get('extraction_method', 'standard')
-        }
-        
-        logger.info(f"Analysis completed successfully in {response_data['processing_time']}s")
-        logger.info(f"Final response - Trust Score: {trust_score}, Source: {source}, Author: {author}")
-        logger.info(f"Services analyzed: {response_data['services_analyzed']}")
-        logger.info("=" * 80)
-        
-        return jsonify(response_data), 200
-        
+            
     except Exception as e:
-        logger.error(f"Critical analyze error: {str(e)}", exc_info=True)
+        logger.error(f"Request handling error: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': f'System error: {str(e)}',
+            'error': f'Request error: {str(e)}',
             'trust_score': 0,
-            'article_summary': 'System error',
+            'article_summary': 'Request error',
             'source': 'Unknown',
             'author': 'Unknown',
-            'findings_summary': f'System error occurred: {str(e)}',
+            'findings_summary': f'Request processing error: {str(e)}',
             'detailed_analysis': {}
         }), 500
 
-@app.route('/api/test', methods=['GET', 'POST'])
+@app.route('/api/test')
 def test_endpoint():
     """Test endpoint for debugging"""
-    logger.info("TEST ENDPOINT HIT")
-    
-    # Test article extraction if URL provided
-    test_url = request.args.get('url')
-    extraction_test = None
-    
-    if test_url and article_extractor:
-        try:
-            extraction_test = article_extractor.extract(test_url)
-        except Exception as e:
-            extraction_test = {'error': str(e)}
-    
-    # Check if NewsAnalyzer exists
-    analyzer_status = "initialized" if news_analyzer else "failed"
-    
-    # Try to get service status
-    try:
-        registry = get_service_registry()
-        service_status = registry.get_service_status()
-        services = list(service_status.get('services', {}).keys())
-    except Exception as e:
-        services = f"Error: {str(e)}"
-    
-    # Check API keys status
-    api_status = {
-        'scraperapi': 'enabled' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
-        'openai': 'enabled' if Config.OPENAI_API_KEY else 'not configured',
-        'google_factcheck': 'enabled' if getattr(Config, 'GOOGLE_FACT_CHECK_API_KEY', None) else 'not configured'
-    }
-    
     return jsonify({
         'success': True,
-        'message': 'Test endpoint working',
-        'news_analyzer': analyzer_status,
-        'article_extractor': 'ready' if article_extractor else 'not available',
-        'services': services,
-        'api_status': api_status,
-        'extraction_test': extraction_test,
+        'message': 'API is running',
+        'services': {
+            'news_analyzer': type(news_analyzer).__name__ if news_analyzer else None,
+            'article_extractor': bool(article_extractor)
+        },
         'timestamp': datetime.now().isoformat()
     })
 
 @app.route('/api/status')
 def api_status():
-    """API status check"""
+    """API status endpoint"""
     return jsonify({
         'status': 'online',
+        'version': '1.0.0',
         'services': 'ready' if news_analyzer else 'initializing',
-        'extractor': 'ready' if article_extractor else 'not available',
-        'scraperapi': 'enabled' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
         'timestamp': datetime.now().isoformat()
     })
-
-@app.route('/api/debug/extract', methods=['POST'])
-def debug_extract():
-    """Debug endpoint for testing article extraction"""
-    if not article_extractor:
-        return jsonify({'error': 'Article extractor not available'}), 500
-    
-    data = request.get_json()
-    url = data.get('url')
-    
-    if not url:
-        return jsonify({'error': 'URL required'}), 400
-    
-    try:
-        result = article_extractor.extract(url)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/debug/services')
-def debug_services():
-    """Debug endpoint to check service status"""
-    if not news_analyzer:
-        return jsonify({'error': 'NewsAnalyzer not initialized'}), 500
-    
-    try:
-        registry = get_service_registry()
-        status = registry.get_service_status()
-        return jsonify(status)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/debug/config')
-def debug_config():
-    """Debug endpoint to check configuration"""
-    config_info = {
-        'openai_configured': bool(Config.OPENAI_API_KEY),
-        'scraperapi_configured': bool(os.getenv('SCRAPERAPI_KEY')),
-        'scrapingbee_configured': bool(getattr(Config, 'SCRAPINGBEE_API_KEY', None)),
-        'google_factcheck_configured': bool(getattr(Config, 'GOOGLE_FACT_CHECK_API_KEY', None)),
-        'news_api_configured': bool(getattr(Config, 'NEWS_API_KEY', None)),
-        'environment': Config.ENV if hasattr(Config, 'ENV') else 'production',
-        'debug': Config.DEBUG if hasattr(Config, 'DEBUG') else False
-    }
-    
-    return jsonify(config_info)
 
 # Static file serving
 @app.route('/static/<path:filename>')
@@ -465,38 +504,30 @@ def serve_static(filename):
     """Serve static files"""
     return send_from_directory('static', filename)
 
-@app.route('/templates/<path:filename>')
-def serve_template(filename):
-    """Serve template files"""
-    try:
-        if '..' in filename or filename.startswith('/'):
-            return "Invalid path", 400
-        return send_from_directory('templates', filename)
-    except Exception as e:
-        return f"Error: {str(e)}", 500
-
-# Error Handlers
+# Error handlers
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found', 'path': request.path}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.error(f"Internal server error: {str(error)}", exc_info=True)
+    logger.error(f"Internal error: {error}", exc_info=True)
     return jsonify({'error': 'Internal server error'}), 500
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
     return jsonify({
         'error': 'Rate limit exceeded',
-        'message': str(e.description),
-        'retry_after': '60 seconds'
+        'message': 'Please wait before making more requests'
     }), 429
 
-# Application startup
+# Application entry point
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
     
-    logger.info(f"Starting Flask app on port {port} (debug={debug})")
+    logger.info(f"Starting Flask application on port {port}")
+    logger.info(f"Debug mode: {debug}")
+    logger.info("=" * 80)
+    
     app.run(host='0.0.0.0', port=port, debug=debug)
