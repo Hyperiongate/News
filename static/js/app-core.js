@@ -586,14 +586,11 @@ class TruthLensAnalyzer {
     }
 
     showDebugInfo(data) {
+        // Only show debug info in development environments, not production
         const debugInfo = document.getElementById('debugInfo');
         const debugData = document.getElementById('debugData');
         
-        if (debugInfo && debugData && 
-            (window.location.hostname === 'localhost' || 
-             window.location.hostname.includes('render') ||
-             window.location.hostname.includes('onrender'))) {
-            
+        if (debugInfo && debugData && window.location.hostname === 'localhost') {
             debugData.textContent = JSON.stringify({
                 success: data.success,
                 trust_score: data.trust_score,
@@ -603,6 +600,9 @@ class TruthLensAnalyzer {
                 response_time: data.processing_time
             }, null, 2);
             debugInfo.style.display = 'block';
+        } else if (debugInfo) {
+            // Hide debug info in production
+            debugInfo.style.display = 'none';
         }
     }
 
