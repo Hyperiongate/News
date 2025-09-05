@@ -1093,8 +1093,8 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 data.source || 'Unknown Source';
             document.getElementById('articleAuthor').textContent = 
                 data.author || 'Staff Writer';
-            document.getElementById('findingsSummary').textContent = 
-                data.findings_summary || 'Analysis completed successfully';
+            document.getElementById('findingsSummary').textContent =  
+                data.findings_summary || 'This analysis evaluated source credibility, bias levels, fact accuracy, transparency, and content quality to determine overall trustworthiness.';
             
             // Display source rankings with current source highlighted
             integrateWithAnalysis(data);
