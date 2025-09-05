@@ -93,8 +93,8 @@ class TruthLensAnalyzer {
         const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) return;
 
-        // Find the trust score overview section
-        const overviewSection = resultsSection.querySelector('.analysis-overview');
+        // Find the enhanced overview section
+        const overviewSection = resultsSection.querySelector('.enhanced-analysis-overview');
         if (!overviewSection) return;
 
         // Check if rankings already exist
@@ -304,7 +304,7 @@ class TruthLensAnalyzer {
         // CRITICAL: Remove ALL debug info elements completely
         const debugInfo = document.getElementById('debugInfo');
         if (debugInfo) {
-            debugInfo.remove(); // Remove it entirely from DOM
+            debugInfo.remove();
         }
         
         let trustScore = data.trust_score || 0;
@@ -381,11 +381,8 @@ class TruthLensAnalyzer {
         // CRITICAL FIX: Force update findings with inline styles to override everything
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
-            // Clear any existing content first
             findingsEl.innerHTML = '';
-            // Set the new content
             findingsEl.textContent = findingsSummary;
-            // Force visibility with !important styles
             findingsEl.setAttribute('style', `
                 display: block !important;
                 background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
@@ -401,16 +398,19 @@ class TruthLensAnalyzer {
             `);
         }
         
-        // Update the enhanced trust display that's defined in your HTML
+        // FIX: Clean up any unwanted text in the enhanced overview
+        this.cleanupUnwantedText();
+        
+        // Update the enhanced trust display if it exists
         if (typeof updateEnhancedTrustDisplay === 'function') {
-            // This function is defined in your HTML, let it run first
             updateEnhancedTrustDisplay(data);
-            // Then override the findings again to ensure our text stays
+            // Override findings again after HTML script runs
             setTimeout(() => {
                 const findingsEl = document.getElementById('findingsSummary');
                 if (findingsEl && findingsEl.textContent !== findingsSummary) {
                     findingsEl.textContent = findingsSummary;
                 }
+                this.cleanupUnwantedText();
             }, 100);
         }
         
@@ -427,48 +427,33 @@ class TruthLensAnalyzer {
         this.showResults();
     }
 
-    // FIXED: Generate a proper findings summary if not provided
-    generateFindingsSummary(data) {
-        const trustScore = data.trust_score || 0;
-        const detailed = data.detailed_analysis || {};
-        
-        let summary = [];
-        
-        // Trust score assessment
-        if (trustScore >= 80) {
-            summary.push("This article demonstrates high credibility and trustworthiness.");
-        } else if (trustScore >= 60) {
-            summary.push("This article shows generally good credibility with some areas of concern.");
-        } else if (trustScore >= 40) {
-            summary.push("This article has moderate credibility with several issues identified.");
-        } else {
-            summary.push("This article shows significant credibility concerns.");
+    // NEW METHOD: Remove unwanted text from enhanced overview
+    cleanupUnwantedText() {
+        const overview = document.querySelector('.enhanced-analysis-overview');
+        if (overview) {
+            // Walk through all text nodes in the overview
+            const walker = document.createTreeWalker(
+                overview,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                // Remove text that matches unwanted format
+                if (node.textContent.includes('Trust Score:') && 
+                    node.textContent.includes('Fact Check:') &&
+                    node.textContent.includes('|')) {
+                    node.textContent = '';
+                }
+                // Also remove if it has the specific format
+                if (node.textContent.includes('/100 (Medium)') ||
+                    node.textContent.includes('% verified')) {
+                    node.textContent = '';
+                }
+            }
         }
-        
-        // Add specific findings from services
-        if (detailed.source_credibility?.score >= 80) {
-            summary.push("The source is highly reputable and well-established.");
-        } else if (detailed.source_credibility?.score < 50) {
-            summary.push("Source credibility is questionable.");
-        }
-        
-        if (detailed.bias_detector?.bias_score > 70) {
-            summary.push("Significant bias detected in the content.");
-        } else if (detailed.bias_detector?.bias_score < 30) {
-            summary.push("Content appears relatively unbiased and balanced.");
-        }
-        
-        if (detailed.fact_checker?.accuracy_score >= 80) {
-            summary.push("Claims are well-supported by evidence.");
-        } else if (detailed.fact_checker?.accuracy_score < 50) {
-            summary.push("Multiple unverified or false claims detected.");
-        }
-        
-        if (detailed.manipulation_detector?.manipulation_score > 60) {
-            summary.push("Warning: Potential manipulation techniques detected.");
-        }
-        
-        return summary.join(" ");
     }
 
     updateTrustScore(score) {
