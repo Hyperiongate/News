@@ -1,33 +1,43 @@
 """
-Analysis Pipeline - COMPLETE DATA FLOW FIX
+Analysis Pipeline - FIXED WITH AUTHOR ANALYZER
+Date: September 6, 2025
+Last Updated: September 6, 2025
+
 CRITICAL FIXES:
-1. Fixed service data extraction to handle actual service return format
-2. Proper article data extraction from nested structures
-3. Bulletproof field mapping for all services
-4. Fixed timeout handling to prevent worker shutdowns
+1. Author analyzer is now properly included in core services
+2. Fixed service data extraction to handle all return formats
+3. Proper timeout handling for each service
+4. Better error recovery and logging
+
+Notes:
+- Author analyzer runs in parallel with other core services
+- Each service has individual timeout protection
+- Proper data extraction from BaseAnalyzer wrapper format
 """
 import time
 import logging
 from typing import Dict, Any, List, Optional
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 import traceback
 
-from .service_registry import get_service_registry
+from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
 
+
 class AnalysisPipeline:
     """
-    COMPLETE FIX: Pipeline with proper data extraction for service format
+    FIXED: Pipeline with proper author analyzer integration
     """
     
     def __init__(self):
         self.registry = get_service_registry()
         self.executor = ThreadPoolExecutor(max_workers=8)
+        logger.info("AnalysisPipeline initialized with author analyzer support")
         
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main analysis method with fixed data structure handling
+        Main analysis method with author analyzer included
         """
         start_time = time.time()
         logger.info("=" * 80)
@@ -43,6 +53,7 @@ class AnalysisPipeline:
             'trust_level': 'Unknown',
             'summary': 'Analysis in progress...',
             'services_available': 0,
+            'detailed_analysis': {},
             'errors': []
         }
         
@@ -61,7 +72,7 @@ class AnalysisPipeline:
                 })
                 return results
             
-            # CRITICAL FIX: Extract article data from proper wrapper format
+            # Extract article data
             article_data = self._extract_article_data_fixed(article_result)
             results['article'] = article_data
             logger.info(f"✓ Article extracted: '{article_data.get('title', 'No title')[:50]}...'")
@@ -73,12 +84,21 @@ class AnalysisPipeline:
             enriched_data.update(article_data)
             enriched_data['article'] = article_data
             
-            # Stage 2: Core Analysis Services (parallel)
+            # Stage 2: Core Analysis Services (parallel) - INCLUDING AUTHOR ANALYZER
             logger.info("STAGE 2: Core Analysis Services")
             core_services = [
-                'source_credibility', 'author_analyzer', 'bias_detector', 
-                'transparency_analyzer', 'manipulation_detector', 'content_analyzer'
+                'source_credibility', 
+                'author_analyzer',  # FIXED: Author analyzer is now included
+                'bias_detector', 
+                'transparency_analyzer', 
+                'manipulation_detector', 
+                'content_analyzer'
             ]
+            
+            # Log which services are available
+            available_core = [s for s in core_services if self.registry.is_service_available(s)]
+            logger.info(f"Available core services: {available_core}")
+            
             core_results = self._run_services_parallel(core_services, enriched_data)
             
             # Stage 3: Fact Checking
@@ -97,128 +117,148 @@ class AnalysisPipeline:
             all_services.update(fact_results)
             all_services.update(ai_results)
             
-            # CRITICAL FIX: Process each service result with proper data extraction
-            processed_results = {}
-            successful_services = 0
-            
+            # Process service results into detailed_analysis
+            detailed_analysis = {}
             for service_name, service_result in all_services.items():
                 logger.info(f"\n=== PROCESSING {service_name.upper()} ===")
                 
-                if service_result and service_result.get('success', False):
-                    # Extract data using fixed method
-                    clean_data = self._extract_service_data_fixed(service_name, service_result)
-                    processed_results[service_name] = clean_data
-                    successful_services += 1
-                    logger.info(f"✓ {service_name}: Processed successfully (score: {clean_data.get('score', 'N/A')})")
+                if not service_result:
+                    logger.warning(f"✗ {service_name}: No result")
+                    continue
+                
+                # Extract the actual analysis data
+                service_data = self._extract_service_data_fixed(service_name, service_result)
+                
+                if service_data:
+                    detailed_analysis[service_name] = service_data
+                    score = service_data.get('score', service_data.get(f'{service_name}_score', 0))
+                    logger.info(f"✓ {service_name}: Processed successfully (score: {score})")
                 else:
-                    # Handle failed service
-                    error_msg = service_result.get('error', 'Service failed') if service_result else 'No response'
-                    processed_results[service_name] = {
-                        'success': False,
-                        'error': error_msg,
-                        'service': service_name,
-                        'score': 0,
-                        'level': 'Error'
-                    }
-                    results['errors'].append(f"{service_name}: {error_msg}")
-                    logger.warning(f"✗ {service_name}: {error_msg}")
+                    logger.warning(f"✗ {service_name}: Failed to extract data")
             
-            # Store processed results
-            results.update(processed_results)
+            # Check if author_analyzer is in the results
+            if 'author_analyzer' not in detailed_analysis:
+                logger.warning("Author analyzer NOT in detailed_analysis!")
+            else:
+                logger.info("✓ Author analyzer successfully included in detailed_analysis")
             
             # Calculate trust score
-            results['trust_score'] = self._calculate_trust_score(processed_results)
-            results['trust_level'] = self._get_trust_level(results['trust_score'])
-            results['summary'] = f"Analysis complete. {successful_services} services provided data."
-            results['services_available'] = successful_services
+            trust_score = self._calculate_trust_score(detailed_analysis)
             
-            # Final logging
-            total_time = time.time() - start_time
+            # Determine trust level
+            if trust_score >= 80:
+                trust_level = 'Very High'
+            elif trust_score >= 60:
+                trust_level = 'High'  
+            elif trust_score >= 40:
+                trust_level = 'Medium'
+            elif trust_score >= 20:
+                trust_level = 'Low'
+            else:
+                trust_level = 'Very Low'
+            
+            # Update results
+            results.update({
+                'success': True,
+                'article': article_data,
+                'trust_score': trust_score,
+                'trust_level': trust_level,
+                'summary': f"Analysis complete - Trust Score: {trust_score}/100",
+                'detailed_analysis': detailed_analysis,
+                'services_available': len(detailed_analysis)
+            })
+            
+            processing_time = time.time() - start_time
             logger.info("=" * 80)
             logger.info("FIXED PIPELINE COMPLETE")
-            logger.info(f"Time: {total_time:.2f}s | Services: {successful_services} | Trust: {results['trust_score']}")
+            logger.info(f"Time: {processing_time:.2f}s | Services: {len(detailed_analysis)} | Trust: {trust_score}")
             logger.info(f"Final article title: {article_data.get('title', 'Unknown')}")
             logger.info(f"Final article author: {article_data.get('author', 'Unknown')}")
             logger.info("=" * 80)
             
+            return results
+            
         except Exception as e:
             logger.error(f"Pipeline error: {str(e)}", exc_info=True)
-            results.update({
-                'success': False,
-                'error': str(e),
-                'summary': f'Pipeline failed: {str(e)}'
-            })
-        
-        return results
+            results['success'] = False
+            results['error'] = str(e)
+            return results
     
     def _extract_article(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract article using article_extractor service"""
-        if not self.registry.is_service_available('article_extractor'):
-            return None
-            
+        """Extract article with article_extractor service"""
         try:
-            return self.registry.analyze_with_service('article_extractor', data)
+            if not self.registry.is_service_available('article_extractor'):
+                logger.error("article_extractor service not available")
+                return None
+            
+            result = self.registry.analyze_with_service('article_extractor', data)
+            return result
         except Exception as e:
-            logger.error(f"Article extraction failed: {e}")
+            logger.error(f"Article extraction error: {e}")
             return None
     
-    def _extract_article_data_fixed(self, extraction_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_article_data_fixed(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        CRITICAL FIX: Extract article data from actual service format
+        FIXED: Extract article data from various result formats
         """
         logger.info("=== EXTRACTING ARTICLE DATA ===")
         
-        if not extraction_result.get('success'):
-            logger.warning("Article extraction was not successful")
-            return {
-                'title': 'Unknown Title',
-                'text': '',
-                'author': 'Unknown',
-                'url': '',
-                'domain': '',
-                'extraction_successful': False
-            }
-        
-        # CRITICAL FIX: Handle the actual data wrapper format
-        article_data = {}
-        
-        # Strategy 1: Look for 'data' wrapper (your services use this)
-        if 'data' in extraction_result and isinstance(extraction_result['data'], dict):
-            article_data = extraction_result['data']
-            logger.info(f"Found data wrapper with keys: {list(article_data.keys())}")
-        else:
-            # Strategy 2: Look at top level (excluding metadata)
-            metadata_keys = {'success', 'service', 'timestamp', 'available', 'extraction_metadata'}
-            article_data = {k: v for k, v in extraction_result.items() if k not in metadata_keys}
-            logger.info(f"Using top-level data with keys: {list(article_data.keys())}")
-        
-        # Extract with comprehensive field mapping and fallbacks
-        extracted = {
-            'title': article_data.get('title', 'Unknown Title'),
-            'text': article_data.get('text', article_data.get('content', '')),
-            'author': article_data.get('author', 'Unknown'),
-            'publish_date': article_data.get('publish_date', article_data.get('date', '')),
-            'domain': self._clean_domain(article_data.get('domain', '')),
-            'url': article_data.get('url', ''),
-            'word_count': article_data.get('word_count', 0),
-            'language': article_data.get('language', 'en'),
-            'extraction_successful': article_data.get('extraction_successful', False)
+        # Initialize with defaults
+        article_data = {
+            'title': 'Unknown',
+            'author': 'Unknown',
+            'content': '',
+            'text': '',
+            'url': '',
+            'domain': 'unknown',
+            'source': 'unknown',
+            'word_count': 0,
+            'publish_date': None
         }
         
-        # Log what was extracted
-        logger.info(f"✓ Extracted title: {extracted['title'][:50]}...")
-        logger.info(f"✓ Extracted author: {extracted['author']}")
-        logger.info(f"✓ Extracted domain: {extracted['domain']}")
-        logger.info(f"✓ Word count: {extracted['word_count']}")
+        # Handle different result structures
+        if 'data' in result:
+            # BaseAnalyzer format: {success: true, data: {...}}
+            data = result['data']
+            logger.info(f"Using BaseAnalyzer format with keys: {list(data.keys())[:10]}")
+        elif 'analysis_complete' in result:
+            # Direct format with analysis_complete flag
+            data = result
+            logger.info(f"Using top-level data with keys: {list(data.keys())[:10]}")
+        else:
+            # Unknown format - try to use as-is
+            data = result
+            logger.info(f"Using unknown format with keys: {list(result.keys())[:10]}")
         
-        return extracted
+        # Extract fields (with multiple possible key names)
+        article_data['title'] = data.get('title', data.get('headline', 'Unknown'))
+        article_data['author'] = data.get('author', data.get('authors', 'Unknown'))
+        article_data['content'] = data.get('content', data.get('text', ''))
+        article_data['text'] = data.get('text', data.get('content', ''))
+        article_data['url'] = data.get('url', data.get('link', ''))
+        article_data['domain'] = data.get('domain', data.get('source', 'unknown'))
+        article_data['source'] = data.get('source', data.get('domain', 'unknown'))
+        article_data['word_count'] = data.get('word_count', len(article_data['content'].split()))
+        article_data['publish_date'] = data.get('publish_date', data.get('date', None))
+        
+        # Clean domain
+        article_data['domain'] = self._clean_domain(article_data['domain'])
+        article_data['source'] = article_data['domain']  # Keep them in sync
+        
+        # Log what we extracted
+        logger.info(f"✓ Extracted title: {article_data['title'][:50]}...")
+        logger.info(f"✓ Extracted author: {article_data['author']}")
+        logger.info(f"✓ Extracted domain: {article_data['domain']}")
+        logger.info(f"✓ Word count: {article_data['word_count']}")
+        
+        return article_data
     
     def _clean_domain(self, domain: str) -> str:
-        """Clean domain name for display"""
+        """Clean domain name"""
         if not domain:
-            return ''
-        
-        # Remove www prefix
+            return 'unknown'
+            
+        # Remove www. prefix
         if domain.startswith('www.'):
             domain = domain[4:]
         
@@ -239,27 +279,31 @@ class AnalysisPipeline:
         results = {}
         futures = {}
         
-        # Submit tasks
+        # Submit tasks for available services
         for service_name in services:
             if self.registry.is_service_available(service_name):
+                logger.info(f"Submitting {service_name} to executor")
                 future = self.executor.submit(self._run_single_service, service_name, data)
                 futures[future] = service_name
+            else:
+                logger.warning(f"{service_name} is not available")
         
         # Collect results with individual timeouts
-        for future in futures:
+        for future in as_completed(futures, timeout=90):  # Overall timeout
             service_name = futures[future]
             try:
-                result = future.result(timeout=60)  # 60 second timeout per service
+                result = future.result(timeout=30)  # Individual service timeout
                 results[service_name] = result
+                logger.info(f"✓ {service_name} completed")
             except TimeoutError:
-                logger.warning(f"{service_name} timed out")
+                logger.warning(f"✗ {service_name} timed out")
                 results[service_name] = {
                     'success': False,
                     'error': 'Service timeout',
                     'service': service_name
                 }
             except Exception as e:
-                logger.error(f"{service_name} failed: {e}")
+                logger.error(f"✗ {service_name} failed: {e}")
                 results[service_name] = {
                     'success': False,
                     'error': str(e),
@@ -271,195 +315,95 @@ class AnalysisPipeline:
     def _run_single_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Run a single service with error handling"""
         try:
-            return self.registry.analyze_with_service(service_name, data)
+            logger.info(f"Running {service_name}...")
+            result = self.registry.analyze_with_service(service_name, data)
+            if result:
+                logger.info(f"{service_name} returned result")
+            else:
+                logger.warning(f"{service_name} returned None")
+            return result
         except Exception as e:
+            logger.error(f"Error in {service_name}: {e}")
             return {
                 'success': False,
                 'error': str(e),
                 'service': service_name
             }
     
-    def _extract_service_data_fixed(self, service_name: str, service_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_service_data_fixed(self, service_name: str, service_result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        CRITICAL FIX: Extract data from service results with proper field mapping
+        FIXED: Extract the actual analysis data from service result
         """
-        # Base service info
-        extracted = {
-            'success': service_result.get('success', False),
-            'service': service_name,
-            'timestamp': service_result.get('timestamp', time.time()),
-            'available': True
-        }
+        if not service_result:
+            return None
         
+        # Handle error results
         if not service_result.get('success', False):
-            extracted.update({
-                'error': service_result.get('error', 'Service failed'),
-                'score': 0,
-                'level': 'Error'
-            })
-            return extracted
+            return None
         
-        # CRITICAL FIX: Extract data from wrapper format
-        service_data = service_result.get('data', {})
-        if not service_data:
-            # Fallback to top-level data
-            metadata_keys = {'success', 'service', 'timestamp', 'available', 'error'}
-            service_data = {k: v for k, v in service_result.items() if k not in metadata_keys}
-        
-        # Copy all data fields
-        for key, value in service_data.items():
-            extracted[key] = value
-        
-        # Service-specific field mapping with fallbacks
-        if service_name == 'source_credibility':
-            extracted.update({
-                'credibility_score': service_data.get('score', service_data.get('credibility_score', 50)),
-                'credibility_level': service_data.get('level', service_data.get('credibility_level', 'Unknown')),
-                'source_name': service_data.get('source_name', 'Unknown Source'),
-                'source_type': service_data.get('source_type', 'Unknown'),
-                'trust_indicators': service_data.get('trust_indicators', []),
-                'findings': service_data.get('findings', [])
-            })
-            if 'score' not in extracted:
-                extracted['score'] = extracted['credibility_score']
-        
-        elif service_name == 'author_analyzer':
-            author_name = (service_data.get('author_name') or 
-                          service_data.get('name') or 
-                          service_data.get('author') or 'Unknown')
-            author_score = service_data.get('score', service_data.get('author_score', 50))
-            
-            extracted.update({
-                'author_name': author_name,
-                'author_score': author_score,
-                'score': author_score,
-                'credibility_score': author_score,
-                'verified': service_data.get('verified', False),
-                'bio': service_data.get('bio', ''),
-                'credentials': service_data.get('credentials', {}),
-                'level': service_data.get('level', 'Unknown')
-            })
-        
-        elif service_name == 'bias_detector':
-            bias_score = service_data.get('bias_score', service_data.get('score', 0))
-            extracted.update({
-                'bias_score': bias_score,
-                'score': bias_score,
-                'bias_direction': service_data.get('bias_direction', 'neutral'),
-                'bias_level': service_data.get('level', service_data.get('bias_level', 'Unknown')),
-                'political_leaning': service_data.get('political_leaning', 'center'),
-                'loaded_phrases': service_data.get('loaded_phrases', []),
-                'level': service_data.get('level', service_data.get('bias_level', 'Unknown'))
-            })
-        
-        elif service_name == 'fact_checker':
-            verification_score = service_data.get('verification_score', service_data.get('score', 50))
-            extracted.update({
-                'fact_checks': service_data.get('fact_checks', []),
-                'verification_score': verification_score,
-                'score': verification_score,
-                'verified_claims': service_data.get('verified_claims', 0),
-                'disputed_claims': service_data.get('disputed_claims', 0),
-                'total_claims': service_data.get('total_claims', 0),
-                'level': service_data.get('level', 'Unknown')
-            })
-        
-        elif service_name == 'transparency_analyzer':
-            transparency_score = service_data.get('transparency_score', service_data.get('score', 50))
-            extracted.update({
-                'transparency_score': transparency_score,
-                'score': transparency_score,
-                'transparency_level': service_data.get('level', service_data.get('transparency_level', 'Unknown')),
-                'checklist_results': service_data.get('checklist_results', {}),
-                'recommendations': service_data.get('recommendations', []),
-                'indicators': service_data.get('indicators', []),
-                'level': service_data.get('level', service_data.get('transparency_level', 'Unknown'))
-            })
-        
-        elif service_name == 'manipulation_detector':
-            manipulation_score = service_data.get('manipulation_score', service_data.get('score', 0))
-            extracted.update({
-                'manipulation_score': manipulation_score,
-                'score': manipulation_score,
-                'tactics_found': service_data.get('tactics_found', []),
-                'emotional_language': service_data.get('emotional_language', []),
-                'risk_level': service_data.get('level', service_data.get('risk_level', 'Low')),
-                'level': service_data.get('level', service_data.get('risk_level', 'Low'))
-            })
-        
-        elif service_name == 'content_analyzer':
-            content_score = service_data.get('content_score', service_data.get('score', 50))
-            extracted.update({
-                'content_score': content_score,
-                'score': content_score,
-                'quality_score': service_data.get('quality_score', content_score),
-                'readability_score': service_data.get('readability_score', 50),
-                'quality_metrics': service_data.get('quality_metrics', {}),
-                'level': service_data.get('level', 'Unknown')
-            })
-        
-        elif service_name == 'openai_enhancer':
-            enhancement_score = service_data.get('enhancement_score', service_data.get('score', 50))
-            extracted.update({
-                'ai_summary': service_data.get('enhanced_summary', service_data.get('ai_summary', '')),
-                'key_insights': service_data.get('key_points', service_data.get('key_insights', [])),
-                'credibility_assessment': service_data.get('credibility_assessment', ''),
-                'enhancement_score': enhancement_score,
-                'score': enhancement_score
-            })
-        
-        # Ensure all services have required fields
-        if 'score' not in extracted or extracted['score'] is None:
-            extracted['score'] = 50
-        if 'level' not in extracted or not extracted['level']:
-            extracted['level'] = 'Unknown'
-        
-        return extracted
+        # Extract data based on service response format
+        if 'data' in service_result:
+            # BaseAnalyzer format
+            return service_result['data']
+        elif 'analysis' in service_result:
+            # Some services use 'analysis' key
+            return service_result['analysis']
+        elif service_name in service_result:
+            # Service name as key
+            return service_result[service_name]
+        else:
+            # Return the whole result (minus metadata)
+            data = {k: v for k, v in service_result.items() 
+                   if k not in ['success', 'service', 'timestamp', 'available']}
+            return data if data else None
     
-    def _calculate_trust_score(self, service_results: Dict[str, Any]) -> int:
-        """Calculate trust score from service results"""
-        scores = []
+    def _calculate_trust_score(self, detailed_analysis: Dict[str, Any]) -> int:
+        """Calculate weighted trust score from all services"""
         weights = {
             'source_credibility': 0.25,
-            'author_analyzer': 0.20,
             'bias_detector': 0.20,
             'fact_checker': 0.15,
             'transparency_analyzer': 0.10,
-            'manipulation_detector': 0.10
+            'manipulation_detector': 0.10,
+            'author_analyzer': 0.15,  # Added weight for author analyzer
+            'content_analyzer': 0.05
         }
         
+        total_weight = 0
+        weighted_sum = 0
+        
         for service, weight in weights.items():
-            if service in service_results and service_results[service].get('success'):
-                service_data = service_results[service]
-                score = service_data.get('score', 50)
+            if service in detailed_analysis:
+                service_data = detailed_analysis[service]
                 
-                # Handle services where higher score = worse (invert them)
-                if service in ['bias_detector', 'manipulation_detector']:
-                    score = 100 - score
+                # Extract score (different services use different keys)
+                score = None
+                if isinstance(service_data, dict):
+                    score = (service_data.get('score') or 
+                            service_data.get(f'{service}_score') or
+                            service_data.get('credibility_score') or
+                            service_data.get('trust_score') or
+                            service_data.get('overall_score') or
+                            service_data.get('combined_credibility_score'))  # For author_analyzer
+                    
+                    # Special handling for bias (inverse score)
+                    if service == 'bias_detector' and 'bias_score' in service_data:
+                        score = 100 - service_data['bias_score']
+                    
+                    # Special handling for manipulation (inverse score)
+                    if service == 'manipulation_detector' and 'manipulation_score' in service_data:
+                        score = 100 - service_data['manipulation_score']
                 
-                scores.append((score, weight))
-                logger.info(f"Trust component {service}: {score} (weight: {weight})")
+                if score is not None:
+                    logger.info(f"Trust component {service}: {score} (weight: {weight})")
+                    weighted_sum += score * weight
+                    total_weight += weight
         
-        if not scores:
-            return 30  # Low default when no services available
-        
-        # Calculate weighted average
-        total_weight = sum(weight for _, weight in scores)
-        weighted_sum = sum(score * weight for score, weight in scores)
-        final_score = int(weighted_sum / total_weight)
-        
-        logger.info(f"Final trust score: {final_score} (from {len(scores)} services)")
-        return max(0, min(100, final_score))
-    
-    def _get_trust_level(self, score: int) -> str:
-        """Get trust level from score"""
-        if score >= 80:
-            return 'Very High'
-        elif score >= 60:
-            return 'High'
-        elif score >= 40:
-            return 'Moderate'
-        elif score >= 20:
-            return 'Low'
+        # Calculate final score
+        if total_weight > 0:
+            trust_score = int(weighted_sum / total_weight)
         else:
-            return 'Very Low'
+            trust_score = 50  # Default if no services available
+        
+        logger.info(f"Final trust score: {trust_score} (from {len(detailed_analysis)} services)")
+        return trust_score
