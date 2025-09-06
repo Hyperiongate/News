@@ -1,913 +1,409 @@
 """
-Article Extractor - FIXED PRODUCTION VERSION
-Date: December 2024
-Last Updated: 2025-09-06
-Purpose: Extract article content with proper author validation
-Critical Fix: Enhanced author validation to reject non-author text like "signing up, and you agree"
-Notes:
-- Added comprehensive rejection patterns for non-author text
-- Maintains all existing functionality
-- Properly validates author names before accepting them
-- Handles multi-author bylines correctly
-"""
+Analysis Pipeline - FIXED WITH AUTHOR ANALYZER
+Date: September 6, 2025
+Last Updated: September 6, 2025
 
-import json
-import re
+CRITICAL FIXES:
+1. Author analyzer is now properly included in core services
+2. Fixed service data extraction to handle all return formats
+3. Proper timeout handling for each service
+4. Better error recovery and logging
+
+Notes:
+- Author analyzer runs in parallel with other core services
+- Each service has individual timeout protection
+- Proper data extraction from BaseAnalyzer wrapper format
+"""
 import time
 import logging
-import requests
-import urllib3
-from bs4 import BeautifulSoup
-from typing import Dict, Optional, Any, List
-from urllib.parse import urlparse
-from datetime import datetime
-import random
-import os
+from typing import Dict, Any, List, Optional
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+import traceback
 
-# Import the base analyzer that your system uses
-from services.base_analyzer import BaseAnalyzer
-
-# Disable SSL warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
 
-class ArticleExtractor(BaseAnalyzer):
+
+class AnalysisPipeline:
     """
-    Complete article extraction with FIXED author validation
-    Properly rejects non-author text like "signing up, and you agree to our"
+    FIXED: Pipeline with proper author analyzer integration
     """
     
     def __init__(self):
-        super().__init__('article_extractor')
+        self.registry = get_service_registry()
+        self.executor = ThreadPoolExecutor(max_workers=8)
+        logger.info("AnalysisPipeline initialized with author analyzer support")
         
-        # Get ScraperAPI key from config
-        try:
-            from config import Config
-            self.scraperapi_key = Config.SCRAPERAPI_KEY
-            logger.info(f"ArticleExtractor initialized - ScraperAPI: {bool(self.scraperapi_key)}")
-        except:
-            self.scraperapi_key = os.getenv('SCRAPERAPI_KEY')
-            logger.warning("Using environment variable for ScraperAPI key")
-        
-        # Initialize session for requests
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        })
-        
-        # Site-specific author selectors - COMPREHENSIVE INCLUDING ABC NEWS
-        self.author_selectors = {
-            'abcnews.go.com': [
-                # ABC News specific selectors
-                '.News__Author',
-                '.News__Byline__Author',
-                'span.Byline__Author',
-                '.byline__authors',
-                '.authors',
-                '.FITT_Article_new__authors',
-                '.FITT_Article_new__byline',
-                '[data-testid="byline"] span',
-                '.ContentRoll__Headline__Author',
-                '.ContentRoll__Headline__Date__Container span',
-                # Meta tags for ABC
-                'meta[name="author"]',
-                'meta[property="article:author"]',
-                'meta[name="DC.creator"]'
-            ],
-            'aljazeera.com': [
-                # Al Jazeera specific selectors
-                '.article-author-name',
-                '.author-name',
-                '.author__name',
-                'span.author-link',
-                '[data-author-name]',
-                'meta[name="author"]',
-                'meta[property="article:author"]'
-            ],
-            'theguardian.com': [
-                # Guardian specific selectors
-                'span[itemprop="name"]',
-                'a[rel="author"] span',
-                'a[data-link-name="auto tag link"] span',
-                'address[aria-label*="author"] span',
-                'div.dcr-1cfvqy6 span',
-                'a[rel="author"]',
-                'span.css-1rv9jn8',
-                'div[data-gu-name="meta"] a span',
-                'meta[name="author"]',
-                'meta[property="article:author"]',
-                '.contributor__name',
-                '.byline span',
-                '.content__meta-container span[itemprop="name"]',
-                '[data-component="byline"] span',
-                '[data-gu-name="byline"] span'
-            ],
-            'bbc.com': [
-                'span.qa-contributor-name',
-                'p.ssrcss-1rv9jn8-Contributor span',
-                'div[data-component="byline"] span',
-                '.author-unit__text',
-                '.byline__name'
-            ],
-            'cnn.com': [
-                'span.metadata__byline__author',
-                'div.byline__names',
-                '.Article__subtitle',
-                'meta[name="author"]'
-            ],
-            'reuters.com': [
-                'div.author-name',
-                'span[class*="author"]',
-                '.ArticleHeader__author',
-                'meta[name="article:author"]'
-            ],
-            'nytimes.com': [
-                'span.byline-name',
-                'meta[name="byl"]',
-                'p.css-1cjnqko span',
-                'span[itemprop="name"]'
-            ],
-            'npr.org': [
-                '.byline__name',
-                '.byline__name a',
-                '.byline__authors',
-                'span.byline__name'
-            ],
-            'washingtonpost.com': [
-                'span[data-qa="author-name"]',
-                'a[data-qa="author-name"]',
-                'meta[name="author"]'
-            ],
-            'foxnews.com': [
-                '.author-byline span',
-                '.article-meta-author',
-                'span.author',
-                'meta[name="dc.creator"]'
-            ],
-            'usatoday.com': [
-                '.gnt_ar_by_a',
-                '.gnt_ar_by',
-                'a[data-c-br="native"]',
-                'meta[name="news_keywords"]'
-            ],
-            'apnews.com': [
-                '.CardHeadline-module-byline',
-                '.Component-bylines',
-                'span[data-key="byline"]',
-                'meta[name="author"]'
-            ]
-        }
-    
-    def _check_availability(self) -> bool:
-        """Check if service is available"""
-        return True  # Always available with fallback methods
-    
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main analysis method - maintains compatibility with pipeline
+        Main analysis method with author analyzer included
         """
-        logger.info("=" * 60)
-        logger.info("ARTICLE EXTRACTOR - FIXED AUTHOR VALIDATION VERSION")
-        logger.info("=" * 60)
+        start_time = time.time()
+        logger.info("=" * 80)
+        logger.info("STARTING FIXED ANALYSIS PIPELINE")
+        logger.info(f"Input data keys: {list(data.keys())}")
+        logger.info("=" * 80)
         
-        try:
-            # Parse input
-            url = data.get('url')
-            text = data.get('text')
-            
-            if url:
-                logger.info(f"Extracting from URL: {url}")
-                result = self._extract_from_url(url)
-            elif text:
-                logger.info("Processing provided text")
-                result = self._process_text(text)
-            else:
-                return self.get_error_result("No URL or text provided")
-            
-            # Return in BaseAnalyzer format
-            if result.get('success'):
-                article_data = result.get('data', {})
-                
-                logger.info("=== EXTRACTION COMPLETE ===")
-                logger.info(f"Title: {article_data.get('title', 'Unknown')[:50]}...")
-                logger.info(f"Author: {article_data.get('author', 'Unknown')}")
-                logger.info(f"Domain: {article_data.get('domain', 'Unknown')}")
-                logger.info(f"Word count: {article_data.get('word_count', 0)}")
-                
-                return self.get_success_result(article_data)
-            else:
-                return self.get_error_result(result.get('error', 'Extraction failed'))
-                
-        except Exception as e:
-            logger.error(f"ArticleExtractor.analyze failed: {e}", exc_info=True)
-            return self.get_error_result(str(e))
-    
-    def _extract_from_url(self, url: str) -> Dict[str, Any]:
-        """Extract article content from URL with multiple strategies"""
-        
-        strategies = [
-            ('scraperapi', self._extract_with_scraperapi),
-            ('enhanced_requests', self._extract_with_requests),
-            ('basic_fallback', self._extract_basic_fallback)
-        ]
-        
-        last_error = None
-        best_result = None
-        
-        for strategy_name, strategy_func in strategies:
-            try:
-                logger.info(f"Trying {strategy_name}...")
-                result = strategy_func(url)
-                
-                if result.get('success'):
-                    # Special handling for specific sites
-                    if 'abcnews' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
-                        logger.info("ABC News article detected - enhancing author extraction")
-                        result = self._enhance_abc_extraction(result, url)
-                    elif 'guardian' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
-                        logger.info("Guardian article detected - enhancing author extraction")
-                        result = self._enhance_guardian_extraction(result, url)
-                    elif 'aljazeera' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
-                        logger.info("Al Jazeera article detected - enhancing author extraction")
-                        result = self._enhance_aljazeera_extraction(result, url)
-                    
-                    if self._validate_extraction(result):
-                        logger.info(f"SUCCESS: {strategy_name} extracted content")
-                        return result
-                    
-                # Keep best partial result
-                if result.get('data', {}).get('text'):
-                    if not best_result or len(result['data']['text']) > len(best_result.get('data', {}).get('text', '')):
-                        best_result = result
-                
-                last_error = result.get('error', f'{strategy_name} failed')
-                    
-            except Exception as e:
-                last_error = str(e)
-                logger.error(f"{strategy_name} exception: {e}")
-                continue
-        
-        # Return best partial result if available
-        if best_result:
-            logger.warning("Returning best partial result")
-            return best_result
-        
-        return {
-            'success': False,
-            'error': f'All extraction methods failed. Last error: {last_error}'
+        # Initialize results structure
+        results = {
+            'success': True,
+            'article': {},
+            'trust_score': 50,
+            'trust_level': 'Unknown',
+            'summary': 'Analysis in progress...',
+            'services_available': 0,
+            'detailed_analysis': {},
+            'errors': []
         }
-    
-    def _extract_with_scraperapi(self, url: str) -> Dict[str, Any]:
-        """Extract using ScraperAPI with JavaScript rendering for dynamic sites"""
-        if not self.scraperapi_key:
-            return {'success': False, 'error': 'ScraperAPI key not available'}
         
         try:
-            params = {
-                'api_key': self.scraperapi_key,
-                'url': url,
-                'render': 'true',  # Enable JS rendering for dynamic sites
-                'country_code': 'us'
-            }
+            # Stage 1: Article Extraction (sequential - required first)
+            logger.info("STAGE 1: Article Extraction")
+            article_result = self._extract_article(data)
             
-            response = requests.get('http://api.scraperapi.com', params=params, timeout=60)
-            response.raise_for_status()
+            if not article_result or not article_result.get('success'):
+                error_msg = article_result.get('error', 'Article extraction failed') if article_result else 'No article data'
+                logger.error(f"Article extraction failed: {error_msg}")
+                results.update({
+                    'success': False,
+                    'error': 'Article extraction failed',
+                    'summary': 'Could not extract article content'
+                })
+                return results
             
-            return self._parse_html_content(response.text, url, 'scraperapi')
+            # Extract article data
+            article_data = self._extract_article_data_fixed(article_result)
+            results['article'] = article_data
+            logger.info(f"✓ Article extracted: '{article_data.get('title', 'No title')[:50]}...'")
+            logger.info(f"✓ Author found: {article_data.get('author', 'Unknown')}")
+            logger.info(f"✓ Domain: {article_data.get('domain', 'Unknown')}")
             
-        except Exception as e:
-            return {'success': False, 'error': f'ScraperAPI failed: {str(e)}'}
-    
-    def _extract_with_requests(self, url: str) -> Dict[str, Any]:
-        """Extract using enhanced requests session"""
-        try:
-            # Randomize user agent
-            self.session.headers['User-Agent'] = self._get_random_user_agent()
+            # Create enriched data for other services
+            enriched_data = {**data}
+            enriched_data.update(article_data)
+            enriched_data['article'] = article_data
             
-            # Add referer for some sites
-            domain = urlparse(url).netloc
-            self.session.headers['Referer'] = f'https://{domain}/'
+            # Stage 2: Core Analysis Services (parallel) - INCLUDING AUTHOR ANALYZER
+            logger.info("STAGE 2: Core Analysis Services")
+            core_services = [
+                'source_credibility', 
+                'author_analyzer',  # FIXED: Author analyzer is now included
+                'bias_detector', 
+                'transparency_analyzer', 
+                'manipulation_detector', 
+                'content_analyzer'
+            ]
             
-            response = self.session.get(url, timeout=30, verify=False, allow_redirects=True)
-            response.raise_for_status()
+            # Log which services are available
+            available_core = [s for s in core_services if self.registry.is_service_available(s)]
+            logger.info(f"Available core services: {available_core}")
             
-            return self._parse_html_content(response.text, url, 'requests')
+            core_results = self._run_services_parallel(core_services, enriched_data)
             
-        except Exception as e:
-            return {'success': False, 'error': f'Enhanced requests failed: {str(e)}'}
-    
-    def _extract_basic_fallback(self, url: str) -> Dict[str, Any]:
-        """Basic fallback extraction method"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
+            # Stage 3: Fact Checking
+            logger.info("STAGE 3: Fact Checking")
+            fact_results = self._run_services_parallel(['fact_checker'], enriched_data)
             
-            response = requests.get(url, headers=headers, timeout=30, verify=False)
-            response.raise_for_status()
+            # Stage 4: AI Enhancement (if pro mode)
+            ai_results = {}
+            if data.get('is_pro', False):
+                logger.info("STAGE 4: AI Enhancement")
+                ai_results = self._run_services_parallel(['openai_enhancer'], enriched_data)
             
-            return self._parse_html_content(response.text, url, 'basic_fallback')
+            # Combine all service results
+            all_services = {}
+            all_services.update(core_results)
+            all_services.update(fact_results)
+            all_services.update(ai_results)
             
-        except Exception as e:
-            return {'success': False, 'error': f'Basic fallback failed: {str(e)}'}
-    
-    def _parse_html_content(self, html: str, url: str, method: str) -> Dict[str, Any]:
-        """Parse HTML and extract article data"""
-        try:
-            soup = BeautifulSoup(html, 'html.parser')
-            
-            # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
-                element.decompose()
-            
-            # Remove cookie banners and popups
-            for selector in ['.cookie', '.gdpr', '.privacy', '.consent', '.newsletter', '.popup', '.modal']:
-                for element in soup.select(selector):
-                    element.decompose()
-            
-            # Extract components
-            title = self._extract_title(soup)
-            content = self._extract_content(soup)
-            author = self._extract_author_universal(soup, url)
-            publish_date = self._extract_publish_date(soup)
-            description = self._extract_description(soup)
-            
-            # Calculate metrics
-            word_count = len(content.split()) if content else 0
-            domain = self._clean_domain(urlparse(url).netloc)
-            
-            logger.info(f"Extraction results - Author: {author}, Title: {title[:50]}, Words: {word_count}")
-            
-            return {
-                'success': True,
-                'data': {
-                    'title': title,
-                    'text': content,
-                    'content': content,  # Some services expect 'content' field
-                    'author': author,
-                    'publish_date': publish_date,
-                    'url': url,
-                    'domain': domain,
-                    'source': domain,  # Alias for domain
-                    'description': description,
-                    'word_count': word_count,
-                    'language': 'en',
-                    'extraction_successful': bool(content and len(content) > 100)
-                },
-                'extraction_metadata': {
-                    'method': method,
-                    'extracted_at': datetime.now().isoformat(),
-                    'author_found': bool(author and author != 'Unknown')
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"HTML parsing failed: {e}", exc_info=True)
-            return {'success': False, 'error': f'HTML parsing failed: {str(e)}'}
-    
-    def _extract_author_universal(self, soup: BeautifulSoup, url: str) -> str:
-        """
-        Universal author extraction with FIXED validation
-        """
-        domain = urlparse(url).netloc.replace('www.', '')
-        logger.info(f"Extracting author for domain: {domain}")
-        
-        # Method 1: JSON-LD Structured Data
-        author = self._extract_author_from_json_ld(soup)
-        if author and author != 'Unknown' and self._validate_author_name(author):
-            logger.info(f"Found valid author in JSON-LD: {author}")
-            return self._clean_author_name(author)
-        
-        # Method 2: Site-specific selectors
-        site_key = None
-        for key in self.author_selectors.keys():
-            if key in domain:
-                site_key = key
-                break
-        
-        if site_key:
-            selectors = self.author_selectors[site_key]
-            for selector in selectors:
-                try:
-                    if selector.startswith('meta'):
-                        # Handle meta tags
-                        parts = selector.split('"')
-                        if len(parts) >= 2:
-                            attr_value = parts[1]
-                            if 'name=' in selector:
-                                element = soup.find('meta', attrs={'name': attr_value})
-                            elif 'property=' in selector:
-                                element = soup.find('meta', attrs={'property': attr_value})
-                            else:
-                                element = None
-                            
-                            if element and element.get('content'):
-                                author = element['content'].strip()
-                                if self._validate_author_name(author):
-                                    logger.info(f"Found valid author in meta tag: {author}")
-                                    return self._clean_author_name(author)
-                    else:
-                        # CSS selector
-                        elements = soup.select(selector)
-                        for element in elements:
-                            text = element.get_text(strip=True)
-                            if text and self._validate_author_name(text):
-                                logger.info(f"Found valid author with selector {selector}: {text}")
-                                return self._clean_author_name(text)
-                except Exception as e:
-                    logger.debug(f"Selector {selector} failed: {e}")
+            # Process service results into detailed_analysis
+            detailed_analysis = {}
+            for service_name, service_result in all_services.items():
+                logger.info(f"\n=== PROCESSING {service_name.upper()} ===")
+                
+                if not service_result:
+                    logger.warning(f"✗ {service_name}: No result")
                     continue
-        
-        # Method 3: Look for byline patterns
-        byline_patterns = [
-            # Look for elements containing "By" text
-            lambda s: s.find_all(text=re.compile(r'^By\s+', re.IGNORECASE)),
-            # Look for common byline classes
-            lambda s: s.find_all(class_=re.compile(r'byline|author', re.IGNORECASE))
-        ]
-        
-        for pattern_func in byline_patterns:
-            elements = pattern_func(soup)
-            for element in elements:
-                if hasattr(element, 'parent'):
-                    parent = element.parent
-                    if parent:
-                        full_text = parent.get_text(strip=True)
-                else:
-                    full_text = element.get_text(strip=True) if hasattr(element, 'get_text') else str(element)
                 
-                # Extract author names after "By" with support for multiple authors
-                match = re.match(
-                    r'^By\s+(.+?)(?:\s*[\d,]+\s*(?:January|February|March|April|May|June|July|August|September|October|November|December)|\s*\d{1,2}[:\/]\d{2}|\s*\d{4}|$)',
-                    full_text,
-                    re.IGNORECASE | re.DOTALL
-                )
-                if match:
-                    authors_text = match.group(1).strip()
-                    # Clean up the authors text
-                    authors_text = re.sub(r'\s+', ' ', authors_text)
-                    authors_text = re.sub(r',?\s+and\s+', ', ', authors_text)
-                    if self._validate_author_name(authors_text):
-                        logger.info(f"Found valid author in byline text: {authors_text}")
-                        return self._clean_author_name(authors_text)
-        
-        # Method 4: Generic meta tags
-        meta_selectors = [
-            'meta[name="author"]',
-            'meta[property="article:author"]',
-            'meta[name="byl"]',
-            'meta[name="DC.creator"]',
-            'meta[name="dc.creator"]',
-            'meta[name="sailthru.author"]',
-            'meta[name="parsely-author"]',
-            'meta[name="twitter:creator"]'
-        ]
-        
-        for selector in meta_selectors:
-            element = soup.select_one(selector)
-            if element:
-                content = element.get('content', '').strip()
-                if content and self._validate_author_name(content):
-                    logger.info(f"Found valid author in generic meta: {content}")
-                    return self._clean_author_name(content)
-        
-        # Method 5: Common byline selectors
-        byline_selectors = [
-            '.author', '.author-name', '.byline', '.byline-author',
-            '.article-author', '.post-author', '.story-author',
-            '[rel="author"]', '.vcard .fn', '.h-card .p-name',
-            'span[itemprop="author"]', 'span[itemprop="name"]',
-            '.contributor', '.journalist', '.reporter'
-        ]
-        
-        for selector in byline_selectors:
-            elements = soup.select(selector)
-            for element in elements:
-                text = element.get_text(strip=True)
-                if text and self._validate_author_name(text):
-                    logger.info(f"Found valid author in byline: {text}")
-                    return self._clean_author_name(text)
-        
-        logger.info("No valid author found with any method")
-        return 'Unknown'
-    
-    def _extract_author_from_json_ld(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract author from JSON-LD structured data"""
-        json_ld_scripts = soup.find_all('script', {'type': 'application/ld+json'})
-        
-        for script in json_ld_scripts:
-            try:
-                data = json.loads(script.string)
+                # Extract the actual analysis data
+                service_data = self._extract_service_data_fixed(service_name, service_result)
                 
-                # Handle different JSON-LD structures
-                if isinstance(data, list):
-                    for item in data:
-                        author = self._extract_author_from_json_object(item)
-                        if author and self._validate_author_name(author):
-                            return author
+                if service_data:
+                    detailed_analysis[service_name] = service_data
+                    score = service_data.get('score', service_data.get(f'{service_name}_score', 0))
+                    logger.info(f"✓ {service_name}: Processed successfully (score: {score})")
                 else:
-                    author = self._extract_author_from_json_object(data)
-                    if author and self._validate_author_name(author):
-                        return author
-                        
-            except (json.JSONDecodeError, AttributeError, TypeError):
-                continue
-        
-        return None
+                    logger.warning(f"✗ {service_name}: Failed to extract data")
+            
+            # Check if author_analyzer is in the results
+            if 'author_analyzer' not in detailed_analysis:
+                logger.warning("Author analyzer NOT in detailed_analysis!")
+            else:
+                logger.info("✓ Author analyzer successfully included in detailed_analysis")
+            
+            # Calculate trust score
+            trust_score = self._calculate_trust_score(detailed_analysis)
+            
+            # Determine trust level
+            if trust_score >= 80:
+                trust_level = 'Very High'
+            elif trust_score >= 60:
+                trust_level = 'High'  
+            elif trust_score >= 40:
+                trust_level = 'Medium'
+            elif trust_score >= 20:
+                trust_level = 'Low'
+            else:
+                trust_level = 'Very Low'
+            
+            # Update results
+            results.update({
+                'success': True,
+                'article': article_data,
+                'trust_score': trust_score,
+                'trust_level': trust_level,
+                'summary': f"Analysis complete - Trust Score: {trust_score}/100",
+                'detailed_analysis': detailed_analysis,
+                'services_available': len(detailed_analysis)
+            })
+            
+            processing_time = time.time() - start_time
+            logger.info("=" * 80)
+            logger.info("FIXED PIPELINE COMPLETE")
+            logger.info(f"Time: {processing_time:.2f}s | Services: {len(detailed_analysis)} | Trust: {trust_score}")
+            logger.info(f"Final article title: {article_data.get('title', 'Unknown')}")
+            logger.info(f"Final article author: {article_data.get('author', 'Unknown')}")
+            logger.info("=" * 80)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Pipeline error: {str(e)}", exc_info=True)
+            results['success'] = False
+            results['error'] = str(e)
+            return results
     
-    def _extract_author_from_json_object(self, data: dict) -> Optional[str]:
-        """Extract author from a JSON-LD object"""
-        if not isinstance(data, dict):
+    def _extract_article(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract article with article_extractor service"""
+        try:
+            if not self.registry.is_service_available('article_extractor'):
+                logger.error("article_extractor service not available")
+                return None
+            
+            result = self.registry.analyze_with_service('article_extractor', data)
+            return result
+        except Exception as e:
+            logger.error(f"Article extraction error: {e}")
             return None
-        
-        # Direct author field
-        if 'author' in data:
-            author_data = data['author']
-            
-            if isinstance(author_data, str):
-                return author_data
-            elif isinstance(author_data, dict):
-                return author_data.get('name')
-            elif isinstance(author_data, list):
-                authors = []
-                for item in author_data:
-                    if isinstance(item, str):
-                        authors.append(item)
-                    elif isinstance(item, dict):
-                        name = item.get('name')
-                        if name:
-                            authors.append(name)
-                if authors:
-                    return ', '.join(authors)
-        
-        # Check @graph structure
-        if '@graph' in data:
-            for item in data['@graph']:
-                if isinstance(item, dict) and 'author' in item:
-                    return self._extract_author_from_json_object({'author': item['author']})
-        
-        return None
     
-    def _enhance_abc_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
-        """Special enhancement for ABC News articles"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://abcnews.go.com/'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=30)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Try ABC-specific extraction
-                author = self._extract_author_universal(soup, url)
-                if author and author != 'Unknown':
-                    result['data']['author'] = author
-                    logger.info(f"Enhanced ABC extraction found author: {author}")
-        except Exception as e:
-            logger.error(f"ABC enhancement failed: {e}")
-        
-        return result
-    
-    def _enhance_guardian_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
-        """Special enhancement for Guardian articles"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-GB,en;q=0.9',
-                'Referer': 'https://www.theguardian.com/'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=30)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Try Guardian-specific extraction
-                author = self._extract_author_universal(soup, url)
-                if author and author != 'Unknown':
-                    result['data']['author'] = author
-                    logger.info(f"Enhanced Guardian extraction found author: {author}")
-        except Exception as e:
-            logger.error(f"Guardian enhancement failed: {e}")
-        
-        return result
-    
-    def _enhance_aljazeera_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
-        """Special enhancement for Al Jazeera articles"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.aljazeera.com/'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=30)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Try Al Jazeera-specific extraction
-                author = self._extract_author_universal(soup, url)
-                if author and author != 'Unknown':
-                    result['data']['author'] = author
-                    logger.info(f"Enhanced Al Jazeera extraction found author: {author}")
-        except Exception as e:
-            logger.error(f"Al Jazeera enhancement failed: {e}")
-        
-        return result
-    
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract article title"""
-        selectors = [
-            'h1',
-            'title',
-            'meta[property="og:title"]',
-            'meta[name="twitter:title"]',
-            '.entry-title',
-            '.post-title',
-            '.article-title'
-        ]
-        
-        for selector in selectors:
-            element = soup.select_one(selector)
-            if element:
-                if element.name == 'meta':
-                    title = element.get('content', '').strip()
-                else:
-                    title = element.get_text(strip=True)
-                
-                if title and len(title) > 5:
-                    return re.sub(r'\s+', ' ', title)[:200]
-        
-        return 'Unknown Title'
-    
-    def _extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract main article content"""
-        content_selectors = [
-            'article',
-            '[role="article"]',
-            '.article-body',
-            '.article-content',
-            '.entry-content',
-            '.post-content',
-            '.storytext',  # NPR
-            '#storytext',  # NPR
-            '.story-body',  # BBC
-            'main',
-            '.main-content'
-        ]
-        
-        for selector in content_selectors:
-            element = soup.select_one(selector)
-            if element:
-                # Remove unwanted nested elements
-                for unwanted in element.find_all(['aside', '.ad', '.advertisement', '.sidebar']):
-                    unwanted.decompose()
-                
-                paragraphs = element.find_all('p')
-                if paragraphs:
-                    text = ' '.join([p.get_text(strip=True) for p in paragraphs])
-                    if len(text) > 100:
-                        return re.sub(r'\s+', ' ', text)
-        
-        # Fallback to all paragraphs
-        paragraphs = soup.find_all('p')
-        content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
-        return re.sub(r'\s+', ' ', content)
-    
-    def _extract_publish_date(self, soup: BeautifulSoup) -> str:
-        """Extract publish date"""
-        date_selectors = [
-            'meta[property="article:published_time"]',
-            'meta[name="publish_date"]',
-            'time[datetime]',
-            '.publish-date',
-            '.article-date'
-        ]
-        
-        for selector in date_selectors:
-            element = soup.select_one(selector)
-            if element:
-                date = element.get('content') or element.get('datetime') or element.get_text(strip=True)
-                if date:
-                    return date[:50]
-        
-        return ''
-    
-    def _extract_description(self, soup: BeautifulSoup) -> str:
-        """Extract article description"""
-        desc_selectors = [
-            'meta[name="description"]',
-            'meta[property="og:description"]',
-            'meta[name="twitter:description"]'
-        ]
-        
-        for selector in desc_selectors:
-            element = soup.select_one(selector)
-            if element:
-                desc = element.get('content', '').strip()
-                if desc:
-                    return desc[:500]
-        
-        return ''
-    
-    def _clean_author_name(self, author: str) -> str:
-        """Clean and normalize author name - handles multiple authors"""
-        if not author:
-            return ""
-        
-        # Remove common prefixes
-        author = re.sub(r'^(By\s+|Written\s+by\s+|Author:\s*)', '', author, flags=re.IGNORECASE)
-        
-        # Handle multiple authors - preserve commas but clean "and"
-        if ',' in author or ' and ' in author.lower():
-            # Split by comma and "and"
-            parts = re.split(r',|\s+and\s+', author, flags=re.IGNORECASE)
-            # Clean each part
-            cleaned_parts = []
-            for part in parts:
-                part = part.strip()
-                if part and self._validate_author_name(part):
-                    # Remove publication names from individual authors
-                    for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'ABC News', 'Guardian', 'The Guardian']:
-                        part = re.sub(rf'\s*{pub}(?:\s+News)?$', '', part, flags=re.IGNORECASE)
-                    part = part.strip()
-                    if part:
-                        cleaned_parts.append(part)
-            
-            # Rejoin with commas
-            if cleaned_parts:
-                if len(cleaned_parts) > 1:
-                    # Format as "Author1, Author2, and Author3"
-                    return ', '.join(cleaned_parts[:-1]) + ', and ' + cleaned_parts[-1]
-                else:
-                    return cleaned_parts[0]
-        
-        # Single author - remove publication names
-        for pub in ['BBC', 'CNN', 'Reuters', 'NPR', 'AP', 'ABC News', 'Guardian', 'The Guardian']:
-            author = re.sub(rf'\s*,?\s*{pub}(?:\s+News)?(?:\s*,.*)?$', '', author, flags=re.IGNORECASE)
-        
-        # Remove role suffixes
-        author = re.sub(r'\s+(Staff\s+Writer|Correspondent|Reporter|Editor)$', '', author, flags=re.IGNORECASE)
-        
-        # Clean whitespace
-        author = re.sub(r'\s+', ' ', author).strip(' ,-')
-        
-        # Convert ALL CAPS to Title Case
-        if author.isupper():
-            author = author.title()
-        
-        return author.strip()
-    
-    def _validate_author_name(self, text: str) -> bool:
+    def _extract_article_data_fixed(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        FIXED: Validate that text looks like a real author name
-        Critical fix: Rejects text containing website UI elements
+        FIXED: Extract article data from various result formats
         """
-        if not text or len(text.strip()) < 3:
-            return False
+        logger.info("=== EXTRACTING ARTICLE DATA ===")
         
-        # Allow longer text for multiple authors
-        if ',' in text or ' and ' in text.lower():
-            if len(text) > 200:  # Multiple authors can be longer
-                return False
-        elif len(text) > 100:  # Single author shouldn't be too long
-            return False
+        # Initialize with defaults
+        article_data = {
+            'title': 'Unknown',
+            'author': 'Unknown',
+            'content': '',
+            'text': '',
+            'url': '',
+            'domain': 'unknown',
+            'source': 'unknown',
+            'word_count': 0,
+            'publish_date': None
+        }
         
-        text_lower = text.strip().lower()
+        # Handle different result structures
+        if 'data' in result:
+            # BaseAnalyzer format: {success: true, data: {...}}
+            data = result['data']
+            logger.info(f"Using BaseAnalyzer format with keys: {list(data.keys())[:10]}")
+        elif 'analysis_complete' in result:
+            # Direct format with analysis_complete flag
+            data = result
+            logger.info(f"Using top-level data with keys: {list(data.keys())[:10]}")
+        else:
+            # Unknown format - try to use as-is
+            data = result
+            logger.info(f"Using unknown format with keys: {list(result.keys())[:10]}")
         
-        # CRITICAL FIX: Expanded rejection patterns for website UI elements
-        rejected_patterns = [
-            # Website UI elements (THIS IS THE KEY FIX)
-            'sign', 'signing', 'sign up', 'sign in', 'login', 'log in',
-            'agree', 'agreement', 'terms', 'conditions', 'privacy', 'policy',
-            'cookie', 'cookies', 'consent', 'accept', 'decline',
-            'subscribe', 'subscription', 'newsletter', 'email',
-            'register', 'registration', 'create account',
-            'password', 'forgot', 'remember',
-            'click', 'tap', 'press', 'button',
-            'menu', 'navigation', 'search',
-            'share', 'follow', 'like',
-            'comment', 'reply', 'post',
-            
-            # Common non-author text
-            'staff', 'editor', 'admin', 'administrator',
-            'correspondent', 'contributor', 'desk',
-            'team', 'group', 'department',
-            'associated press', 'reuters staff',
-            'unknown', 'anonymous', 'guest',
-            
-            # Media elements
-            'photo', 'image', 'video', 'audio',
-            'copyright', 'getty', 'shutterstock',
-            'caption', 'credit',
-            
-            # Navigation elements
-            'read more', 'continue', 'next', 'previous',
-            'related', 'trending', 'popular',
-            'home', 'about', 'contact',
-            
-            # Section names
-            'news', 'sports', 'business', 'politics',
-            'opinion', 'lifestyle', 'entertainment',
-            'technology', 'science', 'health',
-            
-            # Social media
-            'facebook', 'twitter', 'instagram',
-            'youtube', 'linkedin', 'pinterest',
-            
-            # Legal/disclaimer text
-            'disclaimer', 'legal', 'copyright',
-            'all rights reserved', 'trademark'
-        ]
+        # Extract fields (with multiple possible key names)
+        article_data['title'] = data.get('title', data.get('headline', 'Unknown'))
+        article_data['author'] = data.get('author', data.get('authors', 'Unknown'))
+        article_data['content'] = data.get('content', data.get('text', ''))
+        article_data['text'] = data.get('text', data.get('content', ''))
+        article_data['url'] = data.get('url', data.get('link', ''))
+        article_data['domain'] = data.get('domain', data.get('source', 'unknown'))
+        article_data['source'] = data.get('source', data.get('domain', 'unknown'))
+        article_data['word_count'] = data.get('word_count', len(article_data['content'].split()))
+        article_data['publish_date'] = data.get('publish_date', data.get('date', None))
         
-        # Check each rejected pattern
-        for pattern in rejected_patterns:
-            if pattern in text_lower:
-                logger.debug(f"Rejected author '{text}' - contains '{pattern}'")
-                return False
+        # Clean domain
+        article_data['domain'] = self._clean_domain(article_data['domain'])
+        article_data['source'] = article_data['domain']  # Keep them in sync
         
-        # For multiple authors, check each part
-        if ',' in text or ' and ' in text_lower:
-            parts = re.split(r',|\s+and\s+', text, flags=re.IGNORECASE)
-            for part in parts:
-                part = part.strip().lower()
-                for pattern in rejected_patterns:
-                    if pattern in part:
-                        logger.debug(f"Rejected multi-author '{text}' - part contains '{pattern}'")
-                        return False
+        # Log what we extracted
+        logger.info(f"✓ Extracted title: {article_data['title'][:50]}...")
+        logger.info(f"✓ Extracted author: {article_data['author']}")
+        logger.info(f"✓ Extracted domain: {article_data['domain']}")
+        logger.info(f"✓ Word count: {article_data['word_count']}")
         
-        # Must contain letters
-        if not re.search(r'[a-zA-Z]', text):
-            return False
-        
-        # Must contain at least one capital letter (for names)
-        if not re.search(r'[A-Z]', text):
-            return False
-        
-        # Should look like a name (has proper name pattern)
-        # At least one word starting with capital letter
-        name_pattern = r'[A-Z][a-z]+'
-        if not re.search(name_pattern, text):
-            return False
-        
-        return True
+        return article_data
     
     def _clean_domain(self, domain: str) -> str:
-        """Clean domain for display"""
-        if domain and domain.startswith('www.'):
+        """Clean domain name"""
+        if not domain:
+            return 'unknown'
+            
+        # Remove www. prefix
+        if domain.startswith('www.'):
             domain = domain[4:]
-        return domain.lower() if domain else ''
-    
-    def _get_random_user_agent(self) -> str:
-        """Get random user agent"""
-        agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0'
-        ]
-        return random.choice(agents)
-    
-    def _validate_extraction(self, result: Dict[str, Any]) -> bool:
-        """Validate extraction result"""
-        if not result.get('success') or not result.get('data'):
-            return False
         
-        data = result['data']
-        return bool((data.get('text') and len(data['text']) > 100) or data.get('title'))
-    
-    def _process_text(self, text: str) -> Dict[str, Any]:
-        """Process direct text input"""
-        lines = text.strip().split('\n')
-        title = lines[0][:100] if lines else 'Text Analysis'
-        word_count = len(text.split())
+        # Remove protocol if present
+        if domain.startswith('http://'):
+            domain = domain[7:]
+        elif domain.startswith('https://'):
+            domain = domain[8:]
         
-        return {
-            'success': True,
-            'data': {
-                'title': title,
-                'text': text,
-                'content': text,
-                'author': 'Unknown',
-                'publish_date': '',
-                'url': '',
-                'domain': '',
-                'source': '',
-                'description': '',
-                'word_count': word_count,
-                'language': 'en',
-                'extraction_successful': True
+        # Remove trailing slash
+        if domain.endswith('/'):
+            domain = domain[:-1]
+        
+        return domain
+    
+    def _run_services_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run services in parallel with timeout protection"""
+        results = {}
+        futures = {}
+        
+        # Submit tasks for available services
+        for service_name in services:
+            if self.registry.is_service_available(service_name):
+                logger.info(f"Submitting {service_name} to executor")
+                future = self.executor.submit(self._run_single_service, service_name, data)
+                futures[future] = service_name
+            else:
+                logger.warning(f"{service_name} is not available")
+        
+        # Collect results with individual timeouts
+        for future in as_completed(futures, timeout=90):  # Overall timeout
+            service_name = futures[future]
+            try:
+                result = future.result(timeout=30)  # Individual service timeout
+                results[service_name] = result
+                logger.info(f"✓ {service_name} completed")
+            except TimeoutError:
+                logger.warning(f"✗ {service_name} timed out")
+                results[service_name] = {
+                    'success': False,
+                    'error': 'Service timeout',
+                    'service': service_name
+                }
+            except Exception as e:
+                logger.error(f"✗ {service_name} failed: {e}")
+                results[service_name] = {
+                    'success': False,
+                    'error': str(e),
+                    'service': service_name
+                }
+        
+        return results
+    
+    def _run_single_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run a single service with error handling"""
+        try:
+            logger.info(f"Running {service_name}...")
+            result = self.registry.analyze_with_service(service_name, data)
+            if result:
+                logger.info(f"{service_name} returned result")
+            else:
+                logger.warning(f"{service_name} returned None")
+            return result
+        except Exception as e:
+            logger.error(f"Error in {service_name}: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'service': service_name
             }
+    
+    def _extract_service_data_fixed(self, service_name: str, service_result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        FIXED: Extract the actual analysis data from service result
+        """
+        if not service_result:
+            return None
+        
+        # Handle error results
+        if not service_result.get('success', False):
+            return None
+        
+        # Extract data based on service response format
+        if 'data' in service_result:
+            # BaseAnalyzer format
+            return service_result['data']
+        elif 'analysis' in service_result:
+            # Some services use 'analysis' key
+            return service_result['analysis']
+        elif service_name in service_result:
+            # Service name as key
+            return service_result[service_name]
+        else:
+            # Return the whole result (minus metadata)
+            data = {k: v for k, v in service_result.items() 
+                   if k not in ['success', 'service', 'timestamp', 'available']}
+            return data if data else None
+    
+    def _calculate_trust_score(self, detailed_analysis: Dict[str, Any]) -> int:
+        """Calculate weighted trust score from all services"""
+        weights = {
+            'source_credibility': 0.25,
+            'bias_detector': 0.20,
+            'fact_checker': 0.15,
+            'transparency_analyzer': 0.10,
+            'manipulation_detector': 0.10,
+            'author_analyzer': 0.15,  # Added weight for author analyzer
+            'content_analyzer': 0.05
         }
+        
+        total_weight = 0
+        weighted_sum = 0
+        
+        for service, weight in weights.items():
+            if service in detailed_analysis:
+                service_data = detailed_analysis[service]
+                
+                # Extract score (different services use different keys)
+                score = None
+                if isinstance(service_data, dict):
+                    score = (service_data.get('score') or 
+                            service_data.get(f'{service}_score') or
+                            service_data.get('credibility_score') or
+                            service_data.get('trust_score') or
+                            service_data.get('overall_score') or
+                            service_data.get('combined_credibility_score'))  # For author_analyzer
+                    
+                    # Special handling for bias (inverse score)
+                    if service == 'bias_detector' and 'bias_score' in service_data:
+                        score = 100 - service_data['bias_score']
+                    
+                    # Special handling for manipulation (inverse score)
+                    if service == 'manipulation_detector' and 'manipulation_score' in service_data:
+                        score = 100 - service_data['manipulation_score']
+                
+                if score is not None:
+                    logger.info(f"Trust component {service}: {score} (weight: {weight})")
+                    weighted_sum += score * weight
+                    total_weight += weight
+        
+        # Calculate final score
+        if total_weight > 0:
+            trust_score = int(weighted_sum / total_weight)
+        else:
+            trust_score = 50  # Default if no services available
+        
+        logger.info(f"Final trust score: {trust_score} (from {len(detailed_analysis)} services)")
+        return trust_score
