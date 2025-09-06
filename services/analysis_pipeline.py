@@ -97,6 +97,22 @@ class AnalysisPipeline:
             
             # Log which services are available
             available_core = [s for s in core_services if self.registry.is_service_available(s)]
+            
+            # If author_analyzer not in registry, try to create it directly
+            if 'author_analyzer' not in available_core:
+                logger.warning("author_analyzer not in registry - creating directly")
+                try:
+                    from services.author_analyzer import AuthorAnalyzer
+                    analyzer = AuthorAnalyzer()
+                    result = analyzer.analyze(enriched_data)
+                    if result and result.get('success'):
+                        # Add to results manually
+                        if 'data' in result:
+                            core_results['author_analyzer'] = result
+                        logger.info("✓ author_analyzer created and ran successfully")
+                except Exception as e:
+                    logger.error(f"Failed to create author_analyzer: {e}")
+            
             logger.info(f"Available core services: {available_core}")
             
             core_results = self._run_services_parallel(core_services, enriched_data)
