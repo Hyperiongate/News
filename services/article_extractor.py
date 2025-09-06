@@ -97,6 +97,10 @@ except ImportError:
                 'error': 'Service unavailable',
                 'timestamp': time.time()
             }
+        
+        def _check_availability(self):
+            """Required abstract method"""
+            return True
 
 
 class ArticleExtractor(BaseAnalyzer):
