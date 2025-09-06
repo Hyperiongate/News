@@ -1,8 +1,14 @@
 """
-Article Extractor - COMPLETE PRODUCTION VERSION WITH ABC NEWS & GUARDIAN FIX
-Fixed to properly extract authors from ABC News, Guardian, and all major news sites
-Maintains compatibility with existing pipeline
-Last Updated: September 2025
+Article Extractor - FIXED PRODUCTION VERSION
+Date: December 2024
+Last Updated: 2025-09-06
+Purpose: Extract article content with proper author validation
+Critical Fix: Enhanced author validation to reject non-author text like "signing up, and you agree"
+Notes:
+- Added comprehensive rejection patterns for non-author text
+- Maintains all existing functionality
+- Properly validates author names before accepting them
+- Handles multi-author bylines correctly
 """
 
 import json
@@ -28,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 class ArticleExtractor(BaseAnalyzer):
     """
-    Complete article extraction with ABC News, Guardian, and universal author support
-    Properly handles multi-author bylines like "By Author1, Author2, and Author3"
+    Complete article extraction with FIXED author validation
+    Properly rejects non-author text like "signing up, and you agree to our"
     """
     
     def __init__(self):
@@ -59,7 +65,7 @@ class ArticleExtractor(BaseAnalyzer):
         # Site-specific author selectors - COMPREHENSIVE INCLUDING ABC NEWS
         self.author_selectors = {
             'abcnews.go.com': [
-                # ABC News specific selectors - CRITICAL FOR YOUR ISSUE
+                # ABC News specific selectors
                 '.News__Author',
                 '.News__Byline__Author',
                 'span.Byline__Author',
@@ -74,6 +80,16 @@ class ArticleExtractor(BaseAnalyzer):
                 'meta[name="author"]',
                 'meta[property="article:author"]',
                 'meta[name="DC.creator"]'
+            ],
+            'aljazeera.com': [
+                # Al Jazeera specific selectors
+                '.article-author-name',
+                '.author-name',
+                '.author__name',
+                'span.author-link',
+                '[data-author-name]',
+                'meta[name="author"]',
+                'meta[property="article:author"]'
             ],
             'theguardian.com': [
                 # Guardian specific selectors
@@ -158,7 +174,7 @@ class ArticleExtractor(BaseAnalyzer):
         Main analysis method - maintains compatibility with pipeline
         """
         logger.info("=" * 60)
-        logger.info("ARTICLE EXTRACTOR - ABC NEWS ENHANCED VERSION")
+        logger.info("ARTICLE EXTRACTOR - FIXED AUTHOR VALIDATION VERSION")
         logger.info("=" * 60)
         
         try:
@@ -218,6 +234,9 @@ class ArticleExtractor(BaseAnalyzer):
                     elif 'guardian' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
                         logger.info("Guardian article detected - enhancing author extraction")
                         result = self._enhance_guardian_extraction(result, url)
+                    elif 'aljazeera' in url.lower() and result.get('data', {}).get('author') == 'Unknown':
+                        logger.info("Al Jazeera article detected - enhancing author extraction")
+                        result = self._enhance_aljazeera_extraction(result, url)
                     
                     if self._validate_extraction(result):
                         logger.info(f"SUCCESS: {strategy_name} extracted content")
@@ -306,8 +325,13 @@ class ArticleExtractor(BaseAnalyzer):
             soup = BeautifulSoup(html, 'html.parser')
             
             # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer']):
+            for element in soup.find_all(['script', 'style', 'nav', 'aside', 'footer', 'header']):
                 element.decompose()
+            
+            # Remove cookie banners and popups
+            for selector in ['.cookie', '.gdpr', '.privacy', '.consent', '.newsletter', '.popup', '.modal']:
+                for element in soup.select(selector):
+                    element.decompose()
             
             # Extract components
             title = self._extract_title(soup)
@@ -351,15 +375,15 @@ class ArticleExtractor(BaseAnalyzer):
     
     def _extract_author_universal(self, soup: BeautifulSoup, url: str) -> str:
         """
-        Universal author extraction with ABC News, Guardian, and multi-author support
+        Universal author extraction with FIXED validation
         """
         domain = urlparse(url).netloc.replace('www.', '')
         logger.info(f"Extracting author for domain: {domain}")
         
         # Method 1: JSON-LD Structured Data
         author = self._extract_author_from_json_ld(soup)
-        if author and author != 'Unknown':
-            logger.info(f"Found author in JSON-LD: {author}")
+        if author and author != 'Unknown' and self._validate_author_name(author):
+            logger.info(f"Found valid author in JSON-LD: {author}")
             return self._clean_author_name(author)
         
         # Method 2: Site-specific selectors
@@ -388,7 +412,7 @@ class ArticleExtractor(BaseAnalyzer):
                             if element and element.get('content'):
                                 author = element['content'].strip()
                                 if self._validate_author_name(author):
-                                    logger.info(f"Found author in meta tag: {author}")
+                                    logger.info(f"Found valid author in meta tag: {author}")
                                     return self._clean_author_name(author)
                     else:
                         # CSS selector
@@ -396,14 +420,13 @@ class ArticleExtractor(BaseAnalyzer):
                         for element in elements:
                             text = element.get_text(strip=True)
                             if text and self._validate_author_name(text):
-                                logger.info(f"Found author with selector {selector}: {text}")
+                                logger.info(f"Found valid author with selector {selector}: {text}")
                                 return self._clean_author_name(text)
                 except Exception as e:
                     logger.debug(f"Selector {selector} failed: {e}")
                     continue
         
-        # Method 3: Look for byline patterns (especially for ABC News multi-author format)
-        # ABC News often has "By Author1, Author2, and Author3" format
+        # Method 3: Look for byline patterns
         byline_patterns = [
             # Look for elements containing "By" text
             lambda s: s.find_all(text=re.compile(r'^By\s+', re.IGNORECASE)),
@@ -433,7 +456,7 @@ class ArticleExtractor(BaseAnalyzer):
                     authors_text = re.sub(r'\s+', ' ', authors_text)
                     authors_text = re.sub(r',?\s+and\s+', ', ', authors_text)
                     if self._validate_author_name(authors_text):
-                        logger.info(f"Found author in byline text: {authors_text}")
+                        logger.info(f"Found valid author in byline text: {authors_text}")
                         return self._clean_author_name(authors_text)
         
         # Method 4: Generic meta tags
@@ -453,7 +476,7 @@ class ArticleExtractor(BaseAnalyzer):
             if element:
                 content = element.get('content', '').strip()
                 if content and self._validate_author_name(content):
-                    logger.info(f"Found author in generic meta: {content}")
+                    logger.info(f"Found valid author in generic meta: {content}")
                     return self._clean_author_name(content)
         
         # Method 5: Common byline selectors
@@ -462,8 +485,7 @@ class ArticleExtractor(BaseAnalyzer):
             '.article-author', '.post-author', '.story-author',
             '[rel="author"]', '.vcard .fn', '.h-card .p-name',
             'span[itemprop="author"]', 'span[itemprop="name"]',
-            '.contributor', '.journalist', '.reporter',
-            '.News__Author', '.News__Byline__Author'  # ABC News specific
+            '.contributor', '.journalist', '.reporter'
         ]
         
         for selector in byline_selectors:
@@ -471,27 +493,10 @@ class ArticleExtractor(BaseAnalyzer):
             for element in elements:
                 text = element.get_text(strip=True)
                 if text and self._validate_author_name(text):
-                    logger.info(f"Found author in byline: {text}")
+                    logger.info(f"Found valid author in byline: {text}")
                     return self._clean_author_name(text)
         
-        # Method 6: Text pattern matching for remaining cases
-        full_text = soup.get_text()
-        patterns = [
-            # Enhanced pattern for multiple authors
-            r'By\s+([A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*(?:\s*,\s*[A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*)*(?:\s+and\s+[A-Z][a-z]+(?:\s+[A-Z\.\'][a-z]+)*)?)',
-            r'Written\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',
-            r'Author:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})'
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, full_text)
-            if match:
-                author_name = match.group(1)
-                if self._validate_author_name(author_name):
-                    logger.info(f"Found author in text pattern: {author_name}")
-                    return self._clean_author_name(author_name)
-        
-        logger.info("No author found with any method")
+        logger.info("No valid author found with any method")
         return 'Unknown'
     
     def _extract_author_from_json_ld(self, soup: BeautifulSoup) -> Optional[str]:
@@ -506,11 +511,11 @@ class ArticleExtractor(BaseAnalyzer):
                 if isinstance(data, list):
                     for item in data:
                         author = self._extract_author_from_json_object(item)
-                        if author:
+                        if author and self._validate_author_name(author):
                             return author
                 else:
                     author = self._extract_author_from_json_object(data)
-                    if author:
+                    if author and self._validate_author_name(author):
                         return author
                         
             except (json.JSONDecodeError, AttributeError, TypeError):
@@ -552,11 +557,8 @@ class ArticleExtractor(BaseAnalyzer):
         return None
     
     def _enhance_abc_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
-        """
-        Special enhancement for ABC News articles
-        """
+        """Special enhancement for ABC News articles"""
         try:
-            # Try to fetch again with better headers for ABC News
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -579,11 +581,8 @@ class ArticleExtractor(BaseAnalyzer):
         return result
     
     def _enhance_guardian_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
-        """
-        Special enhancement for Guardian articles
-        """
+        """Special enhancement for Guardian articles"""
         try:
-            # Try to fetch again with better headers for Guardian
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -602,6 +601,30 @@ class ArticleExtractor(BaseAnalyzer):
                     logger.info(f"Enhanced Guardian extraction found author: {author}")
         except Exception as e:
             logger.error(f"Guardian enhancement failed: {e}")
+        
+        return result
+    
+    def _enhance_aljazeera_extraction(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
+        """Special enhancement for Al Jazeera articles"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.aljazeera.com/'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Try Al Jazeera-specific extraction
+                author = self._extract_author_universal(soup, url)
+                if author and author != 'Unknown':
+                    result['data']['author'] = author
+                    logger.info(f"Enhanced Al Jazeera extraction found author: {author}")
+        except Exception as e:
+            logger.error(f"Al Jazeera enhancement failed: {e}")
         
         return result
     
@@ -749,7 +772,10 @@ class ArticleExtractor(BaseAnalyzer):
         return author.strip()
     
     def _validate_author_name(self, text: str) -> bool:
-        """Validate that text looks like a real author name"""
+        """
+        FIXED: Validate that text looks like a real author name
+        Critical fix: Rejects text containing website UI elements
+        """
         if not text or len(text.strip()) < 3:
             return False
         
@@ -762,30 +788,82 @@ class ArticleExtractor(BaseAnalyzer):
         
         text_lower = text.strip().lower()
         
-        # Reject common non-author patterns
-        rejected = [
-            'staff', 'editor', 'admin', 'correspondent',
-            'associated press', 'reuters staff', 'unknown',
-            'photo', 'image', 'video', 'copyright',
-            'read more', 'continue', 'subscribe',
-            'news', 'sports', 'business', 'politics'
+        # CRITICAL FIX: Expanded rejection patterns for website UI elements
+        rejected_patterns = [
+            # Website UI elements (THIS IS THE KEY FIX)
+            'sign', 'signing', 'sign up', 'sign in', 'login', 'log in',
+            'agree', 'agreement', 'terms', 'conditions', 'privacy', 'policy',
+            'cookie', 'cookies', 'consent', 'accept', 'decline',
+            'subscribe', 'subscription', 'newsletter', 'email',
+            'register', 'registration', 'create account',
+            'password', 'forgot', 'remember',
+            'click', 'tap', 'press', 'button',
+            'menu', 'navigation', 'search',
+            'share', 'follow', 'like',
+            'comment', 'reply', 'post',
+            
+            # Common non-author text
+            'staff', 'editor', 'admin', 'administrator',
+            'correspondent', 'contributor', 'desk',
+            'team', 'group', 'department',
+            'associated press', 'reuters staff',
+            'unknown', 'anonymous', 'guest',
+            
+            # Media elements
+            'photo', 'image', 'video', 'audio',
+            'copyright', 'getty', 'shutterstock',
+            'caption', 'credit',
+            
+            # Navigation elements
+            'read more', 'continue', 'next', 'previous',
+            'related', 'trending', 'popular',
+            'home', 'about', 'contact',
+            
+            # Section names
+            'news', 'sports', 'business', 'politics',
+            'opinion', 'lifestyle', 'entertainment',
+            'technology', 'science', 'health',
+            
+            # Social media
+            'facebook', 'twitter', 'instagram',
+            'youtube', 'linkedin', 'pinterest',
+            
+            # Legal/disclaimer text
+            'disclaimer', 'legal', 'copyright',
+            'all rights reserved', 'trademark'
         ]
+        
+        # Check each rejected pattern
+        for pattern in rejected_patterns:
+            if pattern in text_lower:
+                logger.debug(f"Rejected author '{text}' - contains '{pattern}'")
+                return False
         
         # For multiple authors, check each part
         if ',' in text or ' and ' in text_lower:
             parts = re.split(r',|\s+and\s+', text, flags=re.IGNORECASE)
             for part in parts:
                 part = part.strip().lower()
-                for pattern in rejected:
+                for pattern in rejected_patterns:
                     if pattern in part:
+                        logger.debug(f"Rejected multi-author '{text}' - part contains '{pattern}'")
                         return False
-        else:
-            for pattern in rejected:
-                if pattern in text_lower:
-                    return False
         
         # Must contain letters
-        return bool(re.search(r'[a-zA-Z]', text))
+        if not re.search(r'[a-zA-Z]', text):
+            return False
+        
+        # Must contain at least one capital letter (for names)
+        if not re.search(r'[A-Z]', text):
+            return False
+        
+        # Should look like a name (has proper name pattern)
+        # At least one word starting with capital letter
+        name_pattern = r'[A-Z][a-z]+'
+        if not re.search(name_pattern, text):
+            return False
+        
+        return True
     
     def _clean_domain(self, domain: str) -> str:
         """Clean domain for display"""
