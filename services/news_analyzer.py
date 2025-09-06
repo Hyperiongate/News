@@ -1,15 +1,13 @@
 """
-News Analyzer Service - FIXED VERSION WITH AUTHOR DATA EXTRACTION
-Date: September 2025
-Last Updated: September 5, 2025
-Purpose: Core analysis orchestrator that coordinates all analysis services
-Dependencies: analysis_pipeline, service_registry
-Notes:
-- Properly handles short content without incorrectly flagging as insufficient
-- CRITICAL FIX: Now properly extracts author_analyzer data from BaseAnalyzer wrapper
-- Handles both wrapped (BaseAnalyzer format) and unwrapped service results
-- Special handling for author_analyzer to extract combined_credibility_score
-- Includes author credibility in findings summary
+News Analyzer Service - FIXED RESPONSE BUILDING VERSION
+Date: September 6, 2025
+Last Updated: September 6, 2025
+
+CRITICAL FIXES:
+1. Trust score now properly passed to frontend (was being overridden to 0)
+2. Extraction quality calculation fixed
+3. Proper handling when author_analyzer is unavailable
+4. Response building preserves calculated values
 """
 import logging
 from typing import Dict, Any, Optional, List, Union
@@ -22,9 +20,10 @@ from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
 
+
 class NewsAnalyzer:
     """
-    News analysis orchestrator with fixed content validation and author data extraction
+    News analysis orchestrator with FIXED response building
     """
     
     # Service weight configuration
@@ -50,9 +49,6 @@ class NewsAnalyzer:
             
             logger.info(f"NewsAnalyzer initialized - {working_services} services available")
             
-            # Cache for last analysis
-            self._last_analysis = None
-            
         except Exception as e:
             logger.error(f"NewsAnalyzer initialization failed: {str(e)}", exc_info=True)
             self.pipeline = None
@@ -60,7 +56,7 @@ class NewsAnalyzer:
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
-        Main analysis method with fixed content validation
+        Main analysis method with FIXED response building
         """
         try:
             # Check initialization
@@ -89,11 +85,8 @@ class NewsAnalyzer:
             logger.info("Running analysis pipeline...")
             pipeline_results = self.pipeline.analyze(data)
             
-            # Normalize pipeline results
-            pipeline_results = self._normalize_pipeline_results(pipeline_results)
-            
-            # Build response
-            response = self._build_frontend_response(pipeline_results, content)
+            # Build response with FIXED trust score handling
+            response = self._build_frontend_response_fixed(pipeline_results, content)
             
             logger.info("Pipeline completed. Success: " + str(response.get('success', False)))
             logger.info(f"Pipeline keys: {list(response.keys())}")
@@ -104,390 +97,144 @@ class NewsAnalyzer:
             logger.error(f"Analysis failed: {str(e)}", exc_info=True)
             return self._error_response(str(e), content, 'analysis_error')
     
-    def _normalize_pipeline_results(self, results: Any) -> Dict[str, Any]:
-        """Normalize pipeline results to ensure it's always a proper dict"""
-        if results is None:
-            return {}
-        if isinstance(results, dict):
-            return results
-        if isinstance(results, list):
-            return {'services': results}
-        return {'result': str(results)}
-    
-    def _build_frontend_response(self, pipeline_results: Dict[str, Any], content: str) -> Dict[str, Any]:
-        """Build response for frontend with fixed content validation"""
+    def _build_frontend_response_fixed(self, pipeline_results: Dict[str, Any], content: str) -> Dict[str, Any]:
+        """
+        FIXED: Build response for frontend preserving calculated values
+        """
         start_time = time.time()
         
         # Check for pipeline success/failure
         if not pipeline_results.get('success', False):
             error_msg = pipeline_results.get('error', 'Analysis failed')
-            
-            # CRITICAL FIX: Check if this is really insufficient content or just an extraction issue
-            if error_msg == 'insufficient_content':
-                # Get what we actually extracted
-                article = pipeline_results.get('article', {})
-                text = article.get('text', '') or article.get('content', '')
-                word_count = article.get('word_count', 0)
-                
-                # FIXED: More reasonable thresholds for short articles
-                # Some news updates are legitimately short (50-200 words)
-                if word_count > 10 or len(text) > 50:
-                    # We have SOME content, proceed with analysis
-                    logger.info(f"Proceeding with short content: {word_count} words, {len(text)} chars")
-                else:
-                    # Really insufficient content
-                    return self._build_error_response(error_msg, content, start_time)
-            else:
-                # Other error
-                return self._build_error_response(error_msg, content, start_time)
+            return self._error_response(error_msg, content, 'pipeline_failed')
         
         # Extract article data
         article = pipeline_results.get('article', {})
         
-        # Handle both 'text' and 'content' fields
-        article_content = article.get('text', '') or article.get('content', '')
+        # Get the ACTUAL calculated trust score from pipeline
+        trust_score = pipeline_results.get('trust_score', 50)
         
-        # Extract service results - FIXED TO PROPERLY HANDLE BASEANALYZER WRAPPER
-        detailed_analysis = {}
-        for service_name in self.STANDARD_WEIGHTS.keys():
-            if service_name in pipeline_results:
-                service_result = pipeline_results[service_name]
-                
-                # CRITICAL FIX: Handle BaseAnalyzer wrapped format
-                if service_result and isinstance(service_result, dict):
-                    # Check if this is a BaseAnalyzer wrapped result
-                    if 'success' in service_result and 'data' in service_result:
-                        # This is wrapped - extract the data field
-                        if service_result.get('success'):
-                            actual_data = service_result.get('data', {})
-                            logger.info(f"Extracted {service_name} data from wrapper: {type(actual_data)}")
-                            
-                            # Special handling for author_analyzer
-                            if service_name == 'author_analyzer':
-                                logger.info(f"Author analyzer data keys: {list(actual_data.keys()) if isinstance(actual_data, dict) else 'not a dict'}")
-                                if isinstance(actual_data, dict) and 'combined_credibility_score' in actual_data:
-                                    logger.info(f"Author credibility score: {actual_data.get('combined_credibility_score')}")
-                            
-                            detailed_analysis[service_name] = actual_data
-                        else:
-                            # Service failed - log but don't include
-                            logger.warning(f"Service {service_name} failed: {service_result.get('error')}")
-                    else:
-                        # Not wrapped - use as is
-                        detailed_analysis[service_name] = self._normalize_service_data(service_result)
+        # Get detailed analysis
+        detailed_analysis = pipeline_results.get('detailed_analysis', {})
         
-        # Log what we have for author_analyzer
-        if 'author_analyzer' in detailed_analysis:
-            logger.info(f"Author analyzer in detailed_analysis: {detailed_analysis['author_analyzer'].get('combined_credibility_score', 'NO SCORE')}")
-        else:
-            logger.warning("Author analyzer NOT in detailed_analysis!")
+        # Count actual services that provided data
+        services_count = len(detailed_analysis)
         
-        # Calculate trust score
-        trust_score = self._calculate_trust_score(detailed_analysis)
+        # Calculate extraction quality based on what we actually have
+        extraction_quality = {
+            'score': 100 if article.get('extraction_successful') else 0,
+            'services_used': services_count,
+            'content_length': len(article.get('content', '')),
+            'word_count': article.get('word_count', 0),
+            'has_title': bool(article.get('title')),
+            'has_source': bool(article.get('domain'))
+        }
         
-        # Assess extraction quality with FIXED thresholds
-        extraction_quality = self._assess_extraction_quality(
-            article, 
-            detailed_analysis,
-            pipeline_results
-        )
-        
-        # Build article summary
-        article_summary = self._build_article_summary(article)
-        
-        # Build findings summary
-        findings_summary = self._build_findings_summary(
+        # Generate findings summary
+        findings_summary = self._generate_findings_summary(
             trust_score,
-            article.get('domain', 'Unknown'),
             detailed_analysis,
-            extraction_quality
+            article
         )
         
-        # Return complete response
-        return {
+        # Build the response with CORRECT values
+        response = {
             'success': True,
-            'trust_score': trust_score,
-            'article_summary': article_summary,
+            'trust_score': trust_score,  # Use the ACTUAL calculated score
+            'article_summary': article.get('title', 'Article analyzed'),
             'source': article.get('domain', 'Unknown'),
             'author': article.get('author', 'Unknown'),
             'findings_summary': findings_summary,
             'detailed_analysis': detailed_analysis,
-            'processing_time': time.time() - start_time,
+            'processing_time': round(time.time() - start_time, 2),
             'extraction_quality': extraction_quality,
-            'message': pipeline_results.get('message', '')
+            'message': f'Analysis complete - {services_count} services provided data.'
         }
+        
+        # Log what we're actually sending
+        logger.info(f"Extraction quality: {services_count}/{len(self.STANDARD_WEIGHTS)} services, "
+                   f"content={len(article.get('content', ''))} chars, "
+                   f"word_count={article.get('word_count', 0)}, "
+                   f"title={bool(article.get('title'))}, "
+                   f"source={bool(article.get('domain'))}")
+        
+        return response
     
-    def _assess_extraction_quality(self, article: Dict, detailed_analysis: Dict, pipeline_results: Dict) -> str:
-        """
-        FIXED: Assess extraction quality with reasonable thresholds
-        """
-        # Count services that ran
-        successful_services = len(detailed_analysis)
-        
-        # Get content and word count
-        content = article.get('text', '') or article.get('content', '')
-        word_count = article.get('word_count', 0)
-        
-        # FIXED: Lower thresholds for legitimate short content
-        # Many news updates are 50-200 words
-        has_minimal_content = (len(content) > 30) or (word_count > 5)
-        has_title = bool(article.get('title'))
-        has_source = bool(article.get('domain') or article.get('source'))
-        
-        logger.info(f"Extraction quality: {successful_services}/{len(self.STANDARD_WEIGHTS)} services, "
-                   f"content={len(content)} chars, word_count={word_count}, "
-                   f"title={has_title}, source={has_source}")
-        
-        # Determine quality level with FIXED logic
-        if successful_services >= 5 and has_minimal_content and has_title:
-            return 'full'
-        elif successful_services >= 3 and has_minimal_content:
-            return 'partial'
-        elif successful_services >= 1 and (has_minimal_content or has_title):
-            return 'minimal'  # New level for short but valid content
-        else:
-            return 'failed'
-    
-    def _calculate_trust_score(self, detailed_analysis: Dict) -> int:
-        """Calculate weighted trust score"""
-        if not detailed_analysis:
-            return 0
-        
-        total_score = 0
-        total_weight = 0
-        
-        for service_name, weight in self.STANDARD_WEIGHTS.items():
-            if service_name in detailed_analysis:
-                service_data = detailed_analysis[service_name]
-                score = self._extract_service_score(service_name, service_data)
-                
-                if score is not None:
-                    # Apply inverse logic for bias and manipulation
-                    if service_name in ['bias_detector', 'manipulation_detector']:
-                        score = 100 - score
-                    
-                    logger.info(f"Trust component {service_name}: {score} (weight: {weight})")
-                    total_score += score * weight
-                    total_weight += weight
-        
-        if total_weight > 0:
-            final_score = int(total_score / total_weight)
-            logger.info(f"Final trust score: {final_score} (from {len(detailed_analysis)} services)")
-            return final_score
-        
-        return 0
-    
-    def _extract_service_score(self, service_name: str, service_data: Any) -> Optional[int]:
-        """Extract score from service data"""
-        if service_data is None:
-            return None
-        
-        # Direct score
-        if isinstance(service_data, (int, float)):
-            return int(service_data)
-        
-        if not isinstance(service_data, dict):
-            return None
-        
-        # Special handling for author_analyzer - FIXED
-        if service_name == 'author_analyzer':
-            # The author_analyzer returns combined_credibility_score
-            if 'combined_credibility_score' in service_data:
-                return service_data['combined_credibility_score']
-            # Fallback to other score fields
-            if 'credibility_score' in service_data:
-                return service_data['credibility_score']
-            if 'score' in service_data:
-                return int(service_data['score'])
-            return None
-        
-        # Special handling for fact_checker
-        elif service_name == 'fact_checker':
-            # FIXED: Always calculate from claims ratio when available
-            checks = service_data.get('claims_checked', 0)
-            verified = service_data.get('verified_claims', 0)
-            if checks > 0:
-                return int((verified / checks) * 100)
-            # Only use the score field if no claims data available
-            if 'score' in service_data:
-                return int(service_data['score'])
-        
-        elif service_name == 'source_credibility':
-            rating = service_data.get('rating', '')
-            ratings_map = {
-                'Very High': 90,
-                'High': 70,
-                'Medium': 50,
-                'Low': 30,
-                'Very Low': 10
-            }
-            if rating in ratings_map:
-                return ratings_map[rating]
-        
-        # Generic score extraction for other services
-        score_keys = ['score', 'trust_score', 'credibility_score', 'overall_score', 'final_score']
-        
-        for key in score_keys:
-            if key in service_data:
-                value = service_data[key]
-                if isinstance(value, (int, float)):
-                    return int(value)
-        
-        return None
-    
-    def _normalize_service_data(self, service_data: Any) -> Dict:
-        """Normalize service data to consistent format"""
-        if service_data is None:
-            return {}
-        
-        if isinstance(service_data, dict):
-            return service_data
-        
-        if isinstance(service_data, (int, float)):
-            return {'score': int(service_data)}
-        
-        if isinstance(service_data, str):
-            return {'result': service_data}
-        
-        if isinstance(service_data, list):
-            return {'findings': service_data}
-        
-        return {'data': str(service_data)}
-    
-    def _build_article_summary(self, article: Dict) -> str:
-        """Build article summary"""
-        title = article.get('title', '')
-        content = article.get('text', '') or article.get('content', '')
-        word_count = article.get('word_count', 0)
-        
-        if title and len(title) > 10:
-            summary = title
-        elif content:
-            # Take first 200 chars or first sentence
-            summary = content[:200].strip()
-            if '.' in summary:
-                summary = summary[:summary.index('.')+1]
-        else:
-            summary = 'Article content not available'
-        
-        # Add word count if available
-        if word_count > 0:
-            summary += f" ({word_count} words)"
-        
-        return summary
-    
-    def _build_findings_summary(self, trust_score: int, source: str, detailed_analysis: Dict, quality: str) -> str:
-        """Build findings summary"""
+    def _generate_findings_summary(self, trust_score: int, detailed_analysis: Dict, article: Dict) -> str:
+        """Generate comprehensive findings summary"""
         findings = []
         
-        # Trust level
-        trust_level = self._get_trust_level(trust_score)
-        findings.append(f"Trust Score: {trust_score}/100 ({trust_level})")
+        # Trust level assessment
+        if trust_score >= 80:
+            findings.append("This article demonstrates high credibility and trustworthiness.")
+        elif trust_score >= 60:
+            findings.append("This article shows generally good credibility with some minor concerns.")
+        elif trust_score >= 40:
+            findings.append("This article has moderate credibility with several issues identified.")
+        else:
+            findings.append("This article shows significant credibility concerns.")
         
-        # Source
+        # Add source info
+        source = article.get('domain', '')
         if source and source != 'Unknown':
-            findings.append(f"Source: {source}")
+            findings.append(f"Published by {source}.")
         
-        # Author credibility if available
-        if 'author_analyzer' in detailed_analysis:
-            author_data = detailed_analysis['author_analyzer']
-            if isinstance(author_data, dict):
-                author_score = author_data.get('combined_credibility_score')
-                if author_score is not None:
-                    findings.append(f"Author Credibility: {author_score}/100")
+        # Add service-specific findings
+        if detailed_analysis:
+            # Bias detection
+            if 'bias_detector' in detailed_analysis:
+                bias_data = detailed_analysis['bias_detector']
+                if isinstance(bias_data, dict):
+                    bias_score = bias_data.get('bias_score', 0)
+                    if bias_score < 30:
+                        findings.append("Content appears balanced with minimal bias.")
+                    elif bias_score > 70:
+                        findings.append("Significant bias detected in the presentation.")
+            
+            # Fact checking
+            if 'fact_checker' in detailed_analysis:
+                fact_data = detailed_analysis['fact_checker']
+                if isinstance(fact_data, dict):
+                    verified = fact_data.get('verified_claims', 0)
+                    total = fact_data.get('claims_checked', 0)
+                    if total > 0:
+                        percentage = (verified / total) * 100
+                        findings.append(f"Fact-checking: {int(percentage)}% of claims verified.")
+            
+            # Author credibility (if available)
+            if 'author_analyzer' in detailed_analysis:
+                author_data = detailed_analysis['author_analyzer']
+                if isinstance(author_data, dict):
+                    author_score = author_data.get('combined_credibility_score', 0)
+                    if author_score > 0:
+                        findings.append(f"Author credibility score: {author_score}/100.")
         
-        # Key findings from services
-        if 'bias_detector' in detailed_analysis:
-            bias_data = detailed_analysis['bias_detector']
-            bias_score = self._extract_service_score('bias_detector', bias_data)
-            if bias_score is not None:
-                bias_level = self._get_bias_level(bias_score)
-                findings.append(f"Bias: {bias_level}")
-        
-        if 'fact_checker' in detailed_analysis:
-            fact_data = detailed_analysis['fact_checker']
-            fact_score = self._extract_service_score('fact_checker', fact_data)
-            if fact_score is not None:
-                findings.append(f"Fact Check: {fact_score}% verified")
-        
-        # Quality note for short content
-        if quality == 'minimal':
-            findings.append("Note: Limited content available for full analysis")
-        elif quality == 'partial':
-            findings.append("Partial analysis completed")
-        
-        return " | ".join(findings) if findings else "Analysis completed."
+        return " ".join(findings) if findings else "Analysis completed."
     
-    def _get_trust_level(self, score: int) -> str:
-        """Get trust level from score"""
-        if score >= 80:
-            return 'Very High'
-        elif score >= 60:
-            return 'High'
-        elif score >= 40:
-            return 'Medium'
-        elif score >= 20:
-            return 'Low'
-        else:
-            return 'Very Low'
-    
-    def _get_bias_level(self, score: int) -> str:
-        """Get bias level from score"""
-        if score <= 20:
-            return 'Minimal'
-        elif score <= 40:
-            return 'Low'
-        elif score <= 60:
-            return 'Moderate'
-        elif score <= 80:
-            return 'High'
-        else:
-            return 'Extreme'
-    
-    def _build_error_response(self, error_msg: str, content: str, start_time: float) -> Dict:
-        """Build error response"""
+    def _error_response(self, error_msg: str, content: str, error_type: str = 'unknown') -> Dict[str, Any]:
+        """Create error response"""
         return {
             'success': False,
             'error': error_msg,
-            'message': error_msg,
+            'error_type': error_type,
             'trust_score': 0,
             'article_summary': 'Analysis failed',
             'source': 'Unknown',
             'author': 'Unknown',
             'findings_summary': f'Analysis failed: {error_msg}',
             'detailed_analysis': {},
-            'processing_time': time.time() - start_time
-        }
-    
-    def _error_response(self, error: str, content: str, error_type: str) -> Dict:
-        """Build error response (backward compatible)"""
-        return {
-            'success': False,
-            'error': error_type,
-            'message': error,
-            'trust_score': 0,
-            'article_summary': 'Analysis failed',
-            'source': 'Unknown',
-            'author': 'Unknown',
-            'findings_summary': f'Analysis failed: {error}',
-            'detailed_analysis': {},
-            'processing_time': 0
+            'processing_time': 0,
+            'extraction_quality': {
+                'score': 0,
+                'services_used': 0
+            }
         }
     
     def get_available_services(self) -> List[str]:
         """Get list of available services"""
-        if not self.service_registry:
-            return []
-        
-        status = self.service_registry.get_service_status()
-        return [name for name, info in status.get('services', {}).items() 
-                if info.get('available', False)]
-    
-    def get_last_analysis(self) -> Optional[Dict]:
-        """Get the last analysis result (for debugging)"""
-        return self._last_analysis
-    
-    def clear_cache(self):
-        """Clear any cached data"""
-        self._last_analysis = None
-        logger.info("Cache cleared")
+        if self.service_registry:
+            return [
+                name for name, service in self.service_registry.services.items()
+                if service and hasattr(service, 'available') and service.available
+            ]
+        return []
