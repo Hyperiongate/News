@@ -1,72 +1,55 @@
 """
-Services package initialization
+Services package initialization - ROBUST VERSION
+Date: September 6, 2025
+
+This ensures all services are properly imported and registered
 """
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Import all service modules to ensure they're available when service_registry initializes
-# This forces the modules to be loaded even if service_registry doesn't import them directly
+# CRITICAL: Import service registry first to create the singleton
 try:
-    from . import article_extractor
-    logger.info("services/__init__.py: article_extractor module imported successfully")
+    from .service_registry import get_service_registry
+    logger.info("✓ service_registry imported")
 except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import article_extractor: {e}")
+    logger.error(f"✗ Failed to import service_registry: {e}")
+    get_service_registry = None
 
+# Force registration of article_extractor by importing and instantiating it
 try:
-    from . import source_credibility
-    logger.info("services/__init__.py: source_credibility module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import source_credibility: {e}")
+    from .article_extractor import ArticleExtractor
+    # Create instance to force registration
+    _article_extractor_instance = ArticleExtractor()
+    logger.info(f"✓ ArticleExtractor imported and instantiated - available: {_article_extractor_instance.available}")
+    
+    # Register with the service registry if it exists
+    if get_service_registry:
+        registry = get_service_registry()
+        registry.services['article_extractor'] = _article_extractor_instance
+        logger.info("✓ ArticleExtractor manually registered with service registry")
+except Exception as e:
+    logger.error(f"✗ Failed to import/register ArticleExtractor: {e}", exc_info=True)
 
-try:
-    from . import author_analyzer
-    logger.info("services/__init__.py: author_analyzer module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import author_analyzer: {e}")
+# Import other services (optional - they can fail)
+services_to_import = [
+    'source_credibility',
+    'author_analyzer',
+    'bias_detector',
+    'fact_checker',
+    'transparency_analyzer',
+    'manipulation_detector',
+    'content_analyzer',
+    'plagiarism_detector',
+    'openai_enhancer'
+]
 
-try:
-    from . import bias_detector
-    logger.info("services/__init__.py: bias_detector module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import bias_detector: {e}")
+for service in services_to_import:
+    try:
+        exec(f"from . import {service}")
+        logger.info(f"  ✓ {service} module imported")
+    except ImportError as e:
+        logger.warning(f"  ⚠ {service} not available: {e}")
 
-try:
-    from . import fact_checker
-    logger.info("services/__init__.py: fact_checker module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import fact_checker: {e}")
-
-try:
-    from . import transparency_analyzer
-    logger.info("services/__init__.py: transparency_analyzer module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import transparency_analyzer: {e}")
-
-try:
-    from . import manipulation_detector
-    logger.info("services/__init__.py: manipulation_detector module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import manipulation_detector: {e}")
-
-try:
-    from . import content_analyzer
-    logger.info("services/__init__.py: content_analyzer module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import content_analyzer: {e}")
-
-try:
-    from . import plagiarism_detector
-    logger.info("services/__init__.py: plagiarism_detector module imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import plagiarism_detector: {e}")
-
-# Now import the service registry AFTER all services are imported
-try:
-    from .service_registry import service_registry
-    logger.info("services/__init__.py: service_registry imported successfully")
-except ImportError as e:
-    logger.error(f"services/__init__.py: Failed to import service_registry: {e}")
-
-# The service_registry will handle the actual registration
-# We just need to ensure the modules are loaded
+# Export the registry
+__all__ = ['get_service_registry']
