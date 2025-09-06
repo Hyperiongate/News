@@ -126,15 +126,45 @@ article_extractor = None
 logger.info("-" * 60)
 logger.info("INITIALIZING SERVICES")
 
-# Initialize ArticleExtractor
+# Initialize ArticleExtractor with force registration
 ArticleExtractorClass = safe_import('services.article_extractor', 'ArticleExtractor')
 if ArticleExtractorClass:
     try:
         article_extractor = ArticleExtractorClass()
         logger.info("✓ ArticleExtractor initialized successfully")
+        
+        # CRITICAL: Force register with service registry
+        if registry:
+            registry.services['article_extractor'] = article_extractor
+            registry._initialized = True  # Mark as initialized
+            logger.info("✓✓ ArticleExtractor FORCE REGISTERED with service registry")
     except Exception as e:
         logger.error(f"✗ ArticleExtractor initialization failed: {e}")
         logger.error(traceback.format_exc())
+else:
+    # Create a basic article extractor if import failed
+    logger.warning("Creating fallback ArticleExtractor")
+    
+    class FallbackArticleExtractor:
+        def __init__(self):
+            self.service_name = 'article_extractor'
+            self.available = True
+            self.is_available = True
+        
+        def analyze(self, data):
+            return {
+                'success': False,
+                'error': 'Article extractor not properly initialized',
+                'service': 'article_extractor'
+            }
+        
+        def check_service(self):
+            return False
+    
+    article_extractor = FallbackArticleExtractor()
+    if registry:
+        registry.services['article_extractor'] = article_extractor
+        logger.info("✓ Fallback ArticleExtractor registered")
 
 # Initialize base analyzer if needed
 BaseAnalyzerClass = safe_import('services.base_analyzer', 'BaseAnalyzer')
