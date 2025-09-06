@@ -186,11 +186,20 @@ class AnalysisPipeline:
     
     def _extract_article(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract article with article_extractor service"""
-        try:
-            if not self.registry.is_service_available('article_extractor'):
-                logger.error("article_extractor service not available")
+        # CRITICAL FIX: Try direct import if registry says unavailable
+        if not self.registry.is_service_available('article_extractor'):
+            logger.warning("article_extractor not in registry - trying direct import")
+            try:
+                from services.article_extractor import ArticleExtractor
+                extractor = ArticleExtractor()
+                logger.info("✓ Direct import of ArticleExtractor successful")
+                result = extractor.analyze(data)
+                return result
+            except Exception as e:
+                logger.error(f"Direct import failed: {e}")
                 return None
-            
+        
+        try:
             result = self.registry.analyze_with_service('article_extractor', data)
             return result
         except Exception as e:
