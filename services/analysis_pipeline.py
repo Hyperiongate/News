@@ -1,13 +1,15 @@
 """
 Analysis Pipeline - FIXED WITH AUTHOR ANALYZER
-Date: September 6, 2025
-Last Updated: September 6, 2025
+Date: September 7, 2025
+Last Updated: September 7, 2025
 
 CRITICAL FIXES:
-1. Author analyzer is now properly included in core services
-2. Fixed service data extraction to handle all return formats
-3. Proper timeout handling for each service
-4. Better error recovery and logging
+1. Fixed 'core_results' referenced before assignment bug
+2. Author analyzer now properly included in core services
+3. Moved manual author_analyzer creation to after core_results is defined
+4. Fixed service data extraction to handle all return formats
+5. Proper timeout handling for each service
+6. Better error recovery and logging
 
 Notes:
 - Author analyzer runs in parallel with other core services
@@ -97,25 +99,26 @@ class AnalysisPipeline:
             
             # Log which services are available
             available_core = [s for s in core_services if self.registry.is_service_available(s)]
+            logger.info(f"Available core services: {available_core}")
             
-            # If author_analyzer not in registry, try to create it directly
-            if 'author_analyzer' not in available_core:
+            # Run core services in parallel
+            core_results = self._run_services_parallel(core_services, enriched_data)
+            
+            # FIXED: If author_analyzer not in registry, try to create it directly AFTER core_results exists
+            if 'author_analyzer' not in available_core and 'author_analyzer' not in core_results:
                 logger.warning("author_analyzer not in registry - creating directly")
                 try:
                     from services.author_analyzer import AuthorAnalyzer
                     analyzer = AuthorAnalyzer()
                     result = analyzer.analyze(enriched_data)
                     if result and result.get('success'):
-                        # Add to results manually
-                        if 'data' in result:
-                            core_results['author_analyzer'] = result
+                        # Add to results manually - core_results now exists
+                        core_results['author_analyzer'] = result
                         logger.info("✓ author_analyzer created and ran successfully")
                 except Exception as e:
                     logger.error(f"Failed to create author_analyzer: {e}")
-            
-            logger.info(f"Available core services: {available_core}")
-            
-            core_results = self._run_services_parallel(core_services, enriched_data)
+                    # Log the full traceback for debugging
+                    logger.error(traceback.format_exc())
             
             # Stage 3: Fact Checking
             logger.info("STAGE 3: Fact Checking")
