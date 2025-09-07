@@ -1,6 +1,15 @@
 /**
- * TruthLens Service Templates
- * Part 2: Service templates and display methods
+ * TruthLens Service Templates - ENHANCED VERSION
+ * Date: September 7, 2025
+ * Last Updated: September 7, 2025
+ * 
+ * ENHANCEMENTS:
+ * - Complete author intelligence display
+ * - Trust indicators and red flags
+ * - AI assessment display
+ * - Social profile links
+ * - Biography section
+ * - Can Trust determination
  */
 
 window.ServiceTemplates = {
@@ -304,6 +313,15 @@ window.ServiceTemplates = {
 
     getAuthorAnalysisTemplate() {
         return `
+            <!-- Trust Decision Box -->
+            <div class="author-trust-decision" id="authorTrustDecision" style="display: none;">
+                <div class="trust-indicator" id="trustIndicator">
+                    <i class="fas fa-shield-alt"></i>
+                    <span id="trustDecisionText">Can Trust: Unknown</span>
+                </div>
+                <div class="trust-reasoning" id="trustReasoning"></div>
+            </div>
+
             <div class="author-card-header">
                 <div class="author-photo-container">
                     <img id="authorPhoto" class="author-photo" src="" alt="Author photo" style="display: none;">
@@ -322,6 +340,33 @@ window.ServiceTemplates = {
                         <span class="credibility-score" id="authorCredibilityScore">0/100</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- AI Assessment -->
+            <div class="ai-assessment-section" id="aiAssessmentSection" style="display: none;">
+                <h4 class="author-section-title">
+                    <i class="fas fa-robot"></i>
+                    AI Assessment
+                </h4>
+                <div class="ai-assessment-text" id="aiAssessmentText"></div>
+            </div>
+
+            <!-- Trust Indicators -->
+            <div class="trust-indicators-section" id="trustIndicatorsSection" style="display: none;">
+                <h4 class="author-section-title">
+                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                    Trust Indicators
+                </h4>
+                <ul class="trust-indicators-list" id="trustIndicatorsList"></ul>
+            </div>
+
+            <!-- Red Flags -->
+            <div class="red-flags-section" id="redFlagsSection" style="display: none;">
+                <h4 class="author-section-title">
+                    <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                    Concerns
+                </h4>
+                <ul class="red-flags-list" id="redFlagsList"></ul>
             </div>
 
             <div class="author-profiles" id="authorProfiles" style="display: none;">
@@ -404,6 +449,7 @@ window.ServiceTemplates = {
         this.displayAuthorAnalysis(detailed_analysis.author_analyzer || {}, data.author, analyzer);
     },
 
+    // [Keep all other display methods unchanged...]
     displaySourceCredibility(data, analyzer) {
         const score = data.score || data.credibility_score || 0;
         const rating = data.credibility || data.credibility_level || 'Unknown';
@@ -693,58 +739,323 @@ window.ServiceTemplates = {
             contentData.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
+    // ENHANCED Author Analysis Display
     displayAuthorAnalysis(data, fallbackAuthor, analyzer) {
-        console.log('=== Displaying Author Analysis ===');
+        console.log('=== Displaying Enhanced Author Analysis ===');
         console.log('Author data:', data);
         
+        // Basic info
         const authorName = data.author_name || data.name || fallbackAuthor || 'Unknown';
-        const authorScore = data.score || data.credibility_score || data.author_score || 0;
-        const authorPosition = data.position || data.title || 'Writer';
-        const authorOrganization = data.organization || '';
-        const authorBio = data.bio || data.biography || '';
-        const hasVerification = data.verified || false;
+        const authorScore = data.combined_credibility_score || data.credibility_score || data.score || 0;
+        const authorPosition = data.position || 'Writer';
+        const authorOrganization = data.organization || data.domain || '';
+        const authorBio = data.biography || data.bio || '';
         
-        const fullPosition = authorOrganization && !authorPosition.includes(authorOrganization) 
+        const fullPosition = authorOrganization && !authorPosition.toLowerCase().includes(authorOrganization.toLowerCase()) 
             ? `${authorPosition} at ${authorOrganization}` 
             : authorPosition;
         
+        // Display basic info
         document.getElementById('authorName').textContent = authorName;
         document.getElementById('authorPosition').textContent = fullPosition;
         document.getElementById('authorCredibilityScore').textContent = authorScore > 0 ? `${authorScore}/100` : 'N/A';
         
         this.updateAuthorCredibilityStyle(authorScore);
         
-        const profiles = this.extractAuthorProfiles(data);
-        this.displayAuthorProfiles(profiles);
+        // Display Trust Decision (NEW)
+        const canTrust = data.can_trust !== undefined ? data.can_trust : (authorScore >= 40);
+        const trustReasoning = data.trust_reasoning || this.generateTrustReasoning(authorScore, data);
         
-        const publications = data.recent_articles || data.publication_history || [];
-        this.displayPublicationHistory(publications);
+        const trustDecisionEl = document.getElementById('authorTrustDecision');
+        const trustIndicatorEl = document.getElementById('trustIndicator');
+        const trustDecisionTextEl = document.getElementById('trustDecisionText');
+        const trustReasoningEl = document.getElementById('trustReasoning');
         
-        const profilesCount = Object.values(profiles).filter(url => url).length;
-        const articleCount = data.article_count || publications.length || 0;
-        const awardsCount = data.awards?.length || data.awards_recognition?.length || 0;
+        if (trustDecisionEl) {
+            trustDecisionEl.style.display = 'block';
+            
+            if (canTrust) {
+                trustIndicatorEl.className = 'trust-indicator trust-yes';
+                trustDecisionTextEl.textContent = 'Can Trust: YES';
+            } else {
+                trustIndicatorEl.className = 'trust-indicator trust-no';
+                trustDecisionTextEl.textContent = 'Can Trust: NO';
+            }
+            
+            trustReasoningEl.textContent = trustReasoning;
+        }
+        
+        // Display AI Assessment (NEW)
+        const aiAssessment = data.ai_assessment || '';
+        if (aiAssessment) {
+            const aiSection = document.getElementById('aiAssessmentSection');
+            const aiText = document.getElementById('aiAssessmentText');
+            if (aiSection && aiText) {
+                aiSection.style.display = 'block';
+                aiText.textContent = aiAssessment;
+            }
+        }
+        
+        // Display Trust Indicators (NEW)
+        const trustIndicators = data.trust_indicators || [];
+        if (trustIndicators.length > 0) {
+            const indicatorsSection = document.getElementById('trustIndicatorsSection');
+            const indicatorsList = document.getElementById('trustIndicatorsList');
+            if (indicatorsSection && indicatorsList) {
+                indicatorsSection.style.display = 'block';
+                indicatorsList.innerHTML = trustIndicators
+                    .map(indicator => `<li><i class="fas fa-check"></i> ${indicator}</li>`)
+                    .join('');
+            }
+        }
+        
+        // Display Red Flags (NEW)
+        const redFlags = data.red_flags || data.potential_issues || [];
+        if (redFlags.length > 0) {
+            const flagsSection = document.getElementById('redFlagsSection');
+            const flagsList = document.getElementById('redFlagsList');
+            if (flagsSection && flagsList) {
+                flagsSection.style.display = 'block';
+                flagsList.innerHTML = redFlags
+                    .map(flag => `<li><i class="fas fa-times"></i> ${flag}</li>`)
+                    .join('');
+            }
+        }
+        
+        // Display Social Profiles with Links (ENHANCED)
+        const socialProfiles = data.social_profiles || [];
+        const professionalLinks = data.professional_links || [];
+        this.displayEnhancedProfiles(socialProfiles, professionalLinks);
+        
+        // Stats
+        const articleCount = data.articles_found || data.article_count || 0;
+        const profilesCount = socialProfiles.length || 0;
+        const awardsCount = (data.awards || []).length || 0;
         
         document.getElementById('articleCount').textContent = articleCount;
         document.getElementById('profilesCount').textContent = profilesCount;
         document.getElementById('awardsCount').textContent = awardsCount;
         
+        // Biography
         if (authorBio && authorBio.trim()) {
             document.getElementById('authorBio').style.display = 'block';
             document.getElementById('authorBioText').textContent = authorBio;
-        } else {
-            document.getElementById('authorBio').style.display = 'none';
         }
         
-        document.getElementById('verificationBadge').style.display = hasVerification ? 'flex' : 'none';
-        
-        const expertise = data.expertise_areas || data.expertise_domains || [];
+        // Expertise
+        const expertise = data.expertise_areas || [];
         this.displayAuthorExpertise(expertise);
         
-        const awards = data.awards || data.awards_recognition || [];
+        // Recent Articles (ENHANCED)
+        const recentArticles = data.recent_articles || [];
+        this.displayEnhancedPublications(recentArticles);
+        
+        // Awards
+        const awards = data.awards || [];
         this.displayAuthorAwards(awards);
     },
 
-    // Helper Methods - Content Generation
+    // New helper methods for enhanced display
+    generateTrustReasoning(score, data) {
+        if (score >= 80) {
+            return "Highly credible journalist with extensive track record and verification.";
+        } else if (score >= 60) {
+            return "Generally trustworthy author with good publication history.";
+        } else if (score >= 40) {
+            return "Mixed credibility indicators. Verify important claims independently.";
+        } else {
+            return "Limited credibility information available. Exercise caution.";
+        }
+    },
+
+    displayEnhancedProfiles(socialProfiles, professionalLinks) {
+        const profilesSection = document.getElementById('authorProfiles');
+        const profilesGrid = document.getElementById('profilesGrid');
+        
+        if (!profilesGrid) return;
+        profilesGrid.innerHTML = '';
+        
+        const allProfiles = [];
+        
+        // Add social profiles
+        if (socialProfiles && socialProfiles.length > 0) {
+            socialProfiles.forEach(profile => {
+                if (profile.url) {
+                    allProfiles.push({
+                        platform: profile.platform,
+                        url: profile.url,
+                        verified: profile.verified
+                    });
+                }
+            });
+        }
+        
+        // Add professional links
+        if (professionalLinks && professionalLinks.length > 0) {
+            professionalLinks.forEach(url => {
+                const platform = this.detectPlatformFromUrl(url);
+                allProfiles.push({
+                    platform: platform,
+                    url: url,
+                    verified: false
+                });
+            });
+        }
+        
+        if (allProfiles.length > 0) {
+            if (profilesSection) profilesSection.style.display = 'block';
+            
+            allProfiles.forEach(profile => {
+                const link = document.createElement('a');
+                link.className = `profile-link ${profile.platform.toLowerCase().replace(/[^a-z]/g, '')}`;
+                link.href = profile.url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                
+                const icon = this.getPlatformIcon(profile.platform);
+                link.innerHTML = `
+                    <i class="fab fa-${icon}"></i> 
+                    ${profile.platform}
+                    ${profile.verified ? '<span class="verified-badge">✓</span>' : ''}
+                `;
+                
+                profilesGrid.appendChild(link);
+            });
+        } else {
+            if (profilesSection) profilesSection.style.display = 'none';
+        }
+    },
+
+    displayEnhancedPublications(articles) {
+        const section = document.getElementById('publicationSection');
+        const list = document.getElementById('publicationList');
+        
+        if (!section || !list) return;
+        
+        if (articles && articles.length > 0) {
+            section.style.display = 'block';
+            list.innerHTML = '';
+            
+            articles.slice(0, 5).forEach(article => {
+                const pubEl = document.createElement('div');
+                pubEl.className = 'publication-item';
+                
+                const title = article.title || 'Untitled';
+                const source = article.source || '';
+                const date = article.date || '';
+                const url = article.url || '';
+                
+                pubEl.innerHTML = `
+                    ${url ? `<a href="${url}" target="_blank" class="pub-title-link">` : '<div class="pub-title">'}
+                        ${title}
+                    ${url ? '</a>' : '</div>'}
+                    <div class="pub-meta">
+                        ${source ? `<span class="pub-source">${source}</span>` : ''}
+                        ${date ? `<span class="pub-date">${this.formatDate(date)}</span>` : ''}
+                    </div>
+                `;
+                
+                list.appendChild(pubEl);
+            });
+        } else {
+            section.style.display = 'none';
+        }
+    },
+
+    detectPlatformFromUrl(url) {
+        if (url.includes('linkedin')) return 'LinkedIn';
+        if (url.includes('twitter') || url.includes('x.com')) return 'Twitter/X';
+        if (url.includes('wikipedia')) return 'Wikipedia';
+        if (url.includes('muckrack')) return 'Muck Rack';
+        if (url.includes('facebook')) return 'Facebook';
+        return 'Website';
+    },
+
+    // [Keep all other helper methods unchanged...]
+    updateAuthorCredibilityStyle(score) {
+        const scoreEl = document.getElementById('authorCredibilityScore');
+        if (!scoreEl) return;
+        
+        scoreEl.className = 'credibility-score';
+        if (score >= 80) scoreEl.classList.add('high');
+        else if (score >= 60) scoreEl.classList.add('good');
+        else if (score >= 40) scoreEl.classList.add('moderate');
+        else if (score > 0) scoreEl.classList.add('low');
+    },
+
+    displayAuthorExpertise(expertiseList) {
+        const section = document.getElementById('expertiseSection');
+        const tags = document.getElementById('expertiseTags');
+        
+        if (!tags) return;
+        tags.innerHTML = '';
+        
+        if (expertiseList && expertiseList.length > 0) {
+            if (section) section.style.display = 'block';
+            
+            expertiseList.forEach(expertise => {
+                const tag = document.createElement('div');
+                tag.className = 'expertise-tag';
+                tag.textContent = expertise;
+                tags.appendChild(tag);
+            });
+        } else {
+            if (section) section.style.display = 'none';
+        }
+    },
+
+    displayAuthorAwards(awardsList) {
+        const section = document.getElementById('awardsSection');
+        const list = document.getElementById('awardsList');
+        
+        if (!list) return;
+        list.innerHTML = '';
+        
+        if (awardsList && awardsList.length > 0) {
+            if (section) section.style.display = 'block';
+            
+            awardsList.forEach(award => {
+                const item = document.createElement('div');
+                item.className = 'award-item';
+                item.innerHTML = `
+                    <div class="award-icon"><i class="fas fa-trophy"></i></div>
+                    <div class="award-text">${award}</div>
+                `;
+                list.appendChild(item);
+            });
+        } else {
+            if (section) section.style.display = 'none';
+        }
+    },
+
+    getPlatformIcon(platform) {
+        const icons = {
+            'linkedin': 'linkedin',
+            'twitter': 'twitter',
+            'twitter/x': 'twitter',
+            'wikipedia': 'wikipedia-w',
+            'muck rack': 'newspaper',
+            'muckrack': 'newspaper',
+            'facebook': 'facebook',
+            'website': 'globe'
+        };
+        return icons[platform.toLowerCase()] || 'link';
+    },
+
+    formatDate(dateStr) {
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        } catch {
+            return dateStr;
+        }
+    },
+
+    // [Keep all other existing helper methods...]
     generateCredibilityFindings(score, rating, biasLevel, data) {
         const inDatabase = data.in_database ? "is listed in our credibility database" : "is not found in major credibility databases";
         if (score >= 80) {
@@ -827,7 +1138,6 @@ window.ServiceTemplates = {
         return "Poor quality undermines credibility.";
     },
 
-    // Helper Methods
     formatDomainAge(days) {
         if (!days) return 'Unknown';
         const years = Math.floor(days / 365);
@@ -920,164 +1230,7 @@ window.ServiceTemplates = {
         } else {
             section.style.display = 'none';
         }
-    },
-
-    updateAuthorCredibilityStyle(score) {
-        const scoreEl = document.getElementById('authorCredibilityScore');
-        if (!scoreEl) return;
-        
-        scoreEl.className = 'credibility-score';
-        if (score >= 80) scoreEl.classList.add('high');
-        else if (score >= 60) scoreEl.classList.add('good');
-        else if (score >= 40) scoreEl.classList.add('moderate');
-        else if (score > 0) scoreEl.classList.add('low');
-    },
-
-    extractAuthorProfiles(data) {
-        const profiles = {};
-        
-        if (data.social_media && typeof data.social_media === 'object') {
-            Object.assign(profiles, data.social_media);
-        }
-        
-        if (data.linkedin_profile) profiles.linkedin = data.linkedin_profile;
-        if (data.twitter_profile) profiles.twitter = data.twitter_profile;
-        if (data.wikipedia_page) profiles.wikipedia = data.wikipedia_page;
-        if (data.muckrack_profile) profiles.muckrack = data.muckrack_profile;
-        if (data.personal_website) profiles.website = data.personal_website;
-        
-        return profiles;
-    },
-
-    displayAuthorProfiles(profiles) {
-        const profilesSection = document.getElementById('authorProfiles');
-        const profilesGrid = document.getElementById('profilesGrid');
-        
-        if (!profilesGrid) return;
-        profilesGrid.innerHTML = '';
-        
-        const hasProfiles = profiles && Object.values(profiles).some(url => url);
-        
-        if (hasProfiles) {
-            if (profilesSection) profilesSection.style.display = 'block';
-            
-            Object.entries(profiles).forEach(([platform, url]) => {
-                if (url) {
-                    const link = document.createElement('a');
-                    link.className = `profile-link ${platform.toLowerCase()}`;
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                    link.innerHTML = `<i class="fab fa-${this.getPlatformIcon(platform)}"></i> ${platform}`;
-                    profilesGrid.appendChild(link);
-                }
-            });
-        } else {
-            if (profilesSection) profilesSection.style.display = 'none';
-        }
-    },
-
-    displayPublicationHistory(publications) {
-        const section = document.getElementById('publicationSection');
-        const list = document.getElementById('publicationList');
-        
-        if (!section || !list) return;
-        
-        if (publications && publications.length > 0) {
-            section.style.display = 'block';
-            list.innerHTML = '';
-            
-            publications.slice(0, 5).forEach(pub => {
-                const pubEl = document.createElement('div');
-                pubEl.className = 'publication-item';
-                
-                const title = pub.title || pub.headline || 'Untitled';
-                const date = pub.date || pub.published_date || '';
-                const publication = pub.publication || pub.source || '';
-                
-                pubEl.innerHTML = `
-                    <div class="pub-title">${title}</div>
-                    <div class="pub-meta">
-                        ${publication ? `<span class="pub-source">${publication}</span>` : ''}
-                        ${date ? `<span class="pub-date">${this.formatDate(date)}</span>` : ''}
-                    </div>
-                `;
-                
-                list.appendChild(pubEl);
-            });
-        } else {
-            section.style.display = 'none';
-        }
-    },
-
-    displayAuthorExpertise(expertiseList) {
-        const section = document.getElementById('expertiseSection');
-        const tags = document.getElementById('expertiseTags');
-        
-        if (!tags) return;
-        tags.innerHTML = '';
-        
-        if (expertiseList && expertiseList.length > 0) {
-            if (section) section.style.display = 'block';
-            
-            expertiseList.forEach(expertise => {
-                const tag = document.createElement('div');
-                tag.className = 'expertise-tag';
-                tag.textContent = expertise;
-                tags.appendChild(tag);
-            });
-        } else {
-            if (section) section.style.display = 'none';
-        }
-    },
-
-    displayAuthorAwards(awardsList) {
-        const section = document.getElementById('awardsSection');
-        const list = document.getElementById('awardsList');
-        
-        if (!list) return;
-        list.innerHTML = '';
-        
-        if (awardsList && awardsList.length > 0) {
-            if (section) section.style.display = 'block';
-            
-            awardsList.forEach(award => {
-                const item = document.createElement('div');
-                item.className = 'award-item';
-                item.innerHTML = `
-                    <div class="award-icon"><i class="fas fa-trophy"></i></div>
-                    <div class="award-text">${award}</div>
-                `;
-                list.appendChild(item);
-            });
-        } else {
-            if (section) section.style.display = 'none';
-        }
-    },
-
-    getPlatformIcon(platform) {
-        const icons = {
-            'linkedin': 'linkedin',
-            'twitter': 'twitter',
-            'wikipedia': 'wikipedia-w',
-            'muckrack': 'newspaper',
-            'website': 'globe'
-        };
-        return icons[platform.toLowerCase()] || 'link';
-    },
-
-    formatDate(dateStr) {
-        try {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        } catch {
-            return dateStr;
-        }
     }
 };
 
-console.log('Service templates loaded successfully');
+console.log('Enhanced service templates loaded successfully');
