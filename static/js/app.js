@@ -1231,21 +1231,13 @@ class TruthLensAnalyzer {
 
     displayAuthorAnalysis(data, fallbackAuthor) {
         // FIX 7: Complete author information display
-        // Handle cases where author name might be duplicated or concatenated
+        // Clean up malformed author names from backend
         let authorName = data.author_name || data.name || fallbackAuthor || 'Unknown';
         
-        // Fix duplicated author names (e.g., "Mary Clare Jalonick, Associated PressMary Clare Jalonick, Associated Press")
-        if (authorName.length > 50 && authorName.indexOf(authorName.substring(0, 20)) > 20) {
-            // Check if the name appears to be duplicated
-            const halfLength = Math.floor(authorName.length / 2);
-            const firstHalf = authorName.substring(0, halfLength);
-            const secondHalf = authorName.substring(halfLength);
-            if (firstHalf === secondHalf || firstHalf.includes(secondHalf.split(',')[0])) {
-                authorName = firstHalf;
-            }
-        }
+        // Use the cleanAuthorName function to properly parse the author
+        authorName = this.cleanAuthorName(authorName);
         
-        const authorScore = data.score || data.credibility_score || 0;
+        const authorScore = data.combined_credibility_score || data.credibility_score || data.score || 0;
         const authorPosition = data.position || data.title || data.role || 'Writer';
         const authorBio = data.bio || data.biography || data.description || '';
         
