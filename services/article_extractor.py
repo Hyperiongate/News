@@ -1,7 +1,13 @@
 """
-Article Extractor Service - FINAL COMPLETE VERSION
-Date: September 6, 2025
-This version includes ALL required methods and will definitely work
+Article Extractor Service - ENHANCED BBC AUTHOR EXTRACTION
+Date: September 7, 2025
+Last Updated: September 7, 2025
+
+FIXES:
+- Enhanced BBC author extraction for their specific byline format
+- Handles multi-author articles
+- Extracts authors from inline text patterns
+- Cleans author names from roles and locations
 """
 import os
 import re
@@ -9,7 +15,7 @@ import json
 import time
 import logging
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -25,7 +31,7 @@ except ImportError:
 
 class ArticleExtractor:
     """
-    Complete article extraction service with all required methods
+    Complete article extraction service with enhanced BBC author support
     """
     
     def __init__(self):
@@ -51,7 +57,21 @@ class ArticleExtractor:
                 'span[class*="TextContributorName"]',
                 'div[class*="TextContributorName"]',
                 'div.byline',
-                'span.byline__name'
+                'span.byline__name',
+                'p[class*="Contributor"]',
+                'div[class*="contributor"]',
+                'span.qa-contributor-name'
+            ],
+            'bbc.co.uk': [  # Same as bbc.com
+                'span.ssrcss-68pt20-Text-TextContributorName',
+                'div.ssrcss-68pt20-Text-TextContributorName',
+                'span[class*="TextContributorName"]',
+                'div[class*="TextContributorName"]',
+                'div.byline',
+                'span.byline__name',
+                'p[class*="Contributor"]',
+                'div[class*="contributor"]',
+                'span.qa-contributor-name'
             ],
             'cnn.com': [
                 'span.byline__name',
@@ -62,6 +82,12 @@ class ArticleExtractor:
                 'div.author-name',
                 'span.author-name',
                 'div.ArticleHeader__author'
+            ],
+            'chicagotribune.com': [
+                'span.byline',
+                'div.byline',
+                'span[class*="author"]',
+                'div[class*="author"]'
             ]
         }
         
@@ -255,10 +281,19 @@ class ArticleExtractor:
         return "No title found"
     
     def _extract_author(self, soup: BeautifulSoup, url: str) -> str:
-        """Extract author"""
+        """Enhanced author extraction with BBC support"""
         domain = urlparse(url).netloc.replace('www.', '')
         
         logger.info(f"Extracting author for domain: {domain}")
+        
+        # Special handling for BBC
+        if 'bbc.com' in domain or 'bbc.co.uk' in domain:
+            authors = self._extract_bbc_authors(soup, html_text=str(soup))
+            if authors:
+                # Join multiple authors with " and "
+                author_string = ' and '.join(authors)
+                logger.info(f"Found BBC author(s): {author_string}")
+                return author_string
         
         # Try domain-specific selectors
         if domain in self.author_selectors:
@@ -267,38 +302,148 @@ class ArticleExtractor:
                     element = soup.select_one(selector)
                     if element:
                         author = element.get_text(strip=True)
-                        author = re.sub(r'^(By|Written by)\s+', '', author, flags=re.I)
+                        author = self._clean_author_text(author)
                         if author and len(author) > 2 and len(author) < 100:
-                            logger.info(f"Found valid author: {author}")
+                            logger.info(f"Found valid author via selector: {author}")
                             return author
                 except:
                     pass
         
         # Try meta tags
-        for name in ['author', 'article:author', 'dc.creator']:
+        for name in ['author', 'article:author', 'dc.creator', 'byl']:
             meta = soup.find('meta', attrs={'name': name}) or \
                    soup.find('meta', attrs={'property': name})
             if meta and meta.get('content'):
                 author = meta['content'].strip()
+                author = self._clean_author_text(author)
                 if author and len(author) > 2:
                     logger.info(f"Found valid author in meta tag: {author}")
                     return author
         
         # Try common patterns
-        for element in soup.find_all(class_=re.compile(r'byline|author', re.I))[:5]:
+        for element in soup.find_all(class_=re.compile(r'byline|author|contributor', re.I))[:10]:
             text = element.get_text(strip=True)
-            text = re.sub(r'^(By|Written by)\s+', '', text, flags=re.I)
+            text = self._clean_author_text(text)
             if text and len(text) > 2 and len(text) < 100:
-                logger.info(f"Found valid author via pattern: {text}")
-                return text
+                # Check if it's actually a name (contains letters, not just roles)
+                if re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+', text):
+                    logger.info(f"Found valid author via pattern: {text}")
+                    return text
         
         logger.info("No valid author found with any method")
         return "Unknown"
     
+    def _extract_bbc_authors(self, soup: BeautifulSoup, html_text: str = "") -> List[str]:
+        """
+        Special extraction for BBC's unique author format
+        BBC often shows authors as:
+        "Rushdi Abualouf Gaza correspondent reporting from Istanbul and Wyre Davies BBC News, Jerusalem"
+        """
+        authors = []
+        
+        # Method 1: Look for the author paragraph pattern in BBC articles
+        # BBC often has authors in a specific paragraph near the top
+        for p in soup.find_all('p')[:20]:  # Check first 20 paragraphs
+            text = p.get_text(strip=True)
+            
+            # Pattern 1: "Name Role reporting from Location"
+            # Pattern 2: "Name BBC News, Location"
+            # Pattern 3: Multiple authors with "and" between them
+            
+            # Check if this looks like an author line
+            if any(keyword in text.lower() for keyword in ['correspondent', 'reporting from', 'bbc news', 'editor', 'reporter']):
+                # Extract names using patterns
+                
+                # Pattern for "Rushdi Abualouf Gaza correspondent"
+                pattern1 = r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+[A-Za-z]+\s+correspondent|\s+BBC\s+News|\s+reporter|\s+editor)'
+                
+                # Pattern for names at the beginning of the text
+                pattern2 = r'^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
+                
+                # Find all matches
+                matches = re.findall(pattern1, text)
+                if not matches:
+                    matches = re.findall(pattern2, text)
+                
+                for match in matches:
+                    # Clean the name
+                    name = match.strip()
+                    # Filter out common non-name words
+                    if name and not any(skip in name.lower() for skip in ['bbc', 'news', 'correspondent', 'editor', 'reporter']):
+                        if len(name.split()) >= 2:  # At least first and last name
+                            authors.append(name)
+                
+                # If we found authors in this paragraph, we're done
+                if authors:
+                    break
+        
+        # Method 2: Look for specific BBC author elements
+        if not authors:
+            # Try contributor name classes
+            for selector in ['span[class*="Contributor"]', 'div[class*="contributor"]', 'p[class*="contributor"]']:
+                elements = soup.select(selector)
+                for element in elements:
+                    text = element.get_text(strip=True)
+                    # Extract just the name part
+                    name_match = re.match(r'^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
+                    if name_match:
+                        authors.append(name_match.group(1))
+        
+        # Method 3: Check the article text for the specific format from your example
+        if not authors and html_text:
+            # Look for the exact pattern from your BBC article
+            patterns = [
+                r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s+Gaza correspondent',
+                r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s+BBC News',
+                r'By\s+([A-Z][a-z]+\s+[A-Z][a-z]+)',
+            ]
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, html_text)
+                for match in matches:
+                    if match and match not in authors:
+                        authors.append(match)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_authors = []
+        for author in authors:
+            if author not in seen:
+                seen.add(author)
+                unique_authors.append(author)
+        
+        return unique_authors[:2]  # Return max 2 authors for BBC articles
+    
+    def _clean_author_text(self, text: str) -> str:
+        """Clean author text"""
+        if not text:
+            return ""
+        
+        # Remove common prefixes
+        text = re.sub(r'^(By|Written by|Author:|Reporter:)\s+', '', text, flags=re.I)
+        
+        # Remove email addresses
+        text = re.sub(r'\S+@\S+\.\S+', '', text)
+        
+        # Remove dates
+        text = re.sub(r'\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)', '', text, flags=re.I)
+        
+        # Remove "Updated" timestamps
+        text = re.sub(r'(UPDATED|PUBLISHED|POSTED).*', '', text, flags=re.I)
+        
+        # Remove role descriptions after name (but keep the name)
+        text = re.sub(r',\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer).*', '', text, flags=re.I)
+        
+        # Clean up
+        text = text.strip()
+        text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single
+        
+        return text
+    
     def _extract_content(self, soup: BeautifulSoup) -> str:
         """Extract content"""
         # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer']):
+        for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
             element.decompose()
         
         # Try article tag
@@ -306,17 +451,17 @@ class ArticleExtractor:
         if article:
             paragraphs = article.find_all('p')
             if paragraphs:
-                content = ' '.join([p.get_text(strip=True) for p in paragraphs])
+                content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
                 if len(content) > 200:
                     return content
         
         # Try main areas
-        for selector in ['main', 'div[role="main"]', 'div.content']:
+        for selector in ['main', 'div[role="main"]', 'div.content', 'div[class*="article-body"]', 'div[class*="story-body"]']:
             element = soup.select_one(selector)
             if element:
                 paragraphs = element.find_all('p')
                 if paragraphs:
-                    content = ' '.join([p.get_text(strip=True) for p in paragraphs])
+                    content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
                     if len(content) > 200:
                         return content
         
