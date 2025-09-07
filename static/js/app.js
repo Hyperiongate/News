@@ -964,6 +964,74 @@ class TruthLensAnalyzer {
         }
     }
 
+    cleanAuthorName(rawAuthor) {
+        // Handle various malformed author formats from backend
+        if (!rawAuthor || rawAuthor === 'Unknown') return rawAuthor;
+        
+        let cleaned = rawAuthor;
+        
+        // Remove "By" or "ByXXX" prefix (handle cases with no space after By)
+        cleaned = cleaned.replace(/^By\s*/i, '');
+        
+        // Handle "ByRick Pearson|rpearson@chicagotribune.com| Chicago Tribune" format
+        if (cleaned.includes('|')) {
+            // Take only the first part before the pipe
+            cleaned = cleaned.split('|')[0].trim();
+        }
+        
+        // Handle "Mary Clare Jalonick, Associated PressMary Clare Jalonick, Associated Press" duplication
+        if (cleaned.length > 40) {
+            // Check for exact duplication
+            const halfLength = Math.floor(cleaned.length / 2);
+            const firstHalf = cleaned.substring(0, halfLength);
+            const secondHalf = cleaned.substring(halfLength);
+            
+            if (firstHalf === secondHalf) {
+                cleaned = firstHalf;
+            } else {
+                // Check for partial duplication (name appears twice)
+                const nameParts = cleaned.split(',')[0];
+                if (nameParts && cleaned.lastIndexOf(nameParts) > nameParts.length) {
+                    // Name appears twice, take only first occurrence
+                    const commaIndex = cleaned.indexOf(',');
+                    if (commaIndex > 0 && commaIndex < cleaned.length / 2) {
+                        cleaned = cleaned.substring(0, cleaned.indexOf(nameParts, nameParts.length));
+                    }
+                }
+            }
+        }
+        
+        // Remove "UPDATED" or timestamp data that might be concatenated
+        cleaned = cleaned.replace(/UPDATED:.*$/i, '').trim();
+        cleaned = cleaned.replace(/\d{4} at \d{1,2}:\d{2}.*$/i, '').trim();
+        
+        // Remove email addresses
+        cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '').trim();
+        
+        // Clean up organization names that might be concatenated
+        // If we have something like "John Smith, Reuters" or "John Smith, Associated Press"
+        if (cleaned.includes(',')) {
+            const parts = cleaned.split(',');
+            if (parts.length === 2) {
+                const possibleOrg = parts[1].trim();
+                // Keep the organization if it's reasonable length
+                if (possibleOrg.length < 30 && !possibleOrg.includes('Press') && !possibleOrg.includes('Tribune')) {
+                    cleaned = parts[0].trim(); // Just the name
+                }
+            }
+        }
+        
+        // Final cleanup - remove any remaining special characters at the edges
+        cleaned = cleaned.replace(/^[|\s-]+|[|\s-]+$/g, '').trim();
+        
+        // Validate the result
+        if (cleaned.length < 3 || cleaned.length > 100) {
+            return 'Unknown';
+        }
+        
+        return cleaned;
+    }
+
     displayAllServiceAnalyses(data) {
         console.log('=== FULL ANALYSIS DATA DIAGNOSTIC ===');
         console.log('Complete response data:', data);
