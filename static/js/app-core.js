@@ -1,8 +1,19 @@
 /**
  * TruthLens News Analyzer - App Core Module (COMPLETE FIXED VERSION)
- * Handles application control flow, user interactions, and API communication
- * FIXES: Added findings summary, compact source rankings, working filter buttons
- * CRITICAL FIXES: Rankings now visible, findings display properly, debug info hidden
+ * Date: September 7, 2025
+ * Last Updated: September 7, 2025
+ * 
+ * FIXES IMPLEMENTED:
+ * - Added cleanAuthorName() function to properly parse malformed author strings
+ * - Handles "By" prefix removal
+ * - Extracts author name from complex strings with emails/timestamps
+ * - Removes duplicate text and formatting issues
+ * - Applied cleaning to all author display locations
+ * 
+ * NOTES:
+ * - Author cleaning is applied before passing to ServiceTemplates
+ * - Handles various author string formats from different news sources
+ * - Maintains fallback to "Unknown Author" for invalid data
  */
 
 class TruthLensAnalyzer {
@@ -31,7 +42,7 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
-        // FIXED: Added proper categories for all sources
+        // Source rankings data
         this.sourceRankingsData = {
             'reuters.com': { score: 95, rank: 1, trend: 'stable', category: 'mainstream' },
             'ap.org': { score: 94, rank: 2, trend: 'up', category: 'mainstream' },
@@ -65,6 +76,69 @@ class TruthLensAnalyzer {
         this.initializeSourceRankings();
     }
 
+    /**
+     * Clean author name from malformed strings
+     * Handles formats like:
+     * - "ByRick Pearson|rpearson@chicagotribune.com| Chicago TribuneUPDATED:..."
+     * - "By Jane Doe"
+     * - "John Smith | john@example.com"
+     * - "Author Name, Organization"
+     */
+    cleanAuthorName(authorString) {
+        if (!authorString || typeof authorString !== 'string') {
+            return 'Unknown Author';
+        }
+
+        let cleaned = authorString;
+
+        // Remove "By" prefix (case insensitive)
+        cleaned = cleaned.replace(/^by\s*/i, '');
+
+        // Handle pipe-separated format (name|email|organization)
+        if (cleaned.includes('|')) {
+            // Extract first part before pipe (usually the name)
+            const parts = cleaned.split('|');
+            cleaned = parts[0].trim();
+        }
+
+        // Remove email addresses
+        cleaned = cleaned.replace(/\S+@\S+\.\S+/g, '').trim();
+
+        // Remove timestamps (e.g., "UPDATED: ...", "Published: ...")
+        cleaned = cleaned.replace(/\b(UPDATED|PUBLISHED|POSTED|MODIFIED):\s*.*/gi, '').trim();
+
+        // Remove organization names that might be appended
+        const orgPatterns = [
+            /\s*(Chicago Tribune|New York Times|Washington Post|CNN|Fox News|Reuters|Associated Press|AP|BBC|NPR).*/gi,
+            /\s*,\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer|Contributing Writer).*/gi
+        ];
+        
+        for (const pattern of orgPatterns) {
+            cleaned = cleaned.replace(pattern, '');
+        }
+
+        // Remove common suffixes
+        cleaned = cleaned.replace(/\s*(Staff|Wire|Service|Report)$/gi, '');
+
+        // Clean up multiple spaces and trim
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+        // Remove any remaining special characters at the end
+        cleaned = cleaned.replace(/[,;:\-|]+$/, '').trim();
+
+        // If we ended up with nothing or just special characters, return unknown
+        if (!cleaned || cleaned.length < 2 || /^[^a-zA-Z]+$/.test(cleaned)) {
+            return 'Unknown Author';
+        }
+
+        // Capitalize properly (First Last format)
+        cleaned = cleaned.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+
+        return cleaned;
+    }
+
     init() {
         this.form.addEventListener('submit', this.handleSubmit.bind(this));
         this.resetBtn.addEventListener('click', this.handleReset.bind(this));
@@ -93,14 +167,11 @@ class TruthLensAnalyzer {
         const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) return;
 
-        // Find the enhanced overview section
         const overviewSection = resultsSection.querySelector('.enhanced-analysis-overview');
         if (!overviewSection) return;
 
-        // Check if rankings already exist
         if (document.getElementById('sourceRankings')) return;
 
-        // Create compact rankings HTML
         const rankingsDiv = document.createElement('div');
         rankingsDiv.id = 'sourceRankings';
         rankingsDiv.className = 'source-rankings-compact';
@@ -119,7 +190,6 @@ class TruthLensAnalyzer {
             <div class="rankings-chart-compact" id="rankingsChart"></div>
         `;
         
-        // Insert after the overview section
         overviewSection.insertAdjacentElement('afterend', rankingsDiv);
         this.attachFilterListeners();
     }
@@ -137,7 +207,6 @@ class TruthLensAnalyzer {
     filterSources(filter) {
         this.currentFilter = filter;
         
-        // Update active button
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.filter === filter) {
@@ -145,7 +214,6 @@ class TruthLensAnalyzer {
             }
         });
         
-        // Redisplay with filter
         this.displaySourceRankings(this.lastAnalyzedSource, this.lastAnalyzedScore);
     }
 
@@ -301,7 +369,7 @@ class TruthLensAnalyzer {
     displayResults(data) {
         this.progressContainer.classList.remove('active');
         
-        // CRITICAL: Remove ALL debug info elements completely
+        // Remove debug info elements
         const debugInfo = document.getElementById('debugInfo');
         if (debugInfo) {
             debugInfo.remove();
@@ -310,13 +378,25 @@ class TruthLensAnalyzer {
         let trustScore = data.trust_score || 0;
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
-        let author = data.author || 'Staff Writer';
+        
+        // CRITICAL FIX: Clean the author name before any display
+        let rawAuthor = data.author || 'Staff Writer';
+        let cleanedAuthor = this.cleanAuthorName(rawAuthor);
+        
+        // Log the cleaning for debugging
+        console.log('Author name cleaning:', {
+            raw: rawAuthor,
+            cleaned: cleanedAuthor
+        });
+        
+        // Update data object with cleaned author for downstream use
+        data.author = cleanedAuthor;
         
         // Store for rankings
         this.lastAnalyzedSource = source;
         this.lastAnalyzedScore = trustScore;
         
-        // CRITICAL FIX: Generate proper findings summary
+        // Generate findings summary
         let findingsSummary = '';
         const trustLevel = trustScore >= 80 ? 'high' : trustScore >= 60 ? 'good' : trustScore >= 40 ? 'moderate' : 'low';
         
@@ -349,6 +429,16 @@ class TruthLensAnalyzer {
             if (d.fact_checker?.accuracy_score === 0) {
                 findingsSummary += " No claims could be independently verified.";
             }
+            
+            // Also clean author name in detailed analysis if present
+            if (d.author_analyzer) {
+                if (d.author_analyzer.name) {
+                    d.author_analyzer.name = this.cleanAuthorName(d.author_analyzer.name);
+                }
+                if (d.author_analyzer.author_name) {
+                    d.author_analyzer.author_name = this.cleanAuthorName(d.author_analyzer.author_name);
+                }
+            }
         }
         
         this.updateTrustScore(trustScore);
@@ -365,7 +455,7 @@ class TruthLensAnalyzer {
             }
         }
         
-        // Update basic info
+        // Update basic info with cleaned author
         const summaryEl = document.getElementById('articleSummary');
         if (summaryEl) {
             summaryEl.textContent = articleSummary.length > 100 ? 
@@ -376,9 +466,9 @@ class TruthLensAnalyzer {
         if (sourceEl) sourceEl.textContent = source;
         
         const authorEl = document.getElementById('articleAuthor');
-        if (authorEl) authorEl.textContent = author;
+        if (authorEl) authorEl.textContent = cleanedAuthor;
         
-        // CRITICAL FIX: Force update findings with inline styles to override everything
+        // Update findings
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
             findingsEl.innerHTML = '';
@@ -398,10 +488,10 @@ class TruthLensAnalyzer {
             `);
         }
         
-        // FIX: Clean up any unwanted text in the enhanced overview
+        // Clean up any unwanted text
         this.cleanupUnwantedText();
         
-        // Update the enhanced trust display if it exists
+        // Update enhanced trust display
         if (typeof updateEnhancedTrustDisplay === 'function') {
             updateEnhancedTrustDisplay(data);
             // Override findings again after HTML script runs
@@ -414,12 +504,12 @@ class TruthLensAnalyzer {
             }, 100);
         }
         
-        // CRITICAL FIX: Ensure source rankings display
+        // Display source rankings
         setTimeout(() => {
             this.displaySourceRankings(source, trustScore);
         }, 200);
         
-        // Use display methods from ServiceTemplates
+        // Use display methods from ServiceTemplates - pass cleaned data
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
         }
@@ -427,11 +517,9 @@ class TruthLensAnalyzer {
         this.showResults();
     }
 
-    // NEW METHOD: Remove unwanted text from enhanced overview
     cleanupUnwantedText() {
         const overview = document.querySelector('.enhanced-analysis-overview');
         if (overview) {
-            // Walk through all text nodes in the overview
             const walker = document.createTreeWalker(
                 overview,
                 NodeFilter.SHOW_TEXT,
@@ -441,13 +529,11 @@ class TruthLensAnalyzer {
             
             let node;
             while (node = walker.nextNode()) {
-                // Remove text that matches unwanted format
                 if (node.textContent.includes('Trust Score:') && 
                     node.textContent.includes('Fact Check:') &&
                     node.textContent.includes('|')) {
                     node.textContent = '';
                 }
-                // Also remove if it has the specific format
                 if (node.textContent.includes('/100 (Medium)') ||
                     node.textContent.includes('% verified')) {
                     node.textContent = '';
@@ -479,9 +565,7 @@ class TruthLensAnalyzer {
         }
     }
 
-    // FIXED: Compact source rankings with filter support - FORCE DISPLAY
     displaySourceRankings(currentSource = null, currentScore = null) {
-        // Create rankings if they don't exist
         let rankingsContainer = document.getElementById('sourceRankings');
         if (!rankingsContainer) {
             this.createSourceRankingsSection();
@@ -491,31 +575,26 @@ class TruthLensAnalyzer {
         const rankingsChart = document.getElementById('rankingsChart');
         if (!rankingsContainer || !rankingsChart) return;
 
-        // CRITICAL: Force visibility
         rankingsContainer.style.display = 'block';
         rankingsContainer.style.visibility = 'visible';
         rankingsContainer.style.opacity = '1';
         rankingsChart.innerHTML = '';
 
-        // Filter sources based on current filter
         let rankingsToDisplay = Object.entries(this.sourceRankingsData)
             .filter(([domain, data]) => {
                 if (this.currentFilter === 'all') return true;
                 return data.category === this.currentFilter;
             })
             .sort((a, b) => b[1].score - a[1].score)
-            .slice(0, 5); // Show only top 5 for compact display
+            .slice(0, 5);
 
-        // Add or mark current source
         if (currentSource && currentScore !== null) {
             const domain = this.extractDomain(currentSource);
             const existingIndex = rankingsToDisplay.findIndex(([d]) => d === domain);
             
             if (existingIndex >= 0) {
-                // Mark existing source as current
                 rankingsToDisplay[existingIndex][1].isCurrent = true;
             } else {
-                // Add new source if not in top 5
                 const category = this.guessCategory(domain);
                 if (this.currentFilter === 'all' || category === this.currentFilter) {
                     const newEntry = [
@@ -535,13 +614,11 @@ class TruthLensAnalyzer {
             }
         }
 
-        // Create compact ranking items
         rankingsToDisplay.forEach(([domain, data], index) => {
             const rankItem = this.createCompactRankingItem(domain, data, index);
             rankingsChart.appendChild(rankItem);
         });
 
-        // Add "show more" option if there are more sources
         const totalInCategory = Object.values(this.sourceRankingsData)
             .filter(data => this.currentFilter === 'all' || data.category === this.currentFilter)
             .length;
@@ -553,7 +630,6 @@ class TruthLensAnalyzer {
             rankingsChart.appendChild(showMore);
         }
 
-        // Animate in
         setTimeout(() => {
             rankingsChart.querySelectorAll('.ranking-item-compact').forEach((item, index) => {
                 setTimeout(() => {
@@ -585,7 +661,6 @@ class TruthLensAnalyzer {
     }
 
     guessCategory(domain) {
-        // List of known mainstream domains
         const mainstream = ['cnn', 'fox', 'nbc', 'cbs', 'abc', 'nytimes', 'wsj', 'washingtonpost', 
                           'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico', 'thehill'];
         
@@ -659,7 +734,7 @@ class TruthLensAnalyzer {
     }
 
     showDebugInfo(data) {
-        // COMPLETELY DISABLED - No debug info in any environment
+        // Debug info disabled in production
         return;
     }
 
