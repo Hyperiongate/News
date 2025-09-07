@@ -965,8 +965,23 @@ class TruthLensAnalyzer {
     }
 
     displayAllServiceAnalyses(data) {
-        console.log('=== Displaying All Service Analyses ===');
+        console.log('=== FULL ANALYSIS DATA DIAGNOSTIC ===');
+        console.log('Complete response data:', data);
+        console.log('Response data keys:', Object.keys(data));
+        
         const detailed_analysis = data.detailed_analysis || {};
+        console.log('Detailed analysis object:', detailed_analysis);
+        console.log('Detailed analysis keys:', Object.keys(detailed_analysis));
+        
+        // Log each service's data
+        console.log('Service data breakdown:');
+        Object.entries(detailed_analysis).forEach(([service, serviceData]) => {
+            console.log(`  ${service}:`, serviceData);
+        });
+        
+        // Specific author data check
+        console.log('Author analyzer data:', detailed_analysis.author_analyzer);
+        console.log('Top-level author field:', data.author);
         
         this.displaySourceCredibility(detailed_analysis.source_credibility || {});
         this.displayBiasDetection(detailed_analysis.bias_detector || {});
@@ -1148,10 +1163,23 @@ class TruthLensAnalyzer {
 
     displayAuthorAnalysis(data, fallbackAuthor) {
         // FIX 7: Complete author information display
-        const authorName = data.author_name || data.name || fallbackAuthor || 'Unknown';
-        const authorScore = data.score || 0;
-        const authorPosition = data.position || data.title || 'Writer';
-        const authorBio = data.bio || data.biography || '';
+        // Handle cases where author name might be duplicated or concatenated
+        let authorName = data.author_name || data.name || fallbackAuthor || 'Unknown';
+        
+        // Fix duplicated author names (e.g., "Mary Clare Jalonick, Associated PressMary Clare Jalonick, Associated Press")
+        if (authorName.length > 50 && authorName.indexOf(authorName.substring(0, 20)) > 20) {
+            // Check if the name appears to be duplicated
+            const halfLength = Math.floor(authorName.length / 2);
+            const firstHalf = authorName.substring(0, halfLength);
+            const secondHalf = authorName.substring(halfLength);
+            if (firstHalf === secondHalf || firstHalf.includes(secondHalf.split(',')[0])) {
+                authorName = firstHalf;
+            }
+        }
+        
+        const authorScore = data.score || data.credibility_score || 0;
+        const authorPosition = data.position || data.title || data.role || 'Writer';
+        const authorBio = data.bio || data.biography || data.description || '';
         
         document.getElementById('authorName').textContent = authorName;
         document.getElementById('authorPosition').textContent = authorPosition;
