@@ -1,9 +1,10 @@
 /**
- * TruthLens Service Templates - ENHANCED VERSION
+ * TruthLens Service Templates - ENHANCED VERSION WITH SOURCE RANKINGS
  * Date: September 7, 2025
- * Last Updated: September 7, 2025
+ * Last Updated: December 18, 2024
  * 
  * ENHANCEMENTS:
+ * - Added Source Credibility Rankings Chart (Top 10 + Current Source)
  * - Complete author intelligence display
  * - Trust indicators and red flags
  * - AI assessment display
@@ -13,6 +14,34 @@
  */
 
 window.ServiceTemplates = {
+    
+    // Source database for rankings (top sources with scores)
+    sourceRankings: [
+        { name: 'Reuters', score: 95 },
+        { name: 'Associated Press', score: 94 },
+        { name: 'BBC', score: 92 },
+        { name: 'NPR', score: 90 },
+        { name: 'ProPublica', score: 89 },
+        { name: 'The Guardian', score: 85 },
+        { name: 'The New York Times', score: 83 },
+        { name: 'The Washington Post', score: 82 },
+        { name: 'The Wall Street Journal', score: 80 },
+        { name: 'The Economist', score: 78 },
+        { name: 'USA Today', score: 75 },
+        { name: 'CBS News', score: 73 },
+        { name: 'ABC News', score: 72 },
+        { name: 'NBC News', score: 71 },
+        { name: 'CNN', score: 65 },
+        { name: 'Fox News', score: 62 },
+        { name: 'MSNBC', score: 60 },
+        { name: 'HuffPost', score: 55 },
+        { name: 'Vox', score: 52 },
+        { name: 'BuzzFeed', score: 45 },
+        { name: 'Daily Mail', score: 38 },
+        { name: 'New York Post', score: 35 },
+        { name: 'Breitbart', score: 25 },
+        { name: 'InfoWars', score: 10 }
+    ],
     
     getTemplate(serviceId) {
         const templates = {
@@ -49,6 +78,19 @@ window.ServiceTemplates = {
                     <div class="metric-label">Domain Age</div>
                     <div class="metric-value" id="sourceDomainAge">Unknown</div>
                     <div class="metric-description">Website establishment timeline</div>
+                </div>
+            </div>
+            
+            <!-- NEW: Source Rankings Chart -->
+            <div class="source-rankings-compact" id="sourceRankingsChart" style="display: none;">
+                <div class="rankings-header-compact">
+                    <h3 class="rankings-title-compact">
+                        <i class="fas fa-trophy"></i>
+                        Source Credibility Rankings
+                    </h3>
+                </div>
+                <div class="rankings-chart-compact" id="rankingsChartContent">
+                    <!-- Chart items will be inserted here dynamically -->
                 </div>
             </div>
             
@@ -449,12 +491,15 @@ window.ServiceTemplates = {
         this.displayAuthorAnalysis(detailed_analysis.author_analyzer || {}, data.author, analyzer);
     },
 
-    // [Keep all other display methods unchanged...]
+    // Enhanced displaySourceCredibility with rankings chart
     displaySourceCredibility(data, analyzer) {
         const score = data.score || data.credibility_score || 0;
         const rating = data.credibility || data.credibility_level || 'Unknown';
         const biasLevel = data.bias || data.bias_level || 'Unknown';
         const domainAge = data.domain_age_days ? this.formatDomainAge(data.domain_age_days) : 'Unknown';
+        
+        // Get the current source name
+        const currentSourceName = data.source_name || data.source || 'Unknown Source';
         
         const whatWeLooked = data.analysis?.what_we_looked || 
             "We evaluated the news source's historical accuracy, editorial standards, ownership transparency, correction policies, and journalistic practices.";
@@ -466,6 +511,9 @@ window.ServiceTemplates = {
         document.getElementById('sourceCredibilityRating').textContent = rating;
         document.getElementById('sourceBiasLevel').textContent = biasLevel;
         document.getElementById('sourceDomainAge').textContent = domainAge;
+        
+        // Display the rankings chart
+        this.displaySourceRankingsChart(currentSourceName, score);
         
         const findingsContainer = document.getElementById('sourceCredibilityFindings');
         if (findingsContainer) {
@@ -489,6 +537,93 @@ window.ServiceTemplates = {
         
         document.getElementById('sourceCredibilityInterpretation').textContent = 
             data.interpretation || `${whatWeFound} ${whatItMeans}`;
+    },
+
+    // NEW METHOD: Display Source Rankings Chart
+    displaySourceRankingsChart(currentSourceName, currentScore) {
+        const chartContainer = document.getElementById('sourceRankingsChart');
+        const chartContent = document.getElementById('rankingsChartContent');
+        
+        if (!chartContainer || !chartContent) return;
+        
+        // Show the chart
+        chartContainer.style.display = 'block';
+        chartContent.innerHTML = '';
+        
+        // Get top 10 sources
+        let topSources = [...this.sourceRankings]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+        
+        // Check if current source is in top 10
+        const currentInTop = topSources.find(s => 
+            s.name.toLowerCase() === currentSourceName.toLowerCase() ||
+            currentSourceName.toLowerCase().includes(s.name.toLowerCase())
+        );
+        
+        // If current source isn't in top 10, add it
+        if (!currentInTop && currentSourceName !== 'Unknown Source') {
+            // Find where it should be inserted based on score
+            let insertIndex = topSources.findIndex(s => s.score < currentScore);
+            if (insertIndex === -1) insertIndex = topSources.length;
+            
+            // If it belongs in top 10, replace the last item
+            if (insertIndex < 10) {
+                topSources.splice(insertIndex, 0, {
+                    name: currentSourceName,
+                    score: currentScore,
+                    isCurrent: true
+                });
+                topSources = topSources.slice(0, 10);
+            } else {
+                // Add at the end as 11th item
+                topSources.push({
+                    name: currentSourceName,
+                    score: currentScore,
+                    isCurrent: true
+                });
+            }
+        } else if (currentInTop) {
+            // Mark the current source
+            currentInTop.isCurrent = true;
+        }
+        
+        // Create chart items
+        topSources.forEach((source, index) => {
+            const rankItem = document.createElement('div');
+            rankItem.className = 'ranking-item-compact';
+            
+            // Determine trust level for coloring
+            let trustLevel = '';
+            if (source.score >= 80) trustLevel = 'highly-trusted';
+            else if (source.score >= 60) trustLevel = 'trusted';
+            else if (source.score >= 40) trustLevel = 'moderate';
+            else trustLevel = 'low';
+            
+            rankItem.classList.add(trustLevel);
+            
+            // Add current source class if applicable
+            if (source.isCurrent) {
+                rankItem.classList.add('current-source');
+            }
+            
+            rankItem.innerHTML = `
+                <span class="rank-number">${index + 1}</span>
+                <span class="source-name-compact">${source.name}</span>
+                <div class="score-bar-compact">
+                    <div class="score-fill" style="width: ${source.score}%"></div>
+                </div>
+                <span class="score-value">${source.score}</span>
+                ${source.isCurrent ? '<span class="current-badge">CURRENT</span>' : ''}
+            `;
+            
+            chartContent.appendChild(rankItem);
+            
+            // Animate in
+            setTimeout(() => {
+                rankItem.classList.add('animate-in');
+            }, index * 50);
+        });
     },
 
     displayBiasDetection(data, analyzer) {
@@ -534,6 +669,7 @@ window.ServiceTemplates = {
             data.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
+    // [Keep all other display methods unchanged from original...]
     displayFactChecking(data, analyzer) {
         const claimsAnalyzed = data.claims_found || data.claims_analyzed || 0;
         const claimsVerified = data.claims_verified || 0;
@@ -739,7 +875,7 @@ window.ServiceTemplates = {
             contentData.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
-    // ENHANCED Author Analysis Display
+    // [Keep all other methods unchanged from original...]
     displayAuthorAnalysis(data, fallbackAuthor, analyzer) {
         console.log('=== Displaying Enhanced Author Analysis ===');
         console.log('Author data:', data);
@@ -855,7 +991,7 @@ window.ServiceTemplates = {
         this.displayAuthorAwards(awards);
     },
 
-    // New helper methods for enhanced display
+    // [Keep all helper methods unchanged from original...]
     generateTrustReasoning(score, data) {
         if (score >= 80) {
             return "Highly credible journalist with extensive track record and verification.";
@@ -971,7 +1107,6 @@ window.ServiceTemplates = {
         return 'Website';
     },
 
-    // [Keep all other helper methods unchanged...]
     updateAuthorCredibilityStyle(score) {
         const scoreEl = document.getElementById('authorCredibilityScore');
         if (!scoreEl) return;
@@ -1055,7 +1190,6 @@ window.ServiceTemplates = {
         }
     },
 
-    // [Keep all other existing helper methods...]
     generateCredibilityFindings(score, rating, biasLevel, data) {
         const inDatabase = data.in_database ? "is listed in our credibility database" : "is not found in major credibility databases";
         if (score >= 80) {
@@ -1233,4 +1367,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('Enhanced service templates loaded successfully');
+console.log('Enhanced service templates with source rankings loaded successfully');
