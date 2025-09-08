@@ -215,7 +215,9 @@ class AuthorAnalyzer:
     
     def _parse_authors_fixed(self, author_string: str) -> List[str]:
         """
-        FIX for concatenated names like "Gregorianandadam"
+        FIX for concatenated names - handles complex cases like:
+        - "Kyle Stewart,julie Tsirkinanddareh Gregorian"
+        - "Dareh Gregorianandadam Reiss"
         """
         if not author_string or not isinstance(author_string, str):
             return []
@@ -228,18 +230,24 @@ class AuthorAnalyzer:
         if not author or author.lower() in ['unknown', 'staff', 'editor', 'admin', 'staff writer']:
             return []
         
-        # FIX: Handle concatenated names - look for 'and' without spaces
-        # This handles "Gregorianandadam" -> "Gregorian and adam"
-        # First handle capital letter cases
-        author = re.sub(r'([a-z])and([A-Z])', r'\1 and \2', author)
-        # Then handle lowercase (like "andadam")
+        # FIX: Handle concatenated names with "and" - multiple patterns
+        # Pattern 1: lowercase letter + "and" + lowercase letter (like "kinand")
         author = re.sub(r'([a-z])and([a-z])', r'\1 and \2', author)
+        # Pattern 2: lowercase letter + "and" + capital letter (like "kinandDareh")
+        author = re.sub(r'([a-z])and([A-Z])', r'\1 and \2', author)
+        # Pattern 3: capital letter + "and" + lowercase letter
+        author = re.sub(r'([A-Z])and([a-z])', r'\1 and \2', author)
         
-        # Now split properly
+        # Handle comma+and combinations (like ",julie" should be ", Julie")
+        author = re.sub(r',([a-z])', r', \1', author)  # Add space after comma if missing
+        
+        # Now split by both comma and "and"
+        # First normalize separators
+        author = author.replace(',', ' and ')  # Convert commas to 'and' for consistent splitting
+        
+        # Split on 'and' (case insensitive)
         if ' and ' in author.lower():
             parts = re.split(r'\s+and\s+', author, flags=re.IGNORECASE)
-        elif ',' in author:
-            parts = author.split(',')
         else:
             parts = [author]
         
@@ -248,15 +256,20 @@ class AuthorAnalyzer:
         for part in parts:
             part = part.strip()
             if part and len(part) > 2:
-                # Fix casing - capitalize first letter of each word
+                # Fix casing - proper title case for names
                 words = part.split()
                 fixed_words = []
                 for word in words:
                     if word:
-                        # Capitalize first letter, keep rest as is
-                        fixed_words.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
+                        # Capitalize first letter of each word
+                        if word[0].islower():
+                            word = word[0].upper() + word[1:] if len(word) > 1 else word.upper()
+                        fixed_words.append(word)
                 part = ' '.join(fixed_words)
-                authors.append(part)
+                
+                # Validate it looks like a name
+                if re.search(r'[A-Za-z]', part) and not part.lower() in ['staff', 'editor', 'unknown']:
+                    authors.append(part)
         
         return authors if authors else []
     
