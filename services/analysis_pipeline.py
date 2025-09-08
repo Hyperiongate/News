@@ -1,399 +1,387 @@
 """
-Analysis Pipeline - FIXED WITH AUTHOR ANALYZER
-Date: September 7, 2025
-Last Updated: September 7, 2025
+Isolated Analysis Pipeline - ARCHITECTURAL FIX
+Date: 2025-01-27
+Author: System Architect
 
-CRITICAL FIXES:
-1. Fixed 'core_results' referenced before assignment bug
-2. Author analyzer now properly included in core services
-3. Moved manual author_analyzer creation to after core_results is defined
-4. Fixed service data extraction to handle all return formats
-5. Proper timeout handling for each service
-6. Better error recovery and logging
+PROBLEM SOLVED:
+- Services no longer depend on each other's output format
+- Each service gets clean, immutable input data
+- Failures are isolated and don't cascade
+- Services can be modified independently without breaking others
 
-Notes:
-- Author analyzer runs in parallel with other core services
-- Each service has individual timeout protection
-- Proper data extraction from BaseAnalyzer wrapper format
+KEY CHANGES:
+1. Each service receives the SAME original article data
+2. No service modifies shared state
+3. Results are aggregated AFTER all services complete
+4. Proper error boundaries prevent cascade failures
+5. Service results are validated before use
 """
+
 import time
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 import traceback
+from copy import deepcopy
+from dataclasses import dataclass, field
+from enum import Enum
 
 from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
 
 
-class AnalysisPipeline:
+class ServiceStatus(Enum):
+    """Service execution status"""
+    SUCCESS = "success"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass
+class ServiceResult:
+    """Encapsulates a service result with metadata"""
+    service_name: str
+    status: ServiceStatus
+    data: Dict[str, Any] = field(default_factory=dict)
+    error: Optional[str] = None
+    execution_time: float = 0.0
+    
+    @property
+    def is_successful(self) -> bool:
+        return self.status == ServiceStatus.SUCCESS
+
+
+@dataclass
+class IsolatedServiceContext:
+    """Immutable context for service execution"""
+    article_data: Dict[str, Any]
+    original_request: Dict[str, Any]
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_service_input(self) -> Dict[str, Any]:
+        """Create immutable input for a service"""
+        # Deep copy to ensure immutability
+        return deepcopy({
+            **self.article_data,
+            **self.original_request,
+            'article': self.article_data,  # Some services expect this
+            'metadata': self.metadata
+        })
+
+
+class ServiceIsolator:
+    """Isolates service execution to prevent cascade failures"""
+    
+    def __init__(self, service_name: str, service_instance: Any):
+        self.service_name = service_name
+        self.service = service_instance
+        self.timeout = self._get_timeout()
+    
+    def _get_timeout(self) -> int:
+        """Get service timeout from config"""
+        from config import Config
+        service_config = Config.get_service_config(self.service_name)
+        return service_config.timeout if service_config else 30
+    
+    def execute(self, context: IsolatedServiceContext) -> ServiceResult:
+        """Execute service in isolation"""
+        start_time = time.time()
+        
+        try:
+            # Check if service is available
+            if not self._is_available():
+                return ServiceResult(
+                    service_name=self.service_name,
+                    status=ServiceStatus.UNAVAILABLE,
+                    error="Service not available"
+                )
+            
+            # Create immutable input data
+            input_data = context.to_service_input()
+            
+            # Execute with timeout protection
+            result = self._execute_with_timeout(input_data)
+            
+            # Validate and normalize result
+            if self._validate_result(result):
+                return ServiceResult(
+                    service_name=self.service_name,
+                    status=ServiceStatus.SUCCESS,
+                    data=self._extract_data(result),
+                    execution_time=time.time() - start_time
+                )
+            else:
+                return ServiceResult(
+                    service_name=self.service_name,
+                    status=ServiceStatus.FAILED,
+                    error="Invalid result format",
+                    execution_time=time.time() - start_time
+                )
+                
+        except TimeoutError:
+            return ServiceResult(
+                service_name=self.service_name,
+                status=ServiceStatus.TIMEOUT,
+                error=f"Service timed out after {self.timeout}s",
+                execution_time=self.timeout
+            )
+        except Exception as e:
+            logger.error(f"Service {self.service_name} failed: {e}")
+            return ServiceResult(
+                service_name=self.service_name,
+                status=ServiceStatus.FAILED,
+                error=str(e),
+                execution_time=time.time() - start_time
+            )
+    
+    def _is_available(self) -> bool:
+        """Check if service is available"""
+        try:
+            return hasattr(self.service, 'is_available') and self.service.is_available
+        except:
+            return False
+    
+    def _execute_with_timeout(self, input_data: Dict[str, Any]) -> Any:
+        """Execute service with timeout"""
+        import concurrent.futures
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self.service.analyze, input_data)
+            return future.result(timeout=self.timeout)
+    
+    def _validate_result(self, result: Any) -> bool:
+        """Validate service result structure"""
+        if not isinstance(result, dict):
+            return False
+        
+        # Check for required fields
+        if 'success' not in result:
+            return False
+        
+        # If not successful, it's still valid (contains error info)
+        if not result['success']:
+            return True
+        
+        # For successful results, check for data
+        return 'data' in result or 'score' in result or 'analysis' in result
+    
+    def _extract_data(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract and normalize service data"""
+        # Handle different result formats
+        if 'data' in result:
+            return result['data']
+        elif 'analysis' in result:
+            return result['analysis']
+        else:
+            # Return everything except metadata
+            return {k: v for k, v in result.items() 
+                   if k not in ['success', 'service', 'timestamp', 'available']}
+
+
+class IsolatedAnalysisPipeline:
     """
-    FIXED: Pipeline with proper author analyzer integration
+    New pipeline architecture with complete service isolation
     """
+    
+    # Service execution order (dependencies)
+    STAGE_DEPENDENCIES = {
+        'extraction': [],  # No dependencies
+        'core_analysis': ['extraction'],  # Depends on extraction
+        'fact_checking': ['extraction'],  # Depends on extraction
+        'enhancement': ['extraction', 'core_analysis']  # Depends on both
+    }
+    
+    # Service to stage mapping
+    SERVICE_STAGES = {
+        'article_extractor': 'extraction',
+        'source_credibility': 'core_analysis',
+        'author_analyzer': 'core_analysis',
+        'bias_detector': 'core_analysis',
+        'transparency_analyzer': 'core_analysis',
+        'manipulation_detector': 'core_analysis',
+        'content_analyzer': 'core_analysis',
+        'fact_checker': 'fact_checking',
+        'openai_enhancer': 'enhancement'
+    }
     
     def __init__(self):
         self.registry = get_service_registry()
         self.executor = ThreadPoolExecutor(max_workers=8)
-        logger.info("AnalysisPipeline initialized with author analyzer support")
-        
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        logger.info("IsolatedAnalysisPipeline initialized")
+    
+    def analyze(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main analysis method with author analyzer included
+        Main analysis method with complete service isolation
         """
         start_time = time.time()
+        request_id = request_data.get('request_id', 'unknown')
+        
         logger.info("=" * 80)
-        logger.info("STARTING FIXED ANALYSIS PIPELINE")
-        logger.info(f"Input data keys: {list(data.keys())}")
+        logger.info(f"[{request_id}] ISOLATED PIPELINE STARTING")
+        logger.info(f"Input type: {'URL' if 'url' in request_data else 'Text'}")
         logger.info("=" * 80)
         
-        # Initialize results structure
-        results = {
-            'success': True,
+        # Initialize response
+        response = {
+            'success': False,
             'article': {},
             'trust_score': 50,
             'trust_level': 'Unknown',
-            'summary': 'Analysis in progress...',
-            'services_available': 0,
             'detailed_analysis': {},
-            'errors': []
+            'errors': [],
+            'metadata': {
+                'pipeline_version': '2.0',
+                'isolated_execution': True
+            }
         }
         
         try:
-            # Stage 1: Article Extraction (sequential - required first)
-            logger.info("STAGE 1: Article Extraction")
-            article_result = self._extract_article(data)
+            # Stage 1: Article Extraction (Sequential - Required)
+            extraction_result = self._extract_article(request_data)
             
-            if not article_result or not article_result.get('success'):
-                error_msg = article_result.get('error', 'Article extraction failed') if article_result else 'No article data'
-                logger.error(f"Article extraction failed: {error_msg}")
-                results.update({
-                    'success': False,
-                    'error': 'Article extraction failed',
-                    'summary': 'Could not extract article content'
-                })
-                return results
+            if not extraction_result.is_successful:
+                response['success'] = False
+                response['errors'].append(f"Extraction failed: {extraction_result.error}")
+                return response
             
-            # Extract article data
-            article_data = self._extract_article_data_fixed(article_result)
-            results['article'] = article_data
-            logger.info(f"✓ Article extracted: '{article_data.get('title', 'No title')[:50]}...'")
-            logger.info(f"✓ Author found: {article_data.get('author', 'Unknown')}")
-            logger.info(f"✓ Domain: {article_data.get('domain', 'Unknown')}")
+            # Create immutable context for all services
+            context = IsolatedServiceContext(
+                article_data=extraction_result.data,
+                original_request=request_data,
+                metadata={'extraction_time': extraction_result.execution_time}
+            )
             
-            # Create enriched data for other services
-            enriched_data = {**data}
-            enriched_data.update(article_data)
-            enriched_data['article'] = article_data
+            response['article'] = extraction_result.data
+            logger.info(f"✓ Article extracted: {extraction_result.data.get('title', 'Unknown')[:50]}...")
             
-            # Stage 2: Core Analysis Services (parallel) - INCLUDING AUTHOR ANALYZER
-            logger.info("STAGE 2: Core Analysis Services")
-            core_services = [
-                'source_credibility', 
-                'author_analyzer',  # FIXED: Author analyzer is now included
-                'bias_detector', 
-                'transparency_analyzer', 
-                'manipulation_detector', 
-                'content_analyzer'
-            ]
+            # Stage 2: Parallel Analysis with Isolation
+            analysis_results = self._run_analysis_services(context)
             
-            # Log which services are available
-            available_core = [s for s in core_services if self.registry.is_service_available(s)]
-            logger.info(f"Available core services: {available_core}")
-            
-            # Run core services in parallel
-            core_results = self._run_services_parallel(core_services, enriched_data)
-            
-            # FIXED: If author_analyzer not in registry, try to create it directly AFTER core_results exists
-            if 'author_analyzer' not in available_core and 'author_analyzer' not in core_results:
-                logger.warning("author_analyzer not in registry - creating directly")
-                try:
-                    from services.author_analyzer import AuthorAnalyzer
-                    analyzer = AuthorAnalyzer()
-                    result = analyzer.analyze(enriched_data)
-                    if result and result.get('success'):
-                        # Add to results manually - core_results now exists
-                        core_results['author_analyzer'] = result
-                        logger.info("✓ author_analyzer created and ran successfully")
-                except Exception as e:
-                    logger.error(f"Failed to create author_analyzer: {e}")
-                    # Log the full traceback for debugging
-                    logger.error(traceback.format_exc())
-            
-            # Stage 3: Fact Checking
-            logger.info("STAGE 3: Fact Checking")
-            fact_results = self._run_services_parallel(['fact_checker'], enriched_data)
-            
-            # Stage 4: AI Enhancement (if pro mode)
-            ai_results = {}
-            if data.get('is_pro', False):
-                logger.info("STAGE 4: AI Enhancement")
-                ai_results = self._run_services_parallel(['openai_enhancer'], enriched_data)
-            
-            # Combine all service results
-            all_services = {}
-            all_services.update(core_results)
-            all_services.update(fact_results)
-            all_services.update(ai_results)
-            
-            # Process service results into detailed_analysis
-            detailed_analysis = {}
-            for service_name, service_result in all_services.items():
-                logger.info(f"\n=== PROCESSING {service_name.upper()} ===")
-                
-                if not service_result:
-                    logger.warning(f"✗ {service_name}: No result")
-                    continue
-                
-                # Extract the actual analysis data
-                service_data = self._extract_service_data_fixed(service_name, service_result)
-                
-                if service_data:
-                    detailed_analysis[service_name] = service_data
-                    score = service_data.get('score', service_data.get(f'{service_name}_score', 0))
-                    logger.info(f"✓ {service_name}: Processed successfully (score: {score})")
+            # Stage 3: Process Results (No Inter-Service Dependencies)
+            for service_name, result in analysis_results.items():
+                if result.is_successful:
+                    response['detailed_analysis'][service_name] = result.data
+                    logger.info(f"✓ {service_name}: Success")
                 else:
-                    logger.warning(f"✗ {service_name}: Failed to extract data")
+                    logger.warning(f"✗ {service_name}: {result.status.value} - {result.error}")
+                    response['errors'].append(f"{service_name}: {result.error}")
             
-            # Check if author_analyzer is in the results
-            if 'author_analyzer' not in detailed_analysis:
-                logger.warning("Author analyzer NOT in detailed_analysis!")
-            else:
-                logger.info("✓ Author analyzer successfully included in detailed_analysis")
+            # Stage 4: Calculate Trust Score (From Independent Results)
+            response['trust_score'] = self._calculate_trust_score(response['detailed_analysis'])
+            response['trust_level'] = self._get_trust_level(response['trust_score'])
             
-            # Calculate trust score
-            trust_score = self._calculate_trust_score(detailed_analysis)
+            # Mark as successful if we got meaningful results
+            response['success'] = len(response['detailed_analysis']) >= 3
             
-            # Determine trust level
-            if trust_score >= 80:
-                trust_level = 'Very High'
-            elif trust_score >= 60:
-                trust_level = 'High'  
-            elif trust_score >= 40:
-                trust_level = 'Medium'
-            elif trust_score >= 20:
-                trust_level = 'Low'
-            else:
-                trust_level = 'Very Low'
-            
-            # Update results
-            results.update({
-                'success': True,
-                'article': article_data,
-                'trust_score': trust_score,
-                'trust_level': trust_level,
-                'summary': f"Analysis complete - Trust Score: {trust_score}/100",
-                'detailed_analysis': detailed_analysis,
-                'services_available': len(detailed_analysis)
+            # Add metadata
+            response['metadata'].update({
+                'processing_time': time.time() - start_time,
+                'services_succeeded': len(response['detailed_analysis']),
+                'services_failed': len(response['errors'])
             })
             
-            processing_time = time.time() - start_time
             logger.info("=" * 80)
-            logger.info("FIXED PIPELINE COMPLETE")
-            logger.info(f"Time: {processing_time:.2f}s | Services: {len(detailed_analysis)} | Trust: {trust_score}")
-            logger.info(f"Final article title: {article_data.get('title', 'Unknown')}")
-            logger.info(f"Final article author: {article_data.get('author', 'Unknown')}")
+            logger.info(f"[{request_id}] PIPELINE COMPLETE")
+            logger.info(f"Services: {len(response['detailed_analysis'])} succeeded, {len(response['errors'])} failed")
+            logger.info(f"Trust Score: {response['trust_score']}/100")
+            logger.info(f"Time: {response['metadata']['processing_time']:.2f}s")
             logger.info("=" * 80)
             
-            return results
+            return response
             
         except Exception as e:
-            logger.error(f"Pipeline error: {str(e)}", exc_info=True)
-            results['success'] = False
-            results['error'] = str(e)
-            return results
+            logger.error(f"Pipeline critical error: {e}", exc_info=True)
+            response['success'] = False
+            response['errors'].append(f"Pipeline error: {str(e)}")
+            return response
     
-    def _extract_article(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract article with article_extractor service"""
-        # CRITICAL FIX: Try direct import if registry says unavailable
-        if not self.registry.is_service_available('article_extractor'):
-            logger.warning("article_extractor not in registry - trying direct import")
-            try:
-                from services.article_extractor import ArticleExtractor
-                extractor = ArticleExtractor()
-                logger.info("✓ Direct import of ArticleExtractor successful")
-                result = extractor.analyze(data)
-                return result
-            except Exception as e:
-                logger.error(f"Direct import failed: {e}")
-                return None
-        
+    def _extract_article(self, request_data: Dict[str, Any]) -> ServiceResult:
+        """Extract article with isolation"""
         try:
-            result = self.registry.analyze_with_service('article_extractor', data)
-            return result
-        except Exception as e:
-            logger.error(f"Article extraction error: {e}")
-            return None
-    
-    def _extract_article_data_fixed(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        FIXED: Extract article data from various result formats
-        """
-        logger.info("=== EXTRACTING ARTICLE DATA ===")
-        
-        # Initialize with defaults
-        article_data = {
-            'title': 'Unknown',
-            'author': 'Unknown',
-            'content': '',
-            'text': '',
-            'url': '',
-            'domain': 'unknown',
-            'source': 'unknown',
-            'word_count': 0,
-            'publish_date': None
-        }
-        
-        # Handle different result structures
-        if 'data' in result:
-            # BaseAnalyzer format: {success: true, data: {...}}
-            data = result['data']
-            logger.info(f"Using BaseAnalyzer format with keys: {list(data.keys())[:10]}")
-        elif 'analysis_complete' in result:
-            # Direct format with analysis_complete flag
-            data = result
-            logger.info(f"Using top-level data with keys: {list(data.keys())[:10]}")
-        else:
-            # Unknown format - try to use as-is
-            data = result
-            logger.info(f"Using unknown format with keys: {list(result.keys())[:10]}")
-        
-        # Extract fields (with multiple possible key names)
-        article_data['title'] = data.get('title', data.get('headline', 'Unknown'))
-        article_data['author'] = data.get('author', data.get('authors', 'Unknown'))
-        article_data['content'] = data.get('content', data.get('text', ''))
-        article_data['text'] = data.get('text', data.get('content', ''))
-        article_data['url'] = data.get('url', data.get('link', ''))
-        article_data['domain'] = data.get('domain', data.get('source', 'unknown'))
-        article_data['source'] = data.get('source', data.get('domain', 'unknown'))
-        article_data['word_count'] = data.get('word_count', len(article_data['content'].split()))
-        article_data['publish_date'] = data.get('publish_date', data.get('date', None))
-        
-        # Clean domain
-        article_data['domain'] = self._clean_domain(article_data['domain'])
-        article_data['source'] = article_data['domain']  # Keep them in sync
-        
-        # Log what we extracted
-        logger.info(f"✓ Extracted title: {article_data['title'][:50]}...")
-        logger.info(f"✓ Extracted author: {article_data['author']}")
-        logger.info(f"✓ Extracted domain: {article_data['domain']}")
-        logger.info(f"✓ Word count: {article_data['word_count']}")
-        
-        return article_data
-    
-    def _clean_domain(self, domain: str) -> str:
-        """Clean domain name"""
-        if not domain:
-            return 'unknown'
+            # Get article extractor
+            extractor = self.registry.get_service('article_extractor')
+            if not extractor:
+                return ServiceResult(
+                    service_name='article_extractor',
+                    status=ServiceStatus.UNAVAILABLE,
+                    error="Article extractor not available"
+                )
             
-        # Remove www. prefix
-        if domain.startswith('www.'):
-            domain = domain[4:]
-        
-        # Remove protocol if present
-        if domain.startswith('http://'):
-            domain = domain[7:]
-        elif domain.startswith('https://'):
-            domain = domain[8:]
-        
-        # Remove trailing slash
-        if domain.endswith('/'):
-            domain = domain[:-1]
-        
-        return domain
+            # Create isolator
+            isolator = ServiceIsolator('article_extractor', extractor)
+            
+            # Create minimal context for extraction
+            context = IsolatedServiceContext(
+                article_data={},
+                original_request=request_data
+            )
+            
+            # Execute with isolation
+            return isolator.execute(context)
+            
+        except Exception as e:
+            logger.error(f"Extraction failed: {e}")
+            return ServiceResult(
+                service_name='article_extractor',
+                status=ServiceStatus.FAILED,
+                error=str(e)
+            )
     
-    def _run_services_parallel(self, services: List[str], data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run services in parallel with timeout protection"""
+    def _run_analysis_services(self, context: IsolatedServiceContext) -> Dict[str, ServiceResult]:
+        """Run all analysis services in parallel with complete isolation"""
         results = {}
         futures = {}
         
-        # Submit tasks for available services
-        for service_name in services:
-            if self.registry.is_service_available(service_name):
-                logger.info(f"Submitting {service_name} to executor")
-                future = self.executor.submit(self._run_single_service, service_name, data)
-                futures[future] = service_name
-            else:
-                logger.warning(f"{service_name} is not available")
+        # Get available services
+        available_services = self.registry.get_available_services()
         
-        # Collect results with individual timeouts
-        for future in as_completed(futures, timeout=90):  # Overall timeout
+        # Submit all analysis services (except extractor and enhancer)
+        for service_name, service in available_services.items():
+            if service_name in ['article_extractor', 'openai_enhancer']:
+                continue  # Skip extraction (already done) and enhancement (do later)
+            
+            logger.info(f"Submitting {service_name} for isolated execution")
+            isolator = ServiceIsolator(service_name, service)
+            future = self.executor.submit(isolator.execute, context)
+            futures[future] = service_name
+        
+        # Collect results with timeout protection
+        for future in as_completed(futures, timeout=60):
             service_name = futures[future]
             try:
-                result = future.result(timeout=30)  # Individual service timeout
+                result = future.result(timeout=30)
                 results[service_name] = result
-                logger.info(f"✓ {service_name} completed")
-            except TimeoutError:
-                logger.warning(f"✗ {service_name} timed out")
-                results[service_name] = {
-                    'success': False,
-                    'error': 'Service timeout',
-                    'service': service_name
-                }
             except Exception as e:
-                logger.error(f"✗ {service_name} failed: {e}")
-                results[service_name] = {
-                    'success': False,
-                    'error': str(e),
-                    'service': service_name
-                }
+                logger.error(f"Failed to get result for {service_name}: {e}")
+                results[service_name] = ServiceResult(
+                    service_name=service_name,
+                    status=ServiceStatus.FAILED,
+                    error=str(e)
+                )
+        
+        # Optional: Run enhancement if available and other services succeeded
+        if len([r for r in results.values() if r.is_successful]) >= 3:
+            enhancer = self.registry.get_service('openai_enhancer')
+            if enhancer and enhancer.is_available:
+                logger.info("Running optional enhancement service")
+                isolator = ServiceIsolator('openai_enhancer', enhancer)
+                enhancement_result = isolator.execute(context)
+                if enhancement_result.is_successful:
+                    results['openai_enhancer'] = enhancement_result
         
         return results
     
-    def _run_single_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run a single service with error handling"""
-        try:
-            logger.info(f"Running {service_name}...")
-            result = self.registry.analyze_with_service(service_name, data)
-            if result:
-                logger.info(f"{service_name} returned result")
-            else:
-                logger.warning(f"{service_name} returned None")
-            return result
-        except Exception as e:
-            logger.error(f"Error in {service_name}: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'service': service_name
-            }
-    
-    def _extract_service_data_fixed(self, service_name: str, service_result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        FIXED: Extract the actual analysis data from service result
-        """
-        if not service_result:
-            return None
-        
-        # Handle error results
-        if not service_result.get('success', False):
-            return None
-        
-        # Extract data based on service response format
-        if 'data' in service_result:
-            # BaseAnalyzer format
-            return service_result['data']
-        elif 'analysis' in service_result:
-            # Some services use 'analysis' key
-            return service_result['analysis']
-        elif service_name in service_result:
-            # Service name as key
-            return service_result[service_name]
-        else:
-            # Return the whole result (minus metadata)
-            data = {k: v for k, v in service_result.items() 
-                   if k not in ['success', 'service', 'timestamp', 'available']}
-            return data if data else None
-    
     def _calculate_trust_score(self, detailed_analysis: Dict[str, Any]) -> int:
-        """Calculate weighted trust score from all services"""
+        """Calculate trust score from isolated service results"""
         weights = {
             'source_credibility': 0.25,
+            'author_analyzer': 0.15,
             'bias_detector': 0.20,
             'fact_checker': 0.15,
             'transparency_analyzer': 0.10,
             'manipulation_detector': 0.10,
-            'author_analyzer': 0.15,  # Added weight for author analyzer
             'content_analyzer': 0.05
         }
         
@@ -404,23 +392,8 @@ class AnalysisPipeline:
             if service in detailed_analysis:
                 service_data = detailed_analysis[service]
                 
-                # Extract score (different services use different keys)
-                score = None
-                if isinstance(service_data, dict):
-                    score = (service_data.get('score') or 
-                            service_data.get(f'{service}_score') or
-                            service_data.get('credibility_score') or
-                            service_data.get('trust_score') or
-                            service_data.get('overall_score') or
-                            service_data.get('combined_credibility_score'))  # For author_analyzer
-                    
-                    # Special handling for bias (inverse score)
-                    if service == 'bias_detector' and 'bias_score' in service_data:
-                        score = 100 - service_data['bias_score']
-                    
-                    # Special handling for manipulation (inverse score)
-                    if service == 'manipulation_detector' and 'manipulation_score' in service_data:
-                        score = 100 - service_data['manipulation_score']
+                # Extract score (handle different formats)
+                score = self._extract_score(service, service_data)
                 
                 if score is not None:
                     logger.info(f"Trust component {service}: {score} (weight: {weight})")
@@ -431,7 +404,73 @@ class AnalysisPipeline:
         if total_weight > 0:
             trust_score = int(weighted_sum / total_weight)
         else:
-            trust_score = 50  # Default if no services available
+            trust_score = 50  # Default
         
-        logger.info(f"Final trust score: {trust_score} (from {len(detailed_analysis)} services)")
-        return trust_score
+        return max(0, min(100, trust_score))
+    
+    def _extract_score(self, service_name: str, service_data: Dict[str, Any]) -> Optional[float]:
+        """Extract score from service data (handles various formats)"""
+        if not isinstance(service_data, dict):
+            return None
+        
+        # Standard score fields
+        for field in ['score', 'trust_score', 'credibility_score', 'overall_score']:
+            if field in service_data:
+                return float(service_data[field])
+        
+        # Service-specific fields
+        if service_name == 'bias_detector' and 'bias_score' in service_data:
+            # Invert bias score (high bias = low trust)
+            return 100 - float(service_data['bias_score'])
+        
+        if service_name == 'manipulation_detector' and 'manipulation_score' in service_data:
+            # Invert manipulation score
+            return 100 - float(service_data['manipulation_score'])
+        
+        if service_name == 'author_analyzer':
+            # Check for various author score fields
+            for field in ['combined_credibility_score', 'author_score']:
+                if field in service_data:
+                    return float(service_data[field])
+        
+        return None
+    
+    def _get_trust_level(self, score: int) -> str:
+        """Convert trust score to level"""
+        if score >= 80:
+            return 'Very High'
+        elif score >= 60:
+            return 'High'
+        elif score >= 40:
+            return 'Medium'
+        elif score >= 20:
+            return 'Low'
+        else:
+            return 'Very Low'
+
+
+# Backward Compatibility Wrapper
+class AnalysisPipeline:
+    """
+    Wrapper to maintain backward compatibility with existing code
+    while using the new isolated pipeline internally
+    """
+    
+    def __init__(self):
+        self.isolated_pipeline = IsolatedAnalysisPipeline()
+        self.registry = get_service_registry()
+        logger.info("AnalysisPipeline initialized with isolation wrapper")
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Backward compatible analyze method"""
+        # Use the isolated pipeline
+        result = self.isolated_pipeline.analyze(data)
+        
+        # Ensure backward compatibility with expected format
+        if 'summary' not in result:
+            result['summary'] = f"Analysis complete - Trust Score: {result.get('trust_score', 0)}/100"
+        
+        if 'services_available' not in result:
+            result['services_available'] = len(result.get('detailed_analysis', {}))
+        
+        return result
