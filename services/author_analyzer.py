@@ -1,9 +1,16 @@
 """
-Author Analyzer Service - ENHANCED INTELLIGENCE VERSION
+Author Analyzer Service - FIXED FOR MULTI-AUTHORS
 Date: September 7, 2025
-Last Updated: September 7, 2025
+Last Updated: September 8, 2025
 
-COMPLETE REWRITE:
+FIXES APPLIED:
+- Now properly handles multi-author articles (e.g., "Author1 and Author2")
+- Analyzes first author when multiple authors present
+- Better validation to prevent marking valid authors as "Unknown"
+- Improved author name cleaning and parsing
+- Fixed issue with BBC multi-author format
+
+Previous fixes retained:
 - Web scraping for author bio pages
 - Social media profile discovery
 - AI-powered credibility assessment
@@ -29,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 class AuthorAnalyzer:
     """
-    Enhanced author intelligence analyzer with real data
+    Enhanced author intelligence analyzer with multi-author support
     """
     
     def __init__(self):
@@ -122,32 +129,42 @@ class AuthorAnalyzer:
             logger.info("=" * 60)
             
             # Extract author and context
-            author = data.get('author', '').strip()
+            raw_author = data.get('author', '').strip()
             domain = data.get('domain', '').strip()
             article_title = data.get('title', '')
             article_content = data.get('content', '')[:2000]  # First 2000 chars for context
             
-            # Clean author name (remove "By", emails, etc.)
-            author = self._clean_author_name(author)
+            logger.info(f"Raw author string received: '{raw_author}'")
             
-            # Handle unknown or missing author
-            if not author or author.lower() in ['unknown', 'staff', 'editor', 'admin', 'unknown author']:
-                logger.info(f"No valid author to analyze: '{author}'")
+            # Clean and parse author name(s)
+            authors = self._parse_authors(raw_author)
+            
+            # If no valid authors found, return unknown result
+            if not authors:
+                logger.info(f"No valid authors found in: '{raw_author}'")
                 return self.get_success_result(self._get_unknown_author_result(domain))
             
-            logger.info(f"Analyzing author: {author} from {domain}")
+            # Analyze the first author (primary author)
+            primary_author = authors[0]
+            logger.info(f"Analyzing primary author: {primary_author} from {domain}")
+            logger.info(f"Additional authors: {authors[1:] if len(authors) > 1 else 'None'}")
             
             # Check cache
-            cache_key = f"{author}:{domain}"
+            cache_key = f"{primary_author}:{domain}"
             if cache_key in self.cache:
                 cached_time, cached_data = self.cache[cache_key]
                 if time.time() - cached_time < self.cache_ttl:
                     logger.info("Using cached author data")
+                    # Update the name field to show all authors if multiple
+                    if len(authors) > 1:
+                        cached_data['name'] = ' and '.join(authors)
                     return self.get_success_result(cached_data)
             
             # Initialize comprehensive author profile
             author_profile = {
-                'name': author,
+                'name': ' and '.join(authors) if len(authors) > 1 else primary_author,
+                'primary_author': primary_author,
+                'all_authors': authors,
                 'domain': domain,
                 'credibility_score': 0,
                 'combined_credibility_score': 0,
@@ -172,16 +189,16 @@ class AuthorAnalyzer:
             
             # Step 1: Web scraping for author bio (if available)
             if self.scraperapi_key:
-                bio_data = self._scrape_author_bio(author, domain)
+                bio_data = self._scrape_author_bio(primary_author, domain)
                 author_profile.update(bio_data)
             
             # Step 2: Search for publication history
-            pub_data = self._search_publication_history(author, domain)
+            pub_data = self._search_publication_history(primary_author, domain)
             author_profile['articles_found'] = pub_data['count']
             author_profile['recent_articles'] = pub_data['articles'][:5]
             
             # Step 3: Find social media and professional profiles
-            social_data = self._find_social_profiles(author, domain)
+            social_data = self._find_social_profiles(primary_author, domain)
             author_profile['social_profiles'] = social_data['profiles']
             author_profile['professional_links'] = social_data['links']
             
@@ -190,13 +207,13 @@ class AuthorAnalyzer:
             author_profile['expertise_areas'] = expertise
             
             # Step 5: Check for awards and recognition
-            awards = self._search_for_awards(author, domain)
+            awards = self._search_for_awards(primary_author, domain)
             author_profile['awards'] = awards
             
             # Step 6: AI-powered credibility assessment
             if self.openai_key:
                 ai_analysis = self._get_ai_credibility_assessment(
-                    author, domain, author_profile, article_title, article_content
+                    primary_author, domain, author_profile, article_title, article_content
                 )
                 author_profile.update(ai_analysis)
             
@@ -223,6 +240,10 @@ class AuthorAnalyzer:
             author_profile['trust_indicators'] = self._get_trust_indicators(author_profile)
             author_profile['red_flags'] = self._get_red_flags(author_profile)
             
+            # Note if multiple authors
+            if len(authors) > 1:
+                author_profile['trust_indicators'].append(f"Co-authored article with {len(authors)-1} other journalist(s)")
+            
             # Cache the result
             self.cache[cache_key] = (time.time(), author_profile)
             
@@ -237,28 +258,96 @@ class AuthorAnalyzer:
             logger.error(f"Enhanced author analysis error: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
+    def _parse_authors(self, author_string: str) -> List[str]:
+        """
+        Parse author string to extract individual author names
+        Handles formats like:
+        - "John Smith"
+        - "John Smith and Jane Doe"
+        - "John Smith, Jane Doe"
+        - "ByJohn Smith and Jane Doe"
+        - "Rushdi Abualouf and Wyre Davies"
+        """
+        if not author_string or not isinstance(author_string, str):
+            return []
+        
+        # Clean the string first
+        cleaned = self._clean_author_name(author_string)
+        
+        # Check if it's unknown/invalid
+        if not cleaned or cleaned.lower() in ['unknown', 'unknown author', 'staff', 'editor', 'admin']:
+            return []
+        
+        # Split by "and" or comma to handle multiple authors
+        authors = []
+        
+        # First try splitting by " and "
+        if ' and ' in cleaned:
+            parts = cleaned.split(' and ')
+        # Then try comma
+        elif ',' in cleaned:
+            parts = cleaned.split(',')
+        else:
+            parts = [cleaned]
+        
+        # Process each part
+        for part in parts:
+            part = part.strip()
+            # Validate that it looks like a real name (at least two words, contains letters)
+            if part and len(part.split()) >= 2 and re.search(r'[A-Za-z]', part):
+                # Additional validation: should not be all lowercase or all uppercase
+                if not (part.islower() or part.isupper()):
+                    authors.append(part)
+                else:
+                    # Try to fix casing
+                    fixed = ' '.join(word.capitalize() for word in part.split())
+                    authors.append(fixed)
+        
+        # If we still have no authors but have a non-empty cleaned string, use it
+        if not authors and cleaned and len(cleaned.split()) >= 2:
+            authors = [cleaned]
+        
+        return authors
+    
     def _clean_author_name(self, author: str) -> str:
         """Clean author name from various formats"""
         if not author:
-            return "Unknown"
+            return ""
         
-        # Remove "By" prefix
+        # Remove "By" prefix (case insensitive)
         author = re.sub(r'^by\s+', '', author, flags=re.IGNORECASE)
         
-        # Handle pipe-separated format
+        # Handle pipe-separated format (name|email|organization)
         if '|' in author:
-            author = author.split('|')[0]
+            parts = author.split('|')
+            author = parts[0].strip()
         
         # Remove email addresses
         author = re.sub(r'\S+@\S+\.\S+', '', author)
         
         # Remove timestamps and metadata
-        author = re.sub(r'(UPDATED|PUBLISHED|POSTED).*', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'(UPDATED|PUBLISHED|POSTED|MODIFIED).*', '', author, flags=re.IGNORECASE)
         
-        # Clean up
-        author = author.strip()
+        # Remove dates
+        author = re.sub(r'\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December).*', '', author, flags=re.IGNORECASE)
+        author = re.sub(r'\d{4}-\d{2}-\d{2}.*', '', author)
         
-        return author if author else "Unknown"
+        # Remove role descriptions that come after the name
+        author = re.sub(r',\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer|Contributing Writer).*', '', author, flags=re.IGNORECASE)
+        
+        # Remove organization names if they're appended
+        orgs = ['Chicago Tribune', 'New York Times', 'Washington Post', 'CNN', 'Fox News', 
+                'Reuters', 'Associated Press', 'AP', 'BBC', 'NPR', 'BBC News']
+        for org in orgs:
+            author = author.replace(org, '')
+        
+        # Clean up multiple spaces and trim
+        author = re.sub(r'\s+', ' ', author).strip()
+        
+        # Remove any remaining special characters at the end
+        author = re.sub(r'[,;:\-|]+$', '', author).strip()
+        
+        return author
     
     def _scrape_author_bio(self, author: str, domain: str) -> Dict[str, Any]:
         """Scrape author bio from publication website"""
@@ -445,7 +534,7 @@ class AuthorAnalyzer:
             'Crime': ['crime', 'police', 'murder', 'arrest', 'court', 'prison', 'investigation', 'fbi', 'criminal'],
             'Education': ['education', 'school', 'university', 'student', 'teacher', 'college', 'academic', 'campus'],
             'Sports': ['sport', 'game', 'player', 'team', 'champion', 'league', 'tournament', 'coach', 'athlete'],
-            'International': ['international', 'foreign', 'global', 'world', 'nation', 'country', 'diplomat', 'embassy'],
+            'International': ['international', 'foreign', 'global', 'world', 'nation', 'country', 'diplomat', 'embassy', 'war', 'conflict'],
             'Local News': ['local', 'city', 'community', 'neighborhood', 'resident', 'municipal', 'town']
         }
         
@@ -612,7 +701,7 @@ class AuthorAnalyzer:
         
         outlet_score = self.major_outlets.get(profile.get('domain', '').lower(), 0)
         if outlet_score >= 75:
-            indicators.append("Publishing at highly credible outlet")
+            indicators.append("Publishing on established outlet")
         
         return indicators
     
