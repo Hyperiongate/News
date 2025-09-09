@@ -55,9 +55,47 @@ RUN python -c "import sys; sys.exit(0)" && \
 # Copy application code
 COPY . .
 
+# CRITICAL: Verify static files exist and have content
+# This will fail the build if files are missing or empty
+RUN echo "Verifying critical static files..." && \
+    if [ ! -f static/js/app-core.js ]; then \
+        echo "ERROR: static/js/app-core.js not found!"; \
+        exit 1; \
+    fi && \
+    if [ ! -s static/js/app-core.js ]; then \
+        echo "ERROR: static/js/app-core.js is empty!"; \
+        exit 1; \
+    fi && \
+    if [ ! -f static/js/service-templates.js ]; then \
+        echo "ERROR: static/js/service-templates.js not found!"; \
+        exit 1; \
+    fi && \
+    if [ ! -s static/js/service-templates.js ]; then \
+        echo "ERROR: static/js/service-templates.js is empty!"; \
+        exit 1; \
+    fi && \
+    if [ ! -f templates/index.html ]; then \
+        echo "ERROR: templates/index.html not found!"; \
+        exit 1; \
+    fi && \
+    if [ ! -s templates/index.html ]; then \
+        echo "ERROR: templates/index.html is empty!"; \
+        exit 1; \
+    fi && \
+    echo "✓ app-core.js: $(wc -l < static/js/app-core.js) lines" && \
+    echo "✓ service-templates.js: $(wc -l < static/js/service-templates.js) lines" && \
+    echo "✓ index.html: $(wc -l < templates/index.html) lines" && \
+    echo "✓ All critical files verified!"
+
 # Create a non-root user to run the app
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
+
+# Ensure static files have correct permissions
+RUN chmod -R 755 /app/static && \
+    chmod 644 /app/static/js/*.js && \
+    chmod 644 /app/static/css/*.css && \
+    chmod 644 /app/templates/*.html
 
 # Switch to non-root user
 USER appuser
@@ -66,6 +104,11 @@ USER appuser
 ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
 ENV PYTHONDONTWRITEBYTECODE=1
+
+# Final verification as the app user
+RUN echo "Final verification as appuser:" && \
+    ls -la /app/static/js/app-core.js && \
+    ls -la /app/templates/index.html
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
