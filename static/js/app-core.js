@@ -468,6 +468,15 @@ class TruthLensAnalyzer {
         
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
+        } else {
+            console.warn('ServiceTemplates not fully loaded, retrying...');
+            setTimeout(() => {
+                if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
+                    window.ServiceTemplates.displayAllAnalyses(data, this);
+                } else {
+                    console.error('ServiceTemplates failed to load');
+                }
+            }, 500);
         }
         
         this.showResults();
