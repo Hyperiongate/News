@@ -610,7 +610,7 @@ window.ServiceTemplates = {
             rankItem.innerHTML = `
                 <span class="rank-number">${index + 1}</span>
                 <span class="source-name-compact">${source.name}</span>
-                <div class="score-bar-compact">
+                <div class="score-bar-compact" style="flex: 1; margin: 0 15px;">
                     <div class="score-fill" style="width: ${source.score}%"></div>
                 </div>
                 <span class="score-value">${source.score}</span>
