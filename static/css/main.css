@@ -1309,3 +1309,260 @@ body::before {
         padding: 2px 6px;
     }
 }
+/* Add these styles to your main.css to match the professional rankings format */
+
+/* Modern Source Rankings Styles */
+.source-rankings-compact {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    margin-top: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    width: 100%;
+}
+
+.rankings-header-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.rankings-title-compact {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rankings-title-compact i {
+    color: #f39c12;
+    font-size: 1rem;
+}
+
+/* Filter buttons (if you want to add them) */
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: none;
+    background: #e8f4fd;
+    color: #0066cc;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.filter-btn.active {
+    background: #0066cc;
+    color: white;
+}
+
+/* Ranking items with modern look */
+.ranking-item-compact {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.ranking-item-compact:hover {
+    background: #f5f5f5;
+    transform: translateX(3px);
+}
+
+.ranking-item-compact.current-source {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Rank position styling */
+.rank-position {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #999;
+    min-width: 40px;
+    text-align: center;
+}
+
+.ranking-item-compact.current-source .rank-position {
+    color: white;
+    opacity: 0.9;
+}
+
+/* Source info section */
+.source-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 250px;
+    margin-right: 20px;
+}
+
+.source-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.source-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.source-name-main {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.ranking-item-compact.current-source .source-name-main {
+    color: white;
+}
+
+.source-domain {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+.ranking-item-compact.current-source .source-domain {
+    color: rgba(255,255,255,0.8);
+}
+
+/* Modern score bar */
+.score-bar-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    margin: 0 20px;
+}
+
+.score-bar-modern {
+    flex: 1;
+    height: 32px;
+    background: #e8e8e8;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ranking-item-compact.current-source .score-bar-modern {
+    background: rgba(255,255,255,0.2);
+}
+
+.score-fill-modern {
+    height: 100%;
+    border-radius: 16px;
+    position: relative;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 12px;
+}
+
+/* Color coding for scores */
+.ranking-item-compact.highly-trusted .score-fill-modern,
+.ranking-item-compact:nth-child(1) .score-fill-modern,
+.ranking-item-compact:nth-child(2) .score-fill-modern,
+.ranking-item-compact:nth-child(3) .score-fill-modern {
+    background: #22c55e;
+}
+
+.ranking-item-compact.trusted .score-fill-modern,
+.ranking-item-compact:nth-child(4) .score-fill-modern,
+.ranking-item-compact:nth-child(5) .score-fill-modern,
+.ranking-item-compact:nth-child(6) .score-fill-modern {
+    background: #3b82f6;
+}
+
+.ranking-item-compact.moderate .score-fill-modern {
+    background: #f59e0b;
+}
+
+.ranking-item-compact.low .score-fill-modern {
+    background: #ef4444;
+}
+
+.ranking-item-compact.current-source .score-fill-modern {
+    background: rgba(255,255,255,0.8);
+}
+
+.score-label-inline {
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* Large score value */
+.score-value-large {
+    min-width: 45px;
+    text-align: right;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.ranking-item-compact.current-source .score-value-large {
+    color: white;
+}
+
+/* Current badge */
+.current-badge {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.95);
+    color: #764ba2;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .source-info {
+        min-width: 180px;
+    }
+    
+    .source-logo {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .score-bar-modern {
+        height: 28px;
+    }
+    
+    .ranking-item-compact {
+        padding: 12px;
+    }
+    
+    .source-domain {
+        display: none;
+    }
+}
