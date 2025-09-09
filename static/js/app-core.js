@@ -1,18 +1,18 @@
 /**
- * TruthLens News Analyzer - App Core Module (FIXED VERSION)
+ * TruthLens News Analyzer - App Core Module (COMPLETE FIXED VERSION)
  * Date: January 27, 2025
  * Last Updated: January 27, 2025
  * 
  * FIXES IMPLEMENTED:
  * - Removed duplicate Source Credibility Rankings
  * - Added source icons to compact ranking items
- * - Using logos from the upper ranking design in lower ranking
- * - Single unified source rankings display
+ * - Single unified source rankings display with icons
+ * - Fixed syntax errors - properly closed all brackets
  * 
  * NOTES:
  * - Only one Source Rankings section is created and displayed
  * - Icons are color-coded per source for brand recognition
- * - Compact ranking chart includes all visual elements
+ * - Properly exports TruthLensAnalyzer class for global access
  */
 
 class TruthLensAnalyzer {
@@ -62,7 +62,7 @@ class TruthLensAnalyzer {
             'msnbc.com': { score: 68, rank: 17, trend: 'down', category: 'mainstream', color: '#0089D0', icon: 'MS' },
             'thehill.com': { score: 65, rank: 18, trend: 'stable', category: 'mainstream', color: '#006B3C', icon: 'TH' },
             'dailywire.com': { score: 63, rank: 19, trend: 'stable', category: 'independent', color: '#8B4513', icon: 'DW' },
-            'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent', color: '#FF6600', icon: 'BB' }
+            'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent', color: '#FF6600', icon: 'BR' }
         };
 
         this.currentFilter = 'all';
@@ -75,32 +75,22 @@ class TruthLensAnalyzer {
         this.initializeSourceRankings();
     }
 
-    /**
-     * Clean author name from malformed strings
-     */
     cleanAuthorName(authorString) {
         if (!authorString || typeof authorString !== 'string') {
             return 'Unknown Author';
         }
 
         let cleaned = authorString;
-
-        // Remove "By" prefix (case insensitive)
         cleaned = cleaned.replace(/^by\s*/i, '');
 
-        // Handle pipe-separated format (name|email|organization)
         if (cleaned.includes('|')) {
             const parts = cleaned.split('|');
             cleaned = parts[0].trim();
         }
 
-        // Remove email addresses
         cleaned = cleaned.replace(/\S+@\S+\.\S+/g, '').trim();
-
-        // Remove timestamps
         cleaned = cleaned.replace(/\b(UPDATED|PUBLISHED|POSTED|MODIFIED):\s*.*/gi, '').trim();
 
-        // Remove organization names
         const orgPatterns = [
             /\s*(Chicago Tribune|New York Times|Washington Post|CNN|Fox News|Reuters|Associated Press|AP|BBC|NPR).*/gi,
             /\s*,\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer|Contributing Writer).*/gi
@@ -110,21 +100,14 @@ class TruthLensAnalyzer {
             cleaned = cleaned.replace(pattern, '');
         }
 
-        // Remove common suffixes
         cleaned = cleaned.replace(/\s*(Staff|Wire|Service|Report)$/gi, '');
-
-        // Clean up multiple spaces and trim
         cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-        // Remove any remaining special characters at the end
         cleaned = cleaned.replace(/[,;:\-|]+$/, '').trim();
 
-        // If we ended up with nothing or just special characters, return unknown
         if (!cleaned || cleaned.length < 2 || /^[^a-zA-Z]+$/.test(cleaned)) {
             return 'Unknown Author';
         }
 
-        // Capitalize properly
         cleaned = cleaned.split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
@@ -163,7 +146,6 @@ class TruthLensAnalyzer {
         const overviewSection = resultsSection.querySelector('.enhanced-analysis-overview');
         if (!overviewSection) return;
 
-        // Don't create if it already exists
         if (document.getElementById('sourceRankings')) return;
 
         const rankingsDiv = document.createElement('div');
@@ -363,7 +345,6 @@ class TruthLensAnalyzer {
     displayResults(data) {
         this.progressContainer.classList.remove('active');
         
-        // Remove debug info elements
         const debugInfo = document.getElementById('debugInfo');
         if (debugInfo) {
             debugInfo.remove();
@@ -373,18 +354,14 @@ class TruthLensAnalyzer {
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
         
-        // Clean the author name
         let rawAuthor = data.author || 'Staff Writer';
         let cleanedAuthor = this.cleanAuthorName(rawAuthor);
         
-        // Update data object with cleaned author
         data.author = cleanedAuthor;
         
-        // Store for rankings
         this.lastAnalyzedSource = source;
         this.lastAnalyzedScore = trustScore;
         
-        // Generate findings summary
         let findingsSummary = '';
         const trustLevel = trustScore >= 80 ? 'high' : trustScore >= 60 ? 'good' : trustScore >= 40 ? 'moderate' : 'low';
         
@@ -403,7 +380,6 @@ class TruthLensAnalyzer {
                 break;
         }
         
-        // Add specific details if available
         if (data.detailed_analysis) {
             const d = data.detailed_analysis;
             if (d.bias_detector?.bias_score !== undefined) {
@@ -418,7 +394,6 @@ class TruthLensAnalyzer {
                 findingsSummary += " No claims could be independently verified.";
             }
             
-            // Clean author name in detailed analysis
             if (d.author_analyzer) {
                 if (d.author_analyzer.name) {
                     d.author_analyzer.name = this.cleanAuthorName(d.author_analyzer.name);
@@ -443,7 +418,6 @@ class TruthLensAnalyzer {
             }
         }
         
-        // Update basic info
         const summaryEl = document.getElementById('articleSummary');
         if (summaryEl) {
             summaryEl.textContent = articleSummary.length > 100 ? 
@@ -456,7 +430,6 @@ class TruthLensAnalyzer {
         const authorEl = document.getElementById('articleAuthor');
         if (authorEl) authorEl.textContent = cleanedAuthor;
         
-        // Update findings
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
             findingsEl.innerHTML = '';
@@ -476,13 +449,10 @@ class TruthLensAnalyzer {
             `);
         }
         
-        // Clean up any unwanted text
         this.cleanupUnwantedText();
         
-        // Update enhanced trust display
         if (typeof updateEnhancedTrustDisplay === 'function') {
             updateEnhancedTrustDisplay(data);
-            // Override findings again after HTML script runs
             setTimeout(() => {
                 const findingsEl = document.getElementById('findingsSummary');
                 if (findingsEl && findingsEl.textContent !== findingsSummary) {
@@ -492,12 +462,10 @@ class TruthLensAnalyzer {
             }, 100);
         }
         
-        // Display source rankings
         setTimeout(() => {
             this.displaySourceRankings(source, trustScore);
         }, 200);
         
-        // Use display methods from ServiceTemplates
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
         }
@@ -574,4 +542,265 @@ class TruthLensAnalyzer {
                 return data.category === this.currentFilter;
             })
             .sort((a, b) => b[1].score - a[1].score)
-            .
+            .slice(0, 10);
+
+        if (currentSource && currentScore !== null) {
+            const domain = this.extractDomain(currentSource);
+            const existingIndex = rankingsToDisplay.findIndex(([d]) => d === domain);
+            
+            if (existingIndex >= 0) {
+                rankingsToDisplay[existingIndex][1].isCurrent = true;
+            } else {
+                const category = this.guessCategory(domain);
+                if (this.currentFilter === 'all' || category === this.currentFilter) {
+                    const sourceIcon = this.formatDomainName(domain).substring(0, 2).toUpperCase();
+                    const sourceColor = this.getSourceColor(domain);
+                    
+                    const newEntry = [
+                        domain,
+                        {
+                            score: currentScore,
+                            rank: this.calculateRank(currentScore),
+                            trend: 'new',
+                            category: category,
+                            isCurrent: true,
+                            icon: sourceIcon,
+                            color: sourceColor
+                        }
+                    ];
+                    rankingsToDisplay.push(newEntry);
+                    rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
+                    rankingsToDisplay = rankingsToDisplay.slice(0, 10);
+                }
+            }
+        }
+
+        rankingsToDisplay.forEach(([domain, data], index) => {
+            const rankItem = this.createCompactRankingItem(domain, data, index);
+            rankingsChart.appendChild(rankItem);
+        });
+
+        const totalInCategory = Object.values(this.sourceRankingsData)
+            .filter(data => this.currentFilter === 'all' || data.category === this.currentFilter)
+            .length;
+        
+        if (totalInCategory > 10) {
+            const showMore = document.createElement('div');
+            showMore.className = 'show-more-sources';
+            showMore.style.cssText = 'text-align: center; padding: 10px; color: #666; font-size: 0.9rem;';
+            showMore.innerHTML = `<span style="cursor: pointer;">+${totalInCategory - 10} more sources</span>`;
+            rankingsChart.appendChild(showMore);
+        }
+
+        setTimeout(() => {
+            rankingsChart.querySelectorAll('.ranking-item-compact').forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('animate-in');
+                }, index * 30);
+            });
+        }, 100);
+    }
+
+    createCompactRankingItem(domain, data, index) {
+        const item = document.createElement('div');
+        const trustClass = this.getScoreCategory(data.score);
+        item.className = `ranking-item-compact ${trustClass} ${data.isCurrent ? 'current-source' : ''}`;
+        
+        const trendIcon = this.getTrendIcon(data.trend);
+        const sourceIcon = data.icon || this.formatDomainName(domain).substring(0, 2).toUpperCase();
+        const sourceColor = data.color || this.getSourceColor(domain);
+        
+        item.innerHTML = `
+            <div class="rank-number">#${index + 1}</div>
+            <div class="source-logo" style="
+                width: 35px;
+                height: 35px;
+                background-color: ${sourceColor};
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 0.85rem;
+                margin-right: 12px;
+                flex-shrink: 0;
+            ">${sourceIcon}</div>
+            <div class="source-name-compact" style="
+                flex: 0 0 auto;
+                min-width: 140px;
+                max-width: 180px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                padding-right: 10px;
+            ">${this.formatDomainName(domain)}</div>
+            <div class="score-bar-compact">
+                <div class="score-fill" style="width: ${data.score}%"></div>
+            </div>
+            <div class="score-value">${data.score}</div>
+            <div class="trend-icon" style="margin-left: 8px;">${trendIcon}</div>
+            ${data.isCurrent ? '<span class="current-badge">CURRENT</span>' : ''}
+        `;
+        
+        return item;
+    }
+
+    getSourceColor(domain) {
+        const domainLower = domain.toLowerCase();
+        
+        if (domainLower.includes('cnn')) return '#CC0000';
+        if (domainLower.includes('fox')) return '#003366';
+        if (domainLower.includes('nbc')) return '#F37021';
+        if (domainLower.includes('abc')) return '#FFD700';
+        if (domainLower.includes('cbs')) return '#1C4586';
+        if (domainLower.includes('bbc')) return '#000000';
+        if (domainLower.includes('npr')) return '#0066CC';
+        if (domainLower.includes('reuters')) return '#FF6B00';
+        if (domainLower.includes('ap')) return '#FF0000';
+        if (domainLower.includes('guardian')) return '#052962';
+        if (domainLower.includes('nytimes') || domainLower.includes('newyorktimes')) return '#000000';
+        if (domainLower.includes('washingtonpost') || domainLower.includes('wapo')) return '#1565C0';
+        if (domainLower.includes('wsj') || domainLower.includes('wallstreet')) return '#1976D2';
+        if (domainLower.includes('politico')) return '#DC143C';
+        if (domainLower.includes('axios')) return '#00796B';
+        
+        return '#6B7280';
+    }
+
+    guessCategory(domain) {
+        const mainstream = ['cnn', 'fox', 'nbc', 'cbs', 'abc', 'nytimes', 'wsj', 'washingtonpost', 
+                          'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico', 'thehill'];
+        
+        const domainLower = domain.toLowerCase();
+        for (const ms of mainstream) {
+            if (domainLower.includes(ms)) {
+                return 'mainstream';
+            }
+        }
+        return 'independent';
+    }
+
+    extractDomain(url) {
+        try {
+            const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
+            return urlObj.hostname.replace('www.', '');
+        } catch {
+            return url.toLowerCase().replace('www.', '');
+        }
+    }
+
+    formatDomainName(domain) {
+        const nameMap = {
+            'reuters.com': 'Reuters',
+            'ap.org': 'Associated Press',
+            'bbc.com': 'BBC News',
+            'bbc.co.uk': 'BBC News',
+            'npr.org': 'NPR',
+            'propublica.org': 'ProPublica',
+            'wsj.com': 'Wall Street Journal',
+            'nytimes.com': 'New York Times',
+            'ft.com': 'Financial Times',
+            'economist.com': 'The Economist',
+            'washingtonpost.com': 'Washington Post',
+            'theguardian.com': 'The Guardian',
+            'theintercept.com': 'The Intercept',
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'msnbc.com': 'MSNBC',
+            'politico.com': 'Politico',
+            'axios.com': 'Axios',
+            'thehill.com': 'The Hill',
+            'dailywire.com': 'Daily Wire',
+            'breitbart.com': 'Breitbart',
+            'nbcnews.com': 'NBC News',
+            'abcnews.go.com': 'ABC News',
+            'cbsnews.com': 'CBS News',
+            'usatoday.com': 'USA Today',
+            'bloomberg.com': 'Bloomberg',
+            'businessinsider.com': 'Business Insider',
+            'vox.com': 'Vox',
+            'slate.com': 'Slate',
+            'salon.com': 'Salon',
+            'huffpost.com': 'HuffPost',
+            'buzzfeednews.com': 'BuzzFeed News',
+            'vice.com': 'Vice News',
+            'motherjones.com': 'Mother Jones',
+            'thedailybeast.com': 'The Daily Beast',
+            'newsweek.com': 'Newsweek',
+            'time.com': 'TIME'
+        };
+        
+        return nameMap[domain] || domain.replace('.com', '').replace('.org', '').replace('.net', '')
+            .split('.')[0]
+            .split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
+
+    getScoreCategory(score) {
+        if (score >= 85) return 'highly-trusted';
+        if (score >= 70) return 'trusted';
+        if (score >= 50) return 'moderate';
+        return 'low';
+    }
+
+    calculateRank(score) {
+        let rank = 1;
+        for (const [domain, data] of Object.entries(this.sourceRankingsData)) {
+            if (data.score > score) rank++;
+        }
+        return rank;
+    }
+
+    getTrendIcon(trend) {
+        const icons = {
+            'up': '<i class="fas fa-arrow-up" style="color: #10b981; font-size: 0.75rem;"></i>',
+            'down': '<i class="fas fa-arrow-down" style="color: #ef4444; font-size: 0.75rem;"></i>',
+            'stable': '<i class="fas fa-minus" style="color: #6b7280; font-size: 0.75rem;"></i>',
+            'new': '<i class="fas fa-star" style="color: #f59e0b; font-size: 0.75rem;"></i>'
+        };
+        return icons[trend] || icons['stable'];
+    }
+
+    showDebugInfo(data) {
+        // Debug info disabled in production
+        return;
+    }
+
+    showResults() {
+        if (this.resultsSection) {
+            this.resultsSection.classList.add('show');
+            this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    setLoading(loading) {
+        if (this.analyzeBtn) {
+            this.analyzeBtn.disabled = loading;
+            this.analyzeBtn.innerHTML = loading ? 
+                '<i class="fas fa-spinner fa-spin"></i> Analyzing...' : 
+                '<i class="fas fa-search"></i> Analyze Article';
+        }
+    }
+}
+
+// Global function for dropdowns
+window.toggleServiceDropdown = function(serviceId) {
+    const dropdown = document.getElementById(`${serviceId}Dropdown`);
+    const content = document.getElementById(`${serviceId}Content`);
+    const toggle = dropdown?.querySelector('.service-toggle i');
+    
+    if (dropdown && content) {
+        dropdown.classList.toggle('active');
+        if (toggle) {
+            toggle.classList.toggle('fa-chevron-down');
+            toggle.classList.toggle('fa-chevron-up');
+        }
+    }
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.analyzer = new TruthLensAnalyzer();
+});
+
+// Export for global access
+window.TruthLensAnalyzer = TruthLensAnalyzer;
