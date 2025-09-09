@@ -1,19 +1,18 @@
 /**
- * TruthLens News Analyzer - App Core Module (COMPLETE FIXED VERSION)
- * Date: September 7, 2025
- * Last Updated: September 7, 2025
+ * TruthLens News Analyzer - App Core Module (FIXED VERSION)
+ * Date: January 27, 2025
+ * Last Updated: January 27, 2025
  * 
  * FIXES IMPLEMENTED:
- * - Added cleanAuthorName() function to properly parse malformed author strings
- * - Handles "By" prefix removal
- * - Extracts author name from complex strings with emails/timestamps
- * - Removes duplicate text and formatting issues
- * - Applied cleaning to all author display locations
+ * - Removed duplicate Source Credibility Rankings
+ * - Added source icons to compact ranking items
+ * - Using logos from the upper ranking design in lower ranking
+ * - Single unified source rankings display
  * 
  * NOTES:
- * - Author cleaning is applied before passing to ServiceTemplates
- * - Handles various author string formats from different news sources
- * - Maintains fallback to "Unknown Author" for invalid data
+ * - Only one Source Rankings section is created and displayed
+ * - Icons are color-coded per source for brand recognition
+ * - Compact ranking chart includes all visual elements
  */
 
 class TruthLensAnalyzer {
@@ -42,28 +41,28 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
-        // Source rankings data
+        // Enhanced source rankings data with colors and icons
         this.sourceRankingsData = {
-            'reuters.com': { score: 95, rank: 1, trend: 'stable', category: 'mainstream' },
-            'ap.org': { score: 94, rank: 2, trend: 'up', category: 'mainstream' },
-            'bbc.com': { score: 92, rank: 3, trend: 'stable', category: 'mainstream' },
-            'npr.org': { score: 90, rank: 4, trend: 'stable', category: 'mainstream' },
-            'propublica.org': { score: 88, rank: 5, trend: 'up', category: 'independent' },
-            'wsj.com': { score: 85, rank: 6, trend: 'stable', category: 'mainstream' },
-            'nytimes.com': { score: 84, rank: 7, trend: 'down', category: 'mainstream' },
-            'ft.com': { score: 83, rank: 8, trend: 'stable', category: 'mainstream' },
-            'economist.com': { score: 82, rank: 9, trend: 'stable', category: 'mainstream' },
-            'washingtonpost.com': { score: 80, rank: 10, trend: 'down', category: 'mainstream' },
-            'theguardian.com': { score: 79, rank: 11, trend: 'stable', category: 'mainstream' },
-            'theintercept.com': { score: 77, rank: 12, trend: 'up', category: 'independent' },
-            'axios.com': { score: 76, rank: 13, trend: 'up', category: 'independent' },
-            'politico.com': { score: 75, rank: 14, trend: 'up', category: 'mainstream' },
-            'cnn.com': { score: 72, rank: 15, trend: 'stable', category: 'mainstream' },
-            'foxnews.com': { score: 70, rank: 16, trend: 'stable', category: 'mainstream' },
-            'msnbc.com': { score: 68, rank: 17, trend: 'down', category: 'mainstream' },
-            'thehill.com': { score: 65, rank: 18, trend: 'stable', category: 'mainstream' },
-            'dailywire.com': { score: 63, rank: 19, trend: 'stable', category: 'independent' },
-            'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent' }
+            'reuters.com': { score: 95, rank: 1, trend: 'stable', category: 'mainstream', color: '#FF6B00', icon: 'RE' },
+            'ap.org': { score: 94, rank: 2, trend: 'up', category: 'mainstream', color: '#FF0000', icon: 'AP' },
+            'bbc.com': { score: 92, rank: 3, trend: 'stable', category: 'mainstream', color: '#000000', icon: 'BB' },
+            'npr.org': { score: 90, rank: 4, trend: 'stable', category: 'mainstream', color: '#0066CC', icon: 'NP' },
+            'propublica.org': { score: 88, rank: 5, trend: 'up', category: 'independent', color: '#2E7D32', icon: 'PP' },
+            'wsj.com': { score: 85, rank: 6, trend: 'stable', category: 'mainstream', color: '#1976D2', icon: 'WS' },
+            'nytimes.com': { score: 84, rank: 7, trend: 'down', category: 'mainstream', color: '#000000', icon: 'NY' },
+            'ft.com': { score: 83, rank: 8, trend: 'stable', category: 'mainstream', color: '#FFA000', icon: 'FT' },
+            'economist.com': { score: 82, rank: 9, trend: 'stable', category: 'mainstream', color: '#E53935', icon: 'EC' },
+            'washingtonpost.com': { score: 80, rank: 10, trend: 'down', category: 'mainstream', color: '#1565C0', icon: 'WP' },
+            'theguardian.com': { score: 79, rank: 11, trend: 'stable', category: 'mainstream', color: '#052962', icon: 'GU' },
+            'theintercept.com': { score: 77, rank: 12, trend: 'up', category: 'independent', color: '#7B1FA2', icon: 'TI' },
+            'axios.com': { score: 76, rank: 13, trend: 'up', category: 'independent', color: '#00796B', icon: 'AX' },
+            'politico.com': { score: 75, rank: 14, trend: 'up', category: 'mainstream', color: '#DC143C', icon: 'PO' },
+            'cnn.com': { score: 72, rank: 15, trend: 'stable', category: 'mainstream', color: '#CC0000', icon: 'CN' },
+            'foxnews.com': { score: 70, rank: 16, trend: 'stable', category: 'mainstream', color: '#003366', icon: 'FX' },
+            'msnbc.com': { score: 68, rank: 17, trend: 'down', category: 'mainstream', color: '#0089D0', icon: 'MS' },
+            'thehill.com': { score: 65, rank: 18, trend: 'stable', category: 'mainstream', color: '#006B3C', icon: 'TH' },
+            'dailywire.com': { score: 63, rank: 19, trend: 'stable', category: 'independent', color: '#8B4513', icon: 'DW' },
+            'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent', color: '#FF6600', icon: 'BB' }
         };
 
         this.currentFilter = 'all';
@@ -78,11 +77,6 @@ class TruthLensAnalyzer {
 
     /**
      * Clean author name from malformed strings
-     * Handles formats like:
-     * - "ByRick Pearson|rpearson@chicagotribune.com| Chicago TribuneUPDATED:..."
-     * - "By Jane Doe"
-     * - "John Smith | john@example.com"
-     * - "Author Name, Organization"
      */
     cleanAuthorName(authorString) {
         if (!authorString || typeof authorString !== 'string') {
@@ -96,7 +90,6 @@ class TruthLensAnalyzer {
 
         // Handle pipe-separated format (name|email|organization)
         if (cleaned.includes('|')) {
-            // Extract first part before pipe (usually the name)
             const parts = cleaned.split('|');
             cleaned = parts[0].trim();
         }
@@ -104,10 +97,10 @@ class TruthLensAnalyzer {
         // Remove email addresses
         cleaned = cleaned.replace(/\S+@\S+\.\S+/g, '').trim();
 
-        // Remove timestamps (e.g., "UPDATED: ...", "Published: ...")
+        // Remove timestamps
         cleaned = cleaned.replace(/\b(UPDATED|PUBLISHED|POSTED|MODIFIED):\s*.*/gi, '').trim();
 
-        // Remove organization names that might be appended
+        // Remove organization names
         const orgPatterns = [
             /\s*(Chicago Tribune|New York Times|Washington Post|CNN|Fox News|Reuters|Associated Press|AP|BBC|NPR).*/gi,
             /\s*,\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer|Contributing Writer).*/gi
@@ -131,7 +124,7 @@ class TruthLensAnalyzer {
             return 'Unknown Author';
         }
 
-        // Capitalize properly (First Last format)
+        // Capitalize properly
         cleaned = cleaned.split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
@@ -170,6 +163,7 @@ class TruthLensAnalyzer {
         const overviewSection = resultsSection.querySelector('.enhanced-analysis-overview');
         if (!overviewSection) return;
 
+        // Don't create if it already exists
         if (document.getElementById('sourceRankings')) return;
 
         const rankingsDiv = document.createElement('div');
@@ -179,7 +173,7 @@ class TruthLensAnalyzer {
         rankingsDiv.innerHTML = `
             <div class="rankings-header-compact">
                 <h4 class="rankings-title-compact">
-                    <i class="fas fa-trophy"></i> Source Rankings
+                    <i class="fas fa-trophy"></i> News Source Credibility Rankings
                 </h4>
                 <div class="filter-buttons-compact">
                     <button class="filter-btn active" data-filter="all">All</button>
@@ -379,17 +373,11 @@ class TruthLensAnalyzer {
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
         
-        // CRITICAL FIX: Clean the author name before any display
+        // Clean the author name
         let rawAuthor = data.author || 'Staff Writer';
         let cleanedAuthor = this.cleanAuthorName(rawAuthor);
         
-        // Log the cleaning for debugging
-        console.log('Author name cleaning:', {
-            raw: rawAuthor,
-            cleaned: cleanedAuthor
-        });
-        
-        // Update data object with cleaned author for downstream use
+        // Update data object with cleaned author
         data.author = cleanedAuthor;
         
         // Store for rankings
@@ -430,7 +418,7 @@ class TruthLensAnalyzer {
                 findingsSummary += " No claims could be independently verified.";
             }
             
-            // Also clean author name in detailed analysis if present
+            // Clean author name in detailed analysis
             if (d.author_analyzer) {
                 if (d.author_analyzer.name) {
                     d.author_analyzer.name = this.cleanAuthorName(d.author_analyzer.name);
@@ -455,7 +443,7 @@ class TruthLensAnalyzer {
             }
         }
         
-        // Update basic info with cleaned author
+        // Update basic info
         const summaryEl = document.getElementById('articleSummary');
         if (summaryEl) {
             summaryEl.textContent = articleSummary.length > 100 ? 
@@ -509,7 +497,7 @@ class TruthLensAnalyzer {
             this.displaySourceRankings(source, trustScore);
         }, 200);
         
-        // Use display methods from ServiceTemplates - pass cleaned data
+        // Use display methods from ServiceTemplates
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
         }
@@ -586,191 +574,4 @@ class TruthLensAnalyzer {
                 return data.category === this.currentFilter;
             })
             .sort((a, b) => b[1].score - a[1].score)
-            .slice(0, 5);
-
-        if (currentSource && currentScore !== null) {
-            const domain = this.extractDomain(currentSource);
-            const existingIndex = rankingsToDisplay.findIndex(([d]) => d === domain);
-            
-            if (existingIndex >= 0) {
-                rankingsToDisplay[existingIndex][1].isCurrent = true;
-            } else {
-                const category = this.guessCategory(domain);
-                if (this.currentFilter === 'all' || category === this.currentFilter) {
-                    const newEntry = [
-                        domain,
-                        {
-                            score: currentScore,
-                            rank: this.calculateRank(currentScore),
-                            trend: 'new',
-                            category: category,
-                            isCurrent: true
-                        }
-                    ];
-                    rankingsToDisplay.push(newEntry);
-                    rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
-                    rankingsToDisplay = rankingsToDisplay.slice(0, 5);
-                }
-            }
-        }
-
-        rankingsToDisplay.forEach(([domain, data], index) => {
-            const rankItem = this.createCompactRankingItem(domain, data, index);
-            rankingsChart.appendChild(rankItem);
-        });
-
-        const totalInCategory = Object.values(this.sourceRankingsData)
-            .filter(data => this.currentFilter === 'all' || data.category === this.currentFilter)
-            .length;
-        
-        if (totalInCategory > 5) {
-            const showMore = document.createElement('div');
-            showMore.className = 'show-more-sources';
-            showMore.innerHTML = `<span>+${totalInCategory - 5} more sources</span>`;
-            rankingsChart.appendChild(showMore);
-        }
-
-        setTimeout(() => {
-            rankingsChart.querySelectorAll('.ranking-item-compact').forEach((item, index) => {
-                setTimeout(() => {
-                    item.classList.add('animate-in');
-                }, index * 30);
-            });
-        }, 100);
-    }
-
-    createCompactRankingItem(domain, data, index) {
-        const item = document.createElement('div');
-        const trustClass = this.getScoreCategory(data.score);
-        item.className = `ranking-item-compact ${trustClass} ${data.isCurrent ? 'current-source' : ''}`;
-        
-        const trendIcon = this.getTrendIcon(data.trend);
-        
-        item.innerHTML = `
-            <div class="rank-number">#${index + 1}</div>
-            <div class="source-name-compact">${this.formatDomainName(domain)}</div>
-            <div class="score-bar-compact">
-                <div class="score-fill" style="width: ${data.score}%"></div>
-            </div>
-            <div class="score-value">${data.score}</div>
-            <div class="trend-icon">${trendIcon}</div>
-            ${data.isCurrent ? '<span class="current-badge">CURRENT</span>' : ''}
-        `;
-        
-        return item;
-    }
-
-    guessCategory(domain) {
-        const mainstream = ['cnn', 'fox', 'nbc', 'cbs', 'abc', 'nytimes', 'wsj', 'washingtonpost', 
-                          'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico', 'thehill'];
-        
-        const domainLower = domain.toLowerCase();
-        for (const ms of mainstream) {
-            if (domainLower.includes(ms)) {
-                return 'mainstream';
-            }
-        }
-        return 'independent';
-    }
-
-    extractDomain(url) {
-        try {
-            const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
-            return urlObj.hostname.replace('www.', '');
-        } catch {
-            return url.toLowerCase().replace('www.', '');
-        }
-    }
-
-    formatDomainName(domain) {
-        const nameMap = {
-            'reuters.com': 'Reuters',
-            'ap.org': 'Associated Press',
-            'bbc.com': 'BBC News',
-            'npr.org': 'NPR',
-            'propublica.org': 'ProPublica',
-            'wsj.com': 'Wall Street Journal',
-            'nytimes.com': 'New York Times',
-            'ft.com': 'Financial Times',
-            'economist.com': 'The Economist',
-            'washingtonpost.com': 'Washington Post',
-            'theguardian.com': 'The Guardian',
-            'theintercept.com': 'The Intercept',
-            'cnn.com': 'CNN',
-            'foxnews.com': 'Fox News',
-            'msnbc.com': 'MSNBC',
-            'politico.com': 'Politico',
-            'axios.com': 'Axios',
-            'thehill.com': 'The Hill',
-            'dailywire.com': 'Daily Wire',
-            'breitbart.com': 'Breitbart'
-        };
-        return nameMap[domain] || domain.replace('.com', '').replace('.org', '');
-    }
-
-    getScoreCategory(score) {
-        if (score >= 85) return 'highly-trusted';
-        if (score >= 70) return 'trusted';
-        if (score >= 50) return 'moderate';
-        return 'low';
-    }
-
-    calculateRank(score) {
-        let rank = 1;
-        for (const [domain, data] of Object.entries(this.sourceRankingsData)) {
-            if (data.score > score) rank++;
-        }
-        return rank;
-    }
-
-    getTrendIcon(trend) {
-        const icons = {
-            'up': '<i class="fas fa-arrow-up" style="color: #10b981;"></i>',
-            'down': '<i class="fas fa-arrow-down" style="color: #ef4444;"></i>',
-            'stable': '<i class="fas fa-minus" style="color: #6b7280;"></i>',
-            'new': '<i class="fas fa-star" style="color: #f59e0b;"></i>'
-        };
-        return icons[trend] || icons['stable'];
-    }
-
-    showDebugInfo(data) {
-        // Debug info disabled in production
-        return;
-    }
-
-    showResults() {
-        if (this.resultsSection) {
-            this.resultsSection.classList.add('show');
-            this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-    }
-
-    setLoading(loading) {
-        if (this.analyzeBtn) {
-            this.analyzeBtn.disabled = loading;
-            this.analyzeBtn.innerHTML = loading ? 
-                '<i class="fas fa-spinner fa-spin"></i> Analyzing...' : 
-                '<i class="fas fa-search"></i> Analyze Article';
-        }
-    }
-}
-
-// Global function for dropdowns
-window.toggleServiceDropdown = function(serviceId) {
-    const dropdown = document.getElementById(`${serviceId}Dropdown`);
-    const content = document.getElementById(`${serviceId}Content`);
-    const toggle = dropdown?.querySelector('.service-toggle i');
-    
-    if (dropdown && content) {
-        dropdown.classList.toggle('active');
-        if (toggle) {
-            toggle.classList.toggle('fa-chevron-down');
-            toggle.classList.toggle('fa-chevron-up');
-        }
-    }
-};
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    window.analyzer = new TruthLensAnalyzer();
-});
+            .
