@@ -1,7 +1,12 @@
 /**
- * TruthLens Service Templates - ENHANCED VERSION WITH SOURCE RANKINGS
+ * TruthLens Service Templates - FIXED VERSION WITH SINGLE SOURCE RANKINGS
  * Date: September 7, 2025
- * Last Updated: December 18, 2024
+ * Last Updated: September 10, 2025
+ * 
+ * FIX APPLIED:
+ * - Added context parameter to control when rankings chart is displayed
+ * - Prevents duplicate source rankings from appearing
+ * - Rankings chart only shows in dropdown context
  * 
  * ENHANCEMENTS:
  * - Added Source Credibility Rankings Chart (Top 10 + Current Source)
@@ -43,6 +48,9 @@ window.ServiceTemplates = {
         { name: 'InfoWars', score: 10 }
     ],
     
+    // Track if rankings have been displayed to prevent duplicates
+    rankingsDisplayed: false,
+    
     getTemplate(serviceId) {
         const templates = {
             sourceCredibility: this.getSourceCredibilityTemplate(),
@@ -81,7 +89,7 @@ window.ServiceTemplates = {
                 </div>
             </div>
             
-            <!-- NEW: Source Rankings Chart -->
+            <!-- Source Rankings Chart - Only displays once in dropdown -->
             <div class="source-rankings-compact" id="sourceRankingsChart" style="display: none;">
                 <div class="rankings-header-compact">
                     <h3 class="rankings-title-compact">
@@ -473,6 +481,9 @@ window.ServiceTemplates = {
         console.log('=== Displaying All Service Analyses ===');
         console.log('Data received:', data);
         
+        // Reset rankings display flag for new analysis
+        this.rankingsDisplayed = false;
+        
         const detailed_analysis = data.detailed_analysis || {};
         
         // Hide plagiarism detector
@@ -482,7 +493,8 @@ window.ServiceTemplates = {
         }
         
         // Display each service
-        this.displaySourceCredibility(detailed_analysis.source_credibility || {}, analyzer);
+        // Pass true for showRankings only for the Source Credibility in dropdown
+        this.displaySourceCredibility(detailed_analysis.source_credibility || {}, analyzer, true);
         this.displayBiasDetection(detailed_analysis.bias_detector || {}, analyzer);
         this.displayFactChecking(detailed_analysis.fact_checker || {}, analyzer);
         this.displayTransparencyAnalysis(detailed_analysis.transparency_analyzer || {}, analyzer);
@@ -491,8 +503,8 @@ window.ServiceTemplates = {
         this.displayAuthorAnalysis(detailed_analysis.author_analyzer || {}, data.author, analyzer);
     },
 
-    // Enhanced displaySourceCredibility with rankings chart
-    displaySourceCredibility(data, analyzer) {
+    // Enhanced displaySourceCredibility with controlled rankings display
+    displaySourceCredibility(data, analyzer, showRankings = true) {
         const score = data.score || data.credibility_score || 0;
         const rating = data.credibility || data.credibility_level || 'Unknown';
         const biasLevel = data.bias || data.bias_level || 'Unknown';
@@ -512,8 +524,17 @@ window.ServiceTemplates = {
         document.getElementById('sourceBiasLevel').textContent = biasLevel;
         document.getElementById('sourceDomainAge').textContent = domainAge;
         
-        // Display the rankings chart
-        this.displaySourceRankingsChart(currentSourceName, score);
+        // Only display the rankings chart once and only if showRankings is true
+        if (showRankings && !this.rankingsDisplayed) {
+            this.displaySourceRankingsChart(currentSourceName, score);
+            this.rankingsDisplayed = true;
+        } else {
+            // Hide the chart if it shouldn't be shown
+            const chartContainer = document.getElementById('sourceRankingsChart');
+            if (chartContainer && !showRankings) {
+                chartContainer.style.display = 'none';
+            }
+        }
         
         const findingsContainer = document.getElementById('sourceCredibilityFindings');
         if (findingsContainer) {
@@ -539,12 +560,20 @@ window.ServiceTemplates = {
             data.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
-    // NEW METHOD: Display Source Rankings Chart
+    // Display Source Rankings Chart - Only called once per analysis
     displaySourceRankingsChart(currentSourceName, currentScore) {
         const chartContainer = document.getElementById('sourceRankingsChart');
         const chartContent = document.getElementById('rankingsChartContent');
         
         if (!chartContainer || !chartContent) return;
+        
+        // Check if we're in a dropdown context
+        const isInDropdown = chartContainer.closest('.service-dropdown-content');
+        if (!isInDropdown) {
+            // Don't display if not in dropdown
+            chartContainer.style.display = 'none';
+            return;
+        }
         
         // Show the chart
         chartContainer.style.display = 'block';
@@ -669,7 +698,6 @@ window.ServiceTemplates = {
             data.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
-    // [Keep all other display methods unchanged from original...]
     displayFactChecking(data, analyzer) {
         const claimsAnalyzed = data.claims_found || data.claims_analyzed || 0;
         const claimsVerified = data.claims_verified || 0;
@@ -875,7 +903,6 @@ window.ServiceTemplates = {
             contentData.interpretation || `${whatWeFound} ${whatItMeans}`;
     },
 
-    // [Keep all other methods unchanged from original...]
     displayAuthorAnalysis(data, fallbackAuthor, analyzer) {
         console.log('=== Displaying Enhanced Author Analysis ===');
         console.log('Author data:', data);
@@ -991,7 +1018,7 @@ window.ServiceTemplates = {
         this.displayAuthorAwards(awards);
     },
 
-    // [Keep all helper methods unchanged from original...]
+    // Helper methods
     generateTrustReasoning(score, data) {
         if (score >= 80) {
             return "Highly credible journalist with extensive track record and verification.";
@@ -1190,6 +1217,7 @@ window.ServiceTemplates = {
         }
     },
 
+    // Content generation helper methods
     generateCredibilityFindings(score, rating, biasLevel, data) {
         const inDatabase = data.in_database ? "is listed in our credibility database" : "is not found in major credibility databases";
         if (score >= 80) {
@@ -1259,7 +1287,7 @@ window.ServiceTemplates = {
         return "High manipulation suggests agenda beyond information.";
     },
 
-    generateContentFindings(score, readability) {
+    generateContentFindings(score, readability, aiInsights, keyPoints) {
         const readText = readability !== 'Unknown' ? ` with ${readability} readability` : '';
         if (score >= 80) return `Excellent content quality${readText}.`;
         if (score >= 60) return `Good content quality${readText}.`;
@@ -1337,34 +1365,4 @@ window.ServiceTemplates = {
         
         if (!section || !list) return;
         
-        const claims = data.claims || data.verified_claims || [];
-        
-        if (claims.length > 0) {
-            section.style.display = 'block';
-            list.innerHTML = '';
-            
-            claims.forEach(claim => {
-                const claimEl = document.createElement('div');
-                claimEl.className = 'claim-item';
-                
-                const status = claim.verified ? 'verified' : 'unverified';
-                const icon = status === 'verified' ? 'check-circle' : 'question-circle';
-                const color = status === 'verified' ? 'green' : 'orange';
-                
-                claimEl.innerHTML = `
-                    <div class="claim-status ${status}">
-                        <i class="fas fa-${icon}" style="color: ${color}"></i>
-                    </div>
-                    <div class="claim-text">${claim.text || claim.claim || 'Claim checked'}</div>
-                    ${claim.evidence ? `<div class="claim-evidence">${claim.evidence}</div>` : ''}
-                `;
-                
-                list.appendChild(claimEl);
-            });
-        } else {
-            section.style.display = 'none';
-        }
-    }
-};
-
-console.log('Enhanced service templates with source rankings loaded successfully');
+        const claims = data.
