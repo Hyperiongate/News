@@ -517,6 +517,15 @@ window.toggleServiceDropdown = function(serviceId) {
     
     if (dropdown && content) {
         dropdown.classList.toggle('active');
+        
+        // Toggle display of content
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+        } else {
+            content.style.display = 'none';
+        }
+        
+        // Toggle chevron icon
         if (toggle) {
             toggle.classList.toggle('fa-chevron-down');
             toggle.classList.toggle('fa-chevron-up');
