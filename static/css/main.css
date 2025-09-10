@@ -1566,3 +1566,12 @@ body::before {
         display: none;
     }
 }
+/* Dropdown fix */
+.service-dropdown.active .service-content {
+    display: block !important;
+}
+
+.service-content {
+    display: none;
+    padding: 20px;
+}
