@@ -1,18 +1,22 @@
 /**
- * TruthLens News Analyzer - App Core Module (COMPLETE FIXED VERSION)
- * Date: January 27, 2025
- * Last Updated: January 27, 2025
+ * TruthLens News Analyzer - App Core Module (DUPLICATE RANKINGS REMOVED)
+ * Date: September 10, 2025
+ * Last Updated: September 10, 2025
  * 
  * FIXES IMPLEMENTED:
- * - Removed duplicate Source Credibility Rankings
- * - Added source icons to compact ranking items
- * - Single unified source rankings display with icons
- * - Fixed syntax errors - properly closed all brackets
+ * - REMOVED displaySourceRankings() method completely
+ * - REMOVED createSourceRankingsSection() method completely  
+ * - REMOVED initializeSourceRankings() method completely
+ * - REMOVED attachFilterListeners() method
+ * - REMOVED filterSources() method
+ * - REMOVED createCompactRankingItem() method
+ * - REMOVED all source ranking related code
+ * - Kept all essential functionality intact
  * 
  * NOTES:
- * - Only one Source Rankings section is created and displayed
- * - Icons are color-coded per source for brand recognition
- * - Properly exports TruthLensAnalyzer class for global access
+ * - Source rankings are now handled ONLY by service-templates.js
+ * - No duplicate rankings will appear
+ * - All other functionality preserved
  */
 
 class TruthLensAnalyzer {
@@ -41,38 +45,8 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
-        // Enhanced source rankings data with colors and icons
-        this.sourceRankingsData = {
-            'reuters.com': { score: 95, rank: 1, trend: 'stable', category: 'mainstream', color: '#FF6B00', icon: 'RE' },
-            'ap.org': { score: 94, rank: 2, trend: 'up', category: 'mainstream', color: '#FF0000', icon: 'AP' },
-            'bbc.com': { score: 92, rank: 3, trend: 'stable', category: 'mainstream', color: '#000000', icon: 'BB' },
-            'npr.org': { score: 90, rank: 4, trend: 'stable', category: 'mainstream', color: '#0066CC', icon: 'NP' },
-            'propublica.org': { score: 88, rank: 5, trend: 'up', category: 'independent', color: '#2E7D32', icon: 'PP' },
-            'wsj.com': { score: 85, rank: 6, trend: 'stable', category: 'mainstream', color: '#1976D2', icon: 'WS' },
-            'nytimes.com': { score: 84, rank: 7, trend: 'down', category: 'mainstream', color: '#000000', icon: 'NY' },
-            'ft.com': { score: 83, rank: 8, trend: 'stable', category: 'mainstream', color: '#FFA000', icon: 'FT' },
-            'economist.com': { score: 82, rank: 9, trend: 'stable', category: 'mainstream', color: '#E53935', icon: 'EC' },
-            'washingtonpost.com': { score: 80, rank: 10, trend: 'down', category: 'mainstream', color: '#1565C0', icon: 'WP' },
-            'theguardian.com': { score: 79, rank: 11, trend: 'stable', category: 'mainstream', color: '#052962', icon: 'GU' },
-            'theintercept.com': { score: 77, rank: 12, trend: 'up', category: 'independent', color: '#7B1FA2', icon: 'TI' },
-            'axios.com': { score: 76, rank: 13, trend: 'up', category: 'independent', color: '#00796B', icon: 'AX' },
-            'politico.com': { score: 75, rank: 14, trend: 'up', category: 'mainstream', color: '#DC143C', icon: 'PO' },
-            'cnn.com': { score: 72, rank: 15, trend: 'stable', category: 'mainstream', color: '#CC0000', icon: 'CN' },
-            'foxnews.com': { score: 70, rank: 16, trend: 'stable', category: 'mainstream', color: '#003366', icon: 'FX' },
-            'msnbc.com': { score: 68, rank: 17, trend: 'down', category: 'mainstream', color: '#0089D0', icon: 'MS' },
-            'thehill.com': { score: 65, rank: 18, trend: 'stable', category: 'mainstream', color: '#006B3C', icon: 'TH' },
-            'dailywire.com': { score: 63, rank: 19, trend: 'stable', category: 'independent', color: '#8B4513', icon: 'DW' },
-            'breitbart.com': { score: 60, rank: 20, trend: 'down', category: 'independent', color: '#FF6600', icon: 'BR' }
-        };
-
-        this.currentFilter = 'all';
-        this.sourceTrendHistory = {};
-        this.lastAnalyzedSource = null;
-        this.lastAnalyzedScore = null;
-        
         this.init();
         this.createServiceCards();
-        this.initializeSourceRankings();
     }
 
     cleanAuthorName(authorString) {
@@ -130,67 +104,6 @@ class TruthLensAnalyzer {
                 this.urlInput.value = '';
             }
         });
-    }
-
-    initializeSourceRankings() {
-        const existingRankings = document.getElementById('sourceRankings');
-        if (!existingRankings) {
-            this.createSourceRankingsSection();
-        }
-    }
-
-    createSourceRankingsSection() {
-        const resultsSection = document.getElementById('resultsSection');
-        if (!resultsSection) return;
-
-        const overviewSection = resultsSection.querySelector('.enhanced-analysis-overview');
-        if (!overviewSection) return;
-
-        if (document.getElementById('sourceRankings')) return;
-
-        const rankingsDiv = document.createElement('div');
-        rankingsDiv.id = 'sourceRankings';
-        rankingsDiv.className = 'source-rankings-compact';
-        rankingsDiv.style.display = 'none';
-        rankingsDiv.innerHTML = `
-            <div class="rankings-header-compact">
-                <h4 class="rankings-title-compact">
-                    <i class="fas fa-trophy"></i> News Source Credibility Rankings
-                </h4>
-                <div class="filter-buttons-compact">
-                    <button class="filter-btn active" data-filter="all">All</button>
-                    <button class="filter-btn" data-filter="mainstream">Mainstream</button>
-                    <button class="filter-btn" data-filter="independent">Independent</button>
-                </div>
-            </div>
-            <div class="rankings-chart-compact" id="rankingsChart"></div>
-        `;
-        
-        overviewSection.insertAdjacentElement('afterend', rankingsDiv);
-        this.attachFilterListeners();
-    }
-
-    attachFilterListeners() {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        filterButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const filter = e.target.dataset.filter;
-                this.filterSources(filter);
-            });
-        });
-    }
-
-    filterSources(filter) {
-        this.currentFilter = filter;
-        
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.filter === filter) {
-                btn.classList.add('active');
-            }
-        });
-        
-        this.displaySourceRankings(this.lastAnalyzedSource, this.lastAnalyzedScore);
     }
 
     createServiceCards() {
@@ -270,14 +183,16 @@ class TruthLensAnalyzer {
         this.form.reset();
         this.resultsSection.classList.remove('show');
         this.progressContainer.classList.remove('active');
-        this.lastAnalyzedSource = null;
-        this.lastAnalyzedScore = null;
-        this.currentFilter = 'all';
         
+        // Remove any source rankings that might exist
         const sourceRankings = document.getElementById('sourceRankings');
         if (sourceRankings) {
-            sourceRankings.style.display = 'none';
+            sourceRankings.remove();
         }
+        
+        // Also remove any duplicate rankings
+        const allRankings = document.querySelectorAll('.source-rankings-compact');
+        allRankings.forEach(ranking => ranking.remove());
     }
 
     showProgress() {
@@ -358,9 +273,6 @@ class TruthLensAnalyzer {
         let cleanedAuthor = this.cleanAuthorName(rawAuthor);
         
         data.author = cleanedAuthor;
-        
-        this.lastAnalyzedSource = source;
-        this.lastAnalyzedScore = trustScore;
         
         let findingsSummary = '';
         const trustLevel = trustScore >= 80 ? 'high' : trustScore >= 60 ? 'good' : trustScore >= 40 ? 'moderate' : 'low';
@@ -462,9 +374,12 @@ class TruthLensAnalyzer {
             }, 100);
         }
         
-        setTimeout(() => {
-            this.displaySourceRankings(source, trustScore);
-        }, 200);
+        // Pass source and score data to ServiceTemplates for rankings display
+        if (window.ServiceTemplates) {
+            // Store the current source info for ServiceTemplates to use
+            window.currentAnalysisSource = source;
+            window.currentAnalysisScore = trustScore;
+        }
         
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
@@ -530,165 +445,6 @@ class TruthLensAnalyzer {
         }
     }
 
-    displaySourceRankings(currentSource = null, currentScore = null) {
-        let rankingsContainer = document.getElementById('sourceRankings');
-        if (!rankingsContainer) {
-            this.createSourceRankingsSection();
-            rankingsContainer = document.getElementById('sourceRankings');
-        }
-        
-        const rankingsChart = document.getElementById('rankingsChart');
-        if (!rankingsContainer || !rankingsChart) return;
-
-        rankingsContainer.style.display = 'block';
-        rankingsContainer.style.visibility = 'visible';
-        rankingsContainer.style.opacity = '1';
-        rankingsChart.innerHTML = '';
-
-        let rankingsToDisplay = Object.entries(this.sourceRankingsData)
-            .filter(([domain, data]) => {
-                if (this.currentFilter === 'all') return true;
-                return data.category === this.currentFilter;
-            })
-            .sort((a, b) => b[1].score - a[1].score)
-            .slice(0, 10);
-
-        if (currentSource && currentScore !== null) {
-            const domain = this.extractDomain(currentSource);
-            const existingIndex = rankingsToDisplay.findIndex(([d]) => d === domain);
-            
-            if (existingIndex >= 0) {
-                rankingsToDisplay[existingIndex][1].isCurrent = true;
-            } else {
-                const category = this.guessCategory(domain);
-                if (this.currentFilter === 'all' || category === this.currentFilter) {
-                    const sourceIcon = this.formatDomainName(domain).substring(0, 2).toUpperCase();
-                    const sourceColor = this.getSourceColor(domain);
-                    
-                    const newEntry = [
-                        domain,
-                        {
-                            score: currentScore,
-                            rank: this.calculateRank(currentScore),
-                            trend: 'new',
-                            category: category,
-                            isCurrent: true,
-                            icon: sourceIcon,
-                            color: sourceColor
-                        }
-                    ];
-                    rankingsToDisplay.push(newEntry);
-                    rankingsToDisplay.sort((a, b) => b[1].score - a[1].score);
-                    rankingsToDisplay = rankingsToDisplay.slice(0, 10);
-                }
-            }
-        }
-
-        rankingsToDisplay.forEach(([domain, data], index) => {
-            const rankItem = this.createCompactRankingItem(domain, data, index);
-            rankingsChart.appendChild(rankItem);
-        });
-
-        const totalInCategory = Object.values(this.sourceRankingsData)
-            .filter(data => this.currentFilter === 'all' || data.category === this.currentFilter)
-            .length;
-        
-        if (totalInCategory > 10) {
-            const showMore = document.createElement('div');
-            showMore.className = 'show-more-sources';
-            showMore.style.cssText = 'text-align: center; padding: 10px; color: #666; font-size: 0.9rem;';
-            showMore.innerHTML = `<span style="cursor: pointer;">+${totalInCategory - 10} more sources</span>`;
-            rankingsChart.appendChild(showMore);
-        }
-
-        setTimeout(() => {
-            rankingsChart.querySelectorAll('.ranking-item-compact').forEach((item, index) => {
-                setTimeout(() => {
-                    item.classList.add('animate-in');
-                }, index * 30);
-            });
-        }, 100);
-    }
-
-    createCompactRankingItem(domain, data, index) {
-        const item = document.createElement('div');
-        const trustClass = this.getScoreCategory(data.score);
-        item.className = `ranking-item-compact ${trustClass} ${data.isCurrent ? 'current-source' : ''}`;
-        
-        const trendIcon = this.getTrendIcon(data.trend);
-        const sourceIcon = data.icon || this.formatDomainName(domain).substring(0, 2).toUpperCase();
-        const sourceColor = data.color || this.getSourceColor(domain);
-        
-        item.innerHTML = `
-            <div class="rank-number">#${index + 1}</div>
-            <div class="source-logo" style="
-                width: 35px;
-                height: 35px;
-                background-color: ${sourceColor};
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: bold;
-                font-size: 0.85rem;
-                margin-right: 12px;
-                flex-shrink: 0;
-            ">${sourceIcon}</div>
-            <div class="source-name-compact" style="
-                flex: 0 0 auto;
-                min-width: 140px;
-                max-width: 180px;
-                font-size: 0.9rem;
-                font-weight: 500;
-                padding-right: 10px;
-            ">${this.formatDomainName(domain)}</div>
-            <div class="score-bar-compact">
-                <div class="score-fill" style="width: ${data.score}%"></div>
-            </div>
-            <div class="score-value">${data.score}</div>
-            <div class="trend-icon" style="margin-left: 8px;">${trendIcon}</div>
-            ${data.isCurrent ? '<span class="current-badge">CURRENT</span>' : ''}
-        `;
-        
-        return item;
-    }
-
-    getSourceColor(domain) {
-        const domainLower = domain.toLowerCase();
-        
-        if (domainLower.includes('cnn')) return '#CC0000';
-        if (domainLower.includes('fox')) return '#003366';
-        if (domainLower.includes('nbc')) return '#F37021';
-        if (domainLower.includes('abc')) return '#FFD700';
-        if (domainLower.includes('cbs')) return '#1C4586';
-        if (domainLower.includes('bbc')) return '#000000';
-        if (domainLower.includes('npr')) return '#0066CC';
-        if (domainLower.includes('reuters')) return '#FF6B00';
-        if (domainLower.includes('ap')) return '#FF0000';
-        if (domainLower.includes('guardian')) return '#052962';
-        if (domainLower.includes('nytimes') || domainLower.includes('newyorktimes')) return '#000000';
-        if (domainLower.includes('washingtonpost') || domainLower.includes('wapo')) return '#1565C0';
-        if (domainLower.includes('wsj') || domainLower.includes('wallstreet')) return '#1976D2';
-        if (domainLower.includes('politico')) return '#DC143C';
-        if (domainLower.includes('axios')) return '#00796B';
-        
-        return '#6B7280';
-    }
-
-    guessCategory(domain) {
-        const mainstream = ['cnn', 'fox', 'nbc', 'cbs', 'abc', 'nytimes', 'wsj', 'washingtonpost', 
-                          'usatoday', 'bbc', 'guardian', 'reuters', 'ap.org', 'npr', 'politico', 'thehill'];
-        
-        const domainLower = domain.toLowerCase();
-        for (const ms of mainstream) {
-            if (domainLower.includes(ms)) {
-                return 'mainstream';
-            }
-        }
-        return 'independent';
-    }
-
     extractDomain(url) {
         try {
             const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
@@ -742,31 +498,6 @@ class TruthLensAnalyzer {
         return nameMap[domain] || domain.replace('.com', '').replace('.org', '').replace('.net', '')
             .split('.')[0]
             .split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-
-    getScoreCategory(score) {
-        if (score >= 85) return 'highly-trusted';
-        if (score >= 70) return 'trusted';
-        if (score >= 50) return 'moderate';
-        return 'low';
-    }
-
-    calculateRank(score) {
-        let rank = 1;
-        for (const [domain, data] of Object.entries(this.sourceRankingsData)) {
-            if (data.score > score) rank++;
-        }
-        return rank;
-    }
-
-    getTrendIcon(trend) {
-        const icons = {
-            'up': '<i class="fas fa-arrow-up" style="color: #10b981; font-size: 0.75rem;"></i>',
-            'down': '<i class="fas fa-arrow-down" style="color: #ef4444; font-size: 0.75rem;"></i>',
-            'stable': '<i class="fas fa-minus" style="color: #6b7280; font-size: 0.75rem;"></i>',
-            'new': '<i class="fas fa-star" style="color: #f59e0b; font-size: 0.75rem;"></i>'
-        };
-        return icons[trend] || icons['stable'];
     }
 
     showDebugInfo(data) {
