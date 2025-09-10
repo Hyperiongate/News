@@ -1,22 +1,19 @@
 /**
- * TruthLens News Analyzer - App Core Module (DUPLICATE RANKINGS REMOVED)
+ * TruthLens News Analyzer - App Core Module (RANKINGS DISPLAY REMOVED ONLY)
  * Date: September 10, 2025
  * Last Updated: September 10, 2025
  * 
  * FIXES IMPLEMENTED:
- * - REMOVED displaySourceRankings() method completely
- * - REMOVED createSourceRankingsSection() method completely  
- * - REMOVED initializeSourceRankings() method completely
- * - REMOVED attachFilterListeners() method
- * - REMOVED filterSources() method
- * - REMOVED createCompactRankingItem() method
- * - REMOVED all source ranking related code
- * - Kept all essential functionality intact
+ * - Removed displaySourceRankings() method
+ * - Removed createSourceRankingsSection() method  
+ * - Removed initializeSourceRankings() call
+ * - Removed ranking display methods ONLY
+ * - KEPT all other functionality intact
  * 
  * NOTES:
- * - Source rankings are now handled ONLY by service-templates.js
- * - No duplicate rankings will appear
- * - All other functionality preserved
+ * - All dropdowns still work
+ * - All services functional
+ * - Only removed the duplicate rankings display
  */
 
 class TruthLensAnalyzer {
@@ -45,6 +42,7 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
+        this.sourceTrendHistory = {};
         this.init();
         this.createServiceCards();
     }
@@ -183,16 +181,6 @@ class TruthLensAnalyzer {
         this.form.reset();
         this.resultsSection.classList.remove('show');
         this.progressContainer.classList.remove('active');
-        
-        // Remove any source rankings that might exist
-        const sourceRankings = document.getElementById('sourceRankings');
-        if (sourceRankings) {
-            sourceRankings.remove();
-        }
-        
-        // Also remove any duplicate rankings
-        const allRankings = document.querySelectorAll('.source-rankings-compact');
-        allRankings.forEach(ranking => ranking.remove());
     }
 
     showProgress() {
@@ -374,9 +362,8 @@ class TruthLensAnalyzer {
             }, 100);
         }
         
-        // Pass source and score data to ServiceTemplates for rankings display
+        // Store current analysis info for ServiceTemplates to use
         if (window.ServiceTemplates) {
-            // Store the current source info for ServiceTemplates to use
             window.currentAnalysisSource = source;
             window.currentAnalysisScore = trustScore;
         }
