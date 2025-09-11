@@ -1,17 +1,16 @@
 """
-News Analyzer API - PRODUCTION VERSION WITH DEADLOCK FIX
+News Analyzer API - PRODUCTION VERSION WITH STATIC FILE FIX
 Date: September 6, 2025
-Last Updated: September 6, 2025
+Last Updated: September 11, 2025
 
-CRITICAL FIX:
-- Removed the per-URL locking mechanism that was causing deadlocks
-- Kept only essential request caching to prevent duplicate processing
-- ScraperAPI can handle concurrent requests for the same URL, so locks aren't needed
-- Fixed the issue where requests would hang indefinitely
+FIXES APPLIED:
+- Original deadlock fix maintained
+- Added explicit JS/CSS file serving to fix empty file responses
+- Files are now read and served with proper content
 
 Notes:
-- The deadlock was caused by improper lock acquisition/release
-- Now uses simple caching without complex locking
+- JavaScript and CSS files were being found but served empty
+- Now explicitly reads file content and returns it
 - Maintains all existing functionality
 """
 import os
@@ -38,7 +37,7 @@ logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 logger.info("=" * 80)
-logger.info("INITIALIZING NEWS ANALYZER API - FIXED DEADLOCK VERSION")
+logger.info("INITIALIZING NEWS ANALYZER API - FIXED STATIC FILES VERSION")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"Port: {os.environ.get('PORT', 5000)}")
@@ -126,6 +125,15 @@ article_extractor = None
 logger.info("-" * 60)
 logger.info("INITIALIZING SERVICES")
 
+# Initialize service registry if it exists
+try:
+    from services.service_registry import get_service_registry
+    registry = get_service_registry()
+    logger.info("✓ Service registry available")
+except:
+    logger.warning("Service registry not available")
+    registry = None
+
 # Initialize ArticleExtractor with force registration
 ArticleExtractorClass = safe_import('services.article_extractor', 'ArticleExtractor')
 if ArticleExtractorClass:
@@ -194,15 +202,6 @@ if not BaseAnalyzerClass:
     # Save it for other services to use
     sys.modules['services.base_analyzer'] = type(sys)('services.base_analyzer')
     sys.modules['services.base_analyzer'].BaseAnalyzer = BaseAnalyzer
-
-# Initialize service registry if it exists
-try:
-    from services.service_registry import get_service_registry
-    registry = get_service_registry()
-    logger.info("✓ Service registry available")
-except:
-    logger.warning("Service registry not available")
-    registry = None
 
 # Initialize analysis pipeline if it exists
 try:
@@ -622,10 +621,48 @@ def api_status():
         'timestamp': datetime.now().isoformat()
     })
 
-# Static file serving
+# FIXED: Explicit JavaScript file serving to fix empty files issue
+@app.route('/static/js/<path:filename>')
+def serve_js(filename):
+    """Explicitly serve JavaScript files with content"""
+    import os
+    js_path = os.path.join('static', 'js', filename)
+    try:
+        if os.path.exists(js_path):
+            with open(js_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            logger.info(f"Serving JS file {filename}: {len(content)} bytes")
+            return content, 200, {'Content-Type': 'application/javascript; charset=utf-8'}
+        else:
+            logger.error(f"JS file not found: {js_path}")
+            return "File not found", 404
+    except Exception as e:
+        logger.error(f"Error serving JS file {filename}: {e}")
+        return f"Error loading file: {str(e)}", 500
+
+# FIXED: Explicit CSS file serving to fix empty files issue  
+@app.route('/static/css/<path:filename>')
+def serve_css(filename):
+    """Explicitly serve CSS files with content"""
+    import os
+    css_path = os.path.join('static', 'css', filename)
+    try:
+        if os.path.exists(css_path):
+            with open(css_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            logger.info(f"Serving CSS file {filename}: {len(content)} bytes")
+            return content, 200, {'Content-Type': 'text/css; charset=utf-8'}
+        else:
+            logger.error(f"CSS file not found: {css_path}")
+            return "File not found", 404
+    except Exception as e:
+        logger.error(f"Error serving CSS file {filename}: {e}")
+        return f"Error loading file: {str(e)}", 500
+
+# Generic static file serving (for other files like images)
 @app.route('/static/<path:filename>')
 def serve_static(filename):
-    """Serve static files"""
+    """Serve other static files"""
     return send_from_directory('static', filename)
 
 # Error handlers
