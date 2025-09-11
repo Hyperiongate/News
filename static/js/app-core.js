@@ -591,12 +591,13 @@ window.toggleServiceDropdown = function(serviceId) {
         if (content.style.display === 'none' || content.style.display === '') {
             content.style.display = 'block';
             
-            // If we have analysis data and the content is empty, populate it
-            if (window.analyzer && window.analyzer.currentAnalysisData) {
-                const hasContent = content.querySelector('.service-card-grid, .author-card-header');
-                if (!hasContent) {
-                    window.analyzer.populateServiceContent(serviceId);
-                }
+            // Check if content needs to be populated
+            const noDataMessage = content.querySelector('.service-no-data');
+            const hasValidContent = content.querySelector('.service-card-grid, .author-card-header, .service-metric');
+            
+            // If we have analysis data and either no content or just the "no data" message
+            if (window.analyzer && window.analyzer.currentAnalysisData && (noDataMessage || !hasValidContent)) {
+                window.analyzer.populateServiceContent(serviceId);
             }
         } else {
             content.style.display = 'none';
