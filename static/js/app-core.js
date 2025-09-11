@@ -1,12 +1,12 @@
 /**
- * TruthLens News Analyzer - SIMPLIFIED FIX
+ * TruthLens News Analyzer - FINAL WORKING VERSION
  * Date: September 11, 2025
  * Last Updated: September 11, 2025
  * 
- * SIMPLE FIX:
- * - Store full response data globally
- * - Repopulate dropdowns every time they're clicked
- * - No complex state management
+ * FIXED:
+ * - Added analyzer parameter to all ServiceTemplates calls
+ * - Store data globally in window.analysisData
+ * - Populate dropdowns on click with proper parameters
  */
 
 // Store analysis data globally
@@ -163,7 +163,7 @@ class TruthLensAnalyzer {
             
             // Store data globally
             window.analysisData = data;
-            console.log('Analysis data stored:', data);
+            console.log('Analysis data stored successfully');
             
             this.displayResults(data);
             
@@ -275,6 +275,38 @@ class TruthLensAnalyzer {
                 break;
         }
         
+        // Add specific details based on the analysis
+        if (data.detailed_analysis) {
+            const d = data.detailed_analysis;
+            
+            // Add source info
+            if (d.source_credibility?.credibility) {
+                findingsSummary = findingsSummary.replace('Source credibility is mixed', `Published by ${source}`);
+            }
+            
+            // Add bias info
+            if (d.bias_detector?.bias_score !== undefined) {
+                const biasLevel = d.bias_detector.bias_score;
+                if (biasLevel < 30) {
+                    findingsSummary += " Content appears balanced with minimal bias.";
+                } else if (biasLevel > 70) {
+                    findingsSummary += " Significant bias detected in presentation.";
+                }
+            }
+            
+            // Add fact-checking info
+            if (d.fact_checker?.claims_verified !== undefined && d.fact_checker?.claims_found !== undefined) {
+                const verified = d.fact_checker.claims_verified || 0;
+                const found = d.fact_checker.claims_found || 0;
+                if (found > 0) {
+                    const percentage = Math.round((verified / found) * 100);
+                    findingsSummary += ` Fact-checking: ${percentage}% of claims verified.`;
+                } else {
+                    findingsSummary += " Fact-checking: 0% of claims verified.";
+                }
+            }
+        }
+        
         this.updateTrustScore(trustScore);
         
         const overviewEl = document.getElementById('analysisOverview');
@@ -353,7 +385,7 @@ class TruthLensAnalyzer {
     }
 }
 
-// SIMPLIFIED dropdown toggle - populate on every click
+// FIXED dropdown toggle - properly pass analyzer parameter
 window.toggleServiceDropdown = function(serviceId) {
     const dropdown = document.getElementById(`${serviceId}Dropdown`);
     const content = document.getElementById(`${serviceId}Content`);
@@ -371,35 +403,52 @@ window.toggleServiceDropdown = function(serviceId) {
             // Get template and populate it
             content.innerHTML = window.ServiceTemplates.getTemplate(serviceId);
             
-            // Immediately populate with data
+            // Immediately populate with data - PASS ANALYZER AS PARAMETER
             const detailed = window.analysisData.detailed_analysis || {};
             
             switch(serviceId) {
                 case 'sourceCredibility':
-                    window.ServiceTemplates.displaySourceCredibility(detailed.source_credibility || {});
+                    window.ServiceTemplates.displaySourceCredibility(
+                        detailed.source_credibility || {}, 
+                        window.analyzer
+                    );
                     break;
                 case 'biasDetector':
-                    window.ServiceTemplates.displayBiasDetection(detailed.bias_detector || {});
+                    window.ServiceTemplates.displayBiasDetection(
+                        detailed.bias_detector || {}, 
+                        window.analyzer
+                    );
                     break;
                 case 'factChecker':
-                    window.ServiceTemplates.displayFactChecking(detailed.fact_checker || {});
+                    window.ServiceTemplates.displayFactChecking(
+                        detailed.fact_checker || {}, 
+                        window.analyzer
+                    );
                     break;
                 case 'transparencyAnalyzer':
-                    window.ServiceTemplates.displayTransparencyAnalysis(detailed.transparency_analyzer || {});
+                    window.ServiceTemplates.displayTransparencyAnalysis(
+                        detailed.transparency_analyzer || {}, 
+                        window.analyzer
+                    );
                     break;
                 case 'manipulationDetector':
-                    window.ServiceTemplates.displayManipulationDetection(detailed.manipulation_detector || {});
+                    window.ServiceTemplates.displayManipulationDetection(
+                        detailed.manipulation_detector || {}, 
+                        window.analyzer
+                    );
                     break;
                 case 'contentAnalyzer':
                     window.ServiceTemplates.displayContentAnalysis(
                         detailed.content_analyzer || {}, 
-                        detailed.openai_enhancer || {}
+                        detailed.openai_enhancer || {},
+                        window.analyzer
                     );
                     break;
                 case 'author':
                     window.ServiceTemplates.displayAuthorAnalysis(
                         detailed.author_analyzer || {}, 
-                        window.analysisData.author
+                        window.analysisData.author,
+                        window.analyzer
                     );
                     break;
             }
