@@ -1,19 +1,16 @@
 /**
- * TruthLens News Analyzer - App Core Module (FIXED DROPDOWN DATA)
+ * TruthLens News Analyzer - SIMPLIFIED FIX
  * Date: September 11, 2025
  * Last Updated: September 11, 2025
  * 
- * FIXES IMPLEMENTED:
- * - Store analysis data globally for dropdown access
- * - Populate dropdowns with actual data when toggled
- * - Ensure templates have data when displayed
- * - Fixed dropdown toggle functionality
- * 
- * NOTES:
- * - Analysis data is stored in window.currentAnalysisData
- * - Dropdowns are populated when expanded
- * - Author profiles with links are restored
+ * SIMPLE FIX:
+ * - Store full response data globally
+ * - Repopulate dropdowns every time they're clicked
+ * - No complex state management
  */
+
+// Store analysis data globally
+window.analysisData = null;
 
 class TruthLensAnalyzer {
     constructor() {
@@ -30,9 +27,6 @@ class TruthLensAnalyzer {
         this.progressSteps = document.getElementById('progressSteps');
         this.serviceContainer = document.getElementById('serviceAnalysisContainer');
         
-        // Store current analysis data
-        this.currentAnalysisData = null;
-        
         // Service definitions
         this.services = [
             { id: 'sourceCredibility', name: 'Source Credibility Analysis', icon: 'fa-shield-alt' },
@@ -44,7 +38,6 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
-        this.sourceTrendHistory = {};
         this.init();
         this.createServiceCards();
     }
@@ -132,66 +125,11 @@ class TruthLensAnalyzer {
                 </div>
             </div>
             <div class="service-content" id="${service.id}Content" style="display: none;">
-                <div class="service-loading">
-                    <i class="fas fa-spinner fa-spin"></i> Loading analysis data...
-                </div>
+                <!-- Content will be populated when dropdown is clicked -->
             </div>
         `;
         
         return dropdown;
-    }
-
-    populateServiceContent(serviceId) {
-        // Only populate if we have analysis data
-        if (!this.currentAnalysisData) {
-            console.warn('No analysis data available yet');
-            return;
-        }
-
-        const content = document.getElementById(`${serviceId}Content`);
-        if (!content) return;
-
-        // Get the template HTML
-        if (window.ServiceTemplates) {
-            const templateHtml = window.ServiceTemplates.getTemplate(serviceId);
-            content.innerHTML = templateHtml;
-
-            // Now populate with actual data
-            const detailed = this.currentAnalysisData.detailed_analysis || {};
-            
-            // Call the appropriate display method based on service
-            switch(serviceId) {
-                case 'sourceCredibility':
-                    window.ServiceTemplates.displaySourceCredibility(detailed.source_credibility || {}, this);
-                    break;
-                case 'biasDetector':
-                    window.ServiceTemplates.displayBiasDetection(detailed.bias_detector || {}, this);
-                    break;
-                case 'factChecker':
-                    window.ServiceTemplates.displayFactChecking(detailed.fact_checker || {}, this);
-                    break;
-                case 'transparencyAnalyzer':
-                    window.ServiceTemplates.displayTransparencyAnalysis(detailed.transparency_analyzer || {}, this);
-                    break;
-                case 'manipulationDetector':
-                    window.ServiceTemplates.displayManipulationDetection(detailed.manipulation_detector || {}, this);
-                    break;
-                case 'contentAnalyzer':
-                    window.ServiceTemplates.displayContentAnalysis(
-                        detailed.content_analyzer || {}, 
-                        detailed.openai_enhancer || {}, 
-                        this
-                    );
-                    break;
-                case 'author':
-                    window.ServiceTemplates.displayAuthorAnalysis(
-                        detailed.author_analyzer || {}, 
-                        this.currentAnalysisData.author, 
-                        this
-                    );
-                    break;
-            }
-        }
     }
 
     async handleSubmit(e) {
@@ -223,9 +161,9 @@ class TruthLensAnalyzer {
                 throw new Error(data.error || 'Analysis failed');
             }
             
-            // Store the analysis data globally
-            this.currentAnalysisData = data;
-            window.currentAnalysisData = data; // Also store globally for debugging
+            // Store data globally
+            window.analysisData = data;
+            console.log('Analysis data stored:', data);
             
             this.displayResults(data);
             
@@ -242,8 +180,7 @@ class TruthLensAnalyzer {
         this.form.reset();
         this.resultsSection.classList.remove('show');
         this.progressContainer.classList.remove('active');
-        this.currentAnalysisData = null;
-        window.currentAnalysisData = null;
+        window.analysisData = null;
     }
 
     showProgress() {
@@ -311,11 +248,6 @@ class TruthLensAnalyzer {
     displayResults(data) {
         this.progressContainer.classList.remove('active');
         
-        const debugInfo = document.getElementById('debugInfo');
-        if (debugInfo) {
-            debugInfo.remove();
-        }
-        
         let trustScore = data.trust_score || 0;
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
@@ -341,30 +273,6 @@ class TruthLensAnalyzer {
             case 'low':
                 findingsSummary = "This article shows significant credibility concerns. Source reputation is questionable, notable bias detected, and multiple claims could not be verified.";
                 break;
-        }
-        
-        if (data.detailed_analysis) {
-            const d = data.detailed_analysis;
-            if (d.bias_detector?.bias_score !== undefined) {
-                const biasLevel = d.bias_detector.bias_score;
-                if (biasLevel < 30) {
-                    findingsSummary += " The content shows minimal bias.";
-                } else if (biasLevel > 70) {
-                    findingsSummary += " Significant bias was detected in the presentation.";
-                }
-            }
-            if (d.fact_checker?.accuracy_score === 0) {
-                findingsSummary += " No claims could be independently verified.";
-            }
-            
-            if (d.author_analyzer) {
-                if (d.author_analyzer.name) {
-                    d.author_analyzer.name = this.cleanAuthorName(d.author_analyzer.name);
-                }
-                if (d.author_analyzer.author_name) {
-                    d.author_analyzer.author_name = this.cleanAuthorName(d.author_analyzer.author_name);
-                }
-            }
         }
         
         this.updateTrustScore(trustScore);
@@ -395,87 +303,14 @@ class TruthLensAnalyzer {
         
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
-            findingsEl.innerHTML = '';
             findingsEl.textContent = findingsSummary;
-            findingsEl.setAttribute('style', `
-                display: block !important;
-                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-                border-left: 3px solid #3b82f6 !important;
-                padding: 12px 15px !important;
-                border-radius: 6px !important;
-                margin-top: 15px !important;
-                color: #475569 !important;
-                line-height: 1.6 !important;
-                font-size: 0.95rem !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            `);
         }
-        
-        this.cleanupUnwantedText();
         
         if (typeof updateEnhancedTrustDisplay === 'function') {
             updateEnhancedTrustDisplay(data);
-            setTimeout(() => {
-                const findingsEl = document.getElementById('findingsSummary');
-                if (findingsEl && findingsEl.textContent !== findingsSummary) {
-                    findingsEl.textContent = findingsSummary;
-                }
-                this.cleanupUnwantedText();
-            }, 100);
-        }
-        
-        // Store current analysis info for ServiceTemplates to use
-        if (window.ServiceTemplates) {
-            window.currentAnalysisSource = source;
-            window.currentAnalysisScore = trustScore;
-        }
-        
-        // First, populate all dropdowns with templates (but keep them hidden)
-        this.services.forEach(service => {
-            this.populateServiceContent(service.id);
-        });
-        
-        // Then call displayAllAnalyses to populate the data
-        if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
-            window.ServiceTemplates.displayAllAnalyses(data, this);
-        } else {
-            console.warn('ServiceTemplates not fully loaded, retrying...');
-            setTimeout(() => {
-                if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
-                    window.ServiceTemplates.displayAllAnalyses(data, this);
-                } else {
-                    console.error('ServiceTemplates failed to load');
-                }
-            }, 500);
         }
         
         this.showResults();
-    }
-
-    cleanupUnwantedText() {
-        const overview = document.querySelector('.enhanced-analysis-overview');
-        if (overview) {
-            const walker = document.createTreeWalker(
-                overview,
-                NodeFilter.SHOW_TEXT,
-                null,
-                false
-            );
-            
-            let node;
-            while (node = walker.nextNode()) {
-                if (node.textContent.includes('Trust Score:') && 
-                    node.textContent.includes('Fact Check:') &&
-                    node.textContent.includes('|')) {
-                    node.textContent = '';
-                }
-                if (node.textContent.includes('/100 (Medium)') ||
-                    node.textContent.includes('% verified')) {
-                    node.textContent = '';
-                }
-            }
-        }
     }
 
     updateTrustScore(score) {
@@ -501,66 +336,6 @@ class TruthLensAnalyzer {
         }
     }
 
-    extractDomain(url) {
-        try {
-            const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
-            return urlObj.hostname.replace('www.', '');
-        } catch {
-            return url.toLowerCase().replace('www.', '');
-        }
-    }
-
-    formatDomainName(domain) {
-        const nameMap = {
-            'reuters.com': 'Reuters',
-            'ap.org': 'Associated Press',
-            'bbc.com': 'BBC News',
-            'bbc.co.uk': 'BBC News',
-            'npr.org': 'NPR',
-            'propublica.org': 'ProPublica',
-            'wsj.com': 'Wall Street Journal',
-            'nytimes.com': 'New York Times',
-            'ft.com': 'Financial Times',
-            'economist.com': 'The Economist',
-            'washingtonpost.com': 'Washington Post',
-            'theguardian.com': 'The Guardian',
-            'theintercept.com': 'The Intercept',
-            'cnn.com': 'CNN',
-            'foxnews.com': 'Fox News',
-            'msnbc.com': 'MSNBC',
-            'politico.com': 'Politico',
-            'axios.com': 'Axios',
-            'thehill.com': 'The Hill',
-            'dailywire.com': 'Daily Wire',
-            'breitbart.com': 'Breitbart',
-            'nbcnews.com': 'NBC News',
-            'abcnews.go.com': 'ABC News',
-            'cbsnews.com': 'CBS News',
-            'usatoday.com': 'USA Today',
-            'bloomberg.com': 'Bloomberg',
-            'businessinsider.com': 'Business Insider',
-            'vox.com': 'Vox',
-            'slate.com': 'Slate',
-            'salon.com': 'Salon',
-            'huffpost.com': 'HuffPost',
-            'buzzfeednews.com': 'BuzzFeed News',
-            'vice.com': 'Vice News',
-            'motherjones.com': 'Mother Jones',
-            'thedailybeast.com': 'The Daily Beast',
-            'newsweek.com': 'Newsweek',
-            'time.com': 'TIME'
-        };
-        
-        return nameMap[domain] || domain.replace('.com', '').replace('.org', '').replace('.net', '')
-            .split('.')[0]
-            .split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-
-    showDebugInfo(data) {
-        // Debug info disabled in production
-        return;
-    }
-
     showResults() {
         if (this.resultsSection) {
             this.resultsSection.classList.add('show');
@@ -578,43 +353,72 @@ class TruthLensAnalyzer {
     }
 }
 
-// Global function for dropdowns - FIXED VERSION
+// SIMPLIFIED dropdown toggle - populate on every click
 window.toggleServiceDropdown = function(serviceId) {
     const dropdown = document.getElementById(`${serviceId}Dropdown`);
     const content = document.getElementById(`${serviceId}Content`);
     const toggle = dropdown?.querySelector('.service-toggle i');
     
-    if (dropdown && content) {
-        dropdown.classList.toggle('active');
+    if (!dropdown || !content) return;
+    
+    dropdown.classList.toggle('active');
+    
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
         
-        // Toggle display of content
-        if (content.style.display === 'none' || content.style.display === '') {
-            content.style.display = 'block';
+        // Always populate the content when opening
+        if (window.analysisData && window.ServiceTemplates) {
+            // Get template and populate it
+            content.innerHTML = window.ServiceTemplates.getTemplate(serviceId);
             
-            // Check if content needs to be populated
-            const noDataMessage = content.querySelector('.service-no-data');
-            const hasValidContent = content.querySelector('.service-card-grid, .author-card-header, .service-metric');
+            // Immediately populate with data
+            const detailed = window.analysisData.detailed_analysis || {};
             
-            // If we have analysis data and either no content or just the "no data" message
-            if (window.analyzer && window.analyzer.currentAnalysisData && (noDataMessage || !hasValidContent)) {
-                window.analyzer.populateServiceContent(serviceId);
+            switch(serviceId) {
+                case 'sourceCredibility':
+                    window.ServiceTemplates.displaySourceCredibility(detailed.source_credibility || {});
+                    break;
+                case 'biasDetector':
+                    window.ServiceTemplates.displayBiasDetection(detailed.bias_detector || {});
+                    break;
+                case 'factChecker':
+                    window.ServiceTemplates.displayFactChecking(detailed.fact_checker || {});
+                    break;
+                case 'transparencyAnalyzer':
+                    window.ServiceTemplates.displayTransparencyAnalysis(detailed.transparency_analyzer || {});
+                    break;
+                case 'manipulationDetector':
+                    window.ServiceTemplates.displayManipulationDetection(detailed.manipulation_detector || {});
+                    break;
+                case 'contentAnalyzer':
+                    window.ServiceTemplates.displayContentAnalysis(
+                        detailed.content_analyzer || {}, 
+                        detailed.openai_enhancer || {}
+                    );
+                    break;
+                case 'author':
+                    window.ServiceTemplates.displayAuthorAnalysis(
+                        detailed.author_analyzer || {}, 
+                        window.analysisData.author
+                    );
+                    break;
             }
         } else {
-            content.style.display = 'none';
+            content.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;">No analysis data available. Please analyze an article first.</div>';
         }
-        
-        // Toggle chevron icon
-        if (toggle) {
-            toggle.classList.toggle('fa-chevron-down');
-            toggle.classList.toggle('fa-chevron-up');
-        }
+    } else {
+        content.style.display = 'none';
+    }
+    
+    if (toggle) {
+        toggle.classList.toggle('fa-chevron-down');
+        toggle.classList.toggle('fa-chevron-up');
     }
 };
 
-// Initialize when DOM is ready
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     window.analyzer = new TruthLensAnalyzer();
 });
 
-// Export for global access
 window.TruthLensAnalyzer = TruthLensAnalyzer;
