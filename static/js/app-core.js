@@ -1,19 +1,18 @@
 /**
- * TruthLens News Analyzer - App Core Module (RANKINGS DISPLAY REMOVED ONLY)
- * Date: September 10, 2025
- * Last Updated: September 10, 2025
+ * TruthLens News Analyzer - App Core Module (FIXED DROPDOWN DATA)
+ * Date: September 11, 2025
+ * Last Updated: September 11, 2025
  * 
  * FIXES IMPLEMENTED:
- * - Removed displaySourceRankings() method
- * - Removed createSourceRankingsSection() method  
- * - Removed initializeSourceRankings() call
- * - Removed ranking display methods ONLY
- * - KEPT all other functionality intact
+ * - Store analysis data globally for dropdown access
+ * - Populate dropdowns with actual data when toggled
+ * - Ensure templates have data when displayed
+ * - Fixed dropdown toggle functionality
  * 
  * NOTES:
- * - All dropdowns still work
- * - All services functional
- * - Only removed the duplicate rankings display
+ * - Analysis data is stored in window.currentAnalysisData
+ * - Dropdowns are populated when expanded
+ * - Author profiles with links are restored
  */
 
 class TruthLensAnalyzer {
@@ -30,6 +29,9 @@ class TruthLensAnalyzer {
         this.progressPercentage = document.getElementById('progressPercentage');
         this.progressSteps = document.getElementById('progressSteps');
         this.serviceContainer = document.getElementById('serviceAnalysisContainer');
+        
+        // Store current analysis data
+        this.currentAnalysisData = null;
         
         // Service definitions
         this.services = [
@@ -129,12 +131,67 @@ class TruthLensAnalyzer {
                     <i class="fas fa-chevron-down"></i>
                 </div>
             </div>
-            <div class="service-content" id="${service.id}Content">
-                ${window.ServiceTemplates ? window.ServiceTemplates.getTemplate(service.id) : ''}
+            <div class="service-content" id="${service.id}Content" style="display: none;">
+                <div class="service-loading">
+                    <i class="fas fa-spinner fa-spin"></i> Loading analysis data...
+                </div>
             </div>
         `;
         
         return dropdown;
+    }
+
+    populateServiceContent(serviceId) {
+        // Only populate if we have analysis data
+        if (!this.currentAnalysisData) {
+            console.warn('No analysis data available yet');
+            return;
+        }
+
+        const content = document.getElementById(`${serviceId}Content`);
+        if (!content) return;
+
+        // Get the template HTML
+        if (window.ServiceTemplates) {
+            const templateHtml = window.ServiceTemplates.getTemplate(serviceId);
+            content.innerHTML = templateHtml;
+
+            // Now populate with actual data
+            const detailed = this.currentAnalysisData.detailed_analysis || {};
+            
+            // Call the appropriate display method based on service
+            switch(serviceId) {
+                case 'sourceCredibility':
+                    window.ServiceTemplates.displaySourceCredibility(detailed.source_credibility || {}, this);
+                    break;
+                case 'biasDetector':
+                    window.ServiceTemplates.displayBiasDetection(detailed.bias_detector || {}, this);
+                    break;
+                case 'factChecker':
+                    window.ServiceTemplates.displayFactChecking(detailed.fact_checker || {}, this);
+                    break;
+                case 'transparencyAnalyzer':
+                    window.ServiceTemplates.displayTransparencyAnalysis(detailed.transparency_analyzer || {}, this);
+                    break;
+                case 'manipulationDetector':
+                    window.ServiceTemplates.displayManipulationDetection(detailed.manipulation_detector || {}, this);
+                    break;
+                case 'contentAnalyzer':
+                    window.ServiceTemplates.displayContentAnalysis(
+                        detailed.content_analyzer || {}, 
+                        detailed.openai_enhancer || {}, 
+                        this
+                    );
+                    break;
+                case 'author':
+                    window.ServiceTemplates.displayAuthorAnalysis(
+                        detailed.author_analyzer || {}, 
+                        this.currentAnalysisData.author, 
+                        this
+                    );
+                    break;
+            }
+        }
     }
 
     async handleSubmit(e) {
@@ -166,6 +223,10 @@ class TruthLensAnalyzer {
                 throw new Error(data.error || 'Analysis failed');
             }
             
+            // Store the analysis data globally
+            this.currentAnalysisData = data;
+            window.currentAnalysisData = data; // Also store globally for debugging
+            
             this.displayResults(data);
             
         } catch (error) {
@@ -181,6 +242,8 @@ class TruthLensAnalyzer {
         this.form.reset();
         this.resultsSection.classList.remove('show');
         this.progressContainer.classList.remove('active');
+        this.currentAnalysisData = null;
+        window.currentAnalysisData = null;
     }
 
     showProgress() {
@@ -368,6 +431,12 @@ class TruthLensAnalyzer {
             window.currentAnalysisScore = trustScore;
         }
         
+        // First, populate all dropdowns with templates (but keep them hidden)
+        this.services.forEach(service => {
+            this.populateServiceContent(service.id);
+        });
+        
+        // Then call displayAllAnalyses to populate the data
         if (window.ServiceTemplates && window.ServiceTemplates.displayAllAnalyses) {
             window.ServiceTemplates.displayAllAnalyses(data, this);
         } else {
@@ -509,7 +578,7 @@ class TruthLensAnalyzer {
     }
 }
 
-// Global function for dropdowns
+// Global function for dropdowns - FIXED VERSION
 window.toggleServiceDropdown = function(serviceId) {
     const dropdown = document.getElementById(`${serviceId}Dropdown`);
     const content = document.getElementById(`${serviceId}Content`);
@@ -521,6 +590,14 @@ window.toggleServiceDropdown = function(serviceId) {
         // Toggle display of content
         if (content.style.display === 'none' || content.style.display === '') {
             content.style.display = 'block';
+            
+            // If we have analysis data and the content is empty, populate it
+            if (window.analyzer && window.analyzer.currentAnalysisData) {
+                const hasContent = content.querySelector('.service-card-grid, .author-card-header');
+                if (!hasContent) {
+                    window.analyzer.populateServiceContent(serviceId);
+                }
+            }
         } else {
             content.style.display = 'none';
         }
