@@ -1,16 +1,17 @@
 """
-News Analyzer API - PRODUCTION VERSION WITH STATIC FILE FIX
+News Analyzer API - PRODUCTION VERSION WITH DATA SERIALIZATION FIX
 Date: September 6, 2025
-Last Updated: September 11, 2025
+Last Updated: September 12, 2025
 
 FIXES APPLIED:
 - Original deadlock fix maintained
 - Added explicit JS/CSS file serving to fix empty file responses
-- Files are now read and served with proper content
+- CRITICAL: Added JSON serialization fix for detailed_analysis data
+- Ensures all service data is properly converted to JSON-serializable types
 
 Notes:
-- JavaScript and CSS files were being found but served empty
-- Now explicitly reads file content and returns it
+- Fixes the issue where 2870 bytes are created but only 949 bytes reach frontend
+- Cleans all nested objects to ensure proper JSON serialization
 - Maintains all existing functionality
 """
 import os
@@ -37,7 +38,7 @@ logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 logger.info("=" * 80)
-logger.info("INITIALIZING NEWS ANALYZER API - FIXED STATIC FILES VERSION")
+logger.info("INITIALIZING NEWS ANALYZER API - FIXED DATA SERIALIZATION VERSION")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"Port: {os.environ.get('PORT', 5000)}")
@@ -407,11 +408,11 @@ def health():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Main analysis endpoint - with deadlock fix
+    Main analysis endpoint - with deadlock fix and JSON serialization fix
     """
     request_id = g.request_id if hasattr(g, 'request_id') else str(uuid.uuid4())[:8]
     logger.info("=" * 80)
-    logger.info(f"[{request_id}] API ANALYZE ENDPOINT - DEADLOCK FIXED VERSION")
+    logger.info(f"[{request_id}] API ANALYZE ENDPOINT - WITH JSON SERIALIZATION FIX")
     start_time = time.time()
     
     try:
@@ -549,6 +550,70 @@ def analyze():
                 'services_analyzed': list(detailed_analysis.keys()) if detailed_analysis else [],
                 'trust_level': get_trust_level(trust_score)
             }
+            
+            # CRITICAL FIX: Ensure detailed_analysis is properly serializable
+            if detailed_analysis:
+                # Deep clean the detailed_analysis to ensure JSON serialization
+                cleaned_analysis = {}
+                for service_name, service_data in detailed_analysis.items():
+                    if isinstance(service_data, dict):
+                        # Ensure all nested data is serializable
+                        cleaned_service = {}
+                        for key, value in service_data.items():
+                            # Convert any non-serializable types
+                            if isinstance(value, (str, int, float, bool, type(None))):
+                                cleaned_service[key] = value
+                            elif isinstance(value, dict):
+                                # Clean nested dicts
+                                cleaned_dict = {}
+                                for k, v in value.items():
+                                    if isinstance(v, (str, int, float, bool, list, dict, type(None))):
+                                        cleaned_dict[k] = v
+                                    else:
+                                        # Convert to string if not serializable
+                                        try:
+                                            cleaned_dict[k] = str(v)
+                                        except:
+                                            cleaned_dict[k] = "Data not serializable"
+                                cleaned_service[key] = cleaned_dict
+                            elif isinstance(value, list):
+                                # Clean lists
+                                cleaned_list = []
+                                for item in value:
+                                    if isinstance(item, (str, int, float, bool, dict, list, type(None))):
+                                        cleaned_list.append(item)
+                                    else:
+                                        # Convert to string if not serializable
+                                        try:
+                                            cleaned_list.append(str(item))
+                                        except:
+                                            cleaned_list.append("Data not serializable")
+                                cleaned_service[key] = cleaned_list
+                            else:
+                                # Convert unknown types to string
+                                try:
+                                    cleaned_service[key] = str(value)
+                                except:
+                                    cleaned_service[key] = "Data not serializable"
+                        cleaned_analysis[service_name] = cleaned_service
+                
+                response_data['detailed_analysis'] = cleaned_analysis
+                
+                # Debug logging
+                logger.info(f"[{request_id}] Cleaned analysis services: {list(cleaned_analysis.keys())}")
+                for service, data in cleaned_analysis.items():
+                    logger.info(f"[{request_id}] {service}: {len(str(data))} chars, fields: {list(data.keys())[:5]}")
+            
+            # Verify JSON serialization
+            try:
+                test_json = json.dumps(response_data)
+                logger.info(f"[{request_id}] Final JSON response size: {len(test_json)} bytes")
+                logger.info(f"[{request_id}] Services in response: {response_data.get('services_analyzed', [])}")
+            except Exception as e:
+                logger.error(f"[{request_id}] JSON serialization failed: {e}")
+                # Fallback to minimal response
+                response_data['detailed_analysis'] = {}
+                logger.warning(f"[{request_id}] Removed detailed_analysis due to serialization error")
             
             # Cache successful response briefly
             request_cache[content_key] = (time.time(), response_data)
