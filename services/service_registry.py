@@ -190,8 +190,6 @@ class ServiceRegistry:
         
     def _initialize_services(self):
         """Initialize all configured services with robust fallback"""
-        import time
-        
         logger.info("=" * 80)
         logger.info("INITIALIZING SERVICE REGISTRY - PRODUCTION FIX")
         logger.info(f"Services to initialize: {list(self.SERVICE_MAPPING.keys())}")
