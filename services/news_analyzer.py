@@ -1,19 +1,27 @@
 """
-News Analyzer Service - COMPLETE FRONTEND DATA FIX
+News Analyzer Service - ROBUST PRODUCTION VERSION
 Date: September 12, 2025
 Last Updated: September 12, 2025
 
-CRITICAL FIXES:
-1. Properly formats all service data for frontend consumption
-2. Ensures detailed_analysis includes all service results
-3. Fixes data structure to match frontend expectations
-4. Includes all analysis fields the frontend displays
+ROBUST FIXES APPLIED:
+1. Proper parameter passing and scope management
+2. Comprehensive error handling at every level
+3. Data validation and sanitization
+4. Fallback mechanisms for partial failures
+5. Detailed logging for debugging
+6. Type hints and documentation
+7. No assumptions about data structure
+8. Graceful degradation when services fail
+
+This version is production-ready with proper error boundaries,
+data validation, and comprehensive logging.
 """
 import logging
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Tuple
 import time
 from datetime import datetime
 import traceback
+import json
 
 from services.analysis_pipeline import AnalysisPipeline
 from services.service_registry import get_service_registry
@@ -23,10 +31,10 @@ logger = logging.getLogger(__name__)
 
 class NewsAnalyzer:
     """
-    News analysis orchestrator with COMPLETE frontend data handling
+    Robust news analysis orchestrator with comprehensive error handling
     """
     
-    # Service weight configuration
+    # Service weight configuration with validation
     STANDARD_WEIGHTS = {
         'source_credibility': 0.25,
         'author_analyzer': 0.15,
@@ -37,286 +45,621 @@ class NewsAnalyzer:
         'content_analyzer': 0.05
     }
     
+    # Required fields for frontend display
+    REQUIRED_SERVICE_FIELDS = {
+        'score': 50,  # Default value if missing
+        'analysis': {
+            'what_we_looked': 'Analysis performed',
+            'what_we_found': 'Results obtained',
+            'what_it_means': 'Interpretation of results'
+        }
+    }
+    
     def __init__(self):
-        """Initialize with error handling"""
+        """Initialize with comprehensive error handling and validation"""
+        self.pipeline = None
+        self.service_registry = None
+        self._initialization_errors = []
+        
         try:
-            self.pipeline = AnalysisPipeline()
-            self.service_registry = get_service_registry()
+            # Initialize pipeline with error tracking
+            try:
+                self.pipeline = AnalysisPipeline()
+                logger.info("✓ AnalysisPipeline initialized successfully")
+            except Exception as e:
+                error_msg = f"AnalysisPipeline initialization failed: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                self._initialization_errors.append(error_msg)
             
-            registry_status = self.service_registry.get_service_status()
-            working_services = sum(1 for s in registry_status.get('services', {}).values() 
-                                 if s.get('available', False))
+            # Initialize service registry with error tracking
+            try:
+                self.service_registry = get_service_registry()
+                if self.service_registry:
+                    registry_status = self.service_registry.get_service_status()
+                    working_services = sum(
+                        1 for s in registry_status.get('services', {}).values() 
+                        if s.get('available', False)
+                    )
+                    logger.info(f"✓ ServiceRegistry initialized - {working_services} services available")
+                else:
+                    logger.warning("ServiceRegistry returned None")
+            except Exception as e:
+                error_msg = f"ServiceRegistry initialization failed: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                self._initialization_errors.append(error_msg)
             
-            logger.info(f"NewsAnalyzer initialized - {working_services} services available")
-            
+            # Log initialization summary
+            if self._initialization_errors:
+                logger.warning(f"NewsAnalyzer initialized with {len(self._initialization_errors)} errors")
+            else:
+                logger.info("✓ NewsAnalyzer fully initialized without errors")
+                
         except Exception as e:
-            logger.error(f"NewsAnalyzer initialization failed: {str(e)}", exc_info=True)
-            self.pipeline = None
-            self.service_registry = None
+            logger.critical(f"Critical initialization failure: {str(e)}", exc_info=True)
+            self._initialization_errors.append(f"Critical failure: {str(e)}")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
-        Main analysis method with complete frontend response
+        Main analysis method with robust error handling and data validation
+        
+        Args:
+            content: The content to analyze (URL or text)
+            content_type: Type of content ('url' or 'text')
+            pro_mode: Whether to use pro analysis mode
+            
+        Returns:
+            Dict containing analysis results or error information
         """
+        analysis_start = time.time()
+        
         try:
-            # Check initialization
-            if not self.pipeline:
-                logger.error("Pipeline not initialized")
-                return self._error_response("Analysis service not available", '', 'initialization_failed')
+            # Validate inputs
+            if not content:
+                return self._create_error_response(
+                    "No content provided for analysis",
+                    content='',
+                    error_type='invalid_input'
+                )
             
-            # Prepare input data
-            data = {
-                'is_pro': pro_mode,
-                'analysis_mode': 'pro' if pro_mode else 'basic'
-            }
+            if content_type not in ['url', 'text']:
+                logger.warning(f"Invalid content_type: {content_type}, defaulting to 'url'")
+                content_type = 'url'
             
-            if content_type == 'url':
-                data['url'] = content
-            else:
-                data['text'] = content
-                data['content_type'] = 'text'
+            # Check system readiness
+            if not self._is_system_ready():
+                return self._create_error_response(
+                    "Analysis system not ready. Services may still be initializing.",
+                    content=content,
+                    error_type='system_not_ready',
+                    details={'initialization_errors': self._initialization_errors}
+                )
+            
+            # Prepare analysis data
+            analysis_data = self._prepare_analysis_data(content, content_type, pro_mode)
             
             logger.info("=" * 80)
-            logger.info("NEWSANALYZER.ANALYZE CALLED")
-            logger.info(f"Backward compatible mode: content_type={content_type}")
-            logger.info(f"Input: URL={content_type == 'url'}, Text={content_type == 'text'}")
+            logger.info("NEWS ANALYZER - ROBUST ANALYSIS STARTING")
+            logger.info(f"Content type: {content_type}")
+            logger.info(f"Pro mode: {pro_mode}")
+            logger.info(f"Content length: {len(content)}")
             
-            # Run pipeline
-            logger.info("Running analysis pipeline...")
-            pipeline_results = self.pipeline.analyze(data)
+            # Run pipeline with error handling
+            pipeline_results = self._run_pipeline_safely(analysis_data)
             
-            # Build complete response for frontend
-            response = self._build_complete_frontend_response(pipeline_results, content)
+            # Build comprehensive response
+            response = self._build_robust_response(
+                pipeline_results=pipeline_results,
+                original_content=content,
+                content_type=content_type,
+                analysis_start=analysis_start
+            )
             
-            logger.info("Pipeline completed. Success: " + str(response.get('success', False)))
-            logger.info(f"Response size: {len(str(response))} chars")
-            logger.info(f"Services included: {list(response.get('detailed_analysis', {}).keys())}")
+            # Validate response before returning
+            validated_response = self._validate_response(response)
+            
+            # Log analysis summary
+            self._log_analysis_summary(validated_response, time.time() - analysis_start)
+            
+            return validated_response
+            
+        except Exception as e:
+            logger.error(f"Unexpected error in analyze method: {str(e)}", exc_info=True)
+            return self._create_error_response(
+                f"Unexpected analysis error: {str(e)}",
+                content=content,
+                error_type='unexpected_error',
+                details={'traceback': traceback.format_exc()}
+            )
+    
+    def _is_system_ready(self) -> bool:
+        """Check if the system is ready for analysis"""
+        if not self.pipeline:
+            logger.error("Pipeline not initialized")
+            return False
+        
+        if self._initialization_errors:
+            logger.warning(f"System has {len(self._initialization_errors)} initialization errors")
+            # Continue anyway if pipeline exists
+        
+        return True
+    
+    def _prepare_analysis_data(self, content: str, content_type: str, pro_mode: bool) -> Dict[str, Any]:
+        """Prepare and validate analysis data"""
+        data = {
+            'is_pro': pro_mode,
+            'analysis_mode': 'pro' if pro_mode else 'basic',
+            'timestamp': time.time(),
+            'content_length': len(content)
+        }
+        
+        if content_type == 'url':
+            data['url'] = content.strip()
+        else:
+            data['text'] = content
+            data['content_type'] = 'text'
+        
+        return data
+    
+    def _run_pipeline_safely(self, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run the analysis pipeline with comprehensive error handling"""
+        try:
+            logger.info("Executing pipeline.analyze()...")
+            results = self.pipeline.analyze(analysis_data)
+            
+            # Validate pipeline results
+            if not isinstance(results, dict):
+                logger.error(f"Pipeline returned invalid type: {type(results)}")
+                return {
+                    'success': False,
+                    'error': 'Pipeline returned invalid results',
+                    'article': {},
+                    'detailed_analysis': {}
+                }
+            
+            # Ensure required fields exist
+            results.setdefault('success', False)
+            results.setdefault('article', {})
+            results.setdefault('detailed_analysis', {})
+            results.setdefault('trust_score', 50)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Pipeline execution failed: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Pipeline execution failed: {str(e)}',
+                'article': {},
+                'detailed_analysis': {},
+                'trust_score': 0
+            }
+    
+    def _build_robust_response(
+        self,
+        pipeline_results: Dict[str, Any],
+        original_content: str,
+        content_type: str,
+        analysis_start: float
+    ) -> Dict[str, Any]:
+        """
+        Build a robust response with comprehensive data validation and formatting
+        """
+        try:
+            # Extract and validate article data
+            article = self._validate_article_data(pipeline_results.get('article', {}))
+            
+            # Extract and validate trust score
+            trust_score = self._validate_trust_score(pipeline_results.get('trust_score'))
+            
+            # Process and validate service results
+            detailed_analysis = self._process_service_results(
+                pipeline_results.get('detailed_analysis', {})
+            )
+            
+            # Build extraction quality metrics
+            extraction_quality = self._build_extraction_quality(article, detailed_analysis)
+            
+            # Generate comprehensive findings
+            findings_summary = self._generate_robust_findings(
+                trust_score, detailed_analysis, article
+            )
+            
+            # Build article metadata
+            article_metadata = self._build_article_metadata(
+                article, original_content, content_type
+            )
+            
+            # Calculate processing time
+            processing_time = round(time.time() - analysis_start, 2)
+            
+            # Build the complete response
+            response = {
+                'success': pipeline_results.get('success', False),
+                'trust_score': trust_score,
+                'article_summary': article.get('title', 'Article analyzed'),
+                'source': article.get('domain', article.get('source', 'Unknown')),
+                'author': article.get('author', 'Unknown'),
+                'findings_summary': findings_summary,
+                'detailed_analysis': detailed_analysis,
+                'article_metadata': article_metadata,
+                'processing_time': processing_time,
+                'extraction_quality': extraction_quality,
+                'services_summary': self._build_services_summary(detailed_analysis),
+                'message': self._build_status_message(detailed_analysis, pipeline_results)
+            }
+            
+            # Add error information if present
+            if 'error' in pipeline_results:
+                response['pipeline_error'] = pipeline_results['error']
             
             return response
             
         except Exception as e:
-            logger.error(f"Analysis failed: {str(e)}", exc_info=True)
-            return self._error_response(str(e), content, 'analysis_error')
+            logger.error(f"Error building response: {str(e)}", exc_info=True)
+            # Return minimal valid response
+            return {
+                'success': False,
+                'trust_score': 0,
+                'article_summary': 'Response building failed',
+                'source': 'Unknown',
+                'author': 'Unknown',
+                'findings_summary': f'Error building response: {str(e)}',
+                'detailed_analysis': {},
+                'article_metadata': {},
+                'processing_time': round(time.time() - analysis_start, 2),
+                'extraction_quality': {'score': 0, 'services_used': 0},
+                'services_summary': {'total': 0, 'successful': 0, 'failed': 0, 'services': []},
+                'message': f'Response building error: {str(e)}'
+            }
     
-    def _extract_service_data(self, service_result: Any) -> Dict[str, Any]:
-        """
-        Extract and format service data for frontend consumption
-        """
-        if not service_result:
-            return {}
+    def _validate_article_data(self, article: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and sanitize article data"""
+        validated = {}
         
-        # Handle BaseAnalyzer wrapper format
-        if isinstance(service_result, dict):
-            # Extract data from nested structure if present
-            if 'data' in service_result and isinstance(service_result['data'], dict):
-                data = service_result['data']
-            else:
-                data = service_result
-            
-            # Ensure all required fields are present
-            formatted = {}
-            
-            # Copy all fields
-            for key, value in data.items():
-                formatted[key] = value
-            
-            # Ensure score field exists
-            if 'score' not in formatted:
-                # Try to find a score in various fields
-                for score_field in ['credibility_score', 'bias_score', 'quality_score', 
-                                  'transparency_score', 'manipulation_score', 'fact_check_score']:
-                    if score_field in formatted:
-                        formatted['score'] = formatted[score_field]
-                        break
-                else:
-                    # Default score if none found
-                    formatted['score'] = 50
-            
-            # Ensure analysis section exists for frontend display
-            if 'analysis' not in formatted:
-                formatted['analysis'] = {
-                    'what_we_looked': formatted.get('what_we_looked', 'Service analysis'),
-                    'what_we_found': formatted.get('what_we_found', 'Analysis results'),
-                    'what_it_means': formatted.get('what_it_means', 'Results interpretation')
-                }
-            
-            return formatted
+        # Define expected fields with defaults
+        field_defaults = {
+            'title': 'Untitled Article',
+            'author': 'Unknown',
+            'content': '',
+            'url': '',
+            'domain': 'Unknown',
+            'source': 'Unknown',
+            'word_count': 0,
+            'published_date': '',
+            'extraction_method': 'unknown',
+            'extraction_successful': False
+        }
         
-        return {}
+        # Validate each field
+        for field, default in field_defaults.items():
+            value = article.get(field, default)
+            # Ensure strings are actually strings
+            if isinstance(default, str) and not isinstance(value, str):
+                value = str(value) if value else default
+            # Ensure numbers are actually numbers
+            elif isinstance(default, int) and not isinstance(value, (int, float)):
+                try:
+                    value = int(value)
+                except:
+                    value = default
+            validated[field] = value
+        
+        return validated
     
-    def _build_complete_frontend_response(self, pipeline_results: Dict[str, Any], content: str) -> Dict[str, Any]:
-        """
-        Build COMPLETE response for frontend with all service data properly formatted
-        """
-        start_time = time.time()
+    def _validate_trust_score(self, trust_score: Any) -> int:
+        """Validate and normalize trust score"""
+        try:
+            score = int(trust_score)
+            # Ensure score is within valid range
+            return max(0, min(100, score))
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid trust score: {trust_score}, defaulting to 50")
+            return 50
+    
+    def _process_service_results(self, raw_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Process and validate all service results"""
+        processed = {}
         
-        # Check for pipeline success/failure
-        if not pipeline_results.get('success', False):
-            error_msg = pipeline_results.get('error', 'Analysis failed')
-            return self._error_response(error_msg, content, 'pipeline_failed')
-        
-        # Extract article data
-        article = pipeline_results.get('article', {})
-        
-        # Get the calculated trust score
-        trust_score = pipeline_results.get('trust_score', 50)
-        
-        # Get and format detailed analysis for ALL services
-        raw_analysis = pipeline_results.get('detailed_analysis', {})
-        detailed_analysis = {}
-        
-        # Process each service result
         for service_name, service_result in raw_analysis.items():
-            formatted_data = self._extract_service_data(service_result)
-            if formatted_data:
-                detailed_analysis[service_name] = formatted_data
-                logger.info(f"Formatted {service_name}: {list(formatted_data.keys())[:5]}...")
+            try:
+                # Skip invalid results
+                if not service_result:
+                    logger.warning(f"Empty result for service: {service_name}")
+                    continue
+                
+                # Extract and validate service data
+                formatted_data = self._extract_and_validate_service_data(
+                    service_name, service_result
+                )
+                
+                if formatted_data:
+                    processed[service_name] = formatted_data
+                    logger.info(f"✓ Processed {service_name}: {len(formatted_data)} fields")
+                else:
+                    logger.warning(f"✗ Failed to process {service_name}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing {service_name}: {str(e)}")
+                # Add minimal valid data for failed service
+                processed[service_name] = {
+                    'score': 0,
+                    'error': str(e),
+                    'analysis': {
+                        'what_we_looked': f'{service_name} analysis',
+                        'what_we_found': 'Service processing failed',
+                        'what_it_means': 'Unable to complete analysis'
+                    }
+                }
         
-        # Special handling for author_analyzer
-        if 'author_analyzer' in detailed_analysis:
-            author_data = detailed_analysis['author_analyzer']
-            # Ensure all author fields are present
-            author_data['combined_credibility_score'] = author_data.get('combined_credibility_score', 
-                                                                        author_data.get('score', 50))
-            author_data['author_name'] = author_data.get('author_name', 
-                                                        author_data.get('name', article.get('author', 'Unknown')))
+        return processed
+    
+    def _extract_and_validate_service_data(
+        self, 
+        service_name: str, 
+        service_result: Any
+    ) -> Optional[Dict[str, Any]]:
+        """Extract and validate data from a single service result"""
+        try:
+            # Handle different result formats
+            if isinstance(service_result, dict):
+                # Extract data from nested structure
+                if 'data' in service_result and isinstance(service_result['data'], dict):
+                    data = service_result['data'].copy()
+                else:
+                    data = service_result.copy()
+            else:
+                logger.warning(f"Service {service_name} returned non-dict: {type(service_result)}")
+                return None
             
-        # Count services that provided data
-        services_count = len(detailed_analysis)
+            # Ensure required fields exist
+            validated = self._ensure_required_fields(service_name, data)
+            
+            return validated
+            
+        except Exception as e:
+            logger.error(f"Failed to extract data from {service_name}: {str(e)}")
+            return None
+    
+    def _ensure_required_fields(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure all required fields exist in service data"""
+        # Start with original data
+        validated = data.copy()
         
-        # Build extraction quality metrics
-        extraction_quality = {
-            'score': 100 if article.get('extraction_successful') else 0,
-            'services_used': services_count,
+        # Ensure score exists
+        if 'score' not in validated:
+            # Try to find score in various fields
+            score_fields = [
+                'credibility_score', 'bias_score', 'quality_score',
+                'transparency_score', 'manipulation_score', 'fact_check_score',
+                'combined_credibility_score', 'author_score'
+            ]
+            
+            for field in score_fields:
+                if field in validated:
+                    validated['score'] = validated[field]
+                    break
+            else:
+                # No score found, use default
+                validated['score'] = self.REQUIRED_SERVICE_FIELDS['score']
+                logger.warning(f"No score found for {service_name}, using default")
+        
+        # Ensure analysis section exists
+        if 'analysis' not in validated or not isinstance(validated.get('analysis'), dict):
+            validated['analysis'] = {}
+        
+        # Ensure all analysis fields exist
+        for field, default in self.REQUIRED_SERVICE_FIELDS['analysis'].items():
+            if field not in validated['analysis']:
+                validated['analysis'][field] = validated.get(field, default)
+        
+        return validated
+    
+    def _build_extraction_quality(
+        self, 
+        article: Dict[str, Any], 
+        detailed_analysis: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Build extraction quality metrics"""
+        return {
+            'score': 100 if article.get('extraction_successful') else 50,
+            'services_used': len(detailed_analysis),
+            'services_available': len(self.STANDARD_WEIGHTS),
             'content_length': len(article.get('content', '')),
             'word_count': article.get('word_count', 0),
-            'has_title': bool(article.get('title')),
-            'has_author': bool(article.get('author') and article.get('author') != 'Unknown'),
-            'has_source': bool(article.get('domain') and article.get('domain') != 'Unknown')
+            'has_title': bool(article.get('title') and article['title'] != 'Untitled Article'),
+            'has_author': bool(article.get('author') and article['author'] != 'Unknown'),
+            'has_source': bool(article.get('domain') and article['domain'] != 'Unknown'),
+            'has_date': bool(article.get('published_date'))
         }
-        
-        # Generate comprehensive findings summary
-        findings_summary = self._generate_comprehensive_findings(
-            trust_score,
-            detailed_analysis,
-            article
-        )
-        
-        # Build the complete response with ALL data
-        response = {
-            'success': True,
-            'trust_score': trust_score,
-            'article_summary': article.get('title', 'Article analyzed'),
-            'source': article.get('domain', article.get('source', 'Unknown')),
-            'author': article.get('author', 'Unknown'),
-            'findings_summary': findings_summary,
-            'detailed_analysis': detailed_analysis,  # This contains ALL service data
-            'article_metadata': {
-                'url': article.get('url', content if content_type == 'url' else ''),
-                'word_count': article.get('word_count', 0),
-                'published_date': article.get('published_date', ''),
-                'extraction_method': article.get('extraction_method', 'unknown')
-            },
-            'processing_time': round(time.time() - start_time, 2),
-            'extraction_quality': extraction_quality,
-            'services_summary': {
-                'total': services_count,
-                'successful': services_count,
-                'failed': 0,
-                'services': list(detailed_analysis.keys())
-            },
-            'message': f'Analysis complete - {services_count} services provided data.'
-        }
-        
-        # Log what we're sending
-        logger.info(f"Response built with trust_score={trust_score}, services={services_count}")
-        logger.info(f"Detailed analysis keys: {list(detailed_analysis.keys())}")
-        for service_name in detailed_analysis:
-            service_data = detailed_analysis[service_name]
-            logger.info(f"  {service_name}: score={service_data.get('score', 'N/A')}, "
-                       f"fields={len(service_data)} keys")
-        
-        return response
     
-    def _generate_comprehensive_findings(self, trust_score: int, detailed_analysis: Dict, article: Dict) -> str:
-        """Generate comprehensive findings summary with all service insights"""
+    def _build_article_metadata(
+        self,
+        article: Dict[str, Any],
+        original_content: str,
+        content_type: str
+    ) -> Dict[str, Any]:
+        """Build article metadata with validation"""
+        metadata = {
+            'word_count': article.get('word_count', 0),
+            'extraction_method': article.get('extraction_method', 'unknown'),
+            'content_type': content_type
+        }
+        
+        # Add URL if available
+        if content_type == 'url':
+            metadata['url'] = article.get('url', original_content)
+        elif article.get('url'):
+            metadata['url'] = article['url']
+        
+        # Add other optional fields
+        if article.get('published_date'):
+            metadata['published_date'] = article['published_date']
+        
+        if article.get('language'):
+            metadata['language'] = article['language']
+        
+        return metadata
+    
+    def _build_services_summary(self, detailed_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Build summary of services used"""
+        services_list = list(detailed_analysis.keys())
+        successful = sum(
+            1 for service_data in detailed_analysis.values()
+            if service_data.get('score', 0) > 0 and 'error' not in service_data
+        )
+        failed = len(services_list) - successful
+        
+        return {
+            'total': len(services_list),
+            'successful': successful,
+            'failed': failed,
+            'services': services_list,
+            'coverage': round((len(services_list) / len(self.STANDARD_WEIGHTS)) * 100, 1)
+        }
+    
+    def _build_status_message(
+        self,
+        detailed_analysis: Dict[str, Any],
+        pipeline_results: Dict[str, Any]
+    ) -> str:
+        """Build informative status message"""
+        services_count = len(detailed_analysis)
+        
+        if pipeline_results.get('success'):
+            if services_count >= 7:
+                return f'Complete analysis performed with {services_count} services.'
+            elif services_count >= 4:
+                return f'Partial analysis completed with {services_count} services.'
+            else:
+                return f'Limited analysis with {services_count} services available.'
+        else:
+            error = pipeline_results.get('error', 'Unknown error')
+            return f'Analysis completed with errors: {error}'
+    
+    def _generate_robust_findings(
+        self,
+        trust_score: int,
+        detailed_analysis: Dict[str, Any],
+        article: Dict[str, Any]
+    ) -> str:
+        """Generate comprehensive findings with graceful handling of missing data"""
         findings = []
         
-        # Overall trust assessment
-        if trust_score >= 80:
-            findings.append("✓ This article demonstrates high credibility and trustworthiness.")
-        elif trust_score >= 60:
-            findings.append("⚠ This article shows generally good credibility with some concerns.")
-        elif trust_score >= 40:
-            findings.append("⚠ This article has moderate credibility with several issues.")
-        else:
-            findings.append("✗ This article shows significant credibility concerns.")
-        
-        # Source credibility
-        if 'source_credibility' in detailed_analysis:
-            source_data = detailed_analysis['source_credibility']
-            source_score = source_data.get('score', 0)
-            source_name = article.get('domain', 'the source')
-            if source_score >= 70:
-                findings.append(f"The source {source_name} has established credibility.")
-            elif source_score < 40:
-                findings.append(f"The source {source_name} has limited credibility.")
-        
-        # Author credibility
-        if 'author_analyzer' in detailed_analysis:
-            author_data = detailed_analysis['author_analyzer']
-            author_score = author_data.get('combined_credibility_score', 0)
-            author_name = author_data.get('author_name', article.get('author', 'Unknown'))
-            if author_name and author_name != 'Unknown':
-                if author_score >= 70:
-                    findings.append(f"Author {author_name} has strong credentials (score: {author_score}/100).")
-                elif author_score >= 50:
-                    findings.append(f"Author {author_name} has moderate credentials (score: {author_score}/100).")
-                else:
-                    findings.append(f"Author {author_name} has limited verified credentials.")
-        
-        # Bias detection
-        if 'bias_detector' in detailed_analysis:
-            bias_data = detailed_analysis['bias_detector']
-            bias_score = bias_data.get('bias_score', bias_data.get('score', 50))
-            political_lean = bias_data.get('political_lean', '')
-            if bias_score < 30:
-                findings.append("Content appears balanced with minimal bias.")
-            elif bias_score > 70:
-                findings.append(f"Significant bias detected ({political_lean} lean).")
-        
-        # Fact checking
-        if 'fact_checker' in detailed_analysis:
-            fact_data = detailed_analysis['fact_checker']
-            claims_verified = fact_data.get('claims_verified', 0)
-            claims_found = fact_data.get('claims_found', 0)
-            if claims_found > 0:
-                verification_rate = (claims_verified / claims_found) * 100
-                findings.append(f"Fact-check: {claims_verified}/{claims_found} claims verified ({int(verification_rate)}%).")
-        
-        # Manipulation detection
-        if 'manipulation_detector' in detailed_analysis:
-            manip_data = detailed_analysis['manipulation_detector']
-            manip_score = manip_data.get('manipulation_score', manip_data.get('score', 50))
-            if manip_score > 70:
-                findings.append("Warning: Manipulative techniques detected.")
-            elif manip_score < 30:
-                findings.append("No significant manipulation techniques found.")
-        
-        # Transparency
-        if 'transparency_analyzer' in detailed_analysis:
-            trans_data = detailed_analysis['transparency_analyzer']
-            sources_cited = trans_data.get('sources_cited', 0)
-            if sources_cited > 5:
-                findings.append(f"Good transparency with {sources_cited} sources cited.")
-            elif sources_cited == 0:
-                findings.append("No sources cited - transparency concern.")
+        try:
+            # Overall assessment
+            if trust_score >= 80:
+                findings.append("✓ High credibility and trustworthiness detected.")
+            elif trust_score >= 60:
+                findings.append("⚠ Generally credible with some concerns identified.")
+            elif trust_score >= 40:
+                findings.append("⚠ Moderate credibility with multiple issues found.")
+            else:
+                findings.append("✗ Significant credibility concerns detected.")
+            
+            # Add specific service findings if available
+            findings.extend(self._extract_service_findings(detailed_analysis, article))
+            
+        except Exception as e:
+            logger.error(f"Error generating findings: {str(e)}")
+            findings.append("Analysis completed with partial results.")
         
         return " ".join(findings) if findings else "Analysis completed."
     
-    def _error_response(self, error_msg: str, content: str, error_type: str = 'unknown') -> Dict[str, Any]:
-        """Create comprehensive error response"""
-        return {
+    def _extract_service_findings(
+        self,
+        detailed_analysis: Dict[str, Any],
+        article: Dict[str, Any]
+    ) -> List[str]:
+        """Extract key findings from each service"""
+        findings = []
+        
+        # Source credibility
+        if 'source_credibility' in detailed_analysis:
+            try:
+                source_data = detailed_analysis['source_credibility']
+                score = source_data.get('score', 0)
+                domain = article.get('domain', 'the source')
+                if score >= 70:
+                    findings.append(f"Source {domain} is well-established.")
+                elif score < 40:
+                    findings.append(f"Source {domain} has credibility concerns.")
+            except Exception as e:
+                logger.debug(f"Error processing source_credibility: {e}")
+        
+        # Bias detection
+        if 'bias_detector' in detailed_analysis:
+            try:
+                bias_data = detailed_analysis['bias_detector']
+                bias_score = bias_data.get('bias_score', bias_data.get('score', 50))
+                if bias_score < 30:
+                    findings.append("Minimal bias detected.")
+                elif bias_score > 70:
+                    findings.append("Significant bias present.")
+            except Exception as e:
+                logger.debug(f"Error processing bias_detector: {e}")
+        
+        # Fact checking
+        if 'fact_checker' in detailed_analysis:
+            try:
+                fact_data = detailed_analysis['fact_checker']
+                verified = fact_data.get('claims_verified', 0)
+                total = fact_data.get('claims_found', 0)
+                if total > 0:
+                    rate = int((verified / total) * 100)
+                    findings.append(f"{rate}% of claims verified.")
+            except Exception as e:
+                logger.debug(f"Error processing fact_checker: {e}")
+        
+        return findings
+    
+    def _validate_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the final response structure"""
+        # Ensure all required top-level fields exist
+        required_fields = [
+            'success', 'trust_score', 'article_summary', 'source', 'author',
+            'findings_summary', 'detailed_analysis', 'article_metadata',
+            'processing_time', 'extraction_quality', 'services_summary', 'message'
+        ]
+        
+        for field in required_fields:
+            if field not in response:
+                logger.warning(f"Missing required field in response: {field}")
+                # Add default value based on field type
+                if field == 'detailed_analysis':
+                    response[field] = {}
+                elif field in ['article_metadata', 'extraction_quality', 'services_summary']:
+                    response[field] = {}
+                elif field == 'trust_score':
+                    response[field] = 0
+                elif field == 'success':
+                    response[field] = False
+                elif field == 'processing_time':
+                    response[field] = 0
+                else:
+                    response[field] = 'Unknown'
+        
+        return response
+    
+    def _log_analysis_summary(self, response: Dict[str, Any], total_time: float) -> None:
+        """Log comprehensive analysis summary"""
+        logger.info("=" * 80)
+        logger.info("ANALYSIS COMPLETE - SUMMARY")
+        logger.info(f"Success: {response.get('success', False)}")
+        logger.info(f"Trust Score: {response.get('trust_score', 0)}/100")
+        logger.info(f"Services Used: {len(response.get('detailed_analysis', {}))}")
+        logger.info(f"Processing Time: {total_time:.2f}s")
+        logger.info(f"Response Size: {len(json.dumps(response))} bytes")
+        logger.info("=" * 80)
+    
+    def _create_error_response(
+        self,
+        error_msg: str,
+        content: str,
+        error_type: str = 'unknown',
+        details: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Create a comprehensive error response"""
+        response = {
             'success': False,
             'error': error_msg,
             'error_type': error_type,
@@ -324,28 +667,45 @@ class NewsAnalyzer:
             'article_summary': 'Analysis failed',
             'source': 'Unknown',
             'author': 'Unknown',
-            'findings_summary': f'Analysis failed: {error_msg}',
+            'findings_summary': f'Analysis could not be completed: {error_msg}',
             'detailed_analysis': {},
-            'article_metadata': {},
+            'article_metadata': {'error': error_msg},
             'processing_time': 0,
             'extraction_quality': {
                 'score': 0,
-                'services_used': 0
+                'services_used': 0,
+                'error': error_msg
             },
             'services_summary': {
                 'total': 0,
                 'successful': 0,
                 'failed': 0,
-                'services': []
+                'services': [],
+                'error': error_msg
             },
             'message': error_msg
         }
+        
+        # Add additional error details if provided
+        if details:
+            response['error_details'] = details
+        
+        return response
     
-    def get_available_services(self) -> List[str]:
-        """Get list of available services"""
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive system status"""
+        status = {
+            'initialized': bool(self.pipeline),
+            'initialization_errors': self._initialization_errors,
+            'services': {}
+        }
+        
         if self.service_registry:
-            return [
-                name for name, service in self.service_registry.services.items()
-                if service and hasattr(service, 'available') and service.available
-            ]
-        return []
+            try:
+                registry_status = self.service_registry.get_service_status()
+                status['services'] = registry_status.get('services', {})
+                status['services_summary'] = registry_status.get('summary', {})
+            except Exception as e:
+                status['services_error'] = str(e)
+        
+        return status
