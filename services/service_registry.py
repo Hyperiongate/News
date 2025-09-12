@@ -4,16 +4,18 @@ Date: 2025-09-12
 Last Updated: 2025-09-12
 
 CRITICAL FIXES APPLIED:
-1. Fixed class name for source_credibility: SourceCredibility (confirmed from provided file)
-2. Added robust error handling for missing services
-3. Force initialization on first access
-4. Added fallback service creation for missing modules
-5. Enhanced logging to track exact failure points
+1. ADDED MISSING 'import time' STATEMENT
+2. Fixed class name for source_credibility: SourceCredibility (confirmed from provided file)
+3. Added robust error handling for missing services
+4. Force initialization on first access
+5. Added fallback service creation for missing modules
+6. Enhanced logging to track exact failure points
 
 This version ensures services initialize or create working fallbacks.
 """
 
 import logging
+import time  # THIS WAS MISSING - CRITICAL FIX!
 from typing import Dict, Any, Optional, List, Type
 import importlib
 import inspect
@@ -181,7 +183,7 @@ class ServiceRegistry:
                     'service': service_name,
                     'success': True,
                     'available': True,
-                    'timestamp': time.time(),  # Now time is imported
+                    'timestamp': time.time(),  # Now time is imported and available!
                     'data': service_data,
                     'fallback': True
                 }
