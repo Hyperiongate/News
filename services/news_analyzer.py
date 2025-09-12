@@ -1,13 +1,13 @@
 """
-News Analyzer Service - FIXED AUTHOR DATA EXTRACTION
-Date: September 6, 2025
-Last Updated: September 6, 2025
+News Analyzer Service - COMPLETE FRONTEND DATA FIX
+Date: September 12, 2025
+Last Updated: September 12, 2025
 
 CRITICAL FIXES:
-1. Properly extracts author_analyzer data from BaseAnalyzer wrapper
-2. Passes combined_credibility_score to frontend
-3. Includes author details in findings summary
-4. Handles both wrapped and unwrapped service responses
+1. Properly formats all service data for frontend consumption
+2. Ensures detailed_analysis includes all service results
+3. Fixes data structure to match frontend expectations
+4. Includes all analysis fields the frontend displays
 """
 import logging
 from typing import Dict, Any, Optional, List, Union
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class NewsAnalyzer:
     """
-    News analysis orchestrator with FIXED author data extraction
+    News analysis orchestrator with COMPLETE frontend data handling
     """
     
     # Service weight configuration
@@ -56,7 +56,7 @@ class NewsAnalyzer:
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
-        Main analysis method with FIXED author data extraction
+        Main analysis method with complete frontend response
         """
         try:
             # Check initialization
@@ -85,11 +85,12 @@ class NewsAnalyzer:
             logger.info("Running analysis pipeline...")
             pipeline_results = self.pipeline.analyze(data)
             
-            # Build response with FIXED author data extraction
-            response = self._build_frontend_response_fixed(pipeline_results, content)
+            # Build complete response for frontend
+            response = self._build_complete_frontend_response(pipeline_results, content)
             
             logger.info("Pipeline completed. Success: " + str(response.get('success', False)))
-            logger.info(f"Pipeline keys: {list(response.keys())}")
+            logger.info(f"Response size: {len(str(response))} chars")
+            logger.info(f"Services included: {list(response.get('detailed_analysis', {}).keys())}")
             
             return response
             
@@ -97,84 +98,55 @@ class NewsAnalyzer:
             logger.error(f"Analysis failed: {str(e)}", exc_info=True)
             return self._error_response(str(e), content, 'analysis_error')
     
-    def _extract_author_data(self, author_result: Any) -> Dict[str, Any]:
+    def _extract_service_data(self, service_result: Any) -> Dict[str, Any]:
         """
-        Extract author data from various possible formats
-        Handles BaseAnalyzer wrapper and direct results
+        Extract and format service data for frontend consumption
         """
-        if not author_result:
+        if not service_result:
             return {}
         
-        # If it's a BaseAnalyzer result wrapper
-        if isinstance(author_result, dict):
-            # Check if data is nested in 'data' field (BaseAnalyzer format)
-            if 'data' in author_result and isinstance(author_result['data'], dict):
-                data = author_result['data']
+        # Handle BaseAnalyzer wrapper format
+        if isinstance(service_result, dict):
+            # Extract data from nested structure if present
+            if 'data' in service_result and isinstance(service_result['data'], dict):
+                data = service_result['data']
             else:
-                # Direct format
-                data = author_result
+                data = service_result
             
-            # Extract all relevant author fields
-            extracted = {}
+            # Ensure all required fields are present
+            formatted = {}
             
-            # Get credibility score (check multiple possible locations)
-            for score_field in ['combined_credibility_score', 'credibility_score', 'score', 'author_score']:
-                if score_field in data:
-                    extracted['combined_credibility_score'] = data[score_field]
-                    extracted['score'] = data[score_field]
-                    break
-            
-            # Get author name
-            for name_field in ['author_name', 'name', 'authors']:
-                if name_field in data:
-                    extracted['author_name'] = data[name_field]
-                    extracted['name'] = data[name_field]
-                    break
-            
-            # Get other fields
-            field_mappings = {
-                'position': ['position', 'title', 'role'],
-                'organization': ['organization', 'company', 'employer'],
-                'bio': ['bio', 'biography', 'description'],
-                'verified': ['verified', 'is_verified', 'verification_status'],
-                'expertise_areas': ['expertise_areas', 'expertise_domains', 'specialties'],
-                'publication_history': ['publication_history', 'recent_articles', 'articles'],
-                'awards': ['awards', 'awards_recognition', 'recognition'],
-                'article_count': ['article_count', 'total_articles', 'publication_count'],
-                'social_profiles': ['social_profiles', 'social_media', 'profiles'],
-                'linkedin_profile': ['linkedin_profile', 'linkedin_url', 'linkedin'],
-                'twitter_profile': ['twitter_profile', 'twitter_url', 'twitter'],
-                'wikipedia_page': ['wikipedia_page', 'wikipedia_url', 'wikipedia']
-            }
-            
-            for target_field, source_fields in field_mappings.items():
-                for source_field in source_fields:
-                    if source_field in data and data[source_field]:
-                        extracted[target_field] = data[source_field]
-                        break
-            
-            # Handle authors array if present
-            if 'authors' in data and isinstance(data['authors'], list) and data['authors']:
-                # If there's an authors array, extract data from first author
-                first_author = data['authors'][0]
-                if isinstance(first_author, dict):
-                    for key, value in first_author.items():
-                        if key not in extracted:
-                            extracted[key] = value
-            
-            # Copy all original data as fallback
+            # Copy all fields
             for key, value in data.items():
-                if key not in extracted:
-                    extracted[key] = value
+                formatted[key] = value
             
-            logger.info(f"Extracted author data with score: {extracted.get('combined_credibility_score', 0)}")
-            return extracted
+            # Ensure score field exists
+            if 'score' not in formatted:
+                # Try to find a score in various fields
+                for score_field in ['credibility_score', 'bias_score', 'quality_score', 
+                                  'transparency_score', 'manipulation_score', 'fact_check_score']:
+                    if score_field in formatted:
+                        formatted['score'] = formatted[score_field]
+                        break
+                else:
+                    # Default score if none found
+                    formatted['score'] = 50
+            
+            # Ensure analysis section exists for frontend display
+            if 'analysis' not in formatted:
+                formatted['analysis'] = {
+                    'what_we_looked': formatted.get('what_we_looked', 'Service analysis'),
+                    'what_we_found': formatted.get('what_we_found', 'Analysis results'),
+                    'what_it_means': formatted.get('what_it_means', 'Results interpretation')
+                }
+            
+            return formatted
         
         return {}
     
-    def _build_frontend_response_fixed(self, pipeline_results: Dict[str, Any], content: str) -> Dict[str, Any]:
+    def _build_complete_frontend_response(self, pipeline_results: Dict[str, Any], content: str) -> Dict[str, Any]:
         """
-        FIXED: Build response for frontend with proper author data extraction
+        Build COMPLETE response for frontend with all service data properly formatted
         """
         start_time = time.time()
         
@@ -186,124 +158,164 @@ class NewsAnalyzer:
         # Extract article data
         article = pipeline_results.get('article', {})
         
-        # Get the ACTUAL calculated trust score from pipeline
+        # Get the calculated trust score
         trust_score = pipeline_results.get('trust_score', 50)
         
-        # Get detailed analysis
-        detailed_analysis = pipeline_results.get('detailed_analysis', {})
+        # Get and format detailed analysis for ALL services
+        raw_analysis = pipeline_results.get('detailed_analysis', {})
+        detailed_analysis = {}
         
-        # CRITICAL FIX: Properly extract author_analyzer data
+        # Process each service result
+        for service_name, service_result in raw_analysis.items():
+            formatted_data = self._extract_service_data(service_result)
+            if formatted_data:
+                detailed_analysis[service_name] = formatted_data
+                logger.info(f"Formatted {service_name}: {list(formatted_data.keys())[:5]}...")
+        
+        # Special handling for author_analyzer
         if 'author_analyzer' in detailed_analysis:
-            author_data = self._extract_author_data(detailed_analysis['author_analyzer'])
-            # Replace the raw result with extracted data
-            detailed_analysis['author_analyzer'] = author_data
-            logger.info(f"Author analyzer data extracted: {list(author_data.keys())}")
-        
-        # Count actual services that provided data
+            author_data = detailed_analysis['author_analyzer']
+            # Ensure all author fields are present
+            author_data['combined_credibility_score'] = author_data.get('combined_credibility_score', 
+                                                                        author_data.get('score', 50))
+            author_data['author_name'] = author_data.get('author_name', 
+                                                        author_data.get('name', article.get('author', 'Unknown')))
+            
+        # Count services that provided data
         services_count = len(detailed_analysis)
         
-        # Calculate extraction quality based on what we actually have
+        # Build extraction quality metrics
         extraction_quality = {
             'score': 100 if article.get('extraction_successful') else 0,
             'services_used': services_count,
             'content_length': len(article.get('content', '')),
             'word_count': article.get('word_count', 0),
             'has_title': bool(article.get('title')),
-            'has_source': bool(article.get('domain'))
+            'has_author': bool(article.get('author') and article.get('author') != 'Unknown'),
+            'has_source': bool(article.get('domain') and article.get('domain') != 'Unknown')
         }
         
-        # Generate findings summary with author info
-        findings_summary = self._generate_findings_summary_with_author(
+        # Generate comprehensive findings summary
+        findings_summary = self._generate_comprehensive_findings(
             trust_score,
             detailed_analysis,
             article
         )
         
-        # Build the response with CORRECT values
+        # Build the complete response with ALL data
         response = {
             'success': True,
             'trust_score': trust_score,
             'article_summary': article.get('title', 'Article analyzed'),
-            'source': article.get('domain', 'Unknown'),
+            'source': article.get('domain', article.get('source', 'Unknown')),
             'author': article.get('author', 'Unknown'),
             'findings_summary': findings_summary,
-            'detailed_analysis': detailed_analysis,
+            'detailed_analysis': detailed_analysis,  # This contains ALL service data
+            'article_metadata': {
+                'url': article.get('url', content if content_type == 'url' else ''),
+                'word_count': article.get('word_count', 0),
+                'published_date': article.get('published_date', ''),
+                'extraction_method': article.get('extraction_method', 'unknown')
+            },
             'processing_time': round(time.time() - start_time, 2),
             'extraction_quality': extraction_quality,
+            'services_summary': {
+                'total': services_count,
+                'successful': services_count,
+                'failed': 0,
+                'services': list(detailed_analysis.keys())
+            },
             'message': f'Analysis complete - {services_count} services provided data.'
         }
         
-        # Log what we're actually sending
+        # Log what we're sending
         logger.info(f"Response built with trust_score={trust_score}, services={services_count}")
-        if 'author_analyzer' in detailed_analysis:
-            author_score = detailed_analysis['author_analyzer'].get('combined_credibility_score', 0)
-            logger.info(f"Author credibility score in response: {author_score}")
+        logger.info(f"Detailed analysis keys: {list(detailed_analysis.keys())}")
+        for service_name in detailed_analysis:
+            service_data = detailed_analysis[service_name]
+            logger.info(f"  {service_name}: score={service_data.get('score', 'N/A')}, "
+                       f"fields={len(service_data)} keys")
         
         return response
     
-    def _generate_findings_summary_with_author(self, trust_score: int, detailed_analysis: Dict, article: Dict) -> str:
-        """Generate comprehensive findings summary including author credibility"""
+    def _generate_comprehensive_findings(self, trust_score: int, detailed_analysis: Dict, article: Dict) -> str:
+        """Generate comprehensive findings summary with all service insights"""
         findings = []
         
-        # Trust level assessment
+        # Overall trust assessment
         if trust_score >= 80:
-            findings.append("This article demonstrates high credibility and trustworthiness.")
+            findings.append("✓ This article demonstrates high credibility and trustworthiness.")
         elif trust_score >= 60:
-            findings.append("This article shows generally good credibility with some minor concerns.")
+            findings.append("⚠ This article shows generally good credibility with some concerns.")
         elif trust_score >= 40:
-            findings.append("This article has moderate credibility with several issues identified.")
+            findings.append("⚠ This article has moderate credibility with several issues.")
         else:
-            findings.append("This article shows significant credibility concerns.")
+            findings.append("✗ This article shows significant credibility concerns.")
         
-        # Add source info
-        source = article.get('domain', '')
-        if source and source != 'Unknown':
-            findings.append(f"Published by {source}.")
+        # Source credibility
+        if 'source_credibility' in detailed_analysis:
+            source_data = detailed_analysis['source_credibility']
+            source_score = source_data.get('score', 0)
+            source_name = article.get('domain', 'the source')
+            if source_score >= 70:
+                findings.append(f"The source {source_name} has established credibility.")
+            elif source_score < 40:
+                findings.append(f"The source {source_name} has limited credibility.")
         
-        # Add author credibility info
-        author = article.get('author', '')
-        if author and author != 'Unknown':
-            if 'author_analyzer' in detailed_analysis:
-                author_data = detailed_analysis['author_analyzer']
-                author_score = author_data.get('combined_credibility_score', 0) or author_data.get('score', 0)
-                if author_score > 0:
-                    if author_score >= 70:
-                        findings.append(f"Author {author} has high credibility (score: {author_score}/100).")
-                    elif author_score >= 50:
-                        findings.append(f"Author {author} has moderate credibility (score: {author_score}/100).")
-                    else:
-                        findings.append(f"Author {author} has limited verified credibility (score: {author_score}/100).")
+        # Author credibility
+        if 'author_analyzer' in detailed_analysis:
+            author_data = detailed_analysis['author_analyzer']
+            author_score = author_data.get('combined_credibility_score', 0)
+            author_name = author_data.get('author_name', article.get('author', 'Unknown'))
+            if author_name and author_name != 'Unknown':
+                if author_score >= 70:
+                    findings.append(f"Author {author_name} has strong credentials (score: {author_score}/100).")
+                elif author_score >= 50:
+                    findings.append(f"Author {author_name} has moderate credentials (score: {author_score}/100).")
                 else:
-                    findings.append(f"Written by {author}.")
-            else:
-                findings.append(f"Written by {author}.")
+                    findings.append(f"Author {author_name} has limited verified credentials.")
         
-        # Add service-specific findings
-        if detailed_analysis:
-            # Bias detection
-            if 'bias_detector' in detailed_analysis:
-                bias_data = detailed_analysis['bias_detector']
-                if isinstance(bias_data, dict):
-                    bias_score = bias_data.get('bias_score', 0)
-                    if bias_score < 30:
-                        findings.append("Content appears balanced with minimal bias.")
-                    elif bias_score > 70:
-                        findings.append("Significant bias detected in the presentation.")
-            
-            # Fact checking
-            if 'fact_checker' in detailed_analysis:
-                fact_data = detailed_analysis['fact_checker']
-                if isinstance(fact_data, dict):
-                    verified = fact_data.get('verified_claims', 0)
-                    total = fact_data.get('claims_checked', 0)
-                    if total > 0:
-                        percentage = (verified / total) * 100
-                        findings.append(f"Fact-checking: {int(percentage)}% of claims verified.")
+        # Bias detection
+        if 'bias_detector' in detailed_analysis:
+            bias_data = detailed_analysis['bias_detector']
+            bias_score = bias_data.get('bias_score', bias_data.get('score', 50))
+            political_lean = bias_data.get('political_lean', '')
+            if bias_score < 30:
+                findings.append("Content appears balanced with minimal bias.")
+            elif bias_score > 70:
+                findings.append(f"Significant bias detected ({political_lean} lean).")
+        
+        # Fact checking
+        if 'fact_checker' in detailed_analysis:
+            fact_data = detailed_analysis['fact_checker']
+            claims_verified = fact_data.get('claims_verified', 0)
+            claims_found = fact_data.get('claims_found', 0)
+            if claims_found > 0:
+                verification_rate = (claims_verified / claims_found) * 100
+                findings.append(f"Fact-check: {claims_verified}/{claims_found} claims verified ({int(verification_rate)}%).")
+        
+        # Manipulation detection
+        if 'manipulation_detector' in detailed_analysis:
+            manip_data = detailed_analysis['manipulation_detector']
+            manip_score = manip_data.get('manipulation_score', manip_data.get('score', 50))
+            if manip_score > 70:
+                findings.append("Warning: Manipulative techniques detected.")
+            elif manip_score < 30:
+                findings.append("No significant manipulation techniques found.")
+        
+        # Transparency
+        if 'transparency_analyzer' in detailed_analysis:
+            trans_data = detailed_analysis['transparency_analyzer']
+            sources_cited = trans_data.get('sources_cited', 0)
+            if sources_cited > 5:
+                findings.append(f"Good transparency with {sources_cited} sources cited.")
+            elif sources_cited == 0:
+                findings.append("No sources cited - transparency concern.")
         
         return " ".join(findings) if findings else "Analysis completed."
     
     def _error_response(self, error_msg: str, content: str, error_type: str = 'unknown') -> Dict[str, Any]:
-        """Create error response"""
+        """Create comprehensive error response"""
         return {
             'success': False,
             'error': error_msg,
@@ -314,11 +326,19 @@ class NewsAnalyzer:
             'author': 'Unknown',
             'findings_summary': f'Analysis failed: {error_msg}',
             'detailed_analysis': {},
+            'article_metadata': {},
             'processing_time': 0,
             'extraction_quality': {
                 'score': 0,
                 'services_used': 0
-            }
+            },
+            'services_summary': {
+                'total': 0,
+                'successful': 0,
+                'failed': 0,
+                'services': []
+            },
+            'message': error_msg
         }
     
     def get_available_services(self) -> List[str]:
