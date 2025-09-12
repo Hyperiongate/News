@@ -1,6 +1,13 @@
 """
 Configuration Management for News Analyzer
-FIXED: Enabled OpenAI Enhancer for AI summaries
+Date: 2025-09-12
+Last Updated: 2025-09-12
+
+MERGED VERSION:
+- Maintains your existing service configurations
+- Adds missing methods for service registry compatibility
+- Keeps OpenAI Enhancer enabled
+- Adds fallback support for critical services
 """
 import os
 from typing import Dict, Any, Optional, List
@@ -19,6 +26,9 @@ class ServiceConfig:
     api_key: Optional[str] = None
     endpoint: Optional[str] = None
     options: Dict[str, Any] = None
+    fallback_enabled: bool = True  # Added for fallback support
+    api_key_required: bool = False  # Added for compatibility
+    api_key_name: Optional[str] = None  # Added for compatibility
 
     def __post_init__(self):
         if self.options is None:
@@ -43,6 +53,7 @@ class Config:
     GOOGLE_FACT_CHECK_API_KEY = os.getenv('GOOGLE_FACT_CHECK_API_KEY')
     GOOGLE_FACTCHECK_API_KEY = os.getenv('GOOGLE_FACTCHECK_API_KEY')  # Alternative name
     SCRAPERAPI_KEY = os.getenv('SCRAPERAPI_KEY')
+    SCRAPER_API_KEY = SCRAPERAPI_KEY  # Added alias for compatibility
     SCRAPINGBEE_API_KEY = os.getenv('SCRAPINGBEE_API_KEY')
     COPYLEAKS_API_KEY = os.getenv('COPYLEAKS_API_KEY')
     COPYLEAKS_EMAIL = os.getenv('COPYLEAKS_EMAIL')
@@ -51,12 +62,15 @@ class Config:
     FRED_API_KEY = os.getenv('FRED_API_KEY')
     MEDIASTACK_API_KEY = os.getenv('MEDIASTACK_API_KEY')
     
-    # Service Configurations
+    # Service Configurations - Enhanced with fallback support
     SERVICES = {
         'article_extractor': ServiceConfig(
             enabled=True,
             timeout=10,
             max_retries=2,
+            fallback_enabled=True,
+            api_key_required=False,  # Can work without API using fallback
+            api_key_name='SCRAPERAPI_KEY',
             options={
                 'min_text_length': 200,
                 'max_text_length': 50000,
@@ -72,12 +86,14 @@ class Config:
             enabled=True,
             timeout=8,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             options={
                 'check_https': True,
                 'check_domain_age': False,  # Slow operation
                 'check_alexa_rank': False,
                 'check_social_presence': False,  # Slow operation
-                'use_ai_enhancement': bool(OPENAI_API_KEY),  # Enable if API key available
+                'use_ai_enhancement': bool(OPENAI_API_KEY),
                 'web_request_timeout': 5
             }
         ),
@@ -85,12 +101,15 @@ class Config:
             enabled=True,
             timeout=8,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             api_key=NEWS_API_KEY or NEWSAPI_KEY,
+            api_key_name='NEWS_API_KEY',
             options={
                 'search_online': False,  # Slow operation
                 'check_social_media': False,  # Slow operation
                 'analyze_past_articles': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY),  # Enable if API key available
+                'use_ai_enhancement': bool(OPENAI_API_KEY),
                 'web_request_timeout': 5
             }
         ),
@@ -98,30 +117,38 @@ class Config:
             enabled=True,
             timeout=5,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             options={
                 'detect_political_bias': True,
                 'detect_sentiment': True,
                 'detect_loaded_language': True,
                 'analyze_sources': True,
-                'use_ai_enhancement': bool(OPENAI_API_KEY)  # Enable if API key available
+                'use_ai_enhancement': bool(OPENAI_API_KEY)
             }
         ),
         'fact_checker': ServiceConfig(
-            enabled=bool(GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY),
+            enabled=True,  # Always enabled with fallback
             timeout=10,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,  # Can work without API using fallback
             api_key=GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY,
+            api_key_name='GOOGLE_FACT_CHECK_API_KEY',
             endpoint='https://factchecktools.googleapis.com/v1alpha1/claims:search',
             options={
                 'max_claims': 10,
                 'confidence_threshold': 0.7,
-                'include_similar': True
+                'include_similar': True,
+                'use_fallback': not bool(GOOGLE_FACT_CHECK_API_KEY or GOOGLE_FACTCHECK_API_KEY)
             }
         ),
         'transparency_analyzer': ServiceConfig(
             enabled=True,
             timeout=5,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             options={
                 'check_sources': True,
                 'check_author_info': True,
@@ -134,6 +161,8 @@ class Config:
             enabled=True,
             timeout=5,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             options={
                 'detect_clickbait': True,
                 'detect_emotional_manipulation': True,
@@ -146,6 +175,8 @@ class Config:
             enabled=True,
             timeout=5,
             max_retries=1,
+            fallback_enabled=True,
+            api_key_required=False,
             options={
                 'analyze_readability': True,
                 'check_grammar': True,
@@ -158,7 +189,10 @@ class Config:
             enabled=False,  # Disabled - too slow for real-time
             timeout=60,
             max_retries=2,
+            fallback_enabled=False,
+            api_key_required=True,
             api_key=COPYLEAKS_API_KEY or COPYSCAPE_API_KEY,
+            api_key_name='COPYLEAKS_API_KEY',
             options={
                 'min_match_length': 15,
                 'check_quotes': False,
@@ -167,30 +201,47 @@ class Config:
             }
         ),
         'openai_enhancer': ServiceConfig(
-            enabled=bool(OPENAI_API_KEY),  # FIXED: Enable if API key is available
-            timeout=15,  # Reasonable timeout for GPT-3.5
+            enabled=bool(OPENAI_API_KEY),  # Enable if API key is available
+            timeout=15,
             max_retries=1,
+            fallback_enabled=False,  # No fallback for OpenAI
+            api_key_required=True,
             api_key=OPENAI_API_KEY,
+            api_key_name='OPENAI_API_KEY',
             options={
-                'model': 'gpt-3.5-turbo',  # Faster model
+                'model': 'gpt-3.5-turbo',
                 'generate_summary': True,
                 'extract_claims': True,
                 'analyze_bias': True,
                 'suggest_fact_checks': True,
                 'generate_questions': True,
                 'overall_assessment': True,
-                'max_tokens': 1000,  # Balanced for good summaries
+                'max_tokens': 1000,
                 'temperature': 0.3
             }
         )
     }
     
+    # Critical services that should always work (with fallback if needed)
+    CRITICAL_SERVICES = [
+        'source_credibility',
+        'author_analyzer',
+        'bias_detector',
+        'fact_checker',
+        'transparency_analyzer',
+        'manipulation_detector',
+        'content_analyzer'
+    ]
+    
+    # Service Configurations (keeping existing SERVICES dict as-is above)
+    SERVICE_CONFIGS = SERVICES  # Alias for compatibility
+    
     # Pipeline Configuration
     PIPELINE = {
-        'stages': ['extraction', 'analysis', 'enhancement'],  # Re-enabled enhancement
+        'stages': ['extraction', 'analysis', 'enhancement'],
         'parallel_processing': True,
         'max_workers': 4,
-        'max_total_timeout': 45,  # Increased slightly to accommodate AI
+        'max_total_timeout': 45,
         'min_required_services': 3,
         'retry_failed_services': False,
         'continue_on_error': True
@@ -208,7 +259,7 @@ class Config:
             'manipulation_detector',
             'content_analyzer'
         ],
-        'enhancement': ['openai_enhancer']  # Re-enabled
+        'enhancement': ['openai_enhancer']
     }
     
     # Service to stage mapping (reverse lookup)
@@ -221,7 +272,7 @@ class Config:
         'transparency_analyzer': 'analysis',
         'manipulation_detector': 'analysis',
         'content_analyzer': 'analysis',
-        'openai_enhancer': 'enhancement'  # Added back
+        'openai_enhancer': 'enhancement'
     }
     
     # Trust Score Weights
@@ -289,17 +340,84 @@ class Config:
     
     @classmethod
     def is_service_enabled(cls, service_name: str) -> bool:
-        """Check if a service is enabled"""
+        """Check if a service is enabled - enhanced with fallback logic"""
         config = cls.get_service_config(service_name)
-        return config and config.enabled
+        if not config:
+            return False
+        
+        # Check if service is explicitly disabled
+        if not config.enabled:
+            return False
+        
+        # Check if service requires API key
+        if config.api_key_required and config.api_key_name:
+            api_key = getattr(cls, config.api_key_name, None) or config.api_key
+            if not api_key:
+                # For critical services, enable with fallback
+                if service_name in cls.CRITICAL_SERVICES and config.fallback_enabled:
+                    logger.info(f"Service {service_name} missing API key but enabling with fallback")
+                    return True
+                logger.warning(f"Service {service_name} disabled - missing required API key")
+                return False
+        
+        return True
     
     @classmethod
     def get_enabled_services(cls) -> List[str]:
         """Get list of all enabled services"""
         return [
-            name for name, config in cls.SERVICES.items()
-            if config.enabled
+            name for name in cls.SERVICES.keys()
+            if cls.is_service_enabled(name)
         ]
+    
+    @classmethod
+    def should_use_fallback(cls, service_name: str) -> bool:
+        """Check if fallback should be used for a service"""
+        config = cls.get_service_config(service_name)
+        if not config:
+            return False
+        
+        # Use fallback if enabled and (missing API key OR service fails)
+        if config.fallback_enabled:
+            if config.api_key_required and not config.api_key:
+                return True
+        
+        return config.fallback_enabled
+    
+    @classmethod
+    def get_service_timeout(cls, service_name: str) -> int:
+        """Get timeout for a service"""
+        config = cls.get_service_config(service_name)
+        return config.timeout if config else 30
+    
+    @classmethod
+    def log_status(cls):
+        """Log configuration status"""
+        logger.info("=" * 60)
+        logger.info("CONFIGURATION STATUS")
+        logger.info("-" * 60)
+        
+        # API Keys
+        logger.info("API Keys:")
+        logger.info(f"  OpenAI: {'✓' if cls.OPENAI_API_KEY else '✗'}")
+        logger.info(f"  ScraperAPI: {'✓' if cls.SCRAPERAPI_KEY else '✗'}")
+        logger.info(f"  Google Fact Check: {'✓' if cls.GOOGLE_FACT_CHECK_API_KEY or cls.GOOGLE_FACTCHECK_API_KEY else '✗'}")
+        logger.info(f"  News API: {'✓' if cls.NEWS_API_KEY or cls.NEWSAPI_KEY else '✗'}")
+        logger.info(f"  ScrapingBee: {'✓' if cls.SCRAPINGBEE_API_KEY else '✗'}")
+        
+        # Services
+        logger.info("\nServices:")
+        enabled_services = cls.get_enabled_services()
+        for service_name, config in cls.SERVICES.items():
+            if service_name in enabled_services:
+                fallback = ' (with fallback)' if cls.should_use_fallback(service_name) else ''
+                logger.info(f"  ✓ {service_name}{fallback}")
+            else:
+                logger.info(f"  ✗ {service_name} (disabled)")
+        
+        logger.info("-" * 60)
+        logger.info(f"Total enabled services: {len(enabled_services)}")
+        logger.info("=" * 60)
     
     @classmethod
     def validate(cls) -> Dict[str, Any]:
@@ -308,32 +426,64 @@ class Config:
             'valid': True,
             'errors': [],
             'warnings': [],
-            'enabled_services': []
+            'enabled_services': [],
+            'api_keys': {}
         }
+        
+        # Check API keys
+        api_key_status = {
+            'OPENAI_API_KEY': bool(cls.OPENAI_API_KEY),
+            'SCRAPERAPI_KEY': bool(cls.SCRAPERAPI_KEY),
+            'GOOGLE_FACT_CHECK_API_KEY': bool(cls.GOOGLE_FACT_CHECK_API_KEY or cls.GOOGLE_FACTCHECK_API_KEY),
+            'NEWS_API_KEY': bool(cls.NEWS_API_KEY or cls.NEWSAPI_KEY),
+            'SCRAPINGBEE_API_KEY': bool(cls.SCRAPINGBEE_API_KEY)
+        }
+        status['api_keys'] = api_key_status
         
         # Check required services
         if not cls.is_service_enabled('article_extractor'):
-            status['errors'].append('Article extractor must be enabled')
-            status['valid'] = False
+            status['warnings'].append('Article extractor not fully enabled - will use fallback')
         
         # Check API keys for enabled services
         for service_name, config in cls.SERVICES.items():
-            if config.enabled:
+            if cls.is_service_enabled(service_name):
                 status['enabled_services'].append(service_name)
                 
                 # Check if service needs API key
                 if service_name == 'fact_checker' and not config.api_key:
-                    status['warnings'].append(f'{service_name} enabled but no API key provided')
+                    if config.fallback_enabled:
+                        status['warnings'].append(f'{service_name} using fallback mode (no API key)')
+                    else:
+                        status['warnings'].append(f'{service_name} limited functionality (no API key)')
                 elif service_name == 'openai_enhancer' and not config.api_key:
-                    status['warnings'].append(f'{service_name} enabled but no OpenAI API key provided')
+                    status['warnings'].append(f'{service_name} disabled (no OpenAI API key)')
                 elif service_name == 'author_analyzer' and not (cls.NEWS_API_KEY or cls.NEWSAPI_KEY):
-                    status['warnings'].append(f'{service_name} may have limited functionality without News API key')
+                    status['warnings'].append(f'{service_name} using limited mode (no News API key)')
         
-        # Check pipeline configuration
-        if cls.PIPELINE['min_required_services'] > len(status['enabled_services']):
-            status['warnings'].append(
-                f"Minimum required services ({cls.PIPELINE['min_required_services']}) "
-                f"exceeds enabled services ({len(status['enabled_services'])})"
+        # Check minimum services
+        if len(status['enabled_services']) < cls.PIPELINE['min_required_services']:
+            status['errors'].append(
+                f"Only {len(status['enabled_services'])} services enabled, "
+                f"minimum required is {cls.PIPELINE['min_required_services']}"
             )
+            status['valid'] = False
+        
+        # Check critical services
+        for service in cls.CRITICAL_SERVICES:
+            if service not in status['enabled_services']:
+                status['warnings'].append(f"Critical service {service} not available")
         
         return status
+    
+    @classmethod
+    def validate_configuration(cls) -> Dict[str, Any]:
+        """Alias for validate() for compatibility"""
+        return cls.validate()
+
+
+# Auto-log status when module is imported (in production)
+if __name__ != "__main__":
+    try:
+        Config.log_status()
+    except Exception as e:
+        logger.error(f"Error logging config status: {e}")
