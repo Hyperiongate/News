@@ -181,7 +181,7 @@ class ServiceRegistry:
                     'service': service_name,
                     'success': True,
                     'available': True,
-                    'timestamp': time.time(),
+                    'timestamp': time.time(),  # Now time is imported
                     'data': service_data,
                     'fallback': True
                 }
