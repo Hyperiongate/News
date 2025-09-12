@@ -1,0 +1,409 @@
+/**
+ * TruthLens Dropdown Styles - Targeted CSS
+ * Date: September 12, 2025
+ * Last Updated: September 12, 2025
+ * 
+ * TARGETED STYLING:
+ * - Only styles for dropdowns and service cards
+ * - Won't interfere with existing page layout
+ * - Professional appearance for service analysis
+ */
+
+/* Service Dropdown Container */
+#serviceAnalysisContainer {
+    margin-top: 2rem;
+}
+
+/* Service Dropdowns - Professional Design */
+.service-dropdown {
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    background: white;
+    border: 1px solid #e5e7eb;
+}
+
+.service-dropdown.active {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.service-header {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+    position: relative;
+    background: #f9fafb;
+    border-bottom: 2px solid transparent;
+}
+
+.service-header:hover {
+    background: #f3f4f6;
+}
+
+.service-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.service-toggle {
+    color: #6b7280;
+    transition: transform 0.3s;
+}
+
+.service-dropdown.active .service-toggle i {
+    transform: rotate(180deg);
+}
+
+/* Service-specific header colors - subtle accents */
+.sourceCredibilityDropdown .service-header {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-bottom-color: #6366f1;
+}
+
+.biasDetectorDropdown .service-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+    border-bottom-color: #f59e0b;
+}
+
+.factCheckerDropdown .service-header {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-bottom-color: #3b82f6;
+}
+
+.transparencyAnalyzerDropdown .service-header {
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-bottom-color: #8b5cf6;
+}
+
+.manipulationDetectorDropdown .service-header {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-bottom-color: #ef4444;
+}
+
+.contentAnalyzerDropdown .service-header {
+    background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+    border-bottom-color: #ec4899;
+}
+
+.authorDropdown .service-header {
+    background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+    border-bottom-color: #06b6d4;
+}
+
+/* Service Content Area */
+.service-content {
+    background: white;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Service Analysis Card */
+.service-analysis-card {
+    padding: 1.5rem;
+    background: #fafafa;
+}
+
+/* Metrics Grid */
+.service-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+    border-left: 3px solid #6366f1;
+}
+
+.metric-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card.primary {
+    border-left-color: #6366f1;
+}
+
+.metric-card.success {
+    border-left-color: #10b981;
+}
+
+.metric-card.warning {
+    border-left-color: #f59e0b;
+}
+
+.metric-card.danger {
+    border-left-color: #ef4444;
+}
+
+.metric-card.info {
+    border-left-color: #3b82f6;
+}
+
+.metric-card.secondary {
+    border-left-color: #06b6d4;
+}
+
+.metric-icon {
+    font-size: 1.5rem;
+    color: #6366f1;
+    opacity: 0.8;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Analysis Details Sections */
+.analysis-details {
+    margin-top: 1.5rem;
+}
+
+.analysis-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-left: 3px solid #6366f1;
+}
+
+.analysis-section h4 {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-section h4 i {
+    color: #6366f1;
+    font-size: 0.875rem;
+}
+
+.analysis-section p {
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Bias Meter Styling */
+.bias-meter-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.meter-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.bias-meter {
+    position: relative;
+    margin: 0 auto;
+    max-width: 350px;
+}
+
+.bias-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.scale-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.bias-track {
+    height: 6px;
+    background: linear-gradient(to right, 
+        #3b82f6 0%, 
+        #06b6d4 25%, 
+        #10b981 50%, 
+        #f59e0b 75%, 
+        #ef4444 100%);
+    border-radius: 3px;
+    position: relative;
+    margin-top: 0.5rem;
+}
+
+.bias-indicator {
+    position: absolute;
+    top: -5px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 2px solid #1f2937;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: left 0.5s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Claims List */
+.claims-list {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.claims-list h4 {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.claim-item {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.claim-item.verified {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.claim-item.unverified {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+/* Author Profile */
+.author-profile {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.author-header {
+    background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: white;
+}
+
+.author-avatar {
+    font-size: 3rem;
+    opacity: 0.9;
+}
+
+.author-info h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.author-info p {
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+/* AI Insights */
+.ai-insights {
+    margin-top: 1rem;
+}
+
+.ai-section {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.02) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.ai-section h4 {
+    color: #7c3aed;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ai-section p {
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 0.9rem;
+}
+
+/* No data message */
+.no-data {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Hide plagiarism detector */
+.plagiarismDetectorDropdown {
+    display: none !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .service-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .bias-scale {
+        font-size: 0.6rem;
+    }
+    
+    .metric-value {
+        font-size: 1.25rem;
+    }
+}
