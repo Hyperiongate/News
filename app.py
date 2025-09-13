@@ -320,8 +320,10 @@ class ArticleExtractor(BaseAnalyzer):
                     'render': 'false'
                 }
                 
-                response = requests.get(api_url, params=params, timeout=30)
+                response = requests.get(api_url, params=params, timeout=15)
                 response.raise_for_status()
+                
+                logger.info(f"ScraperAPI response received, length: {len(response.text)}")
                 
                 # Parse HTML
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -335,24 +337,31 @@ class ArticleExtractor(BaseAnalyzer):
                 else:
                     title = f'Article from {domain}'
                 
+                logger.info(f"Title extracted: {title[:100] if title else 'None'}")
+                
                 # Extract author - try multiple methods
                 author = 'Unknown'
                 
                 # BBC-specific selectors
                 if 'bbc' in domain:
+                    logger.info("Trying BBC-specific author extraction")
                     author_selectors = [
                         'span.ssrcss-68pt20-Text-TextContributorName',
                         'div[class*="TextContributorName"]',
                         'span[class*="Contributor"]',
                         'div.byline',
-                        'span.byline__name'
+                        'span.byline__name',
+                        'p[class*="ssrcss"][class*="Text"]',
+                        'div[data-testid="byline"]',
+                        'span[data-testid="byline"]'
                     ]
                     for selector in author_selectors:
                         author_elem = soup.select_one(selector)
                         if author_elem:
                             author_text = author_elem.get_text(strip=True)
                             if author_text and len(author_text) > 2:
-                                author = author_text.replace('By ', '').strip()
+                                author = author_text.replace('By ', '').replace('by ', '').strip()
+                                logger.info(f"Author found with selector {selector}: {author}")
                                 break
                 
                 # Generic author extraction
@@ -360,6 +369,9 @@ class ArticleExtractor(BaseAnalyzer):
                     meta_author = soup.find('meta', {'name': 'author'})
                     if meta_author:
                         author = meta_author.get('content', 'Unknown')
+                        logger.info(f"Author found in meta tag: {author}")
+                
+                logger.info(f"Final author: {author}")
                 
                 # Extract content
                 content = ''
