@@ -7,11 +7,12 @@ FIXES APPLIED:
 - Original deadlock fix maintained
 - Added explicit JS/CSS file serving to fix empty file responses
 - CRITICAL: Added JSON serialization fix for detailed_analysis data
+- CRITICAL: Added service initialization to prevent fallback services
 - Ensures all service data is properly converted to JSON-serializable types
 
 Notes:
-- Fixes the issue where 2870 bytes are created but only 949 bytes reach frontend
-- Cleans all nested objects to ensure proper JSON serialization
+- Fixes the issue where services return fallback data
+- Properly initializes and registers all analysis services
 - Maintains all existing functionality
 """
 import os
@@ -134,6 +135,98 @@ try:
 except:
     logger.warning("Service registry not available")
     registry = None
+
+# ================================================================================
+# CRITICAL: Initialize and register all analysis services
+# This prevents fallback services from being created
+# ================================================================================
+if registry:
+    logger.info("=" * 80)
+    logger.info("INITIALIZING AND REGISTERING ANALYSIS SERVICES")
+    logger.info("=" * 80)
+    
+    initialized_count = 0
+    failed_count = 0
+    
+    # Define service configurations
+    service_configs = [
+        ('source_credibility', 'SourceCredibility'),
+        ('author_analyzer', 'AuthorAnalyzer'),
+        ('bias_detector', 'BiasDetector'),
+        ('fact_checker', 'FactChecker'),
+        ('transparency_analyzer', 'TransparencyAnalyzer'),
+        ('manipulation_detector', 'ManipulationDetector'),
+        ('content_analyzer', 'ContentAnalyzer'),
+        ('plagiarism_detector', 'PlagiarismDetector'),
+        ('openai_enhancer', 'OpenAIEnhancer')
+    ]
+    
+    for service_name, class_name in service_configs:
+        try:
+            # Try to import the service module
+            module_path = f'services.{service_name}'
+            module = __import__(module_path, fromlist=[class_name])
+            
+            # Try to get the service class
+            if hasattr(module, class_name):
+                ServiceClass = getattr(module, class_name)
+                # Instantiate the service
+                service_instance = ServiceClass()
+                # Register with the registry
+                registry.register_service(service_name, service_instance)
+                
+                # Check availability
+                if hasattr(service_instance, 'is_available'):
+                    available = service_instance.is_available()
+                    logger.info(f"  ✓ {service_name} registered - Available: {available}")
+                else:
+                    logger.info(f"  ✓ {service_name} registered")
+                initialized_count += 1
+            else:
+                # Try to find any analyzer class in the module
+                found = False
+                for attr_name in dir(module):
+                    if not attr_name.startswith('_') and ('analyzer' in attr_name.lower() or 
+                                                          'detector' in attr_name.lower() or 
+                                                          'checker' in attr_name.lower() or 
+                                                          'enhancer' in attr_name.lower()):
+                        try:
+                            ServiceClass = getattr(module, attr_name)
+                            service_instance = ServiceClass()
+                            registry.register_service(service_name, service_instance)
+                            logger.info(f"  ✓ {service_name} registered using {attr_name}")
+                            initialized_count += 1
+                            found = True
+                            break
+                        except Exception as e:
+                            continue
+                
+                if not found:
+                    logger.warning(f"  ✗ {service_name}: Class {class_name} not found in module")
+                    failed_count += 1
+                    
+        except ImportError as e:
+            logger.error(f"  ✗ {service_name}: Module import failed - {str(e)}")
+            failed_count += 1
+        except Exception as e:
+            logger.error(f"  ✗ {service_name}: Initialization failed - {str(e)}")
+            failed_count += 1
+    
+    logger.info("=" * 80)
+    logger.info(f"Service Registration Complete:")
+    logger.info(f"  ✓ Successfully registered: {initialized_count}")
+    logger.info(f"  ✗ Failed to register: {failed_count}")
+    
+    # Log registry status
+    try:
+        if hasattr(registry, 'services'):
+            registered_services = list(registry.services.keys())
+            logger.info(f"  Registered services: {registered_services}")
+    except Exception as e:
+        logger.warning(f"Could not list registered services: {e}")
+    
+    logger.info("=" * 80)
+# ================================================================================
 
 # Initialize ArticleExtractor with force registration
 ArticleExtractorClass = safe_import('services.article_extractor', 'ArticleExtractor')
