@@ -1,12 +1,13 @@
 /**
- * TruthLens News Analyzer - FINAL WORKING VERSION
- * Date: September 11, 2025
- * Last Updated: September 11, 2025
+ * TruthLens News Analyzer - Frontend Core
+ * Date: September 13, 2025
+ * Last Updated: September 13, 2025
  * 
- * FIXED:
- * - Added analyzer parameter to all ServiceTemplates calls
- * - Store data globally in window.analysisData
- * - Populate dropdowns on click with proper parameters
+ * FIXED ISSUES:
+ * - Properly access nested data structure from backend
+ * - Store complete response data globally
+ * - Pass correct data to ServiceTemplates
+ * - Handle missing/undefined data gracefully
  */
 
 // Store analysis data globally
@@ -161,9 +162,10 @@ class TruthLensAnalyzer {
                 throw new Error(data.error || 'Analysis failed');
             }
             
-            // Store data globally
+            // Store COMPLETE data globally
             window.analysisData = data;
-            console.log('Analysis data stored successfully');
+            console.log('Analysis data received:', data);
+            console.log('Detailed analysis keys:', Object.keys(data.detailed_analysis || {}));
             
             this.displayResults(data);
             
@@ -251,62 +253,12 @@ class TruthLensAnalyzer {
         let trustScore = data.trust_score || 0;
         let articleSummary = data.article_summary || 'Analysis completed';
         let source = data.source || 'Unknown Source';
+        let findingsSummary = data.findings_summary || '';
         
-        let rawAuthor = data.author || 'Staff Writer';
-        let cleanedAuthor = this.cleanAuthorName(rawAuthor);
+        // Get author from data
+        let author = data.author || 'Unknown';
         
-        data.author = cleanedAuthor;
-        
-        let findingsSummary = '';
-        const trustLevel = trustScore >= 80 ? 'high' : trustScore >= 60 ? 'good' : trustScore >= 40 ? 'moderate' : 'low';
-        
-        switch(trustLevel) {
-            case 'high':
-                findingsSummary = "This article demonstrates high credibility and trustworthiness. The source is well-established and reputable. Content appears balanced and factually accurate.";
-                break;
-            case 'good':
-                findingsSummary = "This article shows generally good credibility with some minor areas of concern. The source is reasonably reputable and content appears mostly balanced.";
-                break;
-            case 'moderate':
-                findingsSummary = "This article has moderate credibility with several issues identified. Source credibility is mixed and some bias may be present. Fact-checking revealed unverified claims.";
-                break;
-            case 'low':
-                findingsSummary = "This article shows significant credibility concerns. Source reputation is questionable, notable bias detected, and multiple claims could not be verified.";
-                break;
-        }
-        
-        // Add specific details based on the analysis
-        if (data.detailed_analysis) {
-            const d = data.detailed_analysis;
-            
-            // Add source info
-            if (d.source_credibility?.credibility) {
-                findingsSummary = findingsSummary.replace('Source credibility is mixed', `Published by ${source}`);
-            }
-            
-            // Add bias info
-            if (d.bias_detector?.bias_score !== undefined) {
-                const biasLevel = d.bias_detector.bias_score;
-                if (biasLevel < 30) {
-                    findingsSummary += " Content appears balanced with minimal bias.";
-                } else if (biasLevel > 70) {
-                    findingsSummary += " Significant bias detected in presentation.";
-                }
-            }
-            
-            // Add fact-checking info
-            if (d.fact_checker?.claims_verified !== undefined && d.fact_checker?.claims_found !== undefined) {
-                const verified = d.fact_checker.claims_verified || 0;
-                const found = d.fact_checker.claims_found || 0;
-                if (found > 0) {
-                    const percentage = Math.round((verified / found) * 100);
-                    findingsSummary += ` Fact-checking: ${percentage}% of claims verified.`;
-                } else {
-                    findingsSummary += " Fact-checking: 0% of claims verified.";
-                }
-            }
-        }
-        
+        // Update trust score display
         this.updateTrustScore(trustScore);
         
         const overviewEl = document.getElementById('analysisOverview');
@@ -331,7 +283,7 @@ class TruthLensAnalyzer {
         if (sourceEl) sourceEl.textContent = source;
         
         const authorEl = document.getElementById('articleAuthor');
-        if (authorEl) authorEl.textContent = cleanedAuthor;
+        if (authorEl) authorEl.textContent = author;
         
         const findingsEl = document.getElementById('findingsSummary');
         if (findingsEl) {
@@ -385,7 +337,7 @@ class TruthLensAnalyzer {
     }
 }
 
-// FIXED dropdown toggle - properly pass analyzer parameter
+// FIXED dropdown toggle - properly access nested data
 window.toggleServiceDropdown = function(serviceId) {
     const dropdown = document.getElementById(`${serviceId}Dropdown`);
     const content = document.getElementById(`${serviceId}Content`);
@@ -403,51 +355,53 @@ window.toggleServiceDropdown = function(serviceId) {
             // Get template and populate it
             content.innerHTML = window.ServiceTemplates.getTemplate(serviceId);
             
-            // Immediately populate with data - PASS ANALYZER AS PARAMETER
+            // Get the detailed analysis data properly
             const detailed = window.analysisData.detailed_analysis || {};
             
+            // Map service IDs to backend keys
+            const serviceMapping = {
+                'sourceCredibility': 'source_credibility',
+                'biasDetector': 'bias_detector', 
+                'factChecker': 'fact_checker',
+                'transparencyAnalyzer': 'transparency_analyzer',
+                'manipulationDetector': 'manipulation_detector',
+                'contentAnalyzer': 'content_analyzer',
+                'author': 'author_analyzer'
+            };
+            
+            const backendKey = serviceMapping[serviceId] || serviceId;
+            const serviceData = detailed[backendKey] || {};
+            
+            console.log(`Populating ${serviceId} with data:`, serviceData);
+            
+            // Call the appropriate display function with the correct data
             switch(serviceId) {
                 case 'sourceCredibility':
-                    window.ServiceTemplates.displaySourceCredibility(
-                        detailed.source_credibility || {}, 
-                        window.analyzer
-                    );
+                    window.ServiceTemplates.displaySourceCredibility(serviceData, window.analyzer);
                     break;
                 case 'biasDetector':
-                    window.ServiceTemplates.displayBiasDetection(
-                        detailed.bias_detector || {}, 
-                        window.analyzer
-                    );
+                    window.ServiceTemplates.displayBiasDetection(serviceData, window.analyzer);
                     break;
                 case 'factChecker':
-                    window.ServiceTemplates.displayFactChecking(
-                        detailed.fact_checker || {}, 
-                        window.analyzer
-                    );
+                    window.ServiceTemplates.displayFactChecking(serviceData, window.analyzer);
                     break;
                 case 'transparencyAnalyzer':
-                    window.ServiceTemplates.displayTransparencyAnalysis(
-                        detailed.transparency_analyzer || {}, 
-                        window.analyzer
-                    );
+                    window.ServiceTemplates.displayTransparencyAnalysis(serviceData, window.analyzer);
                     break;
                 case 'manipulationDetector':
-                    window.ServiceTemplates.displayManipulationDetection(
-                        detailed.manipulation_detector || {}, 
-                        window.analyzer
-                    );
+                    window.ServiceTemplates.displayManipulationDetection(serviceData, window.analyzer);
                     break;
                 case 'contentAnalyzer':
                     window.ServiceTemplates.displayContentAnalysis(
-                        detailed.content_analyzer || {}, 
+                        serviceData,
                         detailed.openai_enhancer || {},
                         window.analyzer
                     );
                     break;
                 case 'author':
                     window.ServiceTemplates.displayAuthorAnalysis(
-                        detailed.author_analyzer || {}, 
-                        window.analysisData.author,
+                        serviceData,
+                        window.analysisData.author || serviceData.author_name || 'Unknown',
                         window.analyzer
                     );
                     break;
