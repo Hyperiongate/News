@@ -1,13 +1,13 @@
 /**
  * TruthLens Service Templates Module
- * Date: September 12, 2025
- * Last Updated: September 12, 2025
+ * Date: September 13, 2025
+ * Last Updated: September 13, 2025
  * 
- * COMPLETE IMPLEMENTATION:
- * - Professional dropdown UI with data display
- * - Handles all service analysis results
- * - Formats data for user-friendly presentation
- * - Integrates with app-core.js for data flow
+ * FIXED ISSUES:
+ * - Properly handle data from backend with null/undefined checks
+ * - Access nested analysis data correctly
+ * - Display actual values instead of fallback/default data
+ * - Add safe data access with fallbacks
  */
 
 window.ServiceTemplates = {
@@ -46,17 +46,17 @@ window.ServiceTemplates = {
                         </div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-icon"><i class="fas fa-balance-scale"></i></div>
+                        <div class="metric-icon"><i class="fas fa-globe"></i></div>
                         <div class="metric-content">
-                            <div class="metric-value" id="sourceBias">--</div>
-                            <div class="metric-label">Bias Level</div>
+                            <div class="metric-value" id="sourceReputation">--</div>
+                            <div class="metric-label">Reputation</div>
                         </div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-icon"><i class="fas fa-calendar"></i></div>
+                        <div class="metric-icon"><i class="fas fa-lock"></i></div>
                         <div class="metric-content">
-                            <div class="metric-value" id="domainAge">--</div>
-                            <div class="metric-label">Domain Age</div>
+                            <div class="metric-value" id="sourceHttps">--</div>
+                            <div class="metric-label">Security</div>
                         </div>
                     </div>
                 </div>
@@ -355,36 +355,67 @@ window.ServiceTemplates = {
         `;
     },
 
-    // Display methods for each service
+    // Display methods for each service - FIXED to handle actual data structure
     displaySourceCredibility(data, analyzer) {
+        console.log('Displaying source credibility with data:', data);
+        
+        // Safely extract values with fallbacks
         const score = data.score || data.credibility_score || 0;
-        const rating = data.credibility || data.credibility_level || 'Unknown';
-        const biasLevel = data.bias || data.bias_level || 'Unknown';
-        const inDatabase = data.in_database || false;
+        const rating = data.rating || 'Unknown';
+        const reputation = data.reputation || 'Unknown';
+        const usesHttps = data.uses_https !== undefined ? data.uses_https : false;
+        const domain = data.domain || 'Unknown';
         
-        document.getElementById('sourceCredScore').textContent = score + '/100';
-        document.getElementById('sourceRating').textContent = rating;
-        document.getElementById('sourceBias').textContent = biasLevel;
-        document.getElementById('domainAge').textContent = inDatabase ? 'Established' : 'Unknown';
+        // Update display elements
+        const scoreEl = document.getElementById('sourceCredScore');
+        if (scoreEl) scoreEl.textContent = score + '/100';
         
+        const ratingEl = document.getElementById('sourceRating');
+        if (ratingEl) ratingEl.textContent = rating;
+        
+        const reputationEl = document.getElementById('sourceReputation');
+        if (reputationEl) reputationEl.textContent = reputation.charAt(0).toUpperCase() + reputation.slice(1);
+        
+        const httpsEl = document.getElementById('sourceHttps');
+        if (httpsEl) httpsEl.textContent = usesHttps ? 'HTTPS' : 'No HTTPS';
+        
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('sourceWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We evaluated the source's historical accuracy, editorial standards, ownership transparency, and journalistic practices.";
         
-        document.getElementById('sourceWhatWeFound').textContent = 
-            analysis.what_we_found || `The source has a ${rating.toLowerCase()} credibility rating with ${biasLevel.toLowerCase()} bias. ${inDatabase ? 'This is an established news source in our database.' : 'This source is not in our verified database.'}`;
+        const whatWeLooked = document.getElementById('sourceWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We evaluated the source's historical accuracy, editorial standards, ownership transparency, and journalistic practices.";
+        }
         
-        document.getElementById('sourceWhatItMeans').textContent = 
-            analysis.what_it_means || this.getCredibilityMeaning(score);
+        const whatWeFound = document.getElementById('sourceWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `The domain ${domain} has a ${reputation} reputation with ${rating} rating. ${usesHttps ? 'Uses secure HTTPS connection.' : 'Does not use HTTPS.'}`;
+        }
+        
+        const whatItMeans = document.getElementById('sourceWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getCredibilityMeaning(score);
+        }
     },
 
     displayBiasDetection(data, analyzer) {
-        const score = data.score || data.bias_score || 50;
-        const biasScore = 100 - (data.bias_score || 50); // Invert for display
-        const politicalLean = data.political_lean || 'Center';
+        console.log('Displaying bias detection with data:', data);
         
-        document.getElementById('biasScore').textContent = score + '/100';
-        document.getElementById('politicalLean').textContent = politicalLean;
+        // Extract values safely
+        const score = data.score || 50;
+        const biasScore = data.bias_score || 50;
+        const politicalLean = data.political_lean || 'Center';
+        const biasLevel = data.bias_level || 'Moderate';
+        
+        // Update display
+        const scoreEl = document.getElementById('biasScore');
+        if (scoreEl) scoreEl.textContent = biasScore + '/100';
+        
+        const leanEl = document.getElementById('politicalLean');
+        if (leanEl) leanEl.textContent = politicalLean;
         
         // Position bias indicator
         const positions = {
@@ -399,107 +430,212 @@ window.ServiceTemplates = {
             indicator.style.left = (positions[politicalLean] || 50) + '%';
         }
         
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('biasWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We analyzed language patterns, source selection, story framing, and emotional tone for political bias.";
         
-        document.getElementById('biasWhatWeFound').textContent = 
-            analysis.what_we_found || `The article shows ${politicalLean.toLowerCase()} political lean with a bias score of ${biasScore}. Language analysis revealed ${biasScore < 30 ? 'minimal' : biasScore < 70 ? 'moderate' : 'significant'} bias indicators.`;
+        const whatWeLooked = document.getElementById('biasWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We analyzed language patterns, word choices, emotional tone, political indicators, and presentation balance.";
+        }
         
-        document.getElementById('biasWhatItMeans').textContent = 
-            analysis.what_it_means || this.getBiasMeaning(biasScore, politicalLean);
+        const whatWeFound = document.getElementById('biasWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `The article shows ${politicalLean} political lean with ${biasLevel.toLowerCase()} bias level. Bias score: ${biasScore}/100.`;
+        }
+        
+        const whatItMeans = document.getElementById('biasWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getBiasMeaning(biasScore, politicalLean);
+        }
     },
 
     displayFactChecking(data, analyzer) {
-        const claimsFound = data.claims_found || data.claims_analyzed || 0;
-        const claimsVerified = data.claims_verified || 0;
-        const score = claimsFound > 0 ? Math.round((claimsVerified / claimsFound) * 100) : 0;
+        console.log('Displaying fact checking with data:', data);
         
-        document.getElementById('factScore').textContent = score + '%';
-        document.getElementById('claimsAnalyzed').textContent = claimsFound;
-        document.getElementById('claimsVerified').textContent = claimsVerified;
+        // Extract values safely
+        const score = data.score || data.fact_check_score || 0;
+        const claimsFound = data.claims_found || data.claims_checked || 0;
+        const claimsVerified = data.claims_verified || 0;
+        
+        // Update display
+        const scoreEl = document.getElementById('factScore');
+        if (scoreEl) scoreEl.textContent = score + '%';
+        
+        const analyzedEl = document.getElementById('claimsAnalyzed');
+        if (analyzedEl) analyzedEl.textContent = claimsFound;
+        
+        const verifiedEl = document.getElementById('claimsVerified');
+        if (verifiedEl) verifiedEl.textContent = claimsVerified;
         
         // Display claims list if available
         const claimsList = document.getElementById('claimsList');
-        if (claimsList && data.claims && Array.isArray(data.claims)) {
-            claimsList.innerHTML = '<h4>Claims Checked:</h4>';
-            data.claims.forEach(claim => {
-                const status = claim.verified ? 'verified' : 'unverified';
-                claimsList.innerHTML += `
-                    <div class="claim-item ${status}">
-                        <i class="fas fa-${claim.verified ? 'check-circle' : 'question-circle'}"></i>
-                        <span>${claim.text || claim.claim || 'Claim'}</span>
-                    </div>
-                `;
-            });
+        if (claimsList) {
+            claimsList.innerHTML = '';
+            
+            if (data.verified_claims && data.verified_claims.length > 0) {
+                claimsList.innerHTML = '<h4>Verified Claims:</h4>';
+                data.verified_claims.forEach(claim => {
+                    claimsList.innerHTML += `
+                        <div class="claim-item verified">
+                            <i class="fas fa-check-circle"></i>
+                            <span>${claim.substring(0, 100)}...</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.unverified_claims && data.unverified_claims.length > 0) {
+                claimsList.innerHTML += '<h4>Unverified Claims:</h4>';
+                data.unverified_claims.forEach(claim => {
+                    claimsList.innerHTML += `
+                        <div class="claim-item unverified">
+                            <i class="fas fa-question-circle"></i>
+                            <span>${claim.substring(0, 100)}...</span>
+                        </div>
+                    `;
+                });
+            }
         }
         
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('factWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We identified and verified factual claims, cross-referenced with reliable sources, and checked statistical data.";
         
-        document.getElementById('factWhatWeFound').textContent = 
-            analysis.what_we_found || `We identified ${claimsFound} factual claims and successfully verified ${claimsVerified} of them. ${score >= 80 ? 'Most claims are well-supported.' : score >= 50 ? 'Some claims lack verification.' : 'Many claims could not be verified.'}`;
+        const whatWeLooked = document.getElementById('factWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We identified and verified factual claims, cross-referenced with reliable sources, and checked statistical data.";
+        }
         
-        document.getElementById('factWhatItMeans').textContent = 
-            analysis.what_it_means || this.getFactCheckMeaning(score);
+        const whatWeFound = document.getElementById('factWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `We identified ${claimsFound} factual claims and verified ${claimsVerified} of them. Accuracy score: ${score}%.`;
+        }
+        
+        const whatItMeans = document.getElementById('factWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getFactCheckMeaning(score);
+        }
     },
 
     displayTransparencyAnalysis(data, analyzer) {
-        const sourcesCited = data.sources_cited || data.source_count || 0;
-        const quotesUsed = data.quotes_used || data.quote_count || 0;
+        console.log('Displaying transparency with data:', data);
+        
+        // Extract values safely
         const score = data.score || data.transparency_score || 0;
+        const sourcesCited = data.sources_cited || 0;
+        const quotesUsed = data.quotes_used || 0;
         
-        document.getElementById('transparencyScore').textContent = score + '/100';
-        document.getElementById('sourcesCited').textContent = sourcesCited;
-        document.getElementById('quotesUsed').textContent = quotesUsed;
+        // Update display
+        const scoreEl = document.getElementById('transparencyScore');
+        if (scoreEl) scoreEl.textContent = score + '/100';
         
+        const sourcesEl = document.getElementById('sourcesCited');
+        if (sourcesEl) sourcesEl.textContent = sourcesCited;
+        
+        const quotesEl = document.getElementById('quotesUsed');
+        if (quotesEl) quotesEl.textContent = quotesUsed;
+        
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('transparencyWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We examined source attribution, quote usage, data transparency, and disclosure of potential conflicts.";
         
-        document.getElementById('transparencyWhatWeFound').textContent = 
-            analysis.what_we_found || `The article cites ${sourcesCited} sources and includes ${quotesUsed} direct quotes. ${sourcesCited > 5 ? 'Good source diversity.' : 'Limited source attribution.'}`;
+        const whatWeLooked = document.getElementById('transparencyWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We examined source attribution, quote usage, data transparency, and disclosure of potential conflicts.";
+        }
         
-        document.getElementById('transparencyWhatItMeans').textContent = 
-            analysis.what_it_means || this.getTransparencyMeaning(score, sourcesCited);
+        const whatWeFound = document.getElementById('transparencyWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `The article cites ${sourcesCited} sources and includes ${quotesUsed} direct quotes.`;
+        }
+        
+        const whatItMeans = document.getElementById('transparencyWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getTransparencyMeaning(score, sourcesCited);
+        }
     },
 
     displayManipulationDetection(data, analyzer) {
+        console.log('Displaying manipulation detection with data:', data);
+        
+        // Extract values safely - note that score is already inverted (integrity score)
+        const score = data.score || 50;
         const manipulationScore = data.manipulation_score || 50;
-        const integrityScore = 100 - manipulationScore; // Higher is better
         const techniquesFound = data.techniques_found || 0;
+        const techniques = data.techniques || [];
         
-        document.getElementById('manipulationScore').textContent = integrityScore + '/100';
-        document.getElementById('techniquesFound').textContent = techniquesFound;
+        // Update display
+        const scoreEl = document.getElementById('manipulationScore');
+        if (scoreEl) scoreEl.textContent = score + '/100';
         
+        const techniquesEl = document.getElementById('techniquesFound');
+        if (techniquesEl) techniquesEl.textContent = techniquesFound;
+        
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('manipulationWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We scanned for emotional manipulation, misleading headlines, cherry-picking, and logical fallacies.";
         
-        document.getElementById('manipulationWhatWeFound').textContent = 
-            analysis.what_we_found || `Detected ${techniquesFound} potential manipulation techniques. ${techniquesFound === 0 ? 'No significant manipulation found.' : techniquesFound <= 2 ? 'Minor concerns identified.' : 'Multiple manipulation techniques detected.'}`;
+        const whatWeLooked = document.getElementById('manipulationWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We scanned for emotional manipulation, misleading headlines, cherry-picking, and logical fallacies.";
+        }
         
-        document.getElementById('manipulationWhatItMeans').textContent = 
-            analysis.what_it_means || this.getManipulationMeaning(integrityScore, techniquesFound);
+        const whatWeFound = document.getElementById('manipulationWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `Detected ${techniquesFound} potential manipulation techniques. ${techniquesFound === 0 ? 'No significant manipulation found.' : techniques.slice(0, 3).join(', ')}.`;
+        }
+        
+        const whatItMeans = document.getElementById('manipulationWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getManipulationMeaning(score, techniquesFound);
+        }
     },
 
     displayContentAnalysis(contentData, openaiData, analyzer) {
+        console.log('Displaying content analysis with data:', contentData);
+        
+        // Extract values safely
         const score = contentData.score || contentData.quality_score || 0;
-        const readability = contentData.readability || 'Unknown';
+        const readabilityLevel = contentData.readability_level || 'Unknown';
+        const readabilityScore = contentData.readability_score || 0;
+        const wordCount = contentData.word_count || 0;
         
-        document.getElementById('contentScore').textContent = score + '/100';
-        document.getElementById('readability').textContent = readability;
+        // Update display
+        const scoreEl = document.getElementById('contentScore');
+        if (scoreEl) scoreEl.textContent = score + '/100';
         
+        const readabilityEl = document.getElementById('readability');
+        if (readabilityEl) readabilityEl.textContent = readabilityLevel;
+        
+        // Update analysis sections
         const analysis = contentData.analysis || {};
-        document.getElementById('contentWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We evaluated writing quality, structure, readability, depth of coverage, and informational value.";
         
-        document.getElementById('contentWhatWeFound').textContent = 
-            analysis.what_we_found || `The article has ${readability.toLowerCase()} readability with a quality score of ${score}. ${score >= 70 ? 'Well-written and informative.' : score >= 50 ? 'Adequate quality with room for improvement.' : 'Quality concerns identified.'}`;
+        const whatWeLooked = document.getElementById('contentWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We evaluated writing quality, structure, readability, depth of coverage, and informational value.";
+        }
         
-        document.getElementById('contentWhatItMeans').textContent = 
-            analysis.what_it_means || this.getContentMeaning(score, readability);
+        const whatWeFound = document.getElementById('contentWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `The article has ${readabilityLevel} readability (score: ${readabilityScore}) with ${wordCount} words. Quality score: ${score}/100.`;
+        }
+        
+        const whatItMeans = document.getElementById('contentWhatItMeans');
+        if (whatItMeans) {
+            whatItMeans.textContent = analysis.what_it_means || 
+                this.getContentMeaning(score, readabilityLevel);
+        }
         
         // Add AI insights if available
         if (openaiData && openaiData.enhanced_summary) {
@@ -516,21 +652,44 @@ window.ServiceTemplates = {
     },
 
     displayAuthorAnalysis(data, authorName, analyzer) {
+        console.log('Displaying author analysis with data:', data);
+        
+        // Extract values safely
         const score = data.score || data.credibility_score || 0;
         const verified = data.verified ? 'Verified' : 'Unverified';
-        const name = authorName || data.author_name || 'Unknown Author';
+        const name = authorName || data.author_name || 'Unknown';
         
-        document.getElementById('authorName').textContent = name;
-        document.getElementById('authorCredibility').textContent = `${score >= 70 ? 'Credible' : score >= 50 ? 'Moderate' : 'Low'} Author`;
-        document.getElementById('authorScore').textContent = score + '/100';
-        document.getElementById('authorVerified').textContent = verified;
+        // Update display
+        const nameEl = document.getElementById('authorName');
+        if (nameEl) nameEl.textContent = name;
         
+        const credibilityEl = document.getElementById('authorCredibility');
+        if (credibilityEl) {
+            credibilityEl.textContent = score >= 70 ? 'Credible Author' : 
+                                       score >= 50 ? 'Moderate Author' : 
+                                       'Unknown Author';
+        }
+        
+        const scoreEl = document.getElementById('authorScore');
+        if (scoreEl) scoreEl.textContent = score + '/100';
+        
+        const verifiedEl = document.getElementById('authorVerified');
+        if (verifiedEl) verifiedEl.textContent = verified;
+        
+        // Update analysis sections
         const analysis = data.analysis || {};
-        document.getElementById('authorWhatWeLooked').textContent = 
-            analysis.what_we_looked || "We examined the author's credentials, publication history, expertise, and professional background.";
         
-        document.getElementById('authorWhatWeFound').textContent = 
-            analysis.what_we_found || `${name} has a credibility score of ${score}. ${verified === 'Verified' ? 'Identity and credentials verified.' : 'Unable to verify author credentials.'}`;
+        const whatWeLooked = document.getElementById('authorWhatWeLooked');
+        if (whatWeLooked) {
+            whatWeLooked.textContent = analysis.what_we_looked || 
+                "We examined author identification, name structure, publication history, and source credibility.";
+        }
+        
+        const whatWeFound = document.getElementById('authorWhatWeFound');
+        if (whatWeFound) {
+            whatWeFound.textContent = analysis.what_we_found || 
+                `Author ${name !== 'Unknown' ? 'identified as ' + name : 'not identified'}. ${verified === 'Verified' ? 'Author credentials verified.' : 'No author attribution found.'}`;
+        }
     },
 
     // Helper methods for generating meaningful interpretations
@@ -569,18 +728,10 @@ window.ServiceTemplates = {
 
     getContentMeaning(score, readability) {
         if (score >= 80) return `Excellent content quality with ${readability.toLowerCase()} readability. Well-researched and informative.`;
-        if (score >= 60) return `Good content quality. ${readability === 'Good' ? 'Easy to read and understand.' : 'May require careful reading.'}`;
+        if (score >= 60) return `Good content quality. ${readability === 'Good' || readability === 'Easy' ? 'Easy to read and understand.' : 'May require careful reading.'}`;
         return "Content quality concerns identified. May lack depth or clarity.";
-    },
-
-    // Format domain age
-    formatDomainAge(days) {
-        if (!days || days < 0) return 'Unknown';
-        if (days < 30) return 'New Domain';
-        if (days < 365) return `${Math.floor(days / 30)} months`;
-        return `${Math.floor(days / 365)} years`;
     }
 };
 
 // Make sure this loads before app-core.js
-console.log('ServiceTemplates module loaded successfully');
+console.log('ServiceTemplates module loaded successfully - FIXED VERSION');
