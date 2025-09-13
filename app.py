@@ -2,14 +2,14 @@
 TruthLens News Analyzer - Complete Real Analysis Implementation
 Date: September 13, 2025
 Author: Production Implementation Team
-Version: 3.3 PRODUCTION - ENHANCED WITH FRONTEND COMPATIBILITY
+Version: 3.4 PRODUCTION - FIXED NBC RECOGNITION AND AUTHOR SCORING
 
-CRITICAL FIXES:
-- All Flask routes (@app.route) are now at MODULE LEVEL
-- Routes are OUTSIDE the if __name__ == '__main__' block
-- Added data enhancement layer for frontend compatibility
-- Fixed findings_summary generation with visual indicators
-- Added all missing frontend-expected fields
+CRITICAL FIXES IN THIS VERSION:
+1. Fixed NBC/CNBC domain recognition in credible_domains lists
+2. Fixed author scoring to give minimum 65 for recognized platforms
+3. Added proper domain parsing to handle www. prefixes
+4. Enhanced author verification for major news platforms
+5. Fixed domain tier detection logic
 
 COMPLETE IMPLEMENTATION WITH:
 1. Real NLP text analysis using NLTK and TextBlob
@@ -89,7 +89,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS NEWS ANALYZER - ENHANCED v3.3")
+logger.info("TRUTHLENS NEWS ANALYZER - ENHANCED v3.4")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -168,15 +168,25 @@ class TextAnalyzer:
             'absolute': ['always', 'never', 'everyone', 'nobody', 'completely', 'totally']
         }
         
-        # Credible source indicators
+        # FIXED: Enhanced credible domains with proper NBC/CNBC entries
         self.credible_domains = {
-            'high': ['reuters.com', 'apnews.com', 'bbc.com', 'npr.org', 'pbs.org', 
-                    'theguardian.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com'],
-            'medium': ['cnn.com', 'foxnews.com', 'msnbc.com', 'bloomberg.com', 'forbes.com',
-                      'businessinsider.com', 'thehill.com', 'politico.com',
-                      'nbcnews.com', 'cnbc.com', 'abcnews.com', 'cbsnews.com',
-                      'usatoday.com', 'time.com', 'newsweek.com'],
-            'low': ['infowars.com', 'breitbart.com', 'dailywire.com', 'huffpost.com']
+            'high': [
+                'reuters.com', 'apnews.com', 'bbc.com', 'bbc.co.uk', 'npr.org', 'pbs.org',
+                'theguardian.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com',
+                'economist.com', 'ft.com', 'nature.com', 'science.org'
+            ],
+            'medium': [
+                'cnn.com', 'foxnews.com', 'msnbc.com', 'bloomberg.com', 'forbes.com',
+                'businessinsider.com', 'thehill.com', 'politico.com',
+                'nbcnews.com', 'nbc.com', 'cnbc.com',  # FIXED: Added proper NBC domains
+                'abcnews.com', 'abcnews.go.com', 'cbsnews.com', 'cbs.com',
+                'usatoday.com', 'time.com', 'newsweek.com',
+                'axios.com', 'vox.com', 'slate.com', 'theatlantic.com'
+            ],
+            'low': [
+                'infowars.com', 'breitbart.com', 'dailywire.com', 'huffpost.com',
+                'buzzfeed.com', 'dailymail.co.uk', 'thesun.co.uk'
+            ]
         }
     
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
@@ -426,7 +436,11 @@ class ArticleExtractor(BaseAnalyzer):
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL with multiple methods"""
         parsed = urlparse(url)
-        domain = parsed.netloc.replace('www.', '')
+        # FIXED: Properly clean domain
+        domain = parsed.netloc.replace('www.', '').lower()
+        
+        logger.info(f"Extracting from URL: {url}")
+        logger.info(f"Parsed domain: {domain}")
         
         # Try newspaper3k first
         try:
@@ -435,10 +449,13 @@ class ArticleExtractor(BaseAnalyzer):
             article.parse()
             
             if article.text and len(article.text) > 100:
+                author = self._clean_author(article.authors[0] if article.authors else 'Unknown')
+                logger.info(f"Extracted author: {author} from domain: {domain}")
+                
                 return {
                     'title': article.title or 'Article',
                     'domain': domain,
-                    'author': self._clean_author(article.authors[0] if article.authors else 'Unknown'),
+                    'author': author,
                     'content': article.text[:10000],
                     'url': url,
                     'published_date': article.publish_date.isoformat() if article.publish_date else None,
@@ -494,6 +511,7 @@ class ArticleExtractor(BaseAnalyzer):
         
         # Extract author with multiple methods
         author = self._extract_author_from_html(soup, domain)
+        logger.info(f"HTML extracted author: {author} from domain: {domain}")
         
         # Extract content
         content = self._extract_content_from_html(soup)
@@ -529,12 +547,13 @@ class ArticleExtractor(BaseAnalyzer):
             if elem and elem.get('content'):
                 return self._clean_author(elem['content'])
         
-        # Method 2: Common class/id patterns
+        # Method 2: Common class/id patterns (including NBC specific)
         author_selectors = [
             '.author-name', '.by-author', '.article-author', '.post-author',
             '.author', '.writer', '.journalist', '.reporter',
             '#author', '[itemprop="author"]', '[rel="author"]',
-            'span.by', 'div.byline', 'p.byline'
+            'span.by', 'div.byline', 'p.byline',
+            '.byline__name', '.author__name', '.article__author'  # NBC patterns
         ]
         
         for selector in author_selectors:
@@ -673,8 +692,15 @@ class SourceCredibility(BaseAnalyzer):
         domain = data.get('domain', 'unknown.com')
         content = data.get('content', '')
         
+        # FIXED: Clean domain for comparison
+        domain_clean = domain.lower().replace('www.', '')
+        
+        logger.info(f"Analyzing source credibility for domain: {domain_clean}")
+        
         # Check domain credibility
-        credibility_level = self._check_domain_credibility(domain)
+        credibility_level = self._check_domain_credibility(domain_clean)
+        
+        logger.info(f"Domain {domain_clean} credibility: {credibility_level}")
         
         # Check HTTPS
         url = data.get('url', '')
@@ -700,6 +726,8 @@ class SourceCredibility(BaseAnalyzer):
         
         final_score = min(100, max(0, base_score))
         
+        logger.info(f"Final source credibility score for {domain_clean}: {final_score}")
+        
         return {
             'score': final_score,
             'credibility_score': final_score,
@@ -719,22 +747,26 @@ class SourceCredibility(BaseAnalyzer):
         """Check domain against known credibility lists"""
         domain_lower = domain.lower()
         
-        # Check high credibility
+        # FIXED: Check if domain contains any of the credible domains
         for high_domain in self.text_analyzer.credible_domains['high']:
-            if high_domain in domain_lower:
+            if high_domain in domain_lower or domain_lower in high_domain:
+                logger.info(f"Found high-tier match: {high_domain} in {domain_lower}")
                 return {'score': 85, 'reputation': 'excellent', 'tier': 'high'}
         
         # Check medium credibility
         for med_domain in self.text_analyzer.credible_domains['medium']:
-            if med_domain in domain_lower:
+            if med_domain in domain_lower or domain_lower in med_domain:
+                logger.info(f"Found medium-tier match: {med_domain} in {domain_lower}")
                 return {'score': 65, 'reputation': 'good', 'tier': 'medium'}
         
         # Check low credibility
         for low_domain in self.text_analyzer.credible_domains['low']:
-            if low_domain in domain_lower:
+            if low_domain in domain_lower or domain_lower in low_domain:
+                logger.info(f"Found low-tier match: {low_domain} in {domain_lower}")
                 return {'score': 35, 'reputation': 'questionable', 'tier': 'low'}
         
         # Unknown domain - neutral score
+        logger.info(f"Domain {domain_lower} not found in any credibility tier")
         return {'score': 50, 'reputation': 'unknown', 'tier': 'unverified'}
     
     def _analyze_quality_indicators(self, content: str) -> Dict[str, Any]:
@@ -1240,7 +1272,7 @@ class ContentAnalyzer(BaseAnalyzer):
             return 'Poor content quality. Difficult to read or poorly structured. May indicate low-quality source.'
 
 class AuthorAnalyzer(BaseAnalyzer):
-    """Analyze author credibility with enhanced investigation"""
+    """FIXED: Enhanced author credibility analyzer with proper scoring for recognized platforms"""
     
     def __init__(self):
         super().__init__('author_analyzer')
@@ -1250,23 +1282,53 @@ class AuthorAnalyzer(BaseAnalyzer):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
         
-        # Credible news organizations
+        # FIXED: Enhanced credible news organizations list
         self.credible_orgs = {
             'high': [
                 'Reuters', 'Associated Press', 'BBC', 'NPR', 'PBS',
                 'The Guardian', 'Wall Street Journal', 'New York Times',
-                'Washington Post', 'The Economist', 'Financial Times'
+                'Washington Post', 'The Economist', 'Financial Times',
+                'ProPublica', 'Nature', 'Science'
             ],
             'medium': [
                 'CNN', 'Fox News', 'MSNBC', 'CBS News', 'ABC News',
-                'NBC News', 'USA Today', 'The Hill', 'Politico'
+                'NBC News', 'NBC', 'CNBC', 'USA Today', 'The Hill', 'Politico',
+                'Bloomberg', 'Forbes', 'Business Insider', 'Time', 'Newsweek',
+                'Axios', 'Vox', 'The Atlantic', 'Slate'
             ]
+        }
+        
+        # FIXED: Domain mapping for author credibility
+        self.domain_mapping = {
+            'nbcnews.com': 'NBC News',
+            'nbc.com': 'NBC',
+            'cnbc.com': 'CNBC',
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'msnbc.com': 'MSNBC',
+            'cbsnews.com': 'CBS News',
+            'abcnews.com': 'ABC News',
+            'reuters.com': 'Reuters',
+            'apnews.com': 'Associated Press',
+            'bbc.com': 'BBC',
+            'bbc.co.uk': 'BBC',
+            'npr.org': 'NPR',
+            'pbs.org': 'PBS',
+            'nytimes.com': 'New York Times',
+            'washingtonpost.com': 'Washington Post',
+            'wsj.com': 'Wall Street Journal',
+            'theguardian.com': 'The Guardian',
+            'politico.com': 'Politico',
+            'bloomberg.com': 'Bloomberg',
+            'forbes.com': 'Forbes'
         }
     
     def _perform_analysis(self, data):
         author_name = data.get('author', 'Unknown')
-        domain = data.get('domain', '')
+        domain = data.get('domain', '').lower().replace('www.', '')
         content = data.get('content', '')
+        
+        logger.info(f"Analyzing author: {author_name} on domain: {domain}")
         
         if not author_name or author_name == 'Unknown':
             return self._get_unknown_author_analysis()
@@ -1276,8 +1338,19 @@ class AuthorAnalyzer(BaseAnalyzer):
         if not self._is_valid_author_name(cleaned_name):
             return self._get_invalid_author_analysis(author_name)
         
-        # Initialize results
-        credibility_score = 50  # Base score
+        # FIXED: Enhanced credibility scoring
+        # Start with base score based on domain tier
+        domain_tier = self._get_domain_credibility_tier(domain)
+        
+        if domain_tier == 'high':
+            credibility_score = 75  # Start high for top-tier sources
+            logger.info(f"High-tier domain detected: {domain}, starting score: 75")
+        elif domain_tier == 'medium':
+            credibility_score = 65  # Start good for medium-tier sources
+            logger.info(f"Medium-tier domain detected: {domain}, starting score: 65")
+        else:
+            credibility_score = 45  # Start neutral for unknown sources
+            logger.info(f"Unknown domain: {domain}, starting score: 45")
         
         # Search publication history if News API available
         publication_count = 0
@@ -1285,32 +1358,36 @@ class AuthorAnalyzer(BaseAnalyzer):
             pub_history = self._search_publication_history(cleaned_name)
             publication_count = pub_history.get('total_articles', 0)
             
+            # Adjust score based on publication history
             if publication_count > 50:
-                credibility_score += 20
+                credibility_score = min(100, credibility_score + 15)
             elif publication_count > 10:
-                credibility_score += 10
-            elif publication_count == 0:
-                credibility_score -= 10
-        
-        # Check domain credibility
-        domain_tier = self._get_domain_credibility_tier(domain)
-        if domain_tier == 'high':
-            credibility_score += 15
-        elif domain_tier == 'medium':
-            credibility_score += 5
+                credibility_score = min(100, credibility_score + 10)
+            elif publication_count > 0:
+                credibility_score = min(100, credibility_score + 5)
         
         # Look for bio in content
         bio_info = self._extract_author_bio_from_content(content, cleaned_name)
         if bio_info and bio_info.get('has_credentials'):
-            credibility_score += 10
+            credibility_score = min(100, credibility_score + 10)
+        
+        # FIXED: Ensure minimum score for recognized platforms
+        if domain_tier in ['high', 'medium'] and credibility_score < 65:
+            credibility_score = 65
+            logger.info(f"Adjusted score to minimum 65 for recognized platform")
         
         # Cap score
         credibility_score = max(0, min(100, credibility_score))
+        
+        logger.info(f"Final author credibility score: {credibility_score} for {cleaned_name} on {domain}")
         
         # Determine verification status for frontend
         if credibility_score >= 70:
             verification_status = 'Verified'
             verified = True
+        elif credibility_score >= 50:
+            verification_status = 'Partially Verified'
+            verified = False
         else:
             verification_status = 'Unverified'
             verified = False
@@ -1320,17 +1397,18 @@ class AuthorAnalyzer(BaseAnalyzer):
             'credibility_score': credibility_score,
             'author_name': cleaned_name,
             'verified': verified,
-            'verification_status': verification_status,  # Added for frontend
+            'verification_status': verification_status,
             'publication_count': publication_count,
             'domain_tier': domain_tier,
+            'platform': self.domain_mapping.get(domain, domain),  # Added platform name
             'has_bio': bool(bio_info),
             'bio': bio_info.get('bio_text', '') if bio_info else '',
             'expertise_areas': [],  # Added for frontend
             'social_links': {},  # Added for frontend
             'analysis': {
                 'what_we_looked': 'We investigated author credentials, publication history, and professional presence.',
-                'what_we_found': f'Author {cleaned_name} has {publication_count} articles found. Publishing on {domain_tier}-tier site.',
-                'what_it_means': self._get_author_interpretation(credibility_score, publication_count)
+                'what_we_found': f'Author {cleaned_name} has {publication_count} articles found. Publishing on {domain_tier}-tier site ({self.domain_mapping.get(domain, domain)}).',
+                'what_it_means': self._get_author_interpretation(credibility_score, publication_count, domain_tier)
             }
         }
     
@@ -1348,7 +1426,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         if not name or len(name) < 3:
             return False
         
-        generic_terms = ['staff', 'admin', 'editor', 'team', 'news', 'report']
+        generic_terms = ['staff', 'admin', 'editor', 'team', 'news', 'report', 'editorial']
         if name.lower() in generic_terms:
             return False
         
@@ -1394,596 +1472,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return {'total_articles': 0}
     
     def _get_domain_credibility_tier(self, domain: str) -> str:
-        """Get credibility tier of the domain"""
-        domain_lower = domain.lower()
+        """FIXED: Get credibility tier of the domain with better matching"""
+        domain_lower = domain.lower().replace('www.', '')
         
-        for org in self.credible_orgs['high']:
-            if org.lower() in domain_lower:
-                return 'high'
-        
-        for org in self.credible_orgs['medium']:
-            if org.lower() in domain_lower:
-                return 'medium'
-        
-        return 'unknown'
-    
-    def _extract_author_bio_from_content(self, content: str, author_name: str) -> Optional[Dict[str, Any]]:
-        """Extract author bio information from article content"""
-        if not content or not author_name:
-            return None
-        
-        bio_info = {
-            'bio_text': '',
-            'has_credentials': False
-        }
-        
-        bio_patterns = [
-            rf'{author_name} is a .{{10,100}}',
-            rf'{author_name}, a .{{10,100}}',
-            rf'{author_name} has .{{10,100}}'
-        ]
-        
-        for pattern in bio_patterns:
-            match = re.search(pattern, content, re.IGNORECASE)
-            if match:
-                bio_info['bio_text'] = match.group(0)
-                
-                if any(cred in bio_info['bio_text'].lower() for cred in 
-                       ['phd', 'master', 'degree', 'university', 'college', 'journalism']):
-                    bio_info['has_credentials'] = True
-                
-                break
-        
-        return bio_info if bio_info['bio_text'] else None
-    
-    def _get_unknown_author_analysis(self) -> Dict[str, Any]:
-        """Return analysis for unknown/missing author"""
-        return {
-            'score': 30,
-            'credibility_score': 30,
-            'author_name': 'Unknown',
-            'verified': False,
-            'verification_status': 'Unverified',
-            'publication_count': 0,
-            'domain_tier': 'unknown',
-            'has_bio': False,
-            'bio': '',
-            'expertise_areas': [],
-            'social_links': {},
-            'analysis': {
-                'what_we_looked': 'We searched for author attribution in the article.',
-                'what_we_found': 'No author information was provided.',
-                'what_it_means': 'Articles without author attribution lack accountability. This is a credibility concern.'
-            }
-        }
-    
-    def _get_invalid_author_analysis(self, author_string: str) -> Dict[str, Any]:
-        """Return analysis for invalid author string"""
-        return {
-            'score': 35,
-            'credibility_score': 35,
-            'author_name': author_string,
-            'verified': False,
-            'verification_status': 'Unverified',
-            'publication_count': 0,
-            'domain_tier': 'unknown',
-            'has_bio': False,
-            'bio': '',
-            'expertise_areas': [],
-            'social_links': {},
-            'analysis': {
-                'what_we_looked': 'We analyzed the author attribution.',
-                'what_we_found': f'The attribution "{author_string}" appears to be generic.',
-                'what_it_means': 'Generic attributions provide no accountability. Verify information carefully.'
-            }
-        }
-    
-    def _get_author_interpretation(self, score: int, publications: int, domain_tier: str = 'unknown') -> str:
-        """Get interpretation of author analysis"""
-        if score >= 80:
-            return f'Well-established author with {publications} verified publications. High credibility on {domain_tier}-tier platform.'
-        elif score >= 60:
-            if domain_tier in ['high', 'medium']:
-                return f'Author verified on recognized news platform ({domain_tier}-tier). {publications if publications > 0 else "Limited"} articles in our database. Good credibility.'
-            else:
-                return f'Author has some verification with {publications} articles found. Moderate credibility.'
-        elif score >= 40:
-            if domain_tier in ['high', 'medium']:
-                return f'Author on recognized platform but limited verification available. Could be newer journalist or contributor.'
-            else:
-                return 'Limited author verification. Could be newer journalist or freelancer.'
-        else:
-            return 'Author could not be verified. Exercise caution with claims made.'
-
-# ================================================================================
-# Initialize Services
-# ================================================================================
-
-logger.info("=" * 80)
-logger.info("INITIALIZING ANALYSIS SERVICES")
-logger.info("=" * 80)
-
-# Create service instances
-services = {
-    'article_extractor': ArticleExtractor(),
-    'source_credibility': SourceCredibility(),
-    'bias_detector': BiasDetector(),
-    'fact_checker': FactChecker(),
-    'transparency_analyzer': TransparencyAnalyzer(),
-    'manipulation_detector': ManipulationDetector(),
-    'content_analyzer': ContentAnalyzer(),
-    'author_analyzer': AuthorAnalyzer()
-}
-
-logger.info(f"✓ Initialized {len(services)} analysis services with real NLP")
-
-# ================================================================================
-# Analysis Pipeline
-# ================================================================================
-
-class AnalysisPipeline:
-    """Pipeline to orchestrate analysis services"""
-    
-    def __init__(self):
-        self.services = services
-        logger.info("AnalysisPipeline initialized with enhanced analysis services")
-    
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run analysis through all services"""
-        
-        results = {
-            'success': True,
-            'article': {},
-            'detailed_analysis': {},
-            'metadata': {
-                'processing_time': 0,
-                'services_used': [],
-                'nlp_available': NLP_AVAILABLE
-            }
-        }
-        
-        start_time = time.time()
-        
-        # Extract article
-        if 'url' in data or 'text' in data:
-            extraction = self.services['article_extractor'].analyze(data)
-            if extraction.get('success'):
-                results['article'] = extraction.get('data', {})
-                logger.info(f"✓ Article extracted: {results['article'].get('title', 'Unknown')[:50]}...")
-        
-        # Run all analysis services
-        analysis_services = [
-            'source_credibility',
-            'author_analyzer',
-            'bias_detector',
-            'fact_checker',
-            'transparency_analyzer',
-            'manipulation_detector',
-            'content_analyzer'
-        ]
-        
-        for service_name in analysis_services:
-            if service_name in self.services:
-                try:
-                    # Prepare service input
-                    service_input = {**data, **results['article']}
-                    
-                    # Run analysis
-                    result = self.services[service_name].analyze(service_input)
-                    
-                    if result.get('success'):
-                        results['detailed_analysis'][service_name] = result.get('data', {})
-                        results['metadata']['services_used'].append(service_name)
-                        logger.info(f"  ✓ {service_name} completed with score: {result.get('data', {}).get('score', 0)}")
-                except Exception as e:
-                    logger.error(f"  ✗ {service_name} failed: {e}")
-        
-        results['metadata']['processing_time'] = time.time() - start_time
-        logger.info(f"Analysis complete in {results['metadata']['processing_time']:.2f}s")
-        
-        return results
-
-# ================================================================================
-# Main NewsAnalyzer
-# ================================================================================
-
-class NewsAnalyzer:
-    """Main analyzer that coordinates everything"""
-    
-    # Service weights for trust score calculation
-    TRUST_WEIGHTS = {
-        'source_credibility': 0.25,
-        'author_analyzer': 0.15,
-        'bias_detector': 0.20,
-        'fact_checker': 0.15,
-        'transparency_analyzer': 0.10,
-        'manipulation_detector': 0.10,
-        'content_analyzer': 0.05
-    }
-    
-    def __init__(self):
-        self.pipeline = AnalysisPipeline()
-        logger.info("NewsAnalyzer initialized with enhanced analysis pipeline")
-    
-    def analyze(self, content: str, content_type: str = 'url') -> Dict[str, Any]:
-        """Main analysis method"""
-        
-        try:
-            # Prepare input data
-            if content_type == 'url':
-                data = {'url': content}
-            else:
-                data = {'text': content}
-            
-            # Run pipeline
-            pipeline_results = self.pipeline.analyze(data)
-            
-            # Calculate trust score
-            trust_score = self._calculate_trust_score(pipeline_results.get('detailed_analysis', {}))
-            
-            # Build response
-            article = pipeline_results.get('article', {})
-            
-            # Generate findings based on real analysis
-            findings = self._generate_findings(trust_score, pipeline_results.get('detailed_analysis', {}))
-            
-            return {
-                'success': True,
-                'trust_score': trust_score,
-                'article_summary': article.get('title', 'Analysis Complete'),
-                'source': article.get('domain', 'Unknown'),
-                'author': article.get('author', 'Unknown'),
-                'findings_summary': findings,
-                'detailed_analysis': pipeline_results.get('detailed_analysis', {}),
-                'metadata': pipeline_results.get('metadata', {})
-            }
-            
-        except Exception as e:
-            logger.error(f"Analysis error: {e}", exc_info=True)
-            return {
-                'success': False,
-                'error': str(e),
-                'trust_score': 0,
-                'article_summary': 'Analysis failed',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': f'Analysis failed: {str(e)}',
-                'detailed_analysis': {}
-            }
-    
-    def _calculate_trust_score(self, analysis: Dict) -> int:
-        """Calculate weighted trust score from service results"""
-        
-        if not analysis:
-            return 50
-        
-        total_weight = 0
-        weighted_sum = 0
-        
-        for service, weight in self.TRUST_WEIGHTS.items():
-            if service in analysis:
-                data = analysis[service]
-                score = data.get('score', 50)
-                
-                weighted_sum += score * weight
-                total_weight += weight
-                
-                logger.debug(f"Trust score component - {service}: {score} (weight: {weight})")
-        
-        if total_weight > 0:
-            final_score = int(weighted_sum / total_weight)
-        else:
-            final_score = 50
-        
-        logger.info(f"Calculated trust score: {final_score}")
-        return final_score
-    
-    def _generate_findings(self, trust_score: int, analysis: Dict) -> str:
-        """Generate findings based on real analysis results"""
-        
-        findings = []
-        
-        # Overall trust assessment
-        if trust_score >= 80:
-            findings.append("This article demonstrates high credibility and trustworthiness.")
-        elif trust_score >= 60:
-            findings.append("This article shows generally good credibility with some concerns.")
-        elif trust_score >= 40:
-            findings.append("This article has moderate credibility with several issues.")
-        else:
-            findings.append("This article shows significant credibility concerns.")
-        
-        # Add specific findings from analysis
-        if 'source_credibility' in analysis:
-            source = analysis['source_credibility']
-            if source.get('reputation') == 'excellent':
-                findings.append("Published by highly reputable source.")
-            elif source.get('reputation') == 'questionable':
-                findings.append("Source has questionable reputation.")
-        
-        if 'author_analyzer' in analysis:
-            author = analysis['author_analyzer']
-            if author.get('verified'):
-                findings.append(f"Author verified with {author.get('publication_count', 0)} publications.")
-            elif author.get('author_name') == 'Unknown':
-                findings.append("No author attribution provided.")
-        
-        if 'bias_detector' in analysis:
-            bias = analysis['bias_detector']
-            if bias.get('bias_score', 50) < 30:
-                findings.append("Minimal bias detected.")
-            elif bias.get('bias_score', 50) > 70:
-                findings.append(f"Significant {bias.get('political_lean', 'political')} bias present.")
-        
-        if 'fact_checker' in analysis:
-            facts = analysis['fact_checker']
-            if facts.get('claims_found', 0) > 0:
-                verified = facts.get('claims_verified', 0)
-                total = facts.get('claims_found', 1)
-                percentage = int((verified / total) * 100)
-                findings.append(f"{percentage}% of factual claims have verification indicators.")
-        
-        if 'manipulation_detector' in analysis:
-            manip = analysis['manipulation_detector']
-            if manip.get('techniques_found', 0) > 2:
-                findings.append("Multiple manipulation techniques detected.")
-        
-        return " ".join(findings)
-
-# Create global analyzer instance
-news_analyzer = NewsAnalyzer()
-logger.info("=" * 80)
-logger.info("ENHANCED ANALYSIS SYSTEM READY")
-logger.info(f"NLP Features: {'Enabled' if NLP_AVAILABLE else 'Limited'}")
-logger.info("=" * 80)
-
-# ================================================================================
-# ENHANCED FINDINGS GENERATOR FOR FRONTEND
-# ================================================================================
-
-def generate_enhanced_findings_summary(trust_score: int, analysis: Dict) -> str:
-    """Generate enhanced findings summary with visual indicators"""
-    
-    findings = []
-    
-    # Overall assessment with emoji
-    if trust_score >= 80:
-        findings.append("✓ This article demonstrates high credibility and trustworthiness")
-    elif trust_score >= 60:
-        findings.append("⚠ This article shows generally good credibility with some concerns")
-    elif trust_score >= 40:
-        findings.append("⚠ This article has moderate credibility with several issues")
-    else:
-        findings.append("✗ This article shows significant credibility concerns")
-    
-    # Extract key findings from each service
-    if 'source_credibility' in analysis:
-        source = analysis['source_credibility']
-        score = source.get('score', 50)
-        reputation = source.get('reputation', 'unknown')
-        if score >= 70:
-            findings.append(f"✓ Credible source ({reputation} reputation)")
-        elif score < 40:
-            findings.append(f"✗ Questionable source credibility")
-    
-    if 'bias_detector' in analysis:
-        bias = analysis['bias_detector']
-        bias_score = bias.get('bias_score', 50)
-        if bias_score < 30:
-            findings.append("✓ Minimal bias detected")
-        elif bias_score > 60:
-            lean = bias.get('political_lean', 'Unknown')
-            findings.append(f"✗ Significant {lean} bias present")
-    
-    if 'fact_checker' in analysis:
-        facts = analysis['fact_checker']
-        if facts.get('claims_found', 0) > 0:
-            verified = facts.get('claims_verified', 0)
-            total = facts.get('claims_found', 1)
-            percentage = int((verified / total) * 100)
-            if percentage >= 70:
-                findings.append(f"✓ {percentage}% of claims verified")
-            elif percentage < 40:
-                findings.append(f"✗ Only {percentage}% of claims verified")
-            else:
-                findings.append(f"⚠ {percentage}% of claims verified")
-    
-    if 'transparency_analyzer' in analysis:
-        trans = analysis['transparency_analyzer']
-        score = trans.get('score', 0)
-        sources = trans.get('sources_cited', 0)
-        if score >= 70:
-            findings.append(f"✓ Good transparency ({sources} sources cited)")
-        elif score < 40:
-            findings.append("✗ Poor transparency")
-    
-    if 'manipulation_detector' in analysis:
-        manip = analysis['manipulation_detector']
-        techniques = manip.get('techniques_found', 0)
-        if techniques > 3:
-            findings.append(f"✗ {techniques} manipulation techniques detected")
-        elif techniques == 0:
-            findings.append("✓ No manipulation detected")
-    
-    if 'author_analyzer' in analysis:
-        author = analysis['author_analyzer']
-        if author.get('verified', False):
-            pubs = author.get('publication_count', 0)
-            findings.append(f"✓ Author verified ({pubs} publications)")
-        elif author.get('author_name', 'Unknown') == 'Unknown':
-            findings.append("✗ No author attribution")
-        else:
-            findings.append("⚠ Author unverified")
-    
-    # Format the findings
-    if len(findings) > 1:
-        main_finding = findings[0]
-        details = " • ".join(findings[1:])
-        return f"{main_finding}. {details}."
-    else:
-        return findings[0] + "."
-
-# ================================================================================
-# Flask Routes - MUST BE AT MODULE LEVEL (NOT INSIDE if __name__ == '__main__')
-# ================================================================================
-
-@app.before_request
-def before_request():
-    """Set up request-specific data"""
-    g.request_id = str(uuid.uuid4())[:8]
-    g.start_time = time.time()
-
-@app.after_request
-def after_request(response):
-    """Log request completion"""
-    if hasattr(g, 'request_id'):
-        elapsed = time.time() - g.start_time
-        logger.info(f"[{g.request_id}] {request.method} {request.path} - {response.status_code} - {elapsed:.2f}s")
-    return response
-
-@app.route('/')
-def index():
-    """Serve main application"""
-    return render_template('index.html')
-
-@app.route('/health')
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'nlp_available': NLP_AVAILABLE,
-        'services': list(services.keys())
-    })
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze():
-    """Enhanced analysis endpoint with proper data formatting"""
-    
-    request_id = g.request_id if hasattr(g, 'request_id') else str(uuid.uuid4())[:8]
-    logger.info(f"[{request_id}] Enhanced analysis request received")
-    
-    try:
-        # Get request data
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided',
-                'trust_score': 0,
-                'article_summary': 'No data',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': 'No data provided for analysis',
-                'detailed_analysis': {}
-            }), 400
-        
-        # Extract URL or text
-        url = data.get('url', '').strip()
-        text = data.get('text', '').strip()
-        
-        if not url and not text:
-            return jsonify({
-                'success': False,
-                'error': 'URL or text required',
-                'trust_score': 0,
-                'article_summary': 'No content',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': 'Either URL or text is required',
-                'detailed_analysis': {}
-            }), 400
-        
-        # Run analysis
-        logger.info(f"[{request_id}] Analyzing: {'URL' if url else 'Text'}")
-        
-        result = news_analyzer.analyze(
-            content=url if url else text,
-            content_type='url' if url else 'text'
-        )
-        
-        # ENHANCEMENT: Generate better findings summary
-        if result.get('success'):
-            result['findings_summary'] = generate_enhanced_findings_summary(
-                result.get('trust_score', 50),
-                result.get('detailed_analysis', {})
-            )
-        
-        # ENHANCEMENT: Add OpenAI placeholder if not configured
-        if 'detailed_analysis' in result and 'openai_enhancer' not in result['detailed_analysis']:
-            result['detailed_analysis']['openai_enhancer'] = {
-                'enhanced': False,
-                'summary': 'AI enhancement not available. Configure OpenAI API key for enhanced insights.',
-                'key_insights': [],
-                'recommendations': []
-            }
-        
-        logger.info(f"[{request_id}] Enhanced analysis complete - Trust Score: {result.get('trust_score')}")
-        
-        return jsonify(result), 200
-        
-    except Exception as e:
-        logger.error(f"[{request_id}] Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'trust_score': 0,
-            'article_summary': 'Error',
-            'source': 'Unknown',
-            'author': 'Unknown',
-            'findings_summary': f'Error: {str(e)}',
-            'detailed_analysis': {}
-        }), 500
-
-@app.route('/api/status')
-def api_status():
-    """API status endpoint"""
-    return jsonify({
-        'status': 'online',
-        'version': '3.3',
-        'nlp_available': NLP_AVAILABLE,
-        'services': list(services.keys()),
-        'timestamp': datetime.now().isoformat()
-    })
-
-# Static file serving
-@app.route('/static/js/<path:filename>')
-def serve_js(filename):
-    """Serve JavaScript files"""
-    return send_from_directory('static/js', filename)
-
-@app.route('/static/css/<path:filename>')
-def serve_css(filename):
-    """Serve CSS files"""
-    return send_from_directory('static/css', filename)
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Serve other static files"""
-    return send_from_directory('static', filename)
-
-# Error handlers
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    logger.error(f"Internal error: {error}", exc_info=True)
-    return jsonify({'error': 'Internal server error'}), 500
-
-# ================================================================================
-# Entry point - ONLY app.run() goes inside this block
-# ================================================================================
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('FLASK_ENV') == 'development'
-    
-    logger.info(f"Starting TruthLens News Analyzer v3.3")
-    logger.info(f"Port: {port}")
-    logger.info(f"Debug mode: {debug}")
-    logger.info(f"NLP Analysis: {'Enabled' if NLP_AVAILABLE else 'Limited'}")
-    logger.info("=" * 80)
-    
-    app.run(host='0.0.0.0', port=port, debug=debug)
+        # Check
