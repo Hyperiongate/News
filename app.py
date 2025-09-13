@@ -2,7 +2,7 @@
 TruthLens News Analyzer - Complete Real Analysis Implementation
 Date: September 13, 2025
 Author: Production Implementation Team
-Version: 3.0 PRODUCTION
+Version: 3.0 PRODUCTION - FIXED INITIALIZATION
 
 COMPLETE IMPLEMENTATION WITH:
 1. Real NLP text analysis using NLTK and TextBlob
@@ -13,6 +13,7 @@ COMPLETE IMPLEMENTATION WITH:
 6. Real transparency metrics
 7. Manipulation technique detection
 8. Content quality analysis with readability scores
+9. FIXED: All service classes have proper __init__ methods
 
 This replaces all mock data with actual analysis.
 """
@@ -674,6 +675,9 @@ class ArticleExtractor(BaseAnalyzer):
 class SourceCredibility(BaseAnalyzer):
     """Analyze source credibility with real metrics"""
     
+    def __init__(self):
+        super().__init__('source_credibility')
+    
     def _perform_analysis(self, data):
         domain = data.get('domain', 'unknown.com')
         content = data.get('content', '')
@@ -809,6 +813,9 @@ class SourceCredibility(BaseAnalyzer):
 class BiasDetector(BaseAnalyzer):
     """Detect bias using real text analysis"""
     
+    def __init__(self):
+        super().__init__('bias_detector')
+    
     def _perform_analysis(self, data):
         content = data.get('content', '')
         
@@ -872,6 +879,9 @@ class BiasDetector(BaseAnalyzer):
 
 class FactChecker(BaseAnalyzer):
     """Check facts using claim extraction and verification indicators"""
+    
+    def __init__(self):
+        super().__init__('fact_checker')
     
     def _perform_analysis(self, data):
         content = data.get('content', '')
@@ -950,6 +960,9 @@ class FactChecker(BaseAnalyzer):
 class TransparencyAnalyzer(BaseAnalyzer):
     """Analyze transparency of sources and attribution"""
     
+    def __init__(self):
+        super().__init__('transparency_analyzer')
+    
     def _perform_analysis(self, data):
         content = data.get('content', '')
         author = data.get('author', 'Unknown')
@@ -1026,6 +1039,9 @@ class TransparencyAnalyzer(BaseAnalyzer):
 class ManipulationDetector(BaseAnalyzer):
     """Detect manipulation techniques in content"""
     
+    def __init__(self):
+        super().__init__('manipulation_detector')
+    
     def _perform_analysis(self, data):
         content = data.get('content', '')
         title = data.get('title', '')
@@ -1099,6 +1115,9 @@ class ManipulationDetector(BaseAnalyzer):
 class ContentAnalyzer(BaseAnalyzer):
     """Analyze content quality and readability"""
     
+    def __init__(self):
+        super().__init__('content_analyzer')
+    
     def _perform_analysis(self, data):
         content = data.get('content', '')
         
@@ -1157,6 +1176,9 @@ class ContentAnalyzer(BaseAnalyzer):
 
 class AuthorAnalyzer(BaseAnalyzer):
     """Analyze author credibility"""
+    
+    def __init__(self):
+        super().__init__('author_analyzer')
     
     def _perform_analysis(self, data):
         author = data.get('author', 'Unknown')
