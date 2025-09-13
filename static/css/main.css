@@ -741,3 +741,265 @@ body {
         gap: 1rem;
     }
 }
+/* Enhanced Author Analysis Styles
+ * Add these styles to your main.css file
+ * Date: September 13, 2025
+ */
+
+/* Enhanced Author Details Container */
+.author-enhanced-details {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Author Detail Sections */
+.author-detail-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.author-detail-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.author-detail-section h5 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.author-detail-section h5 i {
+    color: #3b82f6;
+    font-size: 0.9rem;
+}
+
+/* Expertise Tags */
+.expertise-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.expertise-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+/* Awards List */
+.awards-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.awards-list li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+    color: #555;
+}
+
+.awards-list li:before {
+    content: "🏆";
+    position: absolute;
+    left: 0;
+}
+
+/* Trust Indicators */
+.trust-indicators .indicator-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.trust-indicator {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    background: #f0fdf4;
+    border-left: 3px solid #22c55e;
+    border-radius: 4px;
+    color: #166534;
+    font-size: 0.9rem;
+}
+
+/* Red Flags */
+.red-flags .flag-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.red-flag {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    background: #fef2f2;
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+    color: #991b1b;
+    font-size: 0.9rem;
+}
+
+/* Author Bio */
+.author-bio {
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    font-style: italic;
+    color: #4b5563;
+    line-height: 1.6;
+    margin-top: 0.5rem;
+}
+
+/* Verification Badge Styles */
+.author-info p {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.author-info p:contains("Verified Journalist") {
+    color: #059669;
+    font-weight: 600;
+}
+
+.author-info p:contains("Established Writer") {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.author-info p:contains("No Attribution") {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+/* Enhanced Metric Cards for Author */
+#authorContent .metric-card {
+    transition: all 0.3s ease;
+}
+
+#authorContent .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Verification Status Colors */
+#authorVerified {
+    font-weight: 600;
+}
+
+#authorVerified:contains("Verified") {
+    color: #059669;
+}
+
+#authorVerified:contains("Partial") {
+    color: #3b82f6;
+}
+
+#authorVerified:contains("Unverified") {
+    color: #6b7280;
+}
+
+/* Author Profile Enhancement */
+.author-profile {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    border-radius: 12px;
+}
+
+.author-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.author-avatar {
+    font-size: 4rem;
+    color: #9ca3af;
+}
+
+.author-avatar.verified {
+    color: #3b82f6;
+}
+
+.author-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #1f2937;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .author-enhanced-details {
+        padding: 1rem;
+    }
+    
+    .expertise-tags {
+        gap: 0.25rem;
+    }
+    
+    .expertise-tag {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+    }
+    
+    .author-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Animation for Enhanced Details */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.author-enhanced-details {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Loading State for Author Investigation */
+.author-investigating {
+    position: relative;
+    opacity: 0.7;
+}
+
+.author-investigating::after {
+    content: "Investigating author credentials...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
+    color: #3b82f6;
+}
