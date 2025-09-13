@@ -173,7 +173,9 @@ class TextAnalyzer:
             'high': ['reuters.com', 'apnews.com', 'bbc.com', 'npr.org', 'pbs.org', 
                     'theguardian.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com'],
             'medium': ['cnn.com', 'foxnews.com', 'msnbc.com', 'bloomberg.com', 'forbes.com',
-                      'businessinsider.com', 'thehill.com', 'politico.com'],
+                      'businessinsider.com', 'thehill.com', 'politico.com',
+                      'nbcnews.com', 'cnbc.com', 'abcnews.com', 'cbsnews.com',
+                      'usatoday.com', 'time.com', 'newsweek.com'],
             'low': ['infowars.com', 'breitbart.com', 'dailywire.com', 'huffpost.com']
         }
     
