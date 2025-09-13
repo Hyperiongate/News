@@ -176,7 +176,7 @@ class SourceCredibility(BaseAnalyzer):
             'analysis': {
                 'what_we_looked': 'Source credibility and reputation',
                 'what_we_found': f'Domain {domain} has {rating.lower()} credibility rating',
-                'what_it_means': f'This source is {"generally reliable' if score > 70 else 'moderately reliable' if score > 50 else 'not well established'}'
+                'what_it_means': f'This source is {"generally reliable" if score > 70 else "moderately reliable" if score > 50 else "not well established"}'
             }
         }
 
