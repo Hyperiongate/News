@@ -652,43 +652,179 @@ window.ServiceTemplates = {
     },
 
     displayAuthorAnalysis(data, authorName, analyzer) {
-        console.log('Displaying author analysis with data:', data);
+        console.log('Displaying enhanced author analysis with data:', data);
         
-        // Extract values safely
+        // Extract values safely with enhanced data
         const score = data.score || data.credibility_score || 0;
-        const verified = data.verified ? 'Verified' : 'Unverified';
         const name = authorName || data.author_name || 'Unknown';
+        const verificationStatus = data.verification_status || 'unverified';
+        const publicationCount = data.publication_count || 0;
+        const expertiseAreas = data.expertise_areas || [];
+        const awards = data.awards || [];
+        const trustIndicators = data.trust_indicators || [];
+        const redFlags = data.red_flags || [];
+        const bio = data.bio || '';
         
         // Update display
         const nameEl = document.getElementById('authorName');
         if (nameEl) nameEl.textContent = name;
         
+        // Update credibility status based on verification
         const credibilityEl = document.getElementById('authorCredibility');
         if (credibilityEl) {
-            credibilityEl.textContent = score >= 70 ? 'Credible Author' : 
-                                       score >= 50 ? 'Moderate Author' : 
-                                       'Unknown Author';
+            let statusText = 'Unknown Author';
+            if (verificationStatus === 'verified') {
+                statusText = 'Verified Journalist';
+            } else if (verificationStatus === 'partially_verified') {
+                statusText = 'Established Writer';
+            } else if (score >= 70) {
+                statusText = 'Credible Author';
+            } else if (score >= 50) {
+                statusText = 'Contributing Writer';
+            } else if (name === 'Unknown') {
+                statusText = 'No Attribution';
+            }
+            credibilityEl.textContent = statusText;
         }
         
         const scoreEl = document.getElementById('authorScore');
         if (scoreEl) scoreEl.textContent = score + '/100';
         
         const verifiedEl = document.getElementById('authorVerified');
-        if (verifiedEl) verifiedEl.textContent = verified;
+        if (verifiedEl) {
+            let verifiedText = 'Unverified';
+            if (verificationStatus === 'verified') {
+                verifiedText = 'Verified';
+            } else if (verificationStatus === 'partially_verified') {
+                verifiedText = 'Partial';
+            }
+            verifiedEl.textContent = verifiedText;
+        }
         
-        // Update analysis sections
+        // Update analysis sections with enhanced data
         const analysis = data.analysis || {};
         
         const whatWeLooked = document.getElementById('authorWhatWeLooked');
         if (whatWeLooked) {
             whatWeLooked.textContent = analysis.what_we_looked || 
-                "We examined author identification, name structure, publication history, and source credibility.";
+                "We conducted a comprehensive author investigation including: publication history search across major news outlets, professional profile verification on journalism platforms, social media verification status, awards and recognition database checks, and consistency analysis with previous work.";
         }
         
         const whatWeFound = document.getElementById('authorWhatWeFound');
         if (whatWeFound) {
             whatWeFound.textContent = analysis.what_we_found || 
-                `Author ${name !== 'Unknown' ? 'identified as ' + name : 'not identified'}. ${verified === 'Verified' ? 'Author credentials verified.' : 'No author attribution found.'}`;
+                `Author ${name !== 'Unknown' ? 'identified as ' + name : 'not identified'}. ${publicationCount > 0 ? `Found ${publicationCount} published articles.` : 'No publication history found.'} ${verificationStatus === 'verified' ? 'Author credentials verified.' : verificationStatus === 'partially_verified' ? 'Author partially verified.' : 'Unable to verify author.'}`;
+        }
+        
+        // Add enhanced author details section after the analysis sections
+        const analysisDetails = document.querySelector('#authorContent .analysis-details');
+        if (analysisDetails && (publicationCount > 0 || expertiseAreas.length > 0 || trustIndicators.length > 0 || redFlags.length > 0)) {
+            // Remove any existing enhanced details
+            const existingDetails = document.getElementById('authorEnhancedDetails');
+            if (existingDetails) {
+                existingDetails.remove();
+            }
+            
+            // Build enhanced details HTML
+            let enhancedHTML = '<div id="authorEnhancedDetails" class="author-enhanced-details">';
+            
+            // Publication history
+            if (publicationCount > 0) {
+                enhancedHTML += `
+                    <div class="author-detail-section">
+                        <h5><i class="fas fa-newspaper"></i> Publication History</h5>
+                        <p><strong>${publicationCount}</strong> articles found in our database</p>
+                    </div>
+                `;
+            }
+            
+            // Expertise areas
+            if (expertiseAreas.length > 0) {
+                enhancedHTML += `
+                    <div class="author-detail-section">
+                        <h5><i class="fas fa-graduation-cap"></i> Areas of Expertise</h5>
+                        <div class="expertise-tags">
+                            ${expertiseAreas.map(area => `<span class="expertise-tag">${area}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Awards
+            if (awards.length > 0) {
+                enhancedHTML += `
+                    <div class="author-detail-section">
+                        <h5><i class="fas fa-trophy"></i> Awards & Recognition</h5>
+                        <ul class="awards-list">
+                            ${awards.map(award => `<li>${award}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Trust indicators
+            if (trustIndicators.length > 0) {
+                enhancedHTML += `
+                    <div class="author-detail-section trust-indicators">
+                        <h5><i class="fas fa-check-circle"></i> Trust Indicators</h5>
+                        <ul class="indicator-list">
+                            ${trustIndicators.map(indicator => `<li class="trust-indicator">✓ ${indicator}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Red flags
+            if (redFlags.length > 0) {
+                enhancedHTML += `
+                    <div class="author-detail-section red-flags">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Concerns</h5>
+                        <ul class="flag-list">
+                            ${redFlags.map(flag => `<li class="red-flag">⚠ ${flag}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Author bio if available
+            if (bio) {
+                enhancedHTML += `
+                    <div class="author-detail-section">
+                        <h5><i class="fas fa-user"></i> Bio</h5>
+                        <p class="author-bio">${bio}</p>
+                    </div>
+                `;
+            }
+            
+            enhancedHTML += '</div>';
+            
+            // Insert the enhanced details before the first analysis section
+            const firstSection = analysisDetails.querySelector('.analysis-section');
+            if (firstSection) {
+                firstSection.insertAdjacentHTML('beforebegin', enhancedHTML);
+            } else {
+                analysisDetails.insertAdjacentHTML('afterbegin', enhancedHTML);
+            }
+        }
+        
+        // Update "What This Means" section if available
+        const whatItMeans = document.getElementById('authorWhatItMeans');
+        if (whatItMeans && analysis.what_it_means) {
+            // Create the section if it doesn't exist
+            if (!whatItMeans.parentElement) {
+                const analysisDetails = document.querySelector('#authorContent .analysis-details');
+                if (analysisDetails) {
+                    const meaningSection = document.createElement('div');
+                    meaningSection.className = 'analysis-section';
+                    meaningSection.innerHTML = `
+                        <h4><i class="fas fa-lightbulb"></i> What This Means</h4>
+                        <p id="authorWhatItMeans">${analysis.what_it_means}</p>
+                    `;
+                    analysisDetails.appendChild(meaningSection);
+                }
+            } else {
+                whatItMeans.textContent = analysis.what_it_means;
+            }
         }
     },
 
