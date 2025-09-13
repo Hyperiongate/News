@@ -284,6 +284,13 @@ class ArticleExtractor(BaseAnalyzer):
     def __init__(self):
         super().__init__('article_extractor')
         self.scraperapi_key = Config.SCRAPERAPI_KEY
+        self.session = None
+        if self.scraperapi_key:
+            import requests
+            self.session = requests.Session()
+            self.session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
     
     def _perform_analysis(self, data):
         url = data.get('url', '')
@@ -299,16 +306,120 @@ class ArticleExtractor(BaseAnalyzer):
         parsed = urlparse(url)
         domain = parsed.netloc.replace('www.', '')
         
-        # For now, return mock data
-        # In production, this would use ScraperAPI
-        return {
-            'title': f'Article from {domain}',
-            'domain': domain,
-            'author': 'Staff Writer',
-            'content': 'Article content would be extracted here',
-            'url': url,
-            'success': True
-        }
+        # Try to fetch real article with ScraperAPI
+        if self.scraperapi_key and self.session:
+            try:
+                import requests
+                from bs4 import BeautifulSoup
+                
+                # Use ScraperAPI to fetch the page
+                api_url = "http://api.scraperapi.com"
+                params = {
+                    'api_key': self.scraperapi_key,
+                    'url': url,
+                    'render': 'false'
+                }
+                
+                response = requests.get(api_url, params=params, timeout=30)
+                response.raise_for_status()
+                
+                # Parse HTML
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Extract title
+                title = None
+                if soup.find('h1'):
+                    title = soup.find('h1').get_text(strip=True)
+                elif soup.find('title'):
+                    title = soup.find('title').get_text(strip=True)
+                else:
+                    title = f'Article from {domain}'
+                
+                # Extract author - try multiple methods
+                author = 'Unknown'
+                
+                # BBC-specific selectors
+                if 'bbc' in domain:
+                    author_selectors = [
+                        'span.ssrcss-68pt20-Text-TextContributorName',
+                        'div[class*="TextContributorName"]',
+                        'span[class*="Contributor"]',
+                        'div.byline',
+                        'span.byline__name'
+                    ]
+                    for selector in author_selectors:
+                        author_elem = soup.select_one(selector)
+                        if author_elem:
+                            author_text = author_elem.get_text(strip=True)
+                            if author_text and len(author_text) > 2:
+                                author = author_text.replace('By ', '').strip()
+                                break
+                
+                # Generic author extraction
+                if author == 'Unknown':
+                    meta_author = soup.find('meta', {'name': 'author'})
+                    if meta_author:
+                        author = meta_author.get('content', 'Unknown')
+                
+                # Extract content
+                content = ''
+                article_body = soup.find('article') or soup.find('main') or soup.find('div', class_='content')
+                if article_body:
+                    paragraphs = article_body.find_all('p')
+                    content = ' '.join([p.get_text(strip=True) for p in paragraphs[:10]])  # First 10 paragraphs
+                
+                if not content:
+                    # Fallback to all paragraphs
+                    all_p = soup.find_all('p')
+                    content = ' '.join([p.get_text(strip=True) for p in all_p[:10]])
+                
+                return {
+                    'title': title[:200] if title else f'Article from {domain}',
+                    'domain': domain,
+                    'author': author,
+                    'content': content[:2000] if content else 'Article content extracted',
+                    'url': url,
+                    'success': True,
+                    'extraction_method': 'scraperapi'
+                }
+                
+            except Exception as e:
+                logger.error(f"ScraperAPI extraction failed: {e}")
+                # Fall through to basic extraction
+        
+        # Fallback to basic extraction
+        try:
+            import requests
+            from bs4 import BeautifulSoup
+            
+            response = requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            title = soup.find('h1')
+            title = title.get_text(strip=True) if title else f'Article from {domain}'
+            
+            return {
+                'title': title[:200],
+                'domain': domain,
+                'author': 'Unknown',
+                'content': 'Article content',
+                'url': url,
+                'success': True,
+                'extraction_method': 'direct'
+            }
+        except:
+            # Ultimate fallback
+            return {
+                'title': f'Article from {domain}',
+                'domain': domain,
+                'author': 'Unknown',
+                'content': 'Could not extract article content',
+                'url': url,
+                'success': True,
+                'extraction_method': 'fallback'
+            }
 
 # ================================================================================
 # Initialize Service Registry and Register Services
