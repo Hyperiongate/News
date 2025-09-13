@@ -1,20 +1,12 @@
 """
-News Analyzer Service - ROBUST PRODUCTION VERSION
+News Analyzer Service - FIXED DATA FORMATTING VERSION
 Date: September 12, 2025
 Last Updated: September 12, 2025
 
-ROBUST FIXES APPLIED:
-1. Proper parameter passing and scope management
-2. Comprehensive error handling at every level
-3. Data validation and sanitization
-4. Fallback mechanisms for partial failures
-5. Detailed logging for debugging
-6. Type hints and documentation
-7. No assumptions about data structure
-8. Graceful degradation when services fail
-
-This version is production-ready with proper error boundaries,
-data validation, and comprehensive logging.
+CRITICAL FIX: Properly flatten service data for frontend consumption
+- Removes nested 'data' structure
+- Ensures all required fields are at the top level
+- Maintains compatibility with ServiceTemplates.js expectations
 """
 import logging
 from typing import Dict, Any, Optional, List, Union, Tuple
@@ -31,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class NewsAnalyzer:
     """
-    Robust news analysis orchestrator with comprehensive error handling
+    Robust news analysis orchestrator with proper data formatting for frontend
     """
     
     # Service weight configuration with validation
@@ -251,8 +243,8 @@ class NewsAnalyzer:
             # Extract and validate trust score
             trust_score = self._validate_trust_score(pipeline_results.get('trust_score'))
             
-            # Process and validate service results
-            detailed_analysis = self._process_service_results(
+            # CRITICAL FIX: Process and FLATTEN service results for frontend
+            detailed_analysis = self._process_and_flatten_service_results(
                 pipeline_results.get('detailed_analysis', {})
             )
             
@@ -280,7 +272,7 @@ class NewsAnalyzer:
                 'source': article.get('domain', article.get('source', 'Unknown')),
                 'author': article.get('author', 'Unknown'),
                 'findings_summary': findings_summary,
-                'detailed_analysis': detailed_analysis,
+                'detailed_analysis': detailed_analysis,  # Now properly flattened
                 'article_metadata': article_metadata,
                 'processing_time': processing_time,
                 'extraction_quality': extraction_quality,
@@ -356,8 +348,11 @@ class NewsAnalyzer:
             logger.warning(f"Invalid trust score: {trust_score}, defaulting to 50")
             return 50
     
-    def _process_service_results(self, raw_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """Process and validate all service results"""
+    def _process_and_flatten_service_results(self, raw_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        CRITICAL METHOD: Process and FLATTEN all service results for frontend
+        This ensures the frontend receives data in the expected format
+        """
         processed = {}
         
         for service_name, service_result in raw_analysis.items():
@@ -367,92 +362,182 @@ class NewsAnalyzer:
                     logger.warning(f"Empty result for service: {service_name}")
                     continue
                 
-                # Extract and validate service data
-                formatted_data = self._extract_and_validate_service_data(
+                # Extract and FLATTEN service data
+                flattened_data = self._extract_and_flatten_service_data(
                     service_name, service_result
                 )
                 
-                if formatted_data:
-                    processed[service_name] = formatted_data
-                    logger.info(f"✓ Processed {service_name}: {len(formatted_data)} fields")
+                if flattened_data:
+                    processed[service_name] = flattened_data
+                    logger.info(f"✓ Processed {service_name}: {list(flattened_data.keys())[:5]}...")
                 else:
                     logger.warning(f"✗ Failed to process {service_name}")
                     
             except Exception as e:
                 logger.error(f"Error processing {service_name}: {str(e)}")
                 # Add minimal valid data for failed service
-                processed[service_name] = {
-                    'score': 0,
-                    'error': str(e),
-                    'analysis': {
-                        'what_we_looked': f'{service_name} analysis',
-                        'what_we_found': 'Service processing failed',
-                        'what_it_means': 'Unable to complete analysis'
-                    }
-                }
+                processed[service_name] = self._create_fallback_service_data(service_name, str(e))
         
         return processed
     
-    def _extract_and_validate_service_data(
+    def _extract_and_flatten_service_data(
         self, 
         service_name: str, 
         service_result: Any
     ) -> Optional[Dict[str, Any]]:
-        """Extract and validate data from a single service result"""
+        """
+        CRITICAL METHOD: Extract and FLATTEN data from a single service result
+        Removes nested 'data' structure and puts everything at the top level
+        """
         try:
+            flattened = {}
+            
             # Handle different result formats
             if isinstance(service_result, dict):
-                # Extract data from nested structure
+                # CRITICAL: Extract from nested 'data' field if it exists
                 if 'data' in service_result and isinstance(service_result['data'], dict):
-                    data = service_result['data'].copy()
+                    # Flatten the nested data to top level
+                    source_data = service_result['data']
                 else:
-                    data = service_result.copy()
+                    # Already flat
+                    source_data = service_result
+                
+                # Copy all fields from source_data to flattened
+                for key, value in source_data.items():
+                    # Skip metadata fields that aren't needed by frontend
+                    if key not in ['service', 'success', 'available', 'timestamp']:
+                        flattened[key] = value
+                
+                # Also check for fields at the service_result level (not in data)
+                for key, value in service_result.items():
+                    if key not in ['data', 'service', 'success', 'available', 'timestamp'] and key not in flattened:
+                        flattened[key] = value
+                        
             else:
                 logger.warning(f"Service {service_name} returned non-dict: {type(service_result)}")
                 return None
             
-            # Ensure required fields exist
-            validated = self._ensure_required_fields(service_name, data)
+            # Ensure required fields exist with proper structure
+            validated = self._ensure_frontend_required_fields(service_name, flattened)
             
             return validated
             
         except Exception as e:
             logger.error(f"Failed to extract data from {service_name}: {str(e)}")
-            return None
+            return self._create_fallback_service_data(service_name, str(e))
     
-    def _ensure_required_fields(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Ensure all required fields exist in service data"""
-        # Start with original data
+    def _ensure_frontend_required_fields(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure all fields required by frontend exist in service data
+        This matches what ServiceTemplates.js expects
+        """
         validated = data.copy()
         
-        # Ensure score exists
-        if 'score' not in validated:
-            # Try to find score in various fields
-            score_fields = [
-                'credibility_score', 'bias_score', 'quality_score',
-                'transparency_score', 'manipulation_score', 'fact_check_score',
-                'combined_credibility_score', 'author_score'
-            ]
+        # Map service-specific fields based on what frontend expects
+        if service_name == 'source_credibility':
+            # Ensure score field
+            if 'score' not in validated and 'credibility_score' in validated:
+                validated['score'] = validated['credibility_score']
+            elif 'score' not in validated:
+                validated['score'] = 50
+                
+            # Ensure other expected fields
+            validated.setdefault('credibility', validated.get('credibility_level', 'Medium'))
+            validated.setdefault('bias', validated.get('bias_level', 'Moderate'))
+            validated.setdefault('in_database', False)
             
-            for field in score_fields:
-                if field in validated:
-                    validated['score'] = validated[field]
-                    break
-            else:
-                # No score found, use default
-                validated['score'] = self.REQUIRED_SERVICE_FIELDS['score']
-                logger.warning(f"No score found for {service_name}, using default")
+        elif service_name == 'bias_detector':
+            # Ensure bias_score field
+            if 'bias_score' not in validated and 'score' in validated:
+                validated['bias_score'] = validated['score']
+            elif 'bias_score' not in validated:
+                validated['bias_score'] = 50
+            validated.setdefault('score', validated['bias_score'])
+            validated.setdefault('political_lean', 'Center')
+            
+        elif service_name == 'fact_checker':
+            # Ensure fact checking fields
+            validated.setdefault('score', validated.get('fact_check_score', 50))
+            validated.setdefault('claims_found', validated.get('claims_analyzed', 0))
+            validated.setdefault('claims_verified', 0)
+            
+        elif service_name == 'transparency_analyzer':
+            # Ensure transparency fields
+            validated.setdefault('score', validated.get('transparency_score', 50))
+            validated.setdefault('sources_cited', validated.get('source_count', 0))
+            validated.setdefault('quotes_used', validated.get('quote_count', 0))
+            
+        elif service_name == 'manipulation_detector':
+            # Ensure manipulation fields
+            validated.setdefault('score', validated.get('manipulation_score', 50))
+            validated.setdefault('manipulation_score', validated.get('score', 50))
+            validated.setdefault('techniques_found', 0)
+            
+        elif service_name == 'content_analyzer':
+            # Ensure content fields
+            validated.setdefault('score', validated.get('quality_score', 50))
+            validated.setdefault('quality_score', validated.get('score', 50))
+            validated.setdefault('readability', 'Good')
+            
+        elif service_name == 'author_analyzer':
+            # Ensure author fields
+            validated.setdefault('score', validated.get('credibility_score', 50))
+            validated.setdefault('credibility_score', validated.get('score', 50))
+            validated.setdefault('author_name', 'Unknown')
+            validated.setdefault('verified', False)
         
-        # Ensure analysis section exists
+        # Ensure generic score exists for all services
+        if 'score' not in validated:
+            validated['score'] = 50
+        
+        # Ensure analysis section exists with proper structure
         if 'analysis' not in validated or not isinstance(validated.get('analysis'), dict):
             validated['analysis'] = {}
         
-        # Ensure all analysis fields exist
-        for field, default in self.REQUIRED_SERVICE_FIELDS['analysis'].items():
-            if field not in validated['analysis']:
-                validated['analysis'][field] = validated.get(field, default)
+        # Ensure all analysis sub-fields exist
+        validated['analysis'].setdefault('what_we_looked', 
+            f"We analyzed {service_name.replace('_', ' ')} factors")
+        validated['analysis'].setdefault('what_we_found', 
+            f"Analysis completed with score of {validated.get('score', 50)}")
+        validated['analysis'].setdefault('what_it_means', 
+            self._generate_meaning_text(service_name, validated.get('score', 50)))
         
         return validated
+    
+    def _create_fallback_service_data(self, service_name: str, error: str) -> Dict[str, Any]:
+        """Create fallback data when a service fails"""
+        return {
+            'score': 0,
+            'error': error,
+            'analysis': {
+                'what_we_looked': f'{service_name.replace("_", " ").title()} analysis',
+                'what_we_found': 'Service processing failed',
+                'what_it_means': 'Unable to complete this analysis component'
+            }
+        }
+    
+    def _generate_meaning_text(self, service_name: str, score: int) -> str:
+        """Generate appropriate meaning text based on service and score"""
+        if score >= 80:
+            quality = "excellent"
+        elif score >= 60:
+            quality = "good"
+        elif score >= 40:
+            quality = "moderate"
+        else:
+            quality = "concerning"
+            
+        meanings = {
+            'source_credibility': f"The source shows {quality} credibility indicators.",
+            'bias_detector': f"The article has {quality} objectivity levels.",
+            'fact_checker': f"Fact verification shows {quality} accuracy.",
+            'transparency_analyzer': f"Source transparency is {quality}.",
+            'manipulation_detector': f"Content integrity appears {quality}.",
+            'content_analyzer': f"Content quality is {quality}.",
+            'author_analyzer': f"Author credibility appears {quality}."
+        }
+        
+        return meanings.get(service_name, f"Analysis shows {quality} results.")
     
     def _build_extraction_quality(
         self, 
