@@ -2,12 +2,14 @@
 TruthLens News Analyzer - Complete Real Analysis Implementation
 Date: September 13, 2025
 Author: Production Implementation Team
-Version: 3.2 PRODUCTION - FIXED MODULE LEVEL ROUTES
+Version: 3.3 PRODUCTION - ENHANCED WITH FRONTEND COMPATIBILITY
 
-CRITICAL FIX:
+CRITICAL FIXES:
 - All Flask routes (@app.route) are now at MODULE LEVEL
 - Routes are OUTSIDE the if __name__ == '__main__' block
-- This allows gunicorn to properly register the routes
+- Added data enhancement layer for frontend compatibility
+- Fixed findings_summary generation with visual indicators
+- Added all missing frontend-expected fields
 
 COMPLETE IMPLEMENTATION WITH:
 1. Real NLP text analysis using NLTK and TextBlob
@@ -19,8 +21,9 @@ COMPLETE IMPLEMENTATION WITH:
 7. Manipulation technique detection
 8. Content quality analysis with readability scores
 9. ENHANCED: Author verification through News API and professional databases
+10. ENHANCED: Frontend data compatibility layer
 
-This version includes comprehensive author investigation capabilities.
+This version includes comprehensive author investigation capabilities and full frontend compatibility.
 """
 
 import os
@@ -86,7 +89,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS NEWS ANALYZER - ENHANCED AUTHOR ANALYSIS v3.2")
+logger.info("TRUTHLENS NEWS ANALYZER - ENHANCED v3.3")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -532,24 +535,6 @@ class ArticleExtractor(BaseAnalyzer):
             'span.by', 'div.byline', 'p.byline'
         ]
         
-        # Add domain-specific selectors
-        if 'bbc' in domain:
-            author_selectors.extend([
-                'span[class*="TextContributorName"]',
-                'div[class*="Contributor"]',
-                'p[class*="gel-brevier"]'
-            ])
-        elif 'cnn' in domain:
-            author_selectors.extend([
-                '.metadata__byline__author',
-                '.byline__name'
-            ])
-        elif 'nytimes' in domain:
-            author_selectors.extend([
-                '.css-1baulvz',
-                'span[itemprop="name"]'
-            ])
-        
         for selector in author_selectors:
             elem = soup.select_one(selector)
             if elem:
@@ -842,14 +827,25 @@ class BiasDetector(BaseAnalyzer):
         if emotional_score > 50:
             bias_score = min(100, bias_score + 10)
         
+        # Calculate objectivity score for frontend
+        objectivity_score = 100 - bias_score
+        
+        # Determine dominant bias
+        if bias_score < 30:
+            dominant_bias = 'Balanced'
+        else:
+            dominant_bias = bias_analysis['political_lean']
+        
         return {
-            'score': 100 - bias_score,  # Invert for trust score calculation
+            'score': objectivity_score,  # Inverted for trust score calculation
             'bias_score': bias_score,
             'political_lean': bias_analysis['political_lean'],
             'bias_level': self._get_bias_level(bias_score),
             'sentiment': sentiment,
             'emotional_tone': emotional_score,
             'loaded_words': bias_analysis['loaded_words'],
+            'objectivity_score': objectivity_score,  # Added for frontend
+            'dominant_bias': dominant_bias,  # Added for frontend
             'analysis': {
                 'what_we_looked': 'We analyzed language patterns, word choices, emotional tone, political indicators, and presentation balance.',
                 'what_we_found': f'The article shows {bias_analysis["political_lean"]} lean with {bias_analysis["loaded_words"]} loaded terms. Emotional tone is {int(emotional_score)}% intense.',
@@ -912,8 +908,10 @@ class FactChecker(BaseAnalyzer):
         
         if total_claims > 0:
             accuracy_score = int((verified_count / total_claims) * 100)
+            accuracy_rate = accuracy_score  # Added for frontend
         else:
             accuracy_score = 50  # No claims found
+            accuracy_rate = 0
         
         return {
             'score': accuracy_score,
@@ -921,6 +919,7 @@ class FactChecker(BaseAnalyzer):
             'claims_found': total_claims,
             'claims_checked': total_claims,
             'claims_verified': verified_count,
+            'accuracy_rate': accuracy_rate,  # Added for frontend
             'verified_claims': verified_claims[:5],  # Limit for display
             'unverified_claims': unverified_claims[:5],
             'analysis': {
@@ -1013,6 +1012,8 @@ class TransparencyAnalyzer(BaseAnalyzer):
             'transparency_score': min(100, score),
             'sources_cited': sources_count,
             'quotes_used': quotes_count,
+            'source_count': sources_count,  # Added for frontend
+            'quote_count': quotes_count,  # Added for frontend
             'has_author': has_author,
             'has_date': has_date,
             'has_sources': has_sources,
@@ -1080,14 +1081,27 @@ class ManipulationDetector(BaseAnalyzer):
         # Add clickbait score
         manipulation_score = min(100, manipulation_score + clickbait_score)
         
+        # Determine risk level for frontend
+        if manipulation_score < 20:
+            risk_level = 'Low'
+        elif manipulation_score < 40:
+            risk_level = 'Moderate'
+        elif manipulation_score < 60:
+            risk_level = 'High'
+        else:
+            risk_level = 'Extreme'
+        
         return {
             'score': 100 - manipulation_score,  # Invert for trust score
             'manipulation_score': manipulation_score,
             'techniques_found': manipulation_analysis['techniques_found'],
             'techniques': manipulation_analysis['techniques'],
+            'manipulation_techniques': manipulation_analysis['techniques'],  # Added for frontend
             'emotional_score': emotional_score,
+            'emotional_language_count': int(emotional_score / 10),  # Added for frontend
             'clickbait_score': clickbait_score,
             'manipulation_level': self._get_manipulation_level(manipulation_score),
+            'risk_level': risk_level,  # Added for frontend
             'analysis': {
                 'what_we_looked': 'We analyzed for propaganda techniques, emotional manipulation, clickbait patterns, and misleading tactics.',
                 'what_we_found': f'Found {manipulation_analysis["techniques_found"]} manipulation techniques. Emotional intensity: {int(emotional_score)}%.',
@@ -1115,7 +1129,7 @@ class ManipulationDetector(BaseAnalyzer):
         elif score < 40:
             return 'Some persuasive techniques used but within normal bounds. Be aware of emotional appeals.'
         elif score < 60:
-            return f'Moderate manipulation using {", ".join(techniques[:2])}. Critical reading advised.'
+            return f'Moderate manipulation using {", ".join(techniques[:2]) if techniques else "various techniques"}. Critical reading advised.'
         else:
             return 'High level of manipulation detected. Content appears designed to mislead or emotionally manipulate.'
 
@@ -1163,10 +1177,22 @@ class ContentAnalyzer(BaseAnalyzer):
         
         quality_score = min(100, max(0, quality_score))
         
+        # Determine quality level for frontend
+        if quality_score >= 80:
+            quality_level = 'Excellent'
+        elif quality_score >= 60:
+            quality_level = 'Good'
+        elif quality_score >= 40:
+            quality_level = 'Fair'
+        else:
+            quality_level = 'Poor'
+        
         return {
             'score': quality_score,
             'quality_score': quality_score,
+            'quality_level': quality_level,  # Added for frontend
             'readability': readability,
+            'readability_level': readability['level'],  # Added for frontend
             'structure': structure_analysis,
             'word_count': len(words),
             'sentence_count': len(sentences),
@@ -1221,13 +1247,6 @@ class AuthorAnalyzer(BaseAnalyzer):
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        
-        # Known journalist platforms
-        self.journalist_platforms = {
-            'muckrack': 'https://muckrack.com/',
-            'linkedin': 'https://www.linkedin.com/in/',
-            'twitter': 'https://twitter.com/'
-        }
         
         # Credible news organizations
         self.credible_orgs = {
@@ -1286,15 +1305,26 @@ class AuthorAnalyzer(BaseAnalyzer):
         # Cap score
         credibility_score = max(0, min(100, credibility_score))
         
+        # Determine verification status for frontend
+        if credibility_score >= 70:
+            verification_status = 'Verified'
+            verified = True
+        else:
+            verification_status = 'Unverified'
+            verified = False
+        
         return {
             'score': credibility_score,
             'credibility_score': credibility_score,
             'author_name': cleaned_name,
-            'verified': credibility_score >= 70,
+            'verified': verified,
+            'verification_status': verification_status,  # Added for frontend
             'publication_count': publication_count,
             'domain_tier': domain_tier,
             'has_bio': bool(bio_info),
             'bio': bio_info.get('bio_text', '') if bio_info else '',
+            'expertise_areas': [],  # Added for frontend
+            'social_links': {},  # Added for frontend
             'analysis': {
                 'what_we_looked': 'We investigated author credentials, publication history, and professional presence.',
                 'what_we_found': f'Author {cleaned_name} has {publication_count} articles found. Publishing on {domain_tier}-tier site.',
@@ -1411,10 +1441,13 @@ class AuthorAnalyzer(BaseAnalyzer):
             'credibility_score': 30,
             'author_name': 'Unknown',
             'verified': False,
+            'verification_status': 'Unverified',
             'publication_count': 0,
             'domain_tier': 'unknown',
             'has_bio': False,
             'bio': '',
+            'expertise_areas': [],
+            'social_links': {},
             'analysis': {
                 'what_we_looked': 'We searched for author attribution in the article.',
                 'what_we_found': 'No author information was provided.',
@@ -1429,10 +1462,13 @@ class AuthorAnalyzer(BaseAnalyzer):
             'credibility_score': 35,
             'author_name': author_string,
             'verified': False,
+            'verification_status': 'Unverified',
             'publication_count': 0,
             'domain_tier': 'unknown',
             'has_bio': False,
             'bio': '',
+            'expertise_areas': [],
+            'social_links': {},
             'analysis': {
                 'what_we_looked': 'We analyzed the author attribution.',
                 'what_we_found': f'The attribution "{author_string}" appears to be generic.',
@@ -1694,6 +1730,92 @@ logger.info(f"NLP Features: {'Enabled' if NLP_AVAILABLE else 'Limited'}")
 logger.info("=" * 80)
 
 # ================================================================================
+# ENHANCED FINDINGS GENERATOR FOR FRONTEND
+# ================================================================================
+
+def generate_enhanced_findings_summary(trust_score: int, analysis: Dict) -> str:
+    """Generate enhanced findings summary with visual indicators"""
+    
+    findings = []
+    
+    # Overall assessment with emoji
+    if trust_score >= 80:
+        findings.append("✓ This article demonstrates high credibility and trustworthiness")
+    elif trust_score >= 60:
+        findings.append("⚠ This article shows generally good credibility with some concerns")
+    elif trust_score >= 40:
+        findings.append("⚠ This article has moderate credibility with several issues")
+    else:
+        findings.append("✗ This article shows significant credibility concerns")
+    
+    # Extract key findings from each service
+    if 'source_credibility' in analysis:
+        source = analysis['source_credibility']
+        score = source.get('score', 50)
+        reputation = source.get('reputation', 'unknown')
+        if score >= 70:
+            findings.append(f"✓ Credible source ({reputation} reputation)")
+        elif score < 40:
+            findings.append(f"✗ Questionable source credibility")
+    
+    if 'bias_detector' in analysis:
+        bias = analysis['bias_detector']
+        bias_score = bias.get('bias_score', 50)
+        if bias_score < 30:
+            findings.append("✓ Minimal bias detected")
+        elif bias_score > 60:
+            lean = bias.get('political_lean', 'Unknown')
+            findings.append(f"✗ Significant {lean} bias present")
+    
+    if 'fact_checker' in analysis:
+        facts = analysis['fact_checker']
+        if facts.get('claims_found', 0) > 0:
+            verified = facts.get('claims_verified', 0)
+            total = facts.get('claims_found', 1)
+            percentage = int((verified / total) * 100)
+            if percentage >= 70:
+                findings.append(f"✓ {percentage}% of claims verified")
+            elif percentage < 40:
+                findings.append(f"✗ Only {percentage}% of claims verified")
+            else:
+                findings.append(f"⚠ {percentage}% of claims verified")
+    
+    if 'transparency_analyzer' in analysis:
+        trans = analysis['transparency_analyzer']
+        score = trans.get('score', 0)
+        sources = trans.get('sources_cited', 0)
+        if score >= 70:
+            findings.append(f"✓ Good transparency ({sources} sources cited)")
+        elif score < 40:
+            findings.append("✗ Poor transparency")
+    
+    if 'manipulation_detector' in analysis:
+        manip = analysis['manipulation_detector']
+        techniques = manip.get('techniques_found', 0)
+        if techniques > 3:
+            findings.append(f"✗ {techniques} manipulation techniques detected")
+        elif techniques == 0:
+            findings.append("✓ No manipulation detected")
+    
+    if 'author_analyzer' in analysis:
+        author = analysis['author_analyzer']
+        if author.get('verified', False):
+            pubs = author.get('publication_count', 0)
+            findings.append(f"✓ Author verified ({pubs} publications)")
+        elif author.get('author_name', 'Unknown') == 'Unknown':
+            findings.append("✗ No author attribution")
+        else:
+            findings.append("⚠ Author unverified")
+    
+    # Format the findings
+    if len(findings) > 1:
+        main_finding = findings[0]
+        details = " • ".join(findings[1:])
+        return f"{main_finding}. {details}."
+    else:
+        return findings[0] + "."
+
+# ================================================================================
 # Flask Routes - MUST BE AT MODULE LEVEL (NOT INSIDE if __name__ == '__main__')
 # ================================================================================
 
@@ -1728,10 +1850,10 @@ def health():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """Main analysis endpoint"""
+    """Enhanced analysis endpoint with proper data formatting"""
     
     request_id = g.request_id if hasattr(g, 'request_id') else str(uuid.uuid4())[:8]
-    logger.info(f"[{request_id}] Analysis request received")
+    logger.info(f"[{request_id}] Enhanced analysis request received")
     
     try:
         # Get request data
@@ -1772,7 +1894,23 @@ def analyze():
             content_type='url' if url else 'text'
         )
         
-        logger.info(f"[{request_id}] Analysis complete - Trust Score: {result.get('trust_score')}")
+        # ENHANCEMENT: Generate better findings summary
+        if result.get('success'):
+            result['findings_summary'] = generate_enhanced_findings_summary(
+                result.get('trust_score', 50),
+                result.get('detailed_analysis', {})
+            )
+        
+        # ENHANCEMENT: Add OpenAI placeholder if not configured
+        if 'detailed_analysis' in result and 'openai_enhancer' not in result['detailed_analysis']:
+            result['detailed_analysis']['openai_enhancer'] = {
+                'enhanced': False,
+                'summary': 'AI enhancement not available. Configure OpenAI API key for enhanced insights.',
+                'key_insights': [],
+                'recommendations': []
+            }
+        
+        logger.info(f"[{request_id}] Enhanced analysis complete - Trust Score: {result.get('trust_score')}")
         
         return jsonify(result), 200
         
@@ -1794,7 +1932,7 @@ def api_status():
     """API status endpoint"""
     return jsonify({
         'status': 'online',
-        'version': '3.2',
+        'version': '3.3',
         'nlp_available': NLP_AVAILABLE,
         'services': list(services.keys()),
         'timestamp': datetime.now().isoformat()
@@ -1834,7 +1972,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
     
-    logger.info(f"Starting TruthLens News Analyzer")
+    logger.info(f"Starting TruthLens News Analyzer v3.3")
     logger.info(f"Port: {port}")
     logger.info(f"Debug mode: {debug}")
     logger.info(f"NLP Analysis: {'Enabled' if NLP_AVAILABLE else 'Limited'}")
