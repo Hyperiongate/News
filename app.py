@@ -1476,14 +1476,20 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
     
-    def _get_author_interpretation(self, score: int, publications: int) -> str:
+    def _get_author_interpretation(self, score: int, publications: int, domain_tier: str = 'unknown') -> str:
         """Get interpretation of author analysis"""
         if score >= 80:
-            return f'Well-established author with {publications} verified publications. High credibility.'
+            return f'Well-established author with {publications} verified publications. High credibility on {domain_tier}-tier platform.'
         elif score >= 60:
-            return f'Author has some verification with {publications} articles found. Moderate credibility.'
+            if domain_tier in ['high', 'medium']:
+                return f'Author verified on recognized news platform ({domain_tier}-tier). {publications if publications > 0 else "Limited"} articles in our database. Good credibility.'
+            else:
+                return f'Author has some verification with {publications} articles found. Moderate credibility.'
         elif score >= 40:
-            return 'Limited author verification. Could be newer journalist or freelancer.'
+            if domain_tier in ['high', 'medium']:
+                return f'Author on recognized platform but limited verification available. Could be newer journalist or contributor.'
+            else:
+                return 'Limited author verification. Could be newer journalist or freelancer.'
         else:
             return 'Author could not be verified. Exercise caution with claims made.'
 
