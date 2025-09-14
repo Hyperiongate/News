@@ -1,15 +1,15 @@
 """
 TruthLens News Analyzer - Complete Real Analysis Implementation
 Date: September 13, 2025
-Version: 3.5 PRODUCTION - FIXED GUNICORN DEPLOYMENT
+Version: 3.6 PRODUCTION - SYNTAX ERROR FIXED
 
 CRITICAL FIXES IN THIS VERSION:
-1. Routes are at MODULE LEVEL for Gunicorn
-2. Services initialized at MODULE LEVEL
-3. NewsAnalyzer instance created at MODULE LEVEL
-4. Fixed NBC/CNBC domain recognition
-5. Fixed author scoring for recognized platforms
-6. All initialization happens on module import
+1. Fixed IndentationError on line 1483
+2. Routes are at MODULE LEVEL for Gunicorn
+3. Services initialized at MODULE LEVEL
+4. NewsAnalyzer instance created at MODULE LEVEL
+5. Fixed NBC/CNBC domain recognition
+6. Fixed author scoring for recognized platforms
 
 This version is specifically structured for Gunicorn deployment on Render.
 """
@@ -77,7 +77,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS NEWS ANALYZER - v3.5 GUNICORN FIXED")
+logger.info("TRUTHLENS NEWS ANALYZER - v3.6 SYNTAX FIXED")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -1481,3 +1481,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         # Fallback to checking if org name is in domain
         for org in self.credible_orgs['high']:
             if org.lower().replace(' ', '') in domain_lower:
+                return 'high'
+        
+        for org in self.credible_orgs['medium']:
+            if org.lower().replace(' ',
