@@ -1,29 +1,17 @@
 """
 TruthLens News Analyzer - Complete Real Analysis Implementation
 Date: September 13, 2025
-Author: Production Implementation Team
-Version: 3.4 PRODUCTION - FIXED NBC RECOGNITION AND AUTHOR SCORING
+Version: 3.5 PRODUCTION - FIXED GUNICORN DEPLOYMENT
 
 CRITICAL FIXES IN THIS VERSION:
-1. Fixed NBC/CNBC domain recognition in credible_domains lists
-2. Fixed author scoring to give minimum 65 for recognized platforms
-3. Added proper domain parsing to handle www. prefixes
-4. Enhanced author verification for major news platforms
-5. Fixed domain tier detection logic
+1. Routes are at MODULE LEVEL for Gunicorn
+2. Services initialized at MODULE LEVEL
+3. NewsAnalyzer instance created at MODULE LEVEL
+4. Fixed NBC/CNBC domain recognition
+5. Fixed author scoring for recognized platforms
+6. All initialization happens on module import
 
-COMPLETE IMPLEMENTATION WITH:
-1. Real NLP text analysis using NLTK and TextBlob
-2. Dynamic scoring based on actual content analysis
-3. ENHANCED: Comprehensive author investigation with publication history
-4. Pattern-based bias detection
-5. Statistical fact checking indicators
-6. Real transparency metrics
-7. Manipulation technique detection
-8. Content quality analysis with readability scores
-9. ENHANCED: Author verification through News API and professional databases
-10. ENHANCED: Frontend data compatibility layer
-
-This version includes comprehensive author investigation capabilities and full frontend compatibility.
+This version is specifically structured for Gunicorn deployment on Render.
 """
 
 import os
@@ -89,7 +77,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS NEWS ANALYZER - ENHANCED v3.4")
+logger.info("TRUTHLENS NEWS ANALYZER - v3.5 GUNICORN FIXED")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -118,7 +106,10 @@ class Config:
 
 Config.log_status()
 
-# Create Flask app
+# ================================================================================
+# CREATE FLASK APP - MUST BE AT MODULE LEVEL
+# ================================================================================
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -374,7 +365,7 @@ class BaseAnalyzer:
         self.service_name = service_name
         self.available = True
         self.text_analyzer = TextAnalyzer()
-        logger.info(f"  ✓ {service_name} initialized with real analysis")
+        logger.info(f"  ✓ {service_name} initialized")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Perform analysis"""
@@ -419,7 +410,7 @@ class ArticleExtractor(BaseAnalyzer):
         self.scraperapi_key = Config.SCRAPERAPI_KEY
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
     
     def _perform_analysis(self, data):
@@ -436,7 +427,6 @@ class ArticleExtractor(BaseAnalyzer):
     def _extract_from_url(self, url: str) -> Dict[str, Any]:
         """Extract article from URL with multiple methods"""
         parsed = urlparse(url)
-        # FIXED: Properly clean domain
         domain = parsed.netloc.replace('www.', '').lower()
         
         logger.info(f"Extracting from URL: {url}")
@@ -1475,4 +1465,19 @@ class AuthorAnalyzer(BaseAnalyzer):
         """FIXED: Get credibility tier of the domain with better matching"""
         domain_lower = domain.lower().replace('www.', '')
         
-        # Check
+        # First check direct domain mapping
+        if domain_lower in self.domain_mapping:
+            org_name = self.domain_mapping[domain_lower]
+            
+            # Check which tier the organization belongs to
+            for org in self.credible_orgs['high']:
+                if org.lower() == org_name.lower():
+                    return 'high'
+            
+            for org in self.credible_orgs['medium']:
+                if org.lower() == org_name.lower():
+                    return 'medium'
+        
+        # Fallback to checking if org name is in domain
+        for org in self.credible_orgs['high']:
+            if org.lower().replace(' ', '') in domain_lower:
