@@ -1,7 +1,7 @@
 """
 TruthLens News Analyzer - Complete Real Analysis Implementation
-Date: September 13, 2025
-Version: 3.6 PRODUCTION - SYNTAX ERROR FIXED
+Date: September 14, 2025
+Version: 3.7 PRODUCTION - WITH ROUTES FIXED
 
 CRITICAL FIXES IN THIS VERSION:
 1. Fixed IndentationError on line 1483
@@ -10,6 +10,7 @@ CRITICAL FIXES IN THIS VERSION:
 4. NewsAnalyzer instance created at MODULE LEVEL
 5. Fixed NBC/CNBC domain recognition
 6. Fixed author scoring for recognized platforms
+7. ADDED MISSING ROUTES INCLUDING HOME ROUTE
 
 This version is specifically structured for Gunicorn deployment on Render.
 """
@@ -77,7 +78,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS NEWS ANALYZER - v3.6 SYNTAX FIXED")
+logger.info("TRUTHLENS NEWS ANALYZER - v3.7 WITH ROUTES")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -1484,4 +1485,383 @@ class AuthorAnalyzer(BaseAnalyzer):
                 return 'high'
         
         for org in self.credible_orgs['medium']:
-            if org.lower().replace(' ',
+            if org.lower().replace(' ', '') in domain_lower:
+                return 'medium'
+        
+        return 'unknown'
+    
+    def _extract_author_bio_from_content(self, content: str, author_name: str) -> Optional[Dict[str, Any]]:
+        """Extract author bio from content"""
+        if not content or not author_name:
+            return None
+        
+        # Look for bio patterns
+        bio_patterns = [
+            f'{author_name} is a',
+            f'{author_name} has been',
+            f'{author_name} works',
+            f'{author_name} covers',
+            f'About {author_name}'
+        ]
+        
+        for pattern in bio_patterns:
+            if pattern.lower() in content.lower():
+                # Extract surrounding text
+                start = content.lower().find(pattern.lower())
+                end = min(start + 500, len(content))
+                bio_text = content[start:end]
+                
+                # Check for credentials
+                credentials = ['journalist', 'reporter', 'editor', 'correspondent', 'writer', 'author', 'phd', 'professor']
+                has_credentials = any(cred in bio_text.lower() for cred in credentials)
+                
+                return {
+                    'bio_text': bio_text,
+                    'has_credentials': has_credentials
+                }
+        
+        return None
+    
+    def _get_unknown_author_analysis(self) -> Dict[str, Any]:
+        """Return analysis for unknown author"""
+        return {
+            'score': 30,
+            'credibility_score': 30,
+            'author_name': 'Unknown',
+            'verified': False,
+            'verification_status': 'Unverified',
+            'publication_count': 0,
+            'domain_tier': 'unknown',
+            'platform': 'Unknown',
+            'has_bio': False,
+            'bio': '',
+            'expertise_areas': [],
+            'social_links': {},
+            'analysis': {
+                'what_we_looked': 'We attempted to identify and verify the author.',
+                'what_we_found': 'No author information available.',
+                'what_it_means': 'Without author attribution, credibility cannot be fully assessed. Be cautious with unattributed content.'
+            }
+        }
+    
+    def _get_invalid_author_analysis(self, author_name: str) -> Dict[str, Any]:
+        """Return analysis for invalid author name"""
+        return {
+            'score': 35,
+            'credibility_score': 35,
+            'author_name': author_name,
+            'verified': False,
+            'verification_status': 'Invalid',
+            'publication_count': 0,
+            'domain_tier': 'unknown',
+            'platform': 'Unknown',
+            'has_bio': False,
+            'bio': '',
+            'expertise_areas': [],
+            'social_links': {},
+            'analysis': {
+                'what_we_looked': 'We attempted to verify the author identity.',
+                'what_we_found': 'Author name appears to be generic or invalid.',
+                'what_it_means': 'Generic bylines like "Staff" or "Admin" indicate lack of accountability. Verify content independently.'
+            }
+        }
+    
+    def _get_author_interpretation(self, score: int, pub_count: int, tier: str) -> str:
+        """Get interpretation of author analysis"""
+        if score >= 75:
+            return f'Highly credible author with {pub_count} published articles on {tier}-tier platform. Strong professional presence.'
+        elif score >= 60:
+            return f'Credible author with established presence on {tier}-tier platform. Generally reliable source.'
+        elif score >= 45:
+            return 'Author partially verified. Limited publication history found. Exercise normal caution.'
+        else:
+            return 'Author credibility could not be fully verified. Limited or no professional history found.'
+
+# ================================================================================
+# SERVICE REGISTRY AND INITIALIZATION
+# ================================================================================
+
+# Global service instances
+article_extractor = ArticleExtractor()
+source_credibility = SourceCredibility()
+bias_detector = BiasDetector()
+fact_checker = FactChecker()
+transparency_analyzer = TransparencyAnalyzer()
+manipulation_detector = ManipulationDetector()
+content_analyzer = ContentAnalyzer()
+author_analyzer = AuthorAnalyzer()
+
+logger.info("✓ All analysis services initialized")
+
+# ================================================================================
+# SIMPLIFIED NEWS ANALYZER - USES REAL SERVICES
+# ================================================================================
+
+class NewsAnalyzer:
+    """Orchestrate real analysis services"""
+    
+    def analyze(self, content: str, content_type: str = 'url') -> Dict[str, Any]:
+        """Perform complete analysis"""
+        try:
+            # Step 1: Extract article
+            if content_type == 'url':
+                extraction_result = article_extractor.analyze({'url': content})
+            else:
+                extraction_result = article_extractor.analyze({'text': content})
+            
+            if not extraction_result.get('success'):
+                return self._error_response('Failed to extract article content')
+            
+            article_data = extraction_result.get('data', {})
+            
+            # Step 2: Run all analyzers
+            analysis_results = {}
+            
+            # Run each analyzer with article data
+            analyzers = {
+                'source_credibility': source_credibility,
+                'bias_detector': bias_detector,
+                'fact_checker': fact_checker,
+                'transparency_analyzer': transparency_analyzer,
+                'manipulation_detector': manipulation_detector,
+                'content_analyzer': content_analyzer,
+                'author_analyzer': author_analyzer
+            }
+            
+            for name, analyzer in analyzers.items():
+                try:
+                    result = analyzer.analyze(article_data)
+                    analysis_results[name] = result.get('data', {})
+                except Exception as e:
+                    logger.error(f"Analyzer {name} failed: {e}")
+                    analysis_results[name] = {'score': 50, 'error': str(e)}
+            
+            # Step 3: Calculate trust score
+            trust_score = self._calculate_trust_score(analysis_results)
+            
+            # Step 4: Build response
+            return {
+                'success': True,
+                'trust_score': trust_score,
+                'article_summary': article_data.get('title', 'Article Analysis'),
+                'source': article_data.get('domain', 'Unknown'),
+                'author': article_data.get('author', 'Unknown'),
+                'findings_summary': self._generate_findings_summary(analysis_results),
+                'article': article_data,
+                'analysis': analysis_results,
+                'detailed_analysis': analysis_results
+            }
+            
+        except Exception as e:
+            logger.error(f"Analysis failed: {e}", exc_info=True)
+            return self._error_response(str(e))
+    
+    def _calculate_trust_score(self, results: Dict[str, Any]) -> int:
+        """Calculate weighted trust score"""
+        weights = {
+            'source_credibility': 0.25,
+            'author_analyzer': 0.15,
+            'bias_detector': 0.20,
+            'fact_checker': 0.15,
+            'transparency_analyzer': 0.10,
+            'manipulation_detector': 0.10,
+            'content_analyzer': 0.05
+        }
+        
+        total_score = 0
+        total_weight = 0
+        
+        for service, weight in weights.items():
+            if service in results and 'score' in results[service]:
+                score = results[service]['score']
+                total_score += score * weight
+                total_weight += weight
+        
+        if total_weight > 0:
+            return int(total_score / total_weight)
+        return 50
+    
+    def _generate_findings_summary(self, results: Dict[str, Any]) -> str:
+        """Generate summary of findings"""
+        findings = []
+        
+        # Check source credibility
+        source_score = results.get('source_credibility', {}).get('score', 50)
+        if source_score >= 70:
+            findings.append('Source has good credibility')
+        elif source_score < 40:
+            findings.append('Source credibility concerns identified')
+        
+        # Check bias
+        bias_score = results.get('bias_detector', {}).get('bias_score', 50)
+        if bias_score >= 60:
+            findings.append('Significant bias detected')
+        elif bias_score < 30:
+            findings.append('Article appears balanced')
+        
+        # Check facts
+        fact_score = results.get('fact_checker', {}).get('score', 50)
+        if fact_score >= 70:
+            findings.append('Claims appear well-supported')
+        elif fact_score < 40:
+            findings.append('Several unverified claims found')
+        
+        if not findings:
+            findings.append('Analysis complete. Review individual scores for details.')
+        
+        return '. '.join(findings)
+    
+    def _error_response(self, error_message: str) -> Dict[str, Any]:
+        """Generate error response"""
+        return {
+            'success': False,
+            'error': error_message,
+            'trust_score': 50,
+            'article_summary': '',
+            'source': '',
+            'author': '',
+            'findings_summary': 'Analysis failed',
+            'detailed_analysis': {}
+        }
+
+# Initialize global analyzer
+news_analyzer = NewsAnalyzer()
+logger.info("✓ NewsAnalyzer initialized")
+
+# ================================================================================
+# ROUTES - CRITICAL SECTION THAT WAS MISSING
+# ================================================================================
+
+@app.route('/')
+def index():
+    """Serve the main application page"""
+    logger.info("Serving index page")
+    return render_template('index.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint for monitoring"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'service': 'news-analyzer',
+        'version': '3.7',
+        'nlp_available': NLP_AVAILABLE
+    }), 200
+
+@app.route('/api/status')
+def api_status():
+    """API status endpoint"""
+    return jsonify({
+        'status': 'operational',
+        'services': {
+            'analyzer': 'ready',
+            'nlp': NLP_AVAILABLE,
+            'article_extractor': article_extractor.available,
+            'source_credibility': source_credibility.available,
+            'bias_detector': bias_detector.available,
+            'fact_checker': fact_checker.available,
+            'transparency_analyzer': transparency_analyzer.available,
+            'manipulation_detector': manipulation_detector.available,
+            'content_analyzer': content_analyzer.available,
+            'author_analyzer': author_analyzer.available
+        },
+        'timestamp': datetime.utcnow().isoformat()
+    }), 200
+
+@app.route('/api/analyze', methods=['POST', 'OPTIONS'])
+def analyze():
+    """Main analysis endpoint"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Extract input with multiple fallbacks
+        input_type = data.get('input_type', 'url')
+        input_data = data.get('input_data') or data.get('url') or data.get('text', '')
+        
+        if not input_data:
+            return jsonify({
+                'success': False,
+                'error': 'No URL or text provided for analysis'
+            }), 400
+        
+        logger.info(f"Analysis request: type={input_type}, length={len(input_data)}")
+        
+        # Perform analysis
+        result = news_analyzer.analyze(input_data, input_type)
+        
+        if result.get('success'):
+            logger.info("Analysis completed successfully")
+            return jsonify(result), 200
+        else:
+            logger.error(f"Analysis failed: {result.get('error')}")
+            return jsonify(result), 400
+            
+    except Exception as e:
+        logger.error(f"Analysis error: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
+
+@app.route('/static/<path:path>')
+def send_static(path):
+    """Serve static files"""
+    return send_from_directory('static', path)
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    try:
+        return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
+    except:
+        return '', 204
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    logger.warning(f"404 error: {request.url}")
+    
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'success': False,
+            'error': 'Endpoint not found'
+        }), 404
+    
+    # For non-API routes, serve index.html (SPA behavior)
+    return render_template('index.html')
+
+@app.errorhandler(500)
+def server_error(error):
+    """Handle 500 errors"""
+    logger.error(f"500 error: {str(error)}", exc_info=True)
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error'
+    }), 500
+
+# ================================================================================
+# MAIN EXECUTION
+# ================================================================================
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 5000))
+    debug = Config.DEBUG
+    
+    logger.info("=" * 80)
+    logger.info(f"Starting TruthLens News Analyzer on port {port}")
+    logger.info(f"Debug mode: {debug}")
+    logger.info("=" * 80)
+    
+    app.run(host='0.0.0.0', port=port, debug=debug)
