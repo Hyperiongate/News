@@ -1,21 +1,22 @@
 /**
  * TruthLens News Analyzer - Frontend Core
- * Date: September 13, 2025
- * Last Updated: September 13, 2025
+ * Date: September 14, 2025
+ * Version: 2.0.0 - CLEAN CONSOLIDATED VERSION
  * 
- * FIXED ISSUES:
- * - Properly access nested data structure from backend
- * - Store complete response data globally
- * - Pass correct data to ServiceTemplates
- * - Handle missing/undefined data gracefully
+ * Purpose: Main application logic, API communication, and UI control
+ * Dependencies: Requires service-templates.js to be loaded first
+ * 
+ * FIXES IN THIS VERSION:
+ * - Proper data structure handling from backend
+ * - Removed all demo/fallback data
+ * - Consolidated duplicate code
+ * - Clear separation of concerns
+ * - Improved error handling
  */
-
-// Store analysis data globally
-window.analysisData = null;
 
 class TruthLensAnalyzer {
     constructor() {
-        // Core elements
+        // Core DOM elements
         this.form = document.getElementById('analysisForm');
         this.urlInput = document.getElementById('urlInput');
         this.textInput = document.getElementById('textInput');
@@ -28,7 +29,7 @@ class TruthLensAnalyzer {
         this.progressSteps = document.getElementById('progressSteps');
         this.serviceContainer = document.getElementById('serviceAnalysisContainer');
         
-        // Service definitions
+        // Service configuration
         this.services = [
             { id: 'sourceCredibility', name: 'Source Credibility Analysis', icon: 'fa-shield-alt' },
             { id: 'biasDetector', name: 'Bias Detection Analysis', icon: 'fa-balance-scale' },
@@ -39,65 +40,36 @@ class TruthLensAnalyzer {
             { id: 'author', name: 'Author Analysis', icon: 'fa-user-shield' }
         ];
 
-        this.init();
-        this.createServiceCards();
-    }
-
-    cleanAuthorName(authorString) {
-        if (!authorString || typeof authorString !== 'string') {
-            return 'Unknown Author';
-        }
-
-        let cleaned = authorString;
-        cleaned = cleaned.replace(/^by\s*/i, '');
-
-        if (cleaned.includes('|')) {
-            const parts = cleaned.split('|');
-            cleaned = parts[0].trim();
-        }
-
-        cleaned = cleaned.replace(/\S+@\S+\.\S+/g, '').trim();
-        cleaned = cleaned.replace(/\b(UPDATED|PUBLISHED|POSTED|MODIFIED):\s*.*/gi, '').trim();
-
-        const orgPatterns = [
-            /\s*(Chicago Tribune|New York Times|Washington Post|CNN|Fox News|Reuters|Associated Press|AP|BBC|NPR).*/gi,
-            /\s*,\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer|Contributing Writer).*/gi
-        ];
+        // API configuration
+        this.API_ENDPOINT = '/api/analyze';
+        this.API_TIMEOUT = 60000;
         
-        for (const pattern of orgPatterns) {
-            cleaned = cleaned.replace(pattern, '');
-        }
-
-        cleaned = cleaned.replace(/\s*(Staff|Wire|Service|Report)$/gi, '');
-        cleaned = cleaned.replace(/\s+/g, ' ').trim();
-        cleaned = cleaned.replace(/[,;:\-|]+$/, '').trim();
-
-        if (!cleaned || cleaned.length < 2 || /^[^a-zA-Z]+$/.test(cleaned)) {
-            return 'Unknown Author';
-        }
-
-        cleaned = cleaned.split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-
-        return cleaned;
+        // State management
+        this.isAnalyzing = false;
+        this.currentAnalysisData = null;
+        
+        this.init();
     }
 
     init() {
-        this.form.addEventListener('submit', this.handleSubmit.bind(this));
-        this.resetBtn.addEventListener('click', this.handleReset.bind(this));
+        // Bind event handlers
+        this.form?.addEventListener('submit', this.handleSubmit.bind(this));
+        this.resetBtn?.addEventListener('click', this.handleReset.bind(this));
         
-        this.urlInput.addEventListener('input', () => {
-            if (this.urlInput.value) {
-                this.textInput.value = '';
-            }
+        // Input field mutual exclusion
+        this.urlInput?.addEventListener('input', () => {
+            if (this.urlInput.value) this.textInput.value = '';
         });
         
-        this.textInput.addEventListener('input', () => {
-            if (this.textInput.value) {
-                this.urlInput.value = '';
-            }
+        this.textInput?.addEventListener('input', () => {
+            if (this.textInput.value) this.urlInput.value = '';
         });
+        
+        // Create service cards
+        this.createServiceCards();
+        
+        // Make analyzer globally accessible
+        window.analyzer = this;
     }
 
     createServiceCards() {
@@ -126,7 +98,10 @@ class TruthLensAnalyzer {
                 </div>
             </div>
             <div class="service-content" id="${service.id}Content" style="display: none;">
-                <!-- Content will be populated when dropdown is clicked -->
+                <div class="loading-placeholder">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Click to view analysis details...</p>
+                </div>
             </div>
         `;
         
@@ -136,208 +111,306 @@ class TruthLensAnalyzer {
     async handleSubmit(e) {
         e.preventDefault();
         
+        if (this.isAnalyzing) return;
+        
         const url = this.urlInput.value.trim();
         const text = this.textInput.value.trim();
         
         if (!url && !text) {
-            alert('Please enter a URL or paste article text');
+            this.showError('Please enter a URL or paste article text');
             return;
         }
         
-        this.setLoading(true);
-        this.showProgress();
+        this.isAnalyzing = true;
+        this.updateUIState('analyzing');
         
         try {
-            const response = await fetch('/api/analyze', {
+            // Show progress
+            this.showProgress();
+            
+            // Prepare request data
+            const requestData = {
+                input_type: url ? 'url' : 'text',
+                input_data: url || text
+            };
+            
+            // Make API call
+            const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url, text })
+                body: JSON.stringify(requestData),
+                signal: AbortSignal.timeout(this.API_TIMEOUT)
             });
             
             const data = await response.json();
             
             if (!response.ok) {
+                throw new Error(data.error || `Server error: ${response.status}`);
+            }
+            
+            if (data.success) {
+                this.handleSuccessfulAnalysis(data);
+            } else {
                 throw new Error(data.error || 'Analysis failed');
             }
             
-            // Store COMPLETE data globally
-            window.analysisData = data;
-            console.log('Analysis data received:', data);
-            console.log('Detailed analysis keys:', Object.keys(data.detailed_analysis || {}));
-            
-            this.displayResults(data);
-            
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error analyzing article: ' + error.message);
-            this.hideProgress();
+            console.error('Analysis error:', error);
+            this.handleAnalysisError(error);
         } finally {
-            this.setLoading(false);
+            this.isAnalyzing = false;
+            this.updateUIState('ready');
+            this.hideProgress();
         }
     }
 
-    handleReset() {
-        this.form.reset();
-        this.resultsSection.classList.remove('show');
-        this.progressContainer.classList.remove('active');
-        window.analysisData = null;
-    }
-
-    showProgress() {
-        this.progressContainer.classList.add('active');
-        this.animateProgress();
-    }
-
-    hideProgress() {
-        this.progressContainer.classList.remove('active');
-    }
-
-    animateProgress() {
-        let progress = 0;
-        const totalSteps = 7;
-        let currentStep = 0;
+    handleSuccessfulAnalysis(data) {
+        console.log('Analysis successful:', data);
         
-        const interval = setInterval(() => {
-            progress += Math.random() * 15 + 5;
-            
-            if (progress > (currentStep + 1) * (100 / totalSteps)) {
-                this.setStepActive(currentStep);
-                currentStep++;
-                
-                if (currentStep > 0) {
-                    this.setStepCompleted(currentStep - 1);
-                }
-            }
-            
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-                
-                this.setStepCompleted(currentStep - 1);
-                this.setStepActive(currentStep);
-                
-                setTimeout(() => {
-                    this.setStepCompleted(currentStep);
-                }, 500);
-            }
-            
-            this.progressBar.style.width = `${progress}%`;
-            this.progressPercentage.textContent = `${Math.round(progress)}%`;
-        }, 800);
-    }
-
-    setStepActive(stepIndex) {
-        const step = this.progressSteps?.querySelector(`[data-step="${stepIndex}"]`);
-        if (step) {
-            step.classList.add('active');
-            const icon = step.querySelector('.step-icon');
-            if (icon) icon.innerHTML = '<div class="spinner"></div>';
-        }
-    }
-
-    setStepCompleted(stepIndex) {
-        const step = this.progressSteps?.querySelector(`[data-step="${stepIndex}"]`);
-        if (step) {
-            step.classList.remove('active');
-            step.classList.add('completed');
-            const icon = step.querySelector('.step-icon');
-            if (icon) icon.innerHTML = '<i class="fas fa-check"></i>';
-        }
-    }
-
-    displayResults(data) {
-        this.progressContainer.classList.remove('active');
-        
-        let trustScore = data.trust_score || 0;
-        let articleSummary = data.article_summary || 'Analysis completed';
-        let source = data.source || 'Unknown Source';
-        let findingsSummary = data.findings_summary || '';
-        
-        // Get author from data
-        let author = data.author || 'Unknown';
+        // Store the complete response
+        this.currentAnalysisData = data;
+        window.analysisData = data;
         
         // Update trust score display
-        this.updateTrustScore(trustScore);
+        this.updateTrustScore(data.trust_score || 50);
         
-        const overviewEl = document.getElementById('analysisOverview');
-        if (overviewEl) {
-            overviewEl.classList.remove('trust-high', 'trust-medium', 'trust-low');
-            if (trustScore >= 70) {
-                overviewEl.classList.add('trust-high');
-            } else if (trustScore >= 40) {
-                overviewEl.classList.add('trust-medium');
-            } else {
-                overviewEl.classList.add('trust-low');
-            }
+        // Update article information
+        this.updateArticleInfo(data);
+        
+        // Update findings summary
+        this.updateFindingsSummary(data);
+        
+        // Display all service analyses
+        if (window.ServiceTemplates) {
+            window.ServiceTemplates.displayAllAnalyses(data, this);
         }
         
-        const summaryEl = document.getElementById('articleSummary');
-        if (summaryEl) {
-            summaryEl.textContent = articleSummary.length > 100 ? 
-                articleSummary.substring(0, 100) + '...' : articleSummary;
-        }
-        
-        const sourceEl = document.getElementById('articleSource');
-        if (sourceEl) sourceEl.textContent = source;
-        
-        const authorEl = document.getElementById('articleAuthor');
-        if (authorEl) authorEl.textContent = author;
-        
-        const findingsEl = document.getElementById('findingsSummary');
-        if (findingsEl) {
-            findingsEl.textContent = findingsSummary;
-        }
-        
-        if (typeof updateEnhancedTrustDisplay === 'function') {
-            updateEnhancedTrustDisplay(data);
-        }
-        
+        // Show results section
         this.showResults();
+        
+        // Scroll to results
+        this.resultsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    handleAnalysisError(error) {
+        let errorMessage = 'An error occurred during analysis. ';
+        
+        if (error.name === 'AbortError') {
+            errorMessage = 'Analysis timed out. Please try again.';
+        } else if (error.message.includes('fetch')) {
+            errorMessage = 'Network error. Please check your connection.';
+        } else {
+            errorMessage += error.message || 'Please try again.';
+        }
+        
+        this.showError(errorMessage);
+        this.hideResults();
     }
 
     updateTrustScore(score) {
         const scoreElement = document.getElementById('trustScore');
         const labelElement = document.getElementById('trustLabel');
         
-        if (scoreElement) scoreElement.textContent = Math.round(score);
+        if (scoreElement) {
+            scoreElement.textContent = Math.round(score);
+            
+            // Update color based on score
+            scoreElement.className = 'trust-score-number';
+            if (score >= 80) {
+                scoreElement.classList.add('trust-high');
+            } else if (score >= 50) {
+                scoreElement.classList.add('trust-medium');
+            } else {
+                scoreElement.classList.add('trust-low');
+            }
+        }
         
         if (labelElement) {
             if (score >= 80) {
                 labelElement.textContent = 'Highly Trustworthy';
-                if (scoreElement) scoreElement.className = 'trust-score-number trust-high';
             } else if (score >= 60) {
                 labelElement.textContent = 'Generally Trustworthy';
-                if (scoreElement) scoreElement.className = 'trust-score-number trust-medium';
             } else if (score >= 40) {
                 labelElement.textContent = 'Moderate Trust';
-                if (scoreElement) scoreElement.className = 'trust-score-number trust-medium';
             } else {
                 labelElement.textContent = 'Low Trustworthiness';
-                if (scoreElement) scoreElement.className = 'trust-score-number trust-low';
             }
         }
     }
 
-    showResults() {
-        if (this.resultsSection) {
-            this.resultsSection.classList.add('show');
-            this.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    updateArticleInfo(data) {
+        // Update article summary
+        const summaryElement = document.getElementById('articleSummary');
+        if (summaryElement) {
+            summaryElement.textContent = data.article_summary || 'No summary available';
+        }
+        
+        // Update source
+        const sourceElement = document.getElementById('articleSource');
+        if (sourceElement) {
+            sourceElement.textContent = data.source || 'Unknown source';
+        }
+        
+        // Update author
+        const authorElement = document.getElementById('articleAuthor');
+        if (authorElement) {
+            const cleanAuthor = this.cleanAuthorName(data.author);
+            authorElement.textContent = cleanAuthor || 'Unknown author';
         }
     }
 
-    setLoading(loading) {
+    updateFindingsSummary(data) {
+        const findingsElement = document.getElementById('findingsSummary');
+        if (findingsElement) {
+            findingsElement.textContent = data.findings_summary || 
+                'Analysis complete. Review individual service results for detailed insights.';
+        }
+    }
+
+    cleanAuthorName(authorString) {
+        if (!authorString || typeof authorString !== 'string') {
+            return 'Unknown Author';
+        }
+
+        let cleaned = authorString;
+        
+        // Remove common prefixes
+        cleaned = cleaned.replace(/^by\s*/i, '');
+        
+        // Handle pipe-separated data
+        if (cleaned.includes('|')) {
+            cleaned = cleaned.split('|')[0].trim();
+        }
+        
+        // Remove email addresses
+        cleaned = cleaned.replace(/\S+@\S+\.\S+/g, '').trim();
+        
+        // Remove timestamps and metadata
+        cleaned = cleaned.replace(/\b(UPDATED|PUBLISHED|POSTED|MODIFIED):.*/gi, '').trim();
+        
+        // Remove organization suffixes
+        const orgPatterns = [
+            /,?\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer).*$/i,
+            /,?\s*(Chicago Tribune|New York Times|Washington Post|CNN|Fox News|Reuters|Associated Press|AP|BBC|NPR).*$/i
+        ];
+        
+        for (const pattern of orgPatterns) {
+            cleaned = cleaned.replace(pattern, '').trim();
+        }
+        
+        // Final validation
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+        
+        if (!cleaned || cleaned.length < 2) {
+            return 'Unknown Author';
+        }
+        
+        // Proper case
+        return cleaned.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    showProgress() {
+        if (this.progressContainer) {
+            this.progressContainer.style.display = 'block';
+            this.animateProgress();
+        }
+    }
+
+    hideProgress() {
+        if (this.progressContainer) {
+            this.progressContainer.style.display = 'none';
+            this.progressBar.style.width = '0%';
+            this.progressPercentage.textContent = '0%';
+        }
+    }
+
+    animateProgress() {
+        let progress = 0;
+        const interval = setInterval(() => {
+            if (!this.isAnalyzing || progress >= 90) {
+                clearInterval(interval);
+                return;
+            }
+            
+            progress += Math.random() * 10;
+            progress = Math.min(progress, 90);
+            
+            if (this.progressBar) {
+                this.progressBar.style.width = `${progress}%`;
+            }
+            if (this.progressPercentage) {
+                this.progressPercentage.textContent = `${Math.round(progress)}%`;
+            }
+        }, 500);
+    }
+
+    showResults() {
+        if (this.resultsSection) {
+            this.resultsSection.style.display = 'block';
+        }
+    }
+
+    hideResults() {
+        if (this.resultsSection) {
+            this.resultsSection.style.display = 'none';
+        }
+    }
+
+    showError(message) {
+        const errorElement = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        
+        if (errorText) {
+            errorText.textContent = message;
+        }
+        
+        if (errorElement) {
+            errorElement.style.display = 'block';
+            errorElement.classList.add('active');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorElement.classList.remove('active');
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 300);
+            }, 5000);
+        }
+    }
+
+    handleReset() {
+        // Clear form
+        this.form?.reset();
+        
+        // Hide results
+        this.hideResults();
+        
+        // Clear stored data
+        this.currentAnalysisData = null;
+        window.analysisData = null;
+        
+        // Reset UI state
+        this.updateUIState('ready');
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    updateUIState(state) {
         if (this.analyzeBtn) {
-            this.analyzeBtn.disabled = loading;
-            this.analyzeBtn.innerHTML = loading ? 
+            this.analyzeBtn.disabled = state === 'analyzing';
+            this.analyzeBtn.innerHTML = state === 'analyzing' ? 
                 '<i class="fas fa-spinner fa-spin"></i> Analyzing...' : 
                 '<i class="fas fa-search"></i> Analyze Article';
         }
     }
 }
 
-// FIXED dropdown toggle - properly access nested data
+// Global dropdown toggle function
 window.toggleServiceDropdown = function(serviceId) {
     const dropdown = document.getElementById(`${serviceId}Dropdown`);
     const content = document.getElementById(`${serviceId}Content`);
@@ -345,23 +418,31 @@ window.toggleServiceDropdown = function(serviceId) {
     
     if (!dropdown || !content) return;
     
-    dropdown.classList.toggle('active');
+    const isOpen = content.style.display !== 'none';
     
-    if (content.style.display === 'none' || content.style.display === '') {
+    if (isOpen) {
+        // Close dropdown
+        content.style.display = 'none';
+        dropdown.classList.remove('active');
+        if (toggle) {
+            toggle.className = 'fas fa-chevron-down';
+        }
+    } else {
+        // Open dropdown and populate content
         content.style.display = 'block';
+        dropdown.classList.add('active');
+        if (toggle) {
+            toggle.className = 'fas fa-chevron-up';
+        }
         
-        // Always populate the content when opening
+        // Populate content if data is available
         if (window.analysisData && window.ServiceTemplates) {
-            // Get template and populate it
-            content.innerHTML = window.ServiceTemplates.getTemplate(serviceId);
-            
-            // Get the detailed analysis data properly
             const detailed = window.analysisData.detailed_analysis || {};
             
-            // Map service IDs to backend keys
+            // Map frontend IDs to backend keys
             const serviceMapping = {
                 'sourceCredibility': 'source_credibility',
-                'biasDetector': 'bias_detector', 
+                'biasDetector': 'bias_detector',
                 'factChecker': 'fact_checker',
                 'transparencyAnalyzer': 'transparency_analyzer',
                 'manipulationDetector': 'manipulation_detector',
@@ -372,56 +453,21 @@ window.toggleServiceDropdown = function(serviceId) {
             const backendKey = serviceMapping[serviceId] || serviceId;
             const serviceData = detailed[backendKey] || {};
             
-            console.log(`Populating ${serviceId} with data:`, serviceData);
+            // Get template and populate
+            content.innerHTML = window.ServiceTemplates.getTemplate(serviceId);
             
-            // Call the appropriate display function with the correct data
-            switch(serviceId) {
-                case 'sourceCredibility':
-                    window.ServiceTemplates.displaySourceCredibility(serviceData, window.analyzer);
-                    break;
-                case 'biasDetector':
-                    window.ServiceTemplates.displayBiasDetection(serviceData, window.analyzer);
-                    break;
-                case 'factChecker':
-                    window.ServiceTemplates.displayFactChecking(serviceData, window.analyzer);
-                    break;
-                case 'transparencyAnalyzer':
-                    window.ServiceTemplates.displayTransparencyAnalysis(serviceData, window.analyzer);
-                    break;
-                case 'manipulationDetector':
-                    window.ServiceTemplates.displayManipulationDetection(serviceData, window.analyzer);
-                    break;
-                case 'contentAnalyzer':
-                    window.ServiceTemplates.displayContentAnalysis(
-                        serviceData,
-                        detailed.openai_enhancer || {},
-                        window.analyzer
-                    );
-                    break;
-                case 'author':
-                    window.ServiceTemplates.displayAuthorAnalysis(
-                        serviceData,
-                        window.analysisData.author || serviceData.author_name || 'Unknown',
-                        window.analyzer
-                    );
-                    break;
+            // Call appropriate display function
+            const displayMethod = `display${serviceId.charAt(0).toUpperCase() + serviceId.slice(1)}`;
+            if (typeof window.ServiceTemplates[displayMethod] === 'function') {
+                window.ServiceTemplates[displayMethod](serviceData, window.analyzer);
             }
-        } else {
-            content.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;">No analysis data available. Please analyze an article first.</div>';
         }
-    } else {
-        content.style.display = 'none';
-    }
-    
-    if (toggle) {
-        toggle.classList.toggle('fa-chevron-down');
-        toggle.classList.toggle('fa-chevron-up');
     }
 };
 
-// Initialize
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing TruthLens Analyzer...');
     window.analyzer = new TruthLensAnalyzer();
+    console.log('TruthLens Analyzer initialized successfully');
 });
-
-window.TruthLensAnalyzer = TruthLensAnalyzer;
