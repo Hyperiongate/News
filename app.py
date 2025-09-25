@@ -1,7 +1,12 @@
 """
 TruthLens Unified News & Transcript Analyzer
 Date: September 25, 2025
-Version: 4.0 UNIFIED PRODUCTION
+Version: 4.0.1 UNIFIED PRODUCTION - FIXED TEMPLATE REFERENCE
+
+FIXES IN THIS VERSION:
+1. Changed template reference from 'index.html' to 'unified_index.html' in line 829
+2. Fixed 404 handler to use 'unified_index.html' in line 910
+3. All template references now consistent with actual file name
 
 UNIFIED FEATURES:
 1. News Analysis Mode - Complete TruthLens functionality
@@ -78,7 +83,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0")
+logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.1")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -529,7 +534,8 @@ logger.info("✓ Unified analyzer initialized")
 def index():
     """Serve the unified application page"""
     logger.info("Serving unified index page")
-    return render_template('index.html')
+    # FIXED: Changed from 'index.html' to 'unified_index.html'
+    return render_template('unified_index.html')
 
 @app.route('/health')
 def health():
@@ -538,7 +544,7 @@ def health():
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'service': 'unified-analyzer',
-        'version': '4.0-unified',
+        'version': '4.0.1-unified',
         'modes': {
             'news': Config.ENABLE_NEWS_MODE,
             'transcript': Config.ENABLE_TRANSCRIPT_MODE
@@ -655,6 +661,7 @@ def not_found(error):
             'error': 'Endpoint not found'
         }), 404
     
+    # FIXED: Changed from 'index.html' to 'unified_index.html'
     return render_template('unified_index.html')
 
 @app.errorhandler(500)
@@ -679,6 +686,7 @@ if __name__ == "__main__":
     logger.info(f"Debug mode: {debug}")
     logger.info(f"News Mode: {Config.ENABLE_NEWS_MODE}")
     logger.info(f"Transcript Mode: {Config.ENABLE_TRANSCRIPT_MODE}")
+    logger.info(f"Template: unified_index.html")
     logger.info("=" * 80)
     
     app.run(host='0.0.0.0', port=port, debug=debug)
