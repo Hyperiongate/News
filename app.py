@@ -529,7 +529,7 @@ logger.info("✓ Unified analyzer initialized")
 def index():
     """Serve the unified application page"""
     logger.info("Serving unified index page")
-    return render_template('unified_index.html')
+    return render_template('index.html')
 
 @app.route('/health')
 def health():
