@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="AI-powered analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.">
+    <title>TruthLens - Unified AI-Powered Analysis</title>
+    <meta name="description" content="AI-powered analysis for news credibility and transcript fact-checking. Multi-mode analyzer supporting news articles and YouTube transcripts.">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
@@ -21,412 +21,185 @@
     <link rel="stylesheet" href="/static/css/main.css">
     
     <style>
-        :root {
-            /* Vibrant Color Palette */
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --primary-light: #60a5fa;
-            --secondary: #10b981;
-            --accent: #f59e0b;
-            --purple: #8b5cf6;
-            --pink: #ec4899;
-            --orange: #f97316;
-            --teal: #14b8a6;
-            --indigo: #6366f1;
-            --cyan: #06b6d4;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-            
-            /* Neutrals */
-            --white: #ffffff;
-            --gray-50: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --gray-800: #1e293b;
-            --gray-900: #0f172a;
-            
-            /* Typography */
-            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            
-            /* Border radius */
-            --radius-sm: 0.375rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            --radius-2xl: 1.5rem;
-            --radius-full: 9999px;
-            
-            /* Transitions */
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Enhanced Trust Score Display Styles */
-        .enhanced-analysis-overview {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-radius: 20px;
-            padding: 2rem;
+        /* Enhanced tab styles for unified interface */
+        .mode-selector {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 0.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-            position: relative;
-            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
         }
 
-        /* Animated background effect */
-        .enhanced-analysis-overview::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
-            animation: rotate 30s linear infinite;
-        }
-
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Trust Score Circular Display */
-        .trust-score-visual {
+        .mode-tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
-            gap: 3rem;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .score-circle-container {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            flex-shrink: 0;
-        }
-
-        .score-circle-bg {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: conic-gradient(
-                from 0deg,
-                #ef4444 0deg,
-                #f59e0b 72deg,
-                #eab308 144deg,
-                #10b981 216deg,
-                #06b6d4 288deg,
-                #3b82f6 360deg
-            );
-            padding: 8px;
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
-            animation: pulse-glow 3s ease-in-out infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { 
-                box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
-                transform: scale(1);
-            }
-            50% { 
-                box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
-                transform: scale(1.02);
-            }
-        }
-
-        .score-circle-inner {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: white;
-            display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            position: relative;
-        }
-
-        .trust-score-big {
-            font-size: 4rem;
-            font-weight: 900;
-            line-height: 1;
-            font-family: var(--font-display);
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: score-shimmer 3s ease-in-out infinite;
-        }
-
-        .trust-score-big.high {
-            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .trust-score-big.medium {
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .trust-score-big.low {
-            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        @keyframes score-shimmer {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.2); }
-        }
-
-        .trust-score-max {
-            font-size: 1.25rem;
-            color: #94a3b8;
-            margin-top: 0.25rem;
-        }
-
-        .trust-label-badge {
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 0.5rem 1.5rem;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            color: white;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-            white-space: nowrap;
-        }
-
-        .trust-label-badge.high {
-            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-        }
-
-        .trust-label-badge.medium {
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
-        }
-
-        .trust-label-badge.low {
-            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-        }
-
-        /* Score Breakdown Section */
-        .score-details-section {
-            flex: 1;
-        }
-
-        .score-breakdown-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
             gap: 0.5rem;
-            font-family: var(--font-display);
-        }
-
-        .calculation-method {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .calculation-method-title {
-            font-weight: 600;
-            color: #3b82f6;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .calculation-method-text {
             color: #64748b;
-            font-size: 0.875rem;
+        }
+
+        .mode-tab.active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .mode-tab:hover:not(.active) {
+            background: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
+        }
+
+        .mode-tab i {
+            font-size: 1.1rem;
+        }
+
+        /* Mode-specific content */
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        /* Enhanced input styles for transcript mode */
+        .transcript-textarea {
+            min-height: 200px;
+            font-family: 'Inter', monospace;
+            font-size: 0.9rem;
             line-height: 1.6;
         }
 
-        /* Service Contribution Bars */
-        .service-contributions {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.25rem;
-        }
-
-        .contributions-title {
-            font-weight: 600;
-            color: #475569;
+        /* YouTube URL helper */
+        .youtube-helper {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.05) 0%, rgba(255, 0, 0, 0.02) 100%);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
             margin-bottom: 1rem;
             font-size: 0.9rem;
+            color: #dc2626;
         }
 
-        .contribution-item {
+        /* Content type indicator */
+        .content-type-indicator {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #6366f1;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .content-type-indicator.show {
+            opacity: 1;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        /* Enhanced mode descriptions */
+        .mode-description {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .mode-description h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
-            margin-bottom: 0.75rem;
-            position: relative;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
-        .contribution-label {
-            flex: 0 0 140px;
-            font-size: 0.8rem;
+        .mode-description p {
             color: #64748b;
-            font-weight: 500;
+            font-size: 0.95rem;
         }
 
-        .contribution-bar-container {
-            flex: 1;
-            height: 24px;
-            background: #e2e8f0;
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .contribution-bar {
-            height: 100%;
-            border-radius: 12px;
-            transition: width 1s ease-out;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .contribution-bar::after {
-            content: '';
+        /* Analysis mode indicator in results */
+        .analysis-mode-badge {
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        .contribution-score {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-
-        .contribution-weight {
-            margin-left: 0.5rem;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            font-weight: 600;
-        }
-
-        /* Service specific colors */
-        .contribution-source { background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%); }
-        .contribution-author { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); }
-        .contribution-bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
-        .contribution-facts { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
-        .contribution-transparency { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
-        .contribution-manipulation { background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); }
-        .contribution-content { background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); }
-
-        /* Article Info Section */
-        .article-info-section {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            font-size: 0.75rem;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #94a3b8;
         }
 
-        .info-value {
-            font-size: 0.95rem;
+        .analysis-mode-badge.news {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .analysis-mode-badge.transcript {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        /* Source type indicators in results */
+        .source-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: #f1f5f9;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: 500;
-            color: #334155;
+            color: #475569;
+            margin-left: 0.5rem;
         }
 
-        .findings-text {
-            color: #64748b;
-            line-height: 1.6;
-            font-size: 0.95rem;
+        .source-type-badge.youtube {
+            background: rgba(255, 0, 0, 0.1);
+            color: #dc2626;
         }
 
-        /* Responsive Design for Enhanced Overview */
+        .source-type-badge.news {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        /* Responsive design */
         @media (max-width: 768px) {
-            .trust-score-visual {
+            .mode-selector {
                 flex-direction: column;
-                gap: 2rem;
-            }
-            
-            .score-circle-container {
-                margin: 0 auto;
-            }
-            
-            .info-grid {
-                grid-template-columns: 1fr;
+                gap: 0.5rem;
             }
 
-            .contribution-label {
-                flex: 0 0 100px;
-                font-size: 0.75rem;
-            }
-
-            .contribution-weight {
-                font-size: 0.7rem;
+            .mode-tab {
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <!-- 
-    FIXED: January 27, 2025
-    - Removed duplicate Source Credibility Rankings section
-    - Keeping only the compact ranking chart with icons
-    - Icons are now integrated into app-core.js
-    -->
-    
     <!-- Header -->
     <header class="header">
         <div class="header-content">
@@ -453,77 +226,172 @@
         <section class="analysis-section">
             <div class="section-header">
                 <h1 class="main-title">
-                    AI-Powered <span class="gradient-text">News Credibility</span> Analysis
+                    Unified AI-Powered <span class="gradient-text">Analysis Platform</span>
                 </h1>
                 <p class="subtitle">
-                    Advanced AI analysis evaluates multiple credibility factors including source reputation, author expertise, bias detection, and fact-checking.
+                    Advanced AI analysis for news credibility evaluation and transcript fact-checking. 
+                    Choose your analysis mode and get comprehensive insights.
                 </p>
                 
                 <div class="trust-badges">
                     <div class="trust-badge">
                         <i class="fas fa-shield-alt"></i>
-                        <span>AI-Powered</span>
+                        <span>Dual-Mode Analysis</span>
                     </div>
                     <div class="trust-badge">
                         <i class="fas fa-bolt"></i>
-                        <span>Real-time Analysis</span>
+                        <span>Real-time Processing</span>
                     </div>
                     <div class="trust-badge">
                         <i class="fas fa-chart-line"></i>
-                        <span>Multi-Factor Analysis</span>
+                        <span>Multi-Factor Scoring</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Form -->
-            <form class="input-form" id="analysisForm">
-                <div class="input-group">
-                    <label class="input-label" for="urlInput">
-                        <i class="fas fa-link"></i> Article URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="urlInput" 
-                        class="input-field" 
-                        placeholder="https://example.com/news-article"
-                        required
-                    >
+            <!-- Mode Selector -->
+            <div class="mode-selector">
+                <button class="mode-tab active" data-mode="news" onclick="switchMode('news')">
+                    <i class="fas fa-newspaper"></i>
+                    <span>News Analysis</span>
+                </button>
+                <button class="mode-tab" data-mode="transcript" onclick="switchMode('transcript')">
+                    <i class="fas fa-video"></i>
+                    <span>Transcript Analysis</span>
+                </button>
+            </div>
+
+            <!-- News Analysis Mode -->
+            <div class="mode-content active" id="news-mode">
+                <div class="mode-description">
+                    <h3>
+                        <i class="fas fa-newspaper"></i>
+                        News Credibility Analysis
+                    </h3>
+                    <p>
+                        Comprehensive analysis of news articles including source credibility, bias detection, 
+                        fact-checking, author verification, and content quality assessment.
+                    </p>
                 </div>
 
-                <div class="input-group">
-                    <label class="input-label" for="textInput">
-                        <i class="fas fa-file-text"></i> Or Paste Article Text
-                    </label>
-                    <textarea 
-                        id="textInput" 
-                        class="input-field textarea-field" 
-                        placeholder="Paste the article text here for analysis...
+                <form class="input-form" id="newsForm">
+                    <div class="input-group">
+                        <label class="input-label" for="newsUrlInput">
+                            <i class="fas fa-link"></i> Article URL
+                        </label>
+                        <input 
+                            type="url" 
+                            id="newsUrlInput" 
+                            class="input-field" 
+                            placeholder="https://example.com/news-article"
+                        >
+                        <div class="content-type-indicator" id="newsTypeIndicator">NEWS</div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="newsTextInput">
+                            <i class="fas fa-file-text"></i> Or Paste Article Text
+                        </label>
+                        <textarea 
+                            id="newsTextInput" 
+                            class="input-field textarea-field" 
+                            placeholder="Paste the article text here for analysis...
 
 Note: If a site blocks URL scraping, you can copy the article text directly from your browser and paste it here."
-                    ></textarea>
+                        ></textarea>
+                        <div class="content-type-indicator" id="newsTextTypeIndicator">TEXT</div>
+                    </div>
+
+                    <div class="button-container">
+                        <button type="submit" class="analyze-button" id="newsAnalyzeBtn">
+                            <div class="button-content">
+                                <span class="button-text">
+                                    <i class="fas fa-search"></i>
+                                    Analyze Article
+                                </span>
+                            </div>
+                        </button>
+                        <button type="button" class="reset-button" onclick="resetForm('news')">
+                            <i class="fas fa-redo"></i>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Transcript Analysis Mode -->
+            <div class="mode-content" id="transcript-mode">
+                <div class="mode-description">
+                    <h3>
+                        <i class="fas fa-video"></i>
+                        Transcript Fact-Checking
+                    </h3>
+                    <p>
+                        In-depth analysis of video transcripts and spoken content. Extract claims, verify facts, 
+                        and assess credibility of information from YouTube videos or transcript text.
+                    </p>
                 </div>
 
-                <div class="button-container">
-                    <button type="submit" class="analyze-button" id="analyzeBtn">
-                        <div class="button-content">
-                            <span class="button-text">
-                                <i class="fas fa-search"></i>
-                                Analyze Article
-                            </span>
-                        </div>
-                    </button>
-                    <button type="button" class="reset-button" id="resetBtn">
-                        <i class="fas fa-redo"></i>
-                        Reset
-                    </button>
-                </div>
-            </form>
+                <form class="input-form" id="transcriptForm">
+                    <div class="input-group">
+                        <label class="input-label" for="youtubeUrlInput">
+                            <i class="fab fa-youtube"></i> YouTube URL
+                        </label>
+                        <input 
+                            type="url" 
+                            id="youtubeUrlInput" 
+                            class="input-field" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                        >
+                        <div class="content-type-indicator" id="youtubeTypeIndicator">YOUTUBE</div>
+                    </div>
 
-            <!-- Progress Container -->
+                    <div class="youtube-helper">
+                        <strong>YouTube Analysis:</strong> We'll automatically extract the transcript and analyze 
+                        claims for accuracy. If transcript extraction fails, you can paste the content manually below.
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="transcriptTextInput">
+                            <i class="fas fa-microphone"></i> Or Paste Transcript Text
+                        </label>
+                        <textarea 
+                            id="transcriptTextInput" 
+                            class="input-field textarea-field transcript-textarea" 
+                            placeholder="Paste video transcript or spoken content here for fact-checking...
+
+You can paste:
+- YouTube video transcript
+- Podcast transcript  
+- Speech text
+- Interview content
+- Any spoken content for analysis"
+                        ></textarea>
+                        <div class="content-type-indicator" id="transcriptTextTypeIndicator">TRANSCRIPT</div>
+                    </div>
+
+                    <div class="button-container">
+                        <button type="submit" class="analyze-button" id="transcriptAnalyzeBtn">
+                            <div class="button-content">
+                                <span class="button-text">
+                                    <i class="fas fa-video"></i>
+                                    Analyze Transcript
+                                </span>
+                            </div>
+                        </button>
+                        <button type="button" class="reset-button" onclick="resetForm('transcript')">
+                            <i class="fas fa-redo"></i>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Progress Container (Shared) -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-header">
-                    <h3 class="progress-title">Analyzing Article...</h3>
-                    <p class="progress-subtitle">Our AI is examining multiple credibility factors</p>
+                    <h3 class="progress-title">Analyzing Content...</h3>
+                    <p class="progress-subtitle">Our AI is examining multiple factors</p>
                 </div>
                 
                 <div class="progress-percentage" id="progressPercentage">0%</div>
@@ -564,159 +432,29 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
             <div class="results-section" id="resultsSection">
                 <div class="results-header">
                     <h2 class="results-title">Analysis Complete</h2>
+                    <div class="analysis-mode-badge" id="analysisModebadge">News</div>
                 </div>
 
-                <!-- Enhanced Analysis Overview -->
+                <!-- Enhanced Analysis Overview (Shared) -->
                 <div class="enhanced-analysis-overview" id="enhancedAnalysisOverview">
-                    <div class="trust-score-visual">
-                        <!-- Circular Trust Score Display -->
-                        <div class="score-circle-container">
-                            <div class="score-circle-bg">
-                                <div class="score-circle-inner">
-                                    <div class="trust-score-big" id="trustScoreBig">85</div>
-                                    <div class="trust-score-max">/100</div>
-                                    <div class="trust-label-badge" id="trustLabelBadge">Highly Trustworthy</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Score Details and Breakdown -->
-                        <div class="score-details-section">
-                            <h3 class="score-breakdown-title">
-                                <i class="fas fa-chart-line"></i>
-                                Trust Score Analysis
-                            </h3>
-
-                            <!-- How It's Calculated -->
-                            <div class="calculation-method">
-                                <div class="calculation-method-title">How We Calculate Your Score</div>
-                                <div class="calculation-method-text">
-                                    Our AI analyzes 7 critical factors using advanced algorithms. Each service contributes a weighted percentage to the final score based on its importance to overall credibility. The score reflects source reputation, factual accuracy, bias levels, transparency, and content quality.
-                                </div>
-                            </div>
-
-                            <!-- Service Contributions -->
-                            <div class="service-contributions">
-                                <div class="contributions-title">Score Breakdown by Service</div>
-                                
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Source Credibility</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-source" style="width: 0%" id="contribSource">
-                                            <span class="contribution-score">0/25</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">25%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Bias Detection</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-bias" style="width: 0%" id="contribBias">
-                                            <span class="contribution-score">0/20</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">20%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Author Analysis</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-author" style="width: 0%" id="contribAuthor">
-                                            <span class="contribution-score">0/15</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">15%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Fact Checking</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-facts" style="width: 0%" id="contribFacts">
-                                            <span class="contribution-score">0/15</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">15%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Transparency</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-transparency" style="width: 0%" id="contribTransparency">
-                                            <span class="contribution-score">0/10</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">10%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Manipulation Check</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
-                                            <span class="contribution-score">0/10</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">10%</span>
-                                </div>
-
-                                <div class="contribution-item">
-                                    <span class="contribution-label">Content Quality</span>
-                                    <div class="contribution-bar-container">
-                                        <div class="contribution-bar contribution-content" style="width: 0%" id="contribContent">
-                                            <span class="contribution-score">0/5</span>
-                                        </div>
-                                    </div>
-                                    <span class="contribution-weight">5%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Article Information Section -->
-                    <div class="article-info-section">
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Article Summary</span>
-                                <span class="info-value" id="articleSummary">Loading...</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Source</span>
-                                <span class="info-value" id="articleSource">Loading...</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Author</span>
-                                <span class="info-value" id="articleAuthor">Loading...</span>
-                            </div>
-                        </div>
-                        <div class="findings-text" id="findingsSummary">
-                            Loading comprehensive analysis findings...
-                        </div>
-                    </div>
+                    <!-- Analysis mode will be shown here -->
+                    <!-- Trust score and breakdown will be populated dynamically -->
                 </div>
 
-                <!-- Keep Old Overview Hidden (for backward compatibility) -->
-                <div class="analysis-overview" id="analysisOverview" style="display: none;">
-                    <div class="trust-score-graphic">
-                        <div class="trust-score-number" id="trustScore">85</div>
-                        <div class="trust-score-label" id="trustLabel">Highly Trustworthy</div>
-                    </div>
-                </div>
-
-                <!-- Service Analysis Dropdowns Container -->
+                <!-- Service Analysis Dropdowns Container (Shared) -->
                 <div id="serviceAnalysisContainer">
                     <!-- Service dropdowns will be dynamically inserted here -->
                 </div>
 
-                <!-- Debug Info Section -->
-                <div class="debug-info" id="debugInfo" style="display: none;">
-                    <h5>Debug Information (Development Only):</h5>
-                    <pre id="debugData"></pre>
+                <!-- Source/Content Information -->
+                <div class="source-info-section" id="sourceInfoSection">
+                    <!-- Mode-specific source information will be shown here -->
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Error Message -->
+    <!-- Error Message (Shared) -->
     <div id="errorMessage" class="error-message" style="display: none;">
         <div class="error-content">
             <div class="error-icon">
@@ -729,7 +467,7 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
         </div>
     </div>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay (Shared) -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="loading-content">
             <div class="loading-spinner">
@@ -738,75 +476,258 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 <div class="spinner-ring"></div>
                 <div class="spinner-ring"></div>
             </div>
-            <h3 class="loading-title">Analyzing Article...</h3>
-            <p class="loading-subtitle">Our AI is examining multiple credibility factors</p>
+            <h3 class="loading-title">Analyzing Content...</h3>
+            <p class="loading-subtitle">Processing through AI analysis pipeline</p>
         </div>
     </div>
 
-    <!-- UPDATED: Load the two JavaScript files in the correct order -->
+    <!-- Load JavaScript files in correct order -->
     <!-- Load Service Templates FIRST -->
     <script src="/static/js/service-templates.js"></script>
     
-    <!-- Load Main Application Core SECOND -->
-    <script src="/static/js/app-core.js"></script>
+    <!-- Load Unified Application Core SECOND -->
+    <script src="/static/js/unified-app-core.js"></script>
     
-    <!-- Enhanced Trust Score Display Functions -->
+    <!-- Enhanced Trust Score Display Functions (from original) -->
     <script>
+        // Global state for current mode
+        let currentAnalysisMode = 'news';
+
+        // Mode switching functionality
+        function switchMode(mode) {
+            currentAnalysisMode = mode;
+            
+            // Update tab active states
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mode === mode);
+            });
+            
+            // Update content visibility
+            document.querySelectorAll('.mode-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${mode}-mode`);
+            });
+            
+            // Update progress subtitle
+            const subtitle = document.querySelector('.progress-subtitle');
+            if (subtitle) {
+                subtitle.textContent = mode === 'news' 
+                    ? 'Our AI is examining multiple credibility factors'
+                    : 'Our AI is analyzing transcript content and claims';
+            }
+            
+            console.log(`Switched to ${mode} mode`);
+        }
+
+        // Reset form functionality
+        function resetForm(mode) {
+            if (mode === 'news') {
+                document.getElementById('newsForm').reset();
+            } else {
+                document.getElementById('transcriptForm').reset();
+            }
+            
+            // Hide results
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+            
+            // Hide progress
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) {
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        // Content type detection (visual feedback)
+        function updateContentTypeIndicator() {
+            // This will be implemented in the main JS file
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Unified TruthLens interface loaded');
+            
+            // Set up input field monitoring for visual feedback
+            const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', updateContentTypeIndicator);
+                }
+            });
+        });
+
+        // Keep the existing trust score display functions from original
         function updateEnhancedTrustDisplay(data) {
             const trustScore = data.trust_score || 0;
             const detailed = data.detailed_analysis || {};
+            const analysisMode = data.analysis_mode || 'news';
             
-            // Update main score
-            const scoreEl = document.getElementById('trustScoreBig');
-            const labelEl = document.getElementById('trustLabelBadge');
-            
-            // Also update the old elements for backward compatibility
-            const oldScoreEl = document.getElementById('trustScore');
-            const oldLabelEl = document.getElementById('trustLabel');
-            
-            scoreEl.textContent = Math.round(trustScore);
-            if (oldScoreEl) oldScoreEl.textContent = Math.round(trustScore);
-            
-            // Update styling based on score
-            let label = '';
-            let className = '';
-            if (trustScore >= 80) {
-                label = 'Highly Trustworthy';
-                className = 'high';
-            } else if (trustScore >= 60) {
-                label = 'Generally Trustworthy';
-                className = 'medium';
-            } else if (trustScore >= 40) {
-                label = 'Moderate Trust';
-                className = 'medium';
-            } else {
-                label = 'Low Trustworthiness';
-                className = 'low';
+            // Update analysis mode badge
+            const modeBadge = document.getElementById('analysisModeBadge');
+            if (modeBadge) {
+                modeBadge.textContent = analysisMode === 'news' ? 'News Analysis' : 'Transcript Analysis';
+                modeBadge.className = `analysis-mode-badge ${analysisMode}`;
             }
             
-            scoreEl.className = 'trust-score-big ' + className;
-            labelEl.className = 'trust-label-badge ' + className;
-            labelEl.textContent = label;
+            // Create enhanced overview HTML
+            const overview = document.getElementById('enhancedAnalysisOverview');
+            if (overview) {
+                overview.innerHTML = createEnhancedOverviewHTML(data);
+            }
             
-            if (oldLabelEl) oldLabelEl.textContent = label;
-            
-            // Calculate and update service contributions with animation
+            // Animate contributions
             setTimeout(() => updateServiceContributions(detailed), 300);
-            
-            // Update article info
-            document.getElementById('articleSummary').textContent = 
-                (data.article_summary || 'Analysis completed').substring(0, 100) + 
-                ((data.article_summary || '').length > 100 ? '...' : '');
-            document.getElementById('articleSource').textContent = 
-                data.source || 'Unknown Source';
-            document.getElementById('articleAuthor').textContent = 
-                data.author || 'Staff Writer';
-            document.getElementById('findingsSummary').textContent =  
-                data.findings_summary || 'This analysis evaluated source credibility, bias levels, fact accuracy, transparency, and content quality to determine overall trustworthiness.';
         }
-        
+
+        function createEnhancedOverviewHTML(data) {
+            const trustScore = data.trust_score || 0;
+            const analysisMode = data.analysis_mode || 'news';
+            
+            let scoreClass = 'medium';
+            let label = 'Moderate Trust';
+            if (trustScore >= 80) {
+                scoreClass = 'high';
+                label = 'Highly Trustworthy';
+            } else if (trustScore >= 60) {
+                label = 'Generally Trustworthy';
+            } else if (trustScore < 40) {
+                scoreClass = 'low';
+                label = 'Low Trustworthiness';
+            }
+
+            return `
+                <div class="trust-score-visual">
+                    <div class="score-circle-container">
+                        <div class="score-circle-bg">
+                            <div class="score-circle-inner">
+                                <div class="trust-score-big ${scoreClass}">${Math.round(trustScore)}</div>
+                                <div class="trust-score-max">/100</div>
+                                <div class="trust-label-badge ${scoreClass}">${label}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="score-details-section">
+                        <h3 class="score-breakdown-title">
+                            <i class="fas fa-chart-line"></i>
+                            ${analysisMode === 'news' ? 'News Credibility' : 'Transcript Accuracy'} Analysis
+                        </h3>
+
+                        <div class="calculation-method">
+                            <div class="calculation-method-title">How We Calculate Your Score</div>
+                            <div class="calculation-method-text">
+                                Our AI analyzes multiple critical factors using advanced algorithms. 
+                                ${analysisMode === 'news' 
+                                    ? 'Each service contributes based on source reputation, factual accuracy, bias levels, and transparency.'
+                                    : 'Each service evaluates claims accuracy, content credibility, and fact verification from the transcript.'}
+                            </div>
+                        </div>
+
+                        <div class="service-contributions">
+                            <div class="contributions-title">Score Breakdown by Service</div>
+                            
+                            <div class="contribution-item">
+                                <span class="contribution-label">Source Credibility</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-source" style="width: 0%" id="contribSource">
+                                        <span class="contribution-score">0/25</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">25%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Bias Detection</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-bias" style="width: 0%" id="contribBias">
+                                        <span class="contribution-score">0/20</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">20%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Author Analysis</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-author" style="width: 0%" id="contribAuthor">
+                                        <span class="contribution-score">0/15</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">15%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Fact Checking</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-facts" style="width: 0%" id="contribFacts">
+                                        <span class="contribution-score">0/15</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">15%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Transparency</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-transparency" style="width: 0%" id="contribTransparency">
+                                        <span class="contribution-score">0/10</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">10%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Manipulation Check</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
+                                        <span class="contribution-score">0/10</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">10%</span>
+                            </div>
+
+                            <div class="contribution-item">
+                                <span class="contribution-label">Content Quality</span>
+                                <div class="contribution-bar-container">
+                                    <div class="contribution-bar contribution-content" style="width: 0%" id="contribContent">
+                                        <span class="contribution-score">0/5</span>
+                                    </div>
+                                </div>
+                                <span class="contribution-weight">5%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="article-info-section">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">${analysisMode === 'news' ? 'Article Summary' : 'Content Title'}</span>
+                            <span class="info-value" id="articleSummary">${data.article_summary || 'Loading...'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Source</span>
+                            <span class="info-value" id="articleSource">
+                                ${data.source || 'Loading...'}
+                                ${data.content_type ? `<span class="source-type-badge ${data.content_type}">${data.content_type.toUpperCase()}</span>` : ''}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">${analysisMode === 'news' ? 'Author' : 'Creator'}</span>
+                            <span class="info-value" id="articleAuthor">${data.author || 'Loading...'}</span>
+                        </div>
+                    </div>
+                    <div class="findings-text" id="findingsSummary">
+                        ${data.findings_summary || 'Loading comprehensive analysis findings...'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Keep existing service contribution functions
         function updateServiceContributions(detailed) {
-            // Service weights as defined in the backend
             const weights = {
                 source_credibility: 0.25,
                 author_analyzer: 0.15,
@@ -817,56 +738,23 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 content_analyzer: 0.05
             };
             
-            // Update each service contribution bar with animation
-            if (detailed.source_credibility) {
-                const score = detailed.source_credibility.score || detailed.source_credibility.credibility_score || 0;
-                const contribution = (score * weights.source_credibility).toFixed(1);
-                updateContributionBar('contribSource', score, contribution, weights.source_credibility * 100);
-            }
-            
-            if (detailed.bias_detector) {
-                const biasScore = detailed.bias_detector.bias_score || detailed.bias_detector.score || 0;
-                const objectivityScore = 100 - biasScore; // Convert bias to objectivity
-                const contribution = (objectivityScore * weights.bias_detector).toFixed(1);
-                updateContributionBar('contribBias', objectivityScore, contribution, weights.bias_detector * 100);
-            }
-            
-            if (detailed.author_analyzer) {
-                const score = detailed.author_analyzer.score || detailed.author_analyzer.credibility_score || 0;
-                const contribution = (score * weights.author_analyzer).toFixed(1);
-                updateContributionBar('contribAuthor', score, contribution, weights.author_analyzer * 100);
-            }
-            
-            if (detailed.fact_checker) {
-                const score = calculateFactCheckScore(detailed.fact_checker);
-                const contribution = (score * weights.fact_checker).toFixed(1);
-                updateContributionBar('contribFacts', score, contribution, weights.fact_checker * 100);
-            }
-            
-            if (detailed.transparency_analyzer) {
-                const score = calculateTransparencyScore(detailed.transparency_analyzer);
-                const contribution = (score * weights.transparency_analyzer).toFixed(1);
-                updateContributionBar('contribTransparency', score, contribution, weights.transparency_analyzer * 100);
-            }
-            
-            if (detailed.manipulation_detector) {
-                const manipScore = detailed.manipulation_detector.score || detailed.manipulation_detector.manipulation_score || 0;
-                const inverseScore = 100 - manipScore; // Lower manipulation = higher trust
-                const contribution = (inverseScore * weights.manipulation_detector).toFixed(1);
-                updateContributionBar('contribManipulation', inverseScore, contribution, weights.manipulation_detector * 100);
-            }
-            
-            if (detailed.content_analyzer) {
-                const score = detailed.content_analyzer.score || detailed.content_analyzer.quality_score || 0;
-                const contribution = (score * weights.content_analyzer).toFixed(1);
-                updateContributionBar('contribContent', score, contribution, weights.content_analyzer * 100);
-            }
+            // Update each service contribution bar
+            Object.keys(weights).forEach(serviceKey => {
+                if (detailed[serviceKey]) {
+                    const score = detailed[serviceKey].score || 0;
+                    const contribution = (score * weights[serviceKey]).toFixed(1);
+                    const elementId = 'contrib' + serviceKey.split('_').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join('').replace('Analyzer', '').replace('Detector', '');
+                    
+                    updateContributionBar(elementId, score, contribution, weights[serviceKey] * 100);
+                }
+            });
         }
         
         function updateContributionBar(elementId, score, contribution, maxWeight) {
             const bar = document.getElementById(elementId);
             if (bar) {
-                // Animate the bar width
                 setTimeout(() => {
                     bar.style.width = score + '%';
                 }, 100);
@@ -877,44 +765,6 @@ Note: If a site blocks URL scraping, you can copy the article text directly from
                 }
             }
         }
-        
-        function calculateFactCheckScore(data) {
-            const claimsAnalyzed = data.claims_found || data.claims_analyzed || 0;
-            const claimsVerified = data.claims_verified || 0;
-            
-            if (claimsAnalyzed > 0) {
-                return Math.round((claimsVerified / claimsAnalyzed) * 100);
-            }
-            return data.score || 0;
-        }
-        
-        function calculateTransparencyScore(data) {
-            const sourcesCited = data.source_count || data.sources_cited || 0;
-            const quotesUsed = data.quote_count || data.quotes_used || 0;
-            
-            if (sourcesCited > 0 || quotesUsed > 0) {
-                const sourceScore = Math.min(sourcesCited * 8, 50);
-                const quoteScore = Math.min(quotesUsed * 10, 50);
-                return Math.min(sourceScore + quoteScore, 100);
-            }
-            return data.score || data.transparency_score || 0;
-        }
-
-        // Initialize application with updated file structure
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize the TruthLens analyzer when the page loads
-            const analyzer = new TruthLensAnalyzer();
-            
-            // Override displayResults to include enhanced trust display
-            const originalDisplayResults = analyzer.displayResults.bind(analyzer);
-            analyzer.displayResults = function(data) {
-                originalDisplayResults(data);
-                updateEnhancedTrustDisplay(data);
-            };
-            
-            // Make it globally accessible for debugging
-            window.truthLensAnalyzer = analyzer;
-        });
     </script>
 </body>
 </html>
