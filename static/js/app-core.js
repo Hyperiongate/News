@@ -1,7 +1,7 @@
 /**
  * TruthLens Unified Analyzer - Frontend Core
  * Date: September 25, 2025
- * Version: 4.0.0 - UNIFIED VERSION
+ * Version: 4.0.0 - UNIFIED VERSION 
  * 
  * Purpose: Main application logic for dual-mode analysis (news + transcript)
  * Dependencies: Requires service-templates.js to be loaded first
