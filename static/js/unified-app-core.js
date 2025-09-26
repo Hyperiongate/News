@@ -196,6 +196,9 @@ class UnifiedTruthLensAnalyzer {
             this.switchMode('transcript');
         }
         
+        // Add minimum delay to show progress animation
+        const minimumDelay = new Promise(resolve => setTimeout(resolve, 2000));
+        
         try {
             // Create abort controller for timeout
             this.abortController = new AbortController();
@@ -205,17 +208,21 @@ class UnifiedTruthLensAnalyzer {
                 }
             }, 120000); // 2 minute timeout
             
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    input_data: input,
-                    analysis_mode: this.currentMode  // Send current mode
+            // Start both the API call and minimum delay
+            const [response] = await Promise.all([
+                fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        input_data: input,
+                        analysis_mode: this.currentMode  // Send current mode
+                    }),
+                    signal: this.abortController.signal
                 }),
-                signal: this.abortController.signal
-            });
+                minimumDelay // Ensure loading state shows for at least 2 seconds
+            ]);
             
             clearTimeout(timeoutId);
             
@@ -226,6 +233,9 @@ class UnifiedTruthLensAnalyzer {
             }
             
             console.log('[UnifiedTruthLens] Analysis complete:', data);
+            
+            // Smooth transition to results
+            await this.fadeOutLoading();
             
             // Display results
             this.displayResults(data);
@@ -243,6 +253,26 @@ class UnifiedTruthLensAnalyzer {
             this.hideLoadingState();
             this.abortController = null;
         }
+    }
+    
+    async fadeOutLoading() {
+        // Smooth transition from loading to results
+        return new Promise(resolve => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            if (loadingOverlay) {
+                loadingOverlay.style.transition = 'opacity 0.3s ease-out';
+                loadingOverlay.style.opacity = '0';
+            }
+            
+            if (progressContainer) {
+                progressContainer.style.transition = 'opacity 0.3s ease-out';
+                progressContainer.style.opacity = '0';
+            }
+            
+            setTimeout(resolve, 300);
+        });
     }
     
     displayResults(data) {
@@ -404,22 +434,37 @@ class UnifiedTruthLensAnalyzer {
     startProgressAnimation() {
         const progressBar = document.getElementById('progressBar');
         const progressPercentage = document.getElementById('progressPercentage');
+        const steps = document.querySelectorAll('.progress-step');
         
         if (!progressBar) return;
         
         let width = 0;
+        let stepIndex = 0;
+        
+        // Animate progress bar smoothly
         this.progressInterval = setInterval(() => {
-            if (width >= 90) {
+            if (width >= 95) {
                 clearInterval(this.progressInterval);
                 return;
             }
-            width += Math.random() * 10;
+            
+            // Smooth progression
+            const increment = Math.random() * 8 + 2; // 2-10% increments
+            width = Math.min(width + increment, 95);
             progressBar.style.width = width + '%';
+            progressBar.style.transition = 'width 0.5s ease-out';
             
             if (progressPercentage) {
                 progressPercentage.textContent = Math.round(width) + '%';
             }
-        }, 500);
+            
+            // Activate steps progressively
+            const expectedStep = Math.floor((width / 100) * steps.length);
+            while (stepIndex <= expectedStep && stepIndex < steps.length) {
+                steps[stepIndex]?.classList.add('active');
+                stepIndex++;
+            }
+        }, 400); // Update every 400ms for smoother animation
     }
     
     stopProgressAnimation() {
