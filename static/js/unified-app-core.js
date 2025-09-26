@@ -52,10 +52,14 @@ class UnifiedTruthLensAnalyzer {
     setupModeTabs() {
         console.log('[UnifiedTruthLens] Setting up mode tabs...');
         
-        // Create tab structure if it doesn't exist
-        const formContainer = document.querySelector('.form-container');
+        // Try multiple selectors for form container
+        const formContainer = document.querySelector('.form-container') || 
+                            document.querySelector('.input-section') || 
+                            document.querySelector('#inputSection') ||
+                            document.querySelector('form')?.parentElement;
+        
         if (!formContainer) {
-            console.error('[UnifiedTruthLens] Form container not found');
+            console.warn('[UnifiedTruthLens] Form container not found, skipping tab setup');
             return;
         }
         
@@ -107,9 +111,15 @@ class UnifiedTruthLensAnalyzer {
             }
         });
         
-        // Update placeholder and labels
-        const inputField = document.getElementById('urlInput');
-        const inputLabel = document.querySelector('label[for="urlInput"]');
+        // Try multiple selectors for input field
+        const inputField = document.getElementById('urlInput') || 
+                          document.getElementById('input_data') || 
+                          document.querySelector('input[type="text"]') || 
+                          document.querySelector('textarea');
+                          
+        const inputLabel = document.querySelector('label[for="urlInput"]') || 
+                          document.querySelector('label[for="input_data"]') || 
+                          document.querySelector('label');
         
         if (inputField) {
             if (mode === 'transcript') {
@@ -150,9 +160,23 @@ class UnifiedTruthLensAnalyzer {
     setupFormHandlers() {
         console.log('[UnifiedTruthLens] Setting up form handlers...');
         
-        const form = document.getElementById('analysisForm');
+        // Try multiple selectors for the form
+        const form = document.getElementById('analysisForm') || 
+                    document.getElementById('urlForm') || 
+                    document.querySelector('form');
+        
         if (!form) {
-            console.error('[UnifiedTruthLens] Analysis form not found');
+            console.warn('[UnifiedTruthLens] Analysis form not found, trying alternative setup');
+            // Try to find submit button directly
+            const submitBtn = document.querySelector('button[type="submit"]') || 
+                            document.querySelector('.analyze-btn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await this.handleAnalysis();
+                });
+                console.log('[UnifiedTruthLens] Submit button handler attached');
+            }
             return;
         }
         
@@ -170,7 +194,7 @@ class UnifiedTruthLensAnalyzer {
                 return;
             }
             
-            await this.analyzeContent(input.value.trim());
+            await this.handleAnalysis();
         });
         
         // Add example button handlers if they exist
@@ -179,10 +203,35 @@ class UnifiedTruthLensAnalyzer {
             btn.addEventListener('click', (e) => {
                 const url = e.currentTarget.dataset.url;
                 if (url) {
-                    document.getElementById('urlInput').value = url;
+                    const inputField = document.getElementById('urlInput') || 
+                                     document.getElementById('input_data') || 
+                                     document.querySelector('input[type="text"]') || 
+                                     document.querySelector('textarea');
+                    if (inputField) {
+                        inputField.value = url;
+                    }
                 }
             });
         });
+    }
+    
+    async handleAnalysis() {
+        if (this.isAnalyzing) {
+            console.log('[UnifiedTruthLens] Analysis already in progress');
+            return;
+        }
+        
+        const input = document.getElementById('urlInput') || 
+                     document.getElementById('input_data') || 
+                     document.querySelector('input[type="text"]') || 
+                     document.querySelector('textarea');
+                     
+        if (!input || !input.value.trim()) {
+            this.showError('Please enter a URL or text to analyze');
+            return;
+        }
+        
+        await this.analyzeContent(input.value.trim());
     }
     
     setupUIElements() {
