@@ -1,15 +1,16 @@
 /**
  * TruthLens Unified App Core
- * Version: 4.0.2
- * Date: September 25, 2025
+ * Version: 4.0.3
+ * Date: September 26, 2025
  * 
  * This is the unified version supporting both news and transcript analysis modes.
  * Handles tabbed interface, mode switching, and content auto-detection.
+ * Updated to work with the actual HTML element IDs.
  */
 
 class UnifiedTruthLensAnalyzer {
     constructor() {
-        console.log('[UnifiedTruthLens] Initializing v4.0.2...');
+        console.log('[UnifiedTruthLens] Initializing v4.0.3...');
         
         // Core properties
         this.currentMode = 'news';  // 'news' or 'transcript'
@@ -34,67 +35,31 @@ class UnifiedTruthLensAnalyzer {
     initialize() {
         console.log('[UnifiedTruthLens] DOM ready, initializing components...');
         
-        // Setup mode tabs
-        this.setupModeTabs();
-        
         // Setup form handlers
         this.setupFormHandlers();
         
         // Setup UI elements
         this.setupUIElements();
         
+        // Setup existing mode tabs (they're already in the HTML)
+        this.setupExistingTabs();
+        
         // Initialize with news mode
-        this.switchMode('news');
+        this.currentMode = 'news';
         
         console.log('[UnifiedTruthLens] ✓ Initialization complete');
     }
     
-    setupModeTabs() {
-        console.log('[UnifiedTruthLens] Setting up mode tabs...');
+    setupExistingTabs() {
+        console.log('[UnifiedTruthLens] Setting up existing tabs...');
         
-        // Try multiple selectors for form container
-        const formContainer = document.querySelector('.form-container') || 
-                            document.querySelector('.input-section') || 
-                            document.querySelector('#inputSection') ||
-                            document.querySelector('form')?.parentElement;
+        // The tabs already exist in HTML with onclick="switchMode()"
+        // We'll override the global switchMode function
+        window.switchMode = (mode) => {
+            this.switchMode(mode);
+        };
         
-        if (!formContainer) {
-            console.warn('[UnifiedTruthLens] Form container not found, skipping tab setup');
-            return;
-        }
-        
-        // Check if tabs already exist
-        let tabContainer = document.querySelector('.mode-tabs');
-        if (!tabContainer) {
-            // Create tab structure
-            tabContainer = document.createElement('div');
-            tabContainer.className = 'mode-tabs';
-            tabContainer.innerHTML = `
-                <button class="mode-tab active" data-mode="news">
-                    <i class="fas fa-newspaper"></i>
-                    News Analysis
-                </button>
-                <button class="mode-tab" data-mode="transcript">
-                    <i class="fas fa-video"></i>
-                    Transcript Analysis
-                </button>
-            `;
-            
-            // Insert before form
-            const form = document.getElementById('analysisForm');
-            if (form) {
-                form.parentNode.insertBefore(tabContainer, form);
-            }
-        }
-        
-        // Add click handlers to tabs
-        const tabs = document.querySelectorAll('.mode-tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const mode = e.currentTarget.dataset.mode;
-                this.switchMode(mode);
-            });
-        });
+        console.log('[UnifiedTruthLens] Tab switching connected');
     }
     
     switchMode(mode) {
@@ -102,147 +67,87 @@ class UnifiedTruthLensAnalyzer {
         
         this.currentMode = mode;
         
-        // Update tab active state
+        // Update tab active states
         document.querySelectorAll('.mode-tab').forEach(tab => {
-            if (tab.dataset.mode === mode) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
+            tab.classList.toggle('active', tab.dataset.mode === mode);
         });
         
-        // Try multiple selectors for input field
-        const inputField = document.getElementById('urlInput') || 
-                          document.getElementById('input_data') || 
-                          document.querySelector('input[type="text"]') || 
-                          document.querySelector('textarea');
-                          
-        const inputLabel = document.querySelector('label[for="urlInput"]') || 
-                          document.querySelector('label[for="input_data"]') || 
-                          document.querySelector('label');
+        // Update content visibility
+        document.querySelectorAll('.mode-content').forEach(content => {
+            content.classList.toggle('active', content.id === `${mode}-mode`);
+        });
         
-        if (inputField) {
-            if (mode === 'transcript') {
-                inputField.placeholder = 'Enter YouTube URL or paste transcript text...';
-                if (inputLabel) {
-                    inputLabel.innerHTML = '<i class="fas fa-video"></i> YouTube URL or Transcript Text';
-                }
-            } else {
-                inputField.placeholder = 'Enter article URL or paste article text...';
-                if (inputLabel) {
-                    inputLabel.innerHTML = '<i class="fas fa-link"></i> Article URL or Text';
-                }
-            }
-        }
-        
-        // Update any mode-specific UI elements
-        this.updateModeSpecificUI(mode);
-    }
-    
-    updateModeSpecificUI(mode) {
-        // Update header if needed
-        const headerTitle = document.querySelector('.header h1');
-        if (headerTitle) {
-            if (mode === 'transcript') {
-                headerTitle.innerHTML = `
-                    <i class="fas fa-shield-alt"></i>
-                    TruthLens <span style="font-size: 0.7em; color: #94a3b8;">Transcript Analyzer</span>
-                `;
-            } else {
-                headerTitle.innerHTML = `
-                    <i class="fas fa-shield-alt"></i>
-                    TruthLens <span style="font-size: 0.7em; color: #94a3b8;">News Analyzer</span>
-                `;
-            }
-        }
+        // Clear any previous results when switching modes
+        this.clearResults();
     }
     
     setupFormHandlers() {
         console.log('[UnifiedTruthLens] Setting up form handlers...');
         
-        // Try multiple selectors for the form
-        const form = document.getElementById('analysisForm') || 
-                    document.getElementById('urlForm') || 
-                    document.querySelector('form');
-        
-        if (!form) {
-            console.warn('[UnifiedTruthLens] Analysis form not found, trying alternative setup');
-            // Try to find submit button directly
-            const submitBtn = document.querySelector('button[type="submit"]') || 
-                            document.querySelector('.analyze-btn');
-            if (submitBtn) {
-                submitBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    await this.handleAnalysis();
-                });
-                console.log('[UnifiedTruthLens] Submit button handler attached');
-            }
-            return;
-        }
-        
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (this.isAnalyzing) {
-                console.log('[UnifiedTruthLens] Analysis already in progress');
-                return;
-            }
-            
-            const input = document.getElementById('urlInput');
-            if (!input || !input.value.trim()) {
-                this.showError('Please enter a URL or text to analyze');
-                return;
-            }
-            
-            await this.handleAnalysis();
-        });
-        
-        // Add example button handlers if they exist
-        const exampleBtns = document.querySelectorAll('.example-btn');
-        exampleBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const url = e.currentTarget.dataset.url;
-                if (url) {
-                    const inputField = document.getElementById('urlInput') || 
-                                     document.getElementById('input_data') || 
-                                     document.querySelector('input[type="text"]') || 
-                                     document.querySelector('textarea');
-                    if (inputField) {
-                        inputField.value = url;
-                    }
+        // Handle news form
+        const newsForm = document.getElementById('newsForm');
+        if (newsForm) {
+            newsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const urlInput = document.getElementById('newsUrlInput');
+                const textInput = document.getElementById('newsTextInput');
+                const input = urlInput?.value?.trim() || textInput?.value?.trim();
+                
+                if (!input) {
+                    this.showError('Please enter a URL or text to analyze');
+                    return;
                 }
+                
+                this.currentMode = 'news';
+                await this.analyzeContent(input);
             });
-        });
-    }
-    
-    async handleAnalysis() {
-        if (this.isAnalyzing) {
-            console.log('[UnifiedTruthLens] Analysis already in progress');
-            return;
+            console.log('[UnifiedTruthLens] News form handler attached');
         }
         
-        const input = document.getElementById('urlInput') || 
-                     document.getElementById('input_data') || 
-                     document.querySelector('input[type="text"]') || 
-                     document.querySelector('textarea');
-                     
-        if (!input || !input.value.trim()) {
-            this.showError('Please enter a URL or text to analyze');
-            return;
+        // Handle transcript form
+        const transcriptForm = document.getElementById('transcriptForm');
+        if (transcriptForm) {
+            transcriptForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const urlInput = document.getElementById('youtubeUrlInput');
+                const textInput = document.getElementById('transcriptTextInput');
+                const input = urlInput?.value?.trim() || textInput?.value?.trim();
+                
+                if (!input) {
+                    this.showError('Please enter a YouTube URL or transcript to analyze');
+                    return;
+                }
+                
+                this.currentMode = 'transcript';
+                await this.analyzeContent(input);
+            });
+            console.log('[UnifiedTruthLens] Transcript form handler attached');
         }
-        
-        await this.analyzeContent(input.value.trim());
     }
     
     setupUIElements() {
-        // Setup any additional UI elements
         console.log('[UnifiedTruthLens] Setting up UI elements...');
         
-        // Add mode indicator if needed
-        const resultsSection = document.getElementById('results');
-        if (resultsSection) {
-            resultsSection.setAttribute('data-mode', this.currentMode);
-        }
+        // Override the global resetForm function
+        window.resetForm = (mode) => {
+            if (mode === 'news') {
+                document.getElementById('newsForm')?.reset();
+            } else {
+                document.getElementById('transcriptForm')?.reset();
+            }
+            
+            // Hide results
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+            
+            // Hide progress
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) {
+                progressContainer.style.display = 'none';
+            }
+        };
     }
     
     detectContentType(input) {
@@ -322,7 +227,7 @@ class UnifiedTruthLensAnalyzer {
             
             console.log('[UnifiedTruthLens] Analysis complete:', data);
             
-            // Display results based on mode
+            // Display results
             this.displayResults(data);
             
         } catch (error) {
@@ -343,7 +248,7 @@ class UnifiedTruthLensAnalyzer {
     displayResults(data) {
         console.log('[UnifiedTruthLens] Displaying results...');
         
-        const resultsSection = document.getElementById('results');
+        const resultsSection = document.getElementById('resultsSection');
         if (!resultsSection) {
             console.error('[UnifiedTruthLens] Results section not found');
             return;
@@ -353,81 +258,46 @@ class UnifiedTruthLensAnalyzer {
         resultsSection.style.display = 'block';
         resultsSection.setAttribute('data-mode', data.analysis_mode || this.currentMode);
         
-        // Update mode indicator if different from current
-        if (data.analysis_mode && data.analysis_mode !== this.currentMode) {
-            console.log(`[UnifiedTruthLens] Result mode differs from current: ${data.analysis_mode}`);
+        // Update mode badge
+        const modeBadge = document.getElementById('analysisModeBadge');
+        if (modeBadge) {
+            modeBadge.textContent = data.analysis_mode === 'transcript' ? 'Transcript' : 'News';
+            modeBadge.className = `analysis-mode-badge ${data.analysis_mode || 'news'}`;
         }
         
-        // Update trust score
-        this.updateTrustScore(data.trust_score || 0);
-        
-        // Update article/content info
-        this.updateContentInfo(data);
+        // Use the enhanced trust display function from HTML
+        if (typeof updateEnhancedTrustDisplay === 'function') {
+            updateEnhancedTrustDisplay(data);
+        } else {
+            // Fallback to basic display
+            this.updateContentInfo(data);
+        }
         
         // Display service analyses
-        if (typeof ServiceTemplates !== 'undefined' && ServiceTemplates.displayAllAnalyses) {
+        const container = document.getElementById('serviceAnalysisContainer');
+        if (container && typeof ServiceTemplates !== 'undefined' && ServiceTemplates.displayAllAnalyses) {
+            container.innerHTML = '';  // Clear existing content
             ServiceTemplates.displayAllAnalyses(data, this);
         } else {
-            console.error('[UnifiedTruthLens] ServiceTemplates.displayAllAnalyses not found');
+            console.error('[UnifiedTruthLens] ServiceTemplates or container not found');
             this.displayFallbackResults(data);
+        }
+        
+        // Hide progress container
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
         }
         
         // Smooth scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
-    updateTrustScore(score) {
-        const scoreElement = document.getElementById('trustScoreValue');
-        const progressRing = document.querySelector('.progress-ring-circle');
-        
-        if (scoreElement) {
-            // Animate score
-            let currentScore = 0;
-            const increment = score / 30;
-            const timer = setInterval(() => {
-                currentScore += increment;
-                if (currentScore >= score) {
-                    currentScore = score;
-                    clearInterval(timer);
-                }
-                scoreElement.textContent = Math.round(currentScore);
-            }, 30);
-        }
-        
-        if (progressRing) {
-            // Animate progress ring
-            const radius = progressRing.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
-            progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
-            progressRing.style.strokeDashoffset = circumference;
-            
-            setTimeout(() => {
-                const offset = circumference - (score / 100) * circumference;
-                progressRing.style.strokeDashoffset = offset;
-                
-                // Update color based on score
-                if (score >= 80) {
-                    progressRing.style.stroke = '#10b981';
-                } else if (score >= 60) {
-                    progressRing.style.stroke = '#f59e0b';
-                } else if (score >= 40) {
-                    progressRing.style.stroke = '#ef4444';
-                } else {
-                    progressRing.style.stroke = '#991b1b';
-                }
-            }, 100);
-        }
-    }
-    
     updateContentInfo(data) {
         // Update article/content summary
         const summaryEl = document.getElementById('articleSummary');
         if (summaryEl) {
-            if (data.analysis_mode === 'transcript') {
-                summaryEl.textContent = data.article_summary || 'Transcript Analysis';
-            } else {
-                summaryEl.textContent = data.article_summary || 'Loading...';
-            }
+            summaryEl.textContent = data.article_summary || 'Analysis Complete';
         }
         
         // Update source
@@ -453,61 +323,88 @@ class UnifiedTruthLensAnalyzer {
         // Fallback display if ServiceTemplates is not available
         console.warn('[UnifiedTruthLens] Using fallback results display');
         
-        const container = document.getElementById('serviceAnalyses');
+        const container = document.getElementById('serviceAnalysisContainer');
         if (!container) return;
         
         container.innerHTML = `
-            <div class="service-card">
+            <div class="service-card" style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin: 20px 0;">
                 <h3>Analysis Results</h3>
-                <pre>${JSON.stringify(data.detailed_analysis || data, null, 2)}</pre>
+                <pre style="white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(data.detailed_analysis || data, null, 2)}</pre>
             </div>
         `;
     }
     
     showLoadingState() {
-        const loadingEl = document.getElementById('loadingIndicator');
-        const resultsEl = document.getElementById('results');
-        const submitBtn = document.querySelector('button[type="submit"]');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const progressContainer = document.getElementById('progressContainer');
+        const resultsSection = document.getElementById('resultsSection');
+        const submitBtns = document.querySelectorAll('.analyze-button');
         
-        if (loadingEl) {
-            loadingEl.style.display = 'flex';
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
         }
         
-        if (resultsEl) {
-            resultsEl.style.opacity = '0.5';
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
+            // Start progress animation
+            this.animateProgressSteps();
         }
         
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
         }
+        
+        submitBtns.forEach(btn => {
+            btn.disabled = true;
+            const textSpan = btn.querySelector('.button-text');
+            if (textSpan) {
+                textSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            }
+        });
         
         this.startProgressAnimation();
     }
     
     hideLoadingState() {
-        const loadingEl = document.getElementById('loadingIndicator');
-        const resultsEl = document.getElementById('results');
-        const submitBtn = document.querySelector('button[type="submit"]');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const submitBtns = document.querySelectorAll('.analyze-button');
         
-        if (loadingEl) {
-            loadingEl.style.display = 'none';
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
         }
         
-        if (resultsEl) {
-            resultsEl.style.opacity = '1';
-        }
-        
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-search"></i> Analyze';
-        }
+        submitBtns.forEach(btn => {
+            btn.disabled = false;
+            const textSpan = btn.querySelector('.button-text');
+            if (textSpan) {
+                const isNews = btn.id === 'newsAnalyzeBtn';
+                textSpan.innerHTML = isNews 
+                    ? '<i class="fas fa-search"></i> Analyze Article'
+                    : '<i class="fas fa-video"></i> Analyze Transcript';
+            }
+        });
         
         this.stopProgressAnimation();
     }
     
+    animateProgressSteps() {
+        const steps = document.querySelectorAll('.progress-step');
+        let currentStep = 0;
+        
+        this.stepInterval = setInterval(() => {
+            if (currentStep < steps.length) {
+                steps[currentStep]?.classList.add('active');
+                currentStep++;
+            } else {
+                clearInterval(this.stepInterval);
+            }
+        }, 500);
+    }
+    
     startProgressAnimation() {
-        const progressBar = document.querySelector('.progress-bar');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        
         if (!progressBar) return;
         
         let width = 0;
@@ -516,8 +413,12 @@ class UnifiedTruthLensAnalyzer {
                 clearInterval(this.progressInterval);
                 return;
             }
-            width += Math.random() * 5;
+            width += Math.random() * 10;
             progressBar.style.width = width + '%';
+            
+            if (progressPercentage) {
+                progressPercentage.textContent = Math.round(width) + '%';
+            }
         }, 500);
     }
     
@@ -526,19 +427,41 @@ class UnifiedTruthLensAnalyzer {
             clearInterval(this.progressInterval);
         }
         
-        const progressBar = document.querySelector('.progress-bar');
+        if (this.stepInterval) {
+            clearInterval(this.stepInterval);
+        }
+        
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const steps = document.querySelectorAll('.progress-step');
+        
         if (progressBar) {
             progressBar.style.width = '100%';
             setTimeout(() => {
                 progressBar.style.width = '0%';
             }, 500);
         }
+        
+        if (progressPercentage) {
+            progressPercentage.textContent = '100%';
+            setTimeout(() => {
+                progressPercentage.textContent = '0%';
+            }, 500);
+        }
+        
+        // Reset steps
+        steps.forEach(step => step.classList.remove('active'));
     }
     
     clearResults() {
-        const container = document.getElementById('serviceAnalyses');
+        const container = document.getElementById('serviceAnalysisContainer');
         if (container) {
             container.innerHTML = '';
+        }
+        
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
         }
         
         // Reset info fields
@@ -546,10 +469,6 @@ class UnifiedTruthLensAnalyzer {
             const el = document.getElementById(id);
             if (el) el.textContent = 'Loading...';
         });
-        
-        // Reset trust score
-        const scoreEl = document.getElementById('trustScoreValue');
-        if (scoreEl) scoreEl.textContent = '0';
     }
     
     showError(message) {
@@ -558,45 +477,40 @@ class UnifiedTruthLensAnalyzer {
         // Hide loading state
         this.hideLoadingState();
         
-        // Show error in results section
-        const resultsSection = document.getElementById('results');
+        // Show error message using the HTML error element
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        
+        if (errorMessage && errorText) {
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            errorMessage.classList.add('active');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorMessage.classList.remove('active');
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 300);
+            }, 5000);
+        }
+        
+        // Also show in results section as fallback
+        const resultsSection = document.getElementById('resultsSection');
         if (resultsSection) {
             resultsSection.style.display = 'block';
             
-            const container = document.getElementById('serviceAnalyses');
+            const container = document.getElementById('serviceAnalysisContainer');
             if (container) {
                 container.innerHTML = `
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Analysis Error</h3>
-                        <p>${message}</p>
+                    <div class="error-message" style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+                        <strong>Analysis Error</strong>
+                        <p style="margin-top: 10px;">${message}</p>
                     </div>
                 `;
             }
         }
-        
-        // Show toast notification
-        this.showToast(message, 'error');
-    }
-    
-    showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-            <span>${message}</span>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        // Trigger animation
-        setTimeout(() => toast.classList.add('show'), 10);
-        
-        // Remove after 4 seconds
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
     }
 }
 
