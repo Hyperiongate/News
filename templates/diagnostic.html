@@ -1,267 +1,294 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens API Diagnostic</title>
+    <title>TruthLens Diagnostic Tool</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
             padding: 20px;
             background: #f5f5f5;
         }
-        .test-section {
+        .diagnostic-card {
             background: white;
-            padding: 20px;
-            margin: 20px 0;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        h1, h2 {
-            color: #333;
+        .status-pass {
+            color: #10b981;
+            font-weight: bold;
         }
-        .test-button {
+        .status-fail {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        h2 {
+            margin-top: 0;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        .check-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: #f8fafc;
+            border-left: 4px solid #e2e8f0;
+            border-radius: 4px;
+        }
+        .check-item.pass {
+            border-left-color: #10b981;
+        }
+        .check-item.fail {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        .check-item.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        code {
+            background: #1e293b;
+            color: #10b981;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .fix-instruction {
+            background: #eff6ff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #3b82f6;
+            margin-top: 10px;
+        }
+        .fix-instruction h3 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+        button {
             background: #6366f1;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 6px;
             cursor: pointer;
-            margin: 5px;
+            font-size: 16px;
+            font-weight: 600;
         }
-        .test-button:hover {
+        button:hover {
             background: #4f46e5;
-        }
-        .result {
-            background: #f3f4f6;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 10px 0;
-            white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .success {
-            border-left: 4px solid #10b981;
-        }
-        .error {
-            border-left: 4px solid #ef4444;
-        }
-        .warning {
-            border-left: 4px solid #f59e0b;
         }
     </style>
 </head>
 <body>
-    <h1>TruthLens API Diagnostic Tool</h1>
+    <h1>🔍 TruthLens UI Diagnostic Tool</h1>
     
-    <div class="test-section">
-        <h2>1. Backend Status Check</h2>
-        <button class="test-button" onclick="testStatus()">Test /api/status</button>
-        <button class="test-button" onclick="testDebugServices()">Test /api/debug/services</button>
-        <div id="status-result"></div>
+    <div class="diagnostic-card">
+        <h2>Step 1: Check What's Loading</h2>
+        <button onclick="runDiagnostics()">Run Full Diagnostics</button>
+        <div id="diagnosticResults"></div>
     </div>
 
-    <div class="test-section">
-        <h2>2. Test Analysis Endpoints</h2>
-        <button class="test-button" onclick="testSimpleUrl()">Test Simple URL</button>
-        <button class="test-button" onclick="testBBCUrl()">Test BBC URL</button>
-        <button class="test-button" onclick="testTextAnalysis()">Test Text Analysis</button>
-        <button class="test-button" onclick="testInvalidPayload()">Test Invalid Payload</button>
-        <div id="analysis-result"></div>
+    <div class="diagnostic-card">
+        <h2>Step 2: Test Individual Components</h2>
+        <button onclick="testComponents()">Test Components</button>
+        <div id="componentResults"></div>
     </div>
 
-    <div class="test-section">
-        <h2>3. Debug Test Analysis</h2>
-        <button class="test-button" onclick="testDebugAnalyze()">Run Debug Test</button>
-        <div id="debug-result"></div>
+    <div class="diagnostic-card">
+        <h2>Step 3: Fix Recommendations</h2>
+        <div id="recommendations"></div>
     </div>
 
     <script>
-        const API_BASE = window.location.origin;
-
-        function displayResult(elementId, content, type = 'info') {
-            const element = document.getElementById(elementId);
-            const resultDiv = document.createElement('div');
-            resultDiv.className = `result ${type}`;
-            resultDiv.textContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
-            element.appendChild(resultDiv);
-        }
-
-        async function testStatus() {
-            const resultEl = document.getElementById('status-result');
-            resultEl.innerHTML = '';
+        function runDiagnostics() {
+            const results = document.getElementById('diagnosticResults');
+            results.innerHTML = '<h3>Running diagnostics...</h3>';
             
-            try {
-                const response = await fetch(`${API_BASE}/api/status`);
-                const data = await response.json();
-                
-                displayResult('status-result', `Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('status-result', `Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function testDebugServices() {
-            const resultEl = document.getElementById('status-result');
+            let html = '';
             
-            try {
-                const response = await fetch(`${API_BASE}/api/debug/services`);
-                const data = await response.json();
-                
-                displayResult('status-result', `Services Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-                
-                // Highlight any failed services
-                if (data.failed && Object.keys(data.failed).length > 0) {
-                    displayResult('status-result', `⚠️ Failed Services:\n${JSON.stringify(data.failed, null, 2)}`, 'warning');
+            // Check 1: ServiceTemplates
+            const serviceTemplatesCheck = typeof ServiceTemplates !== 'undefined';
+            html += `<div class="check-item ${serviceTemplatesCheck ? 'pass' : 'fail'}">
+                ServiceTemplates: <span class="${serviceTemplatesCheck ? 'status-pass' : 'status-fail'}">
+                ${serviceTemplatesCheck ? '✓ LOADED' : '✗ NOT FOUND'}</span>
+                ${serviceTemplatesCheck ? `<br>Methods found: ${Object.keys(ServiceTemplates).join(', ')}` : ''}
+            </div>`;
+            
+            // Check 2: Main CSS
+            const mainCssLoaded = document.querySelector('link[href*="main.css"]');
+            html += `<div class="check-item ${mainCssLoaded ? 'pass' : 'fail'}">
+                Main CSS: <span class="${mainCssLoaded ? 'status-pass' : 'status-fail'}">
+                ${mainCssLoaded ? '✓ LOADED' : '✗ NOT FOUND'}</span>
+            </div>`;
+            
+            // Check 3: Premium CSS
+            const hasPremiumStyles = document.querySelector('style')?.textContent?.includes('slideInPremium');
+            html += `<div class="check-item ${hasPremiumStyles ? 'pass' : 'warning'}">
+                Premium Styles: <span class="${hasPremiumStyles ? 'status-pass' : 'status-warning'}">
+                ${hasPremiumStyles ? '✓ INJECTED' : '⚠ NOT FOUND (animations missing)'}</span>
+            </div>`;
+            
+            // Check 4: Required DOM Elements
+            const elements = [
+                'serviceAnalysisContainer',
+                'resultsSection',
+                'progressContainer',
+                'analysisModeBadge'
+            ];
+            
+            elements.forEach(id => {
+                const exists = document.getElementById(id) !== null;
+                html += `<div class="check-item ${exists ? 'pass' : 'fail'}">
+                    Element #${id}: <span class="${exists ? 'status-pass' : 'status-fail'}">
+                    ${exists ? '✓ EXISTS' : '✗ MISSING'}</span>
+                </div>`;
+            });
+            
+            // Check 5: UnifiedAnalyzer
+            const analyzerExists = typeof window.unifiedAnalyzer !== 'undefined';
+            const hasCleanAuthor = analyzerExists && typeof window.unifiedAnalyzer.cleanAuthorName === 'function';
+            html += `<div class="check-item ${analyzerExists ? 'pass' : 'fail'}">
+                UnifiedAnalyzer: <span class="${analyzerExists ? 'status-pass' : 'status-fail'}">
+                ${analyzerExists ? '✓ LOADED' : '✗ NOT FOUND'}</span>
+                ${analyzerExists ? `<br>cleanAuthorName method: ${hasCleanAuthor ? '✓ EXISTS' : '✗ MISSING'}` : ''}
+            </div>`;
+            
+            // Check 6: Font Awesome Icons
+            const faLoaded = document.querySelector('link[href*="font-awesome"]');
+            html += `<div class="check-item ${faLoaded ? 'pass' : 'warning'}">
+                Font Awesome Icons: <span class="${faLoaded ? 'status-pass' : 'status-warning'}">
+                ${faLoaded ? '✓ LOADED' : '⚠ NOT LOADED (icons missing)'}</span>
+            </div>`;
+            
+            results.innerHTML = html;
+            
+            generateRecommendations();
+        }
+        
+        function testComponents() {
+            const results = document.getElementById('componentResults');
+            results.innerHTML = '<h3>Testing component rendering...</h3>';
+            
+            // Test if ServiceTemplates can generate HTML
+            if (typeof ServiceTemplates !== 'undefined' && ServiceTemplates.getTemplate) {
+                try {
+                    const testHtml = ServiceTemplates.getTemplate('source_credibility');
+                    results.innerHTML += `
+                        <div class="check-item pass">
+                            ✓ ServiceTemplates.getTemplate works<br>
+                            <small>Generated ${testHtml.length} characters of HTML</small>
+                        </div>`;
+                } catch (e) {
+                    results.innerHTML += `
+                        <div class="check-item fail">
+                            ✗ ServiceTemplates.getTemplate failed: ${e.message}
+                        </div>`;
                 }
-            } catch (error) {
-                displayResult('status-result', `Error: ${error.message}`, 'error');
             }
-        }
-
-        async function testSimpleUrl() {
-            const resultEl = document.getElementById('analysis-result');
-            resultEl.innerHTML = '';
             
-            const payload = {
-                url: "https://www.example.com/test-article",
-                is_pro: true
-            };
+            // Test if trust score display works
+            if (typeof updateEnhancedTrustDisplay === 'function') {
+                results.innerHTML += `<div class="check-item pass">✓ Trust score display function exists</div>`;
+            } else {
+                results.innerHTML += `<div class="check-item fail">✗ Trust score display function missing</div>`;
+            }
             
-            displayResult('analysis-result', `Sending: ${JSON.stringify(payload, null, 2)}`, 'info');
+            // Check CSS classes
+            const criticalClasses = [
+                '.service-dropdown',
+                '.trust-score-visual',
+                '.service-header',
+                '.analysis-block',
+                '.bias-meter'
+            ];
             
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+            criticalClasses.forEach(className => {
+                const exists = document.styleSheets.length > 0 && 
+                    Array.from(document.styleSheets).some(sheet => {
+                        try {
+                            return Array.from(sheet.cssRules || []).some(rule => 
+                                rule.selectorText && rule.selectorText.includes(className)
+                            );
+                        } catch {
+                            return false;
+                        }
+                    });
                 
-                const data = await response.json();
-                displayResult('analysis-result', 
-                    `Response Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('analysis-result', `Error: ${error.message}`, 'error');
-            }
+                results.innerHTML += `
+                    <div class="check-item ${exists ? 'pass' : 'fail'}">
+                        CSS class ${className}: <span class="${exists ? 'status-pass' : 'status-fail'}">
+                        ${exists ? '✓ DEFINED' : '✗ MISSING'}</span>
+                    </div>`;
+            });
         }
-
-        async function testBBCUrl() {
-            const resultEl = document.getElementById('analysis-result');
-            resultEl.innerHTML = '';
+        
+        function generateRecommendations() {
+            const recommendations = document.getElementById('recommendations');
+            let html = '<h3>Issues Found & How to Fix:</h3>';
             
-            const payload = {
-                url: "https://www.bbc.com/news/world-us-canada-68562045",
-                is_pro: true
-            };
-            
-            displayResult('analysis-result', `Sending: ${JSON.stringify(payload, null, 2)}`, 'info');
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                displayResult('analysis-result', 
-                    `Response Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('analysis-result', `Error: ${error.message}`, 'error');
+            // Main issue based on diagnostics
+            if (typeof ServiceTemplates === 'undefined') {
+                html += `
+                    <div class="fix-instruction">
+                        <h3>🔴 Critical: ServiceTemplates Not Loading</h3>
+                        <p>This is why you're seeing plain text instead of formatted results.</p>
+                        <p><strong>Fix:</strong></p>
+                        <ol>
+                            <li>Check that <code>service-templates.js</code> exists in <code>static/js/</code></li>
+                            <li>Verify it loads BEFORE <code>unified-app-core.js</code> in your HTML</li>
+                            <li>Check browser console for JavaScript errors in service-templates.js</li>
+                        </ol>
+                    </div>`;
             }
-        }
-
-        async function testTextAnalysis() {
-            const resultEl = document.getElementById('analysis-result');
-            resultEl.innerHTML = '';
             
-            const payload = {
-                text: "This is a test article about technology. The rapid advancement of artificial intelligence has transformed many industries. According to recent studies, AI adoption has increased by 50% in the last year alone. This trend is expected to continue as more companies recognize the benefits of automation and data-driven decision making.",
-                is_pro: true
-            };
-            
-            displayResult('analysis-result', `Sending text analysis...`, 'info');
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                displayResult('analysis-result', 
-                    `Response Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('analysis-result', `Error: ${error.message}`, 'error');
+            if (!document.querySelector('link[href*="main.css"]')) {
+                html += `
+                    <div class="fix-instruction">
+                        <h3>🔴 Critical: Main CSS Not Loading</h3>
+                        <p>Your styles aren't being applied, making everything look basic.</p>
+                        <p><strong>Fix:</strong></p>
+                        <ol>
+                            <li>Check that <code>main.css</code> exists in <code>static/css/</code></li>
+                            <li>Verify the path in your HTML: <code>&lt;link rel="stylesheet" href="/static/css/main.css"&gt;</code></li>
+                            <li>Check if the file is being served (look for 404 errors in Network tab)</li>
+                        </ol>
+                    </div>`;
             }
-        }
-
-        async function testInvalidPayload() {
-            const resultEl = document.getElementById('analysis-result');
-            resultEl.innerHTML = '';
             
-            const payload = {
-                // Missing both url and text
-                is_pro: true
-            };
-            
-            displayResult('analysis-result', `Sending invalid payload: ${JSON.stringify(payload, null, 2)}`, 'info');
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                displayResult('analysis-result', 
-                    `Response Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('analysis-result', `Error: ${error.message}`, 'error');
+            if (typeof window.unifiedAnalyzer !== 'undefined' && !window.unifiedAnalyzer.cleanAuthorName) {
+                html += `
+                    <div class="fix-instruction">
+                        <h3>⚠️ Missing cleanAuthorName Method</h3>
+                        <p>This causes errors when displaying author information.</p>
+                        <p><strong>Fix:</strong> Update to unified-app-core.js v6.0 or add this method manually.</p>
+                    </div>`;
             }
-        }
-
-        async function testDebugAnalyze() {
-            const resultEl = document.getElementById('debug-result');
-            resultEl.innerHTML = '';
             
-            try {
-                const response = await fetch(`${API_BASE}/api/debug/test-analyze`);
-                const data = await response.json();
-                
-                displayResult('debug-result', 
-                    `Debug Test Status: ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                    response.ok ? 'success' : 'error');
-            } catch (error) {
-                displayResult('debug-result', `Error: ${error.message}`, 'error');
-            }
+            html += `
+                <div class="fix-instruction">
+                    <h3>💡 Quick Test</h3>
+                    <p>Run this in your browser console to test if components work:</p>
+                    <code>
+                        ServiceTemplates.displayAllAnalyses({<br>
+                        &nbsp;&nbsp;trust_score: 75,<br>
+                        &nbsp;&nbsp;detailed_analysis: {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;source_credibility: {score: 80}<br>
+                        &nbsp;&nbsp;}<br>
+                        }, window.unifiedAnalyzer)
+                    </code>
+                </div>`;
+            
+            recommendations.innerHTML = html;
         }
-
-        // Run initial status check on load
-        window.addEventListener('load', () => {
-            testStatus();
+        
+        // Auto-run on load
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runDiagnostics, 1000);
         });
     </script>
 </body>
