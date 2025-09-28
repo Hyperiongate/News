@@ -40,8 +40,17 @@ class ArticleExtractor:
         self.available = True
         self.is_available = True
         
-        # Get API keys
+        # Get API keys - WITH DEBUG LOGGING
         self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY')
+        
+        # Critical debug logging
+        if self.scraperapi_key:
+            logger.info(f"✓ ScraperAPI key loaded: {self.scraperapi_key[:8]}... (length: {len(self.scraperapi_key)})")
+        else:
+            logger.error("✗ SCRAPERAPI_KEY NOT FOUND IN ENVIRONMENT!")
+            # Log all available env vars (without values for security)
+            available_vars = list(os.environ.keys())
+            logger.error(f"Available env vars: {available_vars}")
         
         # Session for requests
         self.session = requests.Session()
@@ -183,14 +192,18 @@ class ArticleExtractor:
             # Try extraction methods
             extracted_data = None
             
-            # Method 1: ScraperAPI (if available)
+            # PRIORITY 1: ScraperAPI (if available) - THIS SHOULD BE CALLED FIRST
             if self.scraperapi_key:
-                logger.info("Attempting ScraperAPI extraction...")
+                logger.info("✓ ScraperAPI key found - attempting ScraperAPI extraction FIRST")
                 extracted_data = self._extract_with_scraperapi(url)
                 if extracted_data:
                     logger.info(f"ScraperAPI SUCCESS: Got {extracted_data.get('word_count', 0)} words")
+                else:
+                    logger.warning("ScraperAPI extraction failed, trying fallback methods")
+            else:
+                logger.error("✗ No ScraperAPI key - skipping to direct extraction")
             
-            # Method 2: Direct request with enhanced headers
+            # PRIORITY 2: Direct request with enhanced headers (fallback)
             if not extracted_data:
                 logger.info("Attempting direct extraction...")
                 extracted_data = self._extract_with_requests(url)
@@ -309,21 +322,62 @@ class ArticleExtractor:
             }
     
     def _extract_with_scraperapi(self, url: str) -> Optional[Dict[str, Any]]:
-        """Extract using ScraperAPI"""
+        """Extract using ScraperAPI - FIXED VERSION"""
         try:
-            logger.info("Trying scraperapi...")
+            if not self.scraperapi_key:
+                logger.error("ScraperAPI key not available - skipping")
+                return None
+            
+            logger.info(f"ScraperAPI: Starting extraction for {url}")
+            logger.info(f"ScraperAPI: Using key {self.scraperapi_key[:8]}...")
             
             api_url = "http://api.scraperapi.com"
             params = {
                 'api_key': self.scraperapi_key,
                 'url': url,
-                'render': 'false'
+                'render': 'false',  # Try without JS rendering first (faster)
+                'country_code': 'us'
             }
             
-            response = requests.get(api_url, params=params, timeout=30)
-            response.raise_for_status()
+            logger.info(f"ScraperAPI: Making request to {api_url}")
             
-            return self._parse_html(response.text, url, 'scraperapi')
+            response = requests.get(api_url, params=params, timeout=45)
+            logger.info(f"ScraperAPI: Response status = {response.status_code}")
+            
+            if response.status_code == 200:
+                logger.info(f"ScraperAPI: SUCCESS! Got {len(response.text)} bytes")
+                result = self._parse_html(response.text, url, 'scraperapi')
+                if result:
+                    logger.info(f"ScraperAPI: Parsed successfully - {result.get('word_count', 0)} words")
+                    return result
+                else:
+                    logger.warning("ScraperAPI: Parsing failed, trying basic extraction")
+                    # Try basic extraction
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    text = soup.get_text(separator=' ', strip=True)
+                    if len(text) > 500:
+                        title = soup.title.get_text(strip=True) if soup.title else "Article"
+                        return {
+                            'title': title,
+                            'author': 'Unknown',
+                            'content': text[:10000],
+                            'text': text[:10000],
+                            'url': url,
+                            'domain': urlparse(url).netloc.replace('www.', ''),
+                            'source': urlparse(url).netloc.replace('www.', ''),
+                            'word_count': len(text.split()),
+                            'extraction_method': 'scraperapi',
+                            'extraction_successful': True
+                        }
+            elif response.status_code == 403:
+                logger.error(f"ScraperAPI: 403 - Invalid API key or unauthorized")
+                logger.error(f"Response: {response.text[:200]}")
+            elif response.status_code == 429:
+                logger.error(f"ScraperAPI: 429 - Rate limit exceeded")
+            else:
+                logger.error(f"ScraperAPI: Error {response.status_code} - {response.text[:200]}")
+            
+            return None
             
         except Exception as e:
             logger.error(f"ScraperAPI failed: {e}")
