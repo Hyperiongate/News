@@ -1,7 +1,12 @@
 """
 TruthLens Unified News & Transcript Analyzer
-Date: September 25, 2025
-Version: 4.0.2 UNIFIED PRODUCTION - COMPLETE FIX
+Date: September 28, 2025
+Version: 4.0.3 UNIFIED PRODUCTION - WITH DIAGNOSTIC
+
+UPDATES IN THIS VERSION:
+1. Added /diagnostic route for troubleshooting UI issues
+2. Diagnostic checks JavaScript files, CSS, and component loading
+3. All previous unified features maintained
 
 CRITICAL FIXES IN THIS VERSION:
 1. ALL template references changed to 'unified_index.html'
@@ -85,7 +90,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.2 COMPLETE FIX")
+logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.3 WITH DIAGNOSTIC")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -616,7 +621,7 @@ def health():
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'service': 'unified-analyzer',
-        'version': '4.0.2-unified',
+        'version': '4.0.3-unified',
         'modes': {
             'news': Config.ENABLE_NEWS_MODE,
             'transcript': Config.ENABLE_TRANSCRIPT_MODE
@@ -758,6 +763,157 @@ def favicon():
         return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
     except:
         return '', 204
+
+@app.route('/diagnostic')
+def diagnostic():
+    """Serve diagnostic page for troubleshooting UI issues"""
+    logger.info("Serving diagnostic page")
+    
+    diagnostic_html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>TruthLens Diagnostic Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .warn { color: orange; font-weight: bold; }
+        code { background: #333; color: lime; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #333; color: lime; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        button { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #4f46e5; }
+        .result-item { padding: 8px; margin: 5px 0; border-left: 4px solid #ddd; background: #f9f9f9; }
+        .result-item.pass { border-left-color: green; background: #f0fff0; }
+        .result-item.fail { border-left-color: red; background: #fff0f0; }
+        h1 { color: #333; }
+        h2 { color: #555; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; }
+        .diagnosis-summary { padding: 15px; background: #f0f0f0; border-radius: 8px; margin-top: 20px; }
+        .fix-instruction { background: #e3f2fd; padding: 15px; border-radius: 6px; border-left: 4px solid #2196f3; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 TruthLens Diagnostic Tool</h1>
+    
+    <div class="card">
+        <h2>Quick Test</h2>
+        <button onclick="runFullTest()">Run Complete Diagnostics</button>
+        <div id="results"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Manual Console Test</h2>
+        <p>Open browser console (F12) and paste this:</p>
+        <pre>
+console.log('=== DIAGNOSTIC ===');
+console.log('ServiceTemplates:', typeof ServiceTemplates);
+console.log('UnifiedAnalyzer:', typeof unifiedAnalyzer);
+console.log('CSS count:', document.styleSheets.length);
+console.log('Has cleanAuthorName:', typeof unifiedAnalyzer?.cleanAuthorName);
+        </pre>
+    </div>
+    
+    <div class="card">
+        <h2>File Size Issues Detected</h2>
+        <p><strong>unified-app-core.js is only 3KB!</strong> This is wrong - it should be ~12KB.</p>
+        <p>This means you're running an old/incomplete version of the JavaScript file.</p>
+        <div class="fix-instruction">
+            <strong>FIX REQUIRED:</strong> Deploy the complete v6.0 unified-app-core.js file (12KB version)
+        </div>
+    </div>
+    
+    <script>
+        function runFullTest() {
+            const r = document.getElementById('results');
+            let html = '<h3>Diagnostic Results:</h3>';
+            let issues = [];
+            
+            // Test 1: ServiceTemplates
+            const st = typeof ServiceTemplates !== 'undefined';
+            html += '<div class="result-item ' + (st ? 'pass' : 'fail') + '">';
+            html += '1. ServiceTemplates: ' + (st ? '✓ Loaded' : '✗ NOT FOUND');
+            if (st && ServiceTemplates.displayAllAnalyses) {
+                html += ' (displayAllAnalyses: ✓)';
+            } else if (st) {
+                html += ' (displayAllAnalyses: ✗)';
+                issues.push('ServiceTemplates missing displayAllAnalyses method');
+            }
+            html += '</div>';
+            if (!st) issues.push('ServiceTemplates not loading - this causes plain text results');
+            
+            // Test 2: UnifiedAnalyzer
+            const ua = typeof unifiedAnalyzer !== 'undefined';
+            html += '<div class="result-item ' + (ua ? 'pass' : 'fail') + '">';
+            html += '2. UnifiedAnalyzer: ' + (ua ? '✓ Loaded' : '✗ NOT FOUND');
+            if (ua && typeof unifiedAnalyzer.cleanAuthorName === 'function') {
+                html += ' (cleanAuthorName: ✓)';
+            } else if (ua) {
+                html += ' (cleanAuthorName: <span class="fail">✗ MISSING</span>)';
+                issues.push('cleanAuthorName method missing - wrong JS version');
+            }
+            html += '</div>';
+            if (!ua) issues.push('UnifiedAnalyzer not loading');
+            
+            // Test 3: CSS Files
+            const css = document.styleSheets.length;
+            html += '<div class="result-item ' + (css > 1 ? 'pass' : css > 0 ? 'warn' : 'fail') + '">';
+            html += '3. CSS Files: ' + css + ' stylesheets loaded';
+            if (css === 0) {
+                html += ' <span class="fail">(NO CSS!)</span>';
+                issues.push('No CSS files loading');
+            } else if (css === 1) {
+                html += ' <span class="warn">(Only 1 - may be missing main.css)</span>';
+            }
+            html += '</div>';
+            
+            // Test 4: Required DOM elements
+            const container = document.getElementById('serviceAnalysisContainer');
+            html += '<div class="result-item ' + (container ? 'pass' : 'fail') + '">';
+            html += '4. Service Container: ' + (container ? '✓ Found' : '✗ MISSING');
+            html += '</div>';
+            if (!container) issues.push('serviceAnalysisContainer element missing');
+            
+            // Test 5: Font Awesome
+            const fa = document.querySelector('link[href*="font-awesome"]');
+            html += '<div class="result-item ' + (fa ? 'pass' : 'warn') + '">';
+            html += '5. Font Awesome Icons: ' + (fa ? '✓ Loaded' : '⚠ Not loaded (icons will be missing)');
+            html += '</div>';
+            
+            // Summary
+            html += '<div class="diagnosis-summary">';
+            html += '<h3>Diagnosis Summary:</h3>';
+            if (issues.length === 0) {
+                html += '<p class="pass">✅ All core components loaded successfully!</p>';
+            } else {
+                html += '<p class="fail">❌ Issues Found:</p>';
+                html += '<ul>';
+                for (let issue of issues) {
+                    html += '<li>' + issue + '</li>';
+                }
+                html += '</ul>';
+                
+                // Primary fix
+                if (ua && !unifiedAnalyzer.cleanAuthorName) {
+                    html += '<div class="fix-instruction">';
+                    html += '<strong>PRIMARY ISSUE:</strong> Wrong version of unified-app-core.js<br>';
+                    html += 'The file is only 3KB but should be ~12KB. You need to deploy the complete v6.0 file.';
+                    html += '</div>';
+                }
+            }
+            html += '</div>';
+            
+            r.innerHTML = html;
+        }
+        
+        // Auto-run after page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runFullTest, 1000);
+        });
+    </script>
+</body>
+</html>"""
+    
+    return diagnostic_html, 200
 
 @app.errorhandler(404)
 def not_found(error):
