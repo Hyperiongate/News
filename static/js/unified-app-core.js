@@ -1,444 +1,396 @@
 /**
- * TruthLens Premium Layout CSS
- * Version: 5.0.0
+ * TruthLens Unified App Core - Simple Compatible Version
+ * Version: 6.0.0
  * Date: September 28, 2025
  * 
- * PREMIUM FEATURES:
- * 1. Compact header (reduced from ~200px to 60px)
- * 2. Form always visible above fold
- * 3. Fixed/centered progress bar
- * 4. Premium animations
- * 5. Monetization-ready design
+ * SIMPLIFIED VERSION:
+ * - No optional chaining
+ * - No arrow functions in critical paths
+ * - Maximum browser compatibility
+ * - 3-second minimum loading time
+ * - All premium features preserved
  */
 
-/* ===== COMPACT HEADER ===== */
-.header {
-    height: 60px !important;
-    padding: 0.75rem 2rem !important;
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
-}
-
-.header-content {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 100%;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
-}
-
-.logo-icon {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    color: white;
-}
-
-.logo-text {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: white;
-}
-
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.nav-link {
-    color: #cbd5e1;
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: color 0.2s;
-}
-
-.nav-link:hover {
-    color: white;
-}
-
-.cta-button {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    padding: 0.5rem 1.25rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 600;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-
-/* ===== COMPACT MAIN SECTION ===== */
-.main-container {
-    padding-top: 70px !important; /* Reduced from header */
-    min-height: 100vh;
-    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-}
-
-.analysis-section {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem 2rem; /* Reduced padding */
-}
-
-/* Compact title section */
-.section-header {
-    text-align: center;
-    margin-bottom: 1.5rem; /* Reduced from 3rem */
-    padding: 0 1rem;
-}
-
-.main-title {
-    font-size: 2rem; /* Reduced from 2.5rem */
-    font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 0.5rem;
-    line-height: 1.2;
-}
-
-.gradient-text {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.subtitle {
-    font-size: 0.95rem; /* Reduced */
-    color: #64748b;
-    max-width: 700px;
-    margin: 0 auto 1rem;
-    line-height: 1.5;
-}
-
-/* Compact trust badges */
-.trust-badges {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.trust-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    font-size: 0.85rem;
-    color: #475569;
-}
-
-.trust-badge i {
-    color: #6366f1;
-    font-size: 1rem;
-}
-
-/* ===== COMPACT MODE SELECTOR ===== */
-.mode-selector {
-    display: flex;
-    background: white;
-    border-radius: 12px;
-    padding: 0.4rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.mode-tab {
-    flex: 1;
-    padding: 0.75rem 1.25rem;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    color: #64748b;
-}
-
-/* ===== COMPACT FORM ===== */
-.mode-description {
-    display: none; /* Hide to save space */
-}
-
-.input-form {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 1.5rem;
-}
-
-.input-group {
-    margin-bottom: 1rem;
-}
-
-.input-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #475569;
-}
-
-.input-field {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-}
-
-.textarea-field {
-    min-height: 100px; /* Reduced from 150px */
-    resize: vertical;
-    font-family: inherit;
-}
-
-.transcript-textarea {
-    min-height: 120px; /* Reduced from 200px */
-}
-
-/* ===== PREMIUM PROGRESS BAR (FIXED/CENTERED) ===== */
-.progress-container {
-    position: fixed !important;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10000;
-    background: white;
-    padding: 2.5rem;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    min-width: 500px;
-    max-width: 600px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    display: none;
-}
-
-.progress-header {
-    text-align: center;
-    margin-bottom: 1.5rem;
-}
-
-.progress-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.5rem;
-}
-
-.progress-subtitle {
-    color: #64748b;
-    font-size: 0.95rem;
-}
-
-.progress-percentage {
-    position: absolute;
-    top: 1rem;
-    right: 1.5rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.progress-bar-container {
-    background: #f1f5f9;
-    height: 8px;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 1.5rem 0;
-}
-
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #6366f1);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-    border-radius: 10px;
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
-@keyframes shimmer {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 200% 0%; }
-}
-
-/* ===== PREMIUM LOADING OVERLAY ===== */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(248, 250, 252, 0.95);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-/* ===== PREMIUM RESULTS ===== */
-.results-section {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    margin-top: 2rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    display: none;
-    opacity: 0;
-    transition: opacity 0.8s ease-out;
-    position: relative;
-}
-
-.results-section.show {
-    opacity: 1;
-}
-
-.results-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    position: relative;
-}
-
-.results-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-/* Analysis mode badge */
-.analysis-mode-badge {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.analysis-mode-badge.news {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-}
-
-.analysis-mode-badge.transcript {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-}
-
-/* ===== ENHANCED TRUST SCORE DISPLAY ===== */
-.enhanced-analysis-overview {
-    margin-bottom: 2rem;
-}
-
-.trust-score-visual {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-    padding: 2rem;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
-    border-radius: 16px;
-    border: 1px solid rgba(99, 102, 241, 0.1);
-    transform: scale(0.95);
-    opacity: 0;
-    transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.trust-score-visual.animate-in {
-    transform: scale(1);
-    opacity: 1;
-}
-
-/* ===== PREMIUM SERVICE CARDS ===== */
-.service-dropdown,
-.service-analysis-section {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    opacity: 0;
-    animation: slideInPremium 0.6s ease-out forwards;
-}
-
-@keyframes slideInPremium {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Staggered animations */
-.service-dropdown:nth-child(1) { animation-delay: 0.1s; }
-.service-dropdown:nth-child(2) { animation-delay: 0.2s; }
-.service-dropdown:nth-child(3) { animation-delay: 0.3s; }
-.service-dropdown:nth-child(4) { animation-delay: 0.4s; }
-.service-dropdown:nth-child(5) { animation-delay: 0.5s; }
-.service-dropdown:nth-child(6) { animation-delay: 0.6s; }
-.service-dropdown:nth-child(7) { animation-delay: 0.7s; }
-
-/* ===== MOBILE RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .header {
-        padding: 0.75rem 1rem !important;
+function UnifiedTruthLensAnalyzer() {
+    console.log('[UnifiedTruthLens] Initializing v6.0.0...');
+    
+    // Core properties
+    this.currentMode = 'news';
+    this.isAnalyzing = false;
+    this.abortController = null;
+    this.MINIMUM_LOADING_TIME = 3000; // 3 seconds
+    
+    // Check dependencies
+    if (typeof ServiceTemplates === 'undefined') {
+        console.error('[UnifiedTruthLens] ServiceTemplates not found!');
+        return;
     }
     
-    .nav-links {
-        display: none; /* Hide on mobile to save space */
-    }
-    
-    .main-title {
-        font-size: 1.5rem;
-    }
-    
-    .trust-badges {
-        flex-wrap: wrap;
-    }
-    
-    .progress-container {
-        min-width: 90%;
-        padding: 1.5rem;
+    // Initialize
+    var self = this;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            self.initialize();
+        });
+    } else {
+        this.initialize();
     }
 }
+
+UnifiedTruthLensAnalyzer.prototype.initialize = function() {
+    console.log('[UnifiedTruthLens] Initializing...');
+    
+    this.setupFormHandlers();
+    this.setupTabs();
+    this.setupResetButtons();
+    
+    console.log('[UnifiedTruthLens] Ready');
+};
+
+UnifiedTruthLensAnalyzer.prototype.setupTabs = function() {
+    var self = this;
+    window.switchMode = function(mode) {
+        self.switchMode(mode);
+    };
+};
+
+UnifiedTruthLensAnalyzer.prototype.switchMode = function(mode) {
+    console.log('[UnifiedTruthLens] Switching to ' + mode);
+    this.currentMode = mode;
+    
+    // Update tabs
+    var tabs = document.querySelectorAll('.mode-tab');
+    for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].dataset.mode === mode) {
+            tabs[i].classList.add('active');
+        } else {
+            tabs[i].classList.remove('active');
+        }
+    }
+    
+    // Update content
+    var contents = document.querySelectorAll('.mode-content');
+    for (var j = 0; j < contents.length; j++) {
+        if (contents[j].id === mode + '-mode') {
+            contents[j].classList.add('active');
+        } else {
+            contents[j].classList.remove('active');
+        }
+    }
+    
+    this.clearResults();
+};
+
+UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
+    var self = this;
+    
+    // News form
+    var newsForm = document.getElementById('newsForm');
+    if (newsForm) {
+        newsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var urlInput = document.getElementById('newsUrlInput');
+            var textInput = document.getElementById('newsTextInput');
+            var input = '';
+            
+            if (urlInput && urlInput.value) {
+                input = urlInput.value.trim();
+            }
+            if (!input && textInput && textInput.value) {
+                input = textInput.value.trim();
+            }
+            
+            if (!input) {
+                self.showError('Please enter a URL or text to analyze');
+                return;
+            }
+            
+            self.currentMode = 'news';
+            self.analyzeContent(input);
+        });
+    }
+    
+    // Transcript form
+    var transcriptForm = document.getElementById('transcriptForm');
+    if (transcriptForm) {
+        transcriptForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var urlInput = document.getElementById('youtubeUrlInput');
+            var textInput = document.getElementById('transcriptTextInput');
+            var input = '';
+            
+            if (urlInput && urlInput.value) {
+                input = urlInput.value.trim();
+            }
+            if (!input && textInput && textInput.value) {
+                input = textInput.value.trim();
+            }
+            
+            if (!input) {
+                self.showError('Please enter a YouTube URL or transcript to analyze');
+                return;
+            }
+            
+            self.currentMode = 'transcript';
+            self.analyzeContent(input);
+        });
+    }
+};
+
+UnifiedTruthLensAnalyzer.prototype.setupResetButtons = function() {
+    var self = this;
+    window.resetForm = function(mode) {
+        var formId = mode === 'news' ? 'newsForm' : 'transcriptForm';
+        var form = document.getElementById(formId);
+        if (form) {
+            form.reset();
+        }
+        self.clearResults();
+    };
+};
+
+UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
+    console.log('[UnifiedTruthLens] Starting analysis...');
+    
+    if (this.isAnalyzing) return;
+    
+    this.isAnalyzing = true;
+    this.clearResults();
+    this.showLoadingState();
+    
+    var self = this;
+    var startTime = Date.now();
+    
+    // Create request
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/analyze', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+        var elapsedTime = Date.now() - startTime;
+        var remainingTime = Math.max(0, self.MINIMUM_LOADING_TIME - elapsedTime);
+        
+        // Ensure minimum loading time
+        setTimeout(function() {
+            if (xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.error) {
+                        self.showError(data.error);
+                    } else {
+                        self.displayResults(data);
+                    }
+                } catch (e) {
+                    self.showError('Failed to parse response');
+                }
+            } else {
+                self.showError('Analysis failed: ' + xhr.statusText);
+            }
+            self.hideLoadingState();
+            self.isAnalyzing = false;
+        }, remainingTime);
+    };
+    
+    xhr.onerror = function() {
+        self.showError('Network error occurred');
+        self.hideLoadingState();
+        self.isAnalyzing = false;
+    };
+    
+    xhr.send(JSON.stringify({
+        input_data: input,
+        analysis_mode: this.currentMode
+    }));
+};
+
+UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
+    var loadingOverlay = document.getElementById('loadingOverlay');
+    var progressContainer = document.getElementById('progressContainer');
+    var resultsSection = document.getElementById('resultsSection');
+    
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+    
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        this.animateProgress();
+    }
+    
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+    }
+    
+    // Disable buttons
+    var buttons = document.querySelectorAll('.analyze-button');
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].disabled = true;
+        var textSpan = buttons[i].querySelector('.button-text');
+        if (textSpan) {
+            textSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        }
+    }
+};
+
+UnifiedTruthLensAnalyzer.prototype.animateProgress = function() {
+    var progressBar = document.getElementById('progressBar');
+    var progressPercentage = document.getElementById('progressPercentage');
+    var steps = document.querySelectorAll('.progress-step');
+    
+    if (!progressBar) return;
+    
+    var progress = 0;
+    var stepIndex = 0;
+    
+    this.progressInterval = setInterval(function() {
+        if (progress >= 95) {
+            clearInterval(this.progressInterval);
+            return;
+        }
+        
+        progress = Math.min(95, progress + Math.random() * 5 + 2);
+        progressBar.style.width = progress + '%';
+        
+        if (progressPercentage) {
+            progressPercentage.textContent = Math.round(progress) + '%';
+        }
+        
+        // Activate steps
+        var expectedStep = Math.floor((progress / 95) * steps.length);
+        while (stepIndex <= expectedStep && stepIndex < steps.length) {
+            if (steps[stepIndex]) {
+                steps[stepIndex].classList.add('active');
+            }
+            stepIndex++;
+        }
+    }, 100);
+};
+
+UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
+    var self = this;
+    
+    var loadingOverlay = document.getElementById('loadingOverlay');
+    var progressContainer = document.getElementById('progressContainer');
+    var progressBar = document.getElementById('progressBar');
+    
+    if (progressBar) {
+        progressBar.style.width = '100%';
+    }
+    
+    setTimeout(function() {
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
+        
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+            if (progressBar) {
+                progressBar.style.width = '0%';
+            }
+        }
+        
+        // Reset steps
+        var steps = document.querySelectorAll('.progress-step');
+        for (var i = 0; i < steps.length; i++) {
+            steps[i].classList.remove('active');
+        }
+        
+        // Re-enable buttons
+        var buttons = document.querySelectorAll('.analyze-button');
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].disabled = false;
+            var textSpan = buttons[j].querySelector('.button-text');
+            if (textSpan) {
+                var isNews = buttons[j].id === 'newsAnalyzeBtn';
+                if (isNews) {
+                    textSpan.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+                } else {
+                    textSpan.innerHTML = '<i class="fas fa-video"></i> Analyze Transcript';
+                }
+            }
+        }
+    }, 300);
+    
+    if (this.progressInterval) {
+        clearInterval(this.progressInterval);
+    }
+};
+
+UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
+    console.log('[UnifiedTruthLens] Displaying results...');
+    
+    var resultsSection = document.getElementById('resultsSection');
+    if (!resultsSection) return;
+    
+    resultsSection.style.display = 'block';
+    
+    // Update mode badge
+    var modeBadge = document.getElementById('analysisModeBadge');
+    if (modeBadge) {
+        modeBadge.textContent = data.analysis_mode === 'transcript' ? 'Transcript' : 'News';
+    }
+    
+    // Update trust display
+    if (typeof updateEnhancedTrustDisplay === 'function') {
+        updateEnhancedTrustDisplay(data);
+    }
+    
+    // Display service analyses
+    var container = document.getElementById('serviceAnalysisContainer');
+    if (container && typeof ServiceTemplates !== 'undefined') {
+        container.innerHTML = '';
+        ServiceTemplates.displayAllAnalyses(data, this);
+    }
+    
+    // Scroll to results
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
+    var container = document.getElementById('serviceAnalysisContainer');
+    if (container) {
+        container.innerHTML = '';
+    }
+    
+    var resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+    }
+};
+
+UnifiedTruthLensAnalyzer.prototype.showError = function(message) {
+    console.error('[UnifiedTruthLens] ' + message);
+    
+    this.hideLoadingState();
+    
+    var errorMessage = document.getElementById('errorMessage');
+    var errorText = document.getElementById('errorText');
+    
+    if (errorMessage && errorText) {
+        errorText.textContent = message;
+        errorMessage.style.display = 'block';
+        errorMessage.classList.add('active');
+        
+        setTimeout(function() {
+            errorMessage.classList.remove('active');
+        }, 5000);
+    }
+};
+
+// CRITICAL: Add the missing cleanAuthorName method
+UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
+    if (!author || author === 'Unknown' || author === 'N/A') {
+        return 'Unknown Author';
+    }
+    return author.replace(/^by\s+/i, '').trim() || 'Unknown Author';
+};
+
+// Initialize application
+console.log('[UnifiedTruthLens] Loading application...');
+var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
+
+// Export for compatibility
+window.UnifiedTruthLensAnalyzer = UnifiedTruthLensAnalyzer;
+window.unifiedAnalyzer = unifiedAnalyzer;
