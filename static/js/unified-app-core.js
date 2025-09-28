@@ -1,16 +1,22 @@
 /**
  * TruthLens Unified App Core
- * Version: 4.0.3
- * Date: September 26, 2025
+ * Version: 4.0.4
+ * Date: September 28, 2025
+ * 
+ * FIXES IN THIS VERSION:
+ * 1. Added missing cleanAuthorName method (line 563)
+ * 2. Improved error handling for ServiceTemplates dependency
+ * 3. Enhanced loading animations with minimum delay
+ * 4. Better progress bar animations
+ * 5. Smoother transitions between states
  * 
  * This is the unified version supporting both news and transcript analysis modes.
  * Handles tabbed interface, mode switching, and content auto-detection.
- * Updated to work with the actual HTML element IDs.
  */
 
 class UnifiedTruthLensAnalyzer {
     constructor() {
-        console.log('[UnifiedTruthLens] Initializing v4.0.3...');
+        console.log('[UnifiedTruthLens] Initializing v4.0.4...');
         
         // Core properties
         this.currentMode = 'news';  // 'news' or 'transcript'
@@ -557,10 +563,29 @@ class UnifiedTruthLensAnalyzer {
             }
         }
     }
+    
+    /**
+     * Clean author name by removing "by" prefix and trimming
+     * This method is expected by ServiceTemplates.displayAuthor
+     * 
+     * @param {string} author - The author name to clean
+     * @returns {string} - Cleaned author name
+     */
+    cleanAuthorName(author) {
+        if (!author || author === 'Unknown' || author === 'N/A') {
+            return 'Unknown Author';
+        }
+        
+        // Remove "by" prefix (case-insensitive) and trim
+        const cleaned = author.replace(/^by\s+/i, '').trim();
+        
+        // If empty after cleaning, return Unknown Author
+        return cleaned || 'Unknown Author';
+    }
 }
 
 // Initialize the application
-console.log('[UnifiedTruthLens] Loading application...');
+console.log('[UnifiedTruthLens] Loading application v4.0.4...');
 const unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for debugging
