@@ -1,10 +1,11 @@
 """
 Analysis Pipeline - Service Isolation Architecture
-Date Modified: 2025-09-28
-Fixed: Proper text/content field mapping to prevent "No text provided" errors
+Date Modified: September 28, 2025
+Fixed: URL/content properly passed to article extractor
 
-CRITICAL FIX: The to_service_input() method now properly maps content/text fields
-so services receive the data they expect.
+CRITICAL FIXES:
+1. The _extract_article method now passes URL/content to the extractor
+2. Proper text/content field mapping to prevent "No text provided" errors
 """
 
 import time
@@ -548,7 +549,7 @@ class IsolatedAnalysisPipeline:
             return response
     
     def _extract_article(self, request_data: Dict[str, Any]) -> ServiceResult:
-        """Extract article with fallback"""
+        """Extract article with fallback - FIXED to pass URL properly"""
         try:
             extractor = self.registry.get_service('article_extractor')
             
@@ -571,8 +572,28 @@ class IsolatedAnalysisPipeline:
                 )
             
             isolator = ServiceIsolator('article_extractor', extractor)
+            
+            # CRITICAL FIX: Pass the URL/content to the article extractor!
+            # The article extractor expects either a URL or text content
+            initial_data = {}
+            
+            # Check what type of input we have
+            if 'url' in request_data:
+                # For URL input, pass it to the extractor
+                initial_data['url'] = request_data['url']
+                logger.info(f"Passing URL to extractor: {request_data['url']}")
+            elif 'content' in request_data or 'text' in request_data:
+                # For text input, pass it as article data
+                initial_data['content'] = request_data.get('content') or request_data.get('text', '')
+                initial_data['text'] = initial_data['content']
+                logger.info(f"Passing text content to extractor: {len(initial_data['content'])} chars")
+            else:
+                logger.warning("No URL or content found in request_data")
+                initial_data = request_data  # Pass everything and let extractor figure it out
+            
+            # Create context WITH the URL/content data
             context = IsolatedServiceContext(
-                article_data={},
+                article_data=initial_data,  # ← FIXED: Now passes the URL/content!
                 original_request=request_data
             )
             
