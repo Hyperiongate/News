@@ -1,26 +1,24 @@
 """
-Article Extractor Service - COMPLETE BBC FIX
-Date: September 8, 2025
-Last Updated: September 8, 2025
+Article Extractor Service - PROFESSIONAL VERSION
+Date: 2025-09-28
+Purpose: Extract REAL article content for professional analysis
 
-FIXES:
-- Robust BBC author extraction using multiple methods
-- Searches article text directly for author patterns
-- Handles multi-author articles
-- More aggressive name detection
+This replaces the broken extractor that returns fallback garbage.
+Implements multiple extraction methods with intelligent fallbacks.
 """
+
 import os
 import re
-import json
 import time
+import json
 import logging
 import requests
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Check for BeautifulSoup
 try:
     from bs4 import BeautifulSoup
     BS4_AVAILABLE = True
@@ -28,236 +26,271 @@ except ImportError:
     BS4_AVAILABLE = False
     logger.error("BeautifulSoup not available")
 
+try:
+    from newspaper import Article as NewspaperArticle
+    NEWSPAPER_AVAILABLE = True
+except ImportError:
+    NEWSPAPER_AVAILABLE = False
+    logger.info("Newspaper3k not available - install with: pip install newspaper3k")
+
 
 class ArticleExtractor:
-    """
-    Complete article extraction service with robust BBC author support
-    """
+    """Professional article extraction with multiple methods and quality validation"""
     
     def __init__(self):
-        """Initialize the article extractor"""
         self.service_name = 'article_extractor'
         self.available = True
         self.is_available = True
         
-        # Get API keys
+        # API keys
         self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY')
+        self.scrapingbee_key = os.environ.get('SCRAPINGBEE_KEY')
         
-        # Session for requests
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
-        
-        # Author selectors for different domains
-        self.author_selectors = {
-            'bbc.com': [
-                'span.ssrcss-68pt20-Text-TextContributorName',
-                'div.ssrcss-68pt20-Text-TextContributorName',
-                'span[class*="TextContributorName"]',
-                'div[class*="TextContributorName"]',
-                'div.byline',
-                'span.byline__name',
-                'p[class*="Contributor"]',
-                'div[class*="contributor"]',
-                'span.qa-contributor-name',
-                'div[class*="ssrcss"][class*="Text"]',
-                'p[class*="ssrcss"]'
-            ],
-            'bbc.co.uk': [  # Same as bbc.com
-                'span.ssrcss-68pt20-Text-TextContributorName',
-                'div.ssrcss-68pt20-Text-TextContributorName',
-                'span[class*="TextContributorName"]',
-                'div[class*="TextContributorName"]',
-                'div.byline',
-                'span.byline__name',
-                'p[class*="Contributor"]',
-                'div[class*="contributor"]',
-                'span.qa-contributor-name',
-                'div[class*="ssrcss"][class*="Text"]',
-                'p[class*="ssrcss"]'
-            ],
-            'cnn.com': [
-                'span.byline__name',
-                'div.byline__names',
-                'span.metadata__byline__author'
-            ],
-            'reuters.com': [
-                'div.author-name',
-                'span.author-name',
-                'div.ArticleHeader__author'
-            ],
-            'chicagotribune.com': [
-                'span.byline',
-                'div.byline',
-                'span[class*="author"]',
-                'div[class*="author"]'
-            ]
+        # Professional headers
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         }
         
-        logger.info(f"ArticleExtractor initialized - ScraperAPI: {'✓' if self.scraperapi_key else '✗'}")
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
+        
+        logger.info(f"ArticleExtractor initialized - ScraperAPI: {bool(self.scraperapi_key)}, ScrapingBee: {bool(self.scrapingbee_key)}")
     
     def _check_availability(self) -> bool:
-        """
-        REQUIRED METHOD - Check if service is available
-        This method is required by BaseAnalyzer abstract class
-        """
+        """Check if service is available"""
         return BS4_AVAILABLE
-    
-    def check_service(self) -> bool:
-        """Check if service is operational"""
-        return self._check_availability()
-    
-    def get_success_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Return success result"""
-        return {
-            'success': True,
-            'data': data,
-            'service': self.service_name,
-            'available': True,
-            'timestamp': time.time(),
-            'analysis_complete': True
-        }
-    
-    def get_error_result(self, error_message: str) -> Dict[str, Any]:
-        """Return error result"""
-        return {
-            'success': False,
-            'error': error_message,
-            'service': self.service_name,
-            'available': self.available,
-            'timestamp': time.time()
-        }
-    
-    def get_default_result(self) -> Dict[str, Any]:
-        """Return default result when service unavailable"""
-        return {
-            'success': False,
-            'service': self.service_name,
-            'available': False,
-            'error': 'Service unavailable',
-            'timestamp': time.time()
-        }
-    
-    def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
-        return {
-            'name': self.service_name,
-            'available': self.available,
-            'enabled': True
-        }
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main analysis method - extracts article from URL
+        Extract article with multiple methods and quality validation
+        RETURNS ACTUAL ARTICLE CONTENT, NOT FALLBACK GARBAGE
         """
         try:
-            logger.info("=" * 60)
-            logger.info("ARTICLE EXTRACTOR - STARTING")
-            logger.info("=" * 60)
-            
-            # Check BeautifulSoup
-            if not BS4_AVAILABLE:
-                return self.get_error_result("BeautifulSoup not available")
-            
-            # Get URL
             url = data.get('url')
             if not url:
-                return self.get_error_result("No URL provided")
+                logger.error("No URL provided for extraction")
+                return self._create_error_response("No URL provided")
             
-            logger.info(f"Extracting from URL: {url}")
+            logger.info(f"Extracting article from: {url}")
             
-            # Try extraction methods
-            extracted_data = None
+            # Try extraction methods in order of reliability
+            article_data = None
+            extraction_method = None
             
-            # Method 1: ScraperAPI
-            if self.scraperapi_key:
-                extracted_data = self._extract_with_scraperapi(url)
+            # Method 1: Newspaper3k (best for article extraction)
+            if NEWSPAPER_AVAILABLE and not article_data:
+                logger.info("Trying Newspaper3k extraction...")
+                article_data = self._extract_with_newspaper(url)
+                if article_data:
+                    extraction_method = "newspaper3k"
             
-            # Method 2: Direct request
-            if not extracted_data:
-                extracted_data = self._extract_with_requests(url)
+            # Method 2: ScraperAPI (handles JavaScript sites)
+            if self.scraperapi_key and not article_data:
+                logger.info("Trying ScraperAPI extraction...")
+                article_data = self._extract_with_scraperapi(url)
+                if article_data:
+                    extraction_method = "scraperapi"
             
-            # Return result
-            if extracted_data:
-                logger.info(f"SUCCESS - Extracted: {extracted_data.get('title', 'Unknown')[:50]}")
-                logger.info(f"Author: {extracted_data.get('author', 'Unknown')}")
-                return self.get_success_result(extracted_data)
+            # Method 3: ScrapingBee (alternative API)
+            if self.scrapingbee_key and not article_data:
+                logger.info("Trying ScrapingBee extraction...")
+                article_data = self._extract_with_scrapingbee(url)
+                if article_data:
+                    extraction_method = "scrapingbee"
+            
+            # Method 4: Direct request with BeautifulSoup
+            if not article_data:
+                logger.info("Trying direct extraction with BeautifulSoup...")
+                article_data = self._extract_with_beautifulsoup(url)
+                if article_data:
+                    extraction_method = "beautifulsoup"
+            
+            # Method 5: Fallback with requests + smart parsing
+            if not article_data:
+                logger.info("Trying fallback extraction...")
+                article_data = self._extract_with_fallback(url)
+                if article_data:
+                    extraction_method = "fallback"
+            
+            # Validate extraction quality
+            if article_data and self._validate_extraction(article_data):
+                logger.info(f"SUCCESS: Extracted {article_data.get('word_count', 0)} words using {extraction_method}")
+                
+                # Return ACTUAL article data, not garbage
+                return {
+                    'success': True,
+                    'service': self.service_name,
+                    'available': True,
+                    'timestamp': time.time(),
+                    # CRITICAL: Return the article data directly at root level
+                    **article_data,  # Spread article data at root
+                    'extraction_method': extraction_method,
+                    'extraction_quality': self._calculate_quality_score(article_data)
+                }
             else:
-                return self.get_error_result("All extraction methods failed")
+                logger.error(f"All extraction methods failed for {url}")
+                return self._create_error_response(f"Unable to extract article from {url}")
                 
         except Exception as e:
-            logger.error(f"Article extraction error: {e}")
-            return self.get_error_result(str(e))
+            logger.error(f"Article extraction error: {e}", exc_info=True)
+            return self._create_error_response(str(e))
+    
+    def _extract_with_newspaper(self, url: str) -> Optional[Dict[str, Any]]:
+        """Extract using Newspaper3k - best for articles"""
+        try:
+            article = NewspaperArticle(url)
+            article.download()
+            article.parse()
+            article.nlp()  # Natural language processing for keywords/summary
+            
+            if not article.text or len(article.text) < 100:
+                return None
+            
+            return {
+                'title': article.title or 'Untitled',
+                'author': ', '.join(article.authors) if article.authors else 'Unknown',
+                'text': article.text,
+                'content': article.text,
+                'url': url,
+                'domain': urlparse(url).netloc.replace('www.', ''),
+                'source': urlparse(url).netloc.replace('www.', ''),
+                'publish_date': article.publish_date.isoformat() if article.publish_date else None,
+                'top_image': article.top_image,
+                'keywords': article.keywords[:10] if article.keywords else [],
+                'summary': article.summary[:500] if article.summary else '',
+                'word_count': len(article.text.split()),
+                'extraction_successful': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Newspaper extraction failed: {e}")
+            return None
     
     def _extract_with_scraperapi(self, url: str) -> Optional[Dict[str, Any]]:
-        """Extract using ScraperAPI"""
+        """Extract using ScraperAPI with proper implementation"""
         try:
-            logger.info("Trying scraperapi...")
-            
             api_url = "http://api.scraperapi.com"
             params = {
                 'api_key': self.scraperapi_key,
                 'url': url,
-                'render': 'false'
+                'render': 'true',  # Enable JavaScript rendering
+                'premium': 'true'  # Use premium proxies for better success
             }
             
             response = requests.get(api_url, params=params, timeout=30)
             response.raise_for_status()
             
-            return self._parse_html(response.text, url, 'scraperapi')
+            return self._parse_html_professionally(response.text, url, "scraperapi")
             
         except Exception as e:
-            logger.error(f"ScraperAPI failed: {e}")
+            logger.error(f"ScraperAPI extraction failed: {e}")
             return None
     
-    def _extract_with_requests(self, url: str) -> Optional[Dict[str, Any]]:
-        """Extract using direct requests"""
+    def _extract_with_scrapingbee(self, url: str) -> Optional[Dict[str, Any]]:
+        """Extract using ScrapingBee API"""
         try:
-            logger.info("Trying enhanced_requests...")
+            api_url = "https://app.scrapingbee.com/api/v1"
+            params = {
+                'api_key': self.scrapingbee_key,
+                'url': url,
+                'render_js': 'true',
+                'premium_proxy': 'true'
+            }
             
-            response = self.session.get(url, timeout=15)
+            response = requests.get(api_url, params=params, timeout=30)
             response.raise_for_status()
             
-            return self._parse_html(response.text, url, 'enhanced_requests')
+            return self._parse_html_professionally(response.text, url, "scrapingbee")
             
         except Exception as e:
-            logger.error(f"Requests extraction failed: {e}")
+            logger.error(f"ScrapingBee extraction failed: {e}")
             return None
     
-    def _parse_html(self, html: str, url: str, method: str) -> Optional[Dict[str, Any]]:
-        """Parse HTML and extract article data"""
+    def _extract_with_beautifulsoup(self, url: str) -> Optional[Dict[str, Any]]:
+        """Extract using direct request with BeautifulSoup"""
+        try:
+            response = self.session.get(url, timeout=15, headers=self.headers)
+            response.raise_for_status()
+            
+            return self._parse_html_professionally(response.text, url, "beautifulsoup")
+            
+        except Exception as e:
+            logger.error(f"BeautifulSoup extraction failed: {e}")
+            return None
+    
+    def _extract_with_fallback(self, url: str) -> Optional[Dict[str, Any]]:
+        """Last resort extraction with aggressive parsing"""
+        try:
+            # Try with different user agents
+            user_agents = [
+                'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                'Mozilla/5.0 (compatible; Bingbot/2.0; +http://www.bing.com/bingbot.htm)',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+            ]
+            
+            for ua in user_agents:
+                try:
+                    headers = self.headers.copy()
+                    headers['User-Agent'] = ua
+                    response = requests.get(url, headers=headers, timeout=10)
+                    
+                    if response.status_code == 200:
+                        result = self._parse_html_professionally(response.text, url, "fallback")
+                        if result and result.get('word_count', 0) > 100:
+                            return result
+                except:
+                    continue
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Fallback extraction failed: {e}")
+            return None
+    
+    def _parse_html_professionally(self, html: str, url: str, method: str) -> Optional[Dict[str, Any]]:
+        """Professional HTML parsing with multiple extraction strategies"""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
-            # Extract components
+            # Remove script and style elements
+            for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'noscript']):
+                element.decompose()
+            
+            # Extract metadata
             title = self._extract_title(soup)
-            author = self._extract_author(soup, url, html)  # Pass HTML for robust extraction
-            content = self._extract_content(soup)
+            author = self._extract_author(soup, url)
+            publish_date = self._extract_publish_date(soup)
             
-            # Get domain
-            domain = urlparse(url).netloc.replace('www.', '')
+            # Extract article content with multiple strategies
+            content = self._extract_content_smart(soup)
             
-            # Validate
-            if not content or len(content) < 100:
-                logger.warning(f"{method} insufficient content")
+            if not content or len(content) < 200:
+                logger.warning(f"Insufficient content extracted: {len(content) if content else 0} chars")
                 return None
             
-            logger.info(f"Extraction results - Author: {author}, Title: {title[:50]}, Words: {len(content.split())}")
-            logger.info(f"SUCCESS: {method} extracted content")
+            # Extract additional metadata
+            domain = urlparse(url).netloc.replace('www.', '')
             
             return {
                 'title': title,
                 'author': author,
-                'content': content,
                 'text': content,
+                'content': content,
                 'url': url,
                 'domain': domain,
-                'source': domain,
+                'source': self._get_source_name(domain),
+                'publish_date': publish_date,
                 'word_count': len(content.split()),
-                'extraction_method': method,
+                'sentence_count': len(re.findall(r'[.!?]+', content)),
+                'paragraph_count': len(content.split('\n\n')),
                 'extraction_successful': True,
-                'analysis_complete': True
+                'extraction_method': method
             }
             
         except Exception as e:
@@ -265,256 +298,204 @@ class ArticleExtractor:
             return None
     
     def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract title"""
+        """Extract article title with multiple strategies"""
         # Try OpenGraph
         og_title = soup.find('meta', property='og:title')
         if og_title and og_title.get('content'):
             return og_title['content'].strip()
         
-        # Try h1
-        h1 = soup.find('h1')
-        if h1:
-            return h1.get_text(strip=True)
+        # Try Twitter Card
+        twitter_title = soup.find('meta', attrs={'name': 'twitter:title'})
+        if twitter_title and twitter_title.get('content'):
+            return twitter_title['content'].strip()
         
-        # Try title tag
-        title = soup.find('title')
-        if title:
-            text = title.get_text(strip=True)
-            return text.split(' - ')[0].split(' | ')[0]
+        # Try article title
+        for selector in ['h1.article-title', 'h1.entry-title', 'h1.post-title', 'h1[itemprop="headline"]', 'h1']:
+            element = soup.select_one(selector)
+            if element:
+                return element.get_text(strip=True)
         
-        return "No title found"
+        # Fallback to page title
+        title_tag = soup.find('title')
+        if title_tag:
+            return title_tag.get_text(strip=True).split('|')[0].strip()
+        
+        return "Untitled Article"
     
-    def _extract_author(self, soup: BeautifulSoup, url: str, html_text: str = "") -> str:
-        """Enhanced author extraction with robust BBC support"""
-        domain = urlparse(url).netloc.replace('www.', '')
-        
-        logger.info(f"Extracting author for domain: {domain}")
-        
-        # Special handling for BBC
-        if 'bbc.com' in domain or 'bbc.co.uk' in domain:
-            authors = self._extract_bbc_authors_robust(soup, html_text)
-            if authors:
-                # Join multiple authors with " and "
-                author_string = ' and '.join(authors)
-                logger.info(f"Found BBC author(s): {author_string}")
-                return author_string
-        
-        # Try domain-specific selectors
-        if domain in self.author_selectors:
-            for selector in self.author_selectors[domain]:
-                try:
-                    element = soup.select_one(selector)
-                    if element:
-                        author = element.get_text(strip=True)
-                        author = self._clean_author_text(author)
-                        if author and len(author) > 2 and len(author) < 100:
-                            logger.info(f"Found valid author via selector: {author}")
-                            return author
-                except:
-                    pass
+    def _extract_author(self, soup: BeautifulSoup, url: str) -> str:
+        """Extract author with domain-specific strategies"""
+        # Try schema.org
+        author_schema = soup.find('span', itemprop='author')
+        if author_schema:
+            return author_schema.get_text(strip=True)
         
         # Try meta tags
-        for name in ['author', 'article:author', 'dc.creator', 'byl']:
-            meta = soup.find('meta', attrs={'name': name}) or \
-                   soup.find('meta', attrs={'property': name})
+        for meta_name in ['author', 'article:author', 'DC.creator']:
+            meta = soup.find('meta', attrs={'name': meta_name})
             if meta and meta.get('content'):
-                author = meta['content'].strip()
-                author = self._clean_author_text(author)
-                if author and len(author) > 2:
-                    logger.info(f"Found valid author in meta tag: {author}")
-                    return author
+                return meta['content'].strip()
         
-        # Try common patterns
-        for element in soup.find_all(class_=re.compile(r'byline|author|contributor', re.I))[:10]:
-            text = element.get_text(strip=True)
-            text = self._clean_author_text(text)
-            if text and len(text) > 2 and len(text) < 100:
-                # Check if it's actually a name (contains letters, not just roles)
-                if re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+', text):
-                    logger.info(f"Found valid author via pattern: {text}")
+        # Try common class names
+        for selector in ['.author-name', '.by-author', '.article-author', '[rel="author"]', '.byline']:
+            element = soup.select_one(selector)
+            if element:
+                text = element.get_text(strip=True)
+                # Clean up author text
+                text = re.sub(r'^by\s+', '', text, flags=re.I)
+                if text and len(text) < 100:
                     return text
         
-        logger.info("No valid author found with any method")
-        return "Unknown"
+        return "Staff Writer"
     
-    def _extract_bbc_authors_robust(self, soup: BeautifulSoup, html_text: str = "") -> List[str]:
-        """
-        Robust BBC author extraction using multiple methods
-        """
-        authors = []
+    def _extract_publish_date(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract publish date"""
+        # Try meta tags
+        for meta_property in ['article:published_time', 'datePublished', 'DC.date.issued']:
+            meta = soup.find('meta', property=meta_property) or soup.find('meta', attrs={'name': meta_property})
+            if meta and meta.get('content'):
+                return meta['content']
         
-        # Method 1: Look for author info in the article body text
-        # BBC often shows authors as text like "Rushdi Abualouf Gaza correspondent"
-        article_text = soup.get_text()[:5000]  # First 5000 chars should contain author
+        # Try time tag
+        time_tag = soup.find('time')
+        if time_tag and time_tag.get('datetime'):
+            return time_tag['datetime']
         
-        # Pattern 1: Names followed by role/location
-        # Matches: "Rushdi Abualouf Gaza correspondent" or "Wyre Davies BBC News, Jerusalem"
-        patterns = [
-            # Name + role pattern
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+(?:Gaza|BBC|correspondent|reporter|journalist|editor|News|reporting|Jerusalem|Tel Aviv|Washington|London|New York))',
-            # By + Name pattern  
-            r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
-            # Name at start of line/paragraph
-            r'^([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s|,|\.|$)',
-            # Name with "and" for multiple authors
-            r'([A-Z][a-z]+\s+[A-Z][a-z]+)\s+and\s+([A-Z][a-z]+\s+[A-Z][a-z]+)',
-        ]
+        return None
+    
+    def _extract_content_smart(self, soup: BeautifulSoup) -> str:
+        """Smart content extraction with multiple strategies"""
+        content_parts = []
         
-        for pattern in patterns:
-            matches = re.findall(pattern, article_text, re.MULTILINE)
-            if matches:
-                for match in matches:
-                    if isinstance(match, tuple):
-                        # Handle multiple captures from patterns with groups
-                        for name in match:
-                            if name and name not in authors:
-                                # Validate it's a real name
-                                if self._is_valid_author_name(name):
-                                    authors.append(name)
-                    else:
-                        if match not in authors and self._is_valid_author_name(match):
-                            authors.append(match)
+        # Strategy 1: Look for article tag
+        article = soup.find('article')
+        if article:
+            paragraphs = article.find_all('p')
+            content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 30])
+            if len(content) > 500:
+                return content
         
-        # Method 2: Look in the first few paragraphs for author-like text
-        paragraphs = soup.find_all('p')[:10]
-        for p in paragraphs:
+        # Strategy 2: Look for main content areas
+        for selector in ['main', '[role="main"]', '.article-content', '.entry-content', '.post-content']:
+            element = soup.select_one(selector)
+            if element:
+                paragraphs = element.find_all('p')
+                content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 30])
+                if len(content) > 500:
+                    return content
+        
+        # Strategy 3: Find the densest text cluster
+        all_paragraphs = soup.find_all('p')
+        
+        # Score paragraphs based on length and position
+        scored_paragraphs = []
+        for i, p in enumerate(all_paragraphs):
             text = p.get_text(strip=True)
-            
-            # Check if this paragraph contains author indicators
-            if any(indicator in text.lower() for indicator in ['correspondent', 'bbc news', 'reporting', 'journalist']):
-                # Extract potential names from this paragraph
-                words = text.split()
-                i = 0
-                while i < len(words) - 1:
-                    # Look for capitalized word pairs that could be names
-                    if (words[i][0].isupper() and 
-                        i + 1 < len(words) and 
-                        words[i+1][0].isupper() and
-                        words[i].lower() not in ['bbc', 'news', 'the', 'in', 'from', 'and']):
-                        
-                        potential_name = f"{words[i]} {words[i+1]}"
-                        if self._is_valid_author_name(potential_name) and potential_name not in authors:
-                            authors.append(potential_name)
-                            i += 2
-                        else:
-                            i += 1
-                    else:
-                        i += 1
+            if len(text) > 50:  # Minimum paragraph length
+                # Score based on length and lack of common footer/header words
+                score = len(text)
+                if any(word in text.lower() for word in ['cookie', 'subscribe', 'newsletter', 'copyright', 'privacy']):
+                    score *= 0.3  # Penalize likely non-content
+                scored_paragraphs.append((score, text))
         
-        # Method 3: Check specific BBC selectors
-        for selector in ['p[class*="ssrcss"]', 'div[class*="ssrcss"]', 'span[class*="ssrcss"]']:
-            elements = soup.select(selector)[:20]  # Check first 20 elements
-            for element in elements:
-                text = element.get_text(strip=True)
-                # Look for text that starts with a capitalized name
-                name_match = re.match(r'^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
-                if name_match:
-                    name = name_match.group(1)
-                    if self._is_valid_author_name(name) and name not in authors:
-                        # Check if followed by role/location indicators
-                        if any(indicator in text.lower() for indicator in ['correspondent', 'bbc', 'news', 'reporting']):
-                            authors.append(name)
+        # Sort by score and take the best paragraphs
+        scored_paragraphs.sort(key=lambda x: x[0], reverse=True)
         
-        # Method 4: Fallback - search the entire HTML for specific known authors
-        # This is specific to the article you're testing
-        if not authors:
-            if "Rushdi Abualouf" in html_text:
-                authors.append("Rushdi Abualouf")
-            if "Wyre Davies" in html_text:
-                authors.append("Wyre Davies")
+        # Take top paragraphs that form substantial content
+        content = []
+        total_words = 0
+        for score, text in scored_paragraphs:
+            content.append(text)
+            total_words += len(text.split())
+            if total_words > 300:  # Minimum article length
+                break
         
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_authors = []
-        for author in authors:
-            if author not in seen:
-                seen.add(author)
-                unique_authors.append(author)
-        
-        return unique_authors[:2]  # Return max 2 authors for BBC articles
+        return ' '.join(content)
     
-    def _is_valid_author_name(self, name: str) -> bool:
-        """Validate if a string is likely a person's name"""
-        if not name or len(name) < 3:
+    def _get_source_name(self, domain: str) -> str:
+        """Convert domain to readable source name"""
+        source_map = {
+            'bbc.com': 'BBC News',
+            'bbc.co.uk': 'BBC News',
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'nytimes.com': 'The New York Times',
+            'washingtonpost.com': 'The Washington Post',
+            'theguardian.com': 'The Guardian',
+            'reuters.com': 'Reuters',
+            'apnews.com': 'Associated Press',
+            'bloomberg.com': 'Bloomberg',
+            'wsj.com': 'Wall Street Journal'
+        }
+        
+        return source_map.get(domain, domain.replace('.com', '').replace('.org', '').title())
+    
+    def _validate_extraction(self, data: Dict[str, Any]) -> bool:
+        """Validate that extraction produced quality content"""
+        if not data:
             return False
         
-        # Must have at least 2 parts (first and last name)
-        parts = name.split()
-        if len(parts) < 2:
+        # Check required fields
+        required = ['title', 'text', 'content', 'url', 'domain']
+        for field in required:
+            if field not in data:
+                logger.warning(f"Missing required field: {field}")
+                return False
+        
+        # Check content quality
+        text = data.get('text', '')
+        if len(text) < 200:
+            logger.warning(f"Content too short: {len(text)} chars")
             return False
         
-        # Exclude common non-name words
-        exclude_words = ['BBC', 'News', 'Reuters', 'Associated', 'Press', 'Staff', 'Editor', 
-                        'Reporter', 'Correspondent', 'Journalist', 'Writer', 'The', 'In', 
-                        'From', 'Updated', 'Published', 'Posted', 'Copyright']
+        word_count = data.get('word_count', 0)
+        if word_count < 50:
+            logger.warning(f"Too few words: {word_count}")
+            return False
         
-        for word in exclude_words:
-            if word in name:
-                return False
-        
-        # Check if it looks like a real name (each part starts with capital)
-        for part in parts:
-            if not part[0].isupper():
-                return False
-        
-        # Exclude if all uppercase or all lowercase
-        if name.isupper() or name.islower():
+        # Check for garbage content
+        if text.count('<') > 10 or text.count('>') > 10:
+            logger.warning("Content appears to contain HTML")
             return False
         
         return True
     
-    def _clean_author_text(self, text: str) -> str:
-        """Clean author text"""
-        if not text:
-            return ""
+    def _calculate_quality_score(self, data: Dict[str, Any]) -> int:
+        """Calculate extraction quality score"""
+        score = 0
         
-        # Remove common prefixes
-        text = re.sub(r'^(By|Written by|Author:|Reporter:)\s+', '', text, flags=re.I)
+        # Content length (max 40 points)
+        word_count = data.get('word_count', 0)
+        score += min(40, word_count // 25)
         
-        # Remove email addresses
-        text = re.sub(r'\S+@\S+\.\S+', '', text)
+        # Has title (10 points)
+        if data.get('title') and data['title'] != 'Untitled Article':
+            score += 10
         
-        # Remove dates
-        text = re.sub(r'\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)', '', text, flags=re.I)
+        # Has author (10 points)
+        if data.get('author') and data['author'] not in ['Unknown', 'Staff Writer']:
+            score += 10
         
-        # Remove "Updated" timestamps
-        text = re.sub(r'(UPDATED|PUBLISHED|POSTED).*', '', text, flags=re.I)
+        # Has date (10 points)
+        if data.get('publish_date'):
+            score += 10
         
-        # Remove role descriptions after name (but keep the name)
-        text = re.sub(r',\s*(Reporter|Writer|Journalist|Editor|Correspondent|Staff Writer).*', '', text, flags=re.I)
+        # Has clean content (20 points)
+        text = data.get('text', '')
+        if text and '<' not in text and '>' not in text:
+            score += 20
         
-        # Clean up
-        text = text.strip()
-        text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single
+        # Has metadata (10 points)
+        if data.get('keywords') or data.get('summary'):
+            score += 10
         
-        return text
+        return min(100, score)
     
-    def _extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract content"""
-        # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-            element.decompose()
-        
-        # Try article tag
-        article = soup.find('article')
-        if article:
-            paragraphs = article.find_all('p')
-            if paragraphs:
-                content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
-                if len(content) > 200:
-                    return content
-        
-        # Try main areas
-        for selector in ['main', 'div[role="main"]', 'div.content', 'div[class*="article-body"]', 'div[class*="story-body"]']:
-            element = soup.select_one(selector)
-            if element:
-                paragraphs = element.find_all('p')
-                if paragraphs:
-                    content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
-                    if len(content) > 200:
-                        return content
-        
-        # Fallback: all paragraphs
-        all_p = soup.find_all('p')
-        content = ' '.join([p.get_text(strip=True) for p in all_p if len(p.get_text(strip=True)) > 30])
-        return content
+    def _create_error_response(self, error_message: str) -> Dict[str, Any]:
+        """Create error response"""
+        return {
+            'success': False,
+            'service': self.service_name,
+            'available': self.is_available,
+            'error': error_message,
+            'timestamp': time.time()
+        }
