@@ -10,6 +10,7 @@ THIS VERSION FIXES:
 4. Clean author/title extraction
 5. Handles both news articles and direct text input
 6. No duplicate code or conflicting versions
+7. Includes service wrapper for pipeline compatibility
 
 DEPLOYMENT NOTES:
 - Place this file in: services/article_extractor.py
@@ -25,7 +26,7 @@ import json
 import time
 import logging
 import hashlib
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from urllib.parse import urlparse, quote_plus
 from datetime import datetime
 
@@ -135,9 +136,12 @@ class ArticleExtractor:
                 'api_key': self.scraperapi_key,
                 'url': url,
                 'render': 'true',  # Render JavaScript
-                'premium': 'true',  # Use premium proxies for better success
                 'country_code': 'us'
             }
+            
+            # Only add premium if explicitly enabled
+            if os.environ.get('SCRAPERAPI_PREMIUM', 'false').lower() == 'true':
+                params['premium'] = 'true'
             
             # Make request to ScraperAPI
             response = self.session.get(api_url, params=params, timeout=30)
@@ -169,6 +173,12 @@ class ArticleExtractor:
                 extraction_method='scraperapi_newspaper'
             )
             
+        except requests.HTTPError as e:
+            if '402' in str(e):
+                logger.error("ScraperAPI credits exhausted or invalid key")
+            else:
+                logger.error(f"ScraperAPI HTTP error: {e}")
+            return None
         except requests.RequestException as e:
             logger.error(f"ScraperAPI request failed: {e}")
             return None
@@ -485,10 +495,10 @@ class ArticleExtractor:
         url: str,
         title: str,
         text: str,
-        authors: list = None,
-        publish_date: datetime = None,
-        summary: str = None,
-        html: str = None,
+        authors: Optional[List[str]] = None,
+        publish_date: Optional[datetime] = None,
+        summary: Optional[str] = None,
+        html: Optional[str] = None,
         extraction_method: str = 'unknown'
     ) -> Dict[str, Any]:
         """Prepare the final article result"""
@@ -606,6 +616,72 @@ class ArticleExtractor:
         }
 
 
+# Service wrapper for pipeline compatibility
+class ArticleExtractorService:
+    """Service wrapper that integrates with the analysis pipeline"""
+    
+    def __init__(self):
+        self.extractor = ArticleExtractor()
+        logger.info(f"[ARTICLE_EXTRACTOR v{ArticleExtractor.VERSION}] Service wrapper initialized")
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Method the pipeline expects"""
+        url = data.get('url', '')
+        text = data.get('text', '')
+        content = data.get('content', '')
+        
+        # Handle direct text input
+        if not url and (text or content):
+            input_text = text or content
+            result = self.extractor.process_text_input(input_text, source="direct_input")
+        elif url:
+            result = self.extractor.extract(url)
+        else:
+            return {
+                'service': 'article_extractor',
+                'success': False,
+                'error': 'No URL or text provided',
+                'data': {},
+                'available': True,
+                'timestamp': time.time()
+            }
+        
+        # Return in the format the pipeline expects
+        if result.get('success'):
+            return {
+                'service': 'article_extractor',
+                'success': True,
+                'data': {
+                    'text': result.get('text', ''),
+                    'title': result.get('title', 'Unknown'),
+                    'author': result.get('author', 'Unknown'),
+                    'domain': result.get('domain', ''),
+                    'content': result.get('text', ''),
+                    'url': url or result.get('url', ''),
+                    'word_count': result.get('word_count', 0),
+                    'extraction_method': result.get('extraction_method', 'unknown')
+                },
+                'available': True,
+                'timestamp': time.time()
+            }
+        else:
+            return {
+                'service': 'article_extractor',
+                'success': False,
+                'error': result.get('error', 'Extraction failed'),
+                'data': {
+                    'text': '',
+                    'title': 'Unknown',
+                    'author': 'Unknown',
+                    'domain': '',
+                    'content': '',
+                    'url': url
+                },
+                'available': True,
+                'timestamp': time.time()
+            }
+
+
 # Create singleton instance
 _instance = None
 
@@ -640,6 +716,7 @@ if __name__ == "__main__":
     print(f"Test URL: {test_url}")
     print("-" * 50)
     
+    # Test direct instantiation
     extractor = ArticleExtractor()
     result = extractor.extract(test_url)
     
@@ -648,7 +725,19 @@ if __name__ == "__main__":
         print(f"✓ Author: {result['author']}")
         print(f"✓ Word Count: {result['word_count']}")
         print(f"✓ Method: {result['extraction_method']}")
-        print(f"✓ Content: {result['text'][:200]}...")
+        print(f"✓ Content preview: {result['text'][:200]}...")
     else:
         print(f"✗ Extraction failed: {result.get('error', 'Unknown error')}")
-        
+    
+    print("-" * 50)
+    print("Testing ArticleExtractorService wrapper...")
+    
+    # Test service wrapper
+    service = ArticleExtractorService()
+    service_result = service.analyze({'url': test_url})
+    
+    if service_result['success']:
+        print(f"✓ Service wrapper works")
+        print(f"✓ Data keys: {list(service_result['data'].keys())}")
+    else:
+        print(f"✗ Service wrapper failed: {service_result.get('error', 'Unknown error')}")
