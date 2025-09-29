@@ -39,6 +39,7 @@ class ArticleExtractor:
     """Production-ready article extraction service"""
     
     def __init__(self):
+        print("[ARTICLE_EXTRACTOR v3.0] ArticleExtractor.__init__ called - new class instantiated")
         self.service_name = 'article_extractor'
         self.available = True
         self.is_available = True
