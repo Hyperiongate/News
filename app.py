@@ -497,37 +497,122 @@ class ContentTypeDetector:
 # PRESERVE EXISTING ANALYSIS SERVICES (keeping all original functionality)
 # ================================================================================
 
-# Import your existing services (preserving exact functionality)
+# Import your existing services with better error handling
+NewsAnalyzer = None
+AnalysisPipeline = None
+
+# Try importing AnalysisPipeline first
 try:
     from services.analysis_pipeline import AnalysisPipeline
-    from services.news_analyzer import NewsAnalyzer
-    logger.info("✓ Analysis services imported successfully")
+    logger.info("✓ AnalysisPipeline imported successfully")
 except ImportError as e:
-    logger.error(f"Failed to import analysis services: {e}")
-    logger.error("Creating fallback NewsAnalyzer...")
+    logger.error(f"Failed to import AnalysisPipeline: {e}")
+    import traceback
+    traceback.print_exc()
+
+# Try importing NewsAnalyzer
+try:
+    from services.news_analyzer import NewsAnalyzer
+    logger.info("✓ NewsAnalyzer imported successfully")
+except ImportError as e:
+    logger.error(f"Failed to import NewsAnalyzer: {e}")
+    import traceback
+    traceback.print_exc()
+
+# If NewsAnalyzer didn't import, create a working version that uses the pipeline directly
+if NewsAnalyzer is None:
+    logger.warning("Creating emergency NewsAnalyzer that uses pipeline directly...")
     
-    # Fallback NewsAnalyzer for when imports fail
     class NewsAnalyzer:
+        """Emergency NewsAnalyzer that bypasses the broken import"""
+        
+        def __init__(self):
+            """Initialize with direct pipeline access"""
+            self.pipeline = None
+            try:
+                if AnalysisPipeline:
+                    self.pipeline = AnalysisPipeline()
+                    logger.info("✓ Emergency NewsAnalyzer created with pipeline")
+                else:
+                    logger.error("Cannot create pipeline - AnalysisPipeline not available")
+            except Exception as e:
+                logger.error(f"Failed to create pipeline in emergency NewsAnalyzer: {e}")
+        
         def analyze(self, content: str, content_type: str = 'url') -> Dict[str, Any]:
-            """Fallback analyzer when services are not available"""
-            return {
-                'success': True,
-                'trust_score': 75,
-                'article_summary': 'Analysis services temporarily unavailable',
-                'source': 'Unknown',
-                'author': 'Unknown',
-                'findings_summary': 'Analysis services are being initialized. Please try again.',
-                'detailed_analysis': {
-                    'source_credibility': {'score': 75, 'notes': 'Service initializing'},
-                    'bias_detection': {'score': 75, 'notes': 'Service initializing'},
-                    'fact_checking': {'score': 75, 'notes': 'Service initializing'},
-                    'transparency_score': {'score': 75, 'notes': 'Service initializing'},
-                    'manipulation_detection': {'score': 75, 'notes': 'Service initializing'},
-                    'content_quality': {'score': 75, 'notes': 'Service initializing'},
-                    'author_analysis': {'score': 75, 'notes': 'Service initializing'}
-                },
-                'processing_time': 0.1
-            }
+            """Analyze using pipeline directly"""
+            if not self.pipeline:
+                logger.error("No pipeline available for analysis")
+                return {
+                    'success': False,
+                    'error': 'Analysis pipeline not available',
+                    'trust_score': 0,
+                    'article_summary': 'Pipeline initialization failed',
+                    'source': 'Unknown',
+                    'author': 'Unknown',
+                    'findings_summary': 'Analysis pipeline could not be initialized.',
+                    'detailed_analysis': {},
+                    'processing_time': 0
+                }
+            
+            try:
+                # Prepare data for pipeline
+                if content_type == 'url':
+                    analysis_data = {'url': content}
+                else:
+                    analysis_data = {'text': content, 'content': content}
+                
+                logger.info(f"Emergency NewsAnalyzer calling pipeline with {content_type}: {content[:100]}")
+                
+                # Call pipeline
+                pipeline_result = self.pipeline.analyze(analysis_data)
+                
+                # Extract article info
+                article = pipeline_result.get('article', {})
+                
+                # Format response
+                response = {
+                    'success': pipeline_result.get('success', False),
+                    'trust_score': pipeline_result.get('trust_score', 50),
+                    'article_summary': article.get('title', 'Untitled Article'),
+                    'source': article.get('domain', 'Unknown'),
+                    'author': article.get('author', 'Unknown'),
+                    'findings_summary': self._generate_findings_summary(pipeline_result),
+                    'detailed_analysis': pipeline_result.get('detailed_analysis', {}),
+                    'processing_time': pipeline_result.get('metadata', {}).get('processing_time', 0),
+                    'article': article
+                }
+                
+                logger.info(f"Emergency NewsAnalyzer completed: score={response['trust_score']}")
+                return response
+                
+            except Exception as e:
+                logger.error(f"Emergency NewsAnalyzer failed: {e}")
+                import traceback
+                traceback.print_exc()
+                return {
+                    'success': False,
+                    'error': str(e),
+                    'trust_score': 0,
+                    'article_summary': 'Analysis failed',
+                    'source': 'Unknown',
+                    'author': 'Unknown',
+                    'findings_summary': f'Analysis error: {str(e)}',
+                    'detailed_analysis': {},
+                    'processing_time': 0
+                }
+        
+        def _generate_findings_summary(self, pipeline_result: Dict[str, Any]) -> str:
+            """Generate findings summary from pipeline results"""
+            trust_score = pipeline_result.get('trust_score', 50)
+            
+            if trust_score >= 80:
+                return "Analysis indicates high credibility with strong sourcing and minimal bias."
+            elif trust_score >= 60:
+                return "Analysis shows moderate credibility with some concerns noted."
+            elif trust_score >= 40:
+                return "Analysis reveals mixed credibility with several issues identified."
+            else:
+                return "Analysis indicates low credibility with significant concerns."
 
 # ================================================================================
 # UNIFIED ANALYZER - ORCHESTRATES BOTH MODES
@@ -802,6 +887,10 @@ def analyze():
         
         logger.info(f"Unified analysis: mode={analysis_mode}, type={content_type}")
         
+        # Log NewsAnalyzer type for debugging
+        logger.info(f"NewsAnalyzer class: {unified_analyzer.news_analyzer.__class__.__name__}")
+        logger.info(f"NewsAnalyzer has pipeline: {hasattr(unified_analyzer.news_analyzer, 'pipeline')}")
+        
         # Log service registry status for debugging
         if service_registry:
             try:
@@ -813,14 +902,25 @@ def analyze():
                 pass
         
         # Perform unified analysis
+        logger.info("Calling unified_analyzer.analyze()...")
         result = unified_analyzer.analyze(content, analysis_mode)
+        
+        # Log result size to detect if extraction happened
+        import json
+        result_json = json.dumps(result, default=str)
+        logger.info(f"Result size: {len(result_json)} bytes")
+        
+        # Check if article was extracted
+        if 'article' in result:
+            article = result['article']
+            logger.info(f"Article extracted: title='{article.get('title', 'N/A')[:50]}', word_count={article.get('word_count', 0)}")
         
         # Ensure success field is present
         if 'success' not in result:
             result['success'] = True if result.get('trust_score', 0) > 0 else False
         
         if result.get('success'):
-            logger.info(f"Unified analysis completed: {result.get('analysis_mode')} mode")
+            logger.info(f"Unified analysis completed: {result.get('analysis_mode')} mode, trust_score={result.get('trust_score')}")
             return jsonify(result), 200
         else:
             logger.error(f"Unified analysis failed: {result.get('error')}")
