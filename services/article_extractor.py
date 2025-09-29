@@ -46,7 +46,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 logging.getLogger('newspaper').setLevel(logging.WARNING)
 
 
-class ArticleExtractor:
+class ArticleExtractorCore:
     """
     Enhanced article extraction service with multiple fallback methods
     """
@@ -621,8 +621,8 @@ class ArticleExtractorService:
     """Service wrapper that integrates with the analysis pipeline"""
     
     def __init__(self):
-        self.extractor = ArticleExtractor()
-        logger.info(f"[ARTICLE_EXTRACTOR v{ArticleExtractor.VERSION}] Service wrapper initialized")
+        self.extractor = ArticleExtractorCore()
+        logger.info(f"[ARTICLE_EXTRACTOR v{ArticleExtractorCore.VERSION}] Service wrapper initialized")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Method the pipeline expects"""
@@ -685,11 +685,11 @@ class ArticleExtractorService:
 # Create singleton instance
 _instance = None
 
-def get_extractor() -> ArticleExtractor:
+def get_extractor() -> ArticleExtractorCore:
     """Get or create the article extractor instance"""
     global _instance
     if _instance is None:
-        _instance = ArticleExtractor()
+        _instance = ArticleExtractorCore()
     return _instance
 
 
@@ -708,25 +708,21 @@ def extract_article(url: str) -> Dict[str, Any]:
     return extractor.extract(url)
 
 
-# CRITICAL FIX: Create a proper wrapper that the registry expects
-# The registry looks for 'ArticleExtractor' class
+# Registry-compatible wrapper class
 class ArticleExtractor(ArticleExtractorService):
-    """Registry-compatible wrapper - inherits from ArticleExtractorService"""
+    """The class that the service registry expects to find"""
     pass
-
-# Keep ArticleExtractorService available for direct use if needed
-# ArticleExtractor now properly inherits all functionality from ArticleExtractorService
 
 if __name__ == "__main__":
     # Test extraction
     test_url = "https://www.reuters.com/"
     
-    print(f"Testing ArticleExtractor v{ArticleExtractor.VERSION}")
+    print(f"Testing ArticleExtractorCore v{ArticleExtractorCore.VERSION}")
     print(f"Test URL: {test_url}")
     print("-" * 50)
     
     # Test direct instantiation
-    extractor = ArticleExtractor()
+    extractor = ArticleExtractorCore()
     result = extractor.extract(test_url)
     
     if result['success']:
