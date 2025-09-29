@@ -708,10 +708,14 @@ def extract_article(url: str) -> Dict[str, Any]:
     return extractor.extract(url)
 
 
-# CRITICAL FIX: Add alias for registry compatibility
-# The service registry looks for 'ArticleExtractor' but we have 'ArticleExtractorService'
-# This alias makes both names work
-ArticleExtractor = ArticleExtractorService
+# CRITICAL FIX: Create a proper wrapper that the registry expects
+# The registry looks for 'ArticleExtractor' class
+class ArticleExtractor(ArticleExtractorService):
+    """Registry-compatible wrapper - inherits from ArticleExtractorService"""
+    pass
+
+# Keep ArticleExtractorService available for direct use if needed
+# ArticleExtractor now properly inherits all functionality from ArticleExtractorService
 
 if __name__ == "__main__":
     # Test extraction
