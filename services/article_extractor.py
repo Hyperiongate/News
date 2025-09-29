@@ -708,6 +708,11 @@ def extract_article(url: str) -> Dict[str, Any]:
     return extractor.extract(url)
 
 
+# CRITICAL FIX: Add alias for registry compatibility
+# The service registry looks for 'ArticleExtractor' but we have 'ArticleExtractorService'
+# This alias makes both names work
+ArticleExtractor = ArticleExtractorService
+
 if __name__ == "__main__":
     # Test extraction
     test_url = "https://www.reuters.com/"
